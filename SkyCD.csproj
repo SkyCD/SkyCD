@@ -57,5 +57,6 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
   </ItemGroup>
-  <!-- AboutWindow axaml will be restored to the project and compiled normally -->
+
+
 </Project>

@@ -7,7 +7,6 @@ using SkyCD.Views;
 using System.Linq;
 using System.Globalization;
 using SkyCD.Services;
-using SkyCD.Tools;
 using System.IO;
 using System;
 
@@ -29,28 +28,6 @@ namespace SkyCD
             var baseDir = AppContext.BaseDirectory ?? ".";
             var dataDir = Path.Combine(baseDir, "Data");
             // Convert any existing YAML translations to XLIFF and remove old YAML files
-            try
-            {
-                YamlToXliffConverter.ConvertAllYamlToXliff(dataDir);
-                // remove original .yml/.yaml after conversion
-                if (Directory.Exists(dataDir))
-                {
-                    foreach (var f in Directory.GetFiles(dataDir, "*.yml").Concat(Directory.GetFiles(dataDir, "*.yaml")))
-                    {
-                        try { File.Delete(f); } catch { }
-                    }
-                }
-                // also check base data folder
-                var baseData = Path.Combine(AppContext.BaseDirectory ?? ".", "Data");
-                if (Directory.Exists(baseData))
-                {
-                    foreach (var f in Directory.GetFiles(baseData, "*.yml").Concat(Directory.GetFiles(baseData, "*.yaml")))
-                    {
-                        try { File.Delete(f); } catch { }
-                    }
-                }
-            }
-            catch { }
             System.Diagnostics.Debug.WriteLine($"Localization: baseDir={baseDir}, dataDir={dataDir}");
             // determine requested language from saved settings or system UI culture
             var loc = LocalizationService.Instance;
