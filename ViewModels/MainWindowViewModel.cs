@@ -183,18 +183,21 @@ namespace SkyCD.ViewModels
             return null;
         }
 
-        private FolderItem? FindRecursive(FileSystemItem node, int id)
+        private FolderItem? FindRecursive(IMediaChild node, int id)
         {
-            if (node.Id == id && node is FolderItem f)
-                return f;
-
-            if (node is FolderItem folder)
+            if (node is FileSystemItem fsNode)
             {
-                foreach (var child in folder.Children)
+                if (fsNode.Id == id && fsNode is FolderItem f)
+                    return f;
+
+                if (fsNode is FolderItem folder)
                 {
-                    var found = FindRecursive(child, id);
-                    if (found != null)
-                        return found;
+                    foreach (var child in folder.Children)
+                    {
+                        var found = FindRecursive(child, id);
+                        if (found != null)
+                            return found;
+                    }
                 }
             }
 
@@ -207,22 +210,22 @@ namespace SkyCD.ViewModels
             var pictures = new FolderItem { Id = 2, Name = "Pictures", Type = FileItemType.Folder };
             var music = new FolderItem { Id = 3, Name = "Music", Type = FileItemType.Folder };
 
-            var work = new FolderItem { Id = 4, Name = "Work", Type = FileItemType.Folder, ParentId = documents.Id };
-            var personal = new FolderItem { Id = 5, Name = "Personal", Type = FileItemType.Folder, ParentId = documents.Id };
+            var work = new FolderItem { Id = 4, Name = "Work", Type = FileItemType.Folder, Parent = documents };
+            var personal = new FolderItem { Id = 5, Name = "Personal", Type = FileItemType.Folder, Parent = documents };
 
             documents.Children.Add(work);
             documents.Children.Add(personal);
 
-            work.Children.Add(new FileItem { Id = 6, Name = "Report.docx", Type = FileItemType.File, ParentId = work.Id });
-            work.Children.Add(new FileItem { Id = 7, Name = "Notes.txt", Type = FileItemType.File, ParentId = work.Id });
+            work.Children.Add(new FileItem { Id = 6, Name = "Report.docx", Type = FileItemType.File, Parent = work });
+            work.Children.Add(new FileItem { Id = 7, Name = "Notes.txt", Type = FileItemType.File, Parent = work });
 
-            personal.Children.Add(new FileItem { Id = 8, Name = "Resume.pdf", Type = FileItemType.File, ParentId = personal.Id });
+            personal.Children.Add(new FileItem { Id = 8, Name = "Resume.pdf", Type = FileItemType.File, Parent = personal });
 
-            pictures.Children.Add(new FileItem { Id = 9, Name = "Vacation.jpg", Type = FileItemType.File, ParentId = pictures.Id });
-            pictures.Children.Add(new FileItem { Id = 10, Name = "Family.jpg", Type = FileItemType.File, ParentId = pictures.Id });
+            pictures.Children.Add(new FileItem { Id = 9, Name = "Vacation.jpg", Type = FileItemType.File, Parent = pictures });
+            pictures.Children.Add(new FileItem { Id = 10, Name = "Family.jpg", Type = FileItemType.File, Parent = pictures });
 
-            music.Children.Add(new FileItem { Id = 11, Name = "Song1.mp3", Type = FileItemType.File, ParentId = music.Id });
-            music.Children.Add(new FileItem { Id = 12, Name = "Song2.mp3", Type = FileItemType.File, ParentId = music.Id });
+            music.Children.Add(new FileItem { Id = 11, Name = "Song1.mp3", Type = FileItemType.File, Parent = music });
+            music.Children.Add(new FileItem { Id = 12, Name = "Song2.mp3", Type = FileItemType.File, Parent = music });
 
             Folders = new ObservableCollection<FolderItem> { documents, pictures, music };
         }
