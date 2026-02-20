@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SkyCD.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:conv="using:SkyCD.Converters"
+        xmlns:models="using:SkyCD.Models.VirtualFileSystem"
+        xmlns:loc="using:SkyCD.MarkupExtensions"
+        xmlns:views="using:SkyCD.Views"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SkyCD.Views.MainWindow"
+        x:Name="Root"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="SkyCD">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <DockPanel>
+        <DockPanel.Resources>
+            <conv:MediaTypeToPathConverter x:Key="MediaIconConverter"/>
+            <DataTemplate x:Key="FolderTemplate" DataType="models:FolderItem">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <PathIcon Data="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" Width="16" Height="16" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+                <DataTemplate x:Key="FileTemplate" DataType="models:FileItem">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <PathIcon Data="M13,9V3.5L18.5,9M6,2C4.89,2 4,2.89 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z" Width="16" Height="16" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+                <DataTemplate x:Key="MediaTemplate" DataType="models:MediaItem">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <PathIcon Data="{Binding MediaType, Converter={StaticResource MediaIconConverter}}" Width="16" Height="16" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+        </DockPanel.Resources>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="{loc:Loc Key=menu.file}">
+                <MenuItem Header="{loc:Loc Key=menu.new}" InputGesture="Ctrl+N"/>
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.open}" InputGesture="Ctrl+O"/>
+                <MenuItem Header="{loc:Loc Key=menu.save}" InputGesture="Ctrl+S"/>
+                <MenuItem Header="{loc:Loc Key=menu.save_as}"/>
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.properties}"/>
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.exit}"/>
+            </MenuItem>
+            <MenuItem Header="{loc:Loc Key=menu.edit}">
+                <MenuItem Header="{loc:Loc Key=menu.add}" InputGesture="F2"/>
+                <MenuItem Header="{loc:Loc Key=menu.delete}" InputGesture="Delete"/>
+            </MenuItem>
+            <MenuItem Header="{loc:Loc Key=menu.view}">
+                <MenuItem Header="{loc:Loc Key=menu.status_bar}" IsChecked="{Binding ShowStatusBar, Mode=TwoWay}"  ToggleType="CheckBox" />
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.tiles}" ToggleType="Radio" IsChecked="{Binding IsTilesView, Mode=TwoWay}"/>
+                <MenuItem Header="{loc:Loc Key=menu.small_icons}" ToggleType="Radio" IsChecked="{Binding IsSmallIconsView, Mode=TwoWay}"/>
+                <MenuItem Header="{loc:Loc Key=menu.large_icons}" ToggleType="Radio" IsChecked="{Binding IsLargeIconsView, Mode=TwoWay}"/>
+                <MenuItem Header="{loc:Loc Key=menu.list}" ToggleType="Radio" IsChecked="{Binding IsListView, Mode=TwoWay}"/>
+                <MenuItem Header="{loc:Loc Key=menu.details}" ToggleType="Radio" IsChecked="{Binding IsDetailsView, Mode=TwoWay}"/>
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.arrange_by}">
+                    <MenuItem Header="{loc:Loc Key=menu.name}" ToggleType="Radio" IsChecked="True"/>
+                    <MenuItem Header="{loc:Loc Key=menu.type}" ToggleType="Radio"/>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.refresh}" InputGesture="F5"/>
+            </MenuItem>
+            <MenuItem Header="{loc:Loc Key=menu.tools}">
+                <MenuItem Header="{loc:Loc Key=menu.options}" Click="OnOptionsClicked"/>
+            </MenuItem>
+            <MenuItem Header="{loc:Loc Key=menu.help}">
+                <MenuItem Header="{loc:Loc Key=menu.home_page}" Click="OnHomePageClicked"/>
+                <Separator/>
+                <MenuItem Header="{loc:Loc Key=menu.about}" Click="OnAboutClicked"/>
+            </MenuItem>
+        </Menu>
+
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" 
+                BorderThickness="0,0,0,1" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="4">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Height="32" Padding="6,4">
+                    <ToolTip.Tip>
+                        <TextBlock>
+                            <Run Text="{loc:Loc Key=menu.new}" />
+                            <Run Text=" (Ctrl+N)" />
+                        </TextBlock>
+                    </ToolTip.Tip>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,19L8,15H10.5V12H13.5V15H16L12,19Z" Width="16" Height="16" />
+                        <TextBlock Text="{loc:Loc Key=menu.new}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Height="32" Padding="6,4">
+                    <ToolTip.Tip>
+                        <TextBlock>
+                            <Run Text="{loc:Loc Key=menu.open}" />
+                            <Run Text=" (Ctrl+O)" />
+                        </TextBlock>
+                    </ToolTip.Tip>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" Width="16" Height="16" />
+                        <TextBlock Text="{loc:Loc Key=menu.open}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Height="32" Padding="6,4">
+                    <ToolTip.Tip>
+                        <TextBlock>
+                            <Run Text="{loc:Loc Key=menu.save}" />
+                            <Run Text=" (Ctrl+S)" />
+                        </TextBlock>
+                    </ToolTip.Tip>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" Width="16" Height="16" />
+                        <TextBlock Text="{loc:Loc Key=menu.save}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" 
+                BorderThickness="0,1,0,0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="4"
+                IsVisible="{Binding ShowStatusBar}">
+            <TextBlock Text="{loc:Loc Key=status.done}" VerticalAlignment="Center"/>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" MinWidth="100"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+
+            <TreeView Grid.Column="0" 
+                      ItemsSource="{Binding Folders}"
+                      SelectedItem="{Binding SelectedFolder}">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate ItemsSource="{Binding Children}">
+                        <ContentControl Content="{Binding}" />
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+
+            <GridSplitter Grid.Column="1" Width="4" ResizeDirection="Columns" 
+                          Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+
+            <StackPanel Grid.Column="2">
+                <!-- Icon grid for Tiles/Small/Large -->
+                <ListBox ItemsSource="{Binding Files}" IsVisible="{Binding IsIconGridMode, RelativeSource={RelativeSource AncestorType=views:MainWindow}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Spacing="4" Margin="8">
+                                <PathIcon Data="M13,9V3.5L18.5,9M6,2C4.89,2 4,2.89 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z" 
+                                          Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=views:MainWindow}}" Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=views:MainWindow}}" 
+                                          HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Name}" 
+                                           TextWrapping="Wrap" 
+                                           MaxWidth="{Binding TextMaxWidth, Mode=OneWay, RelativeSource={RelativeSource AncestorType=views:MainWindow}}"
+                                           TextAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+
+                <!-- Vertical list view when ViewMode == List -->
+                <ListBox ItemsSource="{Binding Files}" IsVisible="{Binding IsListView, RelativeSource={RelativeSource AncestorType=views:MainWindow}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="4" VerticalAlignment="Center">
+                                <PathIcon Data="M13,9V3.5L18.5,9M6,2C4.89,2 4,2.89 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z" 
+                                          Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=views:MainWindow}}" Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=views:MainWindow}}" />
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Details view: grid-like rows with headers -->
+                <StackPanel IsVisible="{Binding IsDetailsView, RelativeSource={RelativeSource AncestorType=views:MainWindow}}">
+                    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" BorderThickness="0,0,0,1" Padding="8" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                        <Grid x:Name="HeaderGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="80" />
+                                <ColumnDefinition Width="150" MinWidth="60" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="HeaderNameCell" Width="{Binding DetailsNameWidth, RelativeSource={RelativeSource AncestorType=views:MainWindow}}" Text="{loc:Loc Key=column.name}" Grid.Column="0" FontWeight="Bold" />
+                            <TextBlock Text="{loc:Loc Key=column.type}" Grid.Column="1" FontWeight="Bold" />
+                            <!-- splitter to allow resizing between columns -->
+                            <GridSplitter Grid.Column="0" Width="6" HorizontalAlignment="Right" ResizeDirection="Columns" Background="Transparent" PointerReleased="OnDetailsSplitterReleased"/>
+                        </Grid>
+                    </Border>
+
+                    <ListBox ItemsSource="{Binding Files}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="4" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="{Binding DetailsNameWidth, RelativeSource={RelativeSource AncestorType=views:MainWindow}}" Background="Transparent">
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Type}" Grid.Column="1" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+
+</Window>

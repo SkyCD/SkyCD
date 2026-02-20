@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2">
+  <file source-language="en" target-language="en" datatype="plaintext">
+    <header>
+      <note category="name">English</note>
+      <note category="flag">🇬🇧</note>
+    </header>
+    <body>
+      <trans-unit id="menu.file">
+        <source>File</source>
+      </trans-unit>
+      <trans-unit id="menu.new">
+        <source>New</source>
+      </trans-unit>
+      <trans-unit id="menu.open">
+        <source>Open</source>
+      </trans-unit>
+      <trans-unit id="menu.save">
+        <source>Save</source>
+      </trans-unit>
+      <trans-unit id="menu.save_as">
+        <source>Save As...</source>
+      </trans-unit>
+      <trans-unit id="menu.properties">
+        <source>Properties...</source>
+      </trans-unit>
+      <trans-unit id="menu.exit">
+        <source>Exit</source>
+      </trans-unit>
+      <trans-unit id="menu.edit">
+        <source>Edit</source>
+      </trans-unit>
+      <trans-unit id="menu.add">
+        <source>Add...</source>
+      </trans-unit>
+      <trans-unit id="menu.delete">
+        <source>Delete</source>
+      </trans-unit>
+      <trans-unit id="menu.view">
+        <source>View</source>
+      </trans-unit>
+      <trans-unit id="menu.status_bar">
+        <source>Status bar</source>
+      </trans-unit>
+      <trans-unit id="menu.tiles">
+        <source>Tiles</source>
+      </trans-unit>
+      <trans-unit id="menu.small_icons">
+        <source>Small Icons</source>
+      </trans-unit>
+      <trans-unit id="menu.large_icons">
+        <source>Large Icons</source>
+      </trans-unit>
+      <trans-unit id="menu.list">
+        <source>List</source>
+      </trans-unit>
+      <trans-unit id="menu.details">
+        <source>Details</source>
+      </trans-unit>
+      <trans-unit id="menu.arrange_by">
+        <source>Arrange icons by</source>
+      </trans-unit>
+      <trans-unit id="menu.name">
+        <source>Name</source>
+      </trans-unit>
+      <trans-unit id="menu.type">
+        <source>Type</source>
+      </trans-unit>
+      <trans-unit id="menu.refresh">
+        <source>Refresh</source>
+      </trans-unit>
+      <trans-unit id="menu.tools">
+        <source>Tools</source>
+      </trans-unit>
+      <trans-unit id="menu.options">
+        <source>Options...</source>
+      </trans-unit>
+      <trans-unit id="menu.help">
+        <source>Help</source>
+      </trans-unit>
+      <trans-unit id="menu.home_page">
+        <source>Home page</source>
+      </trans-unit>
+      <trans-unit id="menu.about">
+        <source>About...</source>
+      </trans-unit>
+      <trans-unit id="status.done">
+        <source>Done.</source>
+      </trans-unit>
+      <trans-unit id="tab.appearance">
+        <source>Appearance</source>
+      </trans-unit>
+      <trans-unit id="appearence.theme">
+        <source>Theme</source>
+      </trans-unit>
+      <trans-unit id="appearence.language">
+        <source>Language</source>
+      </trans-unit>
+      <trans-unit id="button.save">
+        <source>Save</source>
+      </trans-unit>
+      <trans-unit id="button.cancel">
+        <source>Cancel</source>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

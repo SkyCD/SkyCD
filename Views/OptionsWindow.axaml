@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:loc="using:SkyCD.MarkupExtensions"
+        xmlns:vm="using:SkyCD.ViewModels"
+        xmlns:svc="using:SkyCD.Services"
+        xmlns:conv="using:SkyCD.Converters"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="250"
+        x:Class="SkyCD.Views.OptionsWindow"
+        x:Name="Root"
+        Width="400" Height="250"
+        Title="Options"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/avalonia-logo.ico">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Window.Resources>
+        <conv:FlagPathToBitmapConverter x:Key="FlagConverter" />
+    </Window.Resources>
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0">
+            <TabItem Header="{loc:Loc Key=tab.appearance}">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Theme row: label and control on same line in an invisible table -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Text="{loc:Loc Key=appearence.theme}"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" x:Name="ThemeCombo" />
+
+                    <!-- Language row: label and control on same line in an invisible table -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,8,8,0" Text="{loc:Loc Key=appearence.language}"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" x:Name="LanguageCombo" Margin="0,8,0,0" HorizontalContentAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate DataType="svc:LanguageInfo">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Image Source="{Binding FlagPath, Converter={StaticResource FlagConverter}}" Width="24" Height="16" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button x:Name="SaveButton" Content="{loc:Loc Key=button.save}" Width="80"/>
+            <Button x:Name="CancelButton" Content="{loc:Loc Key=button.cancel}" Width="80"/>
+        </StackPanel>
+    </Grid>
+</Window>

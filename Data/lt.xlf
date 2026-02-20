@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2">
+  <file source-language="lt" target-language="lt" datatype="plaintext">
+    <header>
+      <note category="name">Lietuvių</note>
+      <note category="flag">🇱🇹</note>
+    </header>
+    <body>
+      <trans-unit id="menu.file">
+        <source>Bylos</source>
+      </trans-unit>
+      <trans-unit id="menu.new">
+        <source>Naujas</source>
+      </trans-unit>
+      <trans-unit id="menu.open">
+        <source>Atidaryti</source>
+      </trans-unit>
+      <trans-unit id="menu.save">
+        <source>Išsaugoti</source>
+      </trans-unit>
+      <trans-unit id="menu.save_as">
+        <source>Išsaugoti kaip...</source>
+      </trans-unit>
+      <trans-unit id="menu.properties">
+        <source>Savybės...</source>
+      </trans-unit>
+      <trans-unit id="menu.exit">
+        <source>Išeiti</source>
+      </trans-unit>
+      <trans-unit id="menu.edit">
+        <source>Redaguoti</source>
+      </trans-unit>
+      <trans-unit id="menu.add">
+        <source>Pridėti...</source>
+      </trans-unit>
+      <trans-unit id="menu.delete">
+        <source>Ištrinti</source>
+      </trans-unit>
+      <trans-unit id="menu.view">
+        <source>Vaizdas</source>
+      </trans-unit>
+      <trans-unit id="menu.status_bar">
+        <source>Būsenos juosta</source>
+      </trans-unit>
+      <trans-unit id="menu.tiles">
+        <source>Plytelių rodinys</source>
+      </trans-unit>
+      <trans-unit id="menu.small_icons">
+        <source>Maži piktogramai</source>
+      </trans-unit>
+      <trans-unit id="menu.large_icons">
+        <source>Dideli piktogramai</source>
+      </trans-unit>
+      <trans-unit id="menu.list">
+        <source>Sąrašas</source>
+      </trans-unit>
+      <trans-unit id="menu.details">
+        <source>Detaliai</source>
+      </trans-unit>
+      <trans-unit id="menu.arrange_by">
+        <source>Rikiuoti pagal</source>
+      </trans-unit>
+      <trans-unit id="menu.name">
+        <source>Pavadinimas</source>
+      </trans-unit>
+      <trans-unit id="menu.type">
+        <source>Tipas</source>
+      </trans-unit>
+      <trans-unit id="menu.refresh">
+        <source>Atnaujinti</source>
+      </trans-unit>
+      <trans-unit id="menu.tools">
+        <source>Įrankiai</source>
+      </trans-unit>
+      <trans-unit id="menu.options">
+        <source>Parinktys...</source>
+      </trans-unit>
+      <trans-unit id="menu.help">
+        <source>Pagalba</source>
+      </trans-unit>
+      <trans-unit id="menu.home_page">
+        <source>Pradinis puslapis</source>
+      </trans-unit>
+      <trans-unit id="menu.about">
+        <source>Apie...</source>
+      </trans-unit>
+      <trans-unit id="status.done">
+        <source>Atlikta.</source>
+      </trans-unit>
+      <trans-unit id="tab.appearance">
+        <source>Išvaizda</source>
+      </trans-unit>
+      <trans-unit id="appearence.theme">
+        <source>Tema</source>
+      </trans-unit>
+      <trans-unit id="appearence.language">
+        <source>Kalba</source>
+      </trans-unit>
+      <trans-unit id="button.save">
+        <source>Išsaugoti</source>
+      </trans-unit>
+      <trans-unit id="button.cancel">
+        <source>Atšaukti</source>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>
