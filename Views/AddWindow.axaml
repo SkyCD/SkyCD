@@ -25,9 +25,9 @@
     </Design.DataContext>
 
 <Window.Resources>
-    <conv:DriveTypeToPathConverter x:Key="DriveIconConverter" />
-    <conv:DriveTypeToEmojiUriConverter x:Key="DriveEmojiConverter" />
-    <conv:DriveTypeToEmojiConverter x:Key="DriveEmojiCharConverter" />
+    <conv:DriveTypeConverter x:Key="DriveIconConverter" />
+    <conv:DriveTypeConverter x:Key="DriveEmojiConverter" />
+    <conv:DriveTypeConverter x:Key="DriveEmojiCharConverter" />
   </Window.Resources>
 
   <Grid Margin="8">
@@ -52,7 +52,7 @@
                 <!-- drive icon based on DriveType -->
                 <!-- try text emoji as a fallback (font must support emoji) -->
                 <Viewbox Stretch="Uniform">
-                  <TextBlock Text="{Binding DriveType, Converter={StaticResource DriveEmojiCharConverter}}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding DriveType, Converter={StaticResource DriveEmojiCharConverter}, ConverterParameter=emoji}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Viewbox>
               </Border>
               <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" Margin="0,6,0,0" />
