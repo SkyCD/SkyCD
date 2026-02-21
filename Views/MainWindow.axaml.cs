@@ -74,6 +74,12 @@ namespace SkyCD.Views
             catch { }
         }
 
+        private void OnAddClicked(object? sender, RoutedEventArgs e)
+        {
+            var add = new AddWindow();
+            add.ShowDialog(this);
+        }
+
         private void OnAboutClicked(object? sender, RoutedEventArgs e)
         {
             var about = new AboutWindow();

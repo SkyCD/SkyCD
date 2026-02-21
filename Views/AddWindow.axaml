@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:io="using:System.IO"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:loc="using:SkyCD.MarkupExtensions"
+        xmlns:vm="using:SkyCD.ViewModels"
+        xmlns:views="using:SkyCD.Views"
+        xmlns:svc="using:SkyCD.Services"
+        xmlns:conv="using:SkyCD.Converters"
+        xmlns:models="using:SkyCD.Models.VirtualFileSystem"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="250"
+        x:Class="SkyCD.Views.AddWindow"
+        x:DataType="views:AddWindow"
+        x:Name="Root"
+        Width="400" Height="250"
+        Title="Add"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/avalonia-logo.ico">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+<Window.Resources>
+    <conv:DriveTypeToPathConverter x:Key="DriveIconConverter" />
+    <conv:DriveTypeToEmojiUriConverter x:Key="DriveEmojiConverter" />
+    <conv:DriveTypeToEmojiConverter x:Key="DriveEmojiCharConverter" />
+  </Window.Resources>
+
+  <Grid Margin="8">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+<Grid VerticalAlignment="Center" ColumnDefinitions="Auto" RowDefinitions="Auto, *">
+      <TextBlock Grid.Row="0" Text="Select drive:" VerticalAlignment="Center" Padding="0, 0, 10, 10"/>
+      <ListBox Grid.Row="1" x:Name="MediaList" ItemsSource="{Binding PossibleDrives, ElementName=Root}" SelectionMode="Single" HorizontalAlignment="Stretch">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="io:DriveInfo">
+            <!-- vertical item: icon (big), drive name, then volume label -->
+            <StackPanel Width="80" Margin="6" HorizontalAlignment="Center">
+              <Border Width="48" Height="48" CornerRadius="6" Background="#EEE" HorizontalAlignment="Center" Padding="6">
+                <!-- drive icon based on DriveType -->
+                <!-- try text emoji as a fallback (font must support emoji) -->
+                <Viewbox Stretch="Uniform">
+                  <TextBlock Text="{Binding DriveType, Converter={StaticResource DriveEmojiCharConverter}}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Viewbox>
+              </Border>
+              <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+              <TextBlock Text="{Binding VolumeLabel}" FontSize="11" Foreground="#666" HorizontalAlignment="Center" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
+
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+      <Button Content="Add" Width="80" Click="OnAddClicked" />
+      <Button Content="Cancel" Width="80" Click="OnCancelClicked" />
+    </StackPanel>
+  </Grid>
+</Window>

@@ -56,7 +56,7 @@
                 <MenuItem Header="{loc:Loc Key=menu.exit}"/>
             </MenuItem>
             <MenuItem Header="{loc:Loc Key=menu.edit}">
-                <MenuItem Header="{loc:Loc Key=menu.add}" InputGesture="F2"/>
+                <MenuItem Header="{loc:Loc Key=menu.add}" InputGesture="F2" Click="OnAddClicked"/>
                 <MenuItem Header="{loc:Loc Key=menu.delete}" InputGesture="Delete"/>
             </MenuItem>
             <MenuItem Header="{loc:Loc Key=menu.view}">
