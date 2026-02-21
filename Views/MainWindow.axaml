@@ -45,7 +45,7 @@
         </DockPanel.Resources>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="{loc:Loc Key=menu.file}">
-                <MenuItem Header="{loc:Loc Key=menu.new}" InputGesture="Ctrl+N"/>
+                <MenuItem Header="{loc:Loc Key=menu.new}" InputGesture="Ctrl+N" Click="OnNewClicked"/>
                 <Separator/>
                 <MenuItem Header="{loc:Loc Key=menu.open}" InputGesture="Ctrl+O"/>
                 <MenuItem Header="{loc:Loc Key=menu.save}" InputGesture="Ctrl+S"/>

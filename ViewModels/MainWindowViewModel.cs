@@ -2,6 +2,8 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SkyCD.Models;
+using Microsoft.EntityFrameworkCore;
+using SkyCD.Data.VirtualFileSystem;
 
 namespace SkyCD.ViewModels
 {
@@ -26,7 +28,7 @@ namespace SkyCD.ViewModels
 
         public MainWindowViewModel()
         {
-            SeedSampleData();
+            LoadFoldersFromDatabase();
             // initialize from saved settings
             _showStatusBar = SettingsService.Current.ShowStatusBar;
             _viewMode = SettingsService.Current.ViewMode;
@@ -204,30 +206,30 @@ namespace SkyCD.ViewModels
             return null;
         }
 
-        private void SeedSampleData()
+        private void LoadFoldersFromDatabase()
         {
-            var documents = new FolderItem { Id = 1, Name = "Documents", Type = FileItemType.Folder };
-            var pictures = new FolderItem { Id = 2, Name = "Pictures", Type = FileItemType.Folder };
-            var music = new FolderItem { Id = 3, Name = "Music", Type = FileItemType.Folder };
+            try
+            {
+                // ensure database schema is created/migrated
+                DbMigrationRunner.EnsureMigrated();
 
-            var work = new FolderItem { Id = 4, Name = "Work", Type = FileItemType.Folder, Parent = documents };
-            var personal = new FolderItem { Id = 5, Name = "Personal", Type = FileItemType.Folder, Parent = documents };
+                var options = new DbContextOptionsBuilder<VirtualFileSystemContext>()
+                    .UseSqlite("Data Source=virtualfs.db")
+                    .Options;
 
-            documents.Children.Add(work);
-            documents.Children.Add(personal);
+                using var db = new VirtualFileSystemContext(options);
+                var service = new VirtualFileSystemService(db);
+                var loaded = service.LoadFolders();
 
-            work.Children.Add(new FileItem { Id = 6, Name = "Report.docx", Type = FileItemType.File, Parent = work });
-            work.Children.Add(new FileItem { Id = 7, Name = "Notes.txt", Type = FileItemType.File, Parent = work });
-
-            personal.Children.Add(new FileItem { Id = 8, Name = "Resume.pdf", Type = FileItemType.File, Parent = personal });
-
-            pictures.Children.Add(new FileItem { Id = 9, Name = "Vacation.jpg", Type = FileItemType.File, Parent = pictures });
-            pictures.Children.Add(new FileItem { Id = 10, Name = "Family.jpg", Type = FileItemType.File, Parent = pictures });
-
-            music.Children.Add(new FileItem { Id = 11, Name = "Song1.mp3", Type = FileItemType.File, Parent = music });
-            music.Children.Add(new FileItem { Id = 12, Name = "Song2.mp3", Type = FileItemType.File, Parent = music });
-
-            Folders = new ObservableCollection<FolderItem> { documents, pictures, music };
+                if (loaded != null && loaded.Count > 0)
+                {
+                    Folders = loaded;
+                }
+            }
+            catch
+            {
+               
+            }
         }
 
         public void Dispose()

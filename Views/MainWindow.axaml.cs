@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using SkyCD.ViewModels;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Diagnostics;
 using SkyCD.Services;
@@ -35,6 +36,42 @@ namespace SkyCD.Views
             var opts = new OptionsWindow();
             // show as dialog, non-resizable window set via XAML
             opts.ShowDialog(this);
+        }
+
+        private void OnNewClicked(object? sender, RoutedEventArgs e)
+        {
+            // Clear data in the existing database without deleting the file itself.
+            try
+            {
+                var dbPath = System.IO.Path.Combine(System.AppContext.BaseDirectory ?? ".", "virtualfs.db");
+                var connStr = $"Data Source={dbPath}";
+
+                // Ensure database exists (create migrations if missing)
+                if (!System.IO.File.Exists(dbPath))
+                    DbMigrationRunner.EnsureMigrated(connStr);
+
+                var optionsBuilder = new DbContextOptionsBuilder<SkyCD.Data.VirtualFileSystem.VirtualFileSystemContext>();
+                optionsBuilder.UseSqlite(connStr);
+                var options = optionsBuilder.Options;
+
+                using var db = new SkyCD.Data.VirtualFileSystem.VirtualFileSystemContext(options);
+                // Remove all stored file system items
+                db.FileSystemItems.RemoveRange(db.FileSystemItems);
+                db.SaveChanges();
+
+                // Reload data in UI by clearing ViewModel collections so the view shows empty
+                if (this.DataContext is MainWindowViewModel vm)
+                {
+                    try
+                    {
+                        // replace folders with an empty collection and clear selection/files
+                        vm.Folders = new System.Collections.ObjectModel.ObservableCollection<SkyCD.Models.VirtualFileSystem.FolderItem>();
+                        vm.SelectedFolder = null; // will clear Files via OnSelectedFolderChanged
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         private void OnAboutClicked(object? sender, RoutedEventArgs e)
