@@ -353,6 +353,14 @@ public partial class MainWindowViewModel : ObservableObject
         CompleteOperation();
     }
 
+    public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
+    {
+        CurrentViewMode = viewMode;
+        CurrentSortMode = sortMode;
+        IsStatusBarVisible = isStatusBarVisible;
+        RefreshBrowserItemsForSelection();
+    }
+
     private static string GetViewModeDisplayName(BrowserViewMode viewMode)
     {
         return viewMode switch

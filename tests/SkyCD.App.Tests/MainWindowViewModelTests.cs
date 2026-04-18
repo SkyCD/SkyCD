@@ -332,4 +332,19 @@ public class MainWindowViewModelTests
         Assert.NotNull(request);
         Assert.Equal(string.Empty, request!.Dialog.Comments);
     }
+
+    [Fact]
+    public void ApplySessionState_RestoresViewSortAndStatusBarAndRefreshesOrdering()
+    {
+        var vm = new MainWindowViewModel();
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        vm.SelectedTreeNode = musicNode;
+
+        vm.ApplySessionState(BrowserViewMode.LargeIcons, BrowserSortMode.Type, false);
+
+        Assert.Equal(BrowserViewMode.LargeIcons, vm.CurrentViewMode);
+        Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
+        Assert.False(vm.IsStatusBarVisible);
+        Assert.Equal("Concert-2025.flac", vm.BrowserItems[0].Name);
+    }
 }
