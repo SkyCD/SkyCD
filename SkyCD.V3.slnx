@@ -17,6 +17,7 @@
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
     <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />
+    <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj" />
   </Folder>
 </Solution>

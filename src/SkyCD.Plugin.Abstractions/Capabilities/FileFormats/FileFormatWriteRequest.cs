@@ -24,4 +24,9 @@ public sealed class FileFormatWriteRequest
     /// Gets the domain payload to serialize.
     /// </summary>
     public required object Payload { get; init; }
+
+    /// <summary>
+    /// Gets optional progress reporter (0-100).
+    /// </summary>
+    public IProgress<int>? Progress { get; init; }
 }
