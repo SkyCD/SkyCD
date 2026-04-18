@@ -9,11 +9,13 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, IReadOnlyList<BrowserItem>> browserItemsByNodeKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
+    private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
+    public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
 
     public MainWindowViewModel()
     {
@@ -190,7 +192,27 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenProperties()
     {
-        StatusText = "Properties dialog is not implemented yet.";
+        if (!TryBuildPropertiesDialog(out var dialog))
+        {
+            StatusText = "Unknown selected object.";
+            return;
+        }
+
+        PropertiesRequested?.Invoke(this, new PropertiesDialogRequestedEventArgs
+        {
+            Dialog = dialog,
+            Complete = (accepted, comments) =>
+            {
+                if (!accepted)
+                {
+                    return;
+                }
+
+                commentsByObjectKey[dialog.ObjectKey] = comments;
+                IsDirtyDocument = true;
+                StatusText = DefaultStatusText;
+            }
+        });
     }
 
     [RelayCommand]
@@ -372,6 +394,72 @@ public partial class MainWindowViewModel : ObservableObject
 
         targetNode = null;
         return false;
+    }
+
+    private bool TryBuildPropertiesDialog([NotNullWhen(true)] out PropertiesDialogViewModel? dialog)
+    {
+        if (SelectedBrowserItem is not null)
+        {
+            var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
+            var comments = GetObjectComments(objectKey);
+            var nodeTitle = SelectedTreeNode?.Title ?? "Library";
+
+            var infoProperties = new List<PropertiesInfoItem>
+            {
+                new("Type", SelectedBrowserItem.Type),
+                new("Size", SelectedBrowserItem.Size),
+                new("Location", nodeTitle)
+            };
+
+            dialog = new PropertiesDialogViewModel(
+                objectKey,
+                SelectedBrowserItem.Name,
+                SelectedBrowserItem.IconGlyph,
+                comments,
+                infoProperties);
+            return true;
+        }
+
+        if (SelectedTreeNode is not null)
+        {
+            var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
+            var comments = GetObjectComments(objectKey);
+
+            var infoProperties = new List<PropertiesInfoItem>
+            {
+                new("Type", "Folder"),
+                new("Children", SelectedTreeNode.Children.Count.ToString())
+            };
+
+            dialog = new PropertiesDialogViewModel(
+                objectKey,
+                SelectedTreeNode.Title,
+                SelectedTreeNode.IconGlyph,
+                comments,
+                infoProperties);
+            return true;
+        }
+
+        dialog = null;
+        return false;
+    }
+
+    private string GetObjectComments(string objectKey)
+    {
+        return commentsByObjectKey.TryGetValue(objectKey, out var comments)
+            ? comments
+            : string.Empty;
+    }
+
+    private string GetBrowserItemObjectKey(BrowserItem item)
+    {
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        return $"item:{nodeKey}:{item.Name}";
+    }
+
+    private static string GetTreeNodeObjectKey(BrowserTreeNode node)
+    {
+        return $"tree:{node.Key}";
     }
 
     private void RefreshBrowserItemsForSelection()
