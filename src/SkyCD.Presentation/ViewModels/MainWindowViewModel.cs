@@ -13,6 +13,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly List<int> progressTransitions = [];
     private const string DefaultStatusText = "Done.";
 
+    public event EventHandler? AddToListRequested;
+
     public MainWindowViewModel()
     {
         var moviesNode = new BrowserTreeNode("movies", "Movies", "🎬");
@@ -200,8 +202,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void AddItem()
     {
-        IsDirtyDocument = true;
-        StatusText = "Add dialog is not implemented yet.";
+        AddToListRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]

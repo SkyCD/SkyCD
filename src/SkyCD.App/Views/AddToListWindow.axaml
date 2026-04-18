@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.AddToListWindow"
+        x:DataType="vm:AddToListDialogViewModel"
+        Width="560"
+        Height="460"
+        MinWidth="520"
+        MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Title="Add To List">
+
+    <Design.DataContext>
+        <vm:AddToListDialogViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="*,Auto" Margin="12">
+        <StackPanel Spacing="10">
+            <GroupBox Header="Source">
+                <StackPanel Margin="10" Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="From Media"
+                                Command="{Binding SelectSourceCommand}"
+                                CommandParameter="Media"/>
+                        <Button Content="From Folder"
+                                Command="{Binding SelectSourceCommand}"
+                                CommandParameter="Folder"/>
+                        <Button Content="From Internet"
+                                Command="{Binding SelectSourceCommand}"
+                                CommandParameter="Internet"/>
+                    </StackPanel>
+                    <TextBlock Text="Mode: Media" IsVisible="{Binding IsSourceMedia}"/>
+                    <TextBlock Text="Mode: Folder" IsVisible="{Binding IsSourceFolder}"/>
+                    <TextBlock Text="Mode: Internet" IsVisible="{Binding IsSourceInternet}"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Options">
+                <StackPanel Margin="10" Spacing="8">
+                    <CheckBox Content="Include media info" IsChecked="{Binding IncludeMediaInfo}"/>
+                    <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}"/>
+                    <CheckBox Content="Extended info" IsChecked="{Binding IncludeExtendedInfo}"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Target Placement">
+                <StackPanel Margin="10" Spacing="8">
+                    <Button Content="Add to selected folder"
+                            HorizontalAlignment="Left"
+                            Command="{Binding SelectTargetCommand}"
+                            CommandParameter="SelectedFolder"/>
+                    <Button Content="Add as new media"
+                            HorizontalAlignment="Left"
+                            Command="{Binding SelectTargetCommand}"
+                            CommandParameter="NewMedia"/>
+                    <TextBlock Text="Target: Selected folder" IsVisible="{Binding IsTargetSelectedFolder}"/>
+                    <TextBlock Text="Target: New media" IsVisible="{Binding IsTargetNewMedia}"/>
+                </StackPanel>
+            </GroupBox>
+
+            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                <TextBlock Text="Media Name:" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="1" Text="{Binding MediaName}"/>
+
+                <TextBlock Grid.Row="1" Text="{Binding SourceValueLabel}" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SourceValue}"/>
+            </Grid>
+
+            <TextBlock Foreground="#B00020" Text="{Binding ValidationMessage}" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,14,0,0">
+            <Button Content="OK"
+                    MinWidth="80"
+                    Command="{Binding ConfirmCommand}"/>
+            <Button Content="Cancel"
+                    MinWidth="80"
+                    Click="OnCancelClicked"/>
+        </StackPanel>
+    </Grid>
+</Window>

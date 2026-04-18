@@ -210,4 +210,16 @@ public class MainWindowViewModelTests
         Assert.Equal([0, 60, 100, 0], vm.ProgressTransitions);
         Assert.False(vm.IsProgressVisible);
     }
+
+    [Fact]
+    public void AddItemCommand_RaisesAddToListRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.AddToListRequested += (_, _) => raised = true;
+
+        vm.AddItemCommand.Execute(null);
+
+        Assert.True(raised);
+    }
 }
