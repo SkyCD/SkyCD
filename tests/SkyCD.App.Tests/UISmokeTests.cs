@@ -93,7 +93,7 @@ public class UISmokeTests
         };
 
         Assert.False(vm.CanConfirm);
-        
+
         vm.SourceValue = "C:\\Music";
         vm.MediaName = "My Media";
         Assert.True(vm.CanConfirm);
