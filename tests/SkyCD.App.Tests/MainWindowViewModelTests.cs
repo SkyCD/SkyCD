@@ -55,6 +55,48 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SetSortModeCommand_ChangesCurrentListOrdering()
+    {
+        var vm = new MainWindowViewModel();
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        vm.SelectedTreeNode = musicNode;
+
+        vm.SetSortModeCommand.Execute("Name");
+        var firstByName = vm.BrowserItems[0].Name;
+
+        vm.SetSortModeCommand.Execute("Type");
+        var firstByType = vm.BrowserItems[0].Name;
+
+        Assert.NotEqual(firstByName, firstByType);
+        Assert.Equal("Classical Collection", firstByName);
+        Assert.Equal("Concert-2025.flac", firstByType);
+    }
+
+    [Fact]
+    public void SetViewModeCommand_UpdatesDerivedLayoutFlags()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.SetViewModeCommand.Execute("LargeIcons");
+        Assert.True(vm.IsIconGridMode);
+        Assert.False(vm.IsListLikeMode);
+        Assert.False(vm.IsTilesMode);
+        Assert.Equal(24, vm.BrowserIconFontSize);
+
+        vm.SetViewModeCommand.Execute("Tiles");
+        Assert.True(vm.IsTilesMode);
+        Assert.True(vm.IsIconGridMode);
+        Assert.False(vm.IsListLikeMode);
+        Assert.Equal(300, vm.BrowserGridItemWidth);
+
+        vm.SetViewModeCommand.Execute("Details");
+        Assert.True(vm.IsDetailsViewChecked);
+        Assert.True(vm.IsListLikeMode);
+        Assert.False(vm.IsIconGridMode);
+        Assert.True(vm.ShowDetailsColumns);
+    }
+
+    [Fact]
     public void OpenThenSave_UpdatesSaveCommandState()
     {
         var vm = new MainWindowViewModel();
