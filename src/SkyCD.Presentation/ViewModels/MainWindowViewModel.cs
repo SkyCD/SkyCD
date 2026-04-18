@@ -16,6 +16,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public event EventHandler? AddToListRequested;
     public event EventHandler? AboutRequested;
+    public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
 
     public MainWindowViewModel()
@@ -243,7 +244,26 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenOptions()
     {
-        StatusText = "Options dialog is not implemented yet.";
+        if (OptionsRequested is null)
+        {
+            StatusText = "Options dialog is not implemented yet.";
+            return;
+        }
+
+        var dialog = new OptionsDialogViewModel(["English", "Lithuanian"]);
+        OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
+        {
+            Dialog = dialog,
+            Complete = (accepted, pluginPath, language) =>
+            {
+                if (!accepted)
+                {
+                    return;
+                }
+
+                StatusText = $"Options saved (Language: {language}).";
+            }
+        });
     }
 
     [RelayCommand]

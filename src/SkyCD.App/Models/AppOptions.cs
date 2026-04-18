@@ -15,4 +15,8 @@ public sealed class AppOptions
     public string BrowserViewMode { get; set; } = "Details";
 
     public string BrowserSortMode { get; set; } = "Name";
+
+    public string PluginPath { get; set; } = string.Empty;
+
+    public string Language { get; set; } = "English";
 }

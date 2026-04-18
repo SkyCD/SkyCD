@@ -1,10 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SkyCD.App.Views;
@@ -12,6 +15,7 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private readonly AppOptionsStore appOptionsStore = new();
+    private readonly RuntimePluginDiscoveryService pluginDiscoveryService = new();
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
@@ -30,6 +34,7 @@ public partial class MainWindow : Window
         {
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
+            subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
         }
 
@@ -38,6 +43,7 @@ public partial class MainWindow : Window
         {
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
+            subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
         }
     }
@@ -144,6 +150,45 @@ public partial class MainWindow : Window
 
         var accepted = await dialog.ShowDialog<bool?>(this);
         e.Complete(accepted == true, e.Dialog.Comments);
+    }
+
+    private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
+    {
+        var options = appOptionsStore.Load();
+        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
+            ? ResolveDefaultPluginPath()
+            : options.PluginPath;
+
+        e.Dialog.PluginPath = pluginPath;
+        if (!string.IsNullOrWhiteSpace(options.Language) &&
+            e.Dialog.Languages.Any(language => language.Equals(options.Language, StringComparison.OrdinalIgnoreCase)))
+        {
+            e.Dialog.SelectedLanguage = options.Language;
+        }
+
+        e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
+        e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        RefreshPlugins(e.Dialog);
+
+        var dialog = new OptionsWindow
+        {
+            DataContext = e.Dialog
+        };
+
+        var accepted = await dialog.ShowDialog<bool?>(this);
+        if (accepted == true)
+        {
+            appOptionsStore.Save(new AppOptions
+            {
+                PluginPath = e.Dialog.PluginPath,
+                Language = e.Dialog.SelectedLanguage
+            });
+        }
+
+        e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
+        e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+
+        e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage);
     }
 
     private async void OnAboutRequested(object? sender, EventArgs e)
@@ -261,5 +306,60 @@ public partial class MainWindow : Window
         return Enum.TryParse<BrowserSortMode>(value, true, out var mode)
             ? mode
             : BrowserSortMode.Name;
+    }
+
+    private async void OnBrowsePluginPathRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select plug-in directory",
+            AllowMultiple = false
+        });
+
+        if (picked.Count == 0)
+        {
+            return;
+        }
+
+        var pickedPath = picked[0].TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(pickedPath))
+        {
+            return;
+        }
+
+        dialogVm.PluginPath = pickedPath;
+        RefreshPlugins(dialogVm);
+    }
+
+    private void OnRefreshPluginsRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        RefreshPlugins(dialogVm);
+    }
+
+    private void RefreshPlugins(OptionsDialogViewModel dialogVm)
+    {
+        var plugins = pluginDiscoveryService.Discover(dialogVm.PluginPath);
+        dialogVm.SetPlugins(plugins);
+    }
+
+    private static string ResolveDefaultPluginPath()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(Environment.CurrentDirectory, "Plugins", "samples"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins", "samples"))
+        };
+
+        return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
     }
 }

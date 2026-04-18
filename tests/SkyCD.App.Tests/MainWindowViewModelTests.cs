@@ -247,6 +247,32 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void OpenOptionsCommand_RaisesRequest_WhenSubscriberIsPresent()
+    {
+        var vm = new MainWindowViewModel();
+        OptionsDialogRequestedEventArgs? request = null;
+        vm.OptionsRequested += (_, args) => request = args;
+
+        vm.OpenOptionsCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal(["English", "Lithuanian"], request!.Dialog.Languages);
+
+        request.Complete(true, @"C:\Plugins", "Lithuanian");
+        Assert.Equal("Options saved (Language: Lithuanian).", vm.StatusText);
+    }
+
+    [Fact]
+    public void OpenOptionsCommand_WithoutSubscriber_UsesFallbackStatus()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.OpenOptionsCommand.Execute(null);
+
+        Assert.Equal("Options dialog is not implemented yet.", vm.StatusText);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
     {
         var vm = new MainWindowViewModel();
