@@ -1,0 +1,96 @@
+using System.IO.Compression;
+using System.Text;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Host;
+using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Sample.Zip;
+
+namespace SkyCD.Plugin.Host.Tests;
+
+public class ZipArchiveIndexPluginTests
+{
+    [Fact]
+    public void OpenFormats_IncludeZip_ButSaveFormatsDoNot()
+    {
+        var service = new FileFormatRoutingService(CreateCatalog());
+
+        var openFormats = service.GetOpenFormats();
+        var saveFormats = service.GetSaveFormats();
+
+        Assert.Contains(openFormats, format => format.FormatId == "skycd-zip" && format.Extensions.Contains(".zip"));
+        Assert.DoesNotContain(saveFormats, format => format.FormatId == "skycd-zip");
+    }
+
+    [Fact]
+    public async Task WriteAsync_IsBlocked_ForReadOnlyZipFormat()
+    {
+        var service = new FileFormatRoutingService(CreateCatalog());
+        await using var stream = new MemoryStream();
+
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "skycd-zip",
+            Target = stream,
+            Payload = new { }
+        }));
+
+        Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ReadAsync_IndexesDeepAndUnicodeEntries_WithMetadata()
+    {
+        var service = new FileFormatRoutingService(CreateCatalog());
+        await using var zipStream = CreateFixtureZip();
+
+        var result = await service.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "skycd-zip",
+            Source = zipStream
+        });
+
+        Assert.True(result.Success);
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+
+        Assert.Contains(rows, row => Equals(row["fullPath"], "root/deep"));
+        Assert.Contains(rows, row => Equals(row["fullPath"], "root/deep/įrašas.txt"));
+        Assert.Contains(rows, row => Equals(row["kind"], "file") && Equals(row["sizeBytes"], "5"));
+        Assert.Contains(rows, row => row.ContainsKey("modifiedUtc"));
+    }
+
+    private static MemoryStream CreateFixtureZip()
+    {
+        var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var first = archive.CreateEntry("root/deep/įrašas.txt");
+            using (var writer = new StreamWriter(first.Open(), new UTF8Encoding(false), leaveOpen: false))
+            {
+                writer.Write("hello");
+            }
+
+            var second = archive.CreateEntry("root/notes.txt");
+            using var secondWriter = new StreamWriter(second.Open(), new UTF8Encoding(false), leaveOpen: false);
+            secondWriter.Write("abc");
+        }
+
+        stream.Position = 0;
+        return stream;
+    }
+
+    private static PluginCatalog CreateCatalog()
+    {
+        var plugin = new ZipArchiveIndexPlugin();
+        var catalog = new PluginCatalog();
+        catalog.SetPlugins(
+        [
+            new DiscoveredPlugin
+            {
+                Plugin = plugin,
+                Capabilities = [plugin]
+            }
+        ]);
+        return catalog;
+    }
+}
