@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Legacy.Cscd\SkyCD.Plugin.Legacy.Cscd.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Legacy.Scd\SkyCD.Plugin.Legacy.Scd.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
   </ItemGroup>
