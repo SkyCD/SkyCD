@@ -1,7 +1,9 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -20,6 +22,29 @@ public class FileFormatRoutingServiceTests
         Assert.Contains(openFormats, format => format.FormatId == "readonly-json");
         Assert.DoesNotContain(saveFormats, format => format.FormatId == "readonly-json");
         Assert.Contains(saveFormats, format => format.FormatId == "rw-json");
+    }
+
+    [Fact]
+    public async Task MenuExecution_GuardsAgainstPluginErrors()
+    {
+        var pluginCatalog = new PluginCatalog();
+        pluginCatalog.SetPlugins(
+        [
+            new DiscoveredPlugin
+            {
+                Plugin = new ThrowingMenuPlugin(),
+                Capabilities = [new ThrowingMenuPlugin()]
+            }
+        ]);
+
+        var menuService = new MenuExtensionService(pluginCatalog);
+        var result = await menuService.ExecuteAsync(
+            "tests.menu.throw",
+            new MenuCommandContext(),
+            timeout: TimeSpan.FromMilliseconds(200));
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.Error);
     }
 
     [Fact]
@@ -127,6 +152,25 @@ public class FileFormatRoutingServiceTests
             await writer.WriteAsync("ok");
             await writer.FlushAsync(cancellationToken);
             return new FileFormatWriteResult { Success = true };
+        }
+    }
+
+    private sealed class ThrowingMenuPlugin : IPlugin, IMenuPluginCapability
+    {
+        public PluginDescriptor Descriptor => new("tests.menu", "Menu Test", new Version(1, 0, 0), new Version(3, 0, 0));
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
+        [
+            new MenuContribution("tests.menu.throw", "Throw", "Tools")
+        ];
+
+        public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("expected test failure");
         }
     }
 }

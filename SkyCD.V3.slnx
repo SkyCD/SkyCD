@@ -2,6 +2,7 @@
   <Folder Name="/Plugins/" />
   <Folder Name="/Plugins/samples/">
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Json/SkyCD.Plugin.Sample.Json.csproj" />
+    <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/SkyCD.App/SkyCD.App.csproj" />

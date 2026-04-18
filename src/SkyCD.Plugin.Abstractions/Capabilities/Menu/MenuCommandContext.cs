@@ -19,4 +19,9 @@ public sealed class MenuCommandContext
     /// Gets optional extension payload from host.
     /// </summary>
     public IReadOnlyDictionary<string, string>? Properties { get; init; }
+
+    /// <summary>
+    /// Gets host actions that plugins are allowed to invoke.
+    /// </summary>
+    public IHostCommandApi? HostApi { get; init; }
 }
