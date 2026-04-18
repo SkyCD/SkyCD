@@ -18,7 +18,11 @@
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
     <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />
+    <Project Path="tests/SkyCD.Migration.Tests/SkyCD.Migration.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/SkyCD.Migration.Cli/SkyCD.Migration.Cli.csproj" />
   </Folder>
 </Solution>
