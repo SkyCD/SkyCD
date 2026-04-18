@@ -15,6 +15,9 @@ Use a **parallel rewrite** with a controlled compatibility bridge for legacy fil
 ### Non-goal
 - No binary compatibility promise for legacy .NET Framework plugins.
 
+### Related Architecture Decisions
+- [Legacy Code Archival Strategy](legacy-code-archival-strategy.md)
+
 ## 3. Target Repository Structure
 ```text
 /

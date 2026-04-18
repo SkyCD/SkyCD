@@ -56,4 +56,48 @@ public class LegacyScdPluginTests
         Assert.Equal(2, parsed.Entries.Count);
         Assert.Equal(@"[Disk]\Folder\File.txt", parsed.Entries[0].Path);
     }
+
+    [Fact]
+    public async Task ReadThenWriteThenReadAsync_RoundTripsFixtureEntries()
+    {
+        var plugin = new LegacyScdPlugin();
+        var samplePath = Path.Combine(AppContext.BaseDirectory, "fixtures", "gamez.scd");
+        var sourceBytes = await File.ReadAllBytesAsync(samplePath);
+        await using var source = new MemoryStream(sourceBytes);
+
+        var firstRead = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-scd",
+            Source = source,
+            FileName = "gamez.scd"
+        });
+
+        Assert.True(firstRead.Success);
+        var parsed = Assert.IsType<LegacyScdCatalog>(firstRead.Payload);
+        Assert.NotEmpty(parsed.Entries);
+
+        await using var serialized = new MemoryStream();
+        var write = await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "legacy-scd",
+            Target = serialized,
+            Payload = parsed,
+            FileName = "gamez.scd"
+        });
+
+        Assert.True(write.Success);
+
+        serialized.Position = 0;
+        var secondRead = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-scd",
+            Source = serialized,
+            FileName = "gamez.scd"
+        });
+
+        Assert.True(secondRead.Success);
+        var reparsed = Assert.IsType<LegacyScdCatalog>(secondRead.Payload);
+        Assert.Equal(parsed.Entries.Count, reparsed.Entries.Count);
+        Assert.Equal(parsed.Entries[0].Path, reparsed.Entries[0].Path);
+    }
 }
