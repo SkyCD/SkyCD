@@ -6,6 +6,8 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly IReadOnlyDictionary<string, IReadOnlyList<BrowserItem>> browserItemsByNodeKey;
+    private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
+    private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private const string DefaultStatusText = "Done.";
 
     public MainWindowViewModel()
@@ -14,14 +16,21 @@ public partial class MainWindowViewModel : ObservableObject
         var musicNode = new BrowserTreeNode("music", "Music", "🎵");
         var projectsNode = new BrowserTreeNode("projects", "Projects", "🗂");
 
+        var libraryNode = new BrowserTreeNode(
+            "library",
+            "Library",
+            "📚",
+            [moviesNode, musicNode, projectsNode],
+            true);
+
         TreeNodes =
         [
-            new BrowserTreeNode(
-                "library",
-                "Library",
-                "📚",
-                [moviesNode, musicNode, projectsNode])
+            libraryNode
         ];
+
+        var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
+        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
 
         browserItemsByNodeKey = new Dictionary<string, IReadOnlyList<BrowserItem>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -212,6 +221,32 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = "About dialog is not implemented yet.";
     }
 
+    [RelayCommand(CanExecute = nameof(CanExpandSelection))]
+    private void ExpandSelection(string? context)
+    {
+        if (!TryResolveContextNode(context, out var targetNode))
+        {
+            return;
+        }
+
+        targetNode.IsExpanded = true;
+        SelectedTreeNode = targetNode;
+        StatusText = $"Expanded {targetNode.Title}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCollapseSelection))]
+    private void CollapseSelection(string? context)
+    {
+        if (!TryResolveContextNode(context, out var targetNode))
+        {
+            return;
+        }
+
+        targetNode.IsExpanded = false;
+        SelectedTreeNode = targetNode;
+        StatusText = $"Collapsed {targetNode.Title}.";
+    }
+
     [RelayCommand]
     private void SetViewMode(string modeKey)
     {
@@ -256,6 +291,67 @@ public partial class MainWindowViewModel : ObservableObject
         };
     }
 
+    private static IEnumerable<BrowserTreeNode> FlattenNodes(IEnumerable<BrowserTreeNode> roots)
+    {
+        foreach (var root in roots)
+        {
+            yield return root;
+            foreach (var child in FlattenNodes(root.Children))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private bool CanExpandSelection(string? context)
+    {
+        return TryResolveContextNode(context, out _);
+    }
+
+    private bool CanCollapseSelection(string? context)
+    {
+        return TryResolveContextNode(context, out _);
+    }
+
+    private bool TryResolveContextNode(string? context, out BrowserTreeNode targetNode)
+    {
+        if (string.Equals(context, "list", StringComparison.OrdinalIgnoreCase) &&
+            TryResolveNodeFromBrowserSelection(out targetNode))
+        {
+            return true;
+        }
+
+        if (SelectedTreeNode is not null)
+        {
+            targetNode = SelectedTreeNode;
+            return true;
+        }
+
+        return TryResolveNodeFromBrowserSelection(out targetNode);
+    }
+
+    private bool TryResolveNodeFromBrowserSelection(out BrowserTreeNode targetNode)
+    {
+        if (SelectedBrowserItem is not null &&
+            SelectedBrowserItem.Type.Equals("Folder", StringComparison.OrdinalIgnoreCase))
+        {
+            if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
+            {
+                return true;
+            }
+
+            var normalizedKey = SelectedBrowserItem.Name.Replace(" ", string.Empty, StringComparison.Ordinal)
+                .ToLowerInvariant();
+            if (treeNodesByKey.TryGetValue(normalizedKey, out targetNode))
+            {
+                return true;
+            }
+        }
+
+        targetNode = null!;
+        return false;
+    }
+
     private void RefreshBrowserItemsForSelection()
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
@@ -284,12 +380,16 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
     {
         RefreshBrowserItemsForSelection();
+        ExpandSelectionCommand.NotifyCanExecuteChanged();
+        CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedBrowserItemChanged(BrowserItem? value)
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        ExpandSelectionCommand.NotifyCanExecuteChanged();
+        CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentViewModeChanged(BrowserViewMode value)

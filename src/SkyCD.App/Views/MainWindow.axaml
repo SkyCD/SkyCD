@@ -135,6 +135,11 @@
                       MinWidth="160"
                       ItemsSource="{Binding TreeNodes}"
                       SelectedItem="{Binding SelectedTreeNode}">
+                <TreeView.Styles>
+                    <Style Selector="TreeViewItem" x:DataType="vm:BrowserTreeNode">
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    </Style>
+                </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -145,8 +150,8 @@
                 </TreeView.ItemTemplate>
                 <TreeView.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="_Expand"/>
-                        <MenuItem Header="C_ollapse"/>
+                        <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="tree"/>
+                        <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="tree"/>
                         <Separator/>
                         <MenuItem Header="_View">
                             <MenuItem Header="Small _Icons"
@@ -313,8 +318,8 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="_Expand"/>
-                        <MenuItem Header="C_ollapse"/>
+                        <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="list"/>
+                        <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="list"/>
                         <Separator/>
                         <MenuItem Header="_View">
                             <MenuItem Header="Small _Icons"
