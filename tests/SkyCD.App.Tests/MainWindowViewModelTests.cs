@@ -222,4 +222,65 @@ public class MainWindowViewModelTests
 
         Assert.True(raised);
     }
+
+    [Fact]
+    public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal(vm.SelectedBrowserItem?.Name, request!.Dialog.Name);
+        Assert.Equal(vm.SelectedBrowserItem?.IconGlyph, request.Dialog.IconGlyph);
+        Assert.Equal(string.Empty, request.Dialog.Comments);
+        Assert.NotEmpty(request.Dialog.InfoProperties);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_Accepted_PersistsCommentsAndMarksDocumentDirty()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        request!.Dialog.Comments = "Updated comment";
+        request.Complete(true, request.Dialog.Comments);
+
+        Assert.True(vm.IsDirtyDocument);
+        Assert.Equal("Done.", vm.StatusText);
+
+        vm.IsDirtyDocument = false;
+        request = null;
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal("Updated comment", request!.Dialog.Comments);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_Canceled_DiscardsCommentChanges()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        request!.Dialog.Comments = "Draft comment";
+        request.Complete(false, request.Dialog.Comments);
+
+        Assert.False(vm.IsDirtyDocument);
+
+        request = null;
+        vm.OpenPropertiesCommand.Execute(null);
+        Assert.NotNull(request);
+        Assert.Equal(string.Empty, request!.Dialog.Comments);
+    }
 }

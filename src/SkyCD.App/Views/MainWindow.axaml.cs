@@ -19,12 +19,14 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
+            subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
         }
 
         subscribedViewModel = DataContext as MainWindowViewModel;
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
+            subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
         }
     }
 
@@ -47,5 +49,16 @@ public partial class MainWindow : Window
             vm.StatusText = "Done.";
             vm.IsDirtyDocument = true;
         }
+    }
+
+    private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
+    {
+        var dialog = new PropertiesWindow
+        {
+            DataContext = e.Dialog
+        };
+
+        var accepted = await dialog.ShowDialog<bool?>(this);
+        e.Complete(accepted == true, e.Dialog.Comments);
     }
 }
