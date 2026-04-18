@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Plugins/" />
   <Folder Name="/Plugins/samples/">
+    <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Scd/SkyCD.Plugin.Legacy.Scd.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Json/SkyCD.Plugin.Sample.Json.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj" />
   </Folder>
@@ -18,6 +19,7 @@
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
     <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />
+    <Project Path="tests/SkyCD.LegacyFormats.Tests/SkyCD.LegacyFormats.Tests.csproj" />
     <Project Path="tests/SkyCD.Migration.Tests/SkyCD.Migration.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj" />
