@@ -8,6 +8,7 @@
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Json/SkyCD.Plugin.Sample.Json.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Zip/SkyCD.Plugin.Sample.Zip.csproj" />
+    <Project Path="Plugins/samples/SkyCD.Plugin.Sample.SevenZip/SkyCD.Plugin.Sample.SevenZip.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/SkyCD.App/SkyCD.App.csproj" />
