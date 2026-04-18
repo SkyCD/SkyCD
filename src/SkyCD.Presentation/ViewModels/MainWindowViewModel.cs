@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -8,6 +9,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, IReadOnlyList<BrowserItem>> browserItemsByNodeKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
+    private readonly List<string> statusTransitions = [];
+    private readonly List<int> progressTransitions = [];
     private const string DefaultStatusText = "Done.";
 
     public MainWindowViewModel()
@@ -108,6 +111,10 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool ShowDetailsColumns => CurrentViewMode == BrowserViewMode.Details;
 
+    public IReadOnlyList<string> StatusTransitions => statusTransitions;
+
+    public IReadOnlyList<int> ProgressTransitions => progressTransitions;
+
     [ObservableProperty]
     private IReadOnlyList<BrowserItem> browserItems = [];
 
@@ -148,22 +155,34 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenCatalog()
     {
+        StartOperation("Loading catalog...");
+        SetProgress(35, "Parsing catalog...");
+        SetProgress(80, "Updating browser...");
+        CompleteOperation();
+
         IsDirtyDocument = true;
-        StatusText = "Opened catalog.";
     }
 
     [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
     private void SaveCatalog()
     {
+        StartOperation("Saving catalog...");
+        SetProgress(40, "Parsing items...");
+        SetProgress(90, "Updating indexes...");
+        CompleteOperation();
+
         IsDirtyDocument = false;
-        StatusText = "Saved catalog.";
     }
 
     [RelayCommand]
     private void SaveCatalogAs()
     {
+        StartOperation("Saving catalog...");
+        SetProgress(50, "Parsing items...");
+        SetProgress(95, "Updating indexes...");
+        CompleteOperation();
+
         IsDirtyDocument = false;
-        StatusText = "Saved catalog as.";
     }
 
     [RelayCommand]
@@ -277,8 +296,10 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Refresh()
     {
+        StartOperation("Updating view...");
+        SetProgress(60, "Parsing catalog...");
         RefreshBrowserItemsForSelection();
-        StatusText = DefaultStatusText;
+        CompleteOperation();
     }
 
     private static string GetViewModeDisplayName(BrowserViewMode viewMode)
@@ -313,7 +334,7 @@ public partial class MainWindowViewModel : ObservableObject
         return TryResolveContextNode(context, out _);
     }
 
-    private bool TryResolveContextNode(string? context, out BrowserTreeNode targetNode)
+    private bool TryResolveContextNode(string? context, [NotNullWhen(true)] out BrowserTreeNode? targetNode)
     {
         if (string.Equals(context, "list", StringComparison.OrdinalIgnoreCase) &&
             TryResolveNodeFromBrowserSelection(out targetNode))
@@ -330,7 +351,7 @@ public partial class MainWindowViewModel : ObservableObject
         return TryResolveNodeFromBrowserSelection(out targetNode);
     }
 
-    private bool TryResolveNodeFromBrowserSelection(out BrowserTreeNode targetNode)
+    private bool TryResolveNodeFromBrowserSelection([NotNullWhen(true)] out BrowserTreeNode? targetNode)
     {
         if (SelectedBrowserItem is not null &&
             SelectedBrowserItem.Type.Equals("Folder", StringComparison.OrdinalIgnoreCase))
@@ -348,7 +369,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
         }
 
-        targetNode = null!;
+        targetNode = null;
         return false;
     }
 
@@ -382,6 +403,46 @@ public partial class MainWindowViewModel : ObservableObject
         RefreshBrowserItemsForSelection();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
+    }
+
+    private void StartOperation(string initialStatus)
+    {
+        statusTransitions.Clear();
+        progressTransitions.Clear();
+        IsProgressVisible = true;
+        ProgressValue = 0;
+        TrackProgress(0);
+        SetStatus(initialStatus);
+    }
+
+    private void SetProgress(int value, string? status = null)
+    {
+        ProgressValue = Math.Clamp(value, 0, 100);
+        TrackProgress(ProgressValue);
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            SetStatus(status);
+        }
+    }
+
+    private void CompleteOperation()
+    {
+        SetProgress(100);
+        SetStatus(DefaultStatusText);
+        IsProgressVisible = false;
+        ProgressValue = 0;
+        TrackProgress(0);
+    }
+
+    private void SetStatus(string value)
+    {
+        StatusText = value;
+        statusTransitions.Add(value);
+    }
+
+    private void TrackProgress(int value)
+    {
+        progressTransitions.Add(value);
     }
 
     partial void OnSelectedBrowserItemChanged(BrowserItem? value)

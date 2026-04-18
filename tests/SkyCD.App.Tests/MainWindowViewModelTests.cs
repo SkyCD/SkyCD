@@ -141,7 +141,7 @@ public class MainWindowViewModelTests
 
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-        Assert.Equal("Saved catalog.", vm.StatusText);
+        Assert.Equal("Done.", vm.StatusText);
     }
 
     [Fact]
@@ -183,5 +183,31 @@ public class MainWindowViewModelTests
         Assert.All(vm.TreeNodes, node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.TreeNodes.SelectMany(node => node.Children), node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.BrowserItems, item => Assert.False(string.IsNullOrWhiteSpace(item.IconGlyph)));
+    }
+
+    [Fact]
+    public void OpenCatalogCommand_TracksLifecycleAndResetsProgressVisuals()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.OpenCatalogCommand.Execute(null);
+
+        Assert.False(vm.IsProgressVisible);
+        Assert.Equal(0, vm.ProgressValue);
+        Assert.Equal("Done.", vm.StatusText);
+        Assert.Equal(["Loading catalog...", "Parsing catalog...", "Updating browser...", "Done."], vm.StatusTransitions);
+        Assert.Equal([0, 35, 80, 100, 0], vm.ProgressTransitions);
+    }
+
+    [Fact]
+    public void RefreshCommand_TracksUpdatingParsingLifecycle()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.RefreshCommand.Execute(null);
+
+        Assert.Equal(["Updating view...", "Parsing catalog...", "Done."], vm.StatusTransitions);
+        Assert.Equal([0, 60, 100, 0], vm.ProgressTransitions);
+        Assert.False(vm.IsProgressVisible);
     }
 }
