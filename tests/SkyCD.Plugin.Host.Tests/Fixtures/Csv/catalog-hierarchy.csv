@@ -1,0 +1,4 @@
+NodeId,ParentId,Kind,Name,SizeBytes
+1,,folder,Root,0
+2,1,folder,"Music, Archive",0
+3,2,file,"Track ""A"".mp3",12345
