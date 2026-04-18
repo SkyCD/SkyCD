@@ -15,6 +15,7 @@ public partial class MainWindowViewModel : ObservableObject
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
+    public event EventHandler? AboutRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
 
     public MainWindowViewModel()
@@ -260,7 +261,14 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenAbout()
     {
-        StatusText = "About dialog is not implemented yet.";
+        if (AboutRequested is null)
+        {
+            StatusText = "About dialog is not implemented yet.";
+            return;
+        }
+
+        AboutRequested.Invoke(this, EventArgs.Empty);
+        StatusText = DefaultStatusText;
     }
 
     [RelayCommand(CanExecute = nameof(CanExpandSelection))]

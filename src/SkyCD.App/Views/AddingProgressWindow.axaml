@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.AddingProgressWindow"
+        x:DataType="vm:AddingProgressDialogViewModel"
+        Width="470"
+        Height="140"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        WindowDecorations="BorderOnly"
+        ShowInTaskbar="False"
+        Title="Adding">
+
+    <Design.DataContext>
+        <vm:AddingProgressDialogViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="10" Margin="16">
+        <TextBlock Text="{Binding OperationText}" TextWrapping="Wrap"/>
+        <ProgressBar Grid.Row="1"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="{Binding ProgressValue}"/>
+    </Grid>
+</Window>

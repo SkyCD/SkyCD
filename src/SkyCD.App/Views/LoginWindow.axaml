@@ -1,0 +1,38 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.LoginWindow"
+        x:DataType="vm:LoginDialogViewModel"
+        Width="380"
+        Height="210"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Server login">
+
+    <Design.DataContext>
+        <vm:LoginDialogViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="*,Auto" Margin="14">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="110,*" ColumnSpacing="10" RowSpacing="8">
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Enter server credentials."/>
+            <TextBlock Grid.Row="1" Text="User name" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Username}"/>
+            <TextBlock Grid.Row="2" Text="Password" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="2" Grid.Column="1" PasswordChar="*" Text="{Binding Password}"/>
+        </Grid>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,12,0,0">
+            <Button Content="OK"
+                    MinWidth="90"
+                    Command="{Binding ConfirmCommand}"/>
+            <Button Content="Cancel"
+                    MinWidth="90"
+                    Click="OnCancelClicked"/>
+        </StackPanel>
+    </Grid>
+</Window>

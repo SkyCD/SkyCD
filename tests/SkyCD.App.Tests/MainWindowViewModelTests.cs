@@ -224,6 +224,29 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void OpenAboutCommand_RaisesAboutRequest_WhenSubscriberIsPresent()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.AboutRequested += (_, _) => raised = true;
+
+        vm.OpenAboutCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.Equal("Done.", vm.StatusText);
+    }
+
+    [Fact]
+    public void OpenAboutCommand_WithoutSubscriber_UsesFallbackStatus()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.OpenAboutCommand.Execute(null);
+
+        Assert.Equal("About dialog is not implemented yet.", vm.StatusText);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
     {
         var vm = new MainWindowViewModel();
