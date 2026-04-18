@@ -11,9 +11,14 @@ public sealed class ModalOpenResult
     public required bool Success { get; init; }
 
     /// <summary>
-    /// Gets optional output payload.
+    /// Gets whether the modal flow was canceled by host timeout/cancellation.
     /// </summary>
-    public object? Output { get; init; }
+    public bool Canceled { get; init; }
+
+    /// <summary>
+    /// Gets optional typed output payload.
+    /// </summary>
+    public ModalPayload? Output { get; init; }
 
     /// <summary>
     /// Gets optional failure message.
