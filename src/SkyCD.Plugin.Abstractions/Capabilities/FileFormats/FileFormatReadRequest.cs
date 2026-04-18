@@ -19,4 +19,9 @@ public sealed class FileFormatReadRequest
     /// Gets optional file name metadata.
     /// </summary>
     public string? FileName { get; init; }
+
+    /// <summary>
+    /// Gets optional progress reporter (0-100).
+    /// </summary>
+    public IProgress<int>? Progress { get; init; }
 }
