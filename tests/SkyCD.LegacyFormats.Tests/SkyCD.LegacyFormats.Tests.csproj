@@ -35,6 +35,12 @@
     <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
