@@ -41,7 +41,7 @@
                     <TextBox Text="{Binding Comments}"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                              MinHeight="250"/>
                 </StackPanel>
             </TabItem>
