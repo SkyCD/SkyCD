@@ -7,8 +7,39 @@ on:
       - feat/**
   pull_request:
 
+concurrency:
+  group: v3-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
+  style:
+    name: Style (.NET format)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+
+      - name: Restore v3 solution
+        run: dotnet restore SkyCD.V3.slnx
+
+      - name: Verify formatting
+        run: dotnet format SkyCD.V3.slnx --verify-no-changes --verbosity minimal
+
   build-test:
+    name: Build & Test (${{ matrix.os }})
+    needs: style
     strategy:
       fail-fast: false
       matrix:
@@ -23,17 +54,30 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
       - name: Restore v3 solution
         run: dotnet restore SkyCD.V3.slnx
 
       - name: Build v3 solution
-        run: dotnet build SkyCD.V3.slnx --configuration Release --no-restore
+        run: dotnet build SkyCD.V3.slnx --configuration Release --no-restore -warnaserror
 
       - name: Test v3 solution
-        run: dotnet test SkyCD.V3.slnx --configuration Release --no-build --verbosity normal
+        run: dotnet test SkyCD.V3.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --results-directory artifacts/test-results/${{ matrix.os }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: artifacts/test-results/${{ matrix.os }}/
 
   license-compliance:
+    name: License Compliance
+    needs: style
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
