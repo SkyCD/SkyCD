@@ -6,6 +6,7 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly IReadOnlyDictionary<string, IReadOnlyList<BrowserItem>> browserItemsByNodeKey;
+    private const string DefaultStatusText = "Done.";
 
     public MainWindowViewModel()
     {
@@ -54,6 +55,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
+    public bool IsDeleteEnabled => SelectedBrowserItem is not null;
+
     public string ProgressText => $"{ProgressValue}%";
 
     public bool IsTilesViewChecked => CurrentViewMode == BrowserViewMode.Tiles;
@@ -77,6 +80,9 @@ public partial class MainWindowViewModel : ObservableObject
     private BrowserTreeNode? selectedTreeNode;
 
     [ObservableProperty]
+    private BrowserItem? selectedBrowserItem;
+
+    [ObservableProperty]
     private BrowserViewMode currentViewMode = BrowserViewMode.Details;
 
     [ObservableProperty]
@@ -89,13 +95,96 @@ public partial class MainWindowViewModel : ObservableObject
     private bool isDirtyDocument;
 
     [ObservableProperty]
-    private string statusText = "Done.";
+    private string statusText = DefaultStatusText;
 
     [ObservableProperty]
     private bool isProgressVisible;
 
     [ObservableProperty]
     private int progressValue;
+
+    [RelayCommand]
+    private void NewCatalog()
+    {
+        IsDirtyDocument = false;
+        StatusText = "Created a new catalog.";
+    }
+
+    [RelayCommand]
+    private void OpenCatalog()
+    {
+        IsDirtyDocument = true;
+        StatusText = "Opened catalog.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
+    private void SaveCatalog()
+    {
+        IsDirtyDocument = false;
+        StatusText = "Saved catalog.";
+    }
+
+    [RelayCommand]
+    private void SaveCatalogAs()
+    {
+        IsDirtyDocument = false;
+        StatusText = "Saved catalog as.";
+    }
+
+    [RelayCommand]
+    private void OpenProperties()
+    {
+        StatusText = "Properties dialog is not implemented yet.";
+    }
+
+    [RelayCommand]
+    private void ExitApplication()
+    {
+        StatusText = "Exit requested.";
+    }
+
+    [RelayCommand]
+    private void AddItem()
+    {
+        IsDirtyDocument = true;
+        StatusText = "Add dialog is not implemented yet.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
+    private void DeleteItem()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        IsDirtyDocument = true;
+        StatusText = $"Deleted {SelectedBrowserItem.Name}.";
+    }
+
+    [RelayCommand]
+    private void OpenOptions()
+    {
+        StatusText = "Options dialog is not implemented yet.";
+    }
+
+    [RelayCommand]
+    private void OpenProjectWebsite()
+    {
+        StatusText = "Open SourceForge project website.";
+    }
+
+    [RelayCommand]
+    private void OpenGithubArea()
+    {
+        StatusText = "Open GitHub project area.";
+    }
+
+    [RelayCommand]
+    private void OpenAbout()
+    {
+        StatusText = "About dialog is not implemented yet.";
+    }
 
     [RelayCommand]
     private void SetViewMode(string modeKey)
@@ -128,7 +217,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void Refresh()
     {
         RefreshBrowserItemsForSelection();
-        StatusText = "Done.";
+        StatusText = DefaultStatusText;
     }
 
     private static string GetViewModeDisplayName(BrowserViewMode viewMode)
@@ -164,6 +253,12 @@ public partial class MainWindowViewModel : ObservableObject
         RefreshBrowserItemsForSelection();
     }
 
+    partial void OnSelectedBrowserItemChanged(BrowserItem? value)
+    {
+        OnPropertyChanged(nameof(IsDeleteEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnCurrentViewModeChanged(BrowserViewMode value)
     {
         OnPropertyChanged(nameof(IsTilesViewChecked));
@@ -182,6 +277,7 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnIsDirtyDocumentChanged(bool value)
     {
         OnPropertyChanged(nameof(IsSaveEnabled));
+        SaveCatalogCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnProgressValueChanged(int value)

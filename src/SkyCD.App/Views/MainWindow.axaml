@@ -18,22 +18,22 @@
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_New" HotKey="Ctrl+N"/>
+                <MenuItem Header="_New" HotKey="Ctrl+N" Command="{Binding NewCatalogCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Open..." HotKey="Ctrl+O"/>
-                <MenuItem Header="_Save" HotKey="Ctrl+S" IsEnabled="{Binding IsSaveEnabled}"/>
-                <MenuItem Header="Save _As..." HotKey="F12"/>
+                <MenuItem Header="_Open..." HotKey="Ctrl+O" Command="{Binding OpenCatalogCommand}"/>
+                <MenuItem Header="_Save" HotKey="Ctrl+S" Command="{Binding SaveCatalogCommand}"/>
+                <MenuItem Header="Save _As..." HotKey="F12" Command="{Binding SaveCatalogAsCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Properties..."/>
+                <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
                 <Separator/>
-                <MenuItem Header="E_xit"/>
+                <MenuItem Header="E_xit" Command="{Binding ExitApplicationCommand}"/>
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="_Add..." HotKey="F2"/>
-                <MenuItem Header="_Delete" HotKey="Delete"/>
+                <MenuItem Header="_Add..." HotKey="F2" Command="{Binding AddItemCommand}"/>
+                <MenuItem Header="_Delete" HotKey="Delete" Command="{Binding DeleteItemCommand}"/>
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="Status _Bar"
+                <MenuItem Header="_StatusBar"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsStatusBarVisible}"/>
                 <Separator/>
@@ -78,21 +78,21 @@
                 <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
             </MenuItem>
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Options..."/>
+                <MenuItem Header="_Options..." Command="{Binding OpenOptionsCommand}"/>
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="Project website in _SourceForge.NET"/>
-                <MenuItem Header="Project area in _GitHub"/>
+                <MenuItem Header="Project website in _SourceForge.NET" Command="{Binding OpenProjectWebsiteCommand}"/>
+                <MenuItem Header="Project area in _GitHub" Command="{Binding OpenGithubAreaCommand}"/>
                 <Separator/>
-                <MenuItem Header="_About..."/>
+                <MenuItem Header="_About..." Command="{Binding OpenAboutCommand}"/>
             </MenuItem>
         </Menu>
 
         <Border DockPanel.Dock="Top" BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Padding="6,4">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="_New" MinWidth="60"/>
-                <Button Content="_Open" MinWidth="60"/>
-                <Button Content="_Save" MinWidth="60" IsEnabled="{Binding IsSaveEnabled}"/>
+                <Button Content="_New" MinWidth="60" Command="{Binding NewCatalogCommand}"/>
+                <Button Content="_Open" MinWidth="60" Command="{Binding OpenCatalogCommand}"/>
+                <Button Content="_Save" MinWidth="60" Command="{Binding SaveCatalogCommand}"/>
             </StackPanel>
         </Border>
 
@@ -157,10 +157,10 @@
                         </MenuItem>
                         <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Add..."/>
-                        <MenuItem Header="_Delete"/>
+                        <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
+                        <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Properties..."/>
+                        <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
                     </ContextMenu>
                 </TreeView.ContextMenu>
             </TreeView>
@@ -171,7 +171,8 @@
                           Background="#CFCFCF"/>
 
             <ListBox Grid.Column="2"
-                     ItemsSource="{Binding BrowserItems}">
+                     ItemsSource="{Binding BrowserItems}"
+                     SelectedItem="{Binding SelectedBrowserItem}">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:BrowserItem">
                         <Grid ColumnDefinitions="*,150,120" Margin="4,2">
@@ -214,10 +215,10 @@
                         </MenuItem>
                         <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Add..."/>
-                        <MenuItem Header="_Delete"/>
+                        <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
+                        <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Properties..."/>
+                        <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
