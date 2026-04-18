@@ -1,0 +1,9 @@
+{
+  "id": "skycd.plugin.sample.yaml",
+  "version": "2.0.0",
+  "minHostVersion": "3.0.0",
+  "assembly": "SkyCD.Plugin.Sample.Yaml.dll",
+  "capabilities": [
+    "file-format"
+  ]
+}

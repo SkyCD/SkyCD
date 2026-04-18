@@ -1,68 +1,29 @@
-name: build and test
+name: dependabot-automerge
 
 on:
   pull_request:
     branches: [ main ]
 
 jobs:
-  build-and-test:
-
-    name: Build & Test on ${{matrix.os}} & .NET ${{ matrix.dotnet }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: 
-#          - ubuntu-latest
-          - windows-latest
-#          - macOS-latest
-        dotnet: 
-          - '5.0.x'
-          - '6.0.x'
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ matrix.dotnet }}
-        
-    - name: Preparing nuget source
-      run: dotnet nuget add source --username SkyCD --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/SkyCD/index.json"        
-
-    - name: Install dependencies
-      run: dotnet restore
-      
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
-    
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
-
   automerge:
     if: ${{ github.actor == 'dependabot[bot]' }}
-    needs: build-and-test
     permissions:
       pull-requests: write
-      contents: write    
+      contents: write
     runs-on: ubuntu-latest
     steps:
-      # This first step will fail if there's no metadata and so the approval
-      # will not occur.
       - name: Dependabot metadata
         id: dependabot-metadata
-        uses: dependabot/fetch-metadata@v2.1.0
+        uses: dependabot/fetch-metadata@v3.0.0
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-      # Here the PR gets approved.
       - name: Approve a PR
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Finally, this sets the PR to allow auto-merging for patch and minor
-      # updates if all checks pass
       - name: Enable auto-merge for Dependabot PRs
-        # if: ${{ steps.dependabot-metadata.outputs.update-type != 'version-update:semver-major' }}
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}                
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

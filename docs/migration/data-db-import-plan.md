@@ -1,7 +1,7 @@
 # Legacy `data.db` Migration Strategy (v2 -> v3)
 
 ## Scope
-This plan defines how legacy SQLite data from `SkyCD/data.db` is imported into the v3 EF Core model.
+This plan defines how legacy SQLite data from `legacy/SkyCD/data.db` is imported into the v3 EF Core model.
 
 ## Legacy Source
 - Table: `list`

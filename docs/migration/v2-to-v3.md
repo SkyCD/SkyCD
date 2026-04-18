@@ -2,6 +2,7 @@
 
 ## Overview
 SkyCD v3 uses a new C#/.NET 10 architecture with EF Core + SQLite schema. Legacy v2 data can be migrated from `data.db`.
+In this repository, the legacy sample database is located at `legacy/SkyCD/data.db`.
 
 ## What is Migrated
 - `list` table records grouped by `AID` -> one v3 `Catalog` per group

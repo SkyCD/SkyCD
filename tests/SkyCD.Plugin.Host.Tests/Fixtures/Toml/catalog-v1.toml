@@ -1,0 +1,17 @@
+[schema]
+version = "skycd.catalog.v1"
+hierarchy = "adjacency-list"
+
+[[nodes]]
+nodeId = "1"
+parentId = ""
+kind = "folder"
+name = "Root"
+sizeBytes = "0"
+
+[[nodes]]
+nodeId = "2"
+parentId = "1"
+kind = "file"
+name = "notes.txt"
+sizeBytes = "16"

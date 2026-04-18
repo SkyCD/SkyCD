@@ -1,0 +1,9 @@
+{
+  "id": "skycd.plugin.sample.toml",
+  "version": "2.0.0",
+  "minHostVersion": "3.0.0",
+  "assembly": "SkyCD.Plugin.Sample.Toml.dll",
+  "capabilities": [
+    "file-format"
+  ]
+}

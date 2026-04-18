@@ -1,0 +1,114 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    name: Style (.NET format)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+
+      - name: Restore solution
+        run: dotnet restore SkyCD.slnx
+
+      - name: Verify formatting
+        run: dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal
+
+  build-test:
+    name: Build & Test (${{ matrix.os }})
+    needs: style
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+
+      - name: Restore solution
+        run: dotnet restore SkyCD.slnx
+
+      - name: Build solution
+        run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
+
+      - name: Test solution
+        run: dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --results-directory artifacts/test-results/${{ matrix.os }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: artifacts/test-results/${{ matrix.os }}/
+
+  license-compliance:
+    name: License Compliance
+    needs: style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install CycloneDX tool
+        shell: pwsh
+        run: |
+          dotnet tool update --global CycloneDX --version 6.1.1
+          "$env:HOME/.dotnet/tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: |
+          dotnet-CycloneDX SkyCD.slnx --output artifacts/licenses --filename bom.json --output-format Json --exclude-test-projects
+
+      - name: Validate dependency license policy
+        shell: pwsh
+        run: |
+          ./tools/scripts/ci/check-license-compliance.ps1 `
+            -SbomPath artifacts/licenses/bom.json `
+            -PolicyPath docs/legal/dependency-license-policy.json `
+            -ReportPath artifacts/licenses/license-compliance.json
+
+      - name: Upload license artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: license-artifacts
+          path: artifacts/licenses/

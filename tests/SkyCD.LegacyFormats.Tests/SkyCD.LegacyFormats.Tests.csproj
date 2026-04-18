@@ -26,7 +26,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd">
+    <None Include="..\..\legacy\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd" Condition="Exists('..\..\legacy\SkyCD\Samples\gamez.scd')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd" Condition="Exists('..\..\legacy\SkyCD\Samples\My Documents.ascd')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd" Condition="Exists('..\..\legacy\SkyCD\Samples\ftpz.ascd')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd" Condition="Exists('..\..\SkyCD\Samples\My Documents.ascd')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd" Condition="Exists('..\..\SkyCD\Samples\ftpz.ascd')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd">

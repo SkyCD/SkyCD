@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "skycd.catalog.v1",
+  "payload": {
+    "title": "Žalias katalogas",
+    "items": [
+      {
+        "name": "Muzika",
+        "count": 42
+      }
+    ]
+  }
+}
