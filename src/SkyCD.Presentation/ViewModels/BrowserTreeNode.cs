@@ -1,9 +1,13 @@
 namespace SkyCD.Presentation.ViewModels;
 
-public sealed record BrowserTreeNode(string Key, string Title, IReadOnlyList<BrowserTreeNode> Children)
+public sealed record BrowserTreeNode(
+    string Key,
+    string Title,
+    string IconGlyph,
+    IReadOnlyList<BrowserTreeNode> Children)
 {
-    public BrowserTreeNode(string key, string title)
-        : this(key, title, [])
+    public BrowserTreeNode(string key, string title, string iconGlyph)
+        : this(key, title, iconGlyph, [])
     {
     }
 }

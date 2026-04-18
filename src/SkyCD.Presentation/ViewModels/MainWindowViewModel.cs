@@ -10,15 +10,16 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel()
     {
-        var moviesNode = new BrowserTreeNode("movies", "Movies");
-        var musicNode = new BrowserTreeNode("music", "Music");
-        var projectsNode = new BrowserTreeNode("projects", "Projects");
+        var moviesNode = new BrowserTreeNode("movies", "Movies", "🎬");
+        var musicNode = new BrowserTreeNode("music", "Music", "🎵");
+        var projectsNode = new BrowserTreeNode("projects", "Projects", "🗂");
 
         TreeNodes =
         [
             new BrowserTreeNode(
                 "library",
                 "Library",
+                "📚",
                 [moviesNode, musicNode, projectsNode])
         ];
 
@@ -26,24 +27,24 @@ public partial class MainWindowViewModel : ObservableObject
         {
             ["library"] =
             [
-                new BrowserItem("Movies", "Folder", "128 items"),
-                new BrowserItem("Music", "Folder", "340 items"),
-                new BrowserItem("Projects", "Folder", "56 items")
+                new BrowserItem("Movies", "Folder", "128 items", "📁"),
+                new BrowserItem("Music", "Folder", "340 items", "📁"),
+                new BrowserItem("Projects", "Folder", "56 items", "📁")
             ],
             ["movies"] =
             [
-                new BrowserItem("Interstellar.mkv", "Video", "12.1 GB"),
-                new BrowserItem("Arrival.mkv", "Video", "9.4 GB")
+                new BrowserItem("Interstellar.mkv", "Video", "12.1 GB", "🎞"),
+                new BrowserItem("Arrival.mkv", "Video", "9.4 GB", "🎞")
             ],
             ["music"] =
             [
-                new BrowserItem("Classical Collection", "Folder", "42 items"),
-                new BrowserItem("Concert-2025.flac", "Audio", "414 MB")
+                new BrowserItem("Classical Collection", "Folder", "42 items", "📁"),
+                new BrowserItem("Concert-2025.flac", "Audio", "414 MB", "🎧")
             ],
             ["projects"] =
             [
-                new BrowserItem("SkyCD v3", "Folder", "11 items"),
-                new BrowserItem("Plugin Benchmarks", "Folder", "6 items")
+                new BrowserItem("SkyCD v3", "Folder", "11 items", "📁"),
+                new BrowserItem("Plugin Benchmarks", "Folder", "6 items", "📁")
             ]
         };
 
@@ -232,20 +233,27 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void RefreshBrowserItemsForSelection()
     {
+        var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         if (!browserItemsByNodeKey.TryGetValue(nodeKey, out var items))
         {
             BrowserItems = [];
+            SelectedBrowserItem = null;
             return;
         }
 
-        BrowserItems = CurrentSortMode switch
+        var refreshedItems = CurrentSortMode switch
         {
             BrowserSortMode.Type => items.OrderBy(static item => item.Type)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
+
+        BrowserItems = refreshedItems;
+        SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
+                                 item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
+                             ?? refreshedItems.FirstOrDefault();
     }
 
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
