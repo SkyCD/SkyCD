@@ -15,9 +15,9 @@ public class PluginDiscoveryServiceTests
 
         var plugins = discovery.DiscoverFromAssembly(Assembly.GetExecutingAssembly(), new Version(3, 0, 0));
 
-        Assert.Single(plugins);
-        Assert.Contains(plugins[0].Capabilities, capability => capability is IMenuPluginCapability);
-        Assert.Contains(plugins[0].Capabilities, capability => capability is IFileFormatPluginCapability);
+        var target = Assert.Single(plugins, plugin => plugin.Plugin.Descriptor.Id == "tests.plugin");
+        Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
+        Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
     }
 
     [Fact]
