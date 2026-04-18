@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.AboutWindow"
+        x:DataType="vm:AboutDialogViewModel"
+        Width="420"
+        Height="260"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="About SkyCD">
+
+    <Design.DataContext>
+        <vm:AboutDialogViewModel ProductName="SkyCD" Version="3.0.0" Website="https://github.com/SkyCD/SkyCD"/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="*,Auto" Margin="16">
+        <StackPanel Spacing="10">
+            <TextBlock Text="{Binding ProductName}" FontSize="24" FontWeight="Bold"/>
+            <TextBlock Text="{Binding Version, StringFormat='Version: {0}'}"/>
+            <TextBlock Text="CD/DVD media catalog manager"/>
+            <TextBlock Text="{Binding Website}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,14,0,0">
+            <Button Content="OK"
+                    MinWidth="90"
+                    Command="{Binding ConfirmCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>
