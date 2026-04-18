@@ -1,0 +1,12 @@
+schemaVersion: skycd.catalog.v1
+payload:
+  - nodeId: "1"
+    parentId: ""
+    kind: folder
+    name: Root
+    sizeBytes: "0"
+  - nodeId: "2"
+    parentId: "1"
+    kind: file
+    name: track.mp3
+    sizeBytes: "42"
