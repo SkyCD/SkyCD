@@ -26,13 +26,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd">
+    <None Include="..\..\legacy\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd">
+    <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd">
+    <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
