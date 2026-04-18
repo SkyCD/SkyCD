@@ -7,6 +7,8 @@ namespace SkyCD.Plugin.Sample.Json;
 
 public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
 {
+    private const string SchemaVersion = "skycd.catalog.v1";
+
     public PluginDescriptor Descriptor => new(
         "skycd.plugin.sample.json",
         "Sample JSON Format Plugin",
@@ -46,12 +48,42 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
         {
             using var reader = new StreamReader(request.Source, Encoding.UTF8, leaveOpen: true);
             var json = await reader.ReadToEndAsync(cancellationToken);
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
 
-            var payload = JsonSerializer.Deserialize<Dictionary<string, object?>>(json);
+            if (!root.TryGetProperty("schemaVersion", out var schemaElement) ||
+                !schemaElement.ValueKind.Equals(JsonValueKind.String))
+            {
+                return new FileFormatReadResult
+                {
+                    Success = false,
+                    Error = "JSON catalog payload is missing required 'schemaVersion'."
+                };
+            }
+
+            var actualSchemaVersion = schemaElement.GetString();
+            if (!SchemaVersion.Equals(actualSchemaVersion, StringComparison.Ordinal))
+            {
+                return new FileFormatReadResult
+                {
+                    Success = false,
+                    Error = $"Unsupported schemaVersion '{actualSchemaVersion}'."
+                };
+            }
+
+            if (!root.TryGetProperty("payload", out var payloadElement))
+            {
+                return new FileFormatReadResult
+                {
+                    Success = false,
+                    Error = "JSON catalog payload is missing required 'payload'."
+                };
+            }
+
             return new FileFormatReadResult
             {
                 Success = true,
-                Payload = payload ?? new Dictionary<string, object?>()
+                Payload = payloadElement.Clone()
             };
         }
         catch (Exception exception)
@@ -68,7 +100,20 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
     {
         try
         {
-            await JsonSerializer.SerializeAsync(request.Target, request.Payload, cancellationToken: cancellationToken);
+            var envelope = new Dictionary<string, object?>
+            {
+                ["schemaVersion"] = SchemaVersion,
+                ["payload"] = request.Payload
+            };
+
+            await JsonSerializer.SerializeAsync(
+                request.Target,
+                envelope,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                },
+                cancellationToken: cancellationToken);
             await request.Target.FlushAsync(cancellationToken);
 
             return new FileFormatWriteResult
