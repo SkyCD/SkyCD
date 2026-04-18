@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Json\SkyCD.Plugin.Sample.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Csv\SkyCD.Plugin.Sample.Csv.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Markdown\SkyCD.Plugin.Sample.Markdown.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Zip\SkyCD.Plugin.Sample.Zip.csproj" />
   </ItemGroup>
 
