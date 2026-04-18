@@ -11,5 +11,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
+    <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
   </Folder>
 </Solution>
