@@ -23,11 +23,13 @@
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Json\SkyCD.Plugin.Sample.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Csv\SkyCD.Plugin.Sample.Csv.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Toml\SkyCD.Plugin.Sample.Toml.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Zip\SkyCD.Plugin.Sample.Zip.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="Fixtures\Csv\catalog-hierarchy.csv">
+    <None Update="Fixtures\Toml\catalog-v1.toml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Fixtures\Json\catalog-v1.json">
