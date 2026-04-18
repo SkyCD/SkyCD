@@ -29,6 +29,8 @@
 
   <ItemGroup>
     <None Update="Fixtures\Csv\catalog-hierarchy.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Fixtures\Yaml\catalog-v1.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
