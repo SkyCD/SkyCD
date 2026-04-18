@@ -3,66 +3,68 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
-        Width="420"
-        Height="430"
-        MinWidth="420"
-        MinHeight="430"
+        Width="411"
+        Height="406"
+        MinWidth="411"
+        MinHeight="406"
+        MaxWidth="411"
+        MaxHeight="406"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Title="Properties">
 
-    <Grid RowDefinitions="*,Auto" Margin="10">
-        <TabControl>
+    <Grid RowDefinitions="*,Auto" Margin="0">
+        <TabControl Margin="0,2,0,0">
             <TabItem Header="General">
-                <StackPanel Margin="12" Spacing="10">
-                    <Grid ColumnDefinitions="40,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6">
-                        <Border Width="32"
-                                Height="32"
-                                BorderBrush="#C0C0C0"
-                                BorderThickness="1"
-                                CornerRadius="3"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Top">
-                            <TextBlock Text="{Binding IconGlyph}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       FontSize="16"/>
-                        </Border>
+                <Grid Margin="10,8,8,6" RowDefinitions="Auto,Auto,*" ColumnDefinitions="32,8,*">
+                    <Border Width="32"
+                            Height="32"
+                            BorderBrush="#C0C0C0"
+                            BorderThickness="1"
+                            VerticalAlignment="Top"
+                            CornerRadius="2">
+                        <TextBlock Text="{Binding IconGlyph}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="16"/>
+                    </Border>
 
-                        <TextBlock Grid.Column="1" Text="Name:"/>
-                        <TextBox Grid.Column="1"
-                                 Grid.Row="1"
-                                 Text="{Binding Name}"
-                                 IsReadOnly="True"/>
-                    </Grid>
+                    <TextBlock Grid.Column="2" Text="Name:" VerticalAlignment="Top"/>
+                    <TextBox Grid.Column="2"
+                             Grid.Row="1"
+                             Margin="0,2,0,0"
+                             Text="{Binding Name}"
+                             IsReadOnly="True"/>
 
-                    <TextBlock Text="Comments:"/>
-                    <TextBox Text="{Binding Comments}"
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Margin="0,14,0,4" Text="Comments:" VerticalAlignment="Top"/>
+                    <TextBox Grid.Row="2"
+                             Grid.ColumnSpan="3"
+                             Margin="0,32,0,0"
+                             Text="{Binding Comments}"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             MinHeight="250"/>
-                </StackPanel>
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                </Grid>
             </TabItem>
 
             <TabItem Header="Info" IsVisible="{Binding HasInfoTab}">
-                <Border Margin="10" BorderBrush="#D8D8D8" BorderThickness="1">
+                <Border Margin="8,6,8,6" BorderBrush="#D8D8D8" BorderThickness="1">
                     <Grid RowDefinitions="Auto,*">
-                        <Grid ColumnDefinitions="190,*" Background="#F5F5F5">
-                            <TextBlock Margin="8,6" Text="Property" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Margin="8,6" Text="Value" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="183,*" Background="#F5F5F5">
+                            <TextBlock Margin="8,5" Text="Property" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" Margin="8,5" Text="Value" FontWeight="SemiBold"/>
                         </Grid>
                         <ListBox Grid.Row="1"
                                  BorderThickness="0"
                                  ItemsSource="{Binding InfoProperties}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PropertiesInfoItem">
-                                    <Grid ColumnDefinitions="190,*" Margin="0,0,0,1">
-                                        <Border BorderBrush="#E2E2E2" BorderThickness="0,0,1,1" Padding="8,5">
+                                    <Grid ColumnDefinitions="183,*" Margin="0,0,0,1">
+                                        <Border BorderBrush="#E2E2E2" BorderThickness="0,0,1,1" Padding="8,4">
                                             <TextBlock Text="{Binding Property}" TextWrapping="Wrap"/>
                                         </Border>
-                                        <Border Grid.Column="1" BorderBrush="#E2E2E2" BorderThickness="0,0,0,1" Padding="8,5">
+                                        <Border Grid.Column="1" BorderBrush="#E2E2E2" BorderThickness="0,0,0,1" Padding="8,4">
                                             <TextBlock Text="{Binding Value}" TextWrapping="Wrap"/>
                                         </Border>
                                     </Grid>
@@ -74,17 +76,29 @@
             </TabItem>
         </TabControl>
 
-        <StackPanel Grid.Row="1"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,10,0,0">
-            <Button Content="OK"
-                    MinWidth="78"
+        <Grid Grid.Row="1"
+              HorizontalAlignment="Right"
+              Margin="0,6,4,4"
+              Width="146"
+              Height="29"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="6">
+            <Button Grid.Column="0"
+                    Content="OK"
+                    Width="67"
+                    Height="23"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    IsDefault="True"
                     Command="{Binding ConfirmCommand}"/>
-            <Button Content="Cancel"
-                    MinWidth="78"
+            <Button Grid.Column="1"
+                    Content="Cancel"
+                    Width="67"
+                    Height="23"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    IsCancel="True"
                     Click="OnCancelClicked"/>
-        </StackPanel>
+        </Grid>
     </Grid>
 </Window>
