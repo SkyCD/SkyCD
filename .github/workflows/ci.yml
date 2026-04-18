@@ -1,4 +1,4 @@
-name: v3-ci
+name: ci
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   pull_request:
 
 concurrency:
-  group: v3-ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   style:
-    name: v3 Style (.NET format)
+    name: Style (.NET format)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,14 +31,14 @@ jobs:
             **/*.csproj
             **/packages.lock.json
 
-      - name: Restore v3 solution
-        run: dotnet restore SkyCD.V3.slnx
+      - name: Restore solution
+        run: dotnet restore SkyCD.slnx
 
       - name: Verify formatting
-        run: dotnet format SkyCD.V3.slnx --verify-no-changes --verbosity minimal
+        run: dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal
 
   build-test:
-    name: v3 Build & Test (${{ matrix.os }})
+    name: Build & Test (${{ matrix.os }})
     needs: style
     strategy:
       fail-fast: false
@@ -59,14 +59,14 @@ jobs:
             **/*.csproj
             **/packages.lock.json
 
-      - name: Restore v3 solution
-        run: dotnet restore SkyCD.V3.slnx
+      - name: Restore solution
+        run: dotnet restore SkyCD.slnx
 
-      - name: Build v3 solution
-        run: dotnet build SkyCD.V3.slnx --configuration Release --no-restore -warnaserror
+      - name: Build solution
+        run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
 
-      - name: Test v3 solution
-        run: dotnet test SkyCD.V3.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --results-directory artifacts/test-results/${{ matrix.os }}
+      - name: Test solution
+        run: dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --results-directory artifacts/test-results/${{ matrix.os }}
 
       - name: Upload test results
         if: always()
@@ -76,7 +76,7 @@ jobs:
           path: artifacts/test-results/${{ matrix.os }}/
 
   license-compliance:
-    name: v3 License Compliance
+    name: License Compliance
     needs: style
     runs-on: ubuntu-latest
     steps:
@@ -96,7 +96,7 @@ jobs:
 
       - name: Generate CycloneDX SBOM (JSON)
         run: |
-          dotnet-CycloneDX SkyCD.V3.slnx --output artifacts/licenses --filename bom.json --output-format Json --exclude-test-projects
+          dotnet-CycloneDX SkyCD.slnx --output artifacts/licenses --filename bom.json --output-format Json --exclude-test-projects
 
       - name: Validate dependency license policy
         shell: pwsh
