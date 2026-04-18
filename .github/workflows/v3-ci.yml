@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   style:
-    name: Style (.NET format)
+    name: v3 Style (.NET format)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,7 +38,7 @@ jobs:
         run: dotnet format SkyCD.V3.slnx --verify-no-changes --verbosity minimal
 
   build-test:
-    name: Build & Test (${{ matrix.os }})
+    name: v3 Build & Test (${{ matrix.os }})
     needs: style
     strategy:
       fail-fast: false
@@ -76,7 +76,7 @@ jobs:
           path: artifacts/test-results/${{ matrix.os }}/
 
   license-compliance:
-    name: License Compliance
+    name: v3 License Compliance
     needs: style
     runs-on: ubuntu-latest
     steps:
