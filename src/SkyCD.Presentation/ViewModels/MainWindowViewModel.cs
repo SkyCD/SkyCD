@@ -74,6 +74,31 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
 
+    public bool IsIconGridMode =>
+        CurrentViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
+
+    public bool IsListLikeMode => !IsIconGridMode;
+
+    public bool IsTilesMode => CurrentViewMode == BrowserViewMode.Tiles;
+
+    public double BrowserIconFontSize => CurrentViewMode switch
+    {
+        BrowserViewMode.SmallIcons => 14,
+        BrowserViewMode.LargeIcons => 24,
+        BrowserViewMode.Tiles => 20,
+        _ => 16
+    };
+
+    public double BrowserGridItemWidth => CurrentViewMode switch
+    {
+        BrowserViewMode.SmallIcons => 120,
+        BrowserViewMode.LargeIcons => 170,
+        BrowserViewMode.Tiles => 300,
+        _ => 220
+    };
+
+    public bool ShowDetailsColumns => CurrentViewMode == BrowserViewMode.Details;
+
     [ObservableProperty]
     private IReadOnlyList<BrowserItem> browserItems = [];
 
@@ -274,6 +299,12 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsLargeIconsViewChecked));
         OnPropertyChanged(nameof(IsListViewChecked));
         OnPropertyChanged(nameof(IsDetailsViewChecked));
+        OnPropertyChanged(nameof(IsIconGridMode));
+        OnPropertyChanged(nameof(IsListLikeMode));
+        OnPropertyChanged(nameof(IsTilesMode));
+        OnPropertyChanged(nameof(BrowserIconFontSize));
+        OnPropertyChanged(nameof(BrowserGridItemWidth));
+        OnPropertyChanged(nameof(ShowDetailsColumns));
     }
 
     partial void OnCurrentSortModeChanged(BrowserSortMode value)
