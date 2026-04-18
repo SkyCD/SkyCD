@@ -24,6 +24,9 @@
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Json\SkyCD.Plugin.Sample.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Csv\SkyCD.Plugin.Sample.Csv.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Xml\SkyCD.Plugin.Sample.Xml.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Iso\SkyCD.Plugin.Sample.Iso.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Modal\SkyCD.Plugin.Sample.Modal.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Yaml\SkyCD.Plugin.Sample.Yaml.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Zip\SkyCD.Plugin.Sample.Zip.csproj" />
   </ItemGroup>
 
