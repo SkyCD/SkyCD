@@ -7,44 +7,221 @@
         x:Class="SkyCD.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="SkyCD v3">
+        MinWidth="700"
+        MinHeight="450"
+        Title="SkyCD">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,*,Auto">
-        <Border Grid.ColumnSpan="2" Background="#1e293b" Padding="14,10">
-            <TextBlock Text="SkyCD v3 Shell" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-        </Border>
+    <DockPanel LastChildFill="True">
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" HotKey="Ctrl+N"/>
+                <Separator/>
+                <MenuItem Header="_Open..." HotKey="Ctrl+O"/>
+                <MenuItem Header="_Save" HotKey="Ctrl+S" IsEnabled="{Binding IsSaveEnabled}"/>
+                <MenuItem Header="Save _As..." HotKey="F12"/>
+                <Separator/>
+                <MenuItem Header="_Properties..."/>
+                <Separator/>
+                <MenuItem Header="E_xit"/>
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Add..." HotKey="F2"/>
+                <MenuItem Header="_Delete" HotKey="Delete"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Status _Bar"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsStatusBarVisible}"/>
+                <Separator/>
+                <MenuItem Header="_Tiles"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="Tiles"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsTilesViewChecked}"/>
+                <MenuItem Header="Small _Icons"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="SmallIcons"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsSmallIconsViewChecked}"/>
+                <MenuItem Header="L_arge Icons"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="LargeIcons"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsLargeIconsViewChecked}"/>
+                <MenuItem Header="_List"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="List"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsListViewChecked}"/>
+                <MenuItem Header="_Details"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="Details"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsDetailsViewChecked}"/>
+                <Separator/>
+                <MenuItem Header="Arrange Icons By">
+                    <MenuItem Header="_Name"
+                              Command="{Binding SetSortModeCommand}"
+                              CommandParameter="Name"
+                              ToggleType="CheckBox"
+                              IsChecked="{Binding IsSortByNameChecked}"/>
+                    <MenuItem Header="_Type"
+                              Command="{Binding SetSortModeCommand}"
+                              CommandParameter="Type"
+                              ToggleType="CheckBox"
+                              IsChecked="{Binding IsSortByTypeChecked}"/>
+                </MenuItem>
+                <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Tools">
+                <MenuItem Header="_Options..."/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="Project website in _SourceForge.NET"/>
+                <MenuItem Header="Project area in _GitHub"/>
+                <Separator/>
+                <MenuItem Header="_About..."/>
+            </MenuItem>
+        </Menu>
 
-        <Border Grid.Row="1" Background="#f1f5f9" Padding="12" BorderBrush="#cbd5e1" BorderThickness="0,0,1,0">
-            <StackPanel Spacing="8">
-                <TextBlock Text="Navigation" FontWeight="SemiBold"/>
-                <ListBox ItemsSource="{Binding NavigationItems}" SelectedItem="{Binding SelectedItem}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ShellNavigationItem">
-                            <TextBlock Text="{Binding Title}"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+        <Border DockPanel.Dock="Top" BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Padding="6,4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="_New" MinWidth="60"/>
+                <Button Content="_Open" MinWidth="60"/>
+                <Button Content="_Save" MinWidth="60" IsEnabled="{Binding IsSaveEnabled}"/>
             </StackPanel>
         </Border>
 
-        <StackPanel Grid.Column="1" Grid.Row="1" Margin="18" Spacing="12">
-            <TextBlock Text="{Binding CurrentPageTitle}" FontSize="22" FontWeight="Bold"/>
-            <TextBlock Text="{Binding CurrentPageDescription}" FontSize="14" TextWrapping="Wrap"/>
-
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
-                <Button Content="Catalog" Command="{Binding NavigateCommand}" CommandParameter="catalog"/>
-                <Button Content="Plugins" Command="{Binding NavigateCommand}" CommandParameter="plugins"/>
-                <Button Content="Settings" Command="{Binding NavigateCommand}" CommandParameter="settings"/>
-            </StackPanel>
-        </StackPanel>
-
-        <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#e2e8f0" Padding="10,8">
-            <TextBlock Text="Bootstrap shell for Avalonia + .NET 10 migration (Issue #61)." FontSize="12"/>
+        <Border DockPanel.Dock="Bottom"
+                IsVisible="{Binding IsStatusBarVisible}"
+                BorderBrush="#D4D4D4"
+                BorderThickness="1,1,0,0"
+                Padding="8,4">
+            <Grid ColumnDefinitions="*,Auto,120" ColumnSpacing="10">
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ProgressText}"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding IsProgressVisible}"/>
+                <ProgressBar Grid.Column="2"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="{Binding ProgressValue}"
+                             IsVisible="{Binding IsProgressVisible}"/>
+            </Grid>
         </Border>
-    </Grid>
+
+        <Grid ColumnDefinitions="220,3,*" RowDefinitions="*">
+            <TreeView Grid.Column="0"
+                      ItemsSource="{Binding TreeNodes}"
+                      SelectedItem="{Binding SelectedTreeNode}">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
+                        <TextBlock Text="{Binding Title}"/>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+                <TreeView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="_Expand"/>
+                        <MenuItem Header="C_ollapse"/>
+                        <Separator/>
+                        <MenuItem Header="_View">
+                            <MenuItem Header="Small _Icons"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="SmallIcons"/>
+                            <MenuItem Header="L_arge Icons"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="LargeIcons"/>
+                            <MenuItem Header="_List"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="List"/>
+                            <MenuItem Header="_Details"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="Details"/>
+                            <MenuItem Header="_Tiles"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="Tiles"/>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="Arrange Icons By">
+                            <MenuItem Header="_Name"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Name"/>
+                            <MenuItem Header="_Type"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Type"/>
+                        </MenuItem>
+                        <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="_Add..."/>
+                        <MenuItem Header="_Delete"/>
+                        <Separator/>
+                        <MenuItem Header="_Properties..."/>
+                    </ContextMenu>
+                </TreeView.ContextMenu>
+            </TreeView>
+
+            <GridSplitter Grid.Column="1"
+                          Width="3"
+                          ResizeDirection="Columns"
+                          Background="#CFCFCF"/>
+
+            <ListBox Grid.Column="2"
+                     ItemsSource="{Binding BrowserItems}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BrowserItem">
+                        <Grid ColumnDefinitions="*,150,120" Margin="4,2">
+                            <TextBlock Text="{Binding Name}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Type}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Size}" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="_Expand"/>
+                        <MenuItem Header="C_ollapse"/>
+                        <Separator/>
+                        <MenuItem Header="_View">
+                            <MenuItem Header="Small _Icons"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="SmallIcons"/>
+                            <MenuItem Header="L_arge Icons"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="LargeIcons"/>
+                            <MenuItem Header="_List"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="List"/>
+                            <MenuItem Header="_Details"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="Details"/>
+                            <MenuItem Header="_Tiles"
+                                      Command="{Binding SetViewModeCommand}"
+                                      CommandParameter="Tiles"/>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="Arrange Icons By">
+                            <MenuItem Header="_Name"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Name"/>
+                            <MenuItem Header="_Type"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Type"/>
+                        </MenuItem>
+                        <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="_Add..."/>
+                        <MenuItem Header="_Delete"/>
+                        <Separator/>
+                        <MenuItem Header="_Properties..."/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
+        </Grid>
+    </DockPanel>
 
 </Window>
