@@ -21,10 +21,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Html\SkyCD.Plugin.Sample.Html.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Json\SkyCD.Plugin.Sample.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Csv\SkyCD.Plugin.Sample.Csv.csproj" />
 <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Markdown\SkyCD.Plugin.Sample.Markdown.csproj" />
+<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Toml\SkyCD.Plugin.Sample.Toml.csproj" />
 <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Tar\SkyCD.Plugin.Sample.Tar.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Modal\SkyCD.Plugin.Sample.Modal.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Xml\SkyCD.Plugin.Sample.Xml.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Iso\SkyCD.Plugin.Sample.Iso.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Yaml\SkyCD.Plugin.Sample.Yaml.csproj" />
@@ -33,6 +36,9 @@
 
   <ItemGroup>
     <None Update="Fixtures\Csv\catalog-hierarchy.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Fixtures\Toml\catalog-v1.toml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Fixtures\Xml\catalog-v1.xml">
@@ -45,5 +51,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>
