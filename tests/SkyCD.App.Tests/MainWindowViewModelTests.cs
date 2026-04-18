@@ -97,6 +97,35 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void ExpandAndCollapseSelectionCommand_UpdatesSelectedTreeNodeExpansion()
+    {
+        var vm = new MainWindowViewModel();
+        var moviesNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
+        vm.SelectedTreeNode = moviesNode;
+
+        vm.ExpandSelectionCommand.Execute("tree");
+        Assert.True(moviesNode.IsExpanded);
+        Assert.Equal("movies", vm.SelectedTreeNode?.Key);
+
+        vm.CollapseSelectionCommand.Execute("tree");
+        Assert.False(moviesNode.IsExpanded);
+        Assert.Equal("movies", vm.SelectedTreeNode?.Key);
+    }
+
+    [Fact]
+    public void ExpandSelectionCommand_FromListContext_TargetsMatchingFolderNode()
+    {
+        var vm = new MainWindowViewModel();
+        var moviesFolder = vm.BrowserItems.Single(item => item.Name == "Movies");
+
+        vm.SelectedBrowserItem = moviesFolder;
+        vm.ExpandSelectionCommand.Execute("list");
+
+        Assert.Equal("movies", vm.SelectedTreeNode?.Key);
+        Assert.True(vm.SelectedTreeNode?.IsExpanded);
+    }
+
+    [Fact]
     public void OpenThenSave_UpdatesSaveCommandState()
     {
         var vm = new MainWindowViewModel();
@@ -112,7 +141,7 @@ public class MainWindowViewModelTests
 
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-        Assert.Equal("Saved catalog.", vm.StatusText);
+        Assert.Equal("Done.", vm.StatusText);
     }
 
     [Fact]
@@ -154,5 +183,43 @@ public class MainWindowViewModelTests
         Assert.All(vm.TreeNodes, node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.TreeNodes.SelectMany(node => node.Children), node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.BrowserItems, item => Assert.False(string.IsNullOrWhiteSpace(item.IconGlyph)));
+    }
+
+    [Fact]
+    public void OpenCatalogCommand_TracksLifecycleAndResetsProgressVisuals()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.OpenCatalogCommand.Execute(null);
+
+        Assert.False(vm.IsProgressVisible);
+        Assert.Equal(0, vm.ProgressValue);
+        Assert.Equal("Done.", vm.StatusText);
+        Assert.Equal(["Loading catalog...", "Parsing catalog...", "Updating browser...", "Done."], vm.StatusTransitions);
+        Assert.Equal([0, 35, 80, 100, 0], vm.ProgressTransitions);
+    }
+
+    [Fact]
+    public void RefreshCommand_TracksUpdatingParsingLifecycle()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.RefreshCommand.Execute(null);
+
+        Assert.Equal(["Updating view...", "Parsing catalog...", "Done."], vm.StatusTransitions);
+        Assert.Equal([0, 60, 100, 0], vm.ProgressTransitions);
+        Assert.False(vm.IsProgressVisible);
+    }
+
+    [Fact]
+    public void AddItemCommand_RaisesAddToListRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.AddToListRequested += (_, _) => raised = true;
+
+        vm.AddItemCommand.Execute(null);
+
+        Assert.True(raised);
     }
 }
