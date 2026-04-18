@@ -7,4 +7,9 @@ public sealed record ModalDescriptor(
     string ModalId,
     string Title,
     int Width,
-    int Height);
+    int Height,
+    IReadOnlyCollection<string>? RequiredPermissions = null,
+    ModalPayloadContract? InputContract = null,
+    ModalPayloadContract? OutputContract = null,
+    bool IsBlocking = true,
+    bool AllowReentry = false);
