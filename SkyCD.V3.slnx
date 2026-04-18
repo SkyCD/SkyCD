@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Plugins/" />
+  <Folder Name="/Plugins/samples/">
+    <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Json/SkyCD.Plugin.Sample.Json.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SkyCD.App/SkyCD.App.csproj" />
     <Project Path="src/SkyCD.Application/SkyCD.Application.csproj" />
@@ -13,5 +17,6 @@
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
     <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />
+    <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj" />
   </Folder>
 </Solution>
