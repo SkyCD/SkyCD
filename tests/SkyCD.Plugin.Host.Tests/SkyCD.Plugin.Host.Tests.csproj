@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Json\SkyCD.Plugin.Sample.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Csv\SkyCD.Plugin.Sample.Csv.csproj" />
+<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Tar\SkyCD.Plugin.Sample.Tar.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Xml\SkyCD.Plugin.Sample.Xml.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Iso\SkyCD.Plugin.Sample.Iso.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Yaml\SkyCD.Plugin.Sample.Yaml.csproj" />
