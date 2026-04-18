@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<skycd:catalog xmlns:skycd="urn:skycd:catalog" schemaVersion="1.0">
+  <skycd:node nodeId="1" parentId="" kind="folder" name="Root" sizeBytes="0" />
+  <skycd:node nodeId="2" parentId="1" kind="folder" name="Music" sizeBytes="0" />
+  <skycd:node nodeId="3" parentId="2" kind="file" name="Track A.mp3" sizeBytes="12345" />
+</skycd:catalog>

@@ -16,7 +16,8 @@
   - Declares menu contributions and command execution
   - Uses `MenuCommandContext.HostApi` so plugins call host through explicit public APIs only
 - `IModalPluginCapability`
-  - Declares modal descriptors and open handler
+  - Declares modal descriptors with size hints, permission requirements, and typed input/output contracts
+  - Uses `ModalPayload` (`TypeId` + value) for input/output envelopes
 
 ## Runtime Discovery
 - Runtime scans assemblies for classes implementing `IPlugin`.
@@ -26,7 +27,10 @@
 ## Guardrails
 - Host executes menu commands through `MenuExtensionService` with timeout and exception isolation.
 - Plugin exceptions are converted to result failures and should not crash the host UI thread.
+- Host executes modals through `ModalExtensionService` with permission checks, typed payload validation, timeout/cancellation propagation, and reentrancy guards.
 
 ## Sample Plugin
 - `Plugins/samples/SkyCD.Plugin.Sample.Json`
 - Compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
+- `Plugins/samples/SkyCD.Plugin.Sample.Modal`
+- Demonstrates modal registration + typed request/response payload contracts (`IModalPluginCapability`).

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,9 +21,16 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Html\SkyCD.Plugin.Sample.Html.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Json\SkyCD.Plugin.Sample.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Csv\SkyCD.Plugin.Sample.Csv.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.SevenZip\SkyCD.Plugin.Sample.SevenZip.csproj" />
+<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.SevenZip\SkyCD.Plugin.Sample.SevenZip.csproj" />
+<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Toml\SkyCD.Plugin.Sample.Toml.csproj" />
+<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Tar\SkyCD.Plugin.Sample.Tar.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Modal\SkyCD.Plugin.Sample.Modal.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Xml\SkyCD.Plugin.Sample.Xml.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Iso\SkyCD.Plugin.Sample.Iso.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Yaml\SkyCD.Plugin.Sample.Yaml.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Zip\SkyCD.Plugin.Sample.Zip.csproj" />
   </ItemGroup>
 
@@ -31,9 +38,17 @@
     <None Update="Fixtures\Csv\catalog-hierarchy.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Fixtures\Toml\catalog-v1.toml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Fixtures\Xml\catalog-v1.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Fixtures\Yaml\catalog-v1.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Fixtures\Json\catalog-v1.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>
