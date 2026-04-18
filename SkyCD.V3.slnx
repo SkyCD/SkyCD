@@ -8,6 +8,7 @@
 <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Html/SkyCD.Plugin.Sample.Html.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Iso/SkyCD.Plugin.Sample.Iso.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Json/SkyCD.Plugin.Sample.Json.csproj" />
+    <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Markdown/SkyCD.Plugin.Sample.Markdown.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Zip/SkyCD.Plugin.Sample.Zip.csproj" />
 <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Toml/SkyCD.Plugin.Sample.Toml.csproj" />
