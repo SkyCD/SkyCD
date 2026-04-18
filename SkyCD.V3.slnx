@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Plugins/" />
   <Folder Name="/Plugins/samples/">
+    <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Ascd/SkyCD.Plugin.Legacy.Ascd.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Cscd/SkyCD.Plugin.Legacy.Cscd.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Scd/SkyCD.Plugin.Legacy.Scd.csproj" />
     <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Json/SkyCD.Plugin.Sample.Json.csproj" />

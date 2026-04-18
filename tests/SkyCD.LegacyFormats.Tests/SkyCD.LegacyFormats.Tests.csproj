@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Legacy.Ascd\SkyCD.Plugin.Legacy.Ascd.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Legacy.Cscd\SkyCD.Plugin.Legacy.Cscd.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Legacy.Scd\SkyCD.Plugin.Legacy.Scd.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
@@ -26,6 +27,12 @@
 
   <ItemGroup>
     <None Include="..\..\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\SkyCD\Samples\ftpz.ascd" Link="fixtures\ftpz.ascd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
