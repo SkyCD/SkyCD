@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SkyCD.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="SkyCD v3">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,*,Auto">
+        <Border Grid.ColumnSpan="2" Background="#1e293b" Padding="14,10">
+            <TextBlock Text="SkyCD v3 Shell" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+        </Border>
+
+        <Border Grid.Row="1" Background="#f1f5f9" Padding="12" BorderBrush="#cbd5e1" BorderThickness="0,0,1,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Navigation" FontWeight="SemiBold"/>
+                <ListBox ItemsSource="{Binding NavigationItems}" SelectedItem="{Binding SelectedItem}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShellNavigationItem">
+                            <TextBlock Text="{Binding Title}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Column="1" Grid.Row="1" Margin="18" Spacing="12">
+            <TextBlock Text="{Binding CurrentPageTitle}" FontSize="22" FontWeight="Bold"/>
+            <TextBlock Text="{Binding CurrentPageDescription}" FontSize="14" TextWrapping="Wrap"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+                <Button Content="Catalog" Command="{Binding NavigateCommand}" CommandParameter="catalog"/>
+                <Button Content="Plugins" Command="{Binding NavigateCommand}" CommandParameter="plugins"/>
+                <Button Content="Settings" Command="{Binding NavigateCommand}" CommandParameter="settings"/>
+            </StackPanel>
+        </StackPanel>
+
+        <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#e2e8f0" Padding="10,8">
+            <TextBlock Text="Bootstrap shell for Avalonia + .NET 10 migration (Issue #61)." FontSize="12"/>
+        </Border>
+    </Grid>
+
+</Window>
