@@ -425,6 +425,9 @@ public partial class MainWindow : Window
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             appOptionsStore.Save(options);
             ApplyLanguage(options.Language);
+
+            // Trigger UI refresh to apply new language
+            InvalidateVisual();
         }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
