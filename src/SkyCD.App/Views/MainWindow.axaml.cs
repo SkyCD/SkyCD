@@ -40,7 +40,9 @@ public partial class MainWindow : Window
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
             subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
@@ -54,7 +56,9 @@ public partial class MainWindow : Window
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
             subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
@@ -322,6 +326,52 @@ public partial class MainWindow : Window
                 """;
             File.WriteAllText(targetPath, content);
             vm.CompleteSaveCatalog(targetPath);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+        }
+    }
+
+    private async void OnSaveCatalogAsRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save catalog as",
+            SuggestedFileName = "catalog.scd",
+            DefaultExtension = "scd",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("SkyCD Catalog")
+                {
+                    Patterns = ["*.scd"]
+                },
+                new FilePickerFileType("All files")
+                {
+                    Patterns = ["*.*"]
+                }
+            ]
+        });
+
+        var localPath = file?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var content = """
+                # SkyCD catalog placeholder
+                # TODO: replace with full catalog serialization pipeline
+                """;
+            File.WriteAllText(localPath, content);
+            vm.CompleteSaveCatalogAs(localPath);
         }
         catch (Exception ex)
         {

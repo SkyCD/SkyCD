@@ -22,6 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
+    public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
@@ -246,18 +247,36 @@ public partial class MainWindowViewModel : ObservableObject
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog to {Path.GetFileName(filePath)}.";
+        StatusText = $"Saved catalog to {GetDisplayFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 
     [RelayCommand]
     private void SaveCatalogAs()
     {
+        if (SaveCatalogAsRequested is not null)
+        {
+            SaveCatalogAsRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteSaveCatalogAs("catalog.scd");
+    }
+
+    public void CompleteSaveCatalogAs(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
         StartOperation("Saving catalog...");
         SetProgress(50, "Parsing items...");
         SetProgress(95, "Updating indexes...");
         CompleteOperation();
 
+        CurrentCatalogPath = filePath;
+        StatusText = $"Saved catalog as {GetDisplayFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 
@@ -664,6 +683,13 @@ public partial class MainWindowViewModel : ObservableObject
     private static string GetTreeNodeObjectKey(BrowserTreeNode node)
     {
         return $"tree:{node.Key}";
+    }
+
+    private static string GetDisplayFileName(string filePath)
+    {
+        var normalizedPath = filePath.Replace('\\', '/');
+        var fileName = Path.GetFileName(normalizedPath);
+        return string.IsNullOrWhiteSpace(fileName) ? filePath : fileName;
     }
 
     private void RefreshBrowserItemsForSelection()

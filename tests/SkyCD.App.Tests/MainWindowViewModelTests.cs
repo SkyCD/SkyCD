@@ -260,6 +260,16 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void CompleteSaveCatalog_UsesFileNameForUnixStylePath()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.CompleteSaveCatalog("/tmp/catalog.scd");
+
+        Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
     public void DeleteCommand_EnabledOnlyWhenItemIsSelected()
     {
         var vm = new MainWindowViewModel();
@@ -442,6 +452,44 @@ public class MainWindowViewModelTests
         vm.OpenOptionsCommand.Execute(null);
 
         Assert.Equal("Options dialog is not implemented yet.", vm.StatusText);
+    }
+
+    [Fact]
+    public void SaveCatalogAsCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.SaveCatalogAsRequested += (_, _) => raised = true;
+
+        vm.SaveCatalogAsCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.Null(vm.CurrentCatalogPath);
+    }
+
+    [Fact]
+    public void CompleteSaveCatalogAs_SetsCurrentPathAndClearsDirtyFlag()
+    {
+        var vm = new MainWindowViewModel
+        {
+            IsDirtyDocument = true
+        };
+
+        vm.CompleteSaveCatalogAs(@"C:\tmp\catalog.scd");
+
+        Assert.False(vm.IsDirtyDocument);
+        Assert.Equal(@"C:\tmp\catalog.scd", vm.CurrentCatalogPath);
+        Assert.Equal("Saved catalog as catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
+    public void CompleteSaveCatalogAs_UsesFileNameForUnixStylePath()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.CompleteSaveCatalogAs("/tmp/catalog.scd");
+
+        Assert.Equal("Saved catalog as catalog.scd.", vm.StatusText);
     }
 
     [Fact]
