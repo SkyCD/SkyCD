@@ -4,6 +4,7 @@
         Width="430"
         Height="170"
         CanResize="False"
+        CanMinimize="False"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Title="Unsaved Changes">

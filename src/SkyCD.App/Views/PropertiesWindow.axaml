@@ -10,6 +10,7 @@
         MaxWidth="411"
         MaxHeight="426"
         CanResize="False"
+        CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
