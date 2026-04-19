@@ -6,6 +6,9 @@ using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Host;
+using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Runtime.Discovery;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,6 +23,8 @@ public partial class MainWindow : Window
 {
     private readonly AppOptionsStore appOptionsStore = new();
     private readonly RuntimePluginDiscoveryService pluginDiscoveryService = new();
+    private readonly PluginCatalog pluginCatalog = new();
+    private readonly FileFormatRoutingService fileFormatRoutingService;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
@@ -28,6 +33,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        fileFormatRoutingService = new FileFormatRoutingService(pluginCatalog);
+        LoadPluginsForFileFormats();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closing += OnClosing;
@@ -292,22 +299,32 @@ public partial class MainWindow : Window
         var targetPath = vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
+            var saveFormats = fileFormatRoutingService.GetSaveFormats();
+            var fileTypeChoices = new List<FilePickerFileType>();
+
+            foreach (var format in saveFormats)
+            {
+                var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
+                fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
+                {
+                    Patterns = patterns
+                });
+            }
+
+            fileTypeChoices.Add(new FilePickerFileType("All files")
+            {
+                Patterns = ["*.*"]
+            });
+
+            var defaultFormat = saveFormats.FirstOrDefault();
+            var defaultExtension = defaultFormat?.Extensions.FirstOrDefault()?.TrimStart('.') ?? "scd";
+
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Save catalog",
-                SuggestedFileName = "catalog.scd",
-                DefaultExtension = "scd",
-                FileTypeChoices =
-                [
-                    new FilePickerFileType("SkyCD Catalog")
-                    {
-                        Patterns = ["*.scd"]
-                    },
-                    new FilePickerFileType("All files")
-                    {
-                        Patterns = ["*.*"]
-                    }
-                ]
+                SuggestedFileName = $"catalog.{defaultExtension}",
+                DefaultExtension = defaultExtension,
+                FileTypeChoices = fileTypeChoices
             });
 
             targetPath = file?.TryGetLocalPath();
@@ -340,22 +357,32 @@ public partial class MainWindow : Window
             return;
         }
 
+        var saveFormats = fileFormatRoutingService.GetSaveFormats();
+        var fileTypeChoices = new List<FilePickerFileType>();
+
+        foreach (var format in saveFormats)
+        {
+            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
+            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
+            {
+                Patterns = patterns
+            });
+        }
+
+        fileTypeChoices.Add(new FilePickerFileType("All files")
+        {
+            Patterns = ["*.*"]
+        });
+
+        var defaultFormat = saveFormats.FirstOrDefault();
+        var defaultExtension = defaultFormat?.Extensions.FirstOrDefault()?.TrimStart('.') ?? "scd";
+
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save catalog as",
-            SuggestedFileName = "catalog.scd",
-            DefaultExtension = "scd",
-            FileTypeChoices =
-            [
-                new FilePickerFileType("SkyCD Catalog")
-                {
-                    Patterns = ["*.scd"]
-                },
-                new FilePickerFileType("All files")
-                {
-                    Patterns = ["*.*"]
-                }
-            ]
+            SuggestedFileName = $"catalog.{defaultExtension}",
+            DefaultExtension = defaultExtension,
+            FileTypeChoices = fileTypeChoices
         });
 
         var localPath = file?.TryGetLocalPath();
@@ -657,6 +684,40 @@ public partial class MainWindow : Window
         dialogVm.CapturePluginStates();
         var plugins = pluginDiscoveryService.Discover(dialogVm.PluginPath);
         dialogVm.SetPlugins(plugins);
+    }
+
+    private void LoadPluginsForFileFormats()
+    {
+        var options = appOptionsStore.Load();
+        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
+            ? ResolveDefaultPluginPath()
+            : options.PluginPath;
+
+        if (string.IsNullOrWhiteSpace(pluginPath) || !Directory.Exists(pluginPath))
+        {
+            return;
+        }
+
+        var hostVersion = new Version(3, 0, 0);
+        var discoveryService = new SkyCD.Plugin.Runtime.Discovery.PluginDiscoveryService();
+        var discoveredPlugins = new List<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>();
+
+        var dllPaths = Directory.GetFiles(pluginPath, "*.dll", SearchOption.AllDirectories);
+        foreach (var dllPath in dllPaths)
+        {
+            try
+            {
+                var assembly = Assembly.LoadFrom(dllPath);
+                var plugins = discoveryService.DiscoverFromAssembly(assembly, hostVersion);
+                discoveredPlugins.AddRange(plugins);
+            }
+            catch
+            {
+                // Skip assemblies that can't be loaded
+            }
+        }
+
+        pluginCatalog.SetPlugins(discoveredPlugins);
     }
 
     private static string ResolveDefaultPluginPath()
