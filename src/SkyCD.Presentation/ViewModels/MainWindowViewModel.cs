@@ -204,7 +204,17 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void NewCatalog()
     {
-        NewCatalogRequested?.Invoke(this, EventArgs.Empty);
+        if (NewCatalogRequested is not null)
+        {
+            NewCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteNewCatalog();
+    }
+
+    public void CompleteNewCatalog()
+    {
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }
@@ -212,13 +222,23 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenCatalog()
     {
-        OpenCatalogRequested?.Invoke(this, EventArgs.Empty);
+        if (OpenCatalogRequested is not null)
+        {
+            OpenCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteOpenCatalog();
+    }
+
+    public void CompleteOpenCatalog()
+    {
         StartOperation("Loading catalog...");
         SetProgress(35, "Parsing catalog...");
         SetProgress(80, "Updating browser...");
         CompleteOperation();
 
-        IsDirtyDocument = true;
+        IsDirtyDocument = false;
     }
 
     [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
