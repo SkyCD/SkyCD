@@ -16,6 +16,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -306,9 +307,15 @@ public partial class MainWindow : Window
         }
 
         var openFormats = fileFormatRoutingService.GetOpenFormats();
-        var fileTypeChoices = new List<FilePickerFileType>();
+        var fileTypeChoices = new List<FilePickerFileType>
+        {
+            new FilePickerFileType("All supported formats")
+            {
+                Patterns = openFormats.SelectMany(f => f.Extensions).Select(ext => $"*{ext}").ToList()
+            }
+        };
 
-        foreach (var format in openFormats)
+        foreach (var format in openFormats.DistinctBy(f => f.FormatId))
         {
             var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
             fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
@@ -326,7 +333,8 @@ public partial class MainWindow : Window
         {
             Title = "Open catalog",
             AllowMultiple = false,
-            FileTypeFilter = fileTypeChoices
+            FileTypeFilter = fileTypeChoices,
+            SuggestedFileType = fileTypeChoices[0]
         });
 
         if (files.Count == 0)
@@ -360,9 +368,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            // Convert to browser tree nodes
-            var treeNodes = ConvertToBrowserTreeNodes(catalog);
-            var browserDataStore = new InMemoryBrowserDataStore(treeNodes);
+            // Convert to browser tree nodes and items
+            var (treeNodes, itemsByNodeKey) = ConvertToBrowserTreeNodes(catalog);
+            var browserDataStore = new InMemoryBrowserDataStore(treeNodes, itemsByNodeKey);
 
             // Create a new view model with loaded data
             var newVm = new MainWindowViewModel(browserDataStore);
@@ -427,12 +435,86 @@ public partial class MainWindow : Window
         return result.Payload;
     }
 
-    private static IReadOnlyList<BrowserTreeNode> ConvertToBrowserTreeNodes(object catalog)
+    private static (IReadOnlyList<BrowserTreeNode> TreeNodes, Dictionary<string, IReadOnlyList<BrowserItem>> Items) ConvertToBrowserTreeNodes(object catalog)
     {
-        // For any loaded catalog, create a simple root node structure
-        // The actual data is handled by the plugin and stored in the data store
-        var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
-        return [rootNode];
+        var itemsByNodeKey = new Dictionary<string, IReadOnlyList<BrowserItem>>(StringComparer.OrdinalIgnoreCase);
+
+        if (catalog is JsonElement { ValueKind: JsonValueKind.Array } jsonArray)
+        {
+            var rootItems = new List<BrowserItem>();
+            var nodeByPath = new Dictionary<string, BrowserTreeNode>(StringComparer.OrdinalIgnoreCase);
+
+            rootItems.Add(new BrowserItem("All Files", "Folder", $"{jsonArray.GetArrayLength()} items", "folder"));
+            itemsByNodeKey["root"] = rootItems;
+
+            foreach (var element in jsonArray.EnumerateArray())
+            {
+                var name = element.TryGetProperty("Name", out var nameProp) ? nameProp.GetString() ?? "Unknown" : "Unknown";
+                var kind = element.TryGetProperty("Kind", out var kindProp) ? kindProp.GetString() ?? "File" : "File";
+                var sizeStr = "";
+                if (element.TryGetProperty("SizeBytes", out var sizeProp))
+                {
+                    if (sizeProp.ValueKind == JsonValueKind.Number && sizeProp.TryGetInt64(out var sizeBytes))
+                        sizeStr = FormatSize(sizeBytes);
+                    else if (sizeProp.ValueKind == JsonValueKind.String && long.TryParse(sizeProp.GetString(), out var sizeFromStr))
+                        sizeStr = FormatSize(sizeFromStr);
+                }
+
+                var icon = kind.Equals("Folder", StringComparison.OrdinalIgnoreCase) ? "folder" : "file";
+                rootItems.Add(new BrowserItem(name, kind, sizeStr, icon));
+            }
+
+            var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
+            return ([rootNode], itemsByNodeKey);
+        }
+
+        if (catalog is System.Collections.IEnumerable entries)
+        {
+            var entryList = entries.Cast<object>().ToList();
+            var rootItems = new List<BrowserItem>
+            {
+                new BrowserItem("All Files", "Folder", $"{entryList.Count} items", "folder")
+            };
+            itemsByNodeKey["root"] = rootItems;
+
+            foreach (var entry in entryList)
+            {
+                string? name = null;
+                string? path = null;
+                long? size = null;
+
+                var entryType = entry.GetType();
+                var pathProp = entryType.GetProperty("Path");
+                var sizeProp = entryType.GetProperty("SizeBytes");
+
+                if (pathProp is not null)
+                    path = pathProp.GetValue(entry)?.ToString();
+
+                if (sizeProp is not null)
+                    size = sizeProp.GetValue(entry) as long?;
+
+                name = path ?? "Unknown";
+                var isFolder = path?.EndsWith("/") ?? path?.EndsWith("\\") ?? false;
+                var displayName = isFolder ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) : Path.GetFileName(path);
+                var sizeStr = size.HasValue ? FormatSize(size.Value) : "";
+
+                rootItems.Add(new BrowserItem(displayName ?? "Unknown", isFolder ? "Folder" : "File", sizeStr, isFolder ? "folder" : "file"));
+            }
+
+            var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
+            return ([rootNode], itemsByNodeKey);
+        }
+
+        var defaultRootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
+        return ([defaultRootNode], itemsByNodeKey);
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024L * 1024L * 1024L) return $"{bytes / (1024d * 1024d * 1024d):0.##} GB";
+        if (bytes >= 1024L * 1024L) return $"{bytes / (1024d * 1024d):0.##} MB";
+        if (bytes >= 1024L) return $"{bytes / 1024d:0.##} KB";
+        return $"{bytes} B";
     }
 
     private static IReadOnlyList<BrowserTreeNode> GetDefaultTreeNodes()
