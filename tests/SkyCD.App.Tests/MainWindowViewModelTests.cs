@@ -273,9 +273,23 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsDeleteEnabled);
         Assert.True(vm.DeleteItemCommand.CanExecute(null));
 
+        var deletedName = vm.BrowserItems[0].Name;
         vm.DeleteItemCommand.Execute(null);
 
-        Assert.Equal($"Deleted {vm.BrowserItems[0].Name}.", vm.StatusText);
+        Assert.Equal($"Deleted {deletedName}.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteCommand_RemovesItemFromVisibleList()
+    {
+        var vm = new MainWindowViewModel();
+        var originalCount = vm.BrowserItems.Count;
+        var deletedName = vm.SelectedBrowserItem?.Name;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == deletedName);
     }
 
     [Fact]

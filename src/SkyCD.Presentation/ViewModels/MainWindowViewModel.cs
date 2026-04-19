@@ -12,6 +12,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
@@ -307,8 +308,18 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames))
+        {
+            deletedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            deletedItemNamesByNodeKey[nodeKey] = deletedNames;
+        }
+
+        deletedNames.Add(SelectedBrowserItem.Name);
+        var deletedName = SelectedBrowserItem.Name;
+        RefreshBrowserItemsForSelection();
         IsDirtyDocument = true;
-        StatusText = $"Deleted {SelectedBrowserItem.Name}.";
+        StatusText = $"Deleted {deletedName}.";
     }
 
     [RelayCommand]
@@ -637,6 +648,13 @@ public partial class MainWindowViewModel : ObservableObject
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var items = browserDataStore.GetBrowserItems(nodeKey);
+        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
+        {
+            items = items
+                .Where(item => !deletedNames.Contains(item.Name))
+                .ToArray();
+        }
+
         if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
         {
             items = items
