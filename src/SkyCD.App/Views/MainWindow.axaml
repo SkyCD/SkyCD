@@ -85,6 +85,8 @@
             <MenuItem Header="_Edit">
                 <MenuItem Header="_Add..." HotKey="F2" Command="{Binding AddItemCommand}"/>
                 <MenuItem Header="_Delete" HotKey="Delete" Command="{Binding DeleteItemCommand}"/>
+                <Separator/>
+                <MenuItem Header="Propert_ies" HotKey="Alt+Enter" Command="{Binding OpenPropertiesCommand}"/>
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="_StatusBar"
