@@ -15,6 +15,60 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+    <Window.Resources>
+        <ContextMenu x:Key="BrowserContextMenu">
+            <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="list"/>
+            <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="list"/>
+            <Separator/>
+            <MenuItem Header="_View">
+                <MenuItem Header="Small _Icons"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="SmallIcons"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsSmallIconsViewChecked}"/>
+                <MenuItem Header="L_arge Icons"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="LargeIcons"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsLargeIconsViewChecked}"/>
+                <MenuItem Header="_List"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="List"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsListViewChecked}"/>
+                <MenuItem Header="_Details"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="Details"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsDetailsViewChecked}"/>
+                <MenuItem Header="_Tiles"
+                          Command="{Binding SetViewModeCommand}"
+                          CommandParameter="Tiles"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsTilesViewChecked}"/>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Arrange Icons By">
+                <MenuItem Header="_Name"
+                          Command="{Binding SetSortModeCommand}"
+                          CommandParameter="Name"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsSortByNameChecked}"/>
+                <MenuItem Header="_Type"
+                          Command="{Binding SetSortModeCommand}"
+                          CommandParameter="Type"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding IsSortByTypeChecked}"/>
+            </MenuItem>
+            <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
+            <Separator/>
+            <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
+            <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
+            <Separator/>
+            <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
+        </ContextMenu>
+    </Window.Resources>
+
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
@@ -214,90 +268,67 @@
                           Background="#CFCFCF"
                           ShowsPreview="True"/>
 
+            <!-- Details View: tabular list with column headers -->
+            <Grid Grid.Column="2" IsVisible="{Binding IsDetailsMode}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Background="#F0F0F0" Padding="4,2">
+                    <Grid ColumnDefinitions="24,*,150,120">
+                        <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
+                    </Grid>
+                </Border>
+                <ListBox Grid.Row="1"
+                         MinWidth="240"
+                         ItemsSource="{Binding BrowserItems}"
+                         SelectedItem="{Binding SelectedBrowserItem}"
+                         ContextMenu="{DynamicResource BrowserContextMenu}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
+                                <TextBlock Text="{Binding IconGlyph}" FontSize="16"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Type}"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <!-- List View: wrapping simple icon+name layout -->
             <ListBox Grid.Column="2"
                      MinWidth="240"
-                     IsVisible="{Binding IsListLikeMode}"
+                     IsVisible="{Binding IsListMode}"
                      ItemsSource="{Binding BrowserItems}"
-                     SelectedItem="{Binding SelectedBrowserItem}">
+                     SelectedItem="{Binding SelectedBrowserItem}"
+                     ContextMenu="{DynamicResource BrowserContextMenu}">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
-                            <TextBlock Text="{Binding IconGlyph}" FontSize="{Binding $parent[Window].DataContext.BrowserIconFontSize}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                            <TextBlock Grid.Column="2"
-                                       IsVisible="{Binding $parent[Window].DataContext.ShowDetailsColumns}"
-                                       Text="{Binding Type}"/>
-                            <TextBlock Grid.Column="3"
-                                       IsVisible="{Binding $parent[Window].DataContext.ShowDetailsColumns}"
-                                       Text="{Binding Size}"
-                                       HorizontalAlignment="Right"/>
-                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,2">
+                            <TextBlock Text="{Binding IconGlyph}" FontSize="14"/>
+                            <TextBlock Text="{Binding Name}" FontSize="13"/>
+                        </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
-                <ListBox.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="_Expand"/>
-                        <MenuItem Header="C_ollapse"/>
-                        <Separator/>
-                        <MenuItem Header="_View">
-                            <MenuItem Header="Small _Icons"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="SmallIcons"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsSmallIconsViewChecked}"/>
-                            <MenuItem Header="L_arge Icons"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="LargeIcons"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsLargeIconsViewChecked}"/>
-                            <MenuItem Header="_List"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="List"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsListViewChecked}"/>
-                            <MenuItem Header="_Details"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="Details"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsDetailsViewChecked}"/>
-                            <MenuItem Header="_Tiles"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="Tiles"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsTilesViewChecked}"/>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Arrange Icons By">
-                            <MenuItem Header="_Name"
-                                      Command="{Binding SetSortModeCommand}"
-                                      CommandParameter="Name"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsSortByNameChecked}"/>
-                            <MenuItem Header="_Type"
-                                      Command="{Binding SetSortModeCommand}"
-                                      CommandParameter="Type"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsSortByTypeChecked}"/>
-                        </MenuItem>
-                        <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
-                        <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="_Copy" HotKey="Ctrl+C" Command="{Binding CopyCommand}"/>
-                        <MenuItem Header="_Paste" HotKey="Ctrl+V" Command="{Binding PasteCommand}"/>
-                        <MenuItem Header="Cu_t" HotKey="Ctrl+X" Command="{Binding CutCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
-                    </ContextMenu>
-                </ListBox.ContextMenu>
             </ListBox>
 
+            <!-- Icon Grid View: Tiles / Small Icons / Large Icons -->
             <ListBox Grid.Column="2"
                      MinWidth="240"
                      IsVisible="{Binding IsIconGridMode}"
                      ItemsSource="{Binding BrowserItems}"
-                     SelectedItem="{Binding SelectedBrowserItem}">
+                     SelectedItem="{Binding SelectedBrowserItem}"
+                     ContextMenu="{DynamicResource BrowserContextMenu}">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
@@ -306,6 +337,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Width="{Binding $parent[Window].DataContext.BrowserGridItemWidth}"
+                                Height="{Binding $parent[Window].DataContext.BrowserGridItemHeight}"
                                 Margin="6"
                                 Padding="8"
                                 BorderBrush="#D0D0D0"
@@ -318,70 +350,13 @@
                                 <TextBlock Text="{Binding Name}" TextAlignment="Center" TextWrapping="Wrap"/>
                                 <StackPanel Margin="0,4,0,0"
                                             IsVisible="{Binding $parent[Window].DataContext.IsTilesMode}">
-                                    <TextBlock Text="{Binding Type}" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Size}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Type}" HorizontalAlignment="Center" FontSize="12"/>
+                                    <TextBlock Text="{Binding Size}" HorizontalAlignment="Center" FontSize="12"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
-                <ListBox.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="list"/>
-                        <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="list"/>
-                        <Separator/>
-                        <MenuItem Header="_View">
-                            <MenuItem Header="Small _Icons"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="SmallIcons"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsSmallIconsViewChecked}"/>
-                            <MenuItem Header="L_arge Icons"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="LargeIcons"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsLargeIconsViewChecked}"/>
-                            <MenuItem Header="_List"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="List"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsListViewChecked}"/>
-                            <MenuItem Header="_Details"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="Details"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsDetailsViewChecked}"/>
-                            <MenuItem Header="_Tiles"
-                                      Command="{Binding SetViewModeCommand}"
-                                      CommandParameter="Tiles"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsTilesViewChecked}"/>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Arrange Icons By">
-                            <MenuItem Header="_Name"
-                                      Command="{Binding SetSortModeCommand}"
-                                      CommandParameter="Name"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsSortByNameChecked}"/>
-                            <MenuItem Header="_Type"
-                                      Command="{Binding SetSortModeCommand}"
-                                      CommandParameter="Type"
-                                      ToggleType="CheckBox"
-                                      IsChecked="{Binding IsSortByTypeChecked}"/>
-                        </MenuItem>
-                        <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
-                        <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="_Copy" HotKey="Ctrl+C" Command="{Binding CopyCommand}"/>
-                        <MenuItem Header="_Paste" HotKey="Ctrl+V" Command="{Binding PasteCommand}"/>
-                        <MenuItem Header="Cu_t" HotKey="Ctrl+X" Command="{Binding CutCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
-                    </ContextMenu>
-                </ListBox.ContextMenu>
             </ListBox>
         </Grid>
     </DockPanel>
