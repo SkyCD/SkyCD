@@ -131,6 +131,11 @@
                               CommandParameter="Type"
                               ToggleType="CheckBox"
                               IsChecked="{Binding IsSortByTypeChecked}"/>
+                    <MenuItem Header="_Size"
+                              Command="{Binding SetSortModeCommand}"
+                              CommandParameter="Size"
+                              ToggleType="CheckBox"
+                              IsChecked="{Binding IsSortBySizeChecked}"/>
                 </MenuItem>
                 <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
             </MenuItem>
@@ -249,11 +254,20 @@
                                       CommandParameter="Type"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortByTypeChecked}"/>
+                            <MenuItem Header="_Size"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Size"
+                                      ToggleType="CheckBox"
+                                      IsChecked="{Binding IsSortBySizeChecked}"/>
                         </MenuItem>
                         <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
                         <Separator/>
                         <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
                         <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="_Copy" HotKey="Ctrl+C" Command="{Binding CopyCommand}"/>
+                        <MenuItem Header="_Paste" HotKey="Ctrl+V" Command="{Binding PasteCommand}"/>
+                        <MenuItem Header="Cu_t" HotKey="Ctrl+X" Command="{Binding CutCommand}"/>
                         <Separator/>
                         <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
                     </ContextMenu>

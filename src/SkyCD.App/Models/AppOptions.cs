@@ -12,6 +12,8 @@ public sealed class AppOptions
 
     public double? WindowHeight { get; set; }
 
+    public string WindowState { get; set; } = "Normal";
+
     public bool IsStatusBarVisible { get; set; } = true;
 
     public string BrowserViewMode { get; set; } = "Details";

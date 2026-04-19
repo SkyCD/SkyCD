@@ -33,26 +33,53 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
+            subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
+            subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
+            subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
         subscribedViewModel = DataContext as MainWindowViewModel;
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
+            subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
+            subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
+            subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            UpdateWindowTitle();
         }
     }
 
     private void OnExitRequested(object? sender, EventArgs e)
     {
         Close();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.IsDirtyDocument))
+        {
+            UpdateWindowTitle();
+        }
+    }
+
+    private void UpdateWindowTitle()
+    {
+        if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)
+        {
+            Title = "* SkyCD";
+        }
+        else
+        {
+            Title = "SkyCD";
+        }
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -146,6 +173,54 @@ public partial class MainWindow : Window
 
         vm.StatusText = "Done.";
         vm.IsDirtyDocument = true;
+    }
+
+    private async void OnNewCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        if (vm.IsDirtyDocument)
+        {
+            var decision = await ShowUnsavedChangesPromptAsync();
+            if (decision == UnsavedChangesDecision.Cancel)
+            {
+                return;
+            }
+
+            if (decision == UnsavedChangesDecision.Save)
+            {
+                vm.SaveCatalogCommand.Execute(null);
+            }
+        }
+
+        vm.NewCatalogCommand.Execute(null);
+    }
+
+    private async void OnOpenCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        if (vm.IsDirtyDocument)
+        {
+            var decision = await ShowUnsavedChangesPromptAsync();
+            if (decision == UnsavedChangesDecision.Cancel)
+            {
+                return;
+            }
+
+            if (decision == UnsavedChangesDecision.Save)
+            {
+                vm.SaveCatalogCommand.Execute(null);
+            }
+        }
+
+        vm.OpenCatalogCommand.Execute(null);
     }
 
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
@@ -270,12 +345,19 @@ public partial class MainWindow : Window
     private void SaveUiState(MainWindowViewModel vm)
     {
         var options = appOptionsStore.Load();
+
+        // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
             options.WindowLeft = Position.X;
             options.WindowTop = Position.Y;
             options.WindowWidth = Width;
             options.WindowHeight = Height;
+            options.WindowState = "Normal";
+        }
+        else if (WindowState == WindowState.Maximized)
+        {
+            options.WindowState = "Maximized";
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
@@ -298,8 +380,37 @@ public partial class MainWindow : Window
 
         if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
         {
-            Position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
+            var position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
+
+            // Validate position is not off-screen
+            if (IsPositionOnScreen(position))
+            {
+                Position = position;
+            }
         }
+
+        // Restore window state
+        if (string.Equals(options.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase))
+        {
+            WindowState = WindowState.Maximized;
+        }
+    }
+
+    private bool IsPositionOnScreen(PixelPoint position)
+    {
+        var screens = Screens.All;
+        foreach (var screen in screens)
+        {
+            var screenBounds = screen.WorkingArea;
+            if (position.X >= screenBounds.X &&
+                position.Y >= screenBounds.Y &&
+                position.X < screenBounds.Right &&
+                position.Y < screenBounds.Bottom)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static BrowserViewMode ParseBrowserViewMode(string? value)

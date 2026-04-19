@@ -16,6 +16,8 @@ public partial class MainWindowViewModel : ObservableObject
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
+    public event EventHandler? NewCatalogRequested;
+    public event EventHandler? OpenCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
@@ -95,6 +97,8 @@ public partial class MainWindowViewModel : ObservableObject
     public bool IsSortByNameChecked => CurrentSortMode == BrowserSortMode.Name;
 
     public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
+
+    public bool IsSortBySizeChecked => CurrentSortMode == BrowserSortMode.Size;
 
     public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
 
@@ -188,9 +192,19 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private int progressValue;
 
+    [ObservableProperty]
+    private BrowserItem? clipboardItem;
+
+    public bool IsCopyEnabled => SelectedBrowserItem is not null;
+
+    public bool IsPasteEnabled => ClipboardItem is not null;
+
+    public bool IsCutEnabled => SelectedBrowserItem is not null;
+
     [RelayCommand]
     private void NewCatalog()
     {
+        NewCatalogRequested?.Invoke(this, EventArgs.Empty);
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }
@@ -198,6 +212,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenCatalog()
     {
+        OpenCatalogRequested?.Invoke(this, EventArgs.Empty);
         StartOperation("Loading catalog...");
         SetProgress(35, "Parsing catalog...");
         SetProgress(80, "Updating browser...");
@@ -415,6 +430,45 @@ public partial class MainWindowViewModel : ObservableObject
         CompleteOperation();
     }
 
+    [RelayCommand(CanExecute = nameof(IsCopyEnabled))]
+    private void Copy()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        ClipboardItem = SelectedBrowserItem;
+        StatusText = $"Copied {SelectedBrowserItem.Name}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPasteEnabled))]
+    private void Paste()
+    {
+        if (ClipboardItem is null)
+        {
+            return;
+        }
+
+        // In a real implementation, this would add a copy of the item to the current location
+        // For now, we'll just show a status message
+        IsDirtyDocument = true;
+        StatusText = $"Pasted {ClipboardItem.Name}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCutEnabled))]
+    private void Cut()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        ClipboardItem = SelectedBrowserItem;
+        IsDirtyDocument = true;
+        StatusText = $"Cut {SelectedBrowserItem.Name}.";
+    }
+
     public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
@@ -576,6 +630,9 @@ public partial class MainWindowViewModel : ObservableObject
             BrowserSortMode.Type => items.OrderBy(static item => item.Type)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
+            BrowserSortMode.Size => items.OrderBy(static item => item.Size, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
 
@@ -638,8 +695,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
+        OnPropertyChanged(nameof(IsCopyEnabled));
+        OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
@@ -668,6 +729,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
+        OnPropertyChanged(nameof(IsSortBySizeChecked));
     }
 
     partial void OnIsDirtyDocumentChanged(bool value)
@@ -679,5 +741,11 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnProgressValueChanged(int value)
     {
         OnPropertyChanged(nameof(ProgressText));
+    }
+
+    partial void OnClipboardItemChanged(BrowserItem? value)
+    {
+        OnPropertyChanged(nameof(IsPasteEnabled));
+        PasteCommand.NotifyCanExecuteChanged();
     }
 }
