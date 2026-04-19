@@ -310,9 +310,6 @@ public partial class MainWindow : Window
         var fileTypeChoices = new List<FilePickerFileType>
         {
             new FilePickerFileType("All supported formats")
-            {
-                Patterns = openFormats.SelectMany(f => f.Extensions).Select(ext => $"*{ext}").ToList()
-            }
         };
 
         foreach (var format in openFormats.DistinctBy(f => f.FormatId))
