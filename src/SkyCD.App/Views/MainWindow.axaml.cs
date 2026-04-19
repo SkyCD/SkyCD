@@ -161,11 +161,13 @@ public partial class MainWindow : Window
 
         e.Dialog.PluginPath = pluginPath;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
-            e.Dialog.Languages.Any(language => language.Equals(options.Language, StringComparison.OrdinalIgnoreCase)))
+            e.Dialog.Languages.FirstOrDefault(language =>
+                string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
         {
-            e.Dialog.SelectedLanguage = options.Language;
+            e.Dialog.SelectedLanguage = language;
         }
 
+        e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         RefreshPlugins(e.Dialog);
@@ -178,17 +180,16 @@ public partial class MainWindow : Window
         var accepted = await dialog.ShowDialog<bool?>(this);
         if (accepted == true)
         {
-            appOptionsStore.Save(new AppOptions
-            {
-                PluginPath = e.Dialog.PluginPath,
-                Language = e.Dialog.SelectedLanguage
-            });
+            options.PluginPath = e.Dialog.PluginPath;
+            options.Language = e.Dialog.SelectedLanguage.Name;
+            options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
+            appOptionsStore.Save(options);
         }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
 
-        e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage);
+        e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
 
     private async void OnAboutRequested(object? sender, EventArgs e)
@@ -348,6 +349,7 @@ public partial class MainWindow : Window
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
     {
+        dialogVm.CapturePluginStates();
         var plugins = pluginDiscoveryService.Discover(dialogVm.PluginPath);
         dialogVm.SetPlugins(plugins);
     }

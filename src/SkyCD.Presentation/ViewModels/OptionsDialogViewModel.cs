@@ -6,6 +6,8 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel : ObservableObject
 {
+    private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+
     public OptionsDialogViewModel()
         : this(["English", "Lithuanian"])
     {
@@ -89,12 +91,49 @@ public partial class OptionsDialogViewModel : ObservableObject
         Plugins.Clear();
         foreach (var plugin in snapshot)
         {
+            plugin.IsEnabled = !disabledPluginIds.Contains(plugin.Id);
             Plugins.Add(plugin);
         }
 
         SelectedPlugin = Plugins.FirstOrDefault();
         InfoMessage = $"Loaded {Plugins.Count} plugin(s).";
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+    }
+
+    public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
+    {
+        disabledPluginIds.Clear();
+        if (pluginIds is null)
+        {
+            return;
+        }
+
+        foreach (var pluginId in pluginIds.Where(static id => !string.IsNullOrWhiteSpace(id)))
+        {
+            disabledPluginIds.Add(pluginId);
+        }
+    }
+
+    public void CapturePluginStates()
+    {
+        if (Plugins.Count == 0)
+        {
+            return;
+        }
+
+        disabledPluginIds.Clear();
+        foreach (var plugin in Plugins.Where(static plugin => !plugin.IsEnabled))
+        {
+            disabledPluginIds.Add(plugin.Id);
+        }
+    }
+
+    public IReadOnlyList<string> GetDisabledPluginIds()
+    {
+        CapturePluginStates();
+        return disabledPluginIds
+            .OrderBy(static id => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
