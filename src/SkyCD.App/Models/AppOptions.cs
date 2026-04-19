@@ -14,6 +14,8 @@ public sealed class AppOptions
 
     public string WindowState { get; set; } = "Normal";
 
+    public double? TreePaneWidth { get; set; }
+
     public bool IsStatusBarVisible { get; set; } = true;
 
     public string BrowserViewMode { get; set; } = "Details";
