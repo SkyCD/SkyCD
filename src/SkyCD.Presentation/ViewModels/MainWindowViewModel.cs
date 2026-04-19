@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -269,13 +270,37 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenProjectWebsite()
     {
-        StatusText = "Open SourceForge project website.";
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://sourceforge.net/projects/skycd/",
+                UseShellExecute = true
+            });
+            StatusText = "Opening SourceForge project website...";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to open SourceForge website: {ex.Message}";
+        }
     }
 
     [RelayCommand]
     private void OpenGithubArea()
     {
-        StatusText = "Open GitHub project area.";
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/SkyCD/SkyCD",
+                UseShellExecute = true
+            });
+            StatusText = "Opening GitHub project area...";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to open GitHub area: {ex.Message}";
+        }
     }
 
     [RelayCommand]
