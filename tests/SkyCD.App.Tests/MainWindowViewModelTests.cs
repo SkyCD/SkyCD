@@ -238,7 +238,6 @@ public class MainWindowViewModelTests
 
         vm.CurrentCatalogPath = @"C:\tmp\catalog.scd";
         vm.SaveCatalogCommand.Execute(null);
-
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
         Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
