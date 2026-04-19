@@ -75,6 +75,11 @@
                               CommandParameter="Type"
                               ToggleType="CheckBox"
                               IsChecked="{Binding IsSortByTypeChecked}"/>
+                    <MenuItem Header="_Size"
+                              Command="{Binding SetSortModeCommand}"
+                              CommandParameter="Size"
+                              ToggleType="CheckBox"
+                              IsChecked="{Binding IsSortBySizeChecked}"/>
                 </MenuItem>
                 <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
             </MenuItem>
@@ -193,6 +198,11 @@
                                       CommandParameter="Type"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortByTypeChecked}"/>
+                            <MenuItem Header="_Size"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Size"
+                                      ToggleType="CheckBox"
+                                      IsChecked="{Binding IsSortBySizeChecked}"/>
                         </MenuItem>
                         <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
                         <Separator/>
@@ -274,6 +284,11 @@
                                       CommandParameter="Type"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortByTypeChecked}"/>
+                            <MenuItem Header="_Size"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Size"
+                                      ToggleType="CheckBox"
+                                      IsChecked="{Binding IsSortBySizeChecked}"/>
                         </MenuItem>
                         <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
                         <Separator/>
@@ -361,6 +376,11 @@
                                       CommandParameter="Type"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortByTypeChecked}"/>
+                            <MenuItem Header="_Size"
+                                      Command="{Binding SetSortModeCommand}"
+                                      CommandParameter="Size"
+                                      ToggleType="CheckBox"
+                                      IsChecked="{Binding IsSortBySizeChecked}"/>
                         </MenuItem>
                         <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
                         <Separator/>
