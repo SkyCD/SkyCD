@@ -249,7 +249,7 @@ public partial class MainWindowViewModel : ObservableObject
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog as {Path.GetFileName(filePath)}.";
+        StatusText = $"Saved catalog as {GetDisplayFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 
@@ -624,6 +624,13 @@ public partial class MainWindowViewModel : ObservableObject
     private static string GetTreeNodeObjectKey(BrowserTreeNode node)
     {
         return $"tree:{node.Key}";
+    }
+
+    private static string GetDisplayFileName(string filePath)
+    {
+        var normalizedPath = filePath.Replace('\\', '/');
+        var fileName = Path.GetFileName(normalizedPath);
+        return string.IsNullOrWhiteSpace(fileName) ? filePath : fileName;
     }
 
     private void RefreshBrowserItemsForSelection()
