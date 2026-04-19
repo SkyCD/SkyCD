@@ -31,6 +31,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
+    <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
     <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />
     <Project Path="tests/SkyCD.LegacyFormats.Tests/SkyCD.LegacyFormats.Tests.csproj" />
