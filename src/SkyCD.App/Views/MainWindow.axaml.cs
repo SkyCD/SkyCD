@@ -8,8 +8,10 @@ using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SkyCD.App.Views;
@@ -21,6 +23,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
+    private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow()
     {
@@ -145,6 +148,7 @@ public partial class MainWindow : Window
             ParseBrowserViewMode(options.BrowserViewMode),
             ParseBrowserSortMode(options.BrowserSortMode),
             options.IsStatusBarVisible);
+        ApplyLanguage(options.Language);
 
         isSessionStateLoaded = true;
     }
@@ -316,6 +320,7 @@ public partial class MainWindow : Window
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
             appOptionsStore.Save(options);
+            ApplyLanguage(options.Language);
         }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
@@ -410,6 +415,11 @@ public partial class MainWindow : Window
             options.WindowState = "Maximized";
         }
 
+        if (TreePaneColumn.Width.IsAbsolute)
+        {
+            options.TreePaneWidth = TreePaneColumn.Width.Value;
+        }
+
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
         options.BrowserViewMode = vm.CurrentViewMode.ToString();
         options.BrowserSortMode = vm.CurrentSortMode.ToString();
@@ -430,13 +440,15 @@ public partial class MainWindow : Window
 
         if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
         {
-            var position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
+            Position = ClampPositionToVisibleBounds(
+                new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value),
+                Width,
+                Height);
+        }
 
-            // Validate position is not off-screen
-            if (IsPositionOnScreen(position))
-            {
-                Position = position;
-            }
+        if (options.TreePaneWidth is >= 160)
+        {
+            TreePaneColumn.Width = new GridLength(options.TreePaneWidth.Value, GridUnitType.Pixel);
         }
 
         // Restore window state
@@ -446,21 +458,42 @@ public partial class MainWindow : Window
         }
     }
 
-    private bool IsPositionOnScreen(PixelPoint position)
+    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth, double requestedHeight)
     {
-        var screens = Screens.All;
-        foreach (var screen in screens)
+        var windowWidth = Math.Max(1, (int)Math.Round(requestedWidth));
+        var windowHeight = Math.Max(1, (int)Math.Round(requestedHeight));
+
+        foreach (var screen in Screens.All)
         {
-            var screenBounds = screen.WorkingArea;
-            if (position.X >= screenBounds.X &&
-                position.Y >= screenBounds.Y &&
-                position.X < screenBounds.Right &&
-                position.Y < screenBounds.Bottom)
+            if (Intersects(requestedPosition, windowWidth, windowHeight, screen.WorkingArea))
             {
-                return true;
+                return ClampToScreen(requestedPosition, windowWidth, windowHeight, screen.WorkingArea);
             }
         }
-        return false;
+
+        var fallbackScreen = Screens.Primary?.WorkingArea ?? Screens.All.First().WorkingArea;
+        return ClampToScreen(requestedPosition, windowWidth, windowHeight, fallbackScreen);
+    }
+
+    private static bool Intersects(PixelPoint position, int width, int height, PixelRect bounds)
+    {
+        var right = position.X + width;
+        var bottom = position.Y + height;
+
+        return position.X < bounds.Right &&
+               right > bounds.X &&
+               position.Y < bounds.Bottom &&
+               bottom > bounds.Y;
+    }
+
+    private static PixelPoint ClampToScreen(PixelPoint position, int width, int height, PixelRect bounds)
+    {
+        var maxX = Math.Max(bounds.X, bounds.Right - width);
+        var maxY = Math.Max(bounds.Y, bounds.Bottom - height);
+
+        var clampedX = Math.Clamp(position.X, bounds.X, maxX);
+        var clampedY = Math.Clamp(position.Y, bounds.Y, maxY);
+        return new PixelPoint(clampedX, clampedY);
     }
 
     private static BrowserViewMode ParseBrowserViewMode(string? value)
@@ -547,5 +580,16 @@ public partial class MainWindow : Window
         }
 
         return null;
+    }
+
+    private static void ApplyLanguage(string? languageName)
+    {
+        var culture = LanguageCultureResolver.ResolveCulture(languageName);
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        Thread.CurrentThread.CurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
     }
 }

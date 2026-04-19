@@ -192,7 +192,12 @@
             </Grid>
         </Border>
 
-        <Grid ColumnDefinitions="220,4,*" RowDefinitions="*">
+        <Grid x:Name="MainLayoutGrid" RowDefinitions="*">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" MinWidth="160"/>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
             <TreeView Grid.Column="0"
                       MinWidth="160"
                       ItemsSource="{Binding TreeNodes}"
