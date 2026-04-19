@@ -5,28 +5,30 @@ namespace SkyCD.App.Tests;
 public class Issue161UiContractTests
 {
     [Fact]
-    public void MainWindow_UsesSharedFileToolbar()
+    public void MainWindow_UsesSharedClassicToolbar()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
 
-        Assert.Contains("<cc:FileToolbar", xaml, StringComparison.Ordinal);
+        Assert.Contains("<cc:ClassicToolbar", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SharedFileToolbar_HasExactlyNewOpenSaveButtonsInOrder()
+    public void SharedClassicToolbar_UsesItemsCollection()
     {
-        var xaml = ReadRepoFile("src", "SkyCD.UI", "Controls", "FileToolbar.axaml");
+        var controlXaml = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbar.axaml");
+        var controlCode = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbar.axaml.cs");
+        var itemInterface = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "IClassicToolbarItem.cs");
+        var buttonType = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbarButton.cs");
+        var separatorType = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbarSeparator.cs");
+        var appXaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
 
-        var buttonCount = Regex.Matches(xaml, "<Button ").Count;
-        Assert.Equal(3, buttonCount);
-
-        var newIndex = xaml.IndexOf("Text=\"_New\"", StringComparison.Ordinal);
-        var openIndex = xaml.IndexOf("Text=\"_Open\"", StringComparison.Ordinal);
-        var saveIndex = xaml.IndexOf("Text=\"_Save\"", StringComparison.Ordinal);
-
-        Assert.True(newIndex >= 0);
-        Assert.True(openIndex > newIndex);
-        Assert.True(saveIndex > openIndex);
+        Assert.Contains("ItemsSource=\"{Binding Items, ElementName=Root}\"", controlXaml, StringComparison.Ordinal);
+        Assert.Contains("AvaloniaList<IClassicToolbarItem>", controlCode, StringComparison.Ordinal);
+        Assert.Contains("interface IClassicToolbarItem", itemInterface, StringComparison.Ordinal);
+        Assert.Contains("IClassicToolbarItem", buttonType, StringComparison.Ordinal);
+        Assert.Contains("IClassicToolbarItem", separatorType, StringComparison.Ordinal);
+        Assert.Contains("<cc:ClassicToolbar.Items>", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<cc:ClassicToolbarButton", appXaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -34,18 +36,26 @@ public class Issue161UiContractTests
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
-        Assert.Contains("<cc:PropertiesTabControl", xaml, StringComparison.Ordinal);
+        Assert.Contains("<TabControl", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"General\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Properties\"", xaml, StringComparison.Ordinal);
         Assert.Contains("<cc:PropertiesList", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SharedPropertiesList_UsesDetailsHeadersWithoutClickableHeaderControls()
+    public void SharedPropertiesList_UsesDictionaryBasedPropertiesData()
     {
-        var xaml = ReadRepoFile("src", "SkyCD.UI", "Controls", "PropertiesList.axaml");
+        var controlXaml = ReadRepoFile("src", "SkyCD.UI", "Controls", "Properties", "PropertiesList.axaml");
+        var controlCode = ReadRepoFile("src", "SkyCD.UI", "Controls", "Properties", "PropertiesList.axaml.cs");
+        var appXaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
-        Assert.Contains("PropertyHeader", xaml, StringComparison.Ordinal);
-        Assert.Contains("ValueHeader", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("<Button", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding PropertiesRows, ElementName=Root}\"", controlXaml, StringComparison.Ordinal);
+        Assert.Contains("PropertiesDataProperty", controlCode, StringComparison.Ordinal);
+        Assert.Contains("IReadOnlyDictionary<string, object?>", controlCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Button", controlXaml, StringComparison.Ordinal);
+        Assert.Contains("PropertiesData=\"{Binding InfoProperties}\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("PropertyHeader=\"Property\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("ValueHeader=\"Value\"", appXaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -53,9 +63,8 @@ public class Issue161UiContractTests
     {
         var files = new[]
         {
-            ReadRepoFile("src", "SkyCD.UI", "Controls", "FileToolbar.axaml"),
-            ReadRepoFile("src", "SkyCD.UI", "Controls", "PropertiesTabControl.axaml"),
-            ReadRepoFile("src", "SkyCD.UI", "Controls", "PropertiesList.axaml")
+            ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbar.axaml"),
+            ReadRepoFile("src", "SkyCD.UI", "Controls", "Properties", "PropertiesList.axaml")
         };
 
         foreach (var xaml in files)

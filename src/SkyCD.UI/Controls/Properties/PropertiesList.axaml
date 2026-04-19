@@ -20,14 +20,21 @@
             <ListBox Grid.Row="1"
                      BorderThickness="0"
                      SelectionMode="Single"
-                     ItemsSource="{Binding ItemsSource, ElementName=Root}">
+                     ItemsSource="{Binding PropertiesRows, ElementName=Root}">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    </Style>
+                </ListBox.Styles>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Grid ColumnDefinitions="183,*">
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="0,0,1,1"
                                     Padding="8,4">
-                                <TextBlock Text="{Binding Property}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Key}" TextWrapping="Wrap"/>
                             </Border>
                             <Border Grid.Column="1"
                                     BorderBrush="{DynamicResource ThemeBorderLowBrush}"

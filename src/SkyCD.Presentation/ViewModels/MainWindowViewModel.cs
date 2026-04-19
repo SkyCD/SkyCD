@@ -646,7 +646,7 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                []);
+                new Dictionary<string, object?>());
             return true;
         }
 
@@ -654,19 +654,19 @@ public partial class MainWindowViewModel : ObservableObject
         return false;
     }
 
-    private static IReadOnlyList<PropertiesInfoItem> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
+    private static IReadOnlyDictionary<string, object?> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
     {
         if (!SupportsInfoTab(item.Type))
         {
-            return [];
+            return new Dictionary<string, object?>();
         }
 
-        return
-        [
-            new("Type", item.Type),
-            new("Size", item.Size),
-            new("Location", nodeTitle)
-        ];
+        return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase)
+        {
+            ["Type"] = item.Type,
+            ["Size"] = item.Size,
+            ["Location"] = nodeTitle
+        };
     }
 
     private static bool SupportsInfoTab(string? itemType)

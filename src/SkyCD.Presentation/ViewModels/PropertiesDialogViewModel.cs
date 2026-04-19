@@ -11,7 +11,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
         string name,
         string iconGlyph,
         string comments,
-        IReadOnlyList<PropertiesInfoItem> infoProperties)
+        IReadOnlyDictionary<string, object?> infoProperties)
     {
         ObjectKey = objectKey;
         this.name = name;
@@ -27,7 +27,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string IconGlyph { get; }
 
-    public IReadOnlyList<PropertiesInfoItem> InfoProperties { get; }
+    public IReadOnlyDictionary<string, object?> InfoProperties { get; }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 
@@ -43,30 +43,41 @@ public partial class PropertiesDialogViewModel : ObservableObject
         DialogAccepted = true;
     }
 
-    private static IReadOnlyList<PropertiesInfoItem> NormalizeInfoProperties(
-        IReadOnlyList<PropertiesInfoItem> infoProperties)
+    private static IReadOnlyDictionary<string, object?> NormalizeInfoProperties(
+        IReadOnlyDictionary<string, object?> infoProperties)
     {
         return infoProperties
-            .Select(item => new PropertiesInfoItem(
-                item.Property,
-                NormalizeDisplayValue(item.Value)))
-            .OrderBy(item => item.Property, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
+            .OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase)
+            .ToDictionary(
+                item => item.Key,
+                item => (object?)NormalizeDisplayValue(item.Value),
+                StringComparer.CurrentCultureIgnoreCase);
     }
 
-    private static string NormalizeDisplayValue(string? value)
+    private static string NormalizeDisplayValue(object? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (value is null)
         {
             return GetUnknownText();
         }
 
-        if (bool.TryParse(value, out var boolValue))
+        if (value is bool boolValue)
         {
             return boolValue ? GetYesText() : GetNoText();
         }
 
-        return value;
+        var text = value.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return GetUnknownText();
+        }
+
+        if (bool.TryParse(text, out var parsedBool))
+        {
+            return parsedBool ? GetYesText() : GetNoText();
+        }
+
+        return text;
     }
 
     private static string GetUnknownText()

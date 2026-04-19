@@ -8,7 +8,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Constructor_InitializesAllProperties()
     {
-        var infoItems = new[] { new PropertiesInfoItem("Size", "1024 KB") };
+        var infoItems = new Dictionary<string, object?> { ["Size"] = "1024 KB" };
         var vm = new PropertiesDialogViewModel(
             objectKey: "file123",
             name: "document.pdf",
@@ -26,7 +26,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void DialogAccepted_DefaultsToFalse()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", []);
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new Dictionary<string, object?>());
 
         Assert.False(vm.DialogAccepted);
     }
@@ -34,7 +34,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void HasInfoTab_IsTrueWhenInfoPropertiesNotEmpty()
     {
-        var infoItems = new[] { new PropertiesInfoItem("Property", "Value") };
+        var infoItems = new Dictionary<string, object?> { ["Property"] = "Value" };
         var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", infoItems);
 
         Assert.True(vm.HasInfoTab);
@@ -43,7 +43,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void HasInfoTab_IsFalseWhenInfoPropertiesEmpty()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", []);
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new Dictionary<string, object?>());
 
         Assert.False(vm.HasInfoTab);
     }
@@ -51,7 +51,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Comments_CanBeModified()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", []);
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", new Dictionary<string, object?>());
 
         vm.Comments = "updated comments";
 
@@ -61,7 +61,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Name_CanBeModified()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", []);
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", new Dictionary<string, object?>());
 
         vm.Name = "renamed";
 
@@ -71,7 +71,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void ConfirmCommand_SetsDialogAcceptedTrue()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", []);
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new Dictionary<string, object?>());
 
         vm.ConfirmCommand.Execute(null);
 
@@ -86,9 +86,9 @@ public class PropertiesDialogViewModelTests
             "name",
             "icon",
             "comments",
-            [new PropertiesInfoItem("Size", "")]);
+            new Dictionary<string, object?> { ["Size"] = string.Empty });
 
-        Assert.Equal("Unknown", vm.InfoProperties.Single().Value);
+        Assert.Equal("Unknown", vm.InfoProperties["Size"]);
     }
 
     [Fact]
@@ -99,13 +99,14 @@ public class PropertiesDialogViewModelTests
             "name",
             "icon",
             "comments",
-            [
-                new PropertiesInfoItem("Zeta", "1"),
-                new PropertiesInfoItem("Alpha", "2"),
-                new PropertiesInfoItem("Middle", "3")
-            ]);
+            new Dictionary<string, object?>
+            {
+                ["Zeta"] = "1",
+                ["Alpha"] = "2",
+                ["Middle"] = "3"
+            });
 
-        Assert.Equal(["Alpha", "Middle", "Zeta"], vm.InfoProperties.Select(item => item.Property));
+        Assert.Equal(["Alpha", "Middle", "Zeta"], vm.InfoProperties.Keys);
     }
 
     [Fact]
@@ -120,9 +121,9 @@ public class PropertiesDialogViewModelTests
                 "name",
                 "icon",
                 "comments",
-                [new PropertiesInfoItem("Flag", "true")]);
+                new Dictionary<string, object?> { ["Flag"] = true });
 
-            Assert.Equal("Taip", vm.InfoProperties.Single().Value);
+            Assert.Equal("Taip", vm.InfoProperties["Flag"]);
         }
         finally
         {

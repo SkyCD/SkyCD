@@ -18,9 +18,8 @@
         Title="Properties">
 
     <Grid RowDefinitions="*,Auto" Margin="0">
-        <cc:PropertiesTabControl Margin="8,8,8,0"
-                                 HasInfoTab="{Binding HasInfoTab}">
-            <cc:PropertiesTabControl.GeneralContent>
+        <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
+            <TabItem Header="General">
                 <Grid Margin="10,8,10,10" RowDefinitions="Auto,Auto,Auto,*" ColumnDefinitions="32,8,*">
                     <Border Width="32"
                             Height="32"
@@ -49,12 +48,14 @@
                              TextWrapping="Wrap"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                 </Grid>
-            </cc:PropertiesTabControl.GeneralContent>
-            <cc:PropertiesTabControl.InfoContent>
+            </TabItem>
+            <TabItem Header="Properties" IsVisible="{Binding HasInfoTab}">
                 <cc:PropertiesList Margin="8,8,8,10"
-                                   ItemsSource="{Binding InfoProperties}"/>
-            </cc:PropertiesTabControl.InfoContent>
-        </cc:PropertiesTabControl>
+                                   PropertiesData="{Binding InfoProperties}"
+                                   PropertyHeader="Property"
+                                   ValueHeader="Value"/>
+            </TabItem>
+        </TabControl>
 
         <Grid Grid.Row="1"
               HorizontalAlignment="Right"
