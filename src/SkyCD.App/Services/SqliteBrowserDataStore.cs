@@ -108,21 +108,21 @@ public sealed class SqliteBrowserDataStore : IBrowserDataStore, IDisposable
         using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO TreeNodes (Key, ParentKey, Title, IconGlyph) VALUES
-            ('library', NULL, 'Library', '📚'),
-            ('movies', 'library', 'Movies', '🎬'),
-            ('music', 'library', 'Music', '🎵'),
-            ('projects', 'library', 'Projects', '🗂');
+            ('library', NULL, 'Library', 'cd'),
+            ('movies', 'library', 'Movies', 'folder'),
+            ('music', 'library', 'Music', 'folder'),
+            ('projects', 'library', 'Projects', 'folder');
 
             INSERT INTO BrowserItems (NodeKey, Name, Type, Size, IconGlyph) VALUES
-            ('library', 'Movies', 'Folder', '128 items', '📁'),
-            ('library', 'Music', 'Folder', '340 items', '📁'),
-            ('library', 'Projects', 'Folder', '56 items', '📁'),
-            ('movies', 'Interstellar.mkv', 'Video', '12.1 GB', '🎞'),
-            ('movies', 'Arrival.mkv', 'Video', '9.4 GB', '🎞'),
-            ('music', 'Classical Collection', 'Folder', '42 items', '📁'),
-            ('music', 'Concert-2025.flac', 'Audio', '414 MB', '🎧'),
-            ('projects', 'SkyCD v3', 'Folder', '11 items', '📁'),
-            ('projects', 'Plugin Benchmarks', 'Folder', '6 items', '📁');
+            ('library', 'Movies', 'Folder', '128 items', 'folder'),
+            ('library', 'Music', 'Folder', '340 items', 'folder'),
+            ('library', 'Projects', 'Folder', '56 items', 'folder'),
+            ('movies', 'Interstellar.mkv', 'Video', '12.1 GB', 'video'),
+            ('movies', 'Arrival.mkv', 'Video', '9.4 GB', 'video'),
+            ('music', 'Classical Collection', 'Folder', '42 items', 'folder'),
+            ('music', 'Concert-2025.flac', 'Audio', '414 MB', 'audio'),
+            ('projects', 'SkyCD v3', 'Folder', '11 items', 'folder'),
+            ('projects', 'Plugin Benchmarks', 'Folder', '6 items', 'folder');
             """;
         command.ExecuteNonQuery();
     }

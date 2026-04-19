@@ -73,7 +73,7 @@ public class UISmokeTests
         var vm = new PropertiesDialogViewModel(
             "item1",
             "Test Item",
-            "📄",
+            "folder",
             "Test comments",
             new Dictionary<string, object?>());
 
