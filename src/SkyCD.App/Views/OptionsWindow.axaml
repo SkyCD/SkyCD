@@ -34,10 +34,11 @@
                             BorderThickness="1">
                         <Grid RowDefinitions="Auto,*">
                             <Border BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Background="#F5F5F5" Padding="8,6">
-                                <Grid ColumnDefinitions="2*,2*,3*">
-                                    <TextBlock Text="Name" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="1" Text="Type" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="2" Text="Extended Info" FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="Auto,2*,2*,3*">
+                                    <TextBlock Text="Enabled" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="3" Text="Extended Info" FontWeight="SemiBold"/>
                                 </Grid>
                             </Border>
 
@@ -47,10 +48,11 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:OptionsPluginItem">
                                         <Border BorderBrush="#E6E6E6" BorderThickness="0,0,0,1" Padding="8,5">
-                                            <Grid ColumnDefinitions="2*,2*,3*">
-                                                <TextBlock Text="{Binding Name}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Type}"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding ExtendedInfo}"/>
+                                            <Grid ColumnDefinitions="Auto,2*,2*,3*">
+                                                <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Type}"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding ExtendedInfo}"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
