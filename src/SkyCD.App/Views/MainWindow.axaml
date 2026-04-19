@@ -153,22 +153,69 @@
         <Border DockPanel.Dock="Top" BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Padding="4,3">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
+                    <ToolTip.Tip>Create new catalog (Ctrl+N)</ToolTip.Tip>
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Width="14" Height="14" Data="M2,1 H8 L12,5 V15 H2 Z M8,1 V5 H12 M4,9 H10 M4,12 H10"/>
                         <TextBlock Text="_New"/>
                     </StackPanel>
                 </Button>
                 <Button MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
+                    <ToolTip.Tip>Open catalog (Ctrl+O)</ToolTip.Tip>
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Width="14" Height="14" Data="M1,5 H6 L7.5,3 H15 V13 H1 Z M1,7 H15"/>
                         <TextBlock Text="_Open"/>
                     </StackPanel>
                 </Button>
                 <Button MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
+                    <ToolTip.Tip>Save catalog (Ctrl+S)</ToolTip.Tip>
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Width="14" Height="14" Data="M2,1 H12 L15,4 V15 H2 Z M4,1 V6 H10 V1 M5,11 H12"/>
                         <TextBlock Text="_Save"/>
                     </StackPanel>
+                </Button>
+                <Separator Width="1" Height="20" Background="#C8C8C8"/>
+                <Button MinWidth="66" Padding="8,3" Command="{Binding AddItemCommand}">
+                    <ToolTip.Tip>Add item (F2)</ToolTip.Tip>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Width="14" Height="14" Data="M7,1 V13 M1,7 H13"/>
+                        <TextBlock Text="_Add"/>
+                    </StackPanel>
+                </Button>
+                <Button MinWidth="74" Padding="8,3" Command="{Binding DeleteItemCommand}">
+                    <ToolTip.Tip>Delete selected item (Delete)</ToolTip.Tip>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Width="14" Height="14" Data="M3,4 H11 M5,4 V2 H9 V4 M4,4 V12 H10 V4"/>
+                        <TextBlock Text="_Delete"/>
+                    </StackPanel>
+                </Button>
+                <Button MinWidth="86" Padding="8,3" Command="{Binding OpenPropertiesCommand}">
+                    <ToolTip.Tip>Open properties (Alt+Enter)</ToolTip.Tip>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Width="14" Height="14" Data="M2,2 H12 V12 H2 Z M4,5 H10 M4,8 H10"/>
+                        <TextBlock Text="_Properties"/>
+                    </StackPanel>
+                </Button>
+                <Separator Width="1" Height="20" Background="#C8C8C8"/>
+                <Button MinWidth="64"
+                        Padding="8,3"
+                        Command="{Binding SetViewModeCommand}"
+                        CommandParameter="Details">
+                    <ToolTip.Tip>Details view</ToolTip.Tip>
+                    <TextBlock Text="Details"/>
+                </Button>
+                <Button MinWidth="54"
+                        Padding="8,3"
+                        Command="{Binding SetViewModeCommand}"
+                        CommandParameter="List">
+                    <ToolTip.Tip>List view</ToolTip.Tip>
+                    <TextBlock Text="List"/>
+                </Button>
+                <Button MinWidth="56"
+                        Padding="8,3"
+                        Command="{Binding SetViewModeCommand}"
+                        CommandParameter="Tiles">
+                    <ToolTip.Tip>Tiles view</ToolTip.Tip>
+                    <TextBlock Text="Tiles"/>
                 </Button>
             </StackPanel>
         </Border>

@@ -236,10 +236,27 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsSaveEnabled);
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
 
+        vm.CurrentCatalogPath = @"C:\tmp\catalog.scd";
         vm.SaveCatalogCommand.Execute(null);
-
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
+        Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
+    public void SaveCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel
+        {
+            IsDirtyDocument = true
+        };
+        var raised = false;
+        vm.SaveCatalogRequested += (_, _) => raised = true;
+
+        vm.SaveCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
     }
 
     [Fact]
@@ -255,9 +272,23 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsDeleteEnabled);
         Assert.True(vm.DeleteItemCommand.CanExecute(null));
 
+        var deletedName = vm.BrowserItems[0].Name;
         vm.DeleteItemCommand.Execute(null);
 
-        Assert.Equal($"Deleted {vm.BrowserItems[0].Name}.", vm.StatusText);
+        Assert.Equal($"Deleted {deletedName}.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteCommand_RemovesItemFromVisibleList()
+    {
+        var vm = new MainWindowViewModel();
+        var originalCount = vm.BrowserItems.Count;
+        var deletedName = vm.SelectedBrowserItem?.Name;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == deletedName);
     }
 
     [Fact]
