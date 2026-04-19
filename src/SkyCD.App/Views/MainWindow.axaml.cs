@@ -345,12 +345,19 @@ public partial class MainWindow : Window
     private void SaveUiState(MainWindowViewModel vm)
     {
         var options = appOptionsStore.Load();
+
+        // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
             options.WindowLeft = Position.X;
             options.WindowTop = Position.Y;
             options.WindowWidth = Width;
             options.WindowHeight = Height;
+            options.WindowState = "Normal";
+        }
+        else if (WindowState == WindowState.Maximized)
+        {
+            options.WindowState = "Maximized";
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
@@ -373,8 +380,37 @@ public partial class MainWindow : Window
 
         if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
         {
-            Position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
+            var position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
+
+            // Validate position is not off-screen
+            if (IsPositionOnScreen(position))
+            {
+                Position = position;
+            }
         }
+
+        // Restore window state
+        if (string.Equals(options.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase))
+        {
+            WindowState = WindowState.Maximized;
+        }
+    }
+
+    private bool IsPositionOnScreen(PixelPoint position)
+    {
+        var screens = Screens.All;
+        foreach (var screen in screens)
+        {
+            var screenBounds = screen.WorkingArea;
+            if (position.X >= screenBounds.X &&
+                position.Y >= screenBounds.Y &&
+                position.X < screenBounds.Right &&
+                position.Y < screenBounds.Bottom)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static BrowserViewMode ParseBrowserViewMode(string? value)
