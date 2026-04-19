@@ -227,6 +227,21 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void DeleteThenSave_UpdatesSaveCommandState()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.True(vm.IsSaveEnabled);
+        Assert.True(vm.SaveCatalogCommand.CanExecute(null));
+
+        vm.SaveCatalogCommand.Execute(null);
+        Assert.False(vm.IsSaveEnabled);
+        Assert.False(vm.SaveCatalogCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void DeleteCommand_EnabledOnlyWhenItemIsSelected()
     {
         var vm = new MainWindowViewModel();
@@ -303,6 +318,20 @@ public class MainWindowViewModelTests
         vm.AddItemCommand.Execute(null);
 
         Assert.True(raised);
+    }
+
+    [Fact]
+    public void NewCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.NewCatalogRequested += (_, _) => raised = true;
+        vm.IsDirtyDocument = true;
+
+        vm.NewCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
     }
 
     [Fact]
@@ -407,6 +436,24 @@ public class MainWindowViewModelTests
 
         Assert.NotNull(request);
         Assert.Equal("Updated comment", request!.Dialog.Comments);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_Accepted_RenamesSelectedBrowserItem()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        var originalName = vm.SelectedBrowserItem!.Name;
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        request!.Dialog.Name = "Renamed Item";
+        request.Complete(true, request.Dialog.Comments);
+
+        Assert.Equal("Renamed Item", vm.SelectedBrowserItem?.Name);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == originalName);
     }
 
     [Fact]
