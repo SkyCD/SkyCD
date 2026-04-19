@@ -346,7 +346,7 @@ public partial class MainWindow : Window
             vm.StatusText = "Reading catalog data...";
             vm.ProgressValue = 10;
 
-            var catalog = await LoadCatalogFromFileAsync(localPath, formatId, progress => 
+            var catalog = await LoadCatalogFromFileAsync(localPath, formatId, progress =>
             {
                 vm.ProgressValue = 10 + (int)(progress * 0.8);
                 vm.StatusText = $"Loading catalog... {vm.ProgressValue}%";
@@ -498,10 +498,10 @@ public partial class MainWindow : Window
                     continue;
 
                 var isFolder = path.EndsWith("/") || path.EndsWith("\\");
-                var displayName = isFolder 
-                    ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) 
+                var displayName = isFolder
+                    ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                     : Path.GetFileName(path);
-                
+
                 if (string.IsNullOrWhiteSpace(displayName))
                     displayName = path;
 
@@ -529,10 +529,10 @@ public partial class MainWindow : Window
 
             if (nodesByPath.Count > 0)
             {
-                var rootFolders = nodesByPath.Values.Where(n => 
-                    string.IsNullOrEmpty(Path.GetDirectoryName(n.Key)) || 
+                var rootFolders = nodesByPath.Values.Where(n =>
+                    string.IsNullOrEmpty(Path.GetDirectoryName(n.Key)) ||
                     !nodesByPath.ContainsKey(Path.GetDirectoryName(n.Key)!)).ToList();
-                
+
                 foreach (var folder in rootFolders)
                 {
                     rootNodeChildren.Add(folder);

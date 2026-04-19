@@ -53,7 +53,7 @@ public sealed class PluginCatalog
         }
 
         var distinctFormats = formats.DistinctBy(f => f.FormatId).ToList();
-        
+
         if (distinctFormats.Count == 0)
         {
             return new List<FilePickerFileType>
@@ -66,7 +66,7 @@ public sealed class PluginCatalog
         }
 
         var allExtensions = distinctFormats.SelectMany(f => f.Extensions).Select(ext => $"*{ext}").Distinct().ToList();
-        
+
         var fileTypeChoices = new List<FilePickerFileType>
         {
             new FilePickerFileType("All supported formats")
