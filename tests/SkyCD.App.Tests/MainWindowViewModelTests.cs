@@ -215,13 +215,23 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void OpenThenSave_UpdatesSaveCommandState()
+    public void OpenCatalogCommand_DoesNotMarkDocumentDirty()
     {
         var vm = new MainWindowViewModel();
 
-        Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-
         vm.OpenCatalogCommand.Execute(null);
+
+        Assert.False(vm.IsSaveEnabled);
+        Assert.False(vm.SaveCatalogCommand.CanExecute(null));
+        Assert.Equal("Done.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteThenSave_UpdatesSaveCommandState()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.DeleteItemCommand.Execute(null);
 
         Assert.True(vm.IsSaveEnabled);
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
@@ -330,6 +340,33 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void NewCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.NewCatalogRequested += (_, _) => raised = true;
+        vm.IsDirtyDocument = true;
+
+        vm.NewCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
+    public void OpenCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.OpenCatalogRequested += (_, _) => raised = true;
+
+        vm.OpenCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.False(vm.IsDirtyDocument);
+    }
+
+    [Fact]
     public void OpenAboutCommand_RaisesAboutRequest_WhenSubscriberIsPresent()
     {
         var vm = new MainWindowViewModel();
@@ -418,6 +455,24 @@ public class MainWindowViewModelTests
 
         Assert.NotNull(request);
         Assert.Equal("Updated comment", request!.Dialog.Comments);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_Accepted_RenamesSelectedBrowserItem()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        var originalName = vm.SelectedBrowserItem!.Name;
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        request!.Dialog.Name = "Renamed Item";
+        request.Complete(true, request.Dialog.Comments);
+
+        Assert.Equal("Renamed Item", vm.SelectedBrowserItem?.Name);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == originalName);
     }
 
     [Fact]
