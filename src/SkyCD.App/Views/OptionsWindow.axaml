@@ -79,7 +79,13 @@
                     <TextBlock Text="Select interface language"/>
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding Languages}"
-                             SelectedItem="{Binding SelectedLanguage}"/>
+                             SelectedItem="{Binding SelectedLanguage}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LanguageItem">
+                                <TextBlock Text="{Binding DisplayText}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </TabItem>
         </TabControl>
