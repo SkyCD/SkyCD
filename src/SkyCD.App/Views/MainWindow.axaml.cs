@@ -304,7 +304,52 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.CompleteOpenCatalog();
+        var openFormats = fileFormatRoutingService.GetOpenFormats();
+        var fileTypeChoices = new List<FilePickerFileType>();
+
+        foreach (var format in openFormats)
+        {
+            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
+            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
+            {
+                Patterns = patterns
+            });
+        }
+
+        fileTypeChoices.Add(new FilePickerFileType("All files")
+        {
+            Patterns = ["*.*"]
+        });
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open catalog",
+            AllowMultiple = false,
+            FileTypeChoices = fileTypeChoices
+        });
+
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        var localPath = files[0].TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            // TODO: Implement actual file loading through plugins
+            vm.CompleteOpenCatalog();
+            vm.CurrentCatalogPath = localPath;
+            vm.StatusText = $"Loaded catalog from {Path.GetFileName(localPath)}.";
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Failed to load catalog: {ex.Message}";
+        }
     }
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
