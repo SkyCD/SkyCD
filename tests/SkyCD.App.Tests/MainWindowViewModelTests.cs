@@ -313,6 +313,20 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void NewCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.NewCatalogRequested += (_, _) => raised = true;
+        vm.IsDirtyDocument = true;
+
+        vm.NewCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
     public void OpenAboutCommand_RaisesAboutRequest_WhenSubscriberIsPresent()
     {
         var vm = new MainWindowViewModel();

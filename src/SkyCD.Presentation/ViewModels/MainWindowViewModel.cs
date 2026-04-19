@@ -170,7 +170,17 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void NewCatalog()
     {
-        NewCatalogRequested?.Invoke(this, EventArgs.Empty);
+        if (NewCatalogRequested is not null)
+        {
+            NewCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteNewCatalog();
+    }
+
+    public void CompleteNewCatalog()
+    {
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }

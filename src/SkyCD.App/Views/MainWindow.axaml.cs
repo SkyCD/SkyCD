@@ -200,7 +200,7 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.NewCatalogCommand.Execute(null);
+        vm.CompleteNewCatalog();
     }
 
     private async void OnOpenCatalogRequested(object? sender, EventArgs e)
