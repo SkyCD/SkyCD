@@ -12,13 +12,13 @@ public class PropertiesDialogViewModelTests
         var vm = new PropertiesDialogViewModel(
             objectKey: "file123",
             name: "document.pdf",
-            iconGlyph: "📄",
+            iconGlyph: "folder",
             comments: "Important document",
             infoProperties: infoItems);
 
         Assert.Equal("file123", vm.ObjectKey);
         Assert.Equal("document.pdf", vm.Name);
-        Assert.Equal("📄", vm.IconGlyph);
+        Assert.Equal("folder", vm.IconGlyph);
         Assert.Equal("Important document", vm.Comments);
         Assert.Single(vm.InfoProperties);
     }

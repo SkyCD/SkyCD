@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
+        xmlns:converters="clr-namespace:SkyCD.App.Converters"
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
         Width="411"
@@ -17,6 +18,10 @@
         Icon="/Assets/skycd.ico"
         Title="Properties">
 
+    <Window.Resources>
+        <converters:IconGlyphConverter x:Key="IconConverter"/>
+    </Window.Resources>
+
     <Grid RowDefinitions="*,Auto" Margin="0">
         <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="General">
@@ -27,10 +32,9 @@
                             BorderThickness="1"
                             VerticalAlignment="Top"
                             CornerRadius="2">
-                        <TextBlock Text="{Binding IconGlyph}"
+                        <Image Width="24" Height="24" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"
                                    HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="16"/>
+                                   VerticalAlignment="Center"/>
                     </Border>
 
                     <TextBlock Grid.Column="2" Text="Name:" VerticalAlignment="Top"/>

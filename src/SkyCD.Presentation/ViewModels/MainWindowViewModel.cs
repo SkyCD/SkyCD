@@ -341,7 +341,7 @@ public partial class MainWindowViewModel : ObservableObject
             addedItemsByNodeKey[nodeKey] = addedItems;
         }
 
-        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "📁");
+        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "folder");
         addedItems.Add(importedItem);
         RefreshBrowserItemsForSelection();
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>

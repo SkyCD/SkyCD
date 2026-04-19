@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
+        xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -17,6 +18,7 @@
     </Design.DataContext>
 
     <Window.Resources>
+        <converters:IconGlyphConverter x:Key="IconConverter"/>
         <ContextMenu x:Key="BrowserContextMenu">
             <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="list"/>
             <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="list"/>
@@ -155,19 +157,19 @@
             <cc:ClassicToolbar.Items>
                 <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                        <PathIcon Width="14" Height="14" Data="M2,1 H8 L12,5 V15 H2 Z M8,1 V5 H12 M4,9 H10 M4,12 H10"/>
+                        <Image Width="16" Height="16" Source="/Assets/add-from-media.png"/>
                         <TextBlock Text="_New"/>
                     </StackPanel>
                 </cc:ClassicToolbarButton>
                 <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                        <PathIcon Width="14" Height="14" Data="M1,5 H6 L7.5,3 H15 V13 H1 Z M1,7 H15"/>
+                        <Image Width="16" Height="16" Source="/Assets/add-from-folder.png"/>
                         <TextBlock Text="_Open"/>
                     </StackPanel>
                 </cc:ClassicToolbarButton>
                 <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                        <PathIcon Width="14" Height="14" Data="M2,1 H12 L15,4 V15 H2 Z M4,1 V6 H10 V1 M5,11 H12"/>
+                        <Image Width="16" Height="16" Source="/Assets/add-from-internet.png"/>
                         <TextBlock Text="_Save"/>
                     </StackPanel>
                 </cc:ClassicToolbarButton>
@@ -212,7 +214,7 @@
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding IconGlyph}"/>
+                            <Image Width="16" Height="16" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
                             <TextBlock Text="{Binding Title}"/>
                         </StackPanel>
                     </TreeDataTemplate>
@@ -311,7 +313,7 @@
                 <cc:DetailsListView.RowTemplate>
                     <DataTemplate x:DataType="vm:BrowserItem">
                         <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
-                            <TextBlock Text="{Binding IconGlyph}" FontSize="16"/>
+                            <Image Width="16" Height="16" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Name}"/>
                             <TextBlock Grid.Column="2" Text="{Binding Type}"/>
                             <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
@@ -336,7 +338,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,2">
-                            <TextBlock Text="{Binding IconGlyph}" FontSize="14"/>
+                            <Image Width="14" Height="14" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
                             <TextBlock Text="{Binding Name}" FontSize="13"/>
                         </StackPanel>
                     </DataTemplate>
@@ -366,8 +368,7 @@
                                 BorderThickness="1"
                                 CornerRadius="4">
                             <StackPanel>
-                                <TextBlock Text="{Binding IconGlyph}"
-                                           FontSize="{Binding $parent[Window].DataContext.BrowserIconFontSize}"
+                                <Image Width="32" Height="32" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding Name}" TextAlignment="Center" TextWrapping="Wrap"/>
                                 <StackPanel Margin="0,4,0,0"

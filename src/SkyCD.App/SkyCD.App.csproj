@@ -9,9 +9,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
+    <Folder Include="Models" />
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="Styles\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- Legacy icons linked from legacy Resources folder -->
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder closed.png" Link="Assets\legacy\icon-folder.png" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd-rom with hardware.png" Link="Assets\legacy\icon-cd.png" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\around the world.png" Link="Assets\legacy\icon-network.png" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\users.png" Link="Assets\legacy\icon-users.png" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\save.ICO" Link="Assets\legacy\icon-save.ico" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder-closed.ICO" Link="Assets\legacy\icon-folder-closed.ico" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd.ICO" Link="Assets\legacy\icon-cd-disk.ico" />
+    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +31,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
     <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
+    
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
