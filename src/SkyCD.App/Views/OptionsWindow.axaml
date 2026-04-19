@@ -8,6 +8,7 @@
         MinWidth="700"
         MinHeight="460"
         WindowStartupLocation="CenterOwner"
+        CanResize="False"
         Title="Options">
 
     <Design.DataContext>
