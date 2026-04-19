@@ -29,6 +29,6 @@ public sealed class AppOptions
     public List<string> DisabledPluginIds { get; set; } = [];
 
     public int OptionsTabIndex { get; set; }
-    
+
     public string? LastOpenedCatalogPath { get; set; }
 }
