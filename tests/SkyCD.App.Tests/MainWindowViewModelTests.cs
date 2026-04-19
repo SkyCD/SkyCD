@@ -226,11 +226,28 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsSaveEnabled);
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
 
+        vm.CurrentCatalogPath = @"C:\tmp\catalog.scd";
         vm.SaveCatalogCommand.Execute(null);
 
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-        Assert.Equal("Done.", vm.StatusText);
+        Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
+    public void SaveCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel
+        {
+            IsDirtyDocument = true
+        };
+        var raised = false;
+        vm.SaveCatalogRequested += (_, _) => raised = true;
+
+        vm.SaveCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
     }
 
     [Fact]
