@@ -1,7 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Legacy WinForms-style TabControl matching app theme -->
+    <!-- Legacy WinForms-style TabControl - Light Theme -->
     <Style Selector="TabControl">
         <Setter Property="Background" Value="#FFFFFF"/>
         <Setter Property="BorderBrush" Value="#cbd5e1"/>
@@ -9,7 +9,15 @@
         <Setter Property="Padding" Value="0"/>
     </Style>
 
-    <!-- TabItem styling - WinForms appearance with modern theme colors -->
+    <!-- TabControl - Dark Theme (Fluent Dark) -->
+    <Style Selector="TabControl:dark">
+        <Setter Property="Background" Value="#1f2937"/>
+        <Setter Property="BorderBrush" Value="#374151"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- TabItem styling - Light Theme -->
     <Style Selector="TabItem">
         <Setter Property="Padding" Value="16,4,16,4"/>
         <Setter Property="Margin" Value="2,0,0,0"/>
@@ -20,7 +28,18 @@
         <Setter Property="FontSize" Value="11"/>
     </Style>
 
-    <!-- Selected/active tab - white with app accent -->
+    <!-- TabItem styling - Dark Theme -->
+    <Style Selector="TabItem:dark">
+        <Setter Property="Padding" Value="16,4,16,4"/>
+        <Setter Property="Margin" Value="2,0,0,0"/>
+        <Setter Property="Background" Value="#374151"/>
+        <Setter Property="Foreground" Value="#f3f4f6"/>
+        <Setter Property="BorderBrush" Value="#4b5563"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <!-- Selected/active tab - Light Theme -->
     <Style Selector="TabItem:selected">
         <Setter Property="Background" Value="#FFFFFF"/>
         <Setter Property="Foreground" Value="#1e293b"/>
@@ -30,15 +49,36 @@
         <Setter Property="Padding" Value="16,4,16,4"/>
     </Style>
 
-    <!-- Hover/focus state -->
+    <!-- Selected/active tab - Dark Theme -->
+    <Style Selector="TabItem:selected:dark">
+        <Setter Property="Background" Value="#2d3748"/>
+        <Setter Property="Foreground" Value="#f3f4f6"/>
+        <Setter Property="BorderBrush" Value="#4b5563"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="ZIndex" Value="1"/>
+        <Setter Property="Padding" Value="16,4,16,4"/>
+    </Style>
+
+    <!-- Hover/focus state - Light Theme -->
     <Style Selector="TabItem:pointerover">
         <Setter Property="Background" Value="#e2e8f0"/>
     </Style>
 
-    <!-- Disabled state -->
+    <!-- Hover/focus state - Dark Theme -->
+    <Style Selector="TabItem:pointerover:dark">
+        <Setter Property="Background" Value="#4b5563"/>
+    </Style>
+
+    <!-- Disabled state - Light Theme -->
     <Style Selector="TabItem:disabled">
         <Setter Property="Foreground" Value="#94a3b8"/>
         <Setter Property="Background" Value="#f1f5f9"/>
+    </Style>
+
+    <!-- Disabled state - Dark Theme -->
+    <Style Selector="TabItem:disabled:dark">
+        <Setter Property="Foreground" Value="#6b7280"/>
+        <Setter Property="Background" Value="#374151"/>
     </Style>
 
 </Styles>
