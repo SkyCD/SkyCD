@@ -247,7 +247,7 @@ public partial class MainWindowViewModel : ObservableObject
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog to {Path.GetFileName(filePath)}.";
+        StatusText = $"Saved catalog to {GetDisplayFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 

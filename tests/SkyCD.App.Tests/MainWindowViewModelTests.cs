@@ -260,6 +260,16 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void CompleteSaveCatalog_UsesFileNameForUnixStylePath()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.CompleteSaveCatalog("/tmp/catalog.scd");
+
+        Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
     public void DeleteCommand_EnabledOnlyWhenItemIsSelected()
     {
         var vm = new MainWindowViewModel();
