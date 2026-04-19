@@ -68,6 +68,72 @@ public class UISmokeTests
     }
 
     [Fact]
+    public void OptionsDialog_ConfigureButton_DisabledWhenNoPluginSelected()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void OptionsDialog_ConfigureButton_DisabledWhenPluginDoesntSupportConfiguration()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var plugins = new[]
+        {
+            new OptionsPluginItem("Plugin1", "Type1", "Info1", SupportsConfiguration: false),
+            new OptionsPluginItem("Plugin2", "Type2", "Info2", SupportsConfiguration: false)
+        };
+
+        vm.SetPlugins(plugins);
+
+        // Select first plugin which doesn't support configuration
+        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void OptionsDialog_ConfigureButton_EnabledWhenPluginSupportsConfiguration()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var plugins = new[]
+        {
+            new OptionsPluginItem("Plugin1", "Type1", "Info1", SupportsConfiguration: false),
+            new OptionsPluginItem("Plugin2", "Type2", "Info2", SupportsConfiguration: true)
+        };
+
+        vm.SetPlugins(plugins);
+
+        // Select second plugin which supports configuration
+        vm.SelectedPlugin = plugins[1];
+
+        Assert.True(vm.ConfigurePluginCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void OptionsDialog_ConfigureButton_ChangesStateWhenSelectionChanges()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var plugins = new[]
+        {
+            new OptionsPluginItem("Plugin1", "Type1", "Info1", SupportsConfiguration: false),
+            new OptionsPluginItem("Plugin2", "Type2", "Info2", SupportsConfiguration: true)
+        };
+
+        vm.SetPlugins(plugins);
+
+        // Initially first plugin is selected (no config support)
+        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
+
+        // Switch to second plugin (with config support)
+        vm.SelectedPlugin = plugins[1];
+        Assert.True(vm.ConfigurePluginCommand.CanExecute(null));
+
+        // Switch back to first plugin (no config support)
+        vm.SelectedPlugin = plugins[0];
+        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void PropertiesDialog_ConfirmCommand_SetsDialogAccepted()
     {
         var vm = new PropertiesDialogViewModel(

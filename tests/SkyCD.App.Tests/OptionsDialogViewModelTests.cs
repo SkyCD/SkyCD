@@ -31,8 +31,8 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         var plugins = new[]
         {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.sample.json v2.0.0"),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.sample.xml v2.0.0")
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.sample.json v2.0.0", SupportsConfiguration: true),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.sample.xml v2.0.0", SupportsConfiguration: true)
         };
 
         vm.SetPlugins(plugins);
@@ -40,5 +40,22 @@ public class OptionsDialogViewModelTests
         Assert.Equal(2, vm.Plugins.Count);
         Assert.Equal("JSON", vm.SelectedPlugin?.Name);
         Assert.True(vm.ConfigurePluginCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SetPlugins_DisablesConfigureWhenPluginDoesntSupportConfiguration()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var plugins = new[]
+        {
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.sample.json v2.0.0", SupportsConfiguration: false),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.sample.xml v2.0.0", SupportsConfiguration: false)
+        };
+
+        vm.SetPlugins(plugins);
+
+        Assert.Equal(2, vm.Plugins.Count);
+        Assert.Equal("JSON", vm.SelectedPlugin?.Name);
+        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
     }
 }
