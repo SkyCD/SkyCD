@@ -3,10 +3,11 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
-        Width="420"
-        Height="260"
+        Width="480"
+        Height="360"
         CanResize="False"
         CanMinimize="False"
+        CanMaximize="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
         Title="About SkyCD">
@@ -15,21 +16,41 @@
         <vm:AboutDialogViewModel ProductName="SkyCD" Version="3.0.0" Website="https://github.com/SkyCD/SkyCD"/>
     </Design.DataContext>
 
-    <Grid RowDefinitions="*,Auto" Margin="16">
-        <StackPanel Spacing="10">
-            <TextBlock Text="{Binding ProductName}" FontSize="24" FontWeight="Bold"/>
-            <TextBlock Text="{Binding Version, StringFormat='Version: {0}'}"/>
-            <TextBlock Text="CD/DVD media catalog manager"/>
-            <TextBlock Text="{Binding Website}"/>
+    <Window.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="8" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                <TextBlock Text="{Binding ProductName}" FontSize="21" FontWeight="Bold" />
+                <TextBlock Text="{Binding Version}" FontSize="12" VerticalAlignment="Bottom" Padding="0,0,0,3" />
+            </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Row="1"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,14,0,0">
-            <Button Content="OK"
-                    MinWidth="90"
-                    Command="{Binding ConfirmCommand}"/>
+        <StackPanel Margin="8" Spacing="6" Height="32" DockPanel.Dock="Bottom">
+            <Button HorizontalAlignment="Right" Width="80" Margin="0,8,0,0" Command="{Binding ConfirmCommand}">Close</Button>
         </StackPanel>
-    </Grid>
+
+        <TabControl Name="MainTabs">
+            <TabItem Header="Project info" FontSize="14">
+                <Grid Margin="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="CD/DVD media catalog manager" />
+                        <TextBlock Text="{Binding Website}" />
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Project license" FontSize="14" IsSelected="True">
+                <Grid Margin="8">
+                    <TextBlock Text="BSD 2-Clause License" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </Window>
+
