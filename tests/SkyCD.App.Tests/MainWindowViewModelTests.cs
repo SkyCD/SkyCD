@@ -440,6 +440,24 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void OpenPropertiesCommand_Accepted_RenamesSelectedBrowserItem()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        var originalName = vm.SelectedBrowserItem!.Name;
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        request!.Dialog.Name = "Renamed Item";
+        request.Complete(true, request.Dialog.Comments);
+
+        Assert.Equal("Renamed Item", vm.SelectedBrowserItem?.Name);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == originalName);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_Canceled_DiscardsCommentChanges()
     {
         var vm = new MainWindowViewModel();

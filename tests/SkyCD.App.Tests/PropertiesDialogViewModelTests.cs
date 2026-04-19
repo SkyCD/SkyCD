@@ -58,6 +58,16 @@ public class PropertiesDialogViewModelTests
     }
 
     [Fact]
+    public void Name_CanBeModified()
+    {
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", []);
+
+        vm.Name = "renamed";
+
+        Assert.Equal("renamed", vm.Name);
+    }
+
+    [Fact]
     public void ConfirmCommand_SetsDialogAcceptedTrue()
     {
         var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", []);
