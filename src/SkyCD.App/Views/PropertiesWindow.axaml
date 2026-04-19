@@ -12,6 +12,7 @@
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
         Title="Properties">
 
     <Grid RowDefinitions="*,Auto" Margin="0">
