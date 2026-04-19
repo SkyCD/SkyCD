@@ -326,7 +326,7 @@ public partial class MainWindow : Window
         {
             Title = "Open catalog",
             AllowMultiple = false,
-            Patterns = fileTypeChoices
+            FileTypeFilter = fileTypeChoices
         });
 
         if (files.Count == 0)

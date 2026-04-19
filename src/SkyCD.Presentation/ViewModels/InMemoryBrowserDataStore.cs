@@ -2,7 +2,23 @@ namespace SkyCD.Presentation.ViewModels;
 
 public sealed class InMemoryBrowserDataStore : IBrowserDataStore
 {
+    private readonly IReadOnlyList<BrowserTreeNode>? customTreeNodes;
+
+    public InMemoryBrowserDataStore()
+    {
+    }
+
+    public InMemoryBrowserDataStore(IReadOnlyList<BrowserTreeNode> treeNodes)
+    {
+        customTreeNodes = treeNodes;
+    }
+
     public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
+    {
+        return customTreeNodes ?? GetDefaultTreeNodes();
+    }
+
+    private static IReadOnlyList<BrowserTreeNode> GetDefaultTreeNodes()
     {
         var moviesNode = new BrowserTreeNode("movies", "Movies", "folder");
         var musicNode = new BrowserTreeNode("music", "Music", "folder");
