@@ -94,6 +94,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
 
+    public bool IsSortBySizeChecked => CurrentSortMode == BrowserSortMode.Size;
+
     public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
 
     public bool IsListMode => CurrentViewMode == BrowserViewMode.List;
@@ -574,6 +576,9 @@ public partial class MainWindowViewModel : ObservableObject
             BrowserSortMode.Type => items.OrderBy(static item => item.Type)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
+            BrowserSortMode.Size => items.OrderBy(static item => item.Size, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
 
@@ -662,6 +667,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
+        OnPropertyChanged(nameof(IsSortBySizeChecked));
     }
 
     partial void OnIsDirtyDocumentChanged(bool value)

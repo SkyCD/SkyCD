@@ -52,6 +52,20 @@ public class MainWindowViewModelTests
         Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
         Assert.True(vm.IsSortByTypeChecked);
         Assert.False(vm.IsSortByNameChecked);
+        Assert.False(vm.IsSortBySizeChecked);
+    }
+
+    [Fact]
+    public void SetSortModeCommand_SizeSortMode_UpdatesCheckedState()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.SetSortModeCommand.Execute("Size");
+
+        Assert.Equal(BrowserSortMode.Size, vm.CurrentSortMode);
+        Assert.True(vm.IsSortBySizeChecked);
+        Assert.False(vm.IsSortByNameChecked);
+        Assert.False(vm.IsSortByTypeChecked);
     }
 
     [Fact]
@@ -67,9 +81,13 @@ public class MainWindowViewModelTests
         vm.SetSortModeCommand.Execute("Type");
         var firstByType = vm.BrowserItems[0].Name;
 
+        vm.SetSortModeCommand.Execute("Size");
+        var firstBySize = vm.BrowserItems[0].Name;
+
         Assert.NotEqual(firstByName, firstByType);
         Assert.Equal("Classical Collection", firstByName);
         Assert.Equal("Concert-2025.flac", firstByType);
+        Assert.Equal("Concert-2025.flac", firstBySize);
     }
 
     [Fact]
@@ -419,5 +437,21 @@ public class MainWindowViewModelTests
         Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
         Assert.False(vm.IsStatusBarVisible);
         Assert.Equal("Concert-2025.flac", vm.BrowserItems[0].Name);
+    }
+
+    [Fact]
+    public void AllSortModes_HaveExactlyOneCheckedState()
+    {
+        var vm = new MainWindowViewModel();
+
+        foreach (BrowserSortMode mode in Enum.GetValues<BrowserSortMode>())
+        {
+            vm.SetSortModeCommand.Execute(mode.ToString());
+
+            var checkedCount = new[] { vm.IsSortByNameChecked, vm.IsSortByTypeChecked, vm.IsSortBySizeChecked }
+                .Count(c => c);
+            Assert.Equal(1, checkedCount);
+            Assert.Equal(mode, vm.CurrentSortMode);
+        }
     }
 }
