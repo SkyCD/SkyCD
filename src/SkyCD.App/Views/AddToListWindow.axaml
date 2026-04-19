@@ -9,6 +9,7 @@
         MinHeight="420"
         WindowStartupLocation="CenterOwner"
         CanMinimize="False"
+        Icon="/Assets/skycd.ico"
         Title="Add To List">
 
     <Design.DataContext>
