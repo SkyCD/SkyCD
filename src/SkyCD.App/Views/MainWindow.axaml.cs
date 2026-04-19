@@ -408,16 +408,18 @@ public partial class MainWindow : Window
         return format?.FormatId;
     }
 
-    private async Task<object?> LoadCatalogFromFileAsync(string filePath, string formatId, Action<double>? progressCallback = null)
+    private async Task<object?> LoadCatalogFromFileAsync(string filePath, string formatId, Action<int>? progressCallback = null)
     {
         await using var stream = File.OpenRead(filePath);
+
+        IProgress<int>? progress = progressCallback is null ? null : new Progress<int>(p => progressCallback(p));
 
         var request = new FileFormatReadRequest
         {
             Source = stream,
             FormatId = formatId,
             FileName = Path.GetFileName(filePath),
-            Progress = progressCallback is null ? null : new Progress<double>(progressCallback)
+            Progress = progress
         };
 
         var result = await fileFormatRoutingService.ReadAsync(request);
@@ -513,7 +515,8 @@ public partial class MainWindow : Window
                     var parentPath = Path.GetDirectoryName(path);
                     if (!string.IsNullOrEmpty(parentPath) && nodesByPath.TryGetValue(parentPath, out var parentNode))
                     {
-                        parentNode.Children.Add(folderNode);
+                        var parentChildrenList = new List<BrowserTreeNode>(parentNode.Children);
+                        parentChildrenList.Add(folderNode);
                     }
                 }
                 else if (!isFolder)
@@ -522,7 +525,7 @@ public partial class MainWindow : Window
                 }
             }
 
-            var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
+            var rootNodeChildren = new List<BrowserTreeNode>();
 
             if (nodesByPath.Count > 0)
             {
@@ -532,9 +535,11 @@ public partial class MainWindow : Window
                 
                 foreach (var folder in rootFolders)
                 {
-                    rootNode.Children.Add(folder);
+                    rootNodeChildren.Add(folder);
                 }
             }
+
+            var rootNode = new BrowserTreeNode("root", "Catalog", "cd", rootNodeChildren, true);
 
             return ([rootNode], itemsByNodeKey);
         }
