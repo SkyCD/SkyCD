@@ -66,7 +66,7 @@ jobs:
         run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
 
       - name: Test solution
-        run: dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --results-directory artifacts/test-results/${{ matrix.os }}
+        run: dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}" --results-directory artifacts/test-results/${{ matrix.os }}
 
       - name: Upload test results
         if: always()
