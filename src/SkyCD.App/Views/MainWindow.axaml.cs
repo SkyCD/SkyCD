@@ -394,7 +394,7 @@ public partial class MainWindow : Window
         }
 
         // Ensure extension starts with a dot
-        if (!extension.StartsWith('.', StringComparison.Ordinal))
+        if (!extension.StartsWith(".", StringComparison.Ordinal))
         {
             extension = "." + extension;
         }
