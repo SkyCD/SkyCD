@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -12,6 +13,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<BrowserItem>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
@@ -20,6 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
+    public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
@@ -163,6 +166,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private BrowserItem? clipboardItem;
 
+    [ObservableProperty]
+    private string? currentCatalogPath;
+
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
     public bool IsPasteEnabled => ClipboardItem is not null;
@@ -212,11 +218,35 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
     private void SaveCatalog()
     {
+        if (SaveCatalogRequested is not null)
+        {
+            SaveCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentCatalogPath))
+        {
+            StatusText = "Use Save As to select file location.";
+            return;
+        }
+
+        CompleteSaveCatalog(CurrentCatalogPath);
+    }
+
+    public void CompleteSaveCatalog(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
         StartOperation("Saving catalog...");
         SetProgress(40, "Parsing items...");
         SetProgress(90, "Updating indexes...");
         CompleteOperation();
 
+        CurrentCatalogPath = filePath;
+        StatusText = $"Saved catalog to {Path.GetFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 
@@ -301,8 +331,18 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames))
+        {
+            deletedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            deletedItemNamesByNodeKey[nodeKey] = deletedNames;
+        }
+
+        deletedNames.Add(SelectedBrowserItem.Name);
+        var deletedName = SelectedBrowserItem.Name;
+        RefreshBrowserItemsForSelection();
         IsDirtyDocument = true;
-        StatusText = $"Deleted {SelectedBrowserItem.Name}.";
+        StatusText = $"Deleted {deletedName}.";
     }
 
     [RelayCommand]
@@ -631,10 +671,22 @@ public partial class MainWindowViewModel : ObservableObject
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var baseItems = browserDataStore.GetBrowserItems(nodeKey);
+        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
+        {
+            baseItems = baseItems
+                .Where(item => !deletedNames.Contains(item.Name))
+                .ToArray();
+        }
+
         var addedItems = addedItemsByNodeKey.TryGetValue(nodeKey, out var runtimeItems)
             ? runtimeItems
             : [];
         var items = baseItems.Concat(addedItems).ToArray();
+        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out deletedNames) && deletedNames.Count > 0)
+        {
+            items = items.Where(item => !deletedNames.Contains(item.Name)).ToArray();
+        }
+
         if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
         {
             items = items
