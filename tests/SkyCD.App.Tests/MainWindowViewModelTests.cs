@@ -496,6 +496,8 @@ public class MainWindowViewModelTests
     public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
     {
         var vm = new MainWindowViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Video");
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -506,6 +508,38 @@ public class MainWindowViewModelTests
         Assert.Equal(vm.SelectedBrowserItem?.IconGlyph, request.Dialog.IconGlyph);
         Assert.Equal(string.Empty, request.Dialog.Comments);
         Assert.NotEmpty(request.Dialog.InfoProperties);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_FolderItem_HidesInfoTab()
+    {
+        var vm = new MainWindowViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes[0];
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Folder");
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.False(request!.Dialog.HasInfoTab);
+        Assert.Empty(request.Dialog.InfoProperties);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_TreeNode_HidesInfoTab()
+    {
+        var vm = new MainWindowViewModel();
+        vm.SelectedBrowserItem = null;
+        vm.SelectedTreeNode = vm.TreeNodes[0];
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.False(request!.Dialog.HasInfoTab);
+        Assert.Empty(request.Dialog.InfoProperties);
     }
 
     [Fact]

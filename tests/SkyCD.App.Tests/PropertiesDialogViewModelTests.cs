@@ -1,3 +1,4 @@
+using System.Globalization;
 using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Tests;
@@ -75,5 +76,57 @@ public class PropertiesDialogViewModelTests
         vm.ConfirmCommand.Execute(null);
 
         Assert.True(vm.DialogAccepted);
+    }
+
+    [Fact]
+    public void Constructor_NormalizesEmptyValuesToUnknown()
+    {
+        var vm = new PropertiesDialogViewModel(
+            "key",
+            "name",
+            "icon",
+            "comments",
+            [new PropertiesInfoItem("Size", "")]);
+
+        Assert.Equal("Unknown", vm.InfoProperties.Single().Value);
+    }
+
+    [Fact]
+    public void Constructor_SortsInfoPropertiesAscendingByProperty()
+    {
+        var vm = new PropertiesDialogViewModel(
+            "key",
+            "name",
+            "icon",
+            "comments",
+            [
+                new PropertiesInfoItem("Zeta", "1"),
+                new PropertiesInfoItem("Alpha", "2"),
+                new PropertiesInfoItem("Middle", "3")
+            ]);
+
+        Assert.Equal(["Alpha", "Middle", "Zeta"], vm.InfoProperties.Select(item => item.Property));
+    }
+
+    [Fact]
+    public void Constructor_LocalizesBooleanValuesForLithuanian()
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("lt-LT");
+            var vm = new PropertiesDialogViewModel(
+                "key",
+                "name",
+                "icon",
+                "comments",
+                [new PropertiesInfoItem("Flag", "true")]);
+
+            Assert.Equal("Taip", vm.InfoProperties.Single().Value);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
     }
 }

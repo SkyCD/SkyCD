@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SkyCD.UI.Controls.PropertiesList"
+             x:Name="Root">
+    <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1">
+        <Grid RowDefinitions="Auto,*">
+            <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                    BorderThickness="0,0,0,1"
+                    Background="{DynamicResource ThemeControlMidBrush}">
+                <Grid ColumnDefinitions="183,*">
+                    <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}" BorderThickness="0,0,1,0" Padding="8,5">
+                        <TextBlock Text="{Binding PropertyHeader, ElementName=Root}" FontWeight="SemiBold"/>
+                    </Border>
+                    <Border Grid.Column="1" Padding="8,5">
+                        <TextBlock Text="{Binding ValueHeader, ElementName=Root}" FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <ListBox Grid.Row="1"
+                     BorderThickness="0"
+                     SelectionMode="Single"
+                     ItemsSource="{Binding ItemsSource, ElementName=Root}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="183,*">
+                            <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="0,0,1,1"
+                                    Padding="8,4">
+                                <TextBlock Text="{Binding Property}" TextWrapping="Wrap"/>
+                            </Border>
+                            <Border Grid.Column="1"
+                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="8,4">
+                                <TextBlock Text="{Binding Value}" TextWrapping="Wrap"/>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Border>
+</UserControl>

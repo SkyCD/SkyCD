@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SkyCD.UI.Controls.PropertiesTabControl"
+             x:Name="Root">
+    <TabControl SelectedIndex="0" TabStripPlacement="Top">
+        <TabItem Header="General">
+            <ContentPresenter Content="{Binding GeneralContent, ElementName=Root}"/>
+        </TabItem>
+        <TabItem Header="Info" IsVisible="{Binding HasInfoTab, ElementName=Root}">
+            <ContentPresenter Content="{Binding InfoContent, ElementName=Root}"/>
+        </TabItem>
+    </TabControl>
+</UserControl>

@@ -625,13 +625,7 @@ public partial class MainWindowViewModel : ObservableObject
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey);
             var nodeTitle = SelectedTreeNode?.Title ?? "Library";
-
-            var infoProperties = new List<PropertiesInfoItem>
-            {
-                new("Type", SelectedBrowserItem.Type),
-                new("Size", SelectedBrowserItem.Size),
-                new("Location", nodeTitle)
-            };
+            var infoProperties = BuildBrowserItemInfoProperties(SelectedBrowserItem, nodeTitle);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -647,23 +641,37 @@ public partial class MainWindowViewModel : ObservableObject
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
             var comments = GetObjectComments(objectKey);
 
-            var infoProperties = new List<PropertiesInfoItem>
-            {
-                new("Type", "Folder"),
-                new("Children", SelectedTreeNode.Children.Count.ToString())
-            };
-
             dialog = new PropertiesDialogViewModel(
                 objectKey,
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                infoProperties);
+                []);
             return true;
         }
 
         dialog = null;
         return false;
+    }
+
+    private static IReadOnlyList<PropertiesInfoItem> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
+    {
+        if (!SupportsInfoTab(item.Type))
+        {
+            return [];
+        }
+
+        return
+        [
+            new("Type", item.Type),
+            new("Size", item.Size),
+            new("Location", nodeTitle)
+        ];
+    }
+
+    private static bool SupportsInfoTab(string? itemType)
+    {
+        return !string.Equals(itemType, "Folder", StringComparison.OrdinalIgnoreCase);
     }
 
     private string GetObjectComments(string objectKey)
