@@ -11,6 +11,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<BrowserItem>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private const string DefaultStatusText = "Done.";
@@ -246,6 +247,28 @@ public partial class MainWindowViewModel : ObservableObject
     private void AddItem()
     {
         AddToListRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void AddImportedItem(string? suggestedName)
+    {
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        var itemName = string.IsNullOrWhiteSpace(suggestedName)
+            ? $"Imported Item {DateTime.Now:HHmmss}"
+            : suggestedName.Trim();
+
+        if (!addedItemsByNodeKey.TryGetValue(nodeKey, out var addedItems))
+        {
+            addedItems = [];
+            addedItemsByNodeKey[nodeKey] = addedItems;
+        }
+
+        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "📁");
+        addedItems.Add(importedItem);
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+            item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
+        IsDirtyDocument = true;
+        StatusText = $"Added {itemName}.";
     }
 
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
@@ -584,8 +607,13 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var items = browserDataStore.GetBrowserItems(nodeKey);
-        if (items.Count == 0)
+        var baseItems = browserDataStore.GetBrowserItems(nodeKey);
+        var addedItems = addedItemsByNodeKey.TryGetValue(nodeKey, out var runtimeItems)
+            ? runtimeItems
+            : [];
+
+        var items = baseItems.Concat(addedItems).ToArray();
+        if (items.Length == 0)
         {
             BrowserItems = [];
             SelectedBrowserItem = null;

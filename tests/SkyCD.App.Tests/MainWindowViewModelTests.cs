@@ -313,6 +313,20 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void AddImportedItem_AddsVisibleItemAndMarksDocumentDirty()
+    {
+        var vm = new MainWindowViewModel();
+        var originalCount = vm.BrowserItems.Count;
+
+        vm.AddImportedItem("Imported Folder");
+
+        Assert.Equal(originalCount + 1, vm.BrowserItems.Count);
+        Assert.Contains(vm.BrowserItems, item => item.Name == "Imported Folder");
+        Assert.True(vm.IsDirtyDocument);
+        Assert.Equal("Imported Folder", vm.SelectedBrowserItem?.Name);
+    }
+
+    [Fact]
     public void OpenAboutCommand_RaisesAboutRequest_WhenSubscriberIsPresent()
     {
         var vm = new MainWindowViewModel();
