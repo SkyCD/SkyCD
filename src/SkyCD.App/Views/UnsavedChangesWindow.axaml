@@ -7,7 +7,7 @@
         CanMinimize="False"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
-        Icon="/Assets/skycd.ico"
+        Icon="/Assets/avalonia-logo.ico"
         Title="Unsaved Changes">
 
     <Grid RowDefinitions="*,Auto" Margin="16">

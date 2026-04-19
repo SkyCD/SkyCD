@@ -13,7 +13,7 @@
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Icon="/Assets/skycd.ico"
+        Icon="/Assets/avalonia-logo.ico"
         Title="Properties">
 
     <Grid RowDefinitions="*,Auto" Margin="0">

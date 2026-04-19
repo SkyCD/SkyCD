@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         CanMinimize="False"
-        Icon="/Assets/skycd.ico"
+        Icon="/Assets/avalonia-logo.ico"
         Title="Options">
 
     <Design.DataContext>
