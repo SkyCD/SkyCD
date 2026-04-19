@@ -464,6 +464,7 @@ public partial class MainWindow : Window
         if (catalog is System.Collections.IEnumerable entries)
         {
             var entryList = entries.Cast<object>().ToList();
+            var nodesByPath = new Dictionary<string, BrowserTreeNode>(StringComparer.OrdinalIgnoreCase);
             var rootItems = new List<BrowserItem>
             {
                 new BrowserItem("All Files", "Folder", $"{entryList.Count} items", "folder")
@@ -472,7 +473,6 @@ public partial class MainWindow : Window
 
             foreach (var entry in entryList)
             {
-                string? name = null;
                 string? path = null;
                 long? size = null;
 
@@ -484,17 +484,56 @@ public partial class MainWindow : Window
                     path = pathProp.GetValue(entry)?.ToString();
 
                 if (sizeProp is not null)
-                    size = sizeProp.GetValue(entry) as long?;
+                {
+                    var sizeValue = sizeProp.GetValue(entry);
+                    if (sizeValue is long sizeLong)
+                        size = sizeLong;
+                }
 
-                name = path ?? "Unknown";
-                var isFolder = path?.EndsWith("/") ?? path?.EndsWith("\\") ?? false;
-                var displayName = isFolder ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) : Path.GetFileName(path);
+                if (string.IsNullOrWhiteSpace(path))
+                    continue;
+
+                var isFolder = path.EndsWith("/") || path.EndsWith("\\");
+                var displayName = isFolder 
+                    ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) 
+                    : Path.GetFileName(path);
+                
+                if (string.IsNullOrWhiteSpace(displayName))
+                    displayName = path;
+
                 var sizeStr = size.HasValue ? FormatSize(size.Value) : "";
+                var icon = isFolder ? "folder" : "file";
 
-                rootItems.Add(new BrowserItem(displayName ?? "Unknown", isFolder ? "Folder" : "File", sizeStr, isFolder ? "folder" : "file"));
+                if (isFolder && !nodesByPath.ContainsKey(path))
+                {
+                    var folderNode = new BrowserTreeNode(path, displayName, "folder", [], false);
+                    nodesByPath[path] = folderNode;
+                    var parentPath = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(parentPath) && nodesByPath.TryGetValue(parentPath, out var parentNode))
+                    {
+                        parentNode.Children.Add(folderNode);
+                    }
+                }
+                else if (!isFolder)
+                {
+                    rootItems.Add(new BrowserItem(displayName, "File", sizeStr, icon));
+                }
             }
 
             var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
+
+            if (nodesByPath.Count > 0)
+            {
+                var rootFolders = nodesByPath.Values.Where(n => 
+                    string.IsNullOrEmpty(Path.GetDirectoryName(n.Key)) || 
+                    !nodesByPath.ContainsKey(Path.GetDirectoryName(n.Key)!)).ToList();
+                
+                foreach (var folder in rootFolders)
+                {
+                    rootNode.Children.Add(folder);
+                }
+            }
+
             return ([rootNode], itemsByNodeKey);
         }
 
