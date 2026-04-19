@@ -328,34 +328,48 @@ public partial class MainWindow : Window
 
         try
         {
-            // Determine format ID from file extension
+            vm.StatusText = "Loading catalog...";
+            vm.ProgressValue = 0;
+
             var extension = Path.GetExtension(localPath);
             var formatId = FindFormatIdByExtension(extension, openFormats);
 
             if (string.IsNullOrEmpty(formatId))
             {
                 vm.StatusText = $"Unsupported file format: {extension}";
+                vm.ProgressValue = 100;
                 return;
             }
 
-            // Load file content through plugin
-            var catalog = await LoadCatalogFromFileAsync(localPath, formatId);
+            vm.StatusText = "Reading catalog data...";
+            vm.ProgressValue = 10;
+
+            var catalog = await LoadCatalogFromFileAsync(localPath, formatId, progress => 
+            {
+                vm.ProgressValue = 10 + (int)(progress * 0.8);
+                vm.StatusText = $"Loading catalog... {vm.ProgressValue}%";
+            });
+
             if (catalog is null)
             {
                 vm.StatusText = "Failed to load catalog: Unknown error";
+                vm.ProgressValue = 100;
                 return;
             }
 
-            // Convert to browser tree nodes and items
+            vm.StatusText = "Building tree structure...";
+            vm.ProgressValue = 90;
+
             var (treeNodes, itemsByNodeKey) = ConvertToBrowserTreeNodes(catalog);
             var browserDataStore = new InMemoryBrowserDataStore(treeNodes, itemsByNodeKey);
 
-            // Create a new view model with loaded data
+            vm.ProgressValue = 95;
+
             var newVm = new MainWindowViewModel(browserDataStore);
             newVm.CurrentCatalogPath = localPath;
             newVm.StatusText = $"Loaded catalog from {Path.GetFileName(localPath)}.";
+            newVm.ProgressValue = 100;
 
-            // Replace the data context
             DataContext = newVm;
             subscribedViewModel = newVm;
 
@@ -392,7 +406,7 @@ public partial class MainWindow : Window
         return format?.FormatId;
     }
 
-    private async Task<object?> LoadCatalogFromFileAsync(string filePath, string formatId)
+    private async Task<object?> LoadCatalogFromFileAsync(string filePath, string formatId, Action<double>? progressCallback = null)
     {
         await using var stream = File.OpenRead(filePath);
 
@@ -400,7 +414,8 @@ public partial class MainWindow : Window
         {
             Source = stream,
             FormatId = formatId,
-            FileName = Path.GetFileName(filePath)
+            FileName = Path.GetFileName(filePath),
+            Progress = progressCallback is null ? null : new Progress<double>(progressCallback)
         };
 
         var result = await fileFormatRoutingService.ReadAsync(request);
