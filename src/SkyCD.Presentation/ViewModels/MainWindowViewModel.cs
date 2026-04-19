@@ -7,7 +7,7 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<BrowserItem>> browserItemsByNodeKey;
+    private readonly IBrowserDataStore browserDataStore;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
@@ -24,53 +24,19 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? ExitRequested;
 
     public MainWindowViewModel()
+        : this(new InMemoryBrowserDataStore())
     {
-        var moviesNode = new BrowserTreeNode("movies", "Movies", "🎬");
-        var musicNode = new BrowserTreeNode("music", "Music", "🎵");
-        var projectsNode = new BrowserTreeNode("projects", "Projects", "🗂");
+    }
 
-        var libraryNode = new BrowserTreeNode(
-            "library",
-            "Library",
-            "📚",
-            [moviesNode, musicNode, projectsNode],
-            true);
-
-        TreeNodes =
-        [
-            libraryNode
-        ];
+    public MainWindowViewModel(IBrowserDataStore browserDataStore)
+    {
+        this.browserDataStore = browserDataStore ?? throw new ArgumentNullException(nameof(browserDataStore));
+        TreeNodes = browserDataStore.GetTreeNodes();
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
         treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
-
-        browserItemsByNodeKey = new Dictionary<string, IReadOnlyList<BrowserItem>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["library"] =
-            [
-                new BrowserItem("Movies", "Folder", "128 items", "📁"),
-                new BrowserItem("Music", "Folder", "340 items", "📁"),
-                new BrowserItem("Projects", "Folder", "56 items", "📁")
-            ],
-            ["movies"] =
-            [
-                new BrowserItem("Interstellar.mkv", "Video", "12.1 GB", "🎞"),
-                new BrowserItem("Arrival.mkv", "Video", "9.4 GB", "🎞")
-            ],
-            ["music"] =
-            [
-                new BrowserItem("Classical Collection", "Folder", "42 items", "📁"),
-                new BrowserItem("Concert-2025.flac", "Audio", "414 MB", "🎧")
-            ],
-            ["projects"] =
-            [
-                new BrowserItem("SkyCD v3", "Folder", "11 items", "📁"),
-                new BrowserItem("Plugin Benchmarks", "Folder", "6 items", "📁")
-            ]
-        };
-
-        SelectedTreeNode = TreeNodes[0];
+        SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
     }
 
@@ -618,7 +584,8 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        if (!browserItemsByNodeKey.TryGetValue(nodeKey, out var items))
+        var items = browserDataStore.GetBrowserItems(nodeKey);
+        if (items.Count == 0)
         {
             BrowserItems = [];
             SelectedBrowserItem = null;

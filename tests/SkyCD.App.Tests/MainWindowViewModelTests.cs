@@ -454,4 +454,29 @@ public class MainWindowViewModelTests
             Assert.Equal(mode, vm.CurrentSortMode);
         }
     }
+
+    [Fact]
+    public void Constructor_UsesInjectedDataStoreForTreeAndList()
+    {
+        var vm = new MainWindowViewModel(new StubBrowserDataStore());
+
+        Assert.Equal("root", vm.SelectedTreeNode?.Key);
+        Assert.Single(vm.BrowserItems);
+        Assert.Equal("Sample.txt", vm.BrowserItems[0].Name);
+    }
+
+    private sealed class StubBrowserDataStore : IBrowserDataStore
+    {
+        public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
+        {
+            return [new BrowserTreeNode("root", "Root", "R", [], isExpanded: true)];
+        }
+
+        public IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)
+        {
+            return nodeKey == "root"
+                ? [new BrowserItem("Sample.txt", "File", "12 KB", "F")]
+                : [];
+        }
+    }
 }
