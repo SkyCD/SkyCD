@@ -12,6 +12,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<BrowserItem>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
@@ -298,6 +299,28 @@ public partial class MainWindowViewModel : ObservableObject
     private void AddItem()
     {
         AddToListRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void AddImportedItem(string? suggestedName)
+    {
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        var itemName = string.IsNullOrWhiteSpace(suggestedName)
+            ? $"Imported Item {DateTime.Now:HHmmss}"
+            : suggestedName.Trim();
+
+        if (!addedItemsByNodeKey.TryGetValue(nodeKey, out var addedItems))
+        {
+            addedItems = [];
+            addedItemsByNodeKey[nodeKey] = addedItems;
+        }
+
+        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "📁");
+        addedItems.Add(importedItem);
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+            item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
+        IsDirtyDocument = true;
+        StatusText = $"Added {itemName}.";
     }
 
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
@@ -647,12 +670,21 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var items = browserDataStore.GetBrowserItems(nodeKey);
+        var baseItems = browserDataStore.GetBrowserItems(nodeKey);
         if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
         {
-            items = items
+            baseItems = baseItems
                 .Where(item => !deletedNames.Contains(item.Name))
                 .ToArray();
+        }
+
+        var addedItems = addedItemsByNodeKey.TryGetValue(nodeKey, out var runtimeItems)
+            ? runtimeItems
+            : [];
+        var items = baseItems.Concat(addedItems).ToArray();
+        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out deletedNames) && deletedNames.Count > 0)
+        {
+            items = items.Where(item => !deletedNames.Contains(item.Name)).ToArray();
         }
 
         if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
@@ -667,7 +699,7 @@ public partial class MainWindowViewModel : ObservableObject
                 .ToArray();
         }
 
-        if (items.Count == 0)
+        if (items.Length == 0)
         {
             BrowserItems = [];
             SelectedBrowserItem = null;
