@@ -5,53 +5,58 @@
         <!-- Light Theme Resources -->
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#cbd5e1"/>
-            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#f1f5f9"/>
-            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#1e293b"/>
-            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#e2e8f0"/>
-            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#94a3b8"/>
+            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#808080"/>
+            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#C0C0C0"/>
+            <SolidColorBrush x:Key="TabItemBorderDarkBrush" Color="#808080"/>
+            <SolidColorBrush x:Key="TabItemBorderLightBrush" Color="#DFDFDF"/>
+            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#ECE9E9"/>
+            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#D0D0D0"/>
+            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#808080"/>
         </ResourceDictionary>
 
         <!-- Dark Theme Resources -->
         <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#1f2937"/>
-            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#374151"/>
-            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#374151"/>
-            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#f3f4f6"/>
-            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#2d3748"/>
-            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#4b5563"/>
-            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#6b7280"/>
+            <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#2D2D2D"/>
+            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#1a1a1a"/>
+            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#3d3d3d"/>
+            <SolidColorBrush x:Key="TabItemBorderDarkBrush" Color="#1a1a1a"/>
+            <SolidColorBrush x:Key="TabItemBorderLightBrush" Color="#5a5a5a"/>
+            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#e0e0e0"/>
+            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#454545"/>
+            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#4a4a4a"/>
+            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#707070"/>
         </ResourceDictionary>
     </Styles.Resources>
 
-    <!-- Legacy WinForms-style TabControl -->
+    <!-- Legacy WinForms-style TabControl with 3D beveled borders -->
     <Style Selector="TabControl">
         <Setter Property="Background" Value="{DynamicResource TabControlBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
 
-    <!-- TabItem styling -->
+    <!-- TabItem styling - Classic beveled WinForms button appearance -->
     <Style Selector="TabItem">
         <Setter Property="Padding" Value="16,4,16,4"/>
-        <Setter Property="Margin" Value="2,0,0,0"/>
+        <Setter Property="Margin" Value="2,2,0,0"/>
         <Setter Property="Background" Value="{DynamicResource TabItemBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TabItemBorderLightBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="FontSize" Value="11"/>
     </Style>
 
-    <!-- Selected/active tab -->
+    <!-- Selected/active tab - lighter appearance with highlight borders -->
     <Style Selector="TabItem:selected">
         <Setter Property="Background" Value="{DynamicResource TabItemSelectedBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TabItemBorderLightBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="ZIndex" Value="1"/>
         <Setter Property="Padding" Value="16,4,16,4"/>
+        <Setter Property="Margin" Value="2,2,0,-2"/>
     </Style>
 
     <!-- Hover/focus state -->
