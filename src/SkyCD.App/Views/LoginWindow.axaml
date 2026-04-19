@@ -8,7 +8,7 @@
         CanResize="False"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/skycd.ico"
         Title="Server login">
 
     <Design.DataContext>

@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterOwner"
         WindowDecorations="BorderOnly"
         ShowInTaskbar="False"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/skycd.ico"
         Title="Adding">
 
     <Design.DataContext>

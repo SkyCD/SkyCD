@@ -9,7 +9,7 @@
         MinHeight="460"
         WindowStartupLocation="CenterOwner"
         CanMinimize="False"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/skycd.ico"
         Title="Add To List">
 
     <Design.DataContext>
