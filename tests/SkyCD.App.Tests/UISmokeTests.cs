@@ -75,7 +75,7 @@ public class UISmokeTests
             "Test Item",
             "📄",
             "Test comments",
-            []);
+            new Dictionary<string, object?>());
 
         Assert.False(vm.DialogAccepted);
         vm.ConfirmCommand.Execute(null);

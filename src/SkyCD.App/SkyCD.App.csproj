@@ -17,7 +17,7 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.1" />
     <PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.1" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj" />
+    <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj" />
     <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
   </ItemGroup>

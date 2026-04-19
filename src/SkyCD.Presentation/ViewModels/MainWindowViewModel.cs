@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -11,6 +12,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<BrowserItem>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
@@ -19,6 +22,8 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
+    public event EventHandler? SaveCatalogAsRequested;
+    public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
@@ -162,6 +167,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private BrowserItem? clipboardItem;
 
+    [ObservableProperty]
+    private string? currentCatalogPath;
+
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
     public bool IsPasteEnabled => ClipboardItem is not null;
@@ -182,6 +190,14 @@ public partial class MainWindowViewModel : ObservableObject
 
     public void CompleteNewCatalog()
     {
+        commentsByObjectKey.Clear();
+        addedItemsByNodeKey.Clear();
+        deletedItemNamesByNodeKey.Clear();
+        renamedBrowserItemNamesByNodeKey.Clear();
+        CurrentCatalogPath = null;
+        SelectedBrowserItem = null;
+        ClipboardItem = null;
+        RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }
@@ -211,22 +227,64 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
     private void SaveCatalog()
     {
+        if (SaveCatalogRequested is not null)
+        {
+            SaveCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentCatalogPath))
+        {
+            StatusText = "Use Save As to select file location.";
+            return;
+        }
+
+        CompleteSaveCatalog(CurrentCatalogPath);
+    }
+
+    public void CompleteSaveCatalog(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
         StartOperation("Saving catalog...");
         SetProgress(40, "Parsing items...");
         SetProgress(90, "Updating indexes...");
         CompleteOperation();
 
+        CurrentCatalogPath = filePath;
+        StatusText = $"Saved catalog to {GetDisplayFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 
     [RelayCommand]
     private void SaveCatalogAs()
     {
+        if (SaveCatalogAsRequested is not null)
+        {
+            SaveCatalogAsRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteSaveCatalogAs("catalog.scd");
+    }
+
+    public void CompleteSaveCatalogAs(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
         StartOperation("Saving catalog...");
         SetProgress(50, "Parsing items...");
         SetProgress(95, "Updating indexes...");
         CompleteOperation();
 
+        CurrentCatalogPath = filePath;
+        StatusText = $"Saved catalog as {GetDisplayFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 
@@ -270,6 +328,28 @@ public partial class MainWindowViewModel : ObservableObject
         AddToListRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    public void AddImportedItem(string? suggestedName)
+    {
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        var itemName = string.IsNullOrWhiteSpace(suggestedName)
+            ? $"Imported Item {DateTime.Now:HHmmss}"
+            : suggestedName.Trim();
+
+        if (!addedItemsByNodeKey.TryGetValue(nodeKey, out var addedItems))
+        {
+            addedItems = [];
+            addedItemsByNodeKey[nodeKey] = addedItems;
+        }
+
+        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "📁");
+        addedItems.Add(importedItem);
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+            item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
+        IsDirtyDocument = true;
+        StatusText = $"Added {itemName}.";
+    }
+
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
     private void DeleteItem()
     {
@@ -278,8 +358,18 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames))
+        {
+            deletedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            deletedItemNamesByNodeKey[nodeKey] = deletedNames;
+        }
+
+        deletedNames.Add(SelectedBrowserItem.Name);
+        var deletedName = SelectedBrowserItem.Name;
+        RefreshBrowserItemsForSelection();
         IsDirtyDocument = true;
-        StatusText = $"Deleted {SelectedBrowserItem.Name}.";
+        StatusText = $"Deleted {deletedName}.";
     }
 
     [RelayCommand]
@@ -543,13 +633,7 @@ public partial class MainWindowViewModel : ObservableObject
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey);
             var nodeTitle = SelectedTreeNode?.Title ?? "Library";
-
-            var infoProperties = new List<PropertiesInfoItem>
-            {
-                new("Type", SelectedBrowserItem.Type),
-                new("Size", SelectedBrowserItem.Size),
-                new("Location", nodeTitle)
-            };
+            var infoProperties = BuildBrowserItemInfoProperties(SelectedBrowserItem, nodeTitle);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -565,23 +649,37 @@ public partial class MainWindowViewModel : ObservableObject
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
             var comments = GetObjectComments(objectKey);
 
-            var infoProperties = new List<PropertiesInfoItem>
-            {
-                new("Type", "Folder"),
-                new("Children", SelectedTreeNode.Children.Count.ToString())
-            };
-
             dialog = new PropertiesDialogViewModel(
                 objectKey,
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                infoProperties);
+                new Dictionary<string, object?>());
             return true;
         }
 
         dialog = null;
         return false;
+    }
+
+    private static IReadOnlyDictionary<string, object?> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
+    {
+        if (!SupportsInfoTab(item.Type))
+        {
+            return new Dictionary<string, object?>();
+        }
+
+        return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase)
+        {
+            ["Type"] = item.Type,
+            ["Size"] = item.Size,
+            ["Location"] = nodeTitle
+        };
+    }
+
+    private static bool SupportsInfoTab(string? itemType)
+    {
+        return !string.Equals(itemType, "Folder", StringComparison.OrdinalIgnoreCase);
     }
 
     private string GetObjectComments(string objectKey)
@@ -603,11 +701,34 @@ public partial class MainWindowViewModel : ObservableObject
         return $"tree:{node.Key}";
     }
 
+    private static string GetDisplayFileName(string filePath)
+    {
+        var normalizedPath = filePath.Replace('\\', '/');
+        var fileName = Path.GetFileName(normalizedPath);
+        return string.IsNullOrWhiteSpace(fileName) ? filePath : fileName;
+    }
+
     private void RefreshBrowserItemsForSelection()
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var items = browserDataStore.GetBrowserItems(nodeKey);
+        var baseItems = browserDataStore.GetBrowserItems(nodeKey);
+        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
+        {
+            baseItems = baseItems
+                .Where(item => !deletedNames.Contains(item.Name))
+                .ToArray();
+        }
+
+        var addedItems = addedItemsByNodeKey.TryGetValue(nodeKey, out var runtimeItems)
+            ? runtimeItems
+            : [];
+        var items = baseItems.Concat(addedItems).ToArray();
+        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out deletedNames) && deletedNames.Count > 0)
+        {
+            items = items.Where(item => !deletedNames.Contains(item.Name)).ToArray();
+        }
+
         if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
         {
             items = items
@@ -620,7 +741,7 @@ public partial class MainWindowViewModel : ObservableObject
                 .ToArray();
         }
 
-        if (items.Count == 0)
+        if (items.Length == 0)
         {
             BrowserItems = [];
             SelectedBrowserItem = null;

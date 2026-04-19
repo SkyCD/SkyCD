@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -10,13 +11,13 @@ public partial class PropertiesDialogViewModel : ObservableObject
         string name,
         string iconGlyph,
         string comments,
-        IReadOnlyList<PropertiesInfoItem> infoProperties)
+        IReadOnlyDictionary<string, object?> infoProperties)
     {
         ObjectKey = objectKey;
         this.name = name;
         IconGlyph = iconGlyph;
         this.comments = comments;
-        InfoProperties = infoProperties;
+        InfoProperties = NormalizeInfoProperties(infoProperties);
     }
 
     public string ObjectKey { get; }
@@ -26,7 +27,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string IconGlyph { get; }
 
-    public IReadOnlyList<PropertiesInfoItem> InfoProperties { get; }
+    public IReadOnlyDictionary<string, object?> InfoProperties { get; }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 
@@ -40,5 +41,63 @@ public partial class PropertiesDialogViewModel : ObservableObject
     private void Confirm()
     {
         DialogAccepted = true;
+    }
+
+    private static IReadOnlyDictionary<string, object?> NormalizeInfoProperties(
+        IReadOnlyDictionary<string, object?> infoProperties)
+    {
+        return infoProperties
+            .OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase)
+            .ToDictionary(
+                item => item.Key,
+                item => (object?)NormalizeDisplayValue(item.Value),
+                StringComparer.CurrentCultureIgnoreCase);
+    }
+
+    private static string NormalizeDisplayValue(object? value)
+    {
+        if (value is null)
+        {
+            return GetUnknownText();
+        }
+
+        if (value is bool boolValue)
+        {
+            return boolValue ? GetYesText() : GetNoText();
+        }
+
+        var text = value.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return GetUnknownText();
+        }
+
+        if (bool.TryParse(text, out var parsedBool))
+        {
+            return parsedBool ? GetYesText() : GetNoText();
+        }
+
+        return text;
+    }
+
+    private static string GetUnknownText()
+    {
+        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase)
+            ? "Nežinoma"
+            : "Unknown";
+    }
+
+    private static string GetYesText()
+    {
+        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase)
+            ? "Taip"
+            : "Yes";
+    }
+
+    private static string GetNoText()
+    {
+        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase)
+            ? "Ne"
+            : "No";
     }
 }

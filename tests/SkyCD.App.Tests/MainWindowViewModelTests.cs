@@ -236,10 +236,37 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsSaveEnabled);
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
 
+        vm.CurrentCatalogPath = @"C:\tmp\catalog.scd";
         vm.SaveCatalogCommand.Execute(null);
-
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
+        Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
+    public void SaveCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel
+        {
+            IsDirtyDocument = true
+        };
+        var raised = false;
+        vm.SaveCatalogRequested += (_, _) => raised = true;
+
+        vm.SaveCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
+    public void CompleteSaveCatalog_UsesFileNameForUnixStylePath()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.CompleteSaveCatalog("/tmp/catalog.scd");
+
+        Assert.Equal("Saved catalog to catalog.scd.", vm.StatusText);
     }
 
     [Fact]
@@ -255,9 +282,23 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsDeleteEnabled);
         Assert.True(vm.DeleteItemCommand.CanExecute(null));
 
+        var deletedName = vm.BrowserItems[0].Name;
         vm.DeleteItemCommand.Execute(null);
 
-        Assert.Equal($"Deleted {vm.BrowserItems[0].Name}.", vm.StatusText);
+        Assert.Equal($"Deleted {deletedName}.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteCommand_RemovesItemFromVisibleList()
+    {
+        var vm = new MainWindowViewModel();
+        var originalCount = vm.BrowserItems.Count;
+        var deletedName = vm.SelectedBrowserItem?.Name;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == deletedName);
     }
 
     [Fact]
@@ -319,6 +360,20 @@ public class MainWindowViewModelTests
         vm.AddItemCommand.Execute(null);
 
         Assert.True(raised);
+    }
+
+    [Fact]
+    public void AddImportedItem_AddsVisibleItemAndMarksDocumentDirty()
+    {
+        var vm = new MainWindowViewModel();
+        var originalCount = vm.BrowserItems.Count;
+
+        vm.AddImportedItem("Imported Folder");
+
+        Assert.Equal(originalCount + 1, vm.BrowserItems.Count);
+        Assert.Contains(vm.BrowserItems, item => item.Name == "Imported Folder");
+        Assert.True(vm.IsDirtyDocument);
+        Assert.Equal("Imported Folder", vm.SelectedBrowserItem?.Name);
     }
 
     [Fact]
@@ -400,9 +455,49 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SaveCatalogAsCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.SaveCatalogAsRequested += (_, _) => raised = true;
+
+        vm.SaveCatalogAsCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.Null(vm.CurrentCatalogPath);
+    }
+
+    [Fact]
+    public void CompleteSaveCatalogAs_SetsCurrentPathAndClearsDirtyFlag()
+    {
+        var vm = new MainWindowViewModel
+        {
+            IsDirtyDocument = true
+        };
+
+        vm.CompleteSaveCatalogAs(@"C:\tmp\catalog.scd");
+
+        Assert.False(vm.IsDirtyDocument);
+        Assert.Equal(@"C:\tmp\catalog.scd", vm.CurrentCatalogPath);
+        Assert.Equal("Saved catalog as catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
+    public void CompleteSaveCatalogAs_UsesFileNameForUnixStylePath()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.CompleteSaveCatalogAs("/tmp/catalog.scd");
+
+        Assert.Equal("Saved catalog as catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
     {
         var vm = new MainWindowViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Video");
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -413,6 +508,38 @@ public class MainWindowViewModelTests
         Assert.Equal(vm.SelectedBrowserItem?.IconGlyph, request.Dialog.IconGlyph);
         Assert.Equal(string.Empty, request.Dialog.Comments);
         Assert.NotEmpty(request.Dialog.InfoProperties);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_FolderItem_HidesInfoTab()
+    {
+        var vm = new MainWindowViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes[0];
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Folder");
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.False(request!.Dialog.HasInfoTab);
+        Assert.Empty(request.Dialog.InfoProperties);
+    }
+
+    [Fact]
+    public void OpenPropertiesCommand_TreeNode_HidesInfoTab()
+    {
+        var vm = new MainWindowViewModel();
+        vm.SelectedBrowserItem = null;
+        vm.SelectedTreeNode = vm.TreeNodes[0];
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.False(request!.Dialog.HasInfoTab);
+        Assert.Empty(request.Dialog.InfoProperties);
     }
 
     [Fact]

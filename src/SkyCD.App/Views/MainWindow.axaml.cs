@@ -6,6 +6,9 @@ using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Host;
+using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Runtime.Discovery;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,6 +23,8 @@ public partial class MainWindow : Window
 {
     private readonly AppOptionsStore appOptionsStore = new();
     private readonly RuntimePluginDiscoveryService pluginDiscoveryService = new();
+    private readonly PluginCatalog pluginCatalog = new();
+    private readonly FileFormatRoutingService fileFormatRoutingService;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
@@ -28,6 +33,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        fileFormatRoutingService = new FileFormatRoutingService(pluginCatalog);
+        LoadPluginsForFileFormats();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closing += OnClosing;
@@ -40,6 +47,9 @@ public partial class MainWindow : Window
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
             subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
+            subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
@@ -53,6 +63,9 @@ public partial class MainWindow : Window
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
             subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
+            subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
+            subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
@@ -225,8 +238,7 @@ public partial class MainWindow : Window
 
         await ShowAddProgressAsync(dialogVm);
 
-        vm.StatusText = "Done.";
-        vm.IsDirtyDocument = true;
+        vm.AddImportedItem(ResolveImportedName(dialogVm));
     }
 
     private async void OnNewCatalogRequested(object? sender, EventArgs e)
@@ -277,6 +289,123 @@ public partial class MainWindow : Window
         vm.CompleteOpenCatalog();
     }
 
+    private async void OnSaveCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var targetPath = vm.CurrentCatalogPath;
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            var saveFormats = fileFormatRoutingService.GetSaveFormats();
+            var fileTypeChoices = new List<FilePickerFileType>();
+
+            foreach (var format in saveFormats)
+            {
+                var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
+                fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
+                {
+                    Patterns = patterns
+                });
+            }
+
+            fileTypeChoices.Add(new FilePickerFileType("All files")
+            {
+                Patterns = ["*.*"]
+            });
+
+            var defaultFormat = saveFormats.FirstOrDefault();
+            var defaultExtension = defaultFormat?.Extensions.FirstOrDefault()?.TrimStart('.') ?? "scd";
+
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save catalog",
+                SuggestedFileName = $"catalog.{defaultExtension}",
+                DefaultExtension = defaultExtension,
+                FileTypeChoices = fileTypeChoices
+            });
+
+            targetPath = file?.TryGetLocalPath();
+        }
+
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var content = """
+                # SkyCD catalog placeholder
+                # TODO: replace with full catalog serialization pipeline
+                """;
+            File.WriteAllText(targetPath, content);
+            vm.CompleteSaveCatalog(targetPath);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+        }
+    }
+
+    private async void OnSaveCatalogAsRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var saveFormats = fileFormatRoutingService.GetSaveFormats();
+        var fileTypeChoices = new List<FilePickerFileType>();
+
+        foreach (var format in saveFormats)
+        {
+            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
+            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
+            {
+                Patterns = patterns
+            });
+        }
+
+        fileTypeChoices.Add(new FilePickerFileType("All files")
+        {
+            Patterns = ["*.*"]
+        });
+
+        var defaultFormat = saveFormats.FirstOrDefault();
+        var defaultExtension = defaultFormat?.Extensions.FirstOrDefault()?.TrimStart('.') ?? "scd";
+
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save catalog as",
+            SuggestedFileName = $"catalog.{defaultExtension}",
+            DefaultExtension = defaultExtension,
+            FileTypeChoices = fileTypeChoices
+        });
+
+        var localPath = file?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var content = """
+                # SkyCD catalog placeholder
+                # TODO: replace with full catalog serialization pipeline
+                """;
+            File.WriteAllText(localPath, content);
+            vm.CompleteSaveCatalogAs(localPath);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+        }
+    }
+
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
     {
         var dialog = new PropertiesWindow
@@ -323,6 +452,9 @@ public partial class MainWindow : Window
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             appOptionsStore.Save(options);
             ApplyLanguage(options.Language);
+
+            // Trigger UI refresh to apply new language
+            InvalidateVisual();
         }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
@@ -557,6 +689,40 @@ public partial class MainWindow : Window
         dialogVm.SetPlugins(plugins);
     }
 
+    private void LoadPluginsForFileFormats()
+    {
+        var options = appOptionsStore.Load();
+        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
+            ? ResolveDefaultPluginPath()
+            : options.PluginPath;
+
+        if (string.IsNullOrWhiteSpace(pluginPath) || !Directory.Exists(pluginPath))
+        {
+            return;
+        }
+
+        var hostVersion = new Version(3, 0, 0);
+        var discoveryService = new SkyCD.Plugin.Runtime.Discovery.PluginDiscoveryService();
+        var discoveredPlugins = new List<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>();
+
+        var dllPaths = Directory.GetFiles(pluginPath, "*.dll", SearchOption.AllDirectories);
+        foreach (var dllPath in dllPaths)
+        {
+            try
+            {
+                var assembly = Assembly.LoadFrom(dllPath);
+                var plugins = discoveryService.DiscoverFromAssembly(assembly, hostVersion);
+                discoveredPlugins.AddRange(plugins);
+            }
+            catch
+            {
+                // Skip assemblies that can't be loaded
+            }
+        }
+
+        pluginCatalog.SetPlugins(discoveredPlugins);
+    }
+
     private static string ResolveDefaultPluginPath()
     {
         var candidates = new[]
@@ -566,6 +732,27 @@ public partial class MainWindow : Window
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)
+    {
+        if (!string.IsNullOrWhiteSpace(dialogVm.MediaName))
+        {
+            return dialogVm.MediaName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dialogVm.SourceValue))
+        {
+            var value = dialogVm.SourceValue.Trim();
+            if (dialogVm.SourceMode == AddToListSourceMode.Internet)
+            {
+                return value;
+            }
+
+            return Path.GetFileName(value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        }
+
+        return null;
     }
 
     private static T? FindAncestor<T>(Visual? visual) where T : class

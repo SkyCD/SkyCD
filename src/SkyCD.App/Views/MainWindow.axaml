@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -150,28 +151,28 @@
             </MenuItem>
         </Menu>
 
-        <Border DockPanel.Dock="Top" BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Padding="4,3">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
+        <cc:ClassicToolbar DockPanel.Dock="Top">
+            <cc:ClassicToolbar.Items>
+                <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Width="14" Height="14" Data="M2,1 H8 L12,5 V15 H2 Z M8,1 V5 H12 M4,9 H10 M4,12 H10"/>
                         <TextBlock Text="_New"/>
                     </StackPanel>
-                </Button>
-                <Button MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
+                </cc:ClassicToolbarButton>
+                <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Width="14" Height="14" Data="M1,5 H6 L7.5,3 H15 V13 H1 Z M1,7 H15"/>
                         <TextBlock Text="_Open"/>
                     </StackPanel>
-                </Button>
-                <Button MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
+                </cc:ClassicToolbarButton>
+                <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <PathIcon Width="14" Height="14" Data="M2,1 H12 L15,4 V15 H2 Z M4,1 V6 H10 V1 M5,11 H12"/>
                         <TextBlock Text="_Save"/>
                     </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
+                </cc:ClassicToolbarButton>
+            </cc:ClassicToolbar.Items>
+        </cc:ClassicToolbar>
 
         <Border DockPanel.Dock="Bottom"
                 IsVisible="{Binding IsStatusBarVisible}"
@@ -287,37 +288,37 @@
                           ShowsPreview="True"/>
 
             <!-- Details View: tabular list with column headers -->
-            <Grid Grid.Column="2" IsVisible="{Binding IsDetailsMode}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Border BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Background="#F0F0F0" Padding="4,2">
-                    <Grid ColumnDefinitions="24,*,150,120">
-                        <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
-                    </Grid>
-                </Border>
-                <ListBox Grid.Row="1"
-                         MinWidth="240"
-                         ItemsSource="{Binding BrowserItems}"
-                         SelectedItem="{Binding SelectedBrowserItem}"
-                         ContextRequested="OnBrowserContextRequested"
-                         ContextMenu="{DynamicResource BrowserContextMenu}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
-                                <TextBlock Text="{Binding IconGlyph}" FontSize="16"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Type}"/>
-                                <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
+            <cc:DetailsListView Grid.Column="2"
+                                IsVisible="{Binding IsDetailsMode}"
+                                ListMinWidth="240"
+                                ItemsSource="{Binding BrowserItems}"
+                                SelectedItem="{Binding SelectedBrowserItem}"
+                                ContextRequested="OnBrowserContextRequested"
+                                ListContextMenu="{DynamicResource BrowserContextMenu}">
+                <cc:DetailsListView.HeaderContent>
+                    <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                            BorderThickness="0,0,0,1"
+                            Background="{DynamicResource ThemeControlMidBrush}"
+                            Padding="4,2">
+                        <Grid ColumnDefinitions="24,*,150,120">
+                            <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Border>
+                </cc:DetailsListView.HeaderContent>
+                <cc:DetailsListView.RowTemplate>
+                    <DataTemplate x:DataType="vm:BrowserItem">
+                        <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
+                            <TextBlock Text="{Binding IconGlyph}" FontSize="16"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Type}"/>
+                            <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </DataTemplate>
+                </cc:DetailsListView.RowTemplate>
+            </cc:DetailsListView>
 
             <!-- List View: wrapping simple icon+name layout -->
             <ListBox Grid.Column="2"

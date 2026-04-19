@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
         Width="411"
@@ -17,12 +18,12 @@
         Title="Properties">
 
     <Grid RowDefinitions="*,Auto" Margin="0">
-        <TabControl Margin="8,8,8,0">
+        <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="General">
                 <Grid Margin="10,8,10,10" RowDefinitions="Auto,Auto,Auto,*" ColumnDefinitions="32,8,*">
                     <Border Width="32"
                             Height="32"
-                            BorderBrush="#C0C0C0"
+                            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                             BorderThickness="1"
                             VerticalAlignment="Top"
                             CornerRadius="2">
@@ -48,32 +49,11 @@
                              ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                 </Grid>
             </TabItem>
-
-            <TabItem Header="Info" IsVisible="{Binding HasInfoTab}">
-                <Border Margin="8,8,8,10" BorderBrush="#D8D8D8" BorderThickness="1">
-                    <Grid RowDefinitions="Auto,*">
-                        <Grid ColumnDefinitions="183,*" Background="#E8E8E8">
-                            <TextBlock Margin="8,5" Text="Property" FontWeight="SemiBold" Foreground="#000000"/>
-                            <TextBlock Grid.Column="1" Margin="8,5" Text="Value" FontWeight="SemiBold" Foreground="#000000"/>
-                        </Grid>
-                        <ListBox Grid.Row="1"
-                                 BorderThickness="0"
-                                 ItemsSource="{Binding InfoProperties}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:PropertiesInfoItem">
-                                    <Grid ColumnDefinitions="183,*" Margin="0,0,0,1">
-                                        <Border BorderBrush="#E2E2E2" BorderThickness="0,0,1,1" Padding="8,4">
-                                            <TextBlock Text="{Binding Property}" TextWrapping="Wrap"/>
-                                        </Border>
-                                        <Border Grid.Column="1" BorderBrush="#E2E2E2" BorderThickness="0,0,0,1" Padding="8,4">
-                                            <TextBlock Text="{Binding Value}" TextWrapping="Wrap"/>
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Grid>
-                </Border>
+            <TabItem Header="Properties" IsVisible="{Binding HasInfoTab}">
+                <cc:PropertiesList Margin="8,8,8,10"
+                                   PropertiesData="{Binding InfoProperties}"
+                                   PropertyHeader="Property"
+                                   ValueHeader="Value"/>
             </TabItem>
         </TabControl>
 
