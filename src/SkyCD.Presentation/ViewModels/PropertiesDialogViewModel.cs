@@ -13,7 +13,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
         IReadOnlyList<PropertiesInfoItem> infoProperties)
     {
         ObjectKey = objectKey;
-        Name = name;
+        this.name = name;
         IconGlyph = iconGlyph;
         this.comments = comments;
         InfoProperties = infoProperties;
@@ -21,7 +21,8 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string ObjectKey { get; }
 
-    public string Name { get; }
+    [ObservableProperty]
+    private string name;
 
     public string IconGlyph { get; }
 

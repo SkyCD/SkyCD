@@ -140,7 +140,7 @@
                 <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
             </MenuItem>
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Options..." Command="{Binding OpenOptionsCommand}"/>
+                <MenuItem Header="_Options..." HotKey="Ctrl+Alt+O" Command="{Binding OpenOptionsCommand}"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Project website in _SourceForge.NET" Command="{Binding OpenProjectWebsiteCommand}"/>
@@ -201,7 +201,8 @@
             <TreeView Grid.Column="0"
                       MinWidth="160"
                       ItemsSource="{Binding TreeNodes}"
-                      SelectedItem="{Binding SelectedTreeNode}">
+                      SelectedItem="{Binding SelectedTreeNode}"
+                      ContextRequested="OnTreeContextRequested">
                 <TreeView.Styles>
                     <Style Selector="TreeViewItem" x:DataType="vm:BrowserTreeNode">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
@@ -303,6 +304,7 @@
                          MinWidth="240"
                          ItemsSource="{Binding BrowserItems}"
                          SelectedItem="{Binding SelectedBrowserItem}"
+                         ContextRequested="OnBrowserContextRequested"
                          ContextMenu="{DynamicResource BrowserContextMenu}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -323,6 +325,7 @@
                      IsVisible="{Binding IsListMode}"
                      ItemsSource="{Binding BrowserItems}"
                      SelectedItem="{Binding SelectedBrowserItem}"
+                     ContextRequested="OnBrowserContextRequested"
                      ContextMenu="{DynamicResource BrowserContextMenu}">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -345,6 +348,7 @@
                      IsVisible="{Binding IsIconGridMode}"
                      ItemsSource="{Binding BrowserItems}"
                      SelectedItem="{Binding SelectedBrowserItem}"
+                     ContextRequested="OnBrowserContextRequested"
                      ContextMenu="{DynamicResource BrowserContextMenu}">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>

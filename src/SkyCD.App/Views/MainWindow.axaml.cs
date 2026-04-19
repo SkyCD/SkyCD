@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
@@ -71,6 +73,54 @@ public partial class MainWindow : Window
         {
             UpdateWindowTitle();
         }
+    }
+
+    private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not TreeView treeView || subscribedViewModel is null)
+        {
+            return;
+        }
+
+        if (!e.TryGetPosition(treeView, out var point))
+        {
+            e.Handled = subscribedViewModel.SelectedTreeNode is null;
+            return;
+        }
+
+        var hit = treeView.InputHitTest(point) as Visual;
+        var treeViewItem = FindAncestor<TreeViewItem>(hit);
+        if (treeViewItem?.DataContext is BrowserTreeNode node)
+        {
+            subscribedViewModel.SelectedTreeNode = node;
+            return;
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnBrowserContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not ListBox listBox || subscribedViewModel is null)
+        {
+            return;
+        }
+
+        if (!e.TryGetPosition(listBox, out var point))
+        {
+            e.Handled = subscribedViewModel.SelectedBrowserItem is null;
+            return;
+        }
+
+        var hit = listBox.InputHitTest(point) as Visual;
+        var listBoxItem = FindAncestor<ListBoxItem>(hit);
+        if (listBoxItem?.DataContext is BrowserItem item)
+        {
+            subscribedViewModel.SelectedBrowserItem = item;
+            return;
+        }
+
+        e.Handled = true;
     }
 
     private void UpdateWindowTitle()
@@ -200,7 +250,7 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.NewCatalogCommand.Execute(null);
+        vm.CompleteNewCatalog();
     }
 
     private async void OnOpenCatalogRequested(object? sender, EventArgs e)
@@ -224,7 +274,7 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.OpenCatalogCommand.Execute(null);
+        vm.CompleteOpenCatalog();
     }
 
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
@@ -254,6 +304,7 @@ public partial class MainWindow : Window
         }
 
         e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
+        e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         RefreshPlugins(e.Dialog);
@@ -269,6 +320,7 @@ public partial class MainWindow : Window
             options.PluginPath = e.Dialog.PluginPath;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
+            options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             appOptionsStore.Save(options);
             ApplyLanguage(options.Language);
         }
@@ -514,6 +566,22 @@ public partial class MainWindow : Window
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private static T? FindAncestor<T>(Visual? visual) where T : class
+    {
+        var current = visual;
+        while (current is not null)
+        {
+            if (current is T target)
+            {
+                return target;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return null;
     }
 
     private static void ApplyLanguage(string? languageName)

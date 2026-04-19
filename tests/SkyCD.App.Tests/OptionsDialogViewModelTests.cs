@@ -91,4 +91,14 @@ public class OptionsDialogViewModelTests
 
         Assert.Equal(["plugin.xml"], disabled);
     }
+
+    [Fact]
+    public void SelectedTabIndex_CanBeUpdated()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.SelectedTabIndex = 1;
+
+        Assert.Equal(1, vm.SelectedTabIndex);
+    }
 }
