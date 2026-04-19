@@ -80,6 +80,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsDeleteEnabled => SelectedBrowserItem is not null;
 
+    public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
+
     public string ProgressText => $"{ProgressValue}%";
 
     public bool IsTilesViewChecked => CurrentViewMode == BrowserViewMode.Tiles;
@@ -241,7 +243,7 @@ public partial class MainWindowViewModel : ObservableObject
         IsDirtyDocument = false;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsPropertiesEnabled))]
     private void OpenProperties()
     {
         if (!TryBuildPropertiesDialog(out var dialog))
@@ -643,6 +645,8 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
     {
         RefreshBrowserItemsForSelection();
+        OnPropertyChanged(nameof(IsPropertiesEnabled));
+        OpenPropertiesCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
@@ -690,9 +694,11 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedBrowserItemChanged(BrowserItem? value)
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
+        OnPropertyChanged(nameof(IsPropertiesEnabled));
         OnPropertyChanged(nameof(IsCopyEnabled));
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        OpenPropertiesCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
