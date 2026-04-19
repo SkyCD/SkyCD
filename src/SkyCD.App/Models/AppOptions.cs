@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SkyCD.App.Models;
 
 public sealed class AppOptions
@@ -19,4 +21,6 @@ public sealed class AppOptions
     public string PluginPath { get; set; } = string.Empty;
 
     public string Language { get; set; } = "English";
+
+    public List<string> DisabledPluginIds { get; set; } = [];
 }
