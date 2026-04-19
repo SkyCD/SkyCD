@@ -36,6 +36,7 @@ public partial class MainWindow : Window
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
+            subscribedViewModel.ExitRequested -= OnExitRequested;
         }
 
         subscribedViewModel = DataContext as MainWindowViewModel;
@@ -45,7 +46,13 @@ public partial class MainWindow : Window
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
+            subscribedViewModel.ExitRequested += OnExitRequested;
         }
+    }
+
+    private void OnExitRequested(object? sender, EventArgs e)
+    {
+        Close();
     }
 
     private void OnOpened(object? sender, EventArgs e)
