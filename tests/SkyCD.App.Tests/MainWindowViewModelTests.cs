@@ -97,6 +97,77 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SetViewModeCommand_UpdatesPerModeVisibilityProperties()
+    {
+        var vm = new MainWindowViewModel();
+
+        // Default: Details mode
+        Assert.True(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("List");
+        Assert.False(vm.IsDetailsMode);
+        Assert.True(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("SmallIcons");
+        Assert.False(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.True(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("LargeIcons");
+        Assert.False(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.True(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("Tiles");
+        Assert.False(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.True(vm.IsTilesMode);
+    }
+
+    [Fact]
+    public void SetViewModeCommand_UpdatesBrowserGridItemHeight()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.SetViewModeCommand.Execute("LargeIcons");
+        Assert.Equal(90, vm.BrowserGridItemHeight);
+
+        vm.SetViewModeCommand.Execute("Tiles");
+        Assert.Equal(80, vm.BrowserGridItemHeight);
+
+        vm.SetViewModeCommand.Execute("SmallIcons");
+        Assert.Equal(60, vm.BrowserGridItemHeight);
+    }
+
+    [Fact]
+    public void AllViewModes_HaveExactlyOneCheckedState()
+    {
+        var vm = new MainWindowViewModel();
+        var modes = new[] { "Details", "List", "SmallIcons", "LargeIcons", "Tiles" };
+
+        foreach (var mode in modes)
+        {
+            vm.SetViewModeCommand.Execute(mode);
+            var checkedCount = new[] { vm.IsDetailsViewChecked, vm.IsListViewChecked, vm.IsSmallIconsViewChecked, vm.IsLargeIconsViewChecked, vm.IsTilesViewChecked }
+                .Count(c => c);
+            Assert.Equal(1, checkedCount);
+        }
+    }
+
+    [Fact]
     public void ExpandAndCollapseSelectionCommand_UpdatesSelectedTreeNodeExpansion()
     {
         var vm = new MainWindowViewModel();

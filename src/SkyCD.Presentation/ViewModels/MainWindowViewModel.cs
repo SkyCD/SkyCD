@@ -94,6 +94,14 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
 
+    public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
+
+    public bool IsListMode => CurrentViewMode == BrowserViewMode.List;
+
+    public bool IsSmallIconsMode => CurrentViewMode == BrowserViewMode.SmallIcons;
+
+    public bool IsLargeIconsMode => CurrentViewMode == BrowserViewMode.LargeIcons;
+
     public bool IsIconGridMode =>
         CurrentViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
 
@@ -117,6 +125,13 @@ public partial class MainWindowViewModel : ObservableObject
         _ => 220
     };
 
+    public double BrowserGridItemHeight => CurrentViewMode switch
+    {
+        BrowserViewMode.LargeIcons => 90,
+        BrowserViewMode.Tiles => 80,
+        _ => 60
+    };
+
     public bool ShowDetailsColumns => CurrentViewMode == BrowserViewMode.Details;
 
     public IReadOnlyList<string> StatusTransitions => statusTransitions;
@@ -133,9 +148,27 @@ public partial class MainWindowViewModel : ObservableObject
     private BrowserItem? selectedBrowserItem;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsSmallIconsViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsLargeIconsViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsListViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsDetailsViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsDetailsMode))]
+    [NotifyPropertyChangedFor(nameof(IsListMode))]
+    [NotifyPropertyChangedFor(nameof(IsSmallIconsMode))]
+    [NotifyPropertyChangedFor(nameof(IsLargeIconsMode))]
+    [NotifyPropertyChangedFor(nameof(IsIconGridMode))]
+    [NotifyPropertyChangedFor(nameof(IsListLikeMode))]
+    [NotifyPropertyChangedFor(nameof(IsTilesMode))]
+    [NotifyPropertyChangedFor(nameof(BrowserIconFontSize))]
+    [NotifyPropertyChangedFor(nameof(BrowserGridItemWidth))]
+    [NotifyPropertyChangedFor(nameof(BrowserGridItemHeight))]
+    [NotifyPropertyChangedFor(nameof(ShowDetailsColumns))]
     private BrowserViewMode currentViewMode = BrowserViewMode.Details;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSortByNameChecked))]
+    [NotifyPropertyChangedFor(nameof(IsSortByTypeChecked))]
     private BrowserSortMode currentSortMode = BrowserSortMode.Name;
 
     [ObservableProperty]
@@ -612,11 +645,16 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsLargeIconsViewChecked));
         OnPropertyChanged(nameof(IsListViewChecked));
         OnPropertyChanged(nameof(IsDetailsViewChecked));
+        OnPropertyChanged(nameof(IsDetailsMode));
+        OnPropertyChanged(nameof(IsListMode));
+        OnPropertyChanged(nameof(IsSmallIconsMode));
+        OnPropertyChanged(nameof(IsLargeIconsMode));
         OnPropertyChanged(nameof(IsIconGridMode));
         OnPropertyChanged(nameof(IsListLikeMode));
         OnPropertyChanged(nameof(IsTilesMode));
         OnPropertyChanged(nameof(BrowserIconFontSize));
         OnPropertyChanged(nameof(BrowserGridItemWidth));
+        OnPropertyChanged(nameof(BrowserGridItemHeight));
         OnPropertyChanged(nameof(ShowDetailsColumns));
     }
 
