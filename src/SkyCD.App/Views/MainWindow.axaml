@@ -35,7 +35,8 @@
             <MenuItem Header="_View">
                 <MenuItem Header="_StatusBar"
                           ToggleType="CheckBox"
-                          IsChecked="{Binding IsStatusBarVisible}"/>
+                          IsChecked="{Binding IsStatusBarVisible}"
+                          Command="{Binding ToggleStatusBarCommand}"/>
                 <Separator/>
                 <MenuItem Header="_Tiles"
                           Command="{Binding SetViewModeCommand}"
