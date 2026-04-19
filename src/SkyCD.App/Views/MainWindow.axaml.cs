@@ -6,7 +6,6 @@ using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -306,25 +305,7 @@ public partial class MainWindow : Window
             }
         }
 
-        var openFormats = fileFormatRoutingService.GetOpenFormats();
-        var fileTypeChoices = new List<FilePickerFileType>
-        {
-            new FilePickerFileType("All supported formats")
-        };
-
-        foreach (var format in openFormats.DistinctBy(f => f.FormatId))
-        {
-            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
-            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
-            {
-                Patterns = patterns
-            });
-        }
-
-        fileTypeChoices.Add(new FilePickerFileType("All files")
-        {
-            Patterns = ["*.*"]
-        });
+        var fileTypeChoices = pluginCatalog.GetFileTypeChoices(allowRead: true, allowWrite: false);
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -601,25 +582,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var saveFormats = fileFormatRoutingService.GetSaveFormats();
-        var fileTypeChoices = new List<FilePickerFileType>();
+        var fileTypeChoices = pluginCatalog.GetFileTypeChoices(allowRead: false, allowWrite: true);
 
-        foreach (var format in saveFormats)
-        {
-            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
-            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
-            {
-                Patterns = patterns
-            });
-        }
-
-        fileTypeChoices.Add(new FilePickerFileType("All files")
-        {
-            Patterns = ["*.*"]
-        });
-
-        var defaultFormat = saveFormats.FirstOrDefault();
-        var defaultExtension = defaultFormat?.Extensions.FirstOrDefault()?.TrimStart('.') ?? "scd";
+        var defaultFormat = fileTypeChoices.Skip(1).FirstOrDefault();
+        var defaultExtension = defaultFormat?.Patterns.FirstOrDefault()?.TrimStart('*', '.') ?? "scd";
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
