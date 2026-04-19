@@ -1,30 +1,30 @@
 <Styles xmlns="https://github.com/avaloniaui"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Legacy WinForms-style TabControl with proper 3D beveled appearance -->
+    <!-- Legacy WinForms-style TabControl matching app theme -->
     <Style Selector="TabControl">
         <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#808080"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderBrush" Value="#cbd5e1"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
 
-    <!-- TabItem styling - classic beveled WinForms appearance -->
+    <!-- TabItem styling - WinForms appearance with modern theme colors -->
     <Style Selector="TabItem">
         <Setter Property="Padding" Value="16,4,16,4"/>
         <Setter Property="Margin" Value="2,0,0,0"/>
-        <Setter Property="Background" Value="#C0C0C0"/>
-        <Setter Property="Foreground" Value="#000000"/>
-        <Setter Property="BorderBrush" Value="#DFDFDF"/>
+        <Setter Property="Background" Value="#f1f5f9"/>
+        <Setter Property="Foreground" Value="#1e293b"/>
+        <Setter Property="BorderBrush" Value="#cbd5e1"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="FontSize" Value="11"/>
     </Style>
 
-    <!-- Selected/active tab - lighter appearance -->
+    <!-- Selected/active tab - white with app accent -->
     <Style Selector="TabItem:selected">
-        <Setter Property="Background" Value="#ECE9E9"/>
-        <Setter Property="Foreground" Value="#000000"/>
-        <Setter Property="BorderBrush" Value="#DFDFDF"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="Foreground" Value="#1e293b"/>
+        <Setter Property="BorderBrush" Value="#cbd5e1"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="ZIndex" Value="1"/>
         <Setter Property="Padding" Value="16,4,16,4"/>
@@ -32,13 +32,13 @@
 
     <!-- Hover/focus state -->
     <Style Selector="TabItem:pointerover">
-        <Setter Property="Background" Value="#D9D9D9"/>
+        <Setter Property="Background" Value="#e2e8f0"/>
     </Style>
 
     <!-- Disabled state -->
     <Style Selector="TabItem:disabled">
-        <Setter Property="Foreground" Value="#808080"/>
-        <Setter Property="Background" Value="#C0C0C0"/>
+        <Setter Property="Foreground" Value="#94a3b8"/>
+        <Setter Property="Background" Value="#f1f5f9"/>
     </Style>
 
 </Styles>
