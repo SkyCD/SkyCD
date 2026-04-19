@@ -250,7 +250,7 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.NewCatalogCommand.Execute(null);
+        vm.CompleteNewCatalog();
     }
 
     private async void OnOpenCatalogRequested(object? sender, EventArgs e)
@@ -274,7 +274,7 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.OpenCatalogCommand.Execute(null);
+        vm.CompleteOpenCatalog();
     }
 
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
