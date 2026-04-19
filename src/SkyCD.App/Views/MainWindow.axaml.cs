@@ -231,8 +231,7 @@ public partial class MainWindow : Window
 
         await ShowAddProgressAsync(dialogVm);
 
-        vm.StatusText = "Done.";
-        vm.IsDirtyDocument = true;
+        vm.AddImportedItem(ResolveImportedName(dialogVm));
     }
 
     private async void OnNewCatalogRequested(object? sender, EventArgs e)
@@ -669,6 +668,27 @@ public partial class MainWindow : Window
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)
+    {
+        if (!string.IsNullOrWhiteSpace(dialogVm.MediaName))
+        {
+            return dialogVm.MediaName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dialogVm.SourceValue))
+        {
+            var value = dialogVm.SourceValue.Trim();
+            if (dialogVm.SourceMode == AddToListSourceMode.Internet)
+            {
+                return value;
+            }
+
+            return Path.GetFileName(value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        }
+
+        return null;
     }
 
     private static T? FindAncestor<T>(Visual? visual) where T : class
