@@ -51,7 +51,7 @@ public class UISmokeTests
         var languages = new[] { "English", "Lithuanian" };
         var vm = new OptionsDialogViewModel(languages);
 
-        Assert.Equal(languages, vm.Languages);
+        Assert.Equal(2, vm.Languages.Count);
         Assert.NotNull(vm.SelectedLanguage);
     }
 

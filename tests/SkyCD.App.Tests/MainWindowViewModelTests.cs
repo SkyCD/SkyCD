@@ -256,7 +256,9 @@ public class MainWindowViewModelTests
         vm.OpenOptionsCommand.Execute(null);
 
         Assert.NotNull(request);
-        Assert.Equal(["English", "Lithuanian"], request!.Dialog.Languages);
+        Assert.Equal(2, request!.Dialog.Languages.Count);
+        Assert.Equal("English", request.Dialog.Languages[0].Name);
+        Assert.Equal("Lithuanian", request.Dialog.Languages[1].Name);
 
         request.Complete(true, @"C:\Plugins", "Lithuanian");
         Assert.Equal("Options saved (Language: Lithuanian).", vm.StatusText);

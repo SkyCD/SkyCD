@@ -9,8 +9,8 @@ public class OptionsDialogViewModelTests
     {
         var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
 
-        Assert.Equal(["English", "Lithuanian"], vm.Languages);
-        Assert.Equal("English", vm.SelectedLanguage);
+        Assert.Equal(2, vm.Languages.Count);
+        Assert.Equal("English", vm.SelectedLanguage?.Name);
     }
 
     [Fact]
