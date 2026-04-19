@@ -12,6 +12,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private const string DefaultStatusText = "Done.";
@@ -175,7 +176,17 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void NewCatalog()
     {
-        NewCatalogRequested?.Invoke(this, EventArgs.Empty);
+        if (NewCatalogRequested is not null)
+        {
+            NewCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteNewCatalog();
+    }
+
+    public void CompleteNewCatalog()
+    {
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }
@@ -183,13 +194,23 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenCatalog()
     {
-        OpenCatalogRequested?.Invoke(this, EventArgs.Empty);
+        if (OpenCatalogRequested is not null)
+        {
+            OpenCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteOpenCatalog();
+    }
+
+    public void CompleteOpenCatalog()
+    {
         StartOperation("Loading catalog...");
         SetProgress(35, "Parsing catalog...");
         SetProgress(80, "Updating browser...");
         CompleteOperation();
 
-        IsDirtyDocument = true;
+        IsDirtyDocument = false;
     }
 
     [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
@@ -251,6 +272,7 @@ public partial class MainWindowViewModel : ObservableObject
                     return;
                 }
 
+                ApplyBrowserItemRenameIfNeeded(dialog);
                 commentsByObjectKey[dialog.ObjectKey] = comments;
                 IsDirtyDocument = true;
                 StatusText = DefaultStatusText;
@@ -595,7 +617,8 @@ public partial class MainWindowViewModel : ObservableObject
     private string GetBrowserItemObjectKey(BrowserItem item)
     {
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        return $"item:{nodeKey}:{item.Name}";
+        var originalName = ResolveOriginalBrowserItemName(nodeKey, item.Name);
+        return $"item:{nodeKey}:{originalName}";
     }
 
     private static string GetTreeNodeObjectKey(BrowserTreeNode node)
@@ -608,6 +631,18 @@ public partial class MainWindowViewModel : ObservableObject
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var items = browserDataStore.GetBrowserItems(nodeKey);
+        if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
+        {
+            items = items
+                .Select(item =>
+                {
+                    return renamedItems.TryGetValue(item.Name, out var renamedName)
+                        ? item with { Name = renamedName }
+                        : item;
+                })
+                .ToArray();
+        }
+
         if (items.Count == 0)
         {
             BrowserItems = [];
@@ -630,6 +665,53 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
                                  item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                              ?? refreshedItems.FirstOrDefault();
+    }
+
+    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
+    {
+        if (SelectedBrowserItem is null || SelectedTreeNode is null)
+        {
+            return;
+        }
+
+        var nodeKey = SelectedTreeNode.Key;
+        var currentDisplayName = SelectedBrowserItem.Name;
+        var requestedName = dialog.Name.Trim();
+        if (string.IsNullOrWhiteSpace(requestedName) ||
+            requestedName.Equals(currentDisplayName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var originalName = ResolveOriginalBrowserItemName(nodeKey, currentDisplayName);
+        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
+        {
+            renamedItems = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            renamedBrowserItemNamesByNodeKey[nodeKey] = renamedItems;
+        }
+
+        renamedItems[originalName] = requestedName;
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+            item.Name.Equals(requestedName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string ResolveOriginalBrowserItemName(string nodeKey, string displayName)
+    {
+        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
+        {
+            return displayName;
+        }
+
+        foreach (var (original, renamed) in renamedItems)
+        {
+            if (renamed.Equals(displayName, StringComparison.OrdinalIgnoreCase))
+            {
+                return original;
+            }
+        }
+
+        return displayName;
     }
 
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)

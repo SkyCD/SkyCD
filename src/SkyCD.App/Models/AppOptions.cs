@@ -27,4 +27,6 @@ public sealed class AppOptions
     public string Language { get; set; } = "English";
 
     public List<string> DisabledPluginIds { get; set; } = [];
+
+    public int OptionsTabIndex { get; set; }
 }
