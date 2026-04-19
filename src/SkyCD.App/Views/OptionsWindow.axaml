@@ -8,6 +8,7 @@
         MinWidth="700"
         MinHeight="460"
         WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
         Title="Options">
 
     <Design.DataContext>
