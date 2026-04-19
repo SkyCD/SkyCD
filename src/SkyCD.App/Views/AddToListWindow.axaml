@@ -3,10 +3,10 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
-        Width="560"
-        Height="460"
-        MinWidth="520"
-        MinHeight="420"
+        Width="580"
+        Height="500"
+        MinWidth="560"
+        MinHeight="460"
         WindowStartupLocation="CenterOwner"
         CanMinimize="False"
         Icon="/Assets/skycd.ico"
@@ -16,72 +16,115 @@
         <vm:AddToListDialogViewModel/>
     </Design.DataContext>
 
-    <Grid RowDefinitions="*,Auto" Margin="12">
-        <StackPanel Spacing="10">
-            <GroupBox Header="Source">
-                <StackPanel Margin="10" Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="From Media"
-                                Command="{Binding SelectSourceCommand}"
-                                CommandParameter="Media"/>
-                        <Button Content="From Folder"
-                                Command="{Binding SelectSourceCommand}"
-                                CommandParameter="Folder"/>
-                        <Button Content="From Internet"
-                                Command="{Binding SelectSourceCommand}"
-                                CommandParameter="Internet"/>
+    <Window.Styles>
+        <Style Selector="Window">
+            <Setter Property="Background" Value="#ECE9D8"/>
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="Tahoma"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="FontFamily" Value="Tahoma"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="24"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontFamily" Value="Tahoma"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="FontFamily" Value="Tahoma"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="*,Auto" Margin="10">
+        <Border BorderBrush="#ACA899" BorderThickness="1" Padding="8" Background="#F4F3EE">
+            <StackPanel Spacing="10">
+                <GroupBox Header="Source">
+                    <StackPanel Margin="8" Spacing="8">
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0"
+                                    Content="From Media"
+                                    Command="{Binding SelectSourceCommand}"
+                                    CommandParameter="Media"/>
+                            <Button Grid.Column="1"
+                                    Content="From Folder"
+                                    Command="{Binding SelectSourceCommand}"
+                                    CommandParameter="Folder"/>
+                            <Button Grid.Column="2"
+                                    Content="From Internet"
+                                    Command="{Binding SelectSourceCommand}"
+                                    CommandParameter="Internet"/>
+                        </Grid>
+                        <Border BorderBrush="#C6C3B7" BorderThickness="1" Padding="6" Background="#FFFFFF">
+                            <StackPanel>
+                                <TextBlock Text="Current mode: Media" IsVisible="{Binding IsSourceMedia}"/>
+                                <TextBlock Text="Current mode: Folder" IsVisible="{Binding IsSourceFolder}"/>
+                                <TextBlock Text="Current mode: Internet" IsVisible="{Binding IsSourceInternet}"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                    <TextBlock Text="Mode: Media" IsVisible="{Binding IsSourceMedia}"/>
-                    <TextBlock Text="Mode: Folder" IsVisible="{Binding IsSourceFolder}"/>
-                    <TextBlock Text="Mode: Internet" IsVisible="{Binding IsSourceInternet}"/>
-                </StackPanel>
-            </GroupBox>
+                </GroupBox>
 
-            <GroupBox Header="Options">
-                <StackPanel Margin="10" Spacing="8">
-                    <CheckBox Content="Include media info" IsChecked="{Binding IncludeMediaInfo}"/>
-                    <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}"/>
-                    <CheckBox Content="Extended info" IsChecked="{Binding IncludeExtendedInfo}"/>
-                </StackPanel>
-            </GroupBox>
+                <GroupBox Header="Options">
+                    <StackPanel Margin="8" Spacing="6">
+                        <CheckBox Content="Include media info" IsChecked="{Binding IncludeMediaInfo}"/>
+                        <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}"/>
+                        <CheckBox Content="Extended info" IsChecked="{Binding IncludeExtendedInfo}"/>
+                    </StackPanel>
+                </GroupBox>
 
-            <GroupBox Header="Target Placement">
-                <StackPanel Margin="10" Spacing="8">
-                    <Button Content="Add to selected folder"
-                            HorizontalAlignment="Left"
-                            Command="{Binding SelectTargetCommand}"
-                            CommandParameter="SelectedFolder"/>
-                    <Button Content="Add as new media"
-                            HorizontalAlignment="Left"
-                            Command="{Binding SelectTargetCommand}"
-                            CommandParameter="NewMedia"/>
-                    <TextBlock Text="Target: Selected folder" IsVisible="{Binding IsTargetSelectedFolder}"/>
-                    <TextBlock Text="Target: New media" IsVisible="{Binding IsTargetNewMedia}"/>
-                </StackPanel>
-            </GroupBox>
+                <GroupBox Header="Target Placement">
+                    <StackPanel Margin="8" Spacing="6">
+                        <Button Content="Add to selected folder"
+                                HorizontalAlignment="Left"
+                                Command="{Binding SelectTargetCommand}"
+                                CommandParameter="SelectedFolder"/>
+                        <Button Content="Add as new media"
+                                HorizontalAlignment="Left"
+                                Command="{Binding SelectTargetCommand}"
+                                CommandParameter="NewMedia"/>
+                        <TextBlock Text="Target: Selected folder" IsVisible="{Binding IsTargetSelectedFolder}"/>
+                        <TextBlock Text="Target: New media" IsVisible="{Binding IsTargetNewMedia}"/>
+                    </StackPanel>
+                </GroupBox>
 
-            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-                <TextBlock Text="Media Name:" VerticalAlignment="Center"/>
-                <TextBox Grid.Column="1" Text="{Binding MediaName}"/>
+                <GroupBox Header="Input">
+                    <Grid Margin="8"
+                          ColumnDefinitions="130,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="8"
+                          RowSpacing="8">
+                        <TextBlock Text="Media Name:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding MediaName}"/>
 
-                <TextBlock Grid.Row="1" Text="{Binding SourceValueLabel}" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SourceValue}"/>
-            </Grid>
+                        <TextBlock Grid.Row="1" Text="{Binding SourceValueLabel}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SourceValue}"/>
+                    </Grid>
+                </GroupBox>
 
-            <TextBlock Foreground="#B00020" Text="{Binding ValidationMessage}" TextWrapping="Wrap"/>
-        </StackPanel>
+                <TextBlock Foreground="#A00000" Text="{Binding ValidationMessage}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
 
-        <StackPanel Grid.Row="1"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,14,0,0">
-            <Button Content="OK"
-                    MinWidth="80"
-                    Command="{Binding ConfirmCommand}"/>
-            <Button Content="Cancel"
-                    MinWidth="80"
-                    Click="OnCancelClicked"/>
-        </StackPanel>
+        <Border Grid.Row="1"
+                BorderBrush="#ACA899"
+                BorderThickness="1,1,0,0"
+                Background="#ECE9D8"
+                Padding="8"
+                Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8">
+                <Button Content="OK"
+                        MinWidth="84"
+                        Command="{Binding ConfirmCommand}"/>
+                <Button Content="Cancel"
+                        MinWidth="84"
+                        Click="OnCancelClicked"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>
