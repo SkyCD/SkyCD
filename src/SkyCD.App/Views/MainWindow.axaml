@@ -288,37 +288,37 @@
                           ShowsPreview="True"/>
 
             <!-- Details View: tabular list with column headers -->
-            <Grid Grid.Column="2" IsVisible="{Binding IsDetailsMode}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Border BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Background="#F0F0F0" Padding="4,2">
-                    <Grid ColumnDefinitions="24,*,150,120">
-                        <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
-                    </Grid>
-                </Border>
-                <ListBox Grid.Row="1"
-                         MinWidth="240"
-                         ItemsSource="{Binding BrowserItems}"
-                         SelectedItem="{Binding SelectedBrowserItem}"
-                         ContextRequested="OnBrowserContextRequested"
-                         ContextMenu="{DynamicResource BrowserContextMenu}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
-                                <TextBlock Text="{Binding IconGlyph}" FontSize="16"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Type}"/>
-                                <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
+            <cc:DetailsListView Grid.Column="2"
+                                IsVisible="{Binding IsDetailsMode}"
+                                ListMinWidth="240"
+                                ItemsSource="{Binding BrowserItems}"
+                                SelectedItem="{Binding SelectedBrowserItem}"
+                                ContextRequested="OnBrowserContextRequested"
+                ListContextMenu="{DynamicResource BrowserContextMenu}">
+                <cc:DetailsListView.HeaderContent>
+                    <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                            BorderThickness="0,0,0,1"
+                            Background="{DynamicResource ThemeControlMidBrush}"
+                            Padding="4,2">
+                        <Grid ColumnDefinitions="24,*,150,120">
+                            <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Border>
+                </cc:DetailsListView.HeaderContent>
+                <cc:DetailsListView.RowTemplate>
+                    <DataTemplate x:DataType="vm:BrowserItem">
+                        <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
+                            <TextBlock Text="{Binding IconGlyph}" FontSize="16"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Type}"/>
+                            <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </DataTemplate>
+                </cc:DetailsListView.RowTemplate>
+            </cc:DetailsListView>
 
             <!-- List View: wrapping simple icon+name layout -->
             <ListBox Grid.Column="2"

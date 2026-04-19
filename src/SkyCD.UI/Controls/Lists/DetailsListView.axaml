@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SkyCD.UI.Controls.DetailsListView"
+             x:Name="Root">
+    <Grid RowDefinitions="Auto,*">
+        <ContentPresenter Content="{Binding HeaderContent, ElementName=Root}"/>
+        <ListBox Grid.Row="1"
+                 MinWidth="{Binding ListMinWidth, ElementName=Root}"
+                 ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                 SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
+                 ItemTemplate="{Binding RowTemplate, ElementName=Root}"
+                 ContextMenu="{Binding ListContextMenu, ElementName=Root}"/>
+    </Grid>
+</UserControl>
