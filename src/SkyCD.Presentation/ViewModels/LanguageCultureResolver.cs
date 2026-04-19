@@ -1,9 +1,14 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public static class LanguageCultureResolver
 {
+    private static readonly Regex CultureCodePattern = new(
+        "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$",
+        RegexOptions.Compiled);
+
     public static CultureInfo ResolveCulture(string? languageName)
     {
         if (string.IsNullOrWhiteSpace(languageName))
@@ -22,6 +27,11 @@ public static class LanguageCultureResolver
             return CultureInfo.GetCultureInfo("lt-LT");
         }
 
+        if (!LooksLikeCultureCode(normalized))
+        {
+            return CultureInfo.GetCultureInfo("en-US");
+        }
+
         try
         {
             return CultureInfo.GetCultureInfo(normalized);
@@ -30,5 +40,10 @@ public static class LanguageCultureResolver
         {
             return CultureInfo.GetCultureInfo("en-US");
         }
+    }
+
+    private static bool LooksLikeCultureCode(string value)
+    {
+        return CultureCodePattern.IsMatch(value);
     }
 }
