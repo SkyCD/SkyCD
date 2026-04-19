@@ -19,6 +19,7 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
+    public event EventHandler? ExitRequested;
 
     public MainWindowViewModel()
     {
@@ -222,6 +223,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void ExitApplication()
     {
         StatusText = "Exit requested.";
+        ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
