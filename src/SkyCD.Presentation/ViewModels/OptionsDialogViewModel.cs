@@ -15,12 +15,12 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         foreach (var language in availableLanguages.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            Languages.Add(language);
+            Languages.Add(LanguageItem.Create(language));
         }
 
         if (Languages.Count == 0)
         {
-            Languages.Add("English");
+            Languages.Add(LanguageItem.Create("English"));
         }
 
         selectedLanguage = Languages[0];
@@ -28,7 +28,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
-    public ObservableCollection<string> Languages { get; } = [];
+    public ObservableCollection<LanguageItem> Languages { get; } = [];
 
     [ObservableProperty]
     private string pluginPath = string.Empty;
@@ -37,7 +37,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     private OptionsPluginItem? selectedPlugin;
 
     [ObservableProperty]
-    private string selectedLanguage;
+    private LanguageItem selectedLanguage;
 
     [ObservableProperty]
     private string infoMessage = string.Empty;
