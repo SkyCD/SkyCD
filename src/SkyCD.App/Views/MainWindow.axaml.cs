@@ -270,7 +270,7 @@ public partial class MainWindow : Window
     private void SaveUiState(MainWindowViewModel vm)
     {
         var options = appOptionsStore.Load();
-        
+
         // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
@@ -306,7 +306,7 @@ public partial class MainWindow : Window
         if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
         {
             var position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
-            
+
             // Validate position is not off-screen
             if (IsPositionOnScreen(position))
             {
@@ -327,7 +327,7 @@ public partial class MainWindow : Window
         foreach (var screen in screens)
         {
             var screenBounds = screen.WorkingArea;
-            if (position.X >= screenBounds.X && 
+            if (position.X >= screenBounds.X &&
                 position.Y >= screenBounds.Y &&
                 position.X < screenBounds.Right &&
                 position.Y < screenBounds.Bottom)
