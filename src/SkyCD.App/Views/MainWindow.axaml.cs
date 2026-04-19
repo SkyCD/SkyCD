@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.App.Views;
 
@@ -332,7 +333,8 @@ public partial class MainWindow : Window
             vm.ProgressValue = 0;
 
             var extension = Path.GetExtension(localPath);
-            var formatId = FindFormatIdByExtension(extension, openFormats);
+            var openFormatsLocal = fileFormatRoutingService.GetOpenFormats();
+            var formatId = FindFormatIdByExtension(extension, openFormatsLocal);
 
             if (string.IsNullOrEmpty(formatId))
             {
