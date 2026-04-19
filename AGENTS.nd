@@ -8,7 +8,8 @@
 5. If a PR targets a feature branch: also create an additional PR from that feature branch into `main`.
 6. Do not include temporary/debug scripts in commits or PRs.
 7. Each commit message must begin with `[XXX]` where `XXX` is the issue number solved by that commit.
-8. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
+8. PR descriptions must clearly state what issue they solve, using format "Solves #XXX: [issue title]" at the beginning.
+9. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
 
 ## Project Structure (SkyCD)
 - `src/`: active v3 application code.
