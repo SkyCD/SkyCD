@@ -339,7 +339,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Border BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Background="#F0F0F0" Padding="4,2">
+                <Border BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Background="#E8E8E8" Padding="4,2">
                     <Grid ColumnDefinitions="24,*,150,120">
                         <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
                         <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
