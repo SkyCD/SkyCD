@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -18,6 +19,7 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
+    public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
@@ -161,6 +163,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private BrowserItem? clipboardItem;
 
+    [ObservableProperty]
+    private string? currentCatalogPath;
+
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
     public bool IsPasteEnabled => ClipboardItem is not null;
@@ -201,11 +206,29 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void SaveCatalogAs()
     {
+        if (SaveCatalogAsRequested is not null)
+        {
+            SaveCatalogAsRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteSaveCatalogAs("catalog.scd");
+    }
+
+    public void CompleteSaveCatalogAs(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
         StartOperation("Saving catalog...");
         SetProgress(50, "Parsing items...");
         SetProgress(95, "Updating indexes...");
         CompleteOperation();
 
+        CurrentCatalogPath = filePath;
+        StatusText = $"Saved catalog as {Path.GetFileName(filePath)}.";
         IsDirtyDocument = false;
     }
 

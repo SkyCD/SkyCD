@@ -364,6 +364,34 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SaveCatalogAsCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.SaveCatalogAsRequested += (_, _) => raised = true;
+
+        vm.SaveCatalogAsCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.Null(vm.CurrentCatalogPath);
+    }
+
+    [Fact]
+    public void CompleteSaveCatalogAs_SetsCurrentPathAndClearsDirtyFlag()
+    {
+        var vm = new MainWindowViewModel
+        {
+            IsDirtyDocument = true
+        };
+
+        vm.CompleteSaveCatalogAs(@"C:\tmp\catalog.scd");
+
+        Assert.False(vm.IsDirtyDocument);
+        Assert.Equal(@"C:\tmp\catalog.scd", vm.CurrentCatalogPath);
+        Assert.Equal("Saved catalog as catalog.scd.", vm.StatusText);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
     {
         var vm = new MainWindowViewModel();
