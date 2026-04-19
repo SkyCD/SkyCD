@@ -52,12 +52,30 @@ public sealed class PluginCatalog
             }
         }
 
+        var distinctFormats = formats.DistinctBy(f => f.FormatId).ToList();
+        
+        if (distinctFormats.Count == 0)
+        {
+            return new List<FilePickerFileType>
+            {
+                new FilePickerFileType("All files")
+                {
+                    Patterns = ["*.*"]
+                }
+            };
+        }
+
+        var allExtensions = distinctFormats.SelectMany(f => f.Extensions).Select(ext => $"*{ext}").Distinct().ToList();
+        
         var fileTypeChoices = new List<FilePickerFileType>
         {
             new FilePickerFileType("All supported formats")
+            {
+                Patterns = allExtensions
+            }
         };
 
-        foreach (var format in formats.DistinctBy(f => f.FormatId))
+        foreach (var format in distinctFormats)
         {
             var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
             fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
