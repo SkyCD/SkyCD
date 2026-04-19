@@ -16,6 +16,8 @@ public partial class MainWindowViewModel : ObservableObject
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
+    public event EventHandler? NewCatalogRequested;
+    public event EventHandler? OpenCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
@@ -189,6 +191,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void NewCatalog()
     {
+        NewCatalogRequested?.Invoke(this, EventArgs.Empty);
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }
@@ -196,6 +199,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenCatalog()
     {
+        OpenCatalogRequested?.Invoke(this, EventArgs.Empty);
         StartOperation("Loading catalog...");
         SetProgress(35, "Parsing catalog...");
         SetProgress(80, "Updating browser...");
