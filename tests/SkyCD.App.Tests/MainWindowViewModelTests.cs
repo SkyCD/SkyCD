@@ -52,6 +52,20 @@ public class MainWindowViewModelTests
         Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
         Assert.True(vm.IsSortByTypeChecked);
         Assert.False(vm.IsSortByNameChecked);
+        Assert.False(vm.IsSortBySizeChecked);
+    }
+
+    [Fact]
+    public void SetSortModeCommand_SizeSortMode_UpdatesCheckedState()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.SetSortModeCommand.Execute("Size");
+
+        Assert.Equal(BrowserSortMode.Size, vm.CurrentSortMode);
+        Assert.True(vm.IsSortBySizeChecked);
+        Assert.False(vm.IsSortByNameChecked);
+        Assert.False(vm.IsSortByTypeChecked);
     }
 
     [Fact]
@@ -67,9 +81,13 @@ public class MainWindowViewModelTests
         vm.SetSortModeCommand.Execute("Type");
         var firstByType = vm.BrowserItems[0].Name;
 
+        vm.SetSortModeCommand.Execute("Size");
+        var firstBySize = vm.BrowserItems[0].Name;
+
         Assert.NotEqual(firstByName, firstByType);
         Assert.Equal("Classical Collection", firstByName);
         Assert.Equal("Concert-2025.flac", firstByType);
+        Assert.Equal("Concert-2025.flac", firstBySize);
     }
 
     [Fact]
@@ -94,6 +112,77 @@ public class MainWindowViewModelTests
         Assert.True(vm.IsListLikeMode);
         Assert.False(vm.IsIconGridMode);
         Assert.True(vm.ShowDetailsColumns);
+    }
+
+    [Fact]
+    public void SetViewModeCommand_UpdatesPerModeVisibilityProperties()
+    {
+        var vm = new MainWindowViewModel();
+
+        // Default: Details mode
+        Assert.True(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("List");
+        Assert.False(vm.IsDetailsMode);
+        Assert.True(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("SmallIcons");
+        Assert.False(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.True(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("LargeIcons");
+        Assert.False(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.True(vm.IsLargeIconsMode);
+        Assert.False(vm.IsTilesMode);
+
+        vm.SetViewModeCommand.Execute("Tiles");
+        Assert.False(vm.IsDetailsMode);
+        Assert.False(vm.IsListMode);
+        Assert.False(vm.IsSmallIconsMode);
+        Assert.False(vm.IsLargeIconsMode);
+        Assert.True(vm.IsTilesMode);
+    }
+
+    [Fact]
+    public void SetViewModeCommand_UpdatesBrowserGridItemHeight()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.SetViewModeCommand.Execute("LargeIcons");
+        Assert.Equal(90, vm.BrowserGridItemHeight);
+
+        vm.SetViewModeCommand.Execute("Tiles");
+        Assert.Equal(80, vm.BrowserGridItemHeight);
+
+        vm.SetViewModeCommand.Execute("SmallIcons");
+        Assert.Equal(60, vm.BrowserGridItemHeight);
+    }
+
+    [Fact]
+    public void AllViewModes_HaveExactlyOneCheckedState()
+    {
+        var vm = new MainWindowViewModel();
+        var modes = new[] { "Details", "List", "SmallIcons", "LargeIcons", "Tiles" };
+
+        foreach (var mode in modes)
+        {
+            vm.SetViewModeCommand.Execute(mode);
+            var checkedCount = new[] { vm.IsDetailsViewChecked, vm.IsListViewChecked, vm.IsSmallIconsViewChecked, vm.IsLargeIconsViewChecked, vm.IsTilesViewChecked }
+                .Count(c => c);
+            Assert.Equal(1, checkedCount);
+        }
     }
 
     [Fact]
@@ -126,13 +215,23 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void OpenThenSave_UpdatesSaveCommandState()
+    public void OpenCatalogCommand_DoesNotMarkDocumentDirty()
     {
         var vm = new MainWindowViewModel();
 
-        Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-
         vm.OpenCatalogCommand.Execute(null);
+
+        Assert.False(vm.IsSaveEnabled);
+        Assert.False(vm.SaveCatalogCommand.CanExecute(null));
+        Assert.Equal("Done.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteThenSave_UpdatesSaveCommandState()
+    {
+        var vm = new MainWindowViewModel();
+
+        vm.DeleteItemCommand.Execute(null);
 
         Assert.True(vm.IsSaveEnabled);
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
@@ -141,7 +240,6 @@ public class MainWindowViewModelTests
 
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-        Assert.Equal("Done.", vm.StatusText);
     }
 
     [Fact]
@@ -224,6 +322,33 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void NewCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.NewCatalogRequested += (_, _) => raised = true;
+        vm.IsDirtyDocument = true;
+
+        vm.NewCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
+    public void OpenCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.OpenCatalogRequested += (_, _) => raised = true;
+
+        vm.OpenCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.False(vm.IsDirtyDocument);
+    }
+
+    [Fact]
     public void OpenAboutCommand_RaisesAboutRequest_WhenSubscriberIsPresent()
     {
         var vm = new MainWindowViewModel();
@@ -256,7 +381,9 @@ public class MainWindowViewModelTests
         vm.OpenOptionsCommand.Execute(null);
 
         Assert.NotNull(request);
-        Assert.Equal(["English", "Lithuanian"], request!.Dialog.Languages);
+        Assert.Equal(2, request!.Dialog.Languages.Count);
+        Assert.Equal("English", request.Dialog.Languages[0].Name);
+        Assert.Equal("Lithuanian", request.Dialog.Languages[1].Name);
 
         request.Complete(true, @"C:\Plugins", "Lithuanian");
         Assert.Equal("Options saved (Language: Lithuanian).", vm.StatusText);
@@ -313,6 +440,24 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void OpenPropertiesCommand_Accepted_RenamesSelectedBrowserItem()
+    {
+        var vm = new MainWindowViewModel();
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        var originalName = vm.SelectedBrowserItem!.Name;
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        request!.Dialog.Name = "Renamed Item";
+        request.Complete(true, request.Dialog.Comments);
+
+        Assert.Equal("Renamed Item", vm.SelectedBrowserItem?.Name);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == originalName);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_Canceled_DiscardsCommentChanges()
     {
         var vm = new MainWindowViewModel();
@@ -346,5 +491,46 @@ public class MainWindowViewModelTests
         Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
         Assert.False(vm.IsStatusBarVisible);
         Assert.Equal("Concert-2025.flac", vm.BrowserItems[0].Name);
+    }
+
+    [Fact]
+    public void AllSortModes_HaveExactlyOneCheckedState()
+    {
+        var vm = new MainWindowViewModel();
+
+        foreach (BrowserSortMode mode in Enum.GetValues<BrowserSortMode>())
+        {
+            vm.SetSortModeCommand.Execute(mode.ToString());
+
+            var checkedCount = new[] { vm.IsSortByNameChecked, vm.IsSortByTypeChecked, vm.IsSortBySizeChecked }
+                .Count(c => c);
+            Assert.Equal(1, checkedCount);
+            Assert.Equal(mode, vm.CurrentSortMode);
+        }
+    }
+
+    [Fact]
+    public void Constructor_UsesInjectedDataStoreForTreeAndList()
+    {
+        var vm = new MainWindowViewModel(new StubBrowserDataStore());
+
+        Assert.Equal("root", vm.SelectedTreeNode?.Key);
+        Assert.Single(vm.BrowserItems);
+        Assert.Equal("Sample.txt", vm.BrowserItems[0].Name);
+    }
+
+    private sealed class StubBrowserDataStore : IBrowserDataStore
+    {
+        public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
+        {
+            return [new BrowserTreeNode("root", "Root", "R", [], isExpanded: true)];
+        }
+
+        public IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)
+        {
+            return nodeKey == "root"
+                ? [new BrowserItem("Sample.txt", "File", "12 KB", "F")]
+                : [];
+        }
     }
 }

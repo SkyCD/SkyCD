@@ -1,13 +1,17 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SkyCD.App.Views;
@@ -19,6 +23,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
+    private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow()
     {
@@ -33,18 +38,100 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
+            subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
+            subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
+            subscribedViewModel.ExitRequested -= OnExitRequested;
+            subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
         subscribedViewModel = DataContext as MainWindowViewModel;
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
+            subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
+            subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
+            subscribedViewModel.ExitRequested += OnExitRequested;
+            subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            UpdateWindowTitle();
+        }
+    }
+
+    private void OnExitRequested(object? sender, EventArgs e)
+    {
+        Close();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.IsDirtyDocument))
+        {
+            UpdateWindowTitle();
+        }
+    }
+
+    private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not TreeView treeView || subscribedViewModel is null)
+        {
+            return;
+        }
+
+        if (!e.TryGetPosition(treeView, out var point))
+        {
+            e.Handled = subscribedViewModel.SelectedTreeNode is null;
+            return;
+        }
+
+        var hit = treeView.InputHitTest(point) as Visual;
+        var treeViewItem = FindAncestor<TreeViewItem>(hit);
+        if (treeViewItem?.DataContext is BrowserTreeNode node)
+        {
+            subscribedViewModel.SelectedTreeNode = node;
+            return;
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnBrowserContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not ListBox listBox || subscribedViewModel is null)
+        {
+            return;
+        }
+
+        if (!e.TryGetPosition(listBox, out var point))
+        {
+            e.Handled = subscribedViewModel.SelectedBrowserItem is null;
+            return;
+        }
+
+        var hit = listBox.InputHitTest(point) as Visual;
+        var listBoxItem = FindAncestor<ListBoxItem>(hit);
+        if (listBoxItem?.DataContext is BrowserItem item)
+        {
+            subscribedViewModel.SelectedBrowserItem = item;
+            return;
+        }
+
+        e.Handled = true;
+    }
+
+    private void UpdateWindowTitle()
+    {
+        if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)
+        {
+            Title = "* SkyCD";
+        }
+        else
+        {
+            Title = "SkyCD";
         }
     }
 
@@ -61,6 +148,7 @@ public partial class MainWindow : Window
             ParseBrowserViewMode(options.BrowserViewMode),
             ParseBrowserSortMode(options.BrowserSortMode),
             options.IsStatusBarVisible);
+        ApplyLanguage(options.Language);
 
         isSessionStateLoaded = true;
     }
@@ -141,6 +229,54 @@ public partial class MainWindow : Window
         vm.IsDirtyDocument = true;
     }
 
+    private async void OnNewCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        if (vm.IsDirtyDocument)
+        {
+            var decision = await ShowUnsavedChangesPromptAsync();
+            if (decision == UnsavedChangesDecision.Cancel)
+            {
+                return;
+            }
+
+            if (decision == UnsavedChangesDecision.Save)
+            {
+                vm.SaveCatalogCommand.Execute(null);
+            }
+        }
+
+        vm.CompleteNewCatalog();
+    }
+
+    private async void OnOpenCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        if (vm.IsDirtyDocument)
+        {
+            var decision = await ShowUnsavedChangesPromptAsync();
+            if (decision == UnsavedChangesDecision.Cancel)
+            {
+                return;
+            }
+
+            if (decision == UnsavedChangesDecision.Save)
+            {
+                vm.SaveCatalogCommand.Execute(null);
+            }
+        }
+
+        vm.CompleteOpenCatalog();
+    }
+
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
     {
         var dialog = new PropertiesWindow
@@ -161,11 +297,14 @@ public partial class MainWindow : Window
 
         e.Dialog.PluginPath = pluginPath;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
-            e.Dialog.Languages.Any(language => language.Equals(options.Language, StringComparison.OrdinalIgnoreCase)))
+            e.Dialog.Languages.FirstOrDefault(language =>
+                string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
         {
-            e.Dialog.SelectedLanguage = options.Language;
+            e.Dialog.SelectedLanguage = language;
         }
 
+        e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
+        e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         RefreshPlugins(e.Dialog);
@@ -178,17 +317,18 @@ public partial class MainWindow : Window
         var accepted = await dialog.ShowDialog<bool?>(this);
         if (accepted == true)
         {
-            appOptionsStore.Save(new AppOptions
-            {
-                PluginPath = e.Dialog.PluginPath,
-                Language = e.Dialog.SelectedLanguage
-            });
+            options.PluginPath = e.Dialog.PluginPath;
+            options.Language = e.Dialog.SelectedLanguage.Name;
+            options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
+            options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
+            appOptionsStore.Save(options);
+            ApplyLanguage(options.Language);
         }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
 
-        e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage);
+        e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
 
     private async void OnAboutRequested(object? sender, EventArgs e)
@@ -262,12 +402,24 @@ public partial class MainWindow : Window
     private void SaveUiState(MainWindowViewModel vm)
     {
         var options = appOptionsStore.Load();
+
+        // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
             options.WindowLeft = Position.X;
             options.WindowTop = Position.Y;
             options.WindowWidth = Width;
             options.WindowHeight = Height;
+            options.WindowState = "Normal";
+        }
+        else if (WindowState == WindowState.Maximized)
+        {
+            options.WindowState = "Maximized";
+        }
+
+        if (TreePaneColumn.Width.IsAbsolute)
+        {
+            options.TreePaneWidth = TreePaneColumn.Width.Value;
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
@@ -290,8 +442,60 @@ public partial class MainWindow : Window
 
         if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
         {
-            Position = new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value);
+            Position = ClampPositionToVisibleBounds(
+                new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value),
+                Width,
+                Height);
         }
+
+        if (options.TreePaneWidth is >= 160)
+        {
+            TreePaneColumn.Width = new GridLength(options.TreePaneWidth.Value, GridUnitType.Pixel);
+        }
+
+        // Restore window state
+        if (string.Equals(options.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase))
+        {
+            WindowState = WindowState.Maximized;
+        }
+    }
+
+    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth, double requestedHeight)
+    {
+        var windowWidth = Math.Max(1, (int)Math.Round(requestedWidth));
+        var windowHeight = Math.Max(1, (int)Math.Round(requestedHeight));
+
+        foreach (var screen in Screens.All)
+        {
+            if (Intersects(requestedPosition, windowWidth, windowHeight, screen.WorkingArea))
+            {
+                return ClampToScreen(requestedPosition, windowWidth, windowHeight, screen.WorkingArea);
+            }
+        }
+
+        var fallbackScreen = Screens.Primary?.WorkingArea ?? Screens.All.First().WorkingArea;
+        return ClampToScreen(requestedPosition, windowWidth, windowHeight, fallbackScreen);
+    }
+
+    private static bool Intersects(PixelPoint position, int width, int height, PixelRect bounds)
+    {
+        var right = position.X + width;
+        var bottom = position.Y + height;
+
+        return position.X < bounds.Right &&
+               right > bounds.X &&
+               position.Y < bounds.Bottom &&
+               bottom > bounds.Y;
+    }
+
+    private static PixelPoint ClampToScreen(PixelPoint position, int width, int height, PixelRect bounds)
+    {
+        var maxX = Math.Max(bounds.X, bounds.Right - width);
+        var maxY = Math.Max(bounds.Y, bounds.Bottom - height);
+
+        var clampedX = Math.Clamp(position.X, bounds.X, maxX);
+        var clampedY = Math.Clamp(position.Y, bounds.Y, maxY);
+        return new PixelPoint(clampedX, clampedY);
     }
 
     private static BrowserViewMode ParseBrowserViewMode(string? value)
@@ -348,6 +552,7 @@ public partial class MainWindow : Window
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
     {
+        dialogVm.CapturePluginStates();
         var plugins = pluginDiscoveryService.Discover(dialogVm.PluginPath);
         dialogVm.SetPlugins(plugins);
     }
@@ -361,5 +566,32 @@ public partial class MainWindow : Window
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private static T? FindAncestor<T>(Visual? visual) where T : class
+    {
+        var current = visual;
+        while (current is not null)
+        {
+            if (current is T target)
+            {
+                return target;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return null;
+    }
+
+    private static void ApplyLanguage(string? languageName)
+    {
+        var culture = LanguageCultureResolver.ResolveCulture(languageName);
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        Thread.CurrentThread.CurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
     }
 }

@@ -10,8 +10,10 @@
         MaxWidth="411"
         MaxHeight="426"
         CanResize="False"
+        CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
         Title="Properties">
 
     <Grid RowDefinitions="*,Auto" Margin="0">
@@ -34,8 +36,7 @@
                     <TextBox Grid.Column="2"
                              Grid.Row="1"
                              Margin="0,2,0,0"
-                             Text="{Binding Name}"
-                             IsReadOnly="True"/>
+                             Text="{Binding Name}"/>
 
                     <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Margin="0,12,0,4" Text="Comments:" VerticalAlignment="Top"/>
                     <TextBox Grid.Row="3"
@@ -51,9 +52,9 @@
             <TabItem Header="Info" IsVisible="{Binding HasInfoTab}">
                 <Border Margin="8,8,8,10" BorderBrush="#D8D8D8" BorderThickness="1">
                     <Grid RowDefinitions="Auto,*">
-                        <Grid ColumnDefinitions="183,*" Background="#F5F5F5">
-                            <TextBlock Margin="8,5" Text="Property" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Margin="8,5" Text="Value" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="183,*" Background="#E8E8E8">
+                            <TextBlock Margin="8,5" Text="Property" FontWeight="SemiBold" Foreground="#000000"/>
+                            <TextBlock Grid.Column="1" Margin="8,5" Text="Value" FontWeight="SemiBold" Foreground="#000000"/>
                         </Grid>
                         <ListBox Grid.Row="1"
                                  BorderThickness="0"

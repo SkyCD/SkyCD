@@ -6,9 +6,11 @@
         Width="470"
         Height="140"
         CanResize="False"
+        CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         WindowDecorations="BorderOnly"
         ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
         Title="Adding">
 
     <Design.DataContext>

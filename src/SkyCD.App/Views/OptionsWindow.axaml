@@ -8,6 +8,9 @@
         MinWidth="700"
         MinHeight="460"
         WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        CanMinimize="False"
+        Icon="/Assets/skycd.ico"
         Title="Options">
 
     <Design.DataContext>
@@ -15,7 +18,7 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="*,Auto" Margin="14">
-        <TabControl>
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}">
             <TabItem Header="Plug-Ins">
                 <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8" Margin="10">
                     <TextBlock Text="Plug-In Path"/>
@@ -33,10 +36,11 @@
                             BorderThickness="1">
                         <Grid RowDefinitions="Auto,*">
                             <Border BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Background="#F5F5F5" Padding="8,6">
-                                <Grid ColumnDefinitions="2*,2*,3*">
-                                    <TextBlock Text="Name" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="1" Text="Type" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="2" Text="Extended Info" FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="Auto,2*,2*,3*">
+                                    <TextBlock Text="Enabled" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="3" Text="Extended Info" FontWeight="SemiBold"/>
                                 </Grid>
                             </Border>
 
@@ -46,10 +50,11 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:OptionsPluginItem">
                                         <Border BorderBrush="#E6E6E6" BorderThickness="0,0,0,1" Padding="8,5">
-                                            <Grid ColumnDefinitions="2*,2*,3*">
-                                                <TextBlock Text="{Binding Name}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Type}"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding ExtendedInfo}"/>
+                                            <Grid ColumnDefinitions="Auto,2*,2*,3*">
+                                                <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Type}"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding ExtendedInfo}"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -79,7 +84,13 @@
                     <TextBlock Text="Select interface language"/>
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding Languages}"
-                             SelectedItem="{Binding SelectedLanguage}"/>
+                             SelectedItem="{Binding SelectedLanguage}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LanguageItem">
+                                <TextBlock Text="{Binding DisplayText}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </TabItem>
         </TabControl>

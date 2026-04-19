@@ -1,72 +1,43 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<BrowserItem>> browserItemsByNodeKey;
+    private readonly IBrowserDataStore browserDataStore;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
+    public event EventHandler? NewCatalogRequested;
+    public event EventHandler? OpenCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
+    public event EventHandler? ExitRequested;
 
     public MainWindowViewModel()
+        : this(new InMemoryBrowserDataStore())
     {
-        var moviesNode = new BrowserTreeNode("movies", "Movies", "🎬");
-        var musicNode = new BrowserTreeNode("music", "Music", "🎵");
-        var projectsNode = new BrowserTreeNode("projects", "Projects", "🗂");
+    }
 
-        var libraryNode = new BrowserTreeNode(
-            "library",
-            "Library",
-            "📚",
-            [moviesNode, musicNode, projectsNode],
-            true);
-
-        TreeNodes =
-        [
-            libraryNode
-        ];
+    public MainWindowViewModel(IBrowserDataStore browserDataStore)
+    {
+        this.browserDataStore = browserDataStore ?? throw new ArgumentNullException(nameof(browserDataStore));
+        TreeNodes = browserDataStore.GetTreeNodes();
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
         treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
-
-        browserItemsByNodeKey = new Dictionary<string, IReadOnlyList<BrowserItem>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["library"] =
-            [
-                new BrowserItem("Movies", "Folder", "128 items", "📁"),
-                new BrowserItem("Music", "Folder", "340 items", "📁"),
-                new BrowserItem("Projects", "Folder", "56 items", "📁")
-            ],
-            ["movies"] =
-            [
-                new BrowserItem("Interstellar.mkv", "Video", "12.1 GB", "🎞"),
-                new BrowserItem("Arrival.mkv", "Video", "9.4 GB", "🎞")
-            ],
-            ["music"] =
-            [
-                new BrowserItem("Classical Collection", "Folder", "42 items", "📁"),
-                new BrowserItem("Concert-2025.flac", "Audio", "414 MB", "🎧")
-            ],
-            ["projects"] =
-            [
-                new BrowserItem("SkyCD v3", "Folder", "11 items", "📁"),
-                new BrowserItem("Plugin Benchmarks", "Folder", "6 items", "📁")
-            ]
-        };
-
-        SelectedTreeNode = TreeNodes[0];
+        SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
     }
 
@@ -75,6 +46,8 @@ public partial class MainWindowViewModel : ObservableObject
     public bool IsSaveEnabled => IsDirtyDocument;
 
     public bool IsDeleteEnabled => SelectedBrowserItem is not null;
+
+    public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
     public string ProgressText => $"{ProgressValue}%";
 
@@ -91,6 +64,16 @@ public partial class MainWindowViewModel : ObservableObject
     public bool IsSortByNameChecked => CurrentSortMode == BrowserSortMode.Name;
 
     public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
+
+    public bool IsSortBySizeChecked => CurrentSortMode == BrowserSortMode.Size;
+
+    public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
+
+    public bool IsListMode => CurrentViewMode == BrowserViewMode.List;
+
+    public bool IsSmallIconsMode => CurrentViewMode == BrowserViewMode.SmallIcons;
+
+    public bool IsLargeIconsMode => CurrentViewMode == BrowserViewMode.LargeIcons;
 
     public bool IsIconGridMode =>
         CurrentViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
@@ -115,6 +98,13 @@ public partial class MainWindowViewModel : ObservableObject
         _ => 220
     };
 
+    public double BrowserGridItemHeight => CurrentViewMode switch
+    {
+        BrowserViewMode.LargeIcons => 90,
+        BrowserViewMode.Tiles => 80,
+        _ => 60
+    };
+
     public bool ShowDetailsColumns => CurrentViewMode == BrowserViewMode.Details;
 
     public IReadOnlyList<string> StatusTransitions => statusTransitions;
@@ -131,9 +121,27 @@ public partial class MainWindowViewModel : ObservableObject
     private BrowserItem? selectedBrowserItem;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsSmallIconsViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsLargeIconsViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsListViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsDetailsViewChecked))]
+    [NotifyPropertyChangedFor(nameof(IsDetailsMode))]
+    [NotifyPropertyChangedFor(nameof(IsListMode))]
+    [NotifyPropertyChangedFor(nameof(IsSmallIconsMode))]
+    [NotifyPropertyChangedFor(nameof(IsLargeIconsMode))]
+    [NotifyPropertyChangedFor(nameof(IsIconGridMode))]
+    [NotifyPropertyChangedFor(nameof(IsListLikeMode))]
+    [NotifyPropertyChangedFor(nameof(IsTilesMode))]
+    [NotifyPropertyChangedFor(nameof(BrowserIconFontSize))]
+    [NotifyPropertyChangedFor(nameof(BrowserGridItemWidth))]
+    [NotifyPropertyChangedFor(nameof(BrowserGridItemHeight))]
+    [NotifyPropertyChangedFor(nameof(ShowDetailsColumns))]
     private BrowserViewMode currentViewMode = BrowserViewMode.Details;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSortByNameChecked))]
+    [NotifyPropertyChangedFor(nameof(IsSortByTypeChecked))]
     private BrowserSortMode currentSortMode = BrowserSortMode.Name;
 
     [ObservableProperty]
@@ -151,8 +159,28 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private int progressValue;
 
+    [ObservableProperty]
+    private BrowserItem? clipboardItem;
+
+    public bool IsCopyEnabled => SelectedBrowserItem is not null;
+
+    public bool IsPasteEnabled => ClipboardItem is not null;
+
+    public bool IsCutEnabled => SelectedBrowserItem is not null;
+
     [RelayCommand]
     private void NewCatalog()
+    {
+        if (NewCatalogRequested is not null)
+        {
+            NewCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteNewCatalog();
+    }
+
+    public void CompleteNewCatalog()
     {
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
@@ -161,12 +189,23 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenCatalog()
     {
+        if (OpenCatalogRequested is not null)
+        {
+            OpenCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteOpenCatalog();
+    }
+
+    public void CompleteOpenCatalog()
+    {
         StartOperation("Loading catalog...");
         SetProgress(35, "Parsing catalog...");
         SetProgress(80, "Updating browser...");
         CompleteOperation();
 
-        IsDirtyDocument = true;
+        IsDirtyDocument = false;
     }
 
     [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
@@ -191,7 +230,7 @@ public partial class MainWindowViewModel : ObservableObject
         IsDirtyDocument = false;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsPropertiesEnabled))]
     private void OpenProperties()
     {
         if (!TryBuildPropertiesDialog(out var dialog))
@@ -210,6 +249,7 @@ public partial class MainWindowViewModel : ObservableObject
                     return;
                 }
 
+                ApplyBrowserItemRenameIfNeeded(dialog);
                 commentsByObjectKey[dialog.ObjectKey] = comments;
                 IsDirtyDocument = true;
                 StatusText = DefaultStatusText;
@@ -221,6 +261,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void ExitApplication()
     {
         StatusText = "Exit requested.";
+        ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
@@ -269,13 +310,37 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void OpenProjectWebsite()
     {
-        StatusText = "Open SourceForge project website.";
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://sourceforge.net/projects/skycd/",
+                UseShellExecute = true
+            });
+            StatusText = "Opening SourceForge project website...";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to open SourceForge website: {ex.Message}";
+        }
     }
 
     [RelayCommand]
     private void OpenGithubArea()
     {
-        StatusText = "Open GitHub project area.";
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/SkyCD/SkyCD",
+                UseShellExecute = true
+            });
+            StatusText = "Opening GitHub project area...";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to open GitHub area: {ex.Message}";
+        }
     }
 
     [RelayCommand]
@@ -351,6 +416,45 @@ public partial class MainWindowViewModel : ObservableObject
         SetProgress(60, "Parsing catalog...");
         RefreshBrowserItemsForSelection();
         CompleteOperation();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCopyEnabled))]
+    private void Copy()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        ClipboardItem = SelectedBrowserItem;
+        StatusText = $"Copied {SelectedBrowserItem.Name}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPasteEnabled))]
+    private void Paste()
+    {
+        if (ClipboardItem is null)
+        {
+            return;
+        }
+
+        // In a real implementation, this would add a copy of the item to the current location
+        // For now, we'll just show a status message
+        IsDirtyDocument = true;
+        StatusText = $"Pasted {ClipboardItem.Name}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCutEnabled))]
+    private void Cut()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        ClipboardItem = SelectedBrowserItem;
+        IsDirtyDocument = true;
+        StatusText = $"Cut {SelectedBrowserItem.Name}.";
     }
 
     public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
@@ -490,7 +594,8 @@ public partial class MainWindowViewModel : ObservableObject
     private string GetBrowserItemObjectKey(BrowserItem item)
     {
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        return $"item:{nodeKey}:{item.Name}";
+        var originalName = ResolveOriginalBrowserItemName(nodeKey, item.Name);
+        return $"item:{nodeKey}:{originalName}";
     }
 
     private static string GetTreeNodeObjectKey(BrowserTreeNode node)
@@ -502,7 +607,20 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        if (!browserItemsByNodeKey.TryGetValue(nodeKey, out var items))
+        var items = browserDataStore.GetBrowserItems(nodeKey);
+        if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
+        {
+            items = items
+                .Select(item =>
+                {
+                    return renamedItems.TryGetValue(item.Name, out var renamedName)
+                        ? item with { Name = renamedName }
+                        : item;
+                })
+                .ToArray();
+        }
+
+        if (items.Count == 0)
         {
             BrowserItems = [];
             SelectedBrowserItem = null;
@@ -514,6 +632,9 @@ public partial class MainWindowViewModel : ObservableObject
             BrowserSortMode.Type => items.OrderBy(static item => item.Type)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
+            BrowserSortMode.Size => items.OrderBy(static item => item.Size, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
 
@@ -523,9 +644,58 @@ public partial class MainWindowViewModel : ObservableObject
                              ?? refreshedItems.FirstOrDefault();
     }
 
+    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
+    {
+        if (SelectedBrowserItem is null || SelectedTreeNode is null)
+        {
+            return;
+        }
+
+        var nodeKey = SelectedTreeNode.Key;
+        var currentDisplayName = SelectedBrowserItem.Name;
+        var requestedName = dialog.Name.Trim();
+        if (string.IsNullOrWhiteSpace(requestedName) ||
+            requestedName.Equals(currentDisplayName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var originalName = ResolveOriginalBrowserItemName(nodeKey, currentDisplayName);
+        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
+        {
+            renamedItems = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            renamedBrowserItemNamesByNodeKey[nodeKey] = renamedItems;
+        }
+
+        renamedItems[originalName] = requestedName;
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+            item.Name.Equals(requestedName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string ResolveOriginalBrowserItemName(string nodeKey, string displayName)
+    {
+        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
+        {
+            return displayName;
+        }
+
+        foreach (var (original, renamed) in renamedItems)
+        {
+            if (renamed.Equals(displayName, StringComparison.OrdinalIgnoreCase))
+            {
+                return original;
+            }
+        }
+
+        return displayName;
+    }
+
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
     {
         RefreshBrowserItemsForSelection();
+        OnPropertyChanged(nameof(IsPropertiesEnabled));
+        OpenPropertiesCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
@@ -573,7 +743,13 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedBrowserItemChanged(BrowserItem? value)
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
+        OnPropertyChanged(nameof(IsPropertiesEnabled));
+        OnPropertyChanged(nameof(IsCopyEnabled));
+        OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        OpenPropertiesCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
@@ -585,11 +761,16 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsLargeIconsViewChecked));
         OnPropertyChanged(nameof(IsListViewChecked));
         OnPropertyChanged(nameof(IsDetailsViewChecked));
+        OnPropertyChanged(nameof(IsDetailsMode));
+        OnPropertyChanged(nameof(IsListMode));
+        OnPropertyChanged(nameof(IsSmallIconsMode));
+        OnPropertyChanged(nameof(IsLargeIconsMode));
         OnPropertyChanged(nameof(IsIconGridMode));
         OnPropertyChanged(nameof(IsListLikeMode));
         OnPropertyChanged(nameof(IsTilesMode));
         OnPropertyChanged(nameof(BrowserIconFontSize));
         OnPropertyChanged(nameof(BrowserGridItemWidth));
+        OnPropertyChanged(nameof(BrowserGridItemHeight));
         OnPropertyChanged(nameof(ShowDetailsColumns));
     }
 
@@ -597,6 +778,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
+        OnPropertyChanged(nameof(IsSortBySizeChecked));
     }
 
     partial void OnIsDirtyDocumentChanged(bool value)
@@ -608,5 +790,11 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnProgressValueChanged(int value)
     {
         OnPropertyChanged(nameof(ProgressText));
+    }
+
+    partial void OnClipboardItemChanged(BrowserItem? value)
+    {
+        OnPropertyChanged(nameof(IsPasteEnabled));
+        PasteCommand.NotifyCanExecuteChanged();
     }
 }

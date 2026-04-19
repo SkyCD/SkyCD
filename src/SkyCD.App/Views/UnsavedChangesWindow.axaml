@@ -4,8 +4,10 @@
         Width="430"
         Height="170"
         CanResize="False"
+        CanMinimize="False"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
         Title="Unsaved Changes">
 
     <Grid RowDefinitions="*,Auto" Margin="16">

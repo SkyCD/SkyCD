@@ -7,5 +7,6 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://SkyCD.App/Styles/TabControlStyles.axaml"/>
+        <StyleInclude Source="avares://SkyCD.App/Styles/IconStyles.axaml"/>
     </Application.Styles>
 </Application>

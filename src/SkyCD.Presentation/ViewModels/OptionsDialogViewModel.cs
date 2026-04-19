@@ -6,6 +6,8 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel : ObservableObject
 {
+    private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+
     public OptionsDialogViewModel()
         : this(["English", "Lithuanian"])
     {
@@ -15,12 +17,12 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         foreach (var language in availableLanguages.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            Languages.Add(language);
+            Languages.Add(LanguageItem.Create(language));
         }
 
         if (Languages.Count == 0)
         {
-            Languages.Add("English");
+            Languages.Add(LanguageItem.Create("English"));
         }
 
         selectedLanguage = Languages[0];
@@ -28,7 +30,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
-    public ObservableCollection<string> Languages { get; } = [];
+    public ObservableCollection<LanguageItem> Languages { get; } = [];
 
     [ObservableProperty]
     private string pluginPath = string.Empty;
@@ -37,13 +39,16 @@ public partial class OptionsDialogViewModel : ObservableObject
     private OptionsPluginItem? selectedPlugin;
 
     [ObservableProperty]
-    private string selectedLanguage;
+    private LanguageItem selectedLanguage;
 
     [ObservableProperty]
     private string infoMessage = string.Empty;
 
     [ObservableProperty]
     private bool dialogAccepted;
+
+    [ObservableProperty]
+    private int selectedTabIndex;
 
     public event EventHandler? BrowsePluginPathRequested;
 
@@ -80,7 +85,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     private bool CanConfigure()
     {
-        return SelectedPlugin is not null;
+        return SelectedPlugin is not null && SelectedPlugin.SupportsConfiguration;
     }
 
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
@@ -89,12 +94,49 @@ public partial class OptionsDialogViewModel : ObservableObject
         Plugins.Clear();
         foreach (var plugin in snapshot)
         {
+            plugin.IsEnabled = !disabledPluginIds.Contains(plugin.Id);
             Plugins.Add(plugin);
         }
 
         SelectedPlugin = Plugins.FirstOrDefault();
         InfoMessage = $"Loaded {Plugins.Count} plugin(s).";
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+    }
+
+    public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
+    {
+        disabledPluginIds.Clear();
+        if (pluginIds is null)
+        {
+            return;
+        }
+
+        foreach (var pluginId in pluginIds.Where(static id => !string.IsNullOrWhiteSpace(id)))
+        {
+            disabledPluginIds.Add(pluginId);
+        }
+    }
+
+    public void CapturePluginStates()
+    {
+        if (Plugins.Count == 0)
+        {
+            return;
+        }
+
+        disabledPluginIds.Clear();
+        foreach (var plugin in Plugins.Where(static plugin => !plugin.IsEnabled))
+        {
+            disabledPluginIds.Add(plugin.Id);
+        }
+    }
+
+    public IReadOnlyList<string> GetDisabledPluginIds()
+    {
+        CapturePluginStates();
+        return disabledPluginIds
+            .OrderBy(static id => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)

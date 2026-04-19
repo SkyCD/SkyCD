@@ -6,7 +6,9 @@
         Width="380"
         Height="210"
         CanResize="False"
+        CanMinimize="False"
         WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
         Title="Server login">
 
     <Design.DataContext>

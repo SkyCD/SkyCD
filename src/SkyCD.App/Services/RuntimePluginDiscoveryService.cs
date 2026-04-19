@@ -74,7 +74,11 @@ public sealed class RuntimePluginDiscoveryService
                     .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
 
             var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
-            output.Add(new OptionsPluginItem(descriptor.DisplayName, capabilitySummary, extendedInfo));
+            output.Add(new OptionsPluginItem(
+                descriptor.DisplayName,
+                capabilitySummary,
+                extendedInfo,
+                id: descriptor.Id));
         }
     }
 }
