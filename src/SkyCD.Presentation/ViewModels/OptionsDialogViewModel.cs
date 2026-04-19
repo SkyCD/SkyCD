@@ -47,6 +47,9 @@ public partial class OptionsDialogViewModel : ObservableObject
     [ObservableProperty]
     private bool dialogAccepted;
 
+    [ObservableProperty]
+    private int selectedTabIndex;
+
     public event EventHandler? BrowsePluginPathRequested;
 
     public event EventHandler? RefreshPluginsRequested;

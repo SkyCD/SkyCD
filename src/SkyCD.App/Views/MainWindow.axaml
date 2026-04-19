@@ -140,7 +140,7 @@
                 <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
             </MenuItem>
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Options..." Command="{Binding OpenOptionsCommand}"/>
+                <MenuItem Header="_Options..." HotKey="Ctrl+Alt+O" Command="{Binding OpenOptionsCommand}"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Project website in _SourceForge.NET" Command="{Binding OpenProjectWebsiteCommand}"/>
