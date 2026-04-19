@@ -18,7 +18,7 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="*,Auto" Margin="14">
-        <TabControl>
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}">
             <TabItem Header="Plug-Ins">
                 <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8" Margin="10">
                     <TextBlock Text="Plug-In Path"/>

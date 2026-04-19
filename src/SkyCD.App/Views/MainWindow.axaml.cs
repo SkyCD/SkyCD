@@ -304,6 +304,7 @@ public partial class MainWindow : Window
         }
 
         e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
+        e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         RefreshPlugins(e.Dialog);
@@ -319,6 +320,7 @@ public partial class MainWindow : Window
             options.PluginPath = e.Dialog.PluginPath;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
+            options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             appOptionsStore.Save(options);
             ApplyLanguage(options.Language);
         }
