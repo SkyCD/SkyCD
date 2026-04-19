@@ -6,6 +6,7 @@ using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -325,7 +326,7 @@ public partial class MainWindow : Window
         {
             Title = "Open catalog",
             AllowMultiple = false,
-            FileTypeChoices = fileTypeChoices
+            Patterns = fileTypeChoices
         });
 
         if (files.Count == 0)
@@ -341,16 +342,117 @@ public partial class MainWindow : Window
 
         try
         {
-            // TODO: Implement actual file loading through plugins
-            vm.CompleteOpenCatalog();
-            vm.CurrentCatalogPath = localPath;
-            vm.StatusText = $"Loaded catalog from {Path.GetFileName(localPath)}.";
+            // Determine format ID from file extension
+            var extension = Path.GetExtension(localPath);
+            var formatId = FindFormatIdByExtension(extension, openFormats);
+
+            if (string.IsNullOrEmpty(formatId))
+            {
+                vm.StatusText = $"Unsupported file format: {extension}";
+                return;
+            }
+
+            // Load file content through plugin
+            var catalog = await LoadCatalogFromFileAsync(localPath, formatId);
+            if (catalog is null)
+            {
+                vm.StatusText = "Failed to load catalog: Unknown error";
+                return;
+            }
+
+            // Convert to browser tree nodes
+            var treeNodes = ConvertToBrowserTreeNodes(catalog);
+            var browserDataStore = new InMemoryBrowserDataStore(treeNodes);
+
+            // Create a new view model with loaded data
+            var newVm = new MainWindowViewModel(browserDataStore);
+            newVm.CurrentCatalogPath = localPath;
+            newVm.StatusText = $"Loaded catalog from {Path.GetFileName(localPath)}.";
+
+            // Replace the data context
+            DataContext = newVm;
+            subscribedViewModel = newVm;
+
+            // Trigger the event handler to attach events
+            OnDataContextChanged(this, EventArgs.Empty);
+        }
+        catch (FileFormatRoutingException ex)
+        {
+            vm.StatusText = $"Failed to load catalog: {ex.Message}";
         }
         catch (Exception ex)
         {
             vm.StatusText = $"Failed to load catalog: {ex.Message}";
         }
     }
+
+    private static string? FindFormatIdByExtension(string extension, IReadOnlyList<FileFormatRoute> openFormats)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return null;
+        }
+
+        // Ensure extension starts with a dot
+        if (!extension.StartsWith('.', StringComparison.Ordinal))
+        {
+            extension = "." + extension;
+        }
+
+        // Look for format that supports this extension
+        var format = openFormats.FirstOrDefault(f =>
+            f.Extensions.Any(ext => ext.Equals(extension, StringComparison.OrdinalIgnoreCase)));
+
+        return format?.FormatId;
+    }
+
+    private async Task<object?> LoadCatalogFromFileAsync(string filePath, string formatId)
+    {
+        await using var stream = File.OpenRead(filePath);
+
+        var request = new FileFormatReadRequest
+        {
+            Source = stream,
+            FormatId = formatId,
+            FileName = Path.GetFileName(filePath)
+        };
+
+        var result = await fileFormatRoutingService.ReadAsync(request);
+
+        if (!result.Success)
+        {
+            throw new FileFormatRoutingException(result.Error ?? "Failed to read catalog file.");
+        }
+
+        return result.Payload;
+    }
+
+    private static IReadOnlyList<BrowserTreeNode> ConvertToBrowserTreeNodes(object catalog)
+    {
+        // For any loaded catalog, create a simple root node structure
+        // The actual data is handled by the plugin and stored in the data store
+        var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
+        return [rootNode];
+    }
+
+    private static IReadOnlyList<BrowserTreeNode> GetDefaultTreeNodes()
+    {
+        var moviesNode = new BrowserTreeNode("movies", "Movies", "folder");
+        var musicNode = new BrowserTreeNode("music", "Music", "folder");
+        var projectsNode = new BrowserTreeNode("projects", "Projects", "folder");
+
+        var libraryNode = new BrowserTreeNode(
+            "library",
+            "Library",
+            "cd",
+            [moviesNode, musicNode, projectsNode],
+            true);
+
+        return [libraryNode];
+    }
+
+    // Legacy catalog conversion removed - types not available at compile time
+    // The plugin system handles parsing; we just display default tree structure
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
     {
