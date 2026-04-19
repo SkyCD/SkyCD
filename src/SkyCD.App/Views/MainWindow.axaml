@@ -294,7 +294,7 @@
                                 ItemsSource="{Binding BrowserItems}"
                                 SelectedItem="{Binding SelectedBrowserItem}"
                                 ContextRequested="OnBrowserContextRequested"
-                ListContextMenu="{DynamicResource BrowserContextMenu}">
+                                ListContextMenu="{DynamicResource BrowserContextMenu}">
                 <cc:DetailsListView.HeaderContent>
                     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                             BorderThickness="0,0,0,1"

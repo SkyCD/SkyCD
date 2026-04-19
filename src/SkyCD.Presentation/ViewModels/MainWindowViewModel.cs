@@ -190,6 +190,14 @@ public partial class MainWindowViewModel : ObservableObject
 
     public void CompleteNewCatalog()
     {
+        commentsByObjectKey.Clear();
+        addedItemsByNodeKey.Clear();
+        deletedItemNamesByNodeKey.Clear();
+        renamedBrowserItemNamesByNodeKey.Clear();
+        CurrentCatalogPath = null;
+        SelectedBrowserItem = null;
+        ClipboardItem = null;
+        RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
         StatusText = "Created a new catalog.";
     }
