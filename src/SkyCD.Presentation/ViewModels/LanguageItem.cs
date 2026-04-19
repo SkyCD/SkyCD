@@ -50,7 +50,43 @@ public sealed record LanguageItem(string Name, string Flag)
     /// </summary>
     public static LanguageItem Create(string languageName)
     {
-        var flag = FlagMappings.TryGetValue(languageName, out var f) ? f : "🌐";
+        var flag = ResolveFlag(languageName);
         return new LanguageItem(languageName, flag);
+    }
+
+    private static string ResolveFlag(string languageName)
+    {
+        if (FlagMappings.TryGetValue(languageName, out var directMatch))
+        {
+            return directMatch;
+        }
+
+        var normalized = (languageName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return "🌐";
+        }
+
+        var bracketIndex = normalized.IndexOf('(');
+        if (bracketIndex > 0)
+        {
+            var baseName = normalized[..bracketIndex].Trim();
+            if (FlagMappings.TryGetValue(baseName, out var baseNameMatch))
+            {
+                return baseNameMatch;
+            }
+        }
+
+        var dashIndex = normalized.IndexOf('-');
+        if (dashIndex > 0)
+        {
+            var baseName = normalized[..dashIndex].Trim();
+            if (FlagMappings.TryGetValue(baseName, out var dashedMatch))
+            {
+                return dashedMatch;
+            }
+        }
+
+        return "🌐";
     }
 }
