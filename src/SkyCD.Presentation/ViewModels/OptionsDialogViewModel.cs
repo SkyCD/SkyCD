@@ -80,7 +80,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     private bool CanConfigure()
     {
-        return SelectedPlugin is not null;
+        return SelectedPlugin is not null && SelectedPlugin.SupportsConfiguration;
     }
 
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
