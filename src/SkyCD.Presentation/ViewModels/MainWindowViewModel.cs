@@ -188,6 +188,15 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private int progressValue;
 
+    [ObservableProperty]
+    private BrowserItem? clipboardItem;
+
+    public bool IsCopyEnabled => SelectedBrowserItem is not null;
+
+    public bool IsPasteEnabled => ClipboardItem is not null;
+
+    public bool IsCutEnabled => SelectedBrowserItem is not null;
+
     [RelayCommand]
     private void NewCatalog()
     {
@@ -415,6 +424,45 @@ public partial class MainWindowViewModel : ObservableObject
         CompleteOperation();
     }
 
+    [RelayCommand(CanExecute = nameof(IsCopyEnabled))]
+    private void Copy()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        ClipboardItem = SelectedBrowserItem;
+        StatusText = $"Copied {SelectedBrowserItem.Name}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPasteEnabled))]
+    private void Paste()
+    {
+        if (ClipboardItem is null)
+        {
+            return;
+        }
+
+        // In a real implementation, this would add a copy of the item to the current location
+        // For now, we'll just show a status message
+        IsDirtyDocument = true;
+        StatusText = $"Pasted {ClipboardItem.Name}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCutEnabled))]
+    private void Cut()
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        ClipboardItem = SelectedBrowserItem;
+        IsDirtyDocument = true;
+        StatusText = $"Cut {SelectedBrowserItem.Name}.";
+    }
+
     public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
@@ -638,7 +686,11 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedBrowserItemChanged(BrowserItem? value)
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
+        OnPropertyChanged(nameof(IsCopyEnabled));
+        OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
     }
@@ -679,5 +731,11 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnProgressValueChanged(int value)
     {
         OnPropertyChanged(nameof(ProgressText));
+    }
+
+    partial void OnClipboardItemChanged(BrowserItem? value)
+    {
+        OnPropertyChanged(nameof(IsPasteEnabled));
+        PasteCommand.NotifyCanExecuteChanged();
     }
 }
