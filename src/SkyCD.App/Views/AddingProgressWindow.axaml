@@ -10,6 +10,7 @@
         WindowStartupLocation="CenterOwner"
         WindowDecorations="BorderOnly"
         ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
         Title="Adding">
 
     <Design.DataContext>
