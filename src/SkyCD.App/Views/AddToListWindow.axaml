@@ -8,6 +8,7 @@
         MinWidth="520"
         MinHeight="420"
         WindowStartupLocation="CenterOwner"
+        CanMinimize="False"
         Title="Add To List">
 
     <Design.DataContext>

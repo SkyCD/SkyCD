@@ -6,6 +6,7 @@
         Width="420"
         Height="260"
         CanResize="False"
+        CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         Title="About SkyCD">
 
