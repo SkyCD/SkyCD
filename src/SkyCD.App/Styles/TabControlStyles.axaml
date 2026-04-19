@@ -1,84 +1,68 @@
 <Styles xmlns="https://github.com/avaloniaui"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Legacy WinForms-style TabControl - Light Theme -->
+    <Styles.Resources>
+        <!-- Light Theme Resources -->
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#cbd5e1"/>
+            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#f1f5f9"/>
+            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#1e293b"/>
+            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#e2e8f0"/>
+            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#94a3b8"/>
+        </ResourceDictionary>
+
+        <!-- Dark Theme Resources -->
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#1f2937"/>
+            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#374151"/>
+            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#374151"/>
+            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#f3f4f6"/>
+            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#2d3748"/>
+            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#4b5563"/>
+            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#6b7280"/>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!-- Legacy WinForms-style TabControl -->
     <Style Selector="TabControl">
-        <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#cbd5e1"/>
+        <Setter Property="Background" Value="{DynamicResource TabControlBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
 
-    <!-- TabControl - Dark Theme (Fluent Dark) -->
-    <Style Selector="TabControl:dark">
-        <Setter Property="Background" Value="#1f2937"/>
-        <Setter Property="BorderBrush" Value="#374151"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="0"/>
-    </Style>
-
-    <!-- TabItem styling - Light Theme -->
+    <!-- TabItem styling -->
     <Style Selector="TabItem">
         <Setter Property="Padding" Value="16,4,16,4"/>
         <Setter Property="Margin" Value="2,0,0,0"/>
-        <Setter Property="Background" Value="#f1f5f9"/>
-        <Setter Property="Foreground" Value="#1e293b"/>
-        <Setter Property="BorderBrush" Value="#cbd5e1"/>
+        <Setter Property="Background" Value="{DynamicResource TabItemBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="FontSize" Value="11"/>
     </Style>
 
-    <!-- TabItem styling - Dark Theme -->
-    <Style Selector="TabItem:dark">
-        <Setter Property="Padding" Value="16,4,16,4"/>
-        <Setter Property="Margin" Value="2,0,0,0"/>
-        <Setter Property="Background" Value="#374151"/>
-        <Setter Property="Foreground" Value="#f3f4f6"/>
-        <Setter Property="BorderBrush" Value="#4b5563"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="FontSize" Value="11"/>
-    </Style>
-
-    <!-- Selected/active tab - Light Theme -->
+    <!-- Selected/active tab -->
     <Style Selector="TabItem:selected">
-        <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="Foreground" Value="#1e293b"/>
-        <Setter Property="BorderBrush" Value="#cbd5e1"/>
+        <Setter Property="Background" Value="{DynamicResource TabItemSelectedBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="ZIndex" Value="1"/>
         <Setter Property="Padding" Value="16,4,16,4"/>
     </Style>
 
-    <!-- Selected/active tab - Dark Theme -->
-    <Style Selector="TabItem:selected:dark">
-        <Setter Property="Background" Value="#2d3748"/>
-        <Setter Property="Foreground" Value="#f3f4f6"/>
-        <Setter Property="BorderBrush" Value="#4b5563"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="ZIndex" Value="1"/>
-        <Setter Property="Padding" Value="16,4,16,4"/>
-    </Style>
-
-    <!-- Hover/focus state - Light Theme -->
+    <!-- Hover/focus state -->
     <Style Selector="TabItem:pointerover">
-        <Setter Property="Background" Value="#e2e8f0"/>
+        <Setter Property="Background" Value="{DynamicResource TabItemHoverBackgroundBrush}"/>
     </Style>
 
-    <!-- Hover/focus state - Dark Theme -->
-    <Style Selector="TabItem:pointerover:dark">
-        <Setter Property="Background" Value="#4b5563"/>
-    </Style>
-
-    <!-- Disabled state - Light Theme -->
+    <!-- Disabled state -->
     <Style Selector="TabItem:disabled">
-        <Setter Property="Foreground" Value="#94a3b8"/>
-        <Setter Property="Background" Value="#f1f5f9"/>
-    </Style>
-
-    <!-- Disabled state - Dark Theme -->
-    <Style Selector="TabItem:disabled:dark">
-        <Setter Property="Foreground" Value="#6b7280"/>
-        <Setter Property="Background" Value="#374151"/>
+        <Setter Property="Foreground" Value="{DynamicResource TabItemDisabledForegroundBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource TabItemBackgroundBrush}"/>
     </Style>
 
 </Styles>
