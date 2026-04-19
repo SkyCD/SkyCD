@@ -215,18 +215,11 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void OpenThenSave_UpdatesSaveCommandState()
+    public void OpenCatalogCommand_DoesNotMarkDocumentDirty()
     {
         var vm = new MainWindowViewModel();
 
-        Assert.False(vm.SaveCatalogCommand.CanExecute(null));
-
         vm.OpenCatalogCommand.Execute(null);
-
-        Assert.True(vm.IsSaveEnabled);
-        Assert.True(vm.SaveCatalogCommand.CanExecute(null));
-
-        vm.SaveCatalogCommand.Execute(null);
 
         Assert.False(vm.IsSaveEnabled);
         Assert.False(vm.SaveCatalogCommand.CanExecute(null));
@@ -310,6 +303,19 @@ public class MainWindowViewModelTests
         vm.AddItemCommand.Execute(null);
 
         Assert.True(raised);
+    }
+
+    [Fact]
+    public void OpenCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = new MainWindowViewModel();
+        var raised = false;
+        vm.OpenCatalogRequested += (_, _) => raised = true;
+
+        vm.OpenCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.False(vm.IsDirtyDocument);
     }
 
     [Fact]

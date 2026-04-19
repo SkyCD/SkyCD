@@ -224,7 +224,7 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.OpenCatalogCommand.Execute(null);
+        vm.CompleteOpenCatalog();
     }
 
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
