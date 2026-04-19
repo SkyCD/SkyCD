@@ -164,6 +164,23 @@ public partial class MainWindow : Window
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
 
+        // Load last opened catalog if available - issue #257
+        if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
+        {
+            try
+            {
+                vm.CompleteOpenCatalog();
+                vm.CurrentCatalogPath = options.LastOpenedCatalogPath;
+                vm.StatusText = $"Loaded catalog from {Path.GetFileName(options.LastOpenedCatalogPath)}.";
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = $"Failed to load last opened catalog: {ex.Message}";
+                options.LastOpenedCatalogPath = null;
+                appOptionsStore.Save(options);
+            }
+        }
+
         isSessionStateLoaded = true;
     }
 
@@ -558,6 +575,7 @@ public partial class MainWindow : Window
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
         options.BrowserViewMode = vm.CurrentViewMode.ToString();
         options.BrowserSortMode = vm.CurrentSortMode.ToString();
+        options.LastOpenedCatalogPath = vm.CurrentCatalogPath;
         appOptionsStore.Save(options);
     }
 
