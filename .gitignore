@@ -424,3 +424,6 @@ sessions/**
 *.trace.ndjson
 *.session.json
 *.transcript.md
+
+.agentbridge/
+.agentbridge/**
