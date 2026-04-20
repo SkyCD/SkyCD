@@ -646,7 +646,7 @@ public partial class MainWindow : Window
         var fileTypeChoices = pluginCatalog.GetFileTypeChoices(allowRead: false, allowWrite: true);
 
         var defaultFormat = fileTypeChoices.Skip(1).FirstOrDefault();
-        var defaultPattern = defaultFormat?.Patterns.FirstOrDefault();
+        string? defaultPattern = defaultFormat?.Patterns?.FirstOrDefault();
         var defaultExtension = string.IsNullOrEmpty(defaultPattern) ? "scd" : defaultPattern.TrimStart('*', '.');
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
