@@ -16,6 +16,7 @@ public sealed class SqliteBrowserDataStore : IBrowserDataStore, IDisposable
         connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         InitializeSchema();
+        SeedData();
     }
 
     public IReadOnlyList<BrowserTreeNode> GetTreeNodes()

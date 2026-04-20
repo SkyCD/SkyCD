@@ -1,10 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj" />
     <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj" />
