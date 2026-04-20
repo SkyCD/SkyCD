@@ -8,5 +8,6 @@
         <SimpleTheme />
         <StyleInclude Source="avares://SkyCD.App/Styles/TabControlStyles.axaml"/>
         <StyleInclude Source="avares://SkyCD.App/Styles/IconStyles.axaml"/>
+        <StyleInclude Source="avares://SkyCD.App/Styles/ButtonStyles.axaml"/>
     </Application.Styles>
 </Application>

@@ -312,6 +312,8 @@ copilot-chat/**
 .claude-code/**
 .anthropic/
 .anthropic/**
+.agentbridge/
+.agentbridge/**
 
 # --- Cursor ---
 .cursor/
