@@ -15,10 +15,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.App.Views;
 
@@ -166,23 +164,6 @@ public partial class MainWindow : Window
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
 
-        // Load last opened catalog if available - issue #257
-        if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
-        {
-            try
-            {
-                vm.CompleteOpenCatalog();
-                vm.CurrentCatalogPath = options.LastOpenedCatalogPath;
-                vm.StatusText = $"Loaded catalog from {Path.GetFileName(options.LastOpenedCatalogPath)}.";
-            }
-            catch (Exception ex)
-            {
-                vm.StatusText = $"Failed to load last opened catalog: {ex.Message}";
-                options.LastOpenedCatalogPath = null;
-                appOptionsStore.Save(options);
-            }
-        }
-
         isSessionStateLoaded = true;
     }
 
@@ -306,274 +287,8 @@ public partial class MainWindow : Window
             }
         }
 
-        var fileTypeChoices = pluginCatalog.GetFileTypeChoices(allowRead: true, allowWrite: false);
-
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Open catalog",
-            AllowMultiple = false,
-            FileTypeFilter = fileTypeChoices,
-            SuggestedFileType = fileTypeChoices[0]
-        });
-
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        var localPath = files[0].TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(localPath))
-        {
-            return;
-        }
-
-        try
-        {
-            vm.StatusText = "Loading catalog...";
-            vm.ProgressValue = 0;
-
-            var extension = Path.GetExtension(localPath);
-            var openFormatsLocal = fileFormatRoutingService.GetOpenFormats();
-            var formatId = FindFormatIdByExtension(extension, openFormatsLocal);
-
-            if (string.IsNullOrEmpty(formatId))
-            {
-                vm.StatusText = $"Unsupported file format: {extension}";
-                vm.ProgressValue = 100;
-                return;
-            }
-
-            vm.StatusText = "Reading catalog data...";
-            vm.ProgressValue = 10;
-
-            var catalog = await LoadCatalogFromFileAsync(localPath, formatId, progress =>
-            {
-                vm.ProgressValue = 10 + (int)(progress * 0.8);
-                vm.StatusText = $"Loading catalog... {vm.ProgressValue}%";
-            });
-
-            if (catalog is null)
-            {
-                vm.StatusText = "Failed to load catalog: Unknown error";
-                vm.ProgressValue = 100;
-                return;
-            }
-
-            vm.StatusText = "Building tree structure...";
-            vm.ProgressValue = 90;
-
-            var (treeNodes, itemsByNodeKey) = ConvertToBrowserTreeNodes(catalog);
-            var browserDataStore = new InMemoryBrowserDataStore(treeNodes, itemsByNodeKey);
-
-            vm.ProgressValue = 95;
-
-            var newVm = new MainWindowViewModel(browserDataStore);
-            newVm.CurrentCatalogPath = localPath;
-            newVm.StatusText = $"Loaded catalog from {Path.GetFileName(localPath)}.";
-            newVm.ProgressValue = 100;
-
-            DataContext = newVm;
-            subscribedViewModel = newVm;
-
-            // Trigger the event handler to attach events
-            OnDataContextChanged(this, EventArgs.Empty);
-        }
-        catch (FileFormatRoutingException ex)
-        {
-            vm.StatusText = $"Failed to load catalog: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            vm.StatusText = $"Failed to load catalog: {ex.Message}";
-        }
+        vm.CompleteOpenCatalog();
     }
-
-    private static string? FindFormatIdByExtension(string extension, IReadOnlyList<FileFormatRoute> openFormats)
-    {
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            return null;
-        }
-
-        // Ensure extension starts with a dot
-        if (!extension.StartsWith(".", StringComparison.Ordinal))
-        {
-            extension = "." + extension;
-        }
-
-        // Look for format that supports this extension
-        var format = openFormats.FirstOrDefault(f =>
-            f.Extensions.Any(ext => ext.Equals(extension, StringComparison.OrdinalIgnoreCase)));
-
-        return format?.FormatId;
-    }
-
-    private async Task<object?> LoadCatalogFromFileAsync(string filePath, string formatId, Action<int>? progressCallback = null)
-    {
-        await using var stream = File.OpenRead(filePath);
-
-        IProgress<int>? progress = progressCallback is null ? null : new Progress<int>(p => progressCallback(p));
-
-        var request = new FileFormatReadRequest
-        {
-            Source = stream,
-            FormatId = formatId,
-            FileName = Path.GetFileName(filePath),
-            Progress = progress
-        };
-
-        var result = await fileFormatRoutingService.ReadAsync(request);
-
-        if (!result.Success)
-        {
-            throw new FileFormatRoutingException(result.Error ?? "Failed to read catalog file.");
-        }
-
-        return result.Payload;
-    }
-
-    private static (IReadOnlyList<BrowserTreeNode> TreeNodes, Dictionary<string, IReadOnlyList<BrowserItem>> Items) ConvertToBrowserTreeNodes(object catalog)
-    {
-        var itemsByNodeKey = new Dictionary<string, IReadOnlyList<BrowserItem>>(StringComparer.OrdinalIgnoreCase);
-
-        if (catalog is JsonElement { ValueKind: JsonValueKind.Array } jsonArray)
-        {
-            var rootItems = new List<BrowserItem>();
-            var nodeByPath = new Dictionary<string, BrowserTreeNode>(StringComparer.OrdinalIgnoreCase);
-
-            rootItems.Add(new BrowserItem("All Files", "Folder", $"{jsonArray.GetArrayLength()} items", "folder"));
-            itemsByNodeKey["root"] = rootItems;
-
-            foreach (var element in jsonArray.EnumerateArray())
-            {
-                var name = element.TryGetProperty("Name", out var nameProp) ? nameProp.GetString() ?? "Unknown" : "Unknown";
-                var kind = element.TryGetProperty("Kind", out var kindProp) ? kindProp.GetString() ?? "File" : "File";
-                var sizeStr = "";
-                if (element.TryGetProperty("SizeBytes", out var sizeProp))
-                {
-                    if (sizeProp.ValueKind == JsonValueKind.Number && sizeProp.TryGetInt64(out var sizeBytes))
-                        sizeStr = FormatSize(sizeBytes);
-                    else if (sizeProp.ValueKind == JsonValueKind.String && long.TryParse(sizeProp.GetString(), out var sizeFromStr))
-                        sizeStr = FormatSize(sizeFromStr);
-                }
-
-                var icon = kind.Equals("Folder", StringComparison.OrdinalIgnoreCase) ? "folder" : "file";
-                rootItems.Add(new BrowserItem(name, kind, sizeStr, icon));
-            }
-
-            var rootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
-            return ([rootNode], itemsByNodeKey);
-        }
-
-        if (catalog is System.Collections.IEnumerable entries)
-        {
-            var entryList = entries.Cast<object>().ToList();
-            var nodesByPath = new Dictionary<string, BrowserTreeNode>(StringComparer.OrdinalIgnoreCase);
-            var rootItems = new List<BrowserItem>
-            {
-                new BrowserItem("All Files", "Folder", $"{entryList.Count} items", "folder")
-            };
-            itemsByNodeKey["root"] = rootItems;
-
-            foreach (var entry in entryList)
-            {
-                string? path = null;
-                long? size = null;
-
-                var entryType = entry.GetType();
-                var pathProp = entryType.GetProperty("Path");
-                var sizeProp = entryType.GetProperty("SizeBytes");
-
-                if (pathProp is not null)
-                    path = pathProp.GetValue(entry)?.ToString();
-
-                if (sizeProp is not null)
-                {
-                    var sizeValue = sizeProp.GetValue(entry);
-                    if (sizeValue is long sizeLong)
-                        size = sizeLong;
-                }
-
-                if (string.IsNullOrWhiteSpace(path))
-                    continue;
-
-                var isFolder = path.EndsWith("/") || path.EndsWith("\\");
-                var displayName = isFolder
-                    ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                    : Path.GetFileName(path);
-
-                if (string.IsNullOrWhiteSpace(displayName))
-                    displayName = path;
-
-                var sizeStr = size.HasValue ? FormatSize(size.Value) : "";
-                var icon = isFolder ? "folder" : "file";
-
-                if (isFolder && !nodesByPath.ContainsKey(path))
-                {
-                    var folderNode = new BrowserTreeNode(path, displayName, "folder", [], false);
-                    nodesByPath[path] = folderNode;
-                    var parentPath = Path.GetDirectoryName(path);
-                    if (!string.IsNullOrEmpty(parentPath) && nodesByPath.TryGetValue(parentPath, out var parentNode))
-                    {
-                        var parentChildrenList = new List<BrowserTreeNode>(parentNode.Children);
-                        parentChildrenList.Add(folderNode);
-                    }
-                }
-                else if (!isFolder)
-                {
-                    rootItems.Add(new BrowserItem(displayName, "File", sizeStr, icon));
-                }
-            }
-
-            var rootNodeChildren = new List<BrowserTreeNode>();
-
-            if (nodesByPath.Count > 0)
-            {
-                var rootFolders = nodesByPath.Values.Where(n =>
-                    string.IsNullOrEmpty(Path.GetDirectoryName(n.Key)) ||
-                    !nodesByPath.ContainsKey(Path.GetDirectoryName(n.Key)!)).ToList();
-
-                foreach (var folder in rootFolders)
-                {
-                    rootNodeChildren.Add(folder);
-                }
-            }
-
-            var rootNode = new BrowserTreeNode("root", "Catalog", "cd", rootNodeChildren, true);
-
-            return ([rootNode], itemsByNodeKey);
-        }
-
-        var defaultRootNode = new BrowserTreeNode("root", "Catalog", "cd", [], true);
-        return ([defaultRootNode], itemsByNodeKey);
-    }
-
-    private static string FormatSize(long bytes)
-    {
-        if (bytes >= 1024L * 1024L * 1024L) return $"{bytes / (1024d * 1024d * 1024d):0.##} GB";
-        if (bytes >= 1024L * 1024L) return $"{bytes / (1024d * 1024d):0.##} MB";
-        if (bytes >= 1024L) return $"{bytes / 1024d:0.##} KB";
-        return $"{bytes} B";
-    }
-
-    private static IReadOnlyList<BrowserTreeNode> GetDefaultTreeNodes()
-    {
-        var moviesNode = new BrowserTreeNode("movies", "Movies", "folder");
-        var musicNode = new BrowserTreeNode("music", "Music", "folder");
-        var projectsNode = new BrowserTreeNode("projects", "Projects", "folder");
-
-        var libraryNode = new BrowserTreeNode(
-            "library",
-            "Library",
-            "cd",
-            [moviesNode, musicNode, projectsNode],
-            true);
-
-        return [libraryNode];
-    }
-
-    // Legacy catalog conversion removed - types not available at compile time
-    // The plugin system handles parsing; we just display default tree structure
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
     {
@@ -643,11 +358,25 @@ public partial class MainWindow : Window
             return;
         }
 
-        var fileTypeChoices = pluginCatalog.GetFileTypeChoices(allowRead: false, allowWrite: true);
+        var saveFormats = fileFormatRoutingService.GetSaveFormats();
+        var fileTypeChoices = new List<FilePickerFileType>();
 
-        var defaultFormat = fileTypeChoices.Skip(1).FirstOrDefault();
-        string? defaultPattern = defaultFormat?.Patterns?.FirstOrDefault();
-        var defaultExtension = string.IsNullOrEmpty(defaultPattern) ? "scd" : defaultPattern.TrimStart('*', '.');
+        foreach (var format in saveFormats)
+        {
+            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
+            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
+            {
+                Patterns = patterns
+            });
+        }
+
+        fileTypeChoices.Add(new FilePickerFileType("All files")
+        {
+            Patterns = ["*.*"]
+        });
+
+        var defaultFormat = saveFormats.FirstOrDefault();
+        var defaultExtension = defaultFormat?.Extensions.FirstOrDefault()?.TrimStart('.') ?? "scd";
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
@@ -829,7 +558,6 @@ public partial class MainWindow : Window
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
         options.BrowserViewMode = vm.CurrentViewMode.ToString();
         options.BrowserSortMode = vm.CurrentSortMode.ToString();
-        options.LastOpenedCatalogPath = vm.CurrentCatalogPath;
         appOptionsStore.Save(options);
     }
 
