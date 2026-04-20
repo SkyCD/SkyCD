@@ -425,5 +425,7 @@ sessions/**
 *.session.json
 *.transcript.md
 
-.agentbridge/
-.agentbridge/**
+ .agentbridge/
+ .agentbridge/**
+ .junie/
+ .junie/**
