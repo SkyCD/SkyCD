@@ -534,6 +534,21 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = $"Pasted {ClipboardItem.Name}.";
     }
 
+    [RelayCommand(CanExecute = nameof(CanNavigateToFolder))]
+    private void NavigateToFolder()
+    {
+        if (TryResolveNodeFromBrowserSelection(out var targetNode))
+        {
+            SelectedTreeNode = targetNode;
+            StatusText = $"Navigated to {targetNode.Title}.";
+        }
+    }
+
+    private bool CanNavigateToFolder()
+    {
+        return TryResolveNodeFromBrowserSelection(out _);
+    }
+
     [RelayCommand(CanExecute = nameof(IsCutEnabled))]
     private void Cut()
     {

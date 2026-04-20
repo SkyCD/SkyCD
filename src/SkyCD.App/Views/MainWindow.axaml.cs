@@ -137,6 +137,16 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnBrowserListDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (subscribedViewModel is null)
+        {
+            return;
+        }
+
+        subscribedViewModel.NavigateToFolderCommand.Execute(null);
+    }
+
     private void UpdateWindowTitle()
     {
         if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)

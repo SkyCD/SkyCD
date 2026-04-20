@@ -1,7 +1,9 @@
+using System;
 using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 
 namespace SkyCD.UI.Controls;
@@ -26,9 +28,16 @@ public partial class DetailsListView : UserControl
     public static readonly StyledProperty<double> ListMinWidthProperty =
         AvaloniaProperty.Register<DetailsListView, double>(nameof(ListMinWidth));
 
+    public event EventHandler<TappedEventArgs>? DoubleTapped;
+
     public DetailsListView()
     {
         AvaloniaXamlLoader.Load(this);
+        var listBox = this.FindControl<ListBox>("InnerListBox");
+        if (listBox != null)
+        {
+            listBox.DoubleTapped += (s, e) => DoubleTapped?.Invoke(this, e);
+        }
     }
 
     public IEnumerable? ItemsSource

@@ -4,7 +4,8 @@
              x:Name="Root">
     <Grid RowDefinitions="Auto,*">
         <ContentPresenter Content="{Binding HeaderContent, ElementName=Root}"/>
-        <ListBox Grid.Row="1"
+        <ListBox x:Name="InnerListBox"
+                 Grid.Row="1"
                  MinWidth="{Binding ListMinWidth, ElementName=Root}"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
                  SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"

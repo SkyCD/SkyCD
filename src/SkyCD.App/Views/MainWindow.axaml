@@ -296,7 +296,8 @@
                                 ItemsSource="{Binding BrowserItems}"
                                 SelectedItem="{Binding SelectedBrowserItem}"
                                 ContextRequested="OnBrowserContextRequested"
-                                ListContextMenu="{DynamicResource BrowserContextMenu}">
+                                ListContextMenu="{DynamicResource BrowserContextMenu}"
+                                DoubleTapped="OnBrowserListDoubleTapped">
                 <cc:DetailsListView.HeaderContent>
                     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                             BorderThickness="0,0,0,1"
@@ -329,7 +330,8 @@
                      ItemsSource="{Binding BrowserItems}"
                      SelectedItem="{Binding SelectedBrowserItem}"
                      ContextRequested="OnBrowserContextRequested"
-                     ContextMenu="{DynamicResource BrowserContextMenu}">
+                     ContextMenu="{DynamicResource BrowserContextMenu}"
+                     DoubleTapped="OnBrowserListDoubleTapped">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
@@ -352,7 +354,8 @@
                      ItemsSource="{Binding BrowserItems}"
                      SelectedItem="{Binding SelectedBrowserItem}"
                      ContextRequested="OnBrowserContextRequested"
-                     ContextMenu="{DynamicResource BrowserContextMenu}">
+                     ContextMenu="{DynamicResource BrowserContextMenu}"
+                     DoubleTapped="OnBrowserListDoubleTapped">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
