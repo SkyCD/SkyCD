@@ -11,6 +11,7 @@ Primary entrypoints:
 - solution: `SkyCD.slnx`
 - CI workflow: `.github/workflows/ci.yml`
 - architecture docs: `docs/architecture/`
+- custom agent config: `.github/agents/cascade.agent.md` (`docs/ci/github-custom-agent-cascade.md`)
 
 Useful local commands:
 ```powershell
