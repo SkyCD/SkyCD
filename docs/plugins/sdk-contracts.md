@@ -30,7 +30,7 @@
 - Host executes modals through `ModalExtensionService` with permission checks, typed payload validation, timeout/cancellation propagation, and reentrancy guards.
 
 ## Sample Plugin
-- `Plugins/samples/SkyCD.Plugin.Sample.Json`
+- `Plugins/samples/SkyCD.Plugin.Json`
 - Compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
-- `Plugins/samples/SkyCD.Plugin.Sample.Modal`
+- `Plugins/samples/SkyCD.Plugin.Modal`
 - Demonstrates modal registration + typed request/response payload contracts (`IModalPluginCapability`).

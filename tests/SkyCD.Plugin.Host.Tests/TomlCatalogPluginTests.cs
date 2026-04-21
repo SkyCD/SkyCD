@@ -3,7 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Sample.Toml;
+using SkyCD.Plugin.Toml;
 
 namespace SkyCD.Plugin.Host.Tests;
 

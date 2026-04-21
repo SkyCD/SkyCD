@@ -1,6 +1,6 @@
 # TOML Hierarchy Mapping (v1)
 
-The TOML plugin (`skycd.plugin.sample.toml`) uses an adjacency-list model:
+The TOML plugin (`skycd.plugin.toml`) uses an adjacency-list model:
 
 - `schema.version` must be `skycd.catalog.v1`
 - `schema.hierarchy` is fixed to `adjacency-list`

@@ -5,7 +5,7 @@ using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Sample.Json;
+using SkyCD.Plugin.Json;
 
 namespace SkyCD.Plugin.Host.Tests;
 
