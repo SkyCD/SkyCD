@@ -458,7 +458,7 @@ public partial class MainWindow : Window
         if (accepted == true)
         {
             options.PluginPath = e.Dialog.PluginPath;
-            options.Language = e.Dialog.SelectedLanguage.Name;
+            options.Language = e.Dialog.SelectedLanguage?.Name ?? "English";
             options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             appOptionsStore.Save(options);

@@ -5,9 +5,18 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AddToListDialogViewModel : ObservableObject
 {
-    public AddToListDialogViewModel()
+    private readonly IReadOnlyDictionary<string, string> _translations;
+
+    public IReadOnlyDictionary<string, string> Translations => _translations;
+
+    public AddToListDialogViewModel(IReadOnlyDictionary<string, string> translations)
     {
+        _translations = translations ?? throw new ArgumentNullException(nameof(translations));
         RecomputeValidation();
+    }
+
+    public AddToListDialogViewModel() : this(new Dictionary<string, string>())
+    {
     }
 
     public bool CanConfirm => string.IsNullOrWhiteSpace(ValidationMessage);
@@ -49,7 +58,7 @@ public partial class AddToListDialogViewModel : ObservableObject
     [ObservableProperty]
     private string? validationMessage;
 
-    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? "Address" : "Folder";
+    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? Translations["AddToListDialog.SourceValue.Address"] : Translations["AddToListDialog.SourceValue.Folder"];
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()
@@ -112,19 +121,19 @@ public partial class AddToListDialogViewModel : ObservableObject
         if (TargetPlacement == AddToListTargetPlacement.NewMedia &&
             string.IsNullOrWhiteSpace(MediaName))
         {
-            return "Media name is required when adding as new media.";
+            return Translations["AddToListDialog.Validation.MediaNameRequired.NewMedia"];
         }
 
         return SourceMode switch
         {
             AddToListSourceMode.Media => string.IsNullOrWhiteSpace(MediaName)
-                ? "Media name is required for media source."
+                ? Translations["AddToListDialog.Validation.MediaNameRequired.MediaSource"]
                 : null,
             AddToListSourceMode.Folder => string.IsNullOrWhiteSpace(SourceValue)
-                ? "Folder path is required for folder source."
+                ? Translations["AddToListDialog.Validation.FolderPathRequired"]
                 : null,
             AddToListSourceMode.Internet => string.IsNullOrWhiteSpace(SourceValue)
-                ? "Address is required for internet source."
+                ? Translations["AddToListDialog.Validation.AddressRequired"]
                 : null,
             _ => null
         };

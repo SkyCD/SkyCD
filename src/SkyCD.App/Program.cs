@@ -16,7 +16,7 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-#if DEBUG
+#if DEBUG && !NET10_0
             .WithDeveloperTools()
 #endif
             .WithInterFont()

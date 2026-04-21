@@ -11,7 +11,7 @@
         WindowDecorations="BorderOnly"
         ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
-        Title="Adding">
+        Title="Adding Progress">
 
     <Design.DataContext>
         <vm:AddingProgressDialogViewModel/>

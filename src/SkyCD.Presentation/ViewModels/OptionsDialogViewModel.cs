@@ -1,16 +1,48 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Globalization;
+using System.ComponentModel;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel : ObservableObject
 {
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+    private LanguageItem originalSelectedLanguage;
 
     public OptionsDialogViewModel()
-        : this(["English", "Lithuanian"])
+        : this(LoadLanguagePacksFromFilesystem())
     {
+    }
+
+    internal static IEnumerable<string> LoadLanguagePacksFromFilesystem()
+    {
+        // Load and validate language codes from ./LanguagePacks directory
+        try
+        {
+            var languageDir = Path.Combine(AppContext.BaseDirectory, "LanguagePacks");
+            if (!Directory.Exists(languageDir))
+            {
+                return ["English"];
+            }
+
+            var validCultures = CultureInfo.GetCultures(CultureTypes.AllCultures)
+                .Select(c => c.Name.ToLowerInvariant())
+                .ToHashSet();
+
+            return Directory.EnumerateFiles(languageDir, "*.json")
+                .Select(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant())
+                .Where(code => validCultures.Contains(code))
+                .DefaultIfEmpty("English")
+                .Distinct();
+        }
+        catch (IOException)
+        {
+            // Log error (implement logging)
+            return ["English"];
+        }
     }
 
     public OptionsDialogViewModel(IEnumerable<string> availableLanguages)
@@ -25,7 +57,8 @@ public partial class OptionsDialogViewModel : ObservableObject
             Languages.Add(LanguageItem.Create("English"));
         }
 
-        selectedLanguage = Languages[0];
+        SelectedLanguage = Languages[0];
+originalSelectedLanguage = SelectedLanguage;
     }
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
@@ -80,7 +113,17 @@ public partial class OptionsDialogViewModel : ObservableObject
     [RelayCommand]
     private void Confirm()
     {
+        // Save selected language to settings (implement settings persistence)
+        originalSelectedLanguage = SelectedLanguage;
         DialogAccepted = true;
+    }
+
+    [RelayCommand]
+    private void Cancel()
+    {
+        // Revert to original language
+        SelectedLanguage = originalSelectedLanguage;
+        DialogAccepted = false;
     }
 
     private bool CanConfigure()
@@ -142,5 +185,26 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedLanguageChanged(LanguageItem value)
+    {
+        // Apply language change with error handling
+        try
+        {
+            if (value != null && !string.IsNullOrWhiteSpace(value.Name))
+            {
+                CultureInfo.CurrentUICulture = new CultureInfo(value.Name);
+            }
+            // Trigger UI binding refresh (Avalonia-specific logic)
+            OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(null));
+            InfoMessage = string.Empty;
+        }
+        catch (CultureNotFoundException)
+        {
+            // Revert to valid language
+            SelectedLanguage = originalSelectedLanguage;
+            InfoMessage = "Invalid language selected - reverted to original";
+        }
     }
 }
