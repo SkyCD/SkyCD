@@ -1,0 +1,9 @@
+{
+  "id": "skycd.plugin.json",
+  "version": "2.0.0",
+  "minHostVersion": "3.0.0",
+  "assembly": "SkyCD.Plugin.Json.dll",
+  "capabilities": [
+    "file-format"
+  ]
+}

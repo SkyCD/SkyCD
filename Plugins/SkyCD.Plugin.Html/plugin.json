@@ -1,0 +1,9 @@
+{
+  "id": "skycd.plugin.html",
+  "version": "2.0.0",
+  "minHostVersion": "3.0.0",
+  "assembly": "SkyCD.Plugin.Html.dll",
+  "capabilities": [
+    "file-format"
+  ]
+}

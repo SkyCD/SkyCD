@@ -1,9 +1,0 @@
-{
-  "id": "skycd.plugin.sample.markdown",
-  "version": "2.0.0",
-  "minHostVersion": "3.0.0",
-  "assembly": "SkyCD.Plugin.Sample.Markdown.dll",
-  "capabilities": [
-    "file-format"
-  ]
-}

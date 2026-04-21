@@ -3,10 +3,10 @@
 ## Manifest Format (`plugin.json`)
 ```json
 {
-  "id": "skycd.plugin.sample.json",
+  "id": "skycd.plugin.json",
   "version": "1.0.0",
   "minHostVersion": "3.0.0",
-  "assembly": "SkyCD.Plugin.Sample.Json.dll",
+  "assembly": "SkyCD.Plugin.Json.dll",
   "capabilities": ["file-format"]
 }
 ```

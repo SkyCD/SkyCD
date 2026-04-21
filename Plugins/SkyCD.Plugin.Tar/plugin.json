@@ -1,0 +1,9 @@
+{
+  "id": "skycd.plugin.tar",
+  "version": "2.0.0",
+  "minHostVersion": "3.0.0",
+  "assembly": "SkyCD.Plugin.Tar.dll",
+  "capabilities": [
+    "file-format"
+  ]
+}
