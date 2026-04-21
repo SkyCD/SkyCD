@@ -296,6 +296,7 @@
                                 ItemsSource="{Binding BrowserItems}"
                                 SelectedItem="{Binding SelectedBrowserItem}"
                                 ContextRequested="OnBrowserContextRequested"
+                                Tapped="OnBrowserListTapped"
                                 ListContextMenu="{DynamicResource BrowserContextMenu}"
                                 DoubleTapped="OnBrowserListDoubleTapped">
                 <cc:DetailsListView.HeaderContent>
@@ -330,6 +331,7 @@
                      ItemsSource="{Binding BrowserItems}"
                      SelectedItem="{Binding SelectedBrowserItem}"
                      ContextRequested="OnBrowserContextRequested"
+                     Tapped="OnBrowserListTapped"
                      ContextMenu="{DynamicResource BrowserContextMenu}"
                      DoubleTapped="OnBrowserListDoubleTapped">
                 <ListBox.ItemsPanel>
