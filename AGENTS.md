@@ -10,6 +10,8 @@
 7. Each commit message must begin with `[XXX]` where `XXX` is the issue number solved by that commit.
 8. PR descriptions must clearly state what issue they solve, using format "Solves #XXX: [issue title]" at the beginning.
 9. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
+10. After each code change, if the build fails, do not commit the changes.
+11. If possible, everytime write integration tests for new functionality
 
 ## Project Structure (SkyCD)
 - `src/`: active v3 application code.
@@ -39,3 +41,6 @@
 - Allowed licenses include: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, Zlib.
 - Blocked licenses include GPL/LGPL/AGPL families, SSPL-1.0, and CC-BY-NC-4.0.
 - Unknown/missing licenses are non-compliant unless explicitly whitelisted in policy.
+
+# Hard requirements
+- .NET 10
