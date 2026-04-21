@@ -738,6 +738,8 @@ public partial class MainWindow : Window
     {
         var candidates = new[]
         {
+            Path.Combine(Environment.CurrentDirectory, "Plugins"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins")),
             Path.Combine(Environment.CurrentDirectory, "Plugins", "samples"),
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins", "samples"))
         };

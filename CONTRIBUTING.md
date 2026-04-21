@@ -8,7 +8,7 @@ Use the main stack for all new work.
 - Architecture and migration docs: `docs/architecture/`, `docs/migration/`
 
 ## Do
-- Implement features and fixes in `src/`, `tests/`, `tools/`, and `Plugins/samples/`.
+- Implement features and fixes in `src/`, `tests/`, `tools/`, and `Plugins/` (legacy formats remain in `Plugins/samples/`).
 - Keep pull requests green against CI checks.
 - Use `dotnet format SkyCD.slnx --verify-no-changes` before opening PRs.
 

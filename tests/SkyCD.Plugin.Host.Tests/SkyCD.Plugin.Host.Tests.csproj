@@ -21,18 +21,18 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Html\SkyCD.Plugin.Html.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Json\SkyCD.Plugin.Json.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj" />
-<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.SevenZip\SkyCD.Plugin.SevenZip.csproj" />
-<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj" />
-<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj" />
-<ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Modal\SkyCD.Plugin.Modal.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Xml\SkyCD.Plugin.Xml.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Yaml\SkyCD.Plugin.Yaml.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Zip\SkyCD.Plugin.Zip.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Html\SkyCD.Plugin.Html.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Json\SkyCD.Plugin.Json.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj" />
+<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.SevenZip\SkyCD.Plugin.SevenZip.csproj" />
+<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj" />
+<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj" />
+<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Modal\SkyCD.Plugin.Modal.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Xml\SkyCD.Plugin.Xml.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Yaml\SkyCD.Plugin.Yaml.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Zip\SkyCD.Plugin.Zip.csproj" />
   </ItemGroup>
 
   <ItemGroup>
