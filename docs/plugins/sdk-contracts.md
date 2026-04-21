@@ -32,5 +32,5 @@
 ## Sample Plugin
 - `Plugins/SkyCD.Plugin.Json`
 - Compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
-- `Plugins/samples/SkyCD.Plugin.Modal`
+- `Plugins/samples/SkyCD.Plugin.Sample.Modal`
 - Demonstrates modal registration + typed request/response payload contracts (`IModalPluginCapability`).
