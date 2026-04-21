@@ -28,7 +28,7 @@ public partial class DetailsListView : UserControl
     public static readonly StyledProperty<double> ListMinWidthProperty =
         AvaloniaProperty.Register<DetailsListView, double>(nameof(ListMinWidth));
 
-    public event EventHandler<TappedEventArgs>? DoubleTapped;
+    public new event EventHandler<TappedEventArgs>? DoubleTapped;
 
     public DetailsListView()
     {

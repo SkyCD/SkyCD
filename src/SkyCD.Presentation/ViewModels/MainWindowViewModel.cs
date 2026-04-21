@@ -834,6 +834,7 @@ public partial class MainWindowViewModel : ObservableObject
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
+        NavigateToFolderCommand.NotifyCanExecuteChanged();
     }
 
     private void StartOperation(string initialStatus)
