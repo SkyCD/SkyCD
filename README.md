@@ -11,7 +11,6 @@ Primary entrypoints:
 - solution: `SkyCD.slnx`
 - CI workflow: `.github/workflows/ci.yml`
 - architecture docs: `docs/architecture/`
-- custom agent config: `.github/agents/kilo.agent.md` (`docs/ci/github-custom-agent-kilo.md`)
 
 Useful local commands:
 ```powershell

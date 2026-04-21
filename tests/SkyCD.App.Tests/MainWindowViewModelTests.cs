@@ -215,6 +215,19 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void NavigateToFolderCommand_WithFolderSelection_SelectsMatchingTreeNode()
+    {
+        var vm = new MainWindowViewModel();
+        var moviesFolder = vm.BrowserItems.Single(item => item.Name == "Movies");
+
+        vm.SelectedBrowserItem = moviesFolder;
+        vm.NavigateToFolderCommand.Execute(null);
+
+        Assert.Equal("movies", vm.SelectedTreeNode?.Key);
+        Assert.Equal("Navigated to Movies.", vm.StatusText);
+    }
+
+    [Fact]
     public void OpenCatalogCommand_DoesNotMarkDocumentDirty()
     {
         var vm = new MainWindowViewModel();
