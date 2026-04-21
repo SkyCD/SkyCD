@@ -11,13 +11,13 @@
     <Project Path="Plugins/SkyCD.Plugin.Iso/SkyCD.Plugin.Iso.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Markdown/SkyCD.Plugin.Markdown.csproj" />
-    <Project Path="Plugins/SkyCD.Plugin.Menu/SkyCD.Plugin.Menu.csproj" />
+    <Project Path="Plugins/samples/SkyCD.Plugin.Menu/SkyCD.Plugin.Menu.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Zip/SkyCD.Plugin.Zip.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.SevenZip/SkyCD.Plugin.SevenZip.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Toml/SkyCD.Plugin.Toml.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Tar/SkyCD.Plugin.Tar.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Xml/SkyCD.Plugin.Xml.csproj" />
-    <Project Path="Plugins/SkyCD.Plugin.Modal/SkyCD.Plugin.Modal.csproj" />
+    <Project Path="Plugins/samples/SkyCD.Plugin.Modal/SkyCD.Plugin.Modal.csproj" />
     <Project Path="Plugins/SkyCD.Plugin.Yaml/SkyCD.Plugin.Yaml.csproj" />
   </Folder>
   <Folder Name="/src/">

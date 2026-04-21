@@ -1,5 +1,5 @@
 {
-  "id": "skycd.plugin.modal",
+  "id": "skycd.plugin.sample.modal",
   "version": "2.0.0",
   "minHostVersion": "3.0.0",
   "assembly": "SkyCD.Plugin.Modal.dll",

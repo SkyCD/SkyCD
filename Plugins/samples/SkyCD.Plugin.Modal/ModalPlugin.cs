@@ -1,13 +1,13 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 
-namespace SkyCD.Plugin.Modal;
+namespace SkyCD.Plugin.Sample.Modal;
 
 public sealed class ModalPlugin : IPlugin, IModalPluginCapability
 {
     public PluginDescriptor Descriptor => new(
-        "skycd.plugin.modal",
-        "Modal Plugin",
+        "skycd.plugin.sample.modal",
+        "Sample Modal Plugin",
         new Version(1, 0, 0),
         new Version(3, 0, 0),
         "Example plugin that contributes a typed modal contract.");

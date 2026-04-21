@@ -22,7 +22,7 @@
 - `src/SkyCD.Plugin.Runtime`: plugin discovery/loading and compatibility checks.
 - `src/SkyCD.Plugin.Host`: host-side plugin routing/execution services.
 - `Plugins/`: functional plugin implementations with `plugin.json` manifests.
-- `Plugins/samples/`: legacy-format plugin implementations.
+- `Plugins/samples/`: legacy-format plugins and sample menu/modal plugins.
 - `tests/`: xUnit test projects organized per module (`SkyCD.App.Tests`, `SkyCD.Infrastructure.Tests`, etc.).
 - `tools/`: CI/publishing scripts and migration CLI.
 - `docs/`: architecture, migration, plugin SDK, legal/license, and implementation guides.

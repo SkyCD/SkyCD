@@ -28,7 +28,7 @@
 <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj" />
 <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj" />
 <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Modal\SkyCD.Plugin.Modal.csproj" />
+    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Modal\SkyCD.Plugin.Modal.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Xml\SkyCD.Plugin.Xml.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Yaml\SkyCD.Plugin.Yaml.csproj" />

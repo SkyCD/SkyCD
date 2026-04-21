@@ -1,13 +1,13 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 
-namespace SkyCD.Plugin.Menu;
+namespace SkyCD.Plugin.Sample.Menu;
 
 public sealed class MenuPlugin : IPlugin, IMenuPluginCapability
 {
     public PluginDescriptor Descriptor => new(
-        "skycd.plugin.menu",
-        "Menu Plugin",
+        "skycd.plugin.sample.menu",
+        "Sample Menu Plugin",
         new Version(1, 0, 0),
         new Version(3, 0, 0),
         "Example menu contribution plugin.");
