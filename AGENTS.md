@@ -44,3 +44,6 @@
 
 # Hard requirements
 - .NET 10
+
+## Commit Guidelines
+AI-generated commits should not include the 'Co-Authored-By' line unless explicitly instructed by the user.
