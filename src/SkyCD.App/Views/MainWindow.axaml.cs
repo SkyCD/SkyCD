@@ -147,16 +147,6 @@ public partial class MainWindow : Window
         subscribedViewModel.NavigateToFolderCommand.Execute(null);
     }
 
-    private void OnBrowserListTapped(object? sender, TappedEventArgs e)
-    {
-        if (subscribedViewModel is null)
-        {
-            return;
-        }
-
-        subscribedViewModel.NavigateToFolderCommand.Execute(null);
-    }
-
     private void UpdateWindowTitle()
     {
         if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)
