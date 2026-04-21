@@ -3,7 +3,7 @@ using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Sample.Modal;
 
-public sealed class ModalPlugin : IPlugin, IModalPluginCapability
+public sealed class SampleModalPlugin : IPlugin, IModalPluginCapability
 {
     public PluginDescriptor Descriptor => new(
         "skycd.plugin.sample.modal",

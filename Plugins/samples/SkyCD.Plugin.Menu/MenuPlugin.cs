@@ -3,7 +3,7 @@ using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Sample.Menu;
 
-public sealed class MenuPlugin : IPlugin, IMenuPluginCapability
+public sealed class SampleMenuPlugin : IPlugin, IMenuPluginCapability
 {
     public PluginDescriptor Descriptor => new(
         "skycd.plugin.sample.menu",
