@@ -37,17 +37,149 @@
         </StackPanel>
 
         <TabControl Name="MainTabs">
-            <TabItem Header="Project info" FontSize="14">
+            <TabItem Header="System info" FontSize="14">
                 <Grid Margin="8">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="CD/DVD media catalog manager" />
-                        <TextBlock Text="{Binding Website}" />
+                        <StackPanel>
+                            <TextBlock Text="CPU" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10" Width="220" />
+                                <TextBlock Text="{Binding CpuUsage}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="Memory" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10" Width="220" />
+                                <StackPanel>
+                                    <TextBlock Text="{Binding WorkingSet}" />
+                                    <TextBlock Text="{Binding ManagedHeap}" FontSize="11" Opacity="0.75" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+                            <Border Grid.Column="0" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE" BorderThickness="1" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="Threads" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{Binding ThreadInfo}" FontSize="20" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE" BorderThickness="1" Margin="8,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Uptime" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{Binding UptimeFriendly}" FontSize="20" FontWeight="Bold" />
+                                    <TextBlock Text="{Binding StartTime}" FontSize="11" Opacity="0.75" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </StackPanel>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Loaded assemblies" FontSize="14">
+                <Grid Margin="8">
+                    <ListBox ItemsSource="{Binding LoadedAssemblies}"
+                             SelectionMode="Multiple"
+                             ScrollViewer.VerticalScrollBarVisibility="Visible"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.AllowAutoHide="False">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel Orientation="Vertical" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="MinHeight" Value="56" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="VerticalContentAlignment" Value="Top" />
+                            </Style>
+                            <Style Selector="ListBoxItem:selected">
+                                <Setter Property="Background" Value="#1E4F9A" />
+                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover">
+                                <Setter Property="Background" Value="#FDFEFE" />
+                                <Setter Property="Foreground" Value="#111111" />
+                            </Style>
+                            <Style Selector="ListBoxItem:selected:pointerover">
+                                <Setter Property="Background" Value="#2A62B9" />
+                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover TextBlock">
+                                <Setter Property="Foreground" Value="#111111" />
+                            </Style>
+                            <Style Selector="ListBoxItem:selected TextBlock">
+                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                            </Style>
+                            <Style Selector="ListBoxItem:selected:pointerover TextBlock">
+                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                            </Style>
+                            <Style Selector="TextBlock.RepositoryLink">
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Style>
+                        </ListBox.Styles>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
+                                <Border BorderBrush="#FFCCCCCC" BorderThickness="0,0,0,1" Padding="6">
+                                    <StackPanel VerticalAlignment="Top">
+                                        <Grid VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       FontSize="18"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="NoWrap"
+                                                       MaxLines="1"
+                                                       Margin="0,0,8,0" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Version}"
+                                                       FontSize="14"
+                                                       VerticalAlignment="Center"
+                                                       MinWidth="72"
+                                                       TextAlignment="Right" />
+                                        </Grid>
+                                        <TextBlock Text="{Binding Copyright}"
+                                                   FontSize="12"
+                                                   IsVisible="{Binding HasCopyright}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   TextWrapping="NoWrap"
+                                                   Margin="0,4,0,0" />
+                                        <TextBlock Text="{Binding RepositoryUrl}"
+                                                   Classes="RepositoryLink"
+                                                   FontSize="12"
+                                                   Cursor="Hand"
+                                                   TextDecorations="Underline"
+                                                   IsVisible="{Binding HasRepositoryUrl}"
+                                                   PointerPressed="OnOpenRepositoryUrl"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   TextWrapping="NoWrap"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </TabItem>
             <TabItem Header="Project license" FontSize="14" IsSelected="True">
                 <Grid Margin="8">
-                    <TextBlock Text="BSD 2-Clause License" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Visible" AllowAutoHide="False">
+                        <TextBox Text="{Binding LicenseText}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 BorderThickness="0"
+                                 Background="Transparent" />
+                    </ScrollViewer>
                 </Grid>
             </TabItem>
         </TabControl>
