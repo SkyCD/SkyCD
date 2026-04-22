@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Runtime.Loading;
 
 /// <summary>
-/// Captures plugin load warning/error details.
+///     Captures plugin load warning/error details.
 /// </summary>
 public sealed class PluginLoadDiagnostic
 {

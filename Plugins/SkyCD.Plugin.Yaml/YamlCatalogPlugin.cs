@@ -14,54 +14,39 @@ public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .Build();
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.yaml",
-        "YAML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes YAML file format support.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-yaml",
             "SkyCD YAML",
             [".yaml", ".yml"],
-            CanRead: true,
-            CanWrite: true,
-            MimeType: "application/yaml")
+            true,
+            true,
+            "application/yaml")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, leaveOpen: true);
             var yaml = await reader.ReadToEndAsync(cancellationToken);
 
             if (yaml.Contains("<<:", StringComparison.Ordinal) || yaml.Contains('*'))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "YAML_UNSUPPORTED_CONSTRUCT: aliases and merge keys are not supported in strict mode."
                 };
-            }
 
             var document = Deserializer.Deserialize<YamlCatalogDocument>(yaml);
             if (document is null || !SchemaVersion.Equals(document.SchemaVersion, StringComparison.Ordinal))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "YAML_SCHEMA_ERROR: missing or unsupported schemaVersion."
                 };
-            }
 
             var rows = (document.Payload ?? [])
                 .Select(row => row.ToDictionary(
@@ -86,12 +71,13 @@ public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("YAML payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException("YAML payload must be a list of row dictionaries.");
 
             var orderedRows = rows
                 .Select(row => new SortedDictionary<string, string?>(StringComparer.Ordinal)
@@ -132,6 +118,33 @@ public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
                 Error = exception.Message
             };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.yaml",
+        "YAML Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exposes YAML file format support.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 
     private sealed class YamlCatalogDocument

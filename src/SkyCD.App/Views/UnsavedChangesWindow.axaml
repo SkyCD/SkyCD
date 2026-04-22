@@ -13,7 +13,7 @@
     <Grid RowDefinitions="*,Auto" Margin="16">
         <TextBlock Text="This collection was edited. Do you want to save it?"
                    TextWrapping="Wrap"
-                   VerticalAlignment="Center"/>
+                   VerticalAlignment="Center" />
 
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
@@ -22,14 +22,14 @@
                     Margin="0,14,0,0">
             <Button Content="Yes"
                     MinWidth="90"
-                    Click="OnYesClicked"/>
+                    Click="OnYesClicked" />
             <Button Content="No"
                     MinWidth="90"
-                    Click="OnNoClicked"/>
+                    Click="OnNoClicked" />
             <Button Content="Cancel"
                     MinWidth="90"
                     IsCancel="True"
-                    Click="OnCancelClicked"/>
+                    Click="OnCancelClicked" />
         </StackPanel>
     </Grid>
 </Window>

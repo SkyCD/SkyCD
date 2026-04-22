@@ -1,9 +1,8 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Markdown;
+using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -27,11 +26,12 @@ public class MarkdownCatalogExportPluginTests
         var service = new FileFormatRoutingService(CreateCatalog());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes("# export"));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-md",
-            Source = source
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "skycd-md",
+                Source = source
+            }));
 
         Assert.Contains("not readable", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

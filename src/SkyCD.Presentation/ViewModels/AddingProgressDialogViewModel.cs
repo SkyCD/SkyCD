@@ -4,9 +4,7 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AddingProgressDialogViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private string operationText = "Preparing database for modifications...";
+    [ObservableProperty] private string operationText = "Preparing database for modifications...";
 
-    [ObservableProperty]
-    private int progressValue;
+    [ObservableProperty] private int progressValue;
 }

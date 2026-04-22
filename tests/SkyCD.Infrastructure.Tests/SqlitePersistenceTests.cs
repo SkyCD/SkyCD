@@ -8,6 +8,19 @@ public sealed class SqlitePersistenceTests : IDisposable
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"skycd-{Guid.NewGuid():N}.db");
 
+    public void Dispose()
+    {
+        if (File.Exists(_dbPath))
+            try
+            {
+                File.Delete(_dbPath);
+            }
+            catch (IOException)
+            {
+                // SQLite may release file handles slightly after DbContext disposal on some platforms.
+            }
+    }
+
     [Fact]
     public void Migrate_CreatesSqliteDatabaseSchema()
     {
@@ -68,20 +81,5 @@ public sealed class SqlitePersistenceTests : IDisposable
             .Options;
 
         return new SkyCdDbContext(options);
-    }
-
-    public void Dispose()
-    {
-        if (File.Exists(_dbPath))
-        {
-            try
-            {
-                File.Delete(_dbPath);
-            }
-            catch (IOException)
-            {
-                // SQLite may release file handles slightly after DbContext disposal on some platforms.
-            }
-        }
     }
 }

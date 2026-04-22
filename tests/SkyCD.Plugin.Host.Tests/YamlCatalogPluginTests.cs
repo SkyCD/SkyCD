@@ -1,6 +1,5 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Yaml;
@@ -72,11 +71,12 @@ public class YamlCatalogPluginTests
         var service = new FileFormatRoutingService(CreateCatalog());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(unsupported));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-yaml",
-            Source = source
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "skycd-yaml",
+                Source = source
+            }));
 
         Assert.Contains("YAML_UNSUPPORTED_CONSTRUCT", exception.Message);
     }

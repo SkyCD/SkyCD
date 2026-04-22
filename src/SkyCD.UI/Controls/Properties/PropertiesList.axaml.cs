@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using Avalonia.Collections;
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
@@ -47,23 +47,16 @@ public partial class PropertiesList : UserControl
     {
         base.OnPropertyChanged(change);
         if (change.Property == PropertiesDataProperty)
-        {
             RebuildRows(change.GetNewValue<IReadOnlyDictionary<string, object?>?>());
-        }
     }
 
     private void RebuildRows(IReadOnlyDictionary<string, object?>? properties)
     {
         PropertiesRows.Clear();
-        if (properties is null || properties.Count == 0)
-        {
-            return;
-        }
+        if (properties is null || properties.Count == 0) return;
 
         foreach (var (key, value) in properties)
-        {
             PropertiesRows.Add(new PropertiesRow(key, value?.ToString() ?? string.Empty));
-        }
     }
 }
 

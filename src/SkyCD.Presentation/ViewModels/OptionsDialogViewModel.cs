@@ -1,12 +1,24 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel : ObservableObject
 {
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+
+    [ObservableProperty] private bool dialogAccepted;
+
+    [ObservableProperty] private string infoMessage = string.Empty;
+
+    [ObservableProperty] private string pluginPath = string.Empty;
+
+    [ObservableProperty] private LanguageItem selectedLanguage;
+
+    [ObservableProperty] private OptionsPluginItem? selectedPlugin;
+
+    [ObservableProperty] private int selectedTabIndex;
 
     public OptionsDialogViewModel()
         : this(["English", "Lithuanian"])
@@ -16,14 +28,9 @@ public partial class OptionsDialogViewModel : ObservableObject
     public OptionsDialogViewModel(IEnumerable<string> availableLanguages)
     {
         foreach (var language in availableLanguages.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
             Languages.Add(LanguageItem.Create(language));
-        }
 
-        if (Languages.Count == 0)
-        {
-            Languages.Add(LanguageItem.Create("English"));
-        }
+        if (Languages.Count == 0) Languages.Add(LanguageItem.Create("English"));
 
         selectedLanguage = Languages[0];
     }
@@ -31,24 +38,6 @@ public partial class OptionsDialogViewModel : ObservableObject
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
     public ObservableCollection<LanguageItem> Languages { get; } = [];
-
-    [ObservableProperty]
-    private string pluginPath = string.Empty;
-
-    [ObservableProperty]
-    private OptionsPluginItem? selectedPlugin;
-
-    [ObservableProperty]
-    private LanguageItem selectedLanguage;
-
-    [ObservableProperty]
-    private string infoMessage = string.Empty;
-
-    [ObservableProperty]
-    private bool dialogAccepted;
-
-    [ObservableProperty]
-    private int selectedTabIndex;
 
     public event EventHandler? BrowsePluginPathRequested;
 
@@ -69,10 +58,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanConfigure))]
     private void ConfigurePlugin()
     {
-        if (SelectedPlugin is null)
-        {
-            return;
-        }
+        if (SelectedPlugin is null) return;
 
         InfoMessage = $"Configure '{SelectedPlugin.Name}' is not implemented yet.";
     }
@@ -106,29 +92,18 @@ public partial class OptionsDialogViewModel : ObservableObject
     public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
     {
         disabledPluginIds.Clear();
-        if (pluginIds is null)
-        {
-            return;
-        }
+        if (pluginIds is null) return;
 
         foreach (var pluginId in pluginIds.Where(static id => !string.IsNullOrWhiteSpace(id)))
-        {
             disabledPluginIds.Add(pluginId);
-        }
     }
 
     public void CapturePluginStates()
     {
-        if (Plugins.Count == 0)
-        {
-            return;
-        }
+        if (Plugins.Count == 0) return;
 
         disabledPluginIds.Clear();
-        foreach (var plugin in Plugins.Where(static plugin => !plugin.IsEnabled))
-        {
-            disabledPluginIds.Add(plugin.Id);
-        }
+        foreach (var plugin in Plugins.Where(static plugin => !plugin.IsEnabled)) disabledPluginIds.Add(plugin.Id);
     }
 
     public IReadOnlyList<string> GetDisabledPluginIds()

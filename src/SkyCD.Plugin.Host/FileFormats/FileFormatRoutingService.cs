@@ -3,7 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 namespace SkyCD.Plugin.Host.FileFormats;
 
 /// <summary>
-/// Resolves plugin file format routes and enforces read/write capability gates.
+///     Resolves plugin file format routes and enforces read/write capability gates.
 /// </summary>
 public sealed class FileFormatRoutingService(PluginCatalog pluginCatalog)
 {
@@ -21,40 +21,30 @@ public sealed class FileFormatRoutingService(PluginCatalog pluginCatalog)
             .ToList();
     }
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         var capability = ResolveCapability(request.FormatId);
         var format = ResolveFormat(capability, request.FormatId);
 
-        if (!format.CanRead)
-        {
-            throw new FileFormatRoutingException($"Format '{request.FormatId}' is not readable.");
-        }
+        if (!format.CanRead) throw new FileFormatRoutingException($"Format '{request.FormatId}' is not readable.");
 
         var result = await capability.ReadAsync(request, cancellationToken);
-        if (!result.Success)
-        {
-            throw new FileFormatRoutingException(result.Error ?? "Read operation failed.");
-        }
+        if (!result.Success) throw new FileFormatRoutingException(result.Error ?? "Read operation failed.");
 
         return result;
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         var capability = ResolveCapability(request.FormatId);
         var format = ResolveFormat(capability, request.FormatId);
 
-        if (!format.CanWrite)
-        {
-            throw new FileFormatRoutingException($"Format '{request.FormatId}' is read-only.");
-        }
+        if (!format.CanWrite) throw new FileFormatRoutingException($"Format '{request.FormatId}' is read-only.");
 
         var result = await capability.WriteAsync(request, cancellationToken);
-        if (!result.Success)
-        {
-            throw new FileFormatRoutingException(result.Error ?? "Write operation failed.");
-        }
+        if (!result.Success) throw new FileFormatRoutingException(result.Error ?? "Write operation failed.");
 
         return result;
     }
@@ -83,13 +73,14 @@ public sealed class FileFormatRoutingService(PluginCatalog pluginCatalog)
             .FirstOrDefault(candidate => candidate.SupportedFormats.Any(format =>
                 format.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase)));
 
-        return capability ?? throw new FileFormatRoutingException($"No plugin capability found for format '{formatId}'.");
+        return capability ??
+               throw new FileFormatRoutingException($"No plugin capability found for format '{formatId}'.");
     }
 
     private static FileFormatDescriptor ResolveFormat(IFileFormatPluginCapability capability, string formatId)
     {
         return capability.SupportedFormats
-            .FirstOrDefault(format => format.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new FileFormatRoutingException($"Format descriptor not found for '{formatId}'.");
+                   .FirstOrDefault(format => format.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase))
+               ?? throw new FileFormatRoutingException($"Format descriptor not found for '{formatId}'.");
     }
 }

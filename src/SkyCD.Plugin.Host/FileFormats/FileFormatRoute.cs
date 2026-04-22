@@ -1,9 +1,7 @@
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-
 namespace SkyCD.Plugin.Host.FileFormats;
 
 /// <summary>
-/// Host-facing representation of an available plugin file format route.
+///     Host-facing representation of an available plugin file format route.
 /// </summary>
 public sealed record FileFormatRoute(
     string PluginId,

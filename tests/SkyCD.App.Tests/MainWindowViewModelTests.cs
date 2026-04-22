@@ -179,7 +179,11 @@ public class MainWindowViewModelTests
         foreach (var mode in modes)
         {
             vm.SetViewModeCommand.Execute(mode);
-            var checkedCount = new[] { vm.IsDetailsViewChecked, vm.IsListViewChecked, vm.IsSmallIconsViewChecked, vm.IsLargeIconsViewChecked, vm.IsTilesViewChecked }
+            var checkedCount = new[]
+                {
+                    vm.IsDetailsViewChecked, vm.IsListViewChecked, vm.IsSmallIconsViewChecked,
+                    vm.IsLargeIconsViewChecked, vm.IsTilesViewChecked
+                }
                 .Count(c => c);
             Assert.Equal(1, checkedCount);
         }
@@ -333,7 +337,8 @@ public class MainWindowViewModelTests
         var vm = new MainWindowViewModel();
 
         Assert.All(vm.TreeNodes, node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
-        Assert.All(vm.TreeNodes.SelectMany(node => node.Children), node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
+        Assert.All(vm.TreeNodes.SelectMany(node => node.Children),
+            node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.BrowserItems, item => Assert.False(string.IsNullOrWhiteSpace(item.IconGlyph)));
     }
 
@@ -347,7 +352,8 @@ public class MainWindowViewModelTests
         Assert.False(vm.IsProgressVisible);
         Assert.Equal(0, vm.ProgressValue);
         Assert.Equal("Done.", vm.StatusText);
-        Assert.Equal(["Loading catalog...", "Parsing catalog...", "Updating browser...", "Done."], vm.StatusTransitions);
+        Assert.Equal(["Loading catalog...", "Parsing catalog...", "Updating browser...", "Done."],
+            vm.StatusTransitions);
         Assert.Equal([0, 35, 80, 100, 0], vm.ProgressTransitions);
     }
 
@@ -638,7 +644,7 @@ public class MainWindowViewModelTests
     {
         var vm = new MainWindowViewModel();
 
-        foreach (BrowserSortMode mode in Enum.GetValues<BrowserSortMode>())
+        foreach (var mode in Enum.GetValues<BrowserSortMode>())
         {
             vm.SetSortModeCommand.Execute(mode.ToString());
 
@@ -663,7 +669,7 @@ public class MainWindowViewModelTests
     {
         public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
         {
-            return [new BrowserTreeNode("root", "Root", "R", [], isExpanded: true)];
+            return [new BrowserTreeNode("root", "Root", "R", [], true)];
         }
 
         public IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)

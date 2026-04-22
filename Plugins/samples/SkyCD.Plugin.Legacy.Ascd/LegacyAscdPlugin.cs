@@ -10,28 +10,17 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
     private const string FormatHeaderPrefix = "# format: skycd-nf";
     private const string InsertPrefix = "INSERT INTO list";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.legacy.ascd",
-        "Legacy ASCD Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Reads and writes legacy *.ascd compressed catalogs using safe statement parsing.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor("legacy-ascd", "SkyCD Advanced Format", [".ascd"], CanRead: true, CanWrite: true, "application/octet-stream")
+        new("legacy-ascd", "SkyCD Advanced Format", [".ascd"], true, true, "application/octet-stream")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var compressed = new DeflateStream(request.Source, CompressionMode.Decompress, leaveOpen: true);
+            using var compressed = new DeflateStream(request.Source, CompressionMode.Decompress, true);
             using var reader = new StreamReader(compressed, Encoding.UTF8, leaveOpen: true);
 
             var lineNumber = 0;
@@ -39,20 +28,15 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
             while ((header = await reader.ReadLineAsync(cancellationToken)) is not null)
             {
                 lineNumber++;
-                if (!string.IsNullOrWhiteSpace(header))
-                {
-                    break;
-                }
+                if (!string.IsNullOrWhiteSpace(header)) break;
             }
 
             if (header is null || !TryParseHeaderVersion(header, out var version))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "Missing or invalid header. Expected '# format: skycd-nf <version>'."
                 };
-            }
 
             var catalog = new LegacyAscdCatalog { HeaderVersion = version };
             string? line;
@@ -60,19 +44,14 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
             while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
             {
                 lineNumber++;
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
                 if (!TryParseInsertStatement(line.Trim(), out var entry, out var error))
-                {
                     return new FileFormatReadResult
                     {
                         Success = false,
                         Error = $"Line {lineNumber}: {error}"
                     };
-                }
 
                 catalog.Entries.Add(entry);
                 processed++;
@@ -96,20 +75,19 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.Payload is not LegacyAscdCatalog catalog)
-        {
             return new FileFormatWriteResult
             {
                 Success = false,
                 Error = "Payload must be LegacyAscdCatalog."
             };
-        }
 
         try
         {
-            using var compressed = new DeflateStream(request.Target, CompressionMode.Compress, leaveOpen: true);
+            using var compressed = new DeflateStream(request.Target, CompressionMode.Compress, true);
             using var writer = new StreamWriter(compressed, Encoding.UTF8, leaveOpen: true);
 
             var version = string.IsNullOrWhiteSpace(catalog.HeaderVersion) ? "1.0" : catalog.HeaderVersion.Trim();
@@ -138,6 +116,33 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.legacy.ascd",
+        "Legacy ASCD Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Reads and writes legacy *.ascd compressed catalogs using safe statement parsing.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
     private static bool TryParseHeaderVersion(string headerLine, out string version)
     {
         var trimmed = headerLine.Trim();
@@ -150,10 +155,7 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
         version = trimmed.Length == FormatHeaderPrefix.Length
             ? "1.0"
             : trimmed[FormatHeaderPrefix.Length..].Trim();
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            version = "1.0";
-        }
+        if (string.IsNullOrWhiteSpace(version)) version = "1.0";
 
         return true;
     }
@@ -211,17 +213,15 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
         return true;
     }
 
-    private static bool TryParseQuotedValues(string text, int startIndex, int endIndex, out List<string> values, out string error)
+    private static bool TryParseQuotedValues(string text, int startIndex, int endIndex, out List<string> values,
+        out string error)
     {
         values = [];
         var index = startIndex;
 
         while (index <= endIndex)
         {
-            while (index <= endIndex && char.IsWhiteSpace(text[index]))
-            {
-                index++;
-            }
+            while (index <= endIndex && char.IsWhiteSpace(text[index])) index++;
 
             if (index > endIndex || text[index] != '\'')
             {
@@ -261,10 +261,7 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
 
             values.Add(builder.ToString());
 
-            while (index <= endIndex && char.IsWhiteSpace(text[index]))
-            {
-                index++;
-            }
+            while (index <= endIndex && char.IsWhiteSpace(text[index])) index++;
 
             if (index <= endIndex)
             {
@@ -284,11 +281,17 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
 
     private static string BuildInsertStatement(LegacyAscdEntry entry)
     {
-        return $"INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('{EscapeSqlLiteral(entry.Id)}', '{EscapeSqlLiteral(entry.Name)}', '{EscapeSqlLiteral(entry.ParentId)}', '{EscapeSqlLiteral(entry.Type)}', '{EscapeSqlLiteral(entry.PropertiesXml)}', '{entry.SizeBytes}', '{EscapeSqlLiteral(entry.ApplicationId)}')";
+        return
+            $"INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('{EscapeSqlLiteral(entry.Id)}', '{EscapeSqlLiteral(entry.Name)}', '{EscapeSqlLiteral(entry.ParentId)}', '{EscapeSqlLiteral(entry.Type)}', '{EscapeSqlLiteral(entry.PropertiesXml)}', '{entry.SizeBytes}', '{EscapeSqlLiteral(entry.ApplicationId)}')";
     }
 
-    private static string EscapeSqlLiteral(string value) => value.Replace("'", "''", StringComparison.Ordinal);
+    private static string EscapeSqlLiteral(string value)
+    {
+        return value.Replace("'", "''", StringComparison.Ordinal);
+    }
 
-    private static long TryParseSize(string raw) =>
-        long.TryParse(raw, out var parsed) ? parsed : 0L;
+    private static long TryParseSize(string raw)
+    {
+        return long.TryParse(raw, out var parsed) ? parsed : 0L;
+    }
 }

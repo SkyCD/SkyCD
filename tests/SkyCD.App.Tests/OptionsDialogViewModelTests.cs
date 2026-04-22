@@ -31,8 +31,8 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         var plugins = new[]
         {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0", supportsConfiguration: true),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0", supportsConfiguration: true)
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0", true),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0", true)
         };
 
         vm.SetPlugins(plugins);
@@ -48,8 +48,8 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         var plugins = new[]
         {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0", supportsConfiguration: false),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0", supportsConfiguration: false)
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0", false),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0", false)
         };
 
         vm.SetPlugins(plugins);

@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Zip;
@@ -28,12 +27,13 @@ public class ZipArchiveIndexPluginTests
         var service = new FileFormatRoutingService(CreateCatalog());
         await using var stream = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-zip",
-            Target = stream,
-            Payload = new { }
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-zip",
+                Target = stream,
+                Payload = new { }
+            }));
 
         Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -62,7 +62,7 @@ public class ZipArchiveIndexPluginTests
     private static MemoryStream CreateFixtureZip()
     {
         var stream = new MemoryStream();
-        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
         {
             var first = archive.CreateEntry("root/deep/įrašas.txt");
             using (var writer = new StreamWriter(first.Open(), new UTF8Encoding(false), leaveOpen: false))

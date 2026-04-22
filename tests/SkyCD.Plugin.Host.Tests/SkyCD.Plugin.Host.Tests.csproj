@@ -1,55 +1,55 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" Version="6.0.4"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="xunit" Version="2.9.3"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-  </ItemGroup>
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
-    <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Html\SkyCD.Plugin.Html.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Json\SkyCD.Plugin.Json.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.SevenZip\SkyCD.Plugin.SevenZip.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj" />
-    <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Modal\SkyCD.Plugin.Sample.Modal.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Xml\SkyCD.Plugin.Xml.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Yaml\SkyCD.Plugin.Yaml.csproj" />
-    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Zip\SkyCD.Plugin.Zip.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Html\SkyCD.Plugin.Html.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Json\SkyCD.Plugin.Json.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.SevenZip\SkyCD.Plugin.SevenZip.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj"/>
+        <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Modal\SkyCD.Plugin.Sample.Modal.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Xml\SkyCD.Plugin.Xml.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Yaml\SkyCD.Plugin.Yaml.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Zip\SkyCD.Plugin.Zip.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Fixtures\Csv\catalog-hierarchy.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Fixtures\Toml\catalog-v1.toml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Fixtures\Xml\catalog-v1.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Fixtures\Yaml\catalog-v1.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Fixtures\Json\catalog-v1.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <None Update="Fixtures\Csv\catalog-hierarchy.csv">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\Toml\catalog-v1.toml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\Xml\catalog-v1.xml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\Yaml\catalog-v1.yaml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\Json\catalog-v1.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

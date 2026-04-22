@@ -17,30 +17,19 @@ public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
         _entryReader = entryReader;
     }
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.iso",
-        "ISO Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes ISO image entries.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-iso",
             "ISO Image Index",
             [".iso"],
-            CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-iso9660-image")
+            true,
+            false,
+            "application/x-iso9660-image")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -49,7 +38,8 @@ public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -59,7 +49,8 @@ public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
                 {
                     ["kind"] = entry.IsDirectory ? "folder" : "file",
                     ["fullPath"] = entry.Path.Replace('\\', '/'),
-                    ["name"] = entry.Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty,
+                    ["name"] = entry.Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ??
+                               string.Empty,
                     ["sizeBytes"] = entry.SizeBytes.ToString(),
                     ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
                 })
@@ -82,6 +73,33 @@ public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
             });
         }
     }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.iso",
+        "ISO Index Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that indexes ISO image entries.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
 }
 
 public interface IIsoEntryReader
@@ -99,9 +117,9 @@ public sealed class DiscUtilsIsoEntryReader : IIsoEntryReader
 {
     public IReadOnlyCollection<IsoEntryInfo> ReadEntries(Stream source)
     {
-        using var reader = new CDReader(source, joliet: true);
+        using var reader = new CDReader(source, true);
         var entries = new List<IsoEntryInfo>();
-        TraverseDirectory(reader, path: string.Empty, entries);
+        TraverseDirectory(reader, string.Empty, entries);
         return entries;
     }
 
@@ -110,7 +128,7 @@ public sealed class DiscUtilsIsoEntryReader : IIsoEntryReader
         foreach (var directory in reader.GetDirectories(path))
         {
             var normalized = directory.Replace('\\', '/');
-            entries.Add(new IsoEntryInfo(normalized, IsDirectory: true, SizeBytes: 0, ModifiedUtc: null));
+            entries.Add(new IsoEntryInfo(normalized, true, 0, null));
             TraverseDirectory(reader, normalized, entries);
         }
 
@@ -119,9 +137,9 @@ public sealed class DiscUtilsIsoEntryReader : IIsoEntryReader
             var normalized = file.Replace('\\', '/');
             entries.Add(new IsoEntryInfo(
                 normalized,
-                IsDirectory: false,
-                SizeBytes: reader.GetFileLength(normalized),
-                ModifiedUtc: reader.GetLastWriteTimeUtc(normalized)));
+                false,
+                reader.GetFileLength(normalized),
+                reader.GetLastWriteTimeUtc(normalized)));
         }
     }
 }

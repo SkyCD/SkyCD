@@ -14,6 +14,18 @@ public sealed class LegacyDbImporterTests : IDisposable
         Directory.CreateDirectory(_root);
     }
 
+    public void Dispose()
+    {
+        if (Directory.Exists(_root))
+            try
+            {
+                Directory.Delete(_root, true);
+            }
+            catch (IOException)
+            {
+            }
+    }
+
     [Fact]
     public async Task ImportAsync_ImportsLegacyRowsIntoTargetSchema()
     {
@@ -23,7 +35,7 @@ public sealed class LegacyDbImporterTests : IDisposable
         await SeedLegacyDatabaseAsync(legacyPath);
 
         var importer = new LegacyDbImporter();
-        var result = await importer.ImportAsync(legacyPath, targetPath, dryRun: false);
+        var result = await importer.ImportAsync(legacyPath, targetPath, false);
 
         Assert.Equal(1, result.ImportedCatalogs);
         Assert.Equal(2, result.ImportedNodes);
@@ -47,44 +59,30 @@ public sealed class LegacyDbImporterTests : IDisposable
 
         await using var create = connection.CreateCommand();
         create.CommandText = """
-            CREATE TABLE list (
-              ID INTEGER,
-              Name TEXT,
-              ParentID INTEGER,
-              Type TEXT,
-              Properties TEXT,
-              Size INTEGER,
-              AID TEXT
-            );
-            """;
+                             CREATE TABLE list (
+                               ID INTEGER,
+                               Name TEXT,
+                               ParentID INTEGER,
+                               Type TEXT,
+                               Properties TEXT,
+                               Size INTEGER,
+                               AID TEXT
+                             );
+                             """;
         await create.ExecuteNonQueryAsync();
 
         await using var insert1 = connection.CreateCommand();
         insert1.CommandText = """
-            INSERT INTO list (ID, Name, ParentID, Type, Properties, Size, AID)
-            VALUES (1, 'Root', -1, 'scdUnknown', '{}', NULL, 'legacy-a');
-            """;
+                              INSERT INTO list (ID, Name, ParentID, Type, Properties, Size, AID)
+                              VALUES (1, 'Root', -1, 'scdUnknown', '{}', NULL, 'legacy-a');
+                              """;
         await insert1.ExecuteNonQueryAsync();
 
         await using var insert2 = connection.CreateCommand();
         insert2.CommandText = """
-            INSERT INTO list (ID, Name, ParentID, Type, Properties, Size, AID)
-            VALUES (2, 'File.txt', 1, 'scdFile', '{"ext":"txt"}', 120, 'legacy-a');
-            """;
+                              INSERT INTO list (ID, Name, ParentID, Type, Properties, Size, AID)
+                              VALUES (2, 'File.txt', 1, 'scdFile', '{"ext":"txt"}', 120, 'legacy-a');
+                              """;
         await insert2.ExecuteNonQueryAsync();
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-        {
-            try
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-        }
     }
 }

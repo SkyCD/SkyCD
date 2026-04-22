@@ -4,12 +4,12 @@ using SkyCD.Plugin.Abstractions.Capabilities.Modal;
 namespace SkyCD.Plugin.Host.Modal;
 
 /// <summary>
-/// Host facade for plugin modal registration and guarded modal execution.
+///     Host facade for plugin modal registration and guarded modal execution.
 /// </summary>
 public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
 {
-    private readonly SemaphoreSlim _blockingModalGate = new(1, 1);
     private readonly ConcurrentDictionary<string, byte> _activeModalIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _blockingModalGate = new(1, 1);
 
     public IReadOnlyList<ModalRegistration> GetModalRegistrations()
     {
@@ -44,34 +44,28 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
 
         var permissionError = ValidatePermissions(modal, request.GrantedPermissions);
         if (permissionError is not null)
-        {
             return new ModalOpenResult
             {
                 Success = false,
                 Error = permissionError
             };
-        }
 
         var inputError = ValidatePayload("Input", modal.InputContract, request.Input);
         if (inputError is not null)
-        {
             return new ModalOpenResult
             {
                 Success = false,
                 Error = inputError
             };
-        }
 
         var enteredBlockingGate = false;
         var addedToActive = _activeModalIds.TryAdd(modal.ModalId, 0);
         if (!addedToActive && !modal.AllowReentry)
-        {
             return new ModalOpenResult
             {
                 Success = false,
                 Error = $"Modal '{modal.ModalId}' is already active."
             };
-        }
 
         try
         {
@@ -89,7 +83,8 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
             {
                 result = await resolved.Capability.OpenModalAsync(request, linkedCts.Token);
             }
-            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested ||
+                                                     cancellationToken.IsCancellationRequested)
             {
                 return new ModalOpenResult
                 {
@@ -111,27 +106,19 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
 
             var outputError = ValidatePayload("Output", modal.OutputContract, result.Output);
             if (outputError is not null)
-            {
                 return new ModalOpenResult
                 {
                     Success = false,
                     Error = outputError
                 };
-            }
 
             return result;
         }
         finally
         {
-            if (addedToActive)
-            {
-                _activeModalIds.TryRemove(modal.ModalId, out _);
-            }
+            if (addedToActive) _activeModalIds.TryRemove(modal.ModalId, out _);
 
-            if (enteredBlockingGate)
-            {
-                _blockingModalGate.Release();
-            }
+            if (enteredBlockingGate) _blockingModalGate.Release();
         }
     }
 
@@ -143,10 +130,7 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
                 .FirstOrDefault(candidate =>
                     candidate.ModalId.Equals(modalId, StringComparison.OrdinalIgnoreCase));
 
-            if (modal is not null)
-            {
-                return (capability, modal);
-            }
+            if (modal is not null) return (capability, modal);
         }
 
         throw new InvalidOperationException($"No plugin capability found for modal '{modalId}'.");
@@ -170,15 +154,9 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
 
     private static string? ValidatePayload(string kind, ModalPayloadContract? contract, ModalPayload? payload)
     {
-        if (contract is null)
-        {
-            return null;
-        }
+        if (contract is null) return null;
 
-        if (payload is null)
-        {
-            return contract.IsRequired ? $"{kind} payload is required." : null;
-        }
+        if (payload is null) return contract.IsRequired ? $"{kind} payload is required." : null;
 
         return payload.TypeId.Equals(contract.TypeId, StringComparison.OrdinalIgnoreCase)
             ? null

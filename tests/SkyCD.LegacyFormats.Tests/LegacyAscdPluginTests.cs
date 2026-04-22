@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Ascd;
 
@@ -11,10 +12,10 @@ public class LegacyAscdPluginTests
         var plugin = new LegacyAscdPlugin();
         var fixtures = new[] { "my-documents.ascd", "ftpz.ascd" };
         var fixtureDir = Path.Combine(AppContext.BaseDirectory, "fixtures");
-        if (!Directory.Exists(fixtureDir) || fixtures.All(f => !File.Exists(Path.Combine(fixtureDir, f))))
-        {
-            return; // Skip if fixtures are not available (e.g., in CI without legacy folder)
-        }
+        if (!Directory.Exists(fixtureDir) ||
+            fixtures.All(f =>
+                !File.Exists(Path.Combine(fixtureDir,
+                    f)))) return; // Skip if fixtures are not available (e.g., in CI without legacy folder)
 
         foreach (var fixture in fixtures)
         {
@@ -49,10 +50,7 @@ public class LegacyAscdPluginTests
         var plugin = new LegacyAscdPlugin();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "fixtures", "my-documents.ascd");
 
-        if (!File.Exists(fixturePath))
-        {
-            return; // Skip if fixture is not available (e.g., in CI without legacy folder)
-        }
+        if (!File.Exists(fixturePath)) return; // Skip if fixture is not available (e.g., in CI without legacy folder)
         var bytes = await File.ReadAllBytesAsync(fixturePath);
         await using var source = new MemoryStream(bytes);
 
@@ -96,7 +94,8 @@ public class LegacyAscdPluginTests
     public async Task ReadAsync_RejectsInvalidHeader()
     {
         var plugin = new LegacyAscdPlugin();
-        var invalidText = "INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>')";
+        var invalidText =
+            "INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>')";
         var compressed = CompressText(invalidText);
         await using var source = new MemoryStream(compressed);
 
@@ -135,7 +134,7 @@ public class LegacyAscdPluginTests
     private static byte[] CompressText(string text)
     {
         using var output = new MemoryStream();
-        using (var compressed = new System.IO.Compression.DeflateStream(output, System.IO.Compression.CompressionMode.Compress, leaveOpen: true))
+        using (var compressed = new DeflateStream(output, CompressionMode.Compress, true))
         using (var writer = new StreamWriter(compressed))
         {
             writer.Write(text);

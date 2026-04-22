@@ -7,30 +7,19 @@ namespace SkyCD.Plugin.Html;
 
 public sealed class HtmlCatalogExportPlugin : IPlugin, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.html",
-        "HTML Export Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exports catalog payloads to HTML.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-html",
             "SkyCD HTML Export",
             [".html"],
-            CanRead: false,
-            CanWrite: true,
-            MimeType: "text/html")
+            false,
+            true,
+            "text/html")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatReadResult
         {
@@ -39,15 +28,18 @@ public sealed class HtmlCatalogExportPlugin : IPlugin, IFileFormatPluginCapabili
         });
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("HTML export payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException(
+                           "HTML export payload must be a list of row dictionaries.");
 
             var orderedRows = rows
-                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null, StringComparer.Ordinal)
+                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null,
+                    StringComparer.Ordinal)
                 .ToList();
 
             var builder = new StringBuilder();
@@ -104,6 +96,33 @@ public sealed class HtmlCatalogExportPlugin : IPlugin, IFileFormatPluginCapabili
                 Error = exception.Message
             };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.html",
+        "HTML Export Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exports catalog payloads to HTML.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 
     private static string GetValue(IReadOnlyDictionary<string, object?> row, string key)

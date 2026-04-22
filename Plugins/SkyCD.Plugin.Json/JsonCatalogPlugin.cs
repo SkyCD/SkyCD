@@ -9,40 +9,19 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.json",
-        "JSON Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes JSON file format support.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-json",
             "SkyCD JSON",
             [".json"],
-            CanRead: true,
-            CanWrite: true,
-            MimeType: "application/json")
+            true,
+            true,
+            "application/json")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -53,32 +32,26 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
 
             if (!root.TryGetProperty("schemaVersion", out var schemaElement) ||
                 !schemaElement.ValueKind.Equals(JsonValueKind.String))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "JSON catalog payload is missing required 'schemaVersion'."
                 };
-            }
 
             var actualSchemaVersion = schemaElement.GetString();
             if (!SchemaVersion.Equals(actualSchemaVersion, StringComparison.Ordinal))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = $"Unsupported schemaVersion '{actualSchemaVersion}'."
                 };
-            }
 
             if (!root.TryGetProperty("payload", out var payloadElement))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "JSON catalog payload is missing required 'payload'."
                 };
-            }
 
             return new FileFormatReadResult
             {
@@ -96,7 +69,8 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -113,7 +87,7 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 },
-                cancellationToken: cancellationToken);
+                cancellationToken);
             await request.Target.FlushAsync(cancellationToken);
 
             return new FileFormatWriteResult
@@ -129,6 +103,28 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
                 Error = exception.Message
             };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.json",
+        "JSON Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exposes JSON file format support.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
     }
 
     public ValueTask DisposeAsync()

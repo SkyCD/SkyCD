@@ -1,13 +1,12 @@
-using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using SkyCD.App.Services;
-using SkyCD.Presentation.ViewModels;
 using SkyCD.App.Views;
+using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App;
 
-public partial class App : Avalonia.Application
+public class App : Avalonia.Application
 {
     private readonly SqliteBrowserDataStore browserDataStore = new();
 
@@ -23,7 +22,7 @@ public partial class App : Avalonia.Application
             desktop.Exit += (_, _) => browserDataStore.Dispose();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(browserDataStore),
+                DataContext = new MainWindowViewModel(browserDataStore)
             };
         }
 

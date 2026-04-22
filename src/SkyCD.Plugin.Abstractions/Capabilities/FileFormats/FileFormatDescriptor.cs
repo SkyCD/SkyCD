@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 /// <summary>
-/// Describes a file format supported by a plugin capability.
+///     Describes a file format supported by a plugin capability.
 /// </summary>
 public sealed record FileFormatDescriptor(
     string FormatId,

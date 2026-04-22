@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Host.Modal;
 
 /// <summary>
-/// Host-facing projection of a plugin-provided modal descriptor.
+///     Host-facing projection of a plugin-provided modal descriptor.
 /// </summary>
 public sealed record ModalRegistration(
     string PluginId,

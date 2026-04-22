@@ -7,30 +7,19 @@ namespace SkyCD.Plugin.Tar;
 
 public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.tar",
-        "TAR Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes TAR archive entries.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-tar",
             "TAR Archive Index",
             [".tar", ".tar.gz", ".tgz"],
-            CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-tar")
+            true,
+            false,
+            "application/x-tar")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -39,31 +28,26 @@ public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             using var tarStream = EnsureTarStream(request.Source);
-            var reader = new TarReader(tarStream, leaveOpen: true);
+            var reader = new TarReader(tarStream, true);
             var rows = new List<Dictionary<string, object?>>();
             var seenDirectories = new HashSet<string>(StringComparer.Ordinal);
 
-            while (reader.GetNextEntry(copyData: false) is { } entry)
+            while (reader.GetNextEntry() is { } entry)
             {
                 var normalizedPath = (entry.Name ?? string.Empty).Replace('\\', '/').TrimEnd('/');
-                if (string.IsNullOrWhiteSpace(normalizedPath))
-                {
-                    continue;
-                }
+                if (string.IsNullOrWhiteSpace(normalizedPath)) continue;
 
                 var parts = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 for (var index = 0; index < parts.Length - 1; index++)
                 {
                     var directoryPath = string.Join("/", parts.Take(index + 1));
-                    if (!seenDirectories.Add(directoryPath))
-                    {
-                        continue;
-                    }
+                    if (!seenDirectories.Add(directoryPath)) continue;
 
                     rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                     {
@@ -80,7 +64,6 @@ public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
                 if (isDirectory)
                 {
                     if (seenDirectories.Add(normalizedPath))
-                    {
                         rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["kind"] = "folder",
@@ -89,7 +72,6 @@ public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
                             ["sizeBytes"] = "0",
                             ["modifiedUtc"] = entry.ModificationTime.UtcDateTime.ToString("O")
                         });
-                    }
                 }
                 else
                 {
@@ -125,6 +107,33 @@ public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.tar",
+        "TAR Index Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that indexes TAR archive entries.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
     private static Stream EnsureTarStream(Stream source)
     {
         if (!source.CanSeek)
@@ -142,7 +151,7 @@ public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
 
         var isGzip = read == 2 && header[0] == 0x1F && header[1] == 0x8B;
         return isGzip
-            ? new GZipStream(source, CompressionMode.Decompress, leaveOpen: true)
+            ? new GZipStream(source, CompressionMode.Decompress, true)
             : source;
     }
 }

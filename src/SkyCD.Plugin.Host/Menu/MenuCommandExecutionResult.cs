@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Host.Menu;
 
 /// <summary>
-/// Result envelope for guarded menu command execution.
+///     Result envelope for guarded menu command execution.
 /// </summary>
 public sealed class MenuCommandExecutionResult
 {

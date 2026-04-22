@@ -13,7 +13,7 @@
         Title="About SkyCD">
 
     <Design.DataContext>
-        <vm:AboutDialogViewModel ProductName="SkyCD" Version="3.0.0" Website="https://github.com/SkyCD/SkyCD"/>
+        <vm:AboutDialogViewModel ProductName="SkyCD" Version="3.0.0" Website="https://github.com/SkyCD/SkyCD" />
     </Design.DataContext>
 
     <Window.Styles>
@@ -53,4 +53,3 @@
         </TabControl>
     </DockPanel>
 </Window>
-

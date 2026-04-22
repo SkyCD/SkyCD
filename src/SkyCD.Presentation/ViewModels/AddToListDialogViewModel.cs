@@ -5,6 +5,24 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AddToListDialogViewModel : ObservableObject
 {
+    [ObservableProperty] private bool dialogAccepted;
+
+    [ObservableProperty] private bool includeExtendedInfo;
+
+    [ObservableProperty] private bool includeMediaInfo = true;
+
+    [ObservableProperty] private bool includeSubfolders;
+
+    [ObservableProperty] private string mediaName = string.Empty;
+
+    [ObservableProperty] private AddToListSourceMode sourceMode = AddToListSourceMode.Media;
+
+    [ObservableProperty] private string sourceValue = string.Empty;
+
+    [ObservableProperty] private AddToListTargetPlacement targetPlacement = AddToListTargetPlacement.SelectedFolder;
+
+    [ObservableProperty] private string? validationMessage;
+
     public AddToListDialogViewModel()
     {
         RecomputeValidation();
@@ -22,33 +40,6 @@ public partial class AddToListDialogViewModel : ObservableObject
 
     public bool IsTargetNewMedia => TargetPlacement == AddToListTargetPlacement.NewMedia;
 
-    [ObservableProperty]
-    private AddToListSourceMode sourceMode = AddToListSourceMode.Media;
-
-    [ObservableProperty]
-    private AddToListTargetPlacement targetPlacement = AddToListTargetPlacement.SelectedFolder;
-
-    [ObservableProperty]
-    private bool includeMediaInfo = true;
-
-    [ObservableProperty]
-    private bool includeSubfolders;
-
-    [ObservableProperty]
-    private bool includeExtendedInfo;
-
-    [ObservableProperty]
-    private string mediaName = string.Empty;
-
-    [ObservableProperty]
-    private string sourceValue = string.Empty;
-
-    [ObservableProperty]
-    private bool dialogAccepted;
-
-    [ObservableProperty]
-    private string? validationMessage;
-
     public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? "Address" : "Folder";
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
@@ -60,19 +51,13 @@ public partial class AddToListDialogViewModel : ObservableObject
     [RelayCommand]
     private void SelectSource(string modeKey)
     {
-        if (Enum.TryParse<AddToListSourceMode>(modeKey, true, out var mode))
-        {
-            SourceMode = mode;
-        }
+        if (Enum.TryParse<AddToListSourceMode>(modeKey, true, out var mode)) SourceMode = mode;
     }
 
     [RelayCommand]
     private void SelectTarget(string targetKey)
     {
-        if (Enum.TryParse<AddToListTargetPlacement>(targetKey, true, out var target))
-        {
-            TargetPlacement = target;
-        }
+        if (Enum.TryParse<AddToListTargetPlacement>(targetKey, true, out var target)) TargetPlacement = target;
     }
 
     partial void OnSourceModeChanged(AddToListSourceMode value)
@@ -111,9 +96,7 @@ public partial class AddToListDialogViewModel : ObservableObject
     {
         if (TargetPlacement == AddToListTargetPlacement.NewMedia &&
             string.IsNullOrWhiteSpace(MediaName))
-        {
             return "Media name is required when adding as new media.";
-        }
 
         return SourceMode switch
         {

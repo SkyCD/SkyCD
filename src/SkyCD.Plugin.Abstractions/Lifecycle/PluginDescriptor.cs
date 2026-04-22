@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Abstractions.Lifecycle;
 
 /// <summary>
-/// Describes a plugin package and its compatibility requirements.
+///     Describes a plugin package and its compatibility requirements.
 /// </summary>
 /// <param name="Id">Stable plugin identifier.</param>
 /// <param name="DisplayName">Human-readable plugin name.</param>

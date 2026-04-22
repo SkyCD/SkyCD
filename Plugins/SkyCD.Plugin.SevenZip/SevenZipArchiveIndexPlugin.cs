@@ -17,30 +17,19 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
         _entryReader = entryReader;
     }
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.7z",
-        "7z Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes 7z archive entries.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-7z",
             "7z Archive Index",
             [".7z"],
-            CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-7z-compressed")
+            true,
+            false,
+            "application/x-7z-compressed")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -49,7 +38,8 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -80,6 +70,33 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
         }
     }
 
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.7z",
+        "7z Index Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that indexes 7z archive entries.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
     private static List<Dictionary<string, object?>> ProjectHierarchy(IReadOnlyCollection<SevenZipEntryInfo> entries)
     {
         var rows = new List<Dictionary<string, object?>>();
@@ -88,19 +105,13 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
         foreach (var entry in entries)
         {
             var normalized = entry.Path.Replace('\\', '/').TrimEnd('/');
-            if (string.IsNullOrWhiteSpace(normalized))
-            {
-                continue;
-            }
+            if (string.IsNullOrWhiteSpace(normalized)) continue;
 
             var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
             for (var index = 0; index < parts.Length - 1; index++)
             {
                 var directoryPath = string.Join("/", parts.Take(index + 1));
-                if (!seenDirectories.Add(directoryPath))
-                {
-                    continue;
-                }
+                if (!seenDirectories.Add(directoryPath)) continue;
 
                 rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -116,7 +127,6 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
             if (entry.IsDirectory)
             {
                 if (seenDirectories.Add(normalized))
-                {
                     rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                     {
                         ["kind"] = "folder",
@@ -125,7 +135,6 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
                         ["sizeBytes"] = "0",
                         ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
                     });
-                }
             }
             else
             {

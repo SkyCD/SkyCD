@@ -1,11 +1,11 @@
 using SkyCD.Migration.Cli;
 
 const string usage = """
-SkyCD Migration CLI
+                     SkyCD Migration CLI
 
-Usage:
-  dotnet run --project tools/SkyCD.Migration.Cli -- --legacy-db <path> --target-db <path> [--dry-run]
-""";
+                     Usage:
+                       dotnet run --project tools/SkyCD.Migration.Cli -- --legacy-db <path> --target-db <path> [--dry-run]
+                     """;
 
 var argsMap = ParseArgs(args);
 
@@ -30,10 +30,7 @@ var result = await importer.ImportAsync(legacyPath, targetPath, dryRun);
 if (result.Errors.Count > 0)
 {
     Console.Error.WriteLine("Migration completed with validation/import errors:");
-    foreach (var error in result.Errors)
-    {
-        Console.Error.WriteLine($"  - {error}");
-    }
+    foreach (var error in result.Errors) Console.Error.WriteLine($"  - {error}");
 }
 
 Console.WriteLine(dryRun
@@ -48,10 +45,7 @@ static Dictionary<string, string> ParseArgs(string[] args)
     for (var i = 0; i < args.Length; i++)
     {
         var key = args[i];
-        if (!key.StartsWith("--", StringComparison.Ordinal))
-        {
-            continue;
-        }
+        if (!key.StartsWith("--", StringComparison.Ordinal)) continue;
 
         if (i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
         {

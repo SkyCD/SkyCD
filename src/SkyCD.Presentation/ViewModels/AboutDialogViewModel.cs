@@ -5,6 +5,8 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AboutDialogViewModel : ObservableObject
 {
+    [ObservableProperty] private bool dialogAccepted;
+
     public AboutDialogViewModel()
         : this("SkyCD", "3.0.0", "https://github.com/SkyCD/SkyCD")
     {
@@ -22,9 +24,6 @@ public partial class AboutDialogViewModel : ObservableObject
     public string Version { get; }
 
     public string Website { get; }
-
-    [ObservableProperty]
-    private bool dialogAccepted;
 
     [RelayCommand]
     private void Confirm()
