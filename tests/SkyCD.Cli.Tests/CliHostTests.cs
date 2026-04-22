@@ -29,8 +29,9 @@ public sealed class CliHostTests
         Assert.Contains("renamed-cli.exe [options] [command]", text, StringComparison.Ordinal);
         Assert.Contains("  open         Open and validate a catalog file.", text, StringComparison.Ordinal);
         Assert.Contains("  convert      Convert a catalog between supported formats.", text, StringComparison.Ordinal);
-        Assert.Contains("  list-formats List available read/write format handlers.", text, StringComparison.Ordinal);
-        Assert.Contains("  plugins list List loaded plugins, capabilities, and commands.", text, StringComparison.Ordinal);
+        Assert.Contains("  fileformats  Work with file format handlers.", text, StringComparison.Ordinal);
+        Assert.Contains("  plugins      Inspect loaded plugins and capabilities.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("plugins list", text, StringComparison.Ordinal);
         Assert.DoesNotContain("open <file>", text, StringComparison.Ordinal);
         Assert.Contains("renamed-cli.exe <command> --help", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
@@ -78,6 +79,69 @@ public sealed class CliHostTests
         Assert.Contains("renamed-cli.exe convert --in <file> --out <file>", text, StringComparison.Ordinal);
         Assert.Contains("--in-format <id>", text, StringComparison.Ordinal);
         Assert.Contains("--format <id>", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task PluginsHelp_ShowsListSubcommand()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["plugins", "--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", text, StringComparison.Ordinal);
+        Assert.Contains("list     List loaded plugins, capabilities, and commands", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task FileFormatsHelp_ShowsListSubcommand()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["fileformats", "--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("renamed-cli.exe fileformats <subcommand> [options]", text, StringComparison.Ordinal);
+        Assert.Contains("list     List available read/write format handlers", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task RootHelp_NormalizesDllNameToExe()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "SkyCD.App.dll");
+
+        var result = await host.TryRunAsync(["--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("SkyCD.App.exe [options] [command]", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("SkyCD.App.dll [options] [command]", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
     }
 

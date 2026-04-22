@@ -17,7 +17,7 @@ public sealed class CliHost(
     [
         "open",
         "convert",
-        "list-formats",
+        "fileformats list",
         "plugins list"
     ];
 
@@ -130,7 +130,7 @@ public sealed class CliHost(
             {
                 "open" => await ExecuteOpenAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
                 "convert" => await ExecuteConvertAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
-                "list-formats" => await ExecuteListFormatsAsync(jsonOutput, routing, pluginDirectories),
+                "fileformats list" => await ExecuteListFormatsAsync(jsonOutput, routing, pluginDirectories),
                 "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, routing, discoveredPlugins, pluginDirectories),
                 _ => CliExitCodes.InvalidArguments
             };
@@ -499,13 +499,13 @@ public sealed class CliHost(
 
     private async Task WriteHelpAsync(IEnumerable<string> pluginCommands, bool jsonOutput)
     {
-        var executableName = executableNameProvider();
+        var executableName = NormalizeExecutableName(executableNameProvider());
         var builtIn = new[]
         {
             new { Name = "open", Description = "Open and validate a catalog file." },
             new { Name = "convert", Description = "Convert a catalog between supported formats." },
-            new { Name = "list-formats", Description = "List available read/write format handlers." },
-            new { Name = "plugins list", Description = "List loaded plugins, capabilities, and commands." }
+            new { Name = "fileformats", Description = "Work with file format handlers." },
+            new { Name = "plugins", Description = "Inspect loaded plugins and capabilities." }
         };
 
         if (jsonOutput)
@@ -563,7 +563,7 @@ public sealed class CliHost(
 
     private async Task WriteCommandHelpAsync(string command, bool jsonOutput)
     {
-        var executableName = executableNameProvider();
+        var executableName = NormalizeExecutableName(executableNameProvider());
         var (usage, options, notes) = command switch
         {
             "open" => (
@@ -591,13 +591,29 @@ public sealed class CliHost(
                 },
                 new[]
                 {
-                    "Format ids are listed by `skycd list-formats`."
+                    $"Format ids are listed by `{executableName} fileformats list`."
                 }),
-            "list-formats" => (
-                $"{executableName} list-formats [--json]",
+            "fileformats" => (
+                $"{executableName} fileformats <subcommand> [options]",
+                new[]
+                {
+                    "list     List available read/write format handlers",
+                    "--help   Display this help"
+                },
+                Array.Empty<string>()),
+            "fileformats list" => (
+                $"{executableName} fileformats list [--json]",
                 new[]
                 {
                     "--json   Use JSON output where supported",
+                    "--help   Display this help"
+                },
+                Array.Empty<string>()),
+            "plugins" => (
+                $"{executableName} plugins <subcommand> [options]",
+                new[]
+                {
+                    "list     List loaded plugins, capabilities, and commands",
                     "--help   Display this help"
                 },
                 Array.Empty<string>()),
@@ -683,9 +699,9 @@ public sealed class CliHost(
             return true;
         }
 
-        if (args.Count == 1 && args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase))
+        if (args.Count == 1 && args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase))
         {
-            command = "list-formats";
+            command = "plugins";
             return true;
         }
 
@@ -695,6 +711,27 @@ public sealed class CliHost(
         {
             command = "plugins list";
             remaining = args.Skip(2).ToArray();
+            return true;
+        }
+
+        if (args.Count == 1 && args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase))
+        {
+            command = "fileformats";
+            return true;
+        }
+
+        if (args.Count >= 2 &&
+            args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase) &&
+            args[1].Equals("list", StringComparison.OrdinalIgnoreCase))
+        {
+            command = "fileformats list";
+            remaining = args.Skip(2).ToArray();
+            return true;
+        }
+
+        if (args.Count == 1 && args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase))
+        {
+            command = "fileformats list";
             return true;
         }
 
@@ -722,10 +759,10 @@ public sealed class CliHost(
         }
 
         if (args.Count >= 2 &&
-            args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase) &&
+            args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase) &&
             ContainsOnlyHelpTokens(args.Skip(1)))
         {
-            command = "list-formats";
+            command = "plugins";
             return true;
         }
 
@@ -735,6 +772,31 @@ public sealed class CliHost(
             ContainsOnlyHelpTokens(args.Skip(2)))
         {
             command = "plugins list";
+            return true;
+        }
+
+        if (args.Count >= 2 &&
+            args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(1)))
+        {
+            command = "fileformats";
+            return true;
+        }
+
+        if (args.Count >= 3 &&
+            args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase) &&
+            args[1].Equals("list", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(2)))
+        {
+            command = "fileformats list";
+            return true;
+        }
+
+        if (args.Count >= 2 &&
+            args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(1)))
+        {
+            command = "fileformats list";
             return true;
         }
 
@@ -799,13 +861,36 @@ public sealed class CliHost(
     private static string ResolveExecutableName()
     {
         var arg0 = Environment.GetCommandLineArgs().FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(arg0))
+        return NormalizeExecutableName(arg0);
+    }
+
+    private static string NormalizeExecutableName(string? executableNameCandidate)
+    {
+        if (string.IsNullOrWhiteSpace(executableNameCandidate))
         {
             return "skycd";
         }
 
-        var executableName = Path.GetFileName(arg0);
-        return string.IsNullOrWhiteSpace(executableName) ? "skycd" : executableName;
+        var executableName = Path.GetFileName(executableNameCandidate);
+        if (string.IsNullOrWhiteSpace(executableName))
+        {
+            return "skycd";
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            if (executableName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.ChangeExtension(executableName, ".exe");
+            }
+
+            if (!Path.HasExtension(executableName))
+            {
+                return $"{executableName}.exe";
+            }
+        }
+
+        return executableName;
     }
 
     private static string ResolveFormatId(
