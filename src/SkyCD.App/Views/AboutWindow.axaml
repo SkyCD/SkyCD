@@ -92,7 +92,7 @@
                         </ListBox.ItemsPanel>
                         <ListBox.Styles>
                             <Style Selector="ListBoxItem">
-                                <Setter Property="Height" Value="72" />
+                                <Setter Property="MinHeight" Value="56" />
                                 <Setter Property="Padding" Value="0" />
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="VerticalContentAlignment" Value="Top" />
@@ -102,7 +102,7 @@
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
                             </Style>
                             <Style Selector="ListBoxItem:pointerover">
-                                <Setter Property="Background" Value="#DCEBFF" />
+                                <Setter Property="Background" Value="#EEF3FA" />
                                 <Setter Property="Foreground" Value="#111111" />
                             </Style>
                             <Style Selector="ListBoxItem:selected:pointerover">
@@ -119,10 +119,10 @@
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
                             </Style>
                             <Style Selector="ListBoxItem:pointerover TextBlock.RepositoryLink">
-                                <Setter Property="Foreground" Value="#004FA3" />
+                                <Setter Property="Foreground" Value="#0B2F5B" />
                             </Style>
                             <Style Selector="TextBlock.RepositoryLink">
-                                <Setter Property="Foreground" Value="#007ACC" />
+                                <Setter Property="Foreground" Value="#0B5CAD" />
                             </Style>
                             <Style Selector="ListBoxItem:selected TextBlock.RepositoryLink">
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
@@ -165,6 +165,7 @@
                                         <TextBlock Text="{Binding RepositoryUrl}"
                                                    Classes="RepositoryLink"
                                                    FontSize="12"
+                                                   Cursor="Hand"
                                                    TextDecorations="Underline"
                                                    IsVisible="{Binding HasRepositoryUrl}"
                                                    PointerPressed="OnOpenRepositoryUrl"
