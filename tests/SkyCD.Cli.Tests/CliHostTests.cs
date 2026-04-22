@@ -10,6 +10,63 @@ namespace SkyCD.Cli.Tests;
 public sealed class CliHostTests
 {
     [Fact]
+    public async Task RootHelp_ShowsConciseCommandList()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+
+        var result = await host.TryRunAsync(["--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("Commands:", text, StringComparison.Ordinal);
+        Assert.Contains("  open", text, StringComparison.Ordinal);
+        Assert.Contains("  convert", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("open <file>", text, StringComparison.Ordinal);
+        Assert.Contains("skycd <command> --help", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task OpenHelp_ShowsCommandSpecificOptions()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+
+        var result = await host.TryRunAsync(["open", "--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("Usage:", text, StringComparison.Ordinal);
+        Assert.Contains("skycd open <file> [--format <id>] [--json]", text, StringComparison.Ordinal);
+        Assert.Contains("--format <id>", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("convert --in", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task ConvertHelp_ShowsCommandSpecificOptions()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+
+        var result = await host.TryRunAsync(["convert", "--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("skycd convert --in <file> --out <file>", text, StringComparison.Ordinal);
+        Assert.Contains("--in-format <id>", text, StringComparison.Ordinal);
+        Assert.Contains("--format <id>", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
     public async Task PluginCommand_Executes_WithoutLaunchingUiPath()
     {
         var output = new StringWriter();

@@ -49,6 +49,12 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
         }
 
+        if (TryGetBuiltInHelpCommand(normalized, out var helpCommand))
+        {
+            await WriteCommandHelpAsync(helpCommand, jsonOutput);
+            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
+        }
+
         if (normalized.Count == 1 && IsVersionToken(normalized[0]))
         {
             await stdout.WriteLineAsync(GetVersionText());
@@ -493,10 +499,10 @@ public sealed class CliHost(
     {
         var builtIn = new[]
         {
-            "open <file> [--json]",
-            "convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
-            "list-formats [--json]",
-            "plugins list [--json]"
+            "open",
+            "convert",
+            "list-formats",
+            "plugins list"
         };
 
         if (jsonOutput)
@@ -512,6 +518,7 @@ public sealed class CliHost(
                     "--json     Use JSON output where supported"
                 },
                 builtInCommands = builtIn,
+                commandHelpHint = "Use `skycd <command> --help` for command-specific options.",
                 pluginCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray()
             }, jsonOptions));
             return;
@@ -536,8 +543,7 @@ public sealed class CliHost(
 
         await stdout.WriteLineAsync("");
         await stdout.WriteLineAsync("Notes:");
-        await stdout.WriteLineAsync("  open infers format from file extension by default.");
-        await stdout.WriteLineAsync("  Use --format <id> to override inferred format for open/convert.");
+        await stdout.WriteLineAsync("  Use `skycd <command> --help` for command-specific options.");
 
         var contributedCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray();
         if (contributedCommands.Length > 0)
@@ -549,6 +555,93 @@ public sealed class CliHost(
         foreach (var pluginCommand in contributedCommands)
         {
             await stdout.WriteLineAsync($"  {pluginCommand}");
+        }
+    }
+
+    private async Task WriteCommandHelpAsync(string command, bool jsonOutput)
+    {
+        var (usage, options, notes) = command switch
+        {
+            "open" => (
+                "skycd open <file> [--format <id>] [--json]",
+                new[]
+                {
+                    "--format <id>  Override inferred format id",
+                    "--json         Use JSON output where supported",
+                    "--help         Display this help"
+                },
+                new[]
+                {
+                    "open infers format from file extension by default."
+                }),
+            "convert" => (
+                "skycd convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
+                new[]
+                {
+                    "--in <file>        Input file path (required)",
+                    "--out <file>       Output file path (required)",
+                    "--in-format <id>   Override inferred input format id",
+                    "--format <id>      Override inferred output format id",
+                    "--json             Use JSON output where supported",
+                    "--help             Display this help"
+                },
+                new[]
+                {
+                    "Format ids are listed by `skycd list-formats`."
+                }),
+            "list-formats" => (
+                "skycd list-formats [--json]",
+                new[]
+                {
+                    "--json   Use JSON output where supported",
+                    "--help   Display this help"
+                },
+                Array.Empty<string>()),
+            "plugins list" => (
+                "skycd plugins list [--json]",
+                new[]
+                {
+                    "--json   Use JSON output where supported",
+                    "--help   Display this help"
+                },
+                Array.Empty<string>()),
+            _ => throw new InvalidOperationException($"Unsupported help command: {command}")
+        };
+
+        if (jsonOutput)
+        {
+            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                command,
+                usage,
+                options,
+                notes
+            }, jsonOptions));
+            return;
+        }
+
+        await stdout.WriteLineAsync("Description:");
+        await stdout.WriteLineAsync($"  {command} command");
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Usage:");
+        await stdout.WriteLineAsync($"  {usage}");
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Options:");
+        foreach (var option in options)
+        {
+            await stdout.WriteLineAsync($"  {option}");
+        }
+
+        if (notes.Length == 0)
+        {
+            return;
+        }
+
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Notes:");
+        foreach (var note in notes)
+        {
+            await stdout.WriteLineAsync($"  {note}");
         }
     }
 
@@ -604,6 +697,46 @@ public sealed class CliHost(
         return false;
     }
 
+    private static bool TryGetBuiltInHelpCommand(IReadOnlyList<string> args, out string command)
+    {
+        command = string.Empty;
+
+        if (args.Count >= 2 &&
+            args[0].Equals("open", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(1)))
+        {
+            command = "open";
+            return true;
+        }
+
+        if (args.Count >= 2 &&
+            args[0].Equals("convert", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(1)))
+        {
+            command = "convert";
+            return true;
+        }
+
+        if (args.Count >= 2 &&
+            args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(1)))
+        {
+            command = "list-formats";
+            return true;
+        }
+
+        if (args.Count >= 3 &&
+            args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase) &&
+            args[1].Equals("list", StringComparison.OrdinalIgnoreCase) &&
+            ContainsOnlyHelpTokens(args.Skip(2)))
+        {
+            command = "plugins list";
+            return true;
+        }
+
+        return false;
+    }
+
     private static (bool JsonOutput, IReadOnlyList<string> Tokens) ExtractJsonFlag(IReadOnlyList<string> args)
     {
         var json = false;
@@ -641,6 +774,22 @@ public sealed class CliHost(
     {
         return token.Equals("--version", StringComparison.OrdinalIgnoreCase)
                || token.Equals("-v", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsOnlyHelpTokens(IEnumerable<string> args)
+    {
+        var sawAny = false;
+        foreach (var token in args)
+        {
+            if (!IsHelpToken(token))
+            {
+                return false;
+            }
+
+            sawAny = true;
+        }
+
+        return sawAny;
     }
 
     private static string ResolveFormatId(
