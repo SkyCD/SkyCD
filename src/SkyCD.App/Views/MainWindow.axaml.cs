@@ -49,7 +49,6 @@ public partial class MainWindow : Window
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
-            subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
@@ -65,7 +64,6 @@ public partial class MainWindow : Window
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
-            subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;

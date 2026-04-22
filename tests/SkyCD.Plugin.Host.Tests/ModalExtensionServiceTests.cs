@@ -86,7 +86,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_RejectsReentrantOpen_WhenModalDoesNotAllowIt()
     {
-        var pluginCatalog = CreateCatalog(new NonReentrantDelayModalPlugin());
+        var plugin = new NonReentrantControlledModalPlugin();
+        var pluginCatalog = CreateCatalog(plugin);
         var service = new ModalExtensionService(pluginCatalog);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -98,7 +99,7 @@ public class ModalExtensionServiceTests
             timeout: TimeSpan.FromSeconds(1),
             cancellationToken: cts.Token);
 
-        await Task.Delay(30, cts.Token);
+        await plugin.FirstOpenStarted.WaitAsync(cts.Token);
 
         var second = await service.OpenAsync(
             new ModalOpenRequest
@@ -110,7 +111,10 @@ public class ModalExtensionServiceTests
 
         Assert.False(second.Success);
         Assert.Contains("already active", second.Error);
-        await firstOpen;
+        plugin.AllowCompletion();
+
+        var first = await firstOpen;
+        Assert.True(first.Success);
     }
 
     [Fact]
@@ -194,14 +198,20 @@ public class ModalExtensionServiceTests
         }
     }
 
-    private sealed class NonReentrantDelayModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class NonReentrantControlledModalPlugin : IPlugin, IModalPluginCapability
     {
+        private readonly TaskCompletionSource _firstOpenStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public PluginDescriptor Descriptor => new("tests.modal.locked", "Locked Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public Task FirstOpenStarted => _firstOpenStarted.Task;
 
         public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public void AllowCompletion() => _allowCompletion.TrySetResult();
 
         public IReadOnlyCollection<ModalDescriptor> GetModals() =>
         [
@@ -210,7 +220,8 @@ public class ModalExtensionServiceTests
 
         public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(120), cancellationToken);
+            _firstOpenStarted.TrySetResult();
+            await _allowCompletion.Task.WaitAsync(cancellationToken);
             return new ModalOpenResult { Success = true };
         }
     }
