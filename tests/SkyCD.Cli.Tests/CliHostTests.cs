@@ -141,8 +141,16 @@ public sealed class CliHostTests
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("SkyCD.App.exe [options] [command]", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("SkyCD.App.dll [options] [command]", text, StringComparison.Ordinal);
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Contains("SkyCD.App.exe [options] [command]", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("SkyCD.App.dll [options] [command]", text, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Contains("SkyCD.App.dll [options] [command]", text, StringComparison.Ordinal);
+        }
+
         Assert.Equal(string.Empty, error.ToString());
     }
 
