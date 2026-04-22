@@ -102,7 +102,7 @@
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
                             </Style>
                             <Style Selector="ListBoxItem:pointerover">
-                                <Setter Property="Background" Value="#EEF3FA" />
+                                <Setter Property="Background" Value="#FDFEFE" />
                                 <Setter Property="Foreground" Value="#111111" />
                             </Style>
                             <Style Selector="ListBoxItem:selected:pointerover">
@@ -119,7 +119,7 @@
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
                             </Style>
                             <Style Selector="ListBoxItem:pointerover TextBlock.RepositoryLink">
-                                <Setter Property="Foreground" Value="#0B2F5B" />
+                                <Setter Property="Foreground" Value="#062A52" />
                             </Style>
                             <Style Selector="TextBlock.RepositoryLink">
                                 <Setter Property="Foreground" Value="#0B5CAD" />
