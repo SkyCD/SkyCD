@@ -57,6 +57,12 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
         }
 
+        if (TryGetImplicitBuiltInHelpCommand(normalized, out var implicitHelpCommand))
+        {
+            await WriteCommandHelpAsync(implicitHelpCommand, jsonOutput);
+            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
+        }
+
         if (normalized.Count == 1 && IsVersionToken(normalized[0]))
         {
             await stdout.WriteLineAsync(GetVersionText());
@@ -130,7 +136,9 @@ public sealed class CliHost(
             {
                 "open" => await ExecuteOpenAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
                 "convert" => await ExecuteConvertAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
+                "fileformats" => await WriteBuiltInHelpAsync("fileformats", jsonOutput),
                 "fileformats list" => await ExecuteListFormatsAsync(jsonOutput, routing, pluginDirectories),
+                "plugins" => await WriteBuiltInHelpAsync("plugins", jsonOutput),
                 "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, routing, discoveredPlugins, pluginDirectories),
                 _ => CliExitCodes.InvalidArguments
             };
@@ -383,6 +391,12 @@ public sealed class CliHost(
 
         await stdout.WriteLineAsync($"Plugin directories checked: {string.Join(", ", pluginDirectories)}");
 
+        return CliExitCodes.Success;
+    }
+
+    private async Task<int> WriteBuiltInHelpAsync(string command, bool jsonOutput)
+    {
+        await WriteCommandHelpAsync(command, jsonOutput);
         return CliExitCodes.Success;
     }
 
@@ -797,6 +811,29 @@ public sealed class CliHost(
             ContainsOnlyHelpTokens(args.Skip(1)))
         {
             command = "fileformats list";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetImplicitBuiltInHelpCommand(IReadOnlyList<string> args, out string command)
+    {
+        command = string.Empty;
+        if (args.Count != 1)
+        {
+            return false;
+        }
+
+        if (args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase))
+        {
+            command = "plugins";
+            return true;
+        }
+
+        if (args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase))
+        {
+            command = "fileformats";
             return true;
         }
 
