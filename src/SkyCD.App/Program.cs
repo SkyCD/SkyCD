@@ -13,6 +13,11 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (args.Length > 0)
+        {
+            CliStdIo.EnsureConsoleAttached();
+        }
+
         var cliResult = CliEntryPoint.TryRun(
             args,
             stdout: CliStdIo.CreateOutputWriter(),
@@ -38,8 +43,14 @@ sealed class Program
 
 internal static class CliStdIo
 {
-    private static readonly TextWriter fallbackOut = Console.Out;
-    private static readonly TextWriter fallbackError = Console.Error;
+    private const uint AttachParentProcess = 0xFFFFFFFF;
+    private static readonly TextWriter fallbackOut = TextWriter.Null;
+    private static readonly TextWriter fallbackError = TextWriter.Null;
+
+    public static void EnsureConsoleAttached()
+    {
+        AttachConsole(AttachParentProcess);
+    }
 
     public static TextWriter CreateOutputWriter() => CreateWriter(StandardHandle.Output, fallbackOut);
 
@@ -78,4 +89,7 @@ internal static class CliStdIo
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GetStdHandle(int nStdHandle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AttachConsole(uint dwProcessId);
 }
