@@ -119,10 +119,11 @@
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
                             </Style>
                             <Style Selector="ListBoxItem:pointerover TextBlock.RepositoryLink">
-                                <Setter Property="Foreground" Value="#062A52" />
+                                <Setter Property="Foreground" Value="#111111" />
                             </Style>
                             <Style Selector="TextBlock.RepositoryLink">
-                                <Setter Property="Foreground" Value="#0B5CAD" />
+                                <Setter Property="Foreground" Value="#1A1A1A" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
                             </Style>
                             <Style Selector="ListBoxItem:selected TextBlock.RepositoryLink">
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
