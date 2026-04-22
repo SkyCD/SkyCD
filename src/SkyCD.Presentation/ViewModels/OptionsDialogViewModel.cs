@@ -26,16 +26,15 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         selectedLanguage = Languages[0];
-        RefreshFilteredContent();
+        RefreshFilteredCategories();
+        selectedSettingCategory = CurrentCategoryName;
     }
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
-    public ObservableCollection<OptionsPluginItem> FilteredPlugins { get; } = [];
-
     public ObservableCollection<LanguageItem> Languages { get; } = [];
 
-    public ObservableCollection<LanguageItem> FilteredLanguages { get; } = [];
+    public ObservableCollection<string> FilteredSettingCategories { get; } = [];
 
     [ObservableProperty]
     private string pluginPath = string.Empty;
@@ -58,9 +57,16 @@ public partial class OptionsDialogViewModel : ObservableObject
     [ObservableProperty]
     private string settingsSearchText = string.Empty;
 
+    [ObservableProperty]
+    private string? selectedSettingCategory;
+
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
 
     public string CurrentCategoryName => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
+
+    public bool IsCurrentCategoryVisibleInSearch =>
+        string.IsNullOrWhiteSpace(SettingsSearchText) ||
+        FilteredSettingCategories.Contains(CurrentCategoryName);
 
     public bool IsPluginsCategorySelected => SelectedTabIndex == 0;
 
@@ -68,11 +74,11 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowPluginPathSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("plugin path", "path", "browse", "directory", PluginPath);
+        IsCurrentCategoryVisibleInSearch;
 
     public bool ShowPluginListSection =>
         IsPluginsCategorySelected &&
-        (FilteredPlugins.Count > 0 || MatchesSearch("plugin list", "plugins", "enabled", "name", "type", "state", "source"));
+        IsCurrentCategoryVisibleInSearch;
 
     public bool ShowPluginActionsSection =>
         IsPluginsCategorySelected &&
@@ -80,11 +86,11 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowPluginInfoSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("status", "info", "message", "plugin status", InfoMessage);
+        IsCurrentCategoryVisibleInSearch;
 
     public bool ShowLanguageSection =>
         IsLanguageCategorySelected &&
-        (FilteredLanguages.Count > 0 || MatchesSearch("language", "interface language", "localization"));
+        IsCurrentCategoryVisibleInSearch;
 
     public bool HasVisibleCategoryContent =>
         ShowPluginPathSection ||
@@ -146,7 +152,6 @@ public partial class OptionsDialogViewModel : ObservableObject
         SelectedPlugin = Plugins.FirstOrDefault();
         InfoMessage = $"Loaded {Plugins.Count} plugin(s).";
         ConfigurePluginCommand.NotifyCanExecuteChanged();
-        RefreshFilteredContent();
     }
 
     public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
@@ -204,21 +209,13 @@ public partial class OptionsDialogViewModel : ObservableObject
             return;
         }
 
+        SelectedSettingCategory = CurrentCategoryName;
         NotifySettingsVisibilityChanged();
     }
 
     partial void OnSettingsSearchTextChanged(string value)
     {
-        RefreshFilteredContent();
-    }
-
-    partial void OnPluginPathChanged(string value)
-    {
-        NotifySettingsVisibilityChanged();
-    }
-
-    partial void OnInfoMessageChanged(string value)
-    {
+        RefreshFilteredCategories();
         NotifySettingsVisibilityChanged();
     }
 
@@ -232,32 +229,51 @@ public partial class OptionsDialogViewModel : ObservableObject
         return terms.Any(term => term.Contains(SettingsSearchText, StringComparison.OrdinalIgnoreCase));
     }
 
-    private void RefreshFilteredContent()
+    partial void OnSelectedSettingCategoryChanged(string? value)
     {
-        FilteredPlugins.Clear();
-        foreach (var plugin in Plugins)
+        if (string.IsNullOrWhiteSpace(value))
         {
-            if (MatchesSearch(plugin.Name, plugin.Type, plugin.ExtendedInfo, plugin.Id))
-            {
-                FilteredPlugins.Add(plugin);
-            }
+            return;
         }
 
-        FilteredLanguages.Clear();
-        foreach (var language in Languages)
+        var index = SettingCategories
+            .Select((category, index) => new { category, index })
+            .FirstOrDefault(item => string.Equals(item.category, value, StringComparison.OrdinalIgnoreCase))
+            ?.index;
+
+        if (index is null || index == SelectedTabIndex)
         {
-            if (MatchesSearch(language.Name, language.DisplayText))
-            {
-                FilteredLanguages.Add(language);
-            }
+            return;
         }
 
-        NotifySettingsVisibilityChanged();
+        SelectedTabIndex = index.Value;
+    }
+
+    private void RefreshFilteredCategories()
+    {
+        FilteredSettingCategories.Clear();
+        foreach (var category in SettingCategories.Where(category => MatchesSearch(category)))
+        {
+            FilteredSettingCategories.Add(category);
+        }
+
+        if (FilteredSettingCategories.Count == 0)
+        {
+            SelectedSettingCategory = null;
+            return;
+        }
+
+        if (SelectedSettingCategory is null ||
+            !FilteredSettingCategories.Contains(SelectedSettingCategory))
+        {
+            SelectedSettingCategory = FilteredSettingCategories[0];
+        }
     }
 
     private void NotifySettingsVisibilityChanged()
     {
         OnPropertyChanged(nameof(CurrentCategoryName));
+        OnPropertyChanged(nameof(IsCurrentCategoryVisibleInSearch));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));
         OnPropertyChanged(nameof(ShowPluginPathSection));

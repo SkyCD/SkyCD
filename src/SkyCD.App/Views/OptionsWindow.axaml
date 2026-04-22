@@ -40,8 +40,8 @@
                              Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <ListBox Grid.Row="1"
-                             ItemsSource="{Binding SettingCategories}"
-                             SelectedIndex="{Binding SelectedTabIndex}">
+                             ItemsSource="{Binding FilteredSettingCategories}"
+                             SelectedItem="{Binding SelectedSettingCategory}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,5"/>
@@ -103,7 +103,7 @@
                                     </Border>
                                     <ListBox Grid.Row="1"
                                              MinHeight="220"
-                                             ItemsSource="{Binding FilteredPlugins}"
+                                             ItemsSource="{Binding Plugins}"
                                              SelectedItem="{Binding SelectedPlugin}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:OptionsPluginItem">
@@ -149,7 +149,7 @@
                                 <TextBlock Text="Language:" VerticalAlignment="Top"/>
                                 <ListBox Grid.Column="1"
                                          MinHeight="220"
-                                         ItemsSource="{Binding FilteredLanguages}"
+                                         ItemsSource="{Binding Languages}"
                                          SelectedItem="{Binding SelectedLanguage}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:LanguageItem">

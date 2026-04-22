@@ -120,12 +120,13 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SelectedTabIndex = 0;
 
-        vm.SettingsSearchText = "configure";
+        vm.SettingsSearchText = "plug";
 
-        Assert.False(vm.ShowPluginPathSection);
-        Assert.False(vm.ShowPluginListSection);
+        Assert.Equal(["Plugins"], vm.FilteredSettingCategories);
+        Assert.True(vm.ShowPluginPathSection);
+        Assert.True(vm.ShowPluginListSection);
         Assert.True(vm.ShowPluginActionsSection);
-        Assert.False(vm.ShowPluginInfoSection);
+        Assert.True(vm.ShowPluginInfoSection);
         Assert.True(vm.HasVisibleCategoryContent);
         Assert.False(vm.ShowNoSearchResults);
     }
@@ -134,44 +135,43 @@ public class OptionsDialogViewModelTests
     public void SearchText_ShowsNoResultsWhenCategoryHasNoMatch()
     {
         var vm = new OptionsDialogViewModel(["English"]);
-        vm.SelectedTabIndex = 1;
+        vm.SelectedTabIndex = 0;
 
-        vm.SettingsSearchText = "plugin";
+        vm.SettingsSearchText = "terminal";
 
-        Assert.False(vm.ShowLanguageSection);
+        Assert.Empty(vm.FilteredSettingCategories);
+        Assert.False(vm.ShowPluginPathSection);
         Assert.False(vm.HasVisibleCategoryContent);
         Assert.True(vm.ShowNoSearchResults);
     }
 
     [Fact]
-    public void SearchText_FiltersPluginsByContent()
+    public void SearchText_FiltersLeftCategoryList()
     {
-        var vm = new OptionsDialogViewModel(["English"]);
-        vm.SelectedTabIndex = 0;
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "lang";
+
+        Assert.Equal(["Language"], vm.FilteredSettingCategories);
+        Assert.Equal("Language", vm.SelectedSettingCategory);
+        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.True(vm.ShowLanguageSection);
+    }
+
+    [Fact]
+    public void SearchText_DoesNotFilterRightPanelItemCollections()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
         vm.SetPlugins(
         [
             new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json"),
             new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
         ]);
+        vm.SelectedTabIndex = 0;
 
-        vm.SettingsSearchText = "xml";
+        vm.SettingsSearchText = "plug";
 
-        Assert.Single(vm.FilteredPlugins);
-        Assert.Equal("XML", vm.FilteredPlugins[0].Name);
-        Assert.True(vm.ShowPluginListSection);
-    }
-
-    [Fact]
-    public void SearchText_FiltersLanguagesByContent()
-    {
-        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
-        vm.SelectedTabIndex = 1;
-
-        vm.SettingsSearchText = "lith";
-
-        Assert.Single(vm.FilteredLanguages);
-        Assert.Equal("Lithuanian", vm.FilteredLanguages[0].Name);
-        Assert.True(vm.ShowLanguageSection);
-        Assert.False(vm.ShowNoSearchResults);
+        Assert.Equal(2, vm.Plugins.Count);
+        Assert.Equal(2, vm.Languages.Count);
     }
 }
