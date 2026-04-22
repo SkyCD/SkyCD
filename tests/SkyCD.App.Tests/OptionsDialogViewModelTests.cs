@@ -101,4 +101,45 @@ public class OptionsDialogViewModelTests
 
         Assert.Equal(1, vm.SelectedTabIndex);
     }
+
+    [Fact]
+    public void SelectedTabIndex_ClampsOutOfRangeValues()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.SelectedTabIndex = -5;
+        Assert.Equal(0, vm.SelectedTabIndex);
+
+        vm.SelectedTabIndex = 99;
+        Assert.Equal(1, vm.SelectedTabIndex);
+    }
+
+    [Fact]
+    public void SearchText_FiltersPluginSections()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SelectedTabIndex = 0;
+
+        vm.SettingsSearchText = "configure";
+
+        Assert.False(vm.ShowPluginPathSection);
+        Assert.False(vm.ShowPluginListSection);
+        Assert.True(vm.ShowPluginActionsSection);
+        Assert.False(vm.ShowPluginInfoSection);
+        Assert.True(vm.HasVisibleCategoryContent);
+        Assert.False(vm.ShowNoSearchResults);
+    }
+
+    [Fact]
+    public void SearchText_ShowsNoResultsWhenCategoryHasNoMatch()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SelectedTabIndex = 1;
+
+        vm.SettingsSearchText = "plugin";
+
+        Assert.False(vm.ShowLanguageSection);
+        Assert.False(vm.HasVisibleCategoryContent);
+        Assert.True(vm.ShowNoSearchResults);
+    }
 }

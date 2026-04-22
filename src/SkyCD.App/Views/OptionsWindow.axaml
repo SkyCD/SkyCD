@@ -17,94 +17,148 @@
         <vm:OptionsDialogViewModel/>
     </Design.DataContext>
 
-    <Grid RowDefinitions="*,Auto" Margin="14">
-        <TabControl SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem Header="Plug-Ins">
-                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8" Margin="10">
-                    <TextBlock Text="Plug-In Path"/>
-                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <TextBox Text="{Binding PluginPath}"/>
-                        <Button Grid.Column="1"
-                                Content="Browse..."
-                                MinWidth="90"
-                                Command="{Binding BrowsePluginPathCommand}"/>
-                    </Grid>
+    <Grid RowDefinitions="Auto,*,Auto" Margin="14" RowSpacing="12">
+        <Border BorderBrush="#D7D7D7"
+                BorderThickness="1"
+                CornerRadius="4"
+                Background="#FAFAFA"
+                Padding="10,8">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <TextBlock Text="Search settings"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"/>
+                <TextBox Grid.Column="1"
+                         PlaceholderText="Type to filter settings"
+                         Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+        </Border>
 
-                    <Border Grid.Row="2"
-                            Margin="0,4,0,0"
-                            BorderBrush="#D4D4D4"
-                            BorderThickness="1">
-                        <Grid RowDefinitions="Auto,*">
-                            <Border BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Background="#F5F5F5" Padding="8,6">
-                                <Grid ColumnDefinitions="Auto,2*,2*,3*">
-                                    <TextBlock Text="Enabled" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="3" Text="Extended Info" FontWeight="SemiBold"/>
+        <Grid Grid.Row="1" ColumnDefinitions="180,*" ColumnSpacing="12">
+            <Border BorderBrush="#D4D4D4"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Background="#F7F7F7"
+                    Padding="4">
+                <ListBox ItemsSource="{Binding SettingCategories}"
+                         SelectedIndex="{Binding SelectedTabIndex}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       Margin="6,4"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Border Grid.Column="1"
+                    BorderBrush="#D4D4D4"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="12">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12">
+                        <StackPanel IsVisible="{Binding ShowPluginPathSection}" Spacing="8">
+                            <TextBlock Text="Plug-In Path" FontSize="15" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBox Text="{Binding PluginPath}"/>
+                                <Button Grid.Column="1"
+                                        Content="Browse..."
+                                        MinWidth="90"
+                                        Command="{Binding BrowsePluginPathCommand}"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding ShowPluginListSection}" Spacing="8">
+                            <TextBlock Text="Installed Plug-Ins" FontSize="15" FontWeight="SemiBold"/>
+                            <Border BorderBrush="#D4D4D4"
+                                    BorderThickness="1">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Border BorderBrush="#D4D4D4" BorderThickness="0,0,0,1" Background="#F5F5F5" Padding="8,6">
+                                        <Grid ColumnDefinitions="Auto,2*,2*,3*">
+                                            <TextBlock Text="Enabled" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="3" Text="Extended Info" FontWeight="SemiBold"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <ListBox Grid.Row="1"
+                                             MinHeight="220"
+                                             ItemsSource="{Binding Plugins}"
+                                             SelectedItem="{Binding SelectedPlugin}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:OptionsPluginItem">
+                                                <Border BorderBrush="#E6E6E6" BorderThickness="0,0,0,1" Padding="8,5">
+                                                    <Grid ColumnDefinitions="Auto,2*,2*,3*">
+                                                        <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding Type}"/>
+                                                        <TextBlock Grid.Column="3" Text="{Binding ExtendedInfo}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
                                 </Grid>
                             </Border>
+                        </StackPanel>
 
-                            <ListBox Grid.Row="1"
-                                     ItemsSource="{Binding Plugins}"
-                                     SelectedItem="{Binding SelectedPlugin}">
+                        <StackPanel IsVisible="{Binding ShowPluginActionsSection}"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                            <Button Content="Refresh"
+                                    MinWidth="90"
+                                    Command="{Binding RefreshPluginsCommand}"/>
+                            <Button Content="Configure"
+                                    MinWidth="90"
+                                    Command="{Binding ConfigurePluginCommand}"/>
+                        </StackPanel>
+
+                        <TextBlock IsVisible="{Binding ShowPluginInfoSection}"
+                                   Foreground="#404040"
+                                   Text="{Binding InfoMessage}"
+                                   TextWrapping="Wrap"/>
+
+                        <StackPanel IsVisible="{Binding ShowLanguageSection}" Spacing="8">
+                            <TextBlock Text="Interface Language" FontSize="15" FontWeight="SemiBold"/>
+                            <ListBox MinHeight="220"
+                                     ItemsSource="{Binding Languages}"
+                                     SelectedItem="{Binding SelectedLanguage}">
                                 <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:OptionsPluginItem">
-                                        <Border BorderBrush="#E6E6E6" BorderThickness="0,0,0,1" Padding="8,5">
-                                            <Grid ColumnDefinitions="Auto,2*,2*,3*">
-                                                <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding Type}"/>
-                                                <TextBlock Grid.Column="3" Text="{Binding ExtendedInfo}"/>
-                                            </Grid>
-                                        </Border>
+                                    <DataTemplate x:DataType="vm:LanguageItem">
+                                        <TextBlock Text="{Binding DisplayText}"/>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                        </Grid>
-                    </Border>
+                        </StackPanel>
 
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Refresh"
-                                MinWidth="90"
-                                Command="{Binding RefreshPluginsCommand}"/>
-                        <Button Content="Configure"
-                                MinWidth="90"
-                                Command="{Binding ConfigurePluginCommand}"/>
+                        <Border IsVisible="{Binding ShowNoSearchResults}"
+                                Background="#FFF8E1"
+                                BorderBrush="#E5D39A"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="10">
+                            <TextBlock Text="No settings match the current search."
+                                       TextWrapping="Wrap"/>
+                        </Border>
                     </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
 
-                    <TextBlock Grid.Row="4"
-                               Foreground="#404040"
-                               Text="{Binding InfoMessage}"
-                               TextWrapping="Wrap"/>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Language">
-                <Grid Margin="10" RowDefinitions="Auto,*" RowSpacing="8">
-                    <TextBlock Text="Select interface language"/>
-                    <ListBox Grid.Row="1"
-                             ItemsSource="{Binding Languages}"
-                             SelectedItem="{Binding SelectedLanguage}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:LanguageItem">
-                                <TextBlock Text="{Binding DisplayText}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </TabItem>
-        </TabControl>
-
-        <StackPanel Grid.Row="1"
+        <StackPanel Grid.Row="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="8"
-                    Margin="0,12,0,0">
+                    Margin="0,2,0,0">
             <Button Content="OK"
                     MinWidth="90"
+                    IsDefault="True"
                     Command="{Binding ConfirmCommand}"/>
             <Button Content="Cancel"
                     MinWidth="90"
+                    IsCancel="True"
                     Click="OnCancelClicked"/>
         </StackPanel>
     </Grid>

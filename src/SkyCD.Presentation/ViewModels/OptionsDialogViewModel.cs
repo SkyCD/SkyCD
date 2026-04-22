@@ -50,6 +50,44 @@ public partial class OptionsDialogViewModel : ObservableObject
     [ObservableProperty]
     private int selectedTabIndex;
 
+    [ObservableProperty]
+    private string settingsSearchText = string.Empty;
+
+    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
+
+    public bool IsPluginsCategorySelected => SelectedTabIndex == 0;
+
+    public bool IsLanguageCategorySelected => SelectedTabIndex == 1;
+
+    public bool ShowPluginPathSection =>
+        IsPluginsCategorySelected &&
+        MatchesSearch("plugin path", "path", "browse", "directory");
+
+    public bool ShowPluginListSection =>
+        IsPluginsCategorySelected &&
+        MatchesSearch("plugin list", "plugins", "enabled", "name", "type", "state", "source");
+
+    public bool ShowPluginActionsSection =>
+        IsPluginsCategorySelected &&
+        MatchesSearch("actions", "refresh", "configure", "plugin actions");
+
+    public bool ShowPluginInfoSection =>
+        IsPluginsCategorySelected &&
+        MatchesSearch("status", "info", "message", "plugin status");
+
+    public bool ShowLanguageSection =>
+        IsLanguageCategorySelected &&
+        MatchesSearch("language", "interface language", "localization");
+
+    public bool HasVisibleCategoryContent =>
+        ShowPluginPathSection ||
+        ShowPluginListSection ||
+        ShowPluginActionsSection ||
+        ShowPluginInfoSection ||
+        ShowLanguageSection;
+
+    public bool ShowNoSearchResults => !HasVisibleCategoryContent;
+
     public event EventHandler? BrowsePluginPathRequested;
 
     public event EventHandler? RefreshPluginsRequested;
@@ -142,5 +180,50 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        if (value < 0)
+        {
+            SelectedTabIndex = 0;
+            return;
+        }
+
+        if (value >= SettingCategories.Count)
+        {
+            SelectedTabIndex = SettingCategories.Count - 1;
+            return;
+        }
+
+        NotifySettingsVisibilityChanged();
+    }
+
+    partial void OnSettingsSearchTextChanged(string value)
+    {
+        NotifySettingsVisibilityChanged();
+    }
+
+    private bool MatchesSearch(params string[] terms)
+    {
+        if (string.IsNullOrWhiteSpace(SettingsSearchText))
+        {
+            return true;
+        }
+
+        return terms.Any(term => term.Contains(SettingsSearchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void NotifySettingsVisibilityChanged()
+    {
+        OnPropertyChanged(nameof(IsPluginsCategorySelected));
+        OnPropertyChanged(nameof(IsLanguageCategorySelected));
+        OnPropertyChanged(nameof(ShowPluginPathSection));
+        OnPropertyChanged(nameof(ShowPluginListSection));
+        OnPropertyChanged(nameof(ShowPluginActionsSection));
+        OnPropertyChanged(nameof(ShowPluginInfoSection));
+        OnPropertyChanged(nameof(ShowLanguageSection));
+        OnPropertyChanged(nameof(HasVisibleCategoryContent));
+        OnPropertyChanged(nameof(ShowNoSearchResults));
     }
 }
