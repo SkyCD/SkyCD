@@ -142,4 +142,36 @@ public class OptionsDialogViewModelTests
         Assert.False(vm.HasVisibleCategoryContent);
         Assert.True(vm.ShowNoSearchResults);
     }
+
+    [Fact]
+    public void SearchText_FiltersPluginsByContent()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SelectedTabIndex = 0;
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
+        ]);
+
+        vm.SettingsSearchText = "xml";
+
+        Assert.Single(vm.FilteredPlugins);
+        Assert.Equal("XML", vm.FilteredPlugins[0].Name);
+        Assert.True(vm.ShowPluginListSection);
+    }
+
+    [Fact]
+    public void SearchText_FiltersLanguagesByContent()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+        vm.SelectedTabIndex = 1;
+
+        vm.SettingsSearchText = "lith";
+
+        Assert.Single(vm.FilteredLanguages);
+        Assert.Equal("Lithuanian", vm.FilteredLanguages[0].Name);
+        Assert.True(vm.ShowLanguageSection);
+        Assert.False(vm.ShowNoSearchResults);
+    }
 }

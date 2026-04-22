@@ -103,7 +103,7 @@
                                     </Border>
                                     <ListBox Grid.Row="1"
                                              MinHeight="220"
-                                             ItemsSource="{Binding Plugins}"
+                                             ItemsSource="{Binding FilteredPlugins}"
                                              SelectedItem="{Binding SelectedPlugin}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:OptionsPluginItem">
@@ -149,7 +149,7 @@
                                 <TextBlock Text="Language:" VerticalAlignment="Top"/>
                                 <ListBox Grid.Column="1"
                                          MinHeight="220"
-                                         ItemsSource="{Binding Languages}"
+                                         ItemsSource="{Binding FilteredLanguages}"
                                          SelectedItem="{Binding SelectedLanguage}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:LanguageItem">

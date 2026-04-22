@@ -26,11 +26,16 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         selectedLanguage = Languages[0];
+        RefreshFilteredContent();
     }
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
+    public ObservableCollection<OptionsPluginItem> FilteredPlugins { get; } = [];
+
     public ObservableCollection<LanguageItem> Languages { get; } = [];
+
+    public ObservableCollection<LanguageItem> FilteredLanguages { get; } = [];
 
     [ObservableProperty]
     private string pluginPath = string.Empty;
@@ -63,11 +68,11 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowPluginPathSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("plugin path", "path", "browse", "directory");
+        MatchesSearch("plugin path", "path", "browse", "directory", PluginPath);
 
     public bool ShowPluginListSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("plugin list", "plugins", "enabled", "name", "type", "state", "source");
+        (FilteredPlugins.Count > 0 || MatchesSearch("plugin list", "plugins", "enabled", "name", "type", "state", "source"));
 
     public bool ShowPluginActionsSection =>
         IsPluginsCategorySelected &&
@@ -75,11 +80,11 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowPluginInfoSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("status", "info", "message", "plugin status");
+        MatchesSearch("status", "info", "message", "plugin status", InfoMessage);
 
     public bool ShowLanguageSection =>
         IsLanguageCategorySelected &&
-        MatchesSearch("language", "interface language", "localization");
+        (FilteredLanguages.Count > 0 || MatchesSearch("language", "interface language", "localization"));
 
     public bool HasVisibleCategoryContent =>
         ShowPluginPathSection ||
@@ -141,6 +146,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         SelectedPlugin = Plugins.FirstOrDefault();
         InfoMessage = $"Loaded {Plugins.Count} plugin(s).";
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+        RefreshFilteredContent();
     }
 
     public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
@@ -203,6 +209,16 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     partial void OnSettingsSearchTextChanged(string value)
     {
+        RefreshFilteredContent();
+    }
+
+    partial void OnPluginPathChanged(string value)
+    {
+        NotifySettingsVisibilityChanged();
+    }
+
+    partial void OnInfoMessageChanged(string value)
+    {
         NotifySettingsVisibilityChanged();
     }
 
@@ -214,6 +230,29 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         return terms.Any(term => term.Contains(SettingsSearchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void RefreshFilteredContent()
+    {
+        FilteredPlugins.Clear();
+        foreach (var plugin in Plugins)
+        {
+            if (MatchesSearch(plugin.Name, plugin.Type, plugin.ExtendedInfo, plugin.Id))
+            {
+                FilteredPlugins.Add(plugin);
+            }
+        }
+
+        FilteredLanguages.Clear();
+        foreach (var language in Languages)
+        {
+            if (MatchesSearch(language.Name, language.DisplayText))
+            {
+                FilteredLanguages.Add(language);
+            }
+        }
+
+        NotifySettingsVisibilityChanged();
     }
 
     private void NotifySettingsVisibilityChanged()
