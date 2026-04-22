@@ -56,7 +56,8 @@ public class AboutDialogViewModelTests
     public void Constructor_UsesLicenseFallback_WhenLicenseFileIsMissing()
     {
         var baseDirectory = Path.Combine(Path.GetTempPath(), $"skycd-about-{Guid.NewGuid():N}");
-        var expectedPath = Path.Combine(baseDirectory, "LICENSE.md");
+        var expectedMarkdownPath = Path.Combine(baseDirectory, "LICENSE.md");
+        var expectedPlainPath = Path.Combine(baseDirectory, "LICENSE");
 
         var vm = new AboutDialogViewModel(
             "SkyCD",
@@ -65,8 +66,29 @@ public class AboutDialogViewModelTests
             loadedAssemblies: [typeof(string).Assembly],
             baseDirectory: baseDirectory);
 
-        Assert.Equal(expectedPath, vm.LicensePath);
-        Assert.Equal($"Not found. Expected at: {expectedPath}", vm.LicenseText);
+        Assert.Equal(expectedMarkdownPath, vm.LicensePath);
+        Assert.Equal($"Not found. Expected at: {expectedMarkdownPath} or {expectedPlainPath}", vm.LicenseText);
+    }
+
+    [Fact]
+    public void Constructor_LoadsLicense_FromParentDirectoryPlainLicenseFile()
+    {
+        var rootDirectory = Path.Combine(Path.GetTempPath(), $"skycd-about-{Guid.NewGuid():N}");
+        var childDirectory = Path.Combine(rootDirectory, "bin", "Debug", "net10.0");
+        Directory.CreateDirectory(childDirectory);
+
+        var licensePath = Path.Combine(rootDirectory, "LICENSE");
+        File.WriteAllText(licensePath, "Test License Content");
+
+        var vm = new AboutDialogViewModel(
+            "SkyCD",
+            "3.0.0",
+            "https://github.com/SkyCD/SkyCD",
+            loadedAssemblies: [typeof(string).Assembly],
+            baseDirectory: childDirectory);
+
+        Assert.Equal(licensePath, vm.LicensePath);
+        Assert.Equal("Test License Content", vm.LicenseText);
     }
 
     [Fact]

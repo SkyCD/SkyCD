@@ -42,7 +42,7 @@ public partial class AboutDialogViewModel : ObservableObject
             ? AppContext.BaseDirectory
             : baseDirectory;
 
-        LicensePath = Path.Combine(normalizedBaseDirectory, "LICENSE.md");
+        LicensePath = ResolveLicensePath(normalizedBaseDirectory) ?? Path.Combine(normalizedBaseDirectory, "LICENSE.md");
         LicenseText = LoadLicenseText(normalizedBaseDirectory);
 
         LoadedAssemblies = new ObservableCollection<LoadedAssemblyEntry>(
@@ -144,10 +144,43 @@ public partial class AboutDialogViewModel : ObservableObject
 
     public static string LoadLicenseText(string baseDirectory)
     {
-        var licensePath = Path.Combine(baseDirectory, "LICENSE.md");
-        return File.Exists(licensePath)
-            ? File.ReadAllText(licensePath)
-            : $"Not found. Expected at: {licensePath}";
+        var resolvedPath = ResolveLicensePath(baseDirectory);
+        if (!string.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath))
+        {
+            return File.ReadAllText(resolvedPath);
+        }
+
+        var expectedMarkdownPath = Path.Combine(baseDirectory, "LICENSE.md");
+        var expectedPlainPath = Path.Combine(baseDirectory, "LICENSE");
+        return $"Not found. Expected at: {expectedMarkdownPath} or {expectedPlainPath}";
+    }
+
+    private static string? ResolveLicensePath(string baseDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(baseDirectory))
+        {
+            return null;
+        }
+
+        var current = new DirectoryInfo(baseDirectory);
+        for (var depth = 0; depth < 8 && current is not null; depth++)
+        {
+            var markdownPath = Path.Combine(current.FullName, "LICENSE.md");
+            if (File.Exists(markdownPath))
+            {
+                return markdownPath;
+            }
+
+            var plainPath = Path.Combine(current.FullName, "LICENSE");
+            if (File.Exists(plainPath))
+            {
+                return plainPath;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
     }
 
     private static IReadOnlyList<LoadedAssemblyEntry> BuildLoadedAssemblyEntries(IEnumerable<Assembly> assemblies)
