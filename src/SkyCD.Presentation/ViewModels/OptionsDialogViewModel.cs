@@ -55,6 +55,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
 
+    public string CurrentCategoryName => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
+
     public bool IsPluginsCategorySelected => SelectedTabIndex == 0;
 
     public bool IsLanguageCategorySelected => SelectedTabIndex == 1;
@@ -216,6 +218,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     private void NotifySettingsVisibilityChanged()
     {
+        OnPropertyChanged(nameof(CurrentCategoryName));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));
         OnPropertyChanged(nameof(ShowPluginPathSection));
