@@ -81,7 +81,16 @@ public sealed class CliHost(
 
         if (TrySplitBuiltIn(normalized, out var builtInCommand, out var builtInArguments))
         {
-            var exitCode = await ExecuteBuiltInAsync(builtInCommand, builtInArguments, jsonOutput, routing, pluginApi, registry, cancellationToken);
+            var exitCode = await ExecuteBuiltInAsync(
+                builtInCommand,
+                builtInArguments,
+                jsonOutput,
+                routing,
+                pluginApi,
+                registry,
+                runtime.DiscoveredPlugins,
+                runtime.PluginDirectories,
+                cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
 
@@ -103,6 +112,8 @@ public sealed class CliHost(
         FileFormatRoutingService routing,
         IHostCliApi hostApi,
         CliContributionRegistry registry,
+        IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
+        IReadOnlyList<string> pluginDirectories,
         CancellationToken cancellationToken)
     {
         try
@@ -111,8 +122,8 @@ public sealed class CliHost(
             {
                 "open" => await ExecuteOpenAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
                 "convert" => await ExecuteConvertAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
-                "list-formats" => await ExecuteListFormatsAsync(jsonOutput, routing),
-                "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, routing),
+                "list-formats" => await ExecuteListFormatsAsync(jsonOutput, routing, pluginDirectories),
+                "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, routing, discoveredPlugins, pluginDirectories),
                 _ => CliExitCodes.InvalidArguments
             };
         }
@@ -265,7 +276,10 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<int> ExecuteListFormatsAsync(bool jsonOutput, FileFormatRoutingService routing)
+    private async Task<int> ExecuteListFormatsAsync(
+        bool jsonOutput,
+        FileFormatRoutingService routing,
+        IReadOnlyList<string> pluginDirectories)
     {
         var routes = routing.GetOpenFormats()
             .Concat(routing.GetSaveFormats())
@@ -283,6 +297,7 @@ public sealed class CliHost(
         if (routes.Count == 0)
         {
             await stdout.WriteLineAsync("No file format plugins were found.");
+            await stdout.WriteLineAsync($"Plugin directories checked: {string.Join(", ", pluginDirectories)}");
             return CliExitCodes.Success;
         }
 
@@ -297,15 +312,27 @@ public sealed class CliHost(
     private async Task<int> ExecutePluginsListAsync(
         bool jsonOutput,
         CliContributionRegistry registry,
-        FileFormatRoutingService routing)
+        FileFormatRoutingService routing,
+        IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
+        IReadOnlyList<string> pluginDirectories)
     {
-        var pluginInfo = routing.GetOpenFormats()
+        var formatsByPlugin = routing.GetOpenFormats()
             .Concat(routing.GetSaveFormats())
             .GroupBy(static route => route.PluginId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.Select(route => route.FormatId).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(static id => id).ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var pluginInfo = discoveredPlugins
+            .Select(plugin => new
             {
-                PluginId = group.Key,
-                Formats = group.Select(route => route.FormatId).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(static id => id).ToArray()
+                PluginId = plugin.Plugin.Descriptor.Id,
+                DisplayName = plugin.Plugin.Descriptor.DisplayName,
+                Capabilities = plugin.Capabilities.Select(static capability => capability.GetType().Name).OrderBy(static name => name).ToArray(),
+                Formats = formatsByPlugin.TryGetValue(plugin.Plugin.Descriptor.Id, out var formats)
+                    ? formats
+                    : Array.Empty<string>()
             })
             .OrderBy(static plugin => plugin.PluginId, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -315,7 +342,8 @@ public sealed class CliHost(
             await stdout.WriteLineAsync(JsonSerializer.Serialize(new
             {
                 plugins = pluginInfo,
-                cliCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase).ToArray()
+                cliCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
+                pluginDirectories = pluginDirectories
             }, jsonOptions));
             return CliExitCodes.Success;
         }
@@ -328,7 +356,10 @@ public sealed class CliHost(
         {
             foreach (var plugin in pluginInfo)
             {
-                await stdout.WriteLineAsync($"{plugin.PluginId}: {string.Join(", ", plugin.Formats)}");
+                var formats = plugin.Formats.Length == 0 ? "-" : string.Join(", ", plugin.Formats);
+                await stdout.WriteLineAsync($"{plugin.PluginId} ({plugin.DisplayName})");
+                await stdout.WriteLineAsync($"  capabilities: {string.Join(", ", plugin.Capabilities)}");
+                await stdout.WriteLineAsync($"  formats: {formats}");
             }
         }
 
@@ -341,6 +372,8 @@ public sealed class CliHost(
                 await stdout.WriteLineAsync($"  {path}");
             }
         }
+
+        await stdout.WriteLineAsync($"Plugin directories checked: {string.Join(", ", pluginDirectories)}");
 
         return CliExitCodes.Success;
     }
@@ -460,33 +493,62 @@ public sealed class CliHost(
     {
         var builtIn = new[]
         {
-            "skycd open <file> [--format <id>] [--json]",
-            "skycd convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
-            "skycd list-formats [--json]",
-            "skycd plugins list [--json]",
-            "skycd --help",
-            "skycd --version"
+            "open <file> [--json]",
+            "convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
+            "list-formats [--json]",
+            "plugins list [--json]"
         };
 
         if (jsonOutput)
         {
             await stdout.WriteLineAsync(JsonSerializer.Serialize(new
             {
+                description = "SkyCD command line interface",
+                usage = "skycd [options] [command]",
+                options = new[]
+                {
+                    "--help     Display this help",
+                    "--version  Display application version",
+                    "--json     Use JSON output where supported"
+                },
                 builtInCommands = builtIn,
                 pluginCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray()
             }, jsonOptions));
             return;
         }
 
-        await stdout.WriteLineAsync("SkyCD CLI commands:");
+        await stdout.WriteLineAsync("Description:");
+        await stdout.WriteLineAsync("  SkyCD command line interface");
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Usage:");
+        await stdout.WriteLineAsync("  skycd [options] [command]");
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Options:");
+        await stdout.WriteLineAsync("  --help       Display this help");
+        await stdout.WriteLineAsync("  --version    Display application version");
+        await stdout.WriteLineAsync("  --json       Use JSON output where supported");
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Commands:");
         foreach (var command in builtIn)
         {
             await stdout.WriteLineAsync($"  {command}");
         }
 
-        foreach (var pluginCommand in pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase))
+        await stdout.WriteLineAsync("");
+        await stdout.WriteLineAsync("Notes:");
+        await stdout.WriteLineAsync("  open infers format from file extension by default.");
+        await stdout.WriteLineAsync("  Use --format <id> to override inferred format for open/convert.");
+
+        var contributedCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (contributedCommands.Length > 0)
         {
-            await stdout.WriteLineAsync($"  skycd {pluginCommand}");
+            await stdout.WriteLineAsync("");
+            await stdout.WriteLineAsync("Plugin Commands:");
+        }
+
+        foreach (var pluginCommand in contributedCommands)
+        {
+            await stdout.WriteLineAsync($"  {pluginCommand}");
         }
     }
 

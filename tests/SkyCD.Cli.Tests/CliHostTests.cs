@@ -77,7 +77,8 @@ public sealed class CliHostTests
             (_, _) => Task.FromResult(new CliPluginRuntime
             {
                 DiscoveredPlugins = plugins.Select(ToDiscoveredPlugin).ToList(),
-                Diagnostics = []
+                Diagnostics = [],
+                PluginDirectories = []
             }));
     }
 
