@@ -1,7 +1,6 @@
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Loading;
-using System.Reflection;
 
 namespace SkyCD.Cli;
 
@@ -18,28 +17,19 @@ public sealed class CliPluginRuntime : IAsyncDisposable
     public static async Task<CliPluginRuntime> LoadAsync(Version hostVersion, CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        var loader = new PluginDirectoryLoader();
-        var loadResult = loader.LoadFromDirectories(pluginDirectories, new PluginLoadOptions
+        var discoveryService = new PluginDirectoryDiscoveryService();
+        var loadResult = discoveryService.Discover(pluginDirectories, new PluginLoadOptions
         {
             HostVersion = hostVersion,
             EnableAssemblyIsolation = false
-        });
-
-        var discoveredPlugins = loadResult.Plugins.ToList();
-        var diagnostics = loadResult.Diagnostics
-            .Select(diagnostic => $"{(diagnostic.IsError ? "error" : "info")}: {diagnostic.PluginId}: {diagnostic.Message}")
-            .ToList();
-
-        if (discoveredPlugins.Count == 0)
-        {
-            diagnostics.Add("info: <fallback>: No manifest-based plugins loaded. Falling back to assembly scan.");
-            discoveredPlugins.AddRange(DiscoverFromAssemblies(pluginDirectories, hostVersion, diagnostics));
-        }
+        }, fallbackToAssemblyScan: true);
 
         var runtime = new CliPluginRuntime
         {
-            DiscoveredPlugins = discoveredPlugins,
-            Diagnostics = diagnostics,
+            DiscoveredPlugins = loadResult.Plugins.ToList(),
+            Diagnostics = loadResult.Diagnostics
+                .Select(diagnostic => $"{(diagnostic.IsError ? "error" : "info")}: {diagnostic.PluginId}: {diagnostic.Message}")
+                .ToList(),
             PluginDirectories = pluginDirectories
         };
 
@@ -108,42 +98,5 @@ public sealed class CliPluginRuntime : IAsyncDisposable
             candidates.Add(Path.Combine(current.FullName, "Plugins", "samples"));
             current = current.Parent;
         }
-    }
-
-    private static IReadOnlyList<DiscoveredPlugin> DiscoverFromAssemblies(
-        IReadOnlyList<string> pluginDirectories,
-        Version hostVersion,
-        ICollection<string> diagnostics)
-    {
-        var discoveryService = new PluginDiscoveryService();
-        var discovered = new List<DiscoveredPlugin>();
-        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var directory in pluginDirectories.Where(Directory.Exists))
-        {
-            foreach (var dllPath in Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories))
-            {
-                try
-                {
-                    var assembly = Assembly.LoadFrom(dllPath);
-                    var plugins = discoveryService.DiscoverFromAssembly(assembly, hostVersion);
-                    foreach (var plugin in plugins)
-                    {
-                        if (!seenIds.Add(plugin.Plugin.Descriptor.Id))
-                        {
-                            continue;
-                        }
-
-                        discovered.Add(plugin);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    diagnostics.Add($"info: <assembly-scan>: Skipped '{dllPath}': {exception.Message}");
-                }
-            }
-        }
-
-        return discovered;
     }
 }

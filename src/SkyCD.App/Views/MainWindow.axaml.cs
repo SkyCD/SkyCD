@@ -8,13 +8,12 @@ using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Loading;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -712,26 +711,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        var hostVersion = new Version(3, 0, 0);
-        var discoveryService = new SkyCD.Plugin.Runtime.Discovery.PluginDiscoveryService();
-        var discoveredPlugins = new List<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>();
-
-        var dllPaths = Directory.GetFiles(pluginPath, "*.dll", SearchOption.AllDirectories);
-        foreach (var dllPath in dllPaths)
+        var discoveryService = new PluginDirectoryDiscoveryService();
+        var loadResult = discoveryService.Discover([pluginPath], new PluginLoadOptions
         {
-            try
-            {
-                var assembly = Assembly.LoadFrom(dllPath);
-                var plugins = discoveryService.DiscoverFromAssembly(assembly, hostVersion);
-                discoveredPlugins.AddRange(plugins);
-            }
-            catch
-            {
-                // Skip assemblies that can't be loaded
-            }
-        }
+            HostVersion = new Version(3, 0, 0),
+            EnableAssemblyIsolation = false
+        }, fallbackToAssemblyScan: true);
 
-        pluginCatalog.SetPlugins(discoveredPlugins);
+        pluginCatalog.SetPlugins(loadResult.Plugins);
     }
 
     private static string ResolveDefaultPluginPath()
