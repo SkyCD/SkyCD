@@ -22,6 +22,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/SkyCD.App/SkyCD.App.csproj" />
+    <Project Path="src/SkyCD.Cli/SkyCD.Cli.csproj" />
     <Project Path="src/SkyCD.UI/SkyCD.UI.csproj" />
     <Project Path="src/SkyCD.Application/SkyCD.Application.csproj" />
     <Project Path="src/SkyCD.Domain/SkyCD.Domain.csproj" />
@@ -33,6 +34,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj" />
+    <Project Path="tests/SkyCD.Cli.Tests/SkyCD.Cli.Tests.csproj" />
     <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
     <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />

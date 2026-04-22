@@ -8,13 +8,12 @@ using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Loading;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -295,7 +294,43 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.CompleteOpenCatalog();
+        var openFormats = GetDistinctRoutes(fileFormatRoutingService.GetOpenFormats());
+        var fileTypeChoices = BuildFileTypeChoices(openFormats);
+        fileTypeChoices.Add(new FilePickerFileType("All files")
+        {
+            Patterns = ["*.*"]
+        });
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open catalog",
+            AllowMultiple = false,
+            FileTypeFilter = fileTypeChoices
+        });
+
+        var localPath = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var format = ResolveRouteByFileName(localPath, openFormats);
+            await using var source = File.OpenRead(localPath);
+            await fileFormatRoutingService.ReadAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+            {
+                FormatId = format.FormatId,
+                Source = source,
+                FileName = Path.GetFileName(localPath)
+            });
+
+            vm.CompleteOpenCatalog();
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Failed to open catalog: {ex.Message}";
+        }
     }
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
@@ -308,17 +343,8 @@ public partial class MainWindow : Window
         var targetPath = vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            var saveFormats = fileFormatRoutingService.GetSaveFormats();
-            var fileTypeChoices = new List<FilePickerFileType>();
-
-            foreach (var format in saveFormats)
-            {
-                var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
-                fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
-                {
-                    Patterns = patterns
-                });
-            }
+            var saveFormats = GetDistinctRoutes(fileFormatRoutingService.GetSaveFormats());
+            var fileTypeChoices = BuildFileTypeChoices(saveFormats);
 
             fileTypeChoices.Add(new FilePickerFileType("All files")
             {
@@ -366,17 +392,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var saveFormats = fileFormatRoutingService.GetSaveFormats();
-        var fileTypeChoices = new List<FilePickerFileType>();
-
-        foreach (var format in saveFormats)
-        {
-            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
-            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
-            {
-                Patterns = patterns
-            });
-        }
+        var saveFormats = GetDistinctRoutes(fileFormatRoutingService.GetSaveFormats());
+        var fileTypeChoices = BuildFileTypeChoices(saveFormats);
 
         fileTypeChoices.Add(new FilePickerFileType("All files")
         {
@@ -710,26 +727,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        var hostVersion = new Version(3, 0, 0);
-        var discoveryService = new SkyCD.Plugin.Runtime.Discovery.PluginDiscoveryService();
-        var discoveredPlugins = new List<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>();
-
-        var dllPaths = Directory.GetFiles(pluginPath, "*.dll", SearchOption.AllDirectories);
-        foreach (var dllPath in dllPaths)
+        var discoveryService = new PluginDirectoryDiscoveryService();
+        var loadResult = discoveryService.Discover([pluginPath], new PluginLoadOptions
         {
-            try
-            {
-                var assembly = Assembly.LoadFrom(dllPath);
-                var plugins = discoveryService.DiscoverFromAssembly(assembly, hostVersion);
-                discoveredPlugins.AddRange(plugins);
-            }
-            catch
-            {
-                // Skip assemblies that can't be loaded
-            }
-        }
+            HostVersion = new Version(3, 0, 0),
+            EnableAssemblyIsolation = false
+        }, fallbackToAssemblyScan: true);
 
-        pluginCatalog.SetPlugins(discoveredPlugins);
+        pluginCatalog.SetPlugins(loadResult.Plugins);
     }
 
     private static string ResolveDefaultPluginPath()
@@ -791,5 +796,54 @@ public partial class MainWindow : Window
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
+    }
+
+    private static IReadOnlyList<FileFormatRoute> GetDistinctRoutes(IEnumerable<FileFormatRoute> routes)
+    {
+        return routes
+            .GroupBy(static route => route.FormatId, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .OrderBy(static route => route.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static List<FilePickerFileType> BuildFileTypeChoices(IEnumerable<FileFormatRoute> routes)
+    {
+        var choices = new List<FilePickerFileType>();
+        foreach (var route in routes)
+        {
+            var patterns = route.Extensions
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(static extension => $"*{extension}")
+                .ToArray();
+
+            choices.Add(new FilePickerFileType(route.DisplayName)
+            {
+                Patterns = patterns
+            });
+        }
+
+        return choices;
+    }
+
+    private static FileFormatRoute ResolveRouteByFileName(string path, IReadOnlyList<FileFormatRoute> routes)
+    {
+        var extension = Path.GetExtension(path);
+        if (!string.IsNullOrWhiteSpace(extension))
+        {
+            var byExtension = routes.FirstOrDefault(route =>
+                route.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
+            if (byExtension is not null)
+            {
+                return byExtension;
+            }
+        }
+
+        if (routes.Count > 0)
+        {
+            return routes[0];
+        }
+
+        throw new InvalidOperationException("No readable file format plugins are available.");
     }
 }
