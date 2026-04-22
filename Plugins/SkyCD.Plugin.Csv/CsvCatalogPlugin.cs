@@ -9,68 +9,48 @@ public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
 {
     private static readonly string[] HeaderColumns = ["NodeId", "ParentId", "Kind", "Name", "SizeBytes"];
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.csv",
-        "CSV Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes CSV file format support.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-csv",
             "SkyCD CSV",
             [".csv"],
-            CanRead: true,
-            CanWrite: true,
-            MimeType: "text/csv")
+            true,
+            true,
+            "text/csv")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, leaveOpen: true);
             var headerLine = await reader.ReadLineAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(headerLine))
-            {
                 return new FileFormatReadResult { Success = true, Payload = new List<Dictionary<string, object?>>() };
-            }
 
             var actualHeader = ParseCsvLine(headerLine);
             if (!HeaderColumns.SequenceEqual(actualHeader, StringComparer.OrdinalIgnoreCase))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "CSV header must match: NodeId,ParentId,Kind,Name,SizeBytes."
                 };
-            }
 
             var rows = new List<Dictionary<string, object?>>();
             string? line;
             while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
             {
-                if (line.Length == 0)
-                {
-                    continue;
-                }
+                if (line.Length == 0) continue;
 
                 var fields = ParseCsvLine(line);
                 if (fields.Count != HeaderColumns.Length)
-                {
                     return new FileFormatReadResult
                     {
                         Success = false,
                         Error = $"CSV row has {fields.Count} fields, expected {HeaderColumns.Length}."
                     };
-                }
 
                 rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -98,12 +78,13 @@ public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = ResolveRows(request.Payload);
-            using var writer = new StreamWriter(request.Target, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
+            using var writer = new StreamWriter(request.Target, new UTF8Encoding(false), leaveOpen: true);
             await writer.WriteLineAsync(string.Join(",", HeaderColumns));
 
             foreach (var row in rows)
@@ -126,15 +107,38 @@ public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.csv",
+        "CSV Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exposes CSV file format support.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
     private static List<Dictionary<string, object?>> ResolveRows(object? payload)
     {
-        if (payload is List<Dictionary<string, object?>> rows)
-        {
-            return rows;
-        }
+        if (payload is List<Dictionary<string, object?>> rows) return rows;
 
         if (payload is JsonElement { ValueKind: JsonValueKind.Array } arrayElement)
-        {
             return arrayElement.EnumerateArray()
                 .Select(element => new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -145,7 +149,6 @@ public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
                     ["SizeBytes"] = ReadJsonValue(element, "sizeBytes")
                 })
                 .ToList();
-        }
 
         throw new InvalidOperationException("CSV payload must be a row list or JSON array.");
     }
@@ -159,10 +162,7 @@ public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
 
     private static string EscapeCsv(string? value)
     {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
+        if (string.IsNullOrEmpty(value)) return string.Empty;
 
         var escaped = value.Replace("\"", "\"\"");
         return escaped.Contains(',') || escaped.Contains('"') || escaped.Contains('\n') || escaped.Contains('\r')

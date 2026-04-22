@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Runtime.Loading;
 
 /// <summary>
-/// Manifest metadata loaded from plugin.json.
+///     Manifest metadata loaded from plugin.json.
 /// </summary>
 public sealed class PluginManifest
 {

@@ -3,6 +3,7 @@ using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 
@@ -14,7 +15,8 @@ public partial class DetailsListView : UserControl
         AvaloniaProperty.Register<DetailsListView, IEnumerable?>(nameof(ItemsSource));
 
     public static readonly StyledProperty<object?> SelectedItemProperty =
-        AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+        AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<object?> HeaderContentProperty =
         AvaloniaProperty.Register<DetailsListView, object?>(nameof(HeaderContent));
@@ -28,16 +30,11 @@ public partial class DetailsListView : UserControl
     public static readonly StyledProperty<double> ListMinWidthProperty =
         AvaloniaProperty.Register<DetailsListView, double>(nameof(ListMinWidth));
 
-    public new event EventHandler<TappedEventArgs>? DoubleTapped;
-
     public DetailsListView()
     {
         AvaloniaXamlLoader.Load(this);
         var listBox = this.FindControl<ListBox>("InnerListBox");
-        if (listBox != null)
-        {
-            listBox.DoubleTapped += (s, e) => DoubleTapped?.Invoke(this, e);
-        }
+        if (listBox != null) listBox.DoubleTapped += (s, e) => DoubleTapped?.Invoke(this, e);
     }
 
     public IEnumerable? ItemsSource
@@ -75,4 +72,6 @@ public partial class DetailsListView : UserControl
         get => GetValue(ListMinWidthProperty);
         set => SetValue(ListMinWidthProperty, value);
     }
+
+    public new event EventHandler<TappedEventArgs>? DoubleTapped;
 }

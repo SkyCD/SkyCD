@@ -3,8 +3,8 @@ using SkyCD.Presentation.ViewModels;
 namespace SkyCD.App.Tests;
 
 /// <summary>
-/// UI Smoke tests for #142: Verify core UI functionality and parity with legacy shell.
-/// These tests validate key dialog flows and command execution paths.
+///     UI Smoke tests for #142: Verify core UI functionality and parity with legacy shell.
+///     These tests validate key dialog flows and command execution paths.
 /// </summary>
 public class UISmokeTests
 {

@@ -1,5 +1,4 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.SevenZip;
@@ -26,12 +25,13 @@ public class SevenZipArchiveIndexPluginTests
         var service = new FileFormatRoutingService(CreateCatalog(new FakeReader([])));
         await using var target = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-7z",
-            Target = target,
-            Payload = new { }
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-7z",
+                Target = target,
+                Payload = new { }
+            }));
 
         Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -41,8 +41,9 @@ public class SevenZipArchiveIndexPluginTests
     {
         var reader = new FakeReader(
         [
-            new SevenZipEntryInfo("root/deep/įrašas.txt", IsDirectory: false, SizeBytes: 123, ModifiedUtc: new DateTime(2026, 01, 01, 0, 0, 0, DateTimeKind.Utc)),
-            new SevenZipEntryInfo("root/docs/", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null)
+            new SevenZipEntryInfo("root/deep/įrašas.txt", false, 123,
+                new DateTime(2026, 01, 01, 0, 0, 0, DateTimeKind.Utc)),
+            new SevenZipEntryInfo("root/docs/", true, 0, null)
         ]);
         var service = new FileFormatRoutingService(CreateCatalog(reader));
         await using var source = new MemoryStream([0x37, 0x7A]); // test stream ignored by fake reader
@@ -65,11 +66,12 @@ public class SevenZipArchiveIndexPluginTests
         var service = new FileFormatRoutingService(CreateCatalog(new ThrowingReader()));
         await using var source = new MemoryStream([0x37, 0x7A]);
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-7z",
-            Source = source
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "skycd-7z",
+                Source = source
+            }));
 
         Assert.Contains("SEVENZIP_UNSUPPORTED_METHOD", exception.Message);
     }
@@ -91,7 +93,10 @@ public class SevenZipArchiveIndexPluginTests
 
     private sealed class FakeReader(IReadOnlyCollection<SevenZipEntryInfo> entries) : ISevenZipEntryReader
     {
-        public IReadOnlyCollection<SevenZipEntryInfo> ReadEntries(Stream source) => entries;
+        public IReadOnlyCollection<SevenZipEntryInfo> ReadEntries(Stream source)
+        {
+            return entries;
+        }
     }
 
     private sealed class ThrowingReader : ISevenZipEntryReader

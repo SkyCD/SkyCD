@@ -1,7 +1,7 @@
-using Avalonia.Controls;
-using SkyCD.Presentation.ViewModels;
 using System;
 using System.ComponentModel;
+using Avalonia.Controls;
+using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Views;
 
@@ -15,10 +15,7 @@ public partial class AboutWindow : Window
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (sender is not AboutWindow window)
-        {
-            return;
-        }
+        if (sender is not AboutWindow window) return;
 
         if (window.DataContext is AboutDialogViewModel vm)
         {
@@ -32,8 +29,6 @@ public partial class AboutWindow : Window
         if (sender is AboutDialogViewModel vm &&
             e.PropertyName == nameof(AboutDialogViewModel.DialogAccepted) &&
             vm.DialogAccepted)
-        {
             Close(true);
-        }
     }
 }

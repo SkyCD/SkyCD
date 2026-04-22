@@ -1,7 +1,7 @@
-using SkyCD.App.Models;
 using System;
 using System.IO;
 using System.Text.Json;
+using SkyCD.App.Models;
 
 namespace SkyCD.App.Services;
 
@@ -23,10 +23,7 @@ public sealed class AppOptionsStore
 
     public AppOptions Load()
     {
-        if (!File.Exists(optionsFilePath))
-        {
-            return new AppOptions();
-        }
+        if (!File.Exists(optionsFilePath)) return new AppOptions();
 
         try
         {
@@ -42,10 +39,7 @@ public sealed class AppOptionsStore
     public void Save(AppOptions options)
     {
         var directory = Path.GetDirectoryName(optionsFilePath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
 
         var json = JsonSerializer.Serialize(options, SerializerOptions);
         File.WriteAllText(optionsFilePath, json);

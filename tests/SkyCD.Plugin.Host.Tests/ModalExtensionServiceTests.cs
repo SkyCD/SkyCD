@@ -1,6 +1,5 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
 using SkyCD.Plugin.Abstractions.Lifecycle;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Runtime.Discovery;
 
@@ -21,7 +20,7 @@ public class ModalExtensionServiceTests
                 Input = new ModalPayload("sample.modal.echo.input", new { Name = "SkyCD" }),
                 GrantedPermissions = ["catalog.read"]
             },
-            timeout: TimeSpan.FromSeconds(1));
+            TimeSpan.FromSeconds(1));
 
         Assert.True(result.Success);
         Assert.NotNull(result.Output);
@@ -41,7 +40,7 @@ public class ModalExtensionServiceTests
                 Input = new ModalPayload("wrong.type", null),
                 GrantedPermissions = ["catalog.read"]
             },
-            timeout: TimeSpan.FromSeconds(1));
+            TimeSpan.FromSeconds(1));
 
         Assert.False(result.Success);
         Assert.Contains("Input payload type mismatch", result.Error);
@@ -59,7 +58,7 @@ public class ModalExtensionServiceTests
                 ModalId = "sample.modal.echo",
                 Input = new ModalPayload("sample.modal.echo.input", null)
             },
-            timeout: TimeSpan.FromSeconds(1));
+            TimeSpan.FromSeconds(1));
 
         Assert.False(result.Success);
         Assert.Contains("Missing required permissions", result.Error);
@@ -76,7 +75,7 @@ public class ModalExtensionServiceTests
             {
                 ModalId = "sample.modal.slow"
             },
-            timeout: TimeSpan.FromMilliseconds(50));
+            TimeSpan.FromMilliseconds(50));
 
         Assert.False(result.Success);
         Assert.True(result.Canceled);
@@ -95,8 +94,8 @@ public class ModalExtensionServiceTests
             {
                 ModalId = "sample.modal.locked"
             },
-            timeout: TimeSpan.FromSeconds(1),
-            cancellationToken: cts.Token);
+            TimeSpan.FromSeconds(1),
+            cts.Token);
 
         await Task.Delay(30, cts.Token);
 
@@ -105,8 +104,8 @@ public class ModalExtensionServiceTests
             {
                 ModalId = "sample.modal.locked"
             },
-            timeout: TimeSpan.FromSeconds(1),
-            cancellationToken: cts.Token);
+            TimeSpan.FromSeconds(1),
+            cts.Token);
 
         Assert.False(second.Success);
         Assert.Contains("already active", second.Error);
@@ -142,28 +141,25 @@ public class ModalExtensionServiceTests
 
     private sealed class EchoModalPlugin : IPlugin, IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.echo", "Echo Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public IReadOnlyCollection<ModalDescriptor> GetModals()
+        {
+            return
+            [
+                new ModalDescriptor(
+                    "sample.modal.echo",
+                    "Echo",
+                    600,
+                    320,
+                    ["catalog.read"],
+                    new ModalPayloadContract("sample.modal.echo.input", true),
+                    new ModalPayloadContract("sample.modal.echo.output", false),
+                    true,
+                    false)
+            ];
+        }
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor(
-                "sample.modal.echo",
-                "Echo",
-                Width: 600,
-                Height: 320,
-                RequiredPermissions: ["catalog.read"],
-                InputContract: new ModalPayloadContract("sample.modal.echo.input", IsRequired: true),
-                OutputContract: new ModalPayloadContract("sample.modal.echo.output", IsRequired: false),
-                IsBlocking: true,
-                AllowReentry: false)
-        ];
-
-        public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
+        public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request,
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new ModalOpenResult
             {
@@ -171,47 +167,113 @@ public class ModalExtensionServiceTests
                 Output = new ModalPayload("sample.modal.echo.output", request.Input?.Value)
             });
         }
+
+        public PluginDescriptor Descriptor =>
+            new("tests.modal.echo", "Echo Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class SlowModalPlugin : IPlugin, IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.slow", "Slow Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public IReadOnlyCollection<ModalDescriptor> GetModals()
+        {
+            return
+            [
+                new ModalDescriptor("sample.modal.slow", "Slow", 400, 260)
+            ];
+        }
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor("sample.modal.slow", "Slow", 400, 260)
-        ];
-
-        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
+        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request,
+            CancellationToken cancellationToken = default)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
             return new ModalOpenResult { Success = true };
+        }
+
+        public PluginDescriptor Descriptor =>
+            new("tests.modal.slow", "Slow Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
         }
     }
 
     private sealed class NonReentrantDelayModalPlugin : IPlugin, IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.locked", "Locked Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public IReadOnlyCollection<ModalDescriptor> GetModals()
+        {
+            return
+            [
+                new ModalDescriptor("sample.modal.locked", "Locked", 420, 300, AllowReentry: false)
+            ];
+        }
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor("sample.modal.locked", "Locked", 420, 300, AllowReentry: false)
-        ];
-
-        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
+        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request,
+            CancellationToken cancellationToken = default)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(120), cancellationToken);
             return new ModalOpenResult { Success = true };
+        }
+
+        public PluginDescriptor Descriptor =>
+            new("tests.modal.locked", "Locked Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
         }
     }
 }

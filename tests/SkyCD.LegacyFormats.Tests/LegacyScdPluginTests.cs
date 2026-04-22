@@ -1,4 +1,3 @@
-using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Scd;
 
@@ -12,10 +11,7 @@ public class LegacyScdPluginTests
         var plugin = new LegacyScdPlugin();
         var samplePath = Path.Combine(AppContext.BaseDirectory, "fixtures", "gamez.scd");
 
-        if (!File.Exists(samplePath))
-        {
-            return; // Skip if fixture is not available (e.g., in CI without legacy folder)
-        }
+        if (!File.Exists(samplePath)) return; // Skip if fixture is not available (e.g., in CI without legacy folder)
 
         var bytes = await File.ReadAllBytesAsync(samplePath);
         await using var stream = new MemoryStream(bytes);
@@ -69,10 +65,7 @@ public class LegacyScdPluginTests
         var plugin = new LegacyScdPlugin();
         var samplePath = Path.Combine(AppContext.BaseDirectory, "fixtures", "gamez.scd");
 
-        if (!File.Exists(samplePath))
-        {
-            return; // Skip if fixture is not available (e.g., in CI without legacy folder)
-        }
+        if (!File.Exists(samplePath)) return; // Skip if fixture is not available (e.g., in CI without legacy folder)
         var sourceBytes = await File.ReadAllBytesAsync(samplePath);
         await using var source = new MemoryStream(sourceBytes);
 

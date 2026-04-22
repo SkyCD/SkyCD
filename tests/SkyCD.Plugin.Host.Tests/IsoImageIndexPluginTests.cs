@@ -1,8 +1,7 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Iso;
+using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -26,12 +25,13 @@ public class IsoImageIndexPluginTests
         var service = new FileFormatRoutingService(CreateCatalog(new FakeReader([])));
         await using var target = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-iso",
-            Target = target,
-            Payload = new { }
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-iso",
+                Target = target,
+                Payload = new { }
+            }));
 
         Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -41,9 +41,10 @@ public class IsoImageIndexPluginTests
     {
         var reader = new FakeReader(
         [
-            new IsoEntryInfo("ROOT", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
-            new IsoEntryInfo("ROOT/DEEP", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
-            new IsoEntryInfo("ROOT/DEEP/MOVIE.MKV", IsDirectory: false, SizeBytes: 8589934592L, ModifiedUtc: new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
+            new IsoEntryInfo("ROOT", true, 0, null),
+            new IsoEntryInfo("ROOT/DEEP", true, 0, null),
+            new IsoEntryInfo("ROOT/DEEP/MOVIE.MKV", false, 8589934592L,
+                new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
         ]);
         var service = new FileFormatRoutingService(CreateCatalog(reader));
         await using var source = new MemoryStream([0x43, 0x44]); // fake stream for fixture reader
@@ -78,6 +79,9 @@ public class IsoImageIndexPluginTests
 
     private sealed class FakeReader(IReadOnlyCollection<IsoEntryInfo> entries) : IIsoEntryReader
     {
-        public IReadOnlyCollection<IsoEntryInfo> ReadEntries(Stream source) => entries;
+        public IReadOnlyCollection<IsoEntryInfo> ReadEntries(Stream source)
+        {
+            return entries;
+        }
     }
 }

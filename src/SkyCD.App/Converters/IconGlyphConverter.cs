@@ -1,16 +1,15 @@
-using Avalonia;
-using Avalonia.Data.Converters;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace SkyCD.App.Converters;
 
 /// <summary>
-/// Converts an icon glyph key (e.g. "folder", "cd") to a legacy Bitmap image.
-/// This replaces the previous emoji-based icon approach with proper legacy-style icons.
+///     Converts an icon glyph key (e.g. "folder", "cd") to a legacy Bitmap image.
+///     This replaces the previous emoji-based icon approach with proper legacy-style icons.
 /// </summary>
 public sealed class IconGlyphConverter : IValueConverter
 {
@@ -32,7 +31,7 @@ public sealed class IconGlyphConverter : IValueConverter
         // Toolbar icons
         ["toolbar-new"] = "avares://SkyCD.App/Assets/add-from-media.png",
         ["toolbar-open"] = "avares://SkyCD.App/Assets/add-from-folder.png",
-        ["toolbar-save"] = "avares://SkyCD.App/Assets/add-from-internet.png",
+        ["toolbar-save"] = "avares://SkyCD.App/Assets/add-from-internet.png"
     };
 
     private static readonly Dictionary<string, Bitmap?> Cache = [];
@@ -68,13 +67,15 @@ public sealed class IconGlyphConverter : IValueConverter
         }
     }
 
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+
     private static Bitmap LoadBitmap(string uri)
     {
         var uriObj = new Uri(uri);
         using var stream = AssetLoader.Open(uriObj);
         return new Bitmap(stream);
     }
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
 }

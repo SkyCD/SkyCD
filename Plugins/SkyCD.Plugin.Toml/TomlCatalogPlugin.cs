@@ -1,7 +1,6 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Lifecycle;
-using Tomlyn;
 using Tomlyn.Model;
 
 namespace SkyCD.Plugin.Toml;
@@ -11,56 +10,38 @@ public sealed class TomlCatalogPlugin : IPlugin, IFileFormatPluginCapability
     private const string SchemaVersion = "skycd.catalog.v1";
     private const string HierarchyStrategy = "adjacency-list";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.toml",
-        "TOML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes TOML file format support.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-toml",
             "SkyCD TOML",
             [".toml"],
-            CanRead: true,
-            CanWrite: true,
-            MimeType: "application/toml")
+            true,
+            true,
+            "application/toml")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, leaveOpen: true);
             var text = await reader.ReadToEndAsync(cancellationToken);
-            var model = Tomlyn.Toml.ToModel(text) as TomlTable;
-            if (model is null)
-            {
-                return new FileFormatReadResult { Success = false, Error = "Invalid TOML document." };
-            }
+            var model = Tomlyn.Toml.ToModel(text);
+            if (model is null) return new FileFormatReadResult { Success = false, Error = "Invalid TOML document." };
 
             if (model["schema"] is not TomlTable schema ||
                 schema["version"]?.ToString() is not { } version ||
                 !SchemaVersion.Equals(version, StringComparison.Ordinal))
-            {
                 return new FileFormatReadResult
                 {
                     Success = false,
                     Error = "TOML_SCHEMA_ERROR: missing or unsupported schema.version."
                 };
-            }
 
             if (model["nodes"] is not TomlTableArray nodes)
-            {
                 return new FileFormatReadResult { Success = true, Payload = new List<Dictionary<string, object?>>() };
-            }
 
             var rows = nodes
                 .Select(node => new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
@@ -89,12 +70,13 @@ public sealed class TomlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("TOML payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException("TOML payload must be a list of row dictionaries.");
 
             var table = new TomlTable
             {
@@ -106,17 +88,22 @@ public sealed class TomlCatalogPlugin : IPlugin, IFileFormatPluginCapability
             };
 
             var array = new TomlTableArray();
-            foreach (var row in rows.OrderBy(row => row.TryGetValue("nodeId", out var id) ? id?.ToString() : null, StringComparer.Ordinal))
-            {
+            foreach (var row in rows.OrderBy(row => row.TryGetValue("nodeId", out var id) ? id?.ToString() : null,
+                         StringComparer.Ordinal))
                 array.Add(new TomlTable
                 {
-                    ["nodeId"] = row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() ?? string.Empty : string.Empty,
-                    ["parentId"] = row.TryGetValue("parentId", out var parentId) ? parentId?.ToString() ?? string.Empty : string.Empty,
+                    ["nodeId"] = row.TryGetValue("nodeId", out var nodeId)
+                        ? nodeId?.ToString() ?? string.Empty
+                        : string.Empty,
+                    ["parentId"] = row.TryGetValue("parentId", out var parentId)
+                        ? parentId?.ToString() ?? string.Empty
+                        : string.Empty,
                     ["kind"] = row.TryGetValue("kind", out var kind) ? kind?.ToString() ?? string.Empty : string.Empty,
                     ["name"] = row.TryGetValue("name", out var name) ? name?.ToString() ?? string.Empty : string.Empty,
-                    ["sizeBytes"] = row.TryGetValue("sizeBytes", out var sizeBytes) ? sizeBytes?.ToString() ?? string.Empty : string.Empty
+                    ["sizeBytes"] = row.TryGetValue("sizeBytes", out var sizeBytes)
+                        ? sizeBytes?.ToString() ?? string.Empty
+                        : string.Empty
                 });
-            }
 
             table["nodes"] = array;
 
@@ -135,5 +122,32 @@ public sealed class TomlCatalogPlugin : IPlugin, IFileFormatPluginCapability
                 Error = exception.Message
             };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.toml",
+        "TOML Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exposes TOML file format support.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 }

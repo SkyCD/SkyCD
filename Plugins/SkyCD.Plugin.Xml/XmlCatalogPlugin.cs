@@ -11,30 +11,19 @@ public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
     private const string NamespaceUri = "urn:skycd:catalog";
     private const string SchemaVersion = "1.0";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.xml",
-        "XML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes XML file format support.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-xml",
             "SkyCD XML",
             [".xml"],
-            CanRead: true,
-            CanWrite: true,
-            MimeType: "application/xml")
+            true,
+            true,
+            "application/xml")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -53,27 +42,22 @@ public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
 
             var root = document.DocumentElement;
             if (root is null || root.LocalName != "catalog" || root.NamespaceURI != NamespaceUri)
-            {
                 return Task.FromResult(new FileFormatReadResult
                 {
                     Success = false,
                     Error = "Invalid XML root element. Expected skycd:catalog."
                 });
-            }
 
             var version = root.GetAttribute("schemaVersion");
             if (!version.Equals(SchemaVersion, StringComparison.Ordinal))
-            {
                 return Task.FromResult(new FileFormatReadResult
                 {
                     Success = false,
                     Error = $"Unsupported schema version '{version}'."
                 });
-            }
 
             var rows = new List<Dictionary<string, object?>>();
             foreach (XmlElement nodeElement in root.GetElementsByTagName("node", NamespaceUri))
-            {
                 rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["NodeId"] = nodeElement.GetAttribute("nodeId"),
@@ -82,7 +66,6 @@ public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
                     ["Name"] = nodeElement.GetAttribute("name"),
                     ["SizeBytes"] = nodeElement.GetAttribute("sizeBytes")
                 });
-            }
 
             return Task.FromResult(new FileFormatReadResult
             {
@@ -100,7 +83,8 @@ public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -145,6 +129,33 @@ public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
                 Error = exception.Message
             };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.xml",
+        "XML Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exposes XML file format support.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 
     private static List<Dictionary<string, object?>> ResolveRows(object? payload)

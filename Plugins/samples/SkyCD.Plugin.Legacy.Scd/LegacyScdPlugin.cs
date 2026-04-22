@@ -9,24 +9,13 @@ public sealed class LegacyScdPlugin : IPlugin, IFileFormatPluginCapability
 {
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.legacy.scd",
-        "Legacy SCD Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Reads and writes legacy *.scd text catalogs.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor("legacy-scd", "SkyCD Text Format", [".scd"], CanRead: true, CanWrite: true, "text/plain")
+        new("legacy-scd", "SkyCD Text Format", [".scd"], true, true, "text/plain")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -38,10 +27,8 @@ public sealed class LegacyScdPlugin : IPlugin, IFileFormatPluginCapability
             while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
             {
                 processed++;
-                if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#", StringComparison.Ordinal))
-                {
-                    continue;
-                }
+                if (string.IsNullOrWhiteSpace(line) ||
+                    line.TrimStart().StartsWith("#", StringComparison.Ordinal)) continue;
 
                 var trimmed = line.Trim();
                 var sizeMatch = SizePrefix.Match(trimmed);
@@ -71,12 +58,11 @@ public sealed class LegacyScdPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.Payload is not LegacyScdCatalog catalog)
-        {
             return new FileFormatWriteResult { Success = false, Error = "Payload must be LegacyScdCatalog." };
-        }
 
         try
         {
@@ -99,6 +85,33 @@ public sealed class LegacyScdPlugin : IPlugin, IFileFormatPluginCapability
         {
             return new FileFormatWriteResult { Success = false, Error = exception.Message };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.legacy.scd",
+        "Legacy SCD Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Reads and writes legacy *.scd text catalogs.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 
     private static long? TryParseLegacySize(string raw)

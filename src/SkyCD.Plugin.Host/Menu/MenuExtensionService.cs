@@ -3,7 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 namespace SkyCD.Plugin.Host.Menu;
 
 /// <summary>
-/// Host service for menu contribution discovery and guarded command execution.
+///     Host service for menu contribution discovery and guarded command execution.
 /// </summary>
 public sealed class MenuExtensionService(PluginCatalog pluginCatalog)
 {
@@ -15,10 +15,8 @@ public sealed class MenuExtensionService(PluginCatalog pluginCatalog)
             .AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(location))
-        {
             contributions = contributions.Where(contribution =>
                 contribution.Location.Equals(location, StringComparison.OrdinalIgnoreCase));
-        }
 
         return contributions
             .OrderBy(contribution => contribution.Order)
@@ -39,13 +37,11 @@ public sealed class MenuExtensionService(PluginCatalog pluginCatalog)
                     contribution.CommandId.Equals(commandId, StringComparison.OrdinalIgnoreCase)));
 
         if (matchingCapability is null)
-        {
             return new MenuCommandExecutionResult
             {
                 Success = false,
                 Error = $"Command '{commandId}' was not found."
             };
-        }
 
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);

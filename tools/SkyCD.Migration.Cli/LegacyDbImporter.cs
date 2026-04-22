@@ -7,7 +7,8 @@ namespace SkyCD.Migration.Cli;
 
 public sealed class LegacyDbImporter
 {
-    public async Task<LegacyImportResult> ImportAsync(string legacyPath, string targetPath, bool dryRun, CancellationToken cancellationToken = default)
+    public async Task<LegacyImportResult> ImportAsync(string legacyPath, string targetPath, bool dryRun,
+        CancellationToken cancellationToken = default)
     {
         var targetConnection = $"Data Source={targetPath}";
         await using var targetContext = new SkyCdDbContext(
@@ -21,10 +22,7 @@ public sealed class LegacyDbImporter
         await legacyConnection.OpenAsync(cancellationToken);
 
         var rows = await ReadLegacyRowsAsync(legacyConnection, cancellationToken);
-        if (rows.Count == 0)
-        {
-            return new LegacyImportResult(0, 0, []);
-        }
+        if (rows.Count == 0) return new LegacyImportResult(0, 0, []);
 
         var groupedByAid = rows.GroupBy(row => row.Aid).ToList();
         var importedCatalogs = 0;
@@ -79,7 +77,8 @@ public sealed class LegacyDbImporter
         return new LegacyImportResult(importedCatalogs, importedNodes, errors);
     }
 
-    private static async Task<IReadOnlyList<LegacyRow>> ReadLegacyRowsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<LegacyRow>> ReadLegacyRowsAsync(SqliteConnection connection,
+        CancellationToken cancellationToken)
     {
         var rows = new List<LegacyRow>();
 
@@ -88,16 +87,14 @@ public sealed class LegacyDbImporter
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
-        {
             rows.Add(new LegacyRow(
                 reader.GetInt64(0),
                 reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
                 reader.IsDBNull(2) ? -1 : reader.GetInt64(2),
                 reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
                 reader.IsDBNull(4) ? null : reader.GetString(4),
-                reader.IsDBNull(5) ? (long?)null : reader.GetInt64(5),
+                reader.IsDBNull(5) ? null : reader.GetInt64(5),
                 reader.IsDBNull(6) ? "default" : reader.GetValue(6).ToString() ?? "default"));
-        }
 
         return rows;
     }

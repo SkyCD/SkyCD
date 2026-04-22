@@ -45,10 +45,7 @@ public class AddingProgressDialogViewModelTests
     {
         var vm = new AddingProgressDialogViewModel();
 
-        for (int i = 1; i <= 100; i++)
-        {
-            vm.ProgressValue = i;
-        }
+        for (var i = 1; i <= 100; i++) vm.ProgressValue = i;
 
         Assert.Equal(100, vm.ProgressValue);
     }

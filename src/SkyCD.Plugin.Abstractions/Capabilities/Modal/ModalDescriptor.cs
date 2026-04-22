@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
 
 /// <summary>
-/// Describes a modal dialog contributed by a plugin.
+///     Describes a modal dialog contributed by a plugin.
 /// </summary>
 public sealed record ModalDescriptor(
     string ModalId,

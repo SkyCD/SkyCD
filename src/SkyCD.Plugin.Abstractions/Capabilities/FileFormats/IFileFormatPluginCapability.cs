@@ -1,24 +1,23 @@
-using SkyCD.Plugin.Abstractions.Lifecycle;
-
 namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 /// <summary>
-/// Capability contract for plugins that provide file format read/write support.
+///     Capability contract for plugins that provide file format read/write support.
 /// </summary>
 public interface IFileFormatPluginCapability : IPluginCapability
 {
     /// <summary>
-    /// Gets file formats supported by this capability.
+    ///     Gets file formats supported by this capability.
     /// </summary>
     IReadOnlyCollection<FileFormatDescriptor> SupportedFormats { get; }
 
     /// <summary>
-    /// Reads structured payload from source stream.
+    ///     Reads structured payload from source stream.
     /// </summary>
     Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Writes structured payload to target stream.
+    ///     Writes structured payload to target stream.
     /// </summary>
-    Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default);
+    Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default);
 }

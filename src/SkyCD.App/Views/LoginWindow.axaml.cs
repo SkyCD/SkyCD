@@ -1,8 +1,8 @@
+using System;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using SkyCD.Presentation.ViewModels;
-using System;
-using System.ComponentModel;
 
 namespace SkyCD.App.Views;
 
@@ -16,10 +16,7 @@ public partial class LoginWindow : Window
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (sender is not LoginWindow window)
-        {
-            return;
-        }
+        if (sender is not LoginWindow window) return;
 
         if (window.DataContext is LoginDialogViewModel vm)
         {
@@ -33,9 +30,7 @@ public partial class LoginWindow : Window
         if (sender is LoginDialogViewModel vm &&
             e.PropertyName == nameof(LoginDialogViewModel.DialogAccepted) &&
             vm.DialogAccepted)
-        {
             Close(true);
-        }
     }
 
     private void OnCancelClicked(object? sender, RoutedEventArgs e)

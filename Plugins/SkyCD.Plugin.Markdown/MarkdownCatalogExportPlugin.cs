@@ -6,30 +6,19 @@ namespace SkyCD.Plugin.Markdown;
 
 public sealed class MarkdownCatalogExportPlugin : IPlugin, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.markdown",
-        "Markdown Export Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exports catalog payloads to Markdown.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor(
+        new(
             "skycd-md",
             "SkyCD Markdown Export",
             [".md"],
-            CanRead: false,
-            CanWrite: true,
-            MimeType: "text/markdown")
+            false,
+            true,
+            "text/markdown")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatReadResult
         {
@@ -38,15 +27,18 @@ public sealed class MarkdownCatalogExportPlugin : IPlugin, IFileFormatPluginCapa
         });
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("Markdown export payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException(
+                           "Markdown export payload must be a list of row dictionaries.");
 
             var orderedRows = rows
-                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null, StringComparer.Ordinal)
+                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null,
+                    StringComparer.Ordinal)
                 .ToList();
 
             var byParent = orderedRows
@@ -58,7 +50,7 @@ public sealed class MarkdownCatalogExportPlugin : IPlugin, IFileFormatPluginCapa
             builder.AppendLine();
             builder.AppendLine("## Nodes");
 
-            WriteChildren(builder, byParent, parentId: string.Empty, depth: 0);
+            WriteChildren(builder, byParent, string.Empty, 0);
 
             await using var writer = new StreamWriter(request.Target, new UTF8Encoding(false), leaveOpen: true);
             await writer.WriteAsync(builder.ToString().AsMemory(), cancellationToken);
@@ -75,16 +67,40 @@ public sealed class MarkdownCatalogExportPlugin : IPlugin, IFileFormatPluginCapa
         }
     }
 
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.markdown",
+        "Markdown Export Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Example plugin that exports catalog payloads to Markdown.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
     private static void WriteChildren(
         StringBuilder builder,
         IReadOnlyDictionary<string, List<Dictionary<string, object?>>> byParent,
         string parentId,
         int depth)
     {
-        if (!byParent.TryGetValue(parentId, out var children))
-        {
-            return;
-        }
+        if (!byParent.TryGetValue(parentId, out var children)) return;
 
         foreach (var row in children)
         {

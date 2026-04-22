@@ -50,7 +50,8 @@ public class Issue161UiContractTests
         var controlCode = ReadRepoFile("src", "SkyCD.UI", "Controls", "Properties", "PropertiesList.axaml.cs");
         var appXaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
-        Assert.Contains("ItemsSource=\"{Binding PropertiesRows, ElementName=Root}\"", controlXaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding PropertiesRows, ElementName=Root}\"", controlXaml,
+            StringComparison.Ordinal);
         Assert.Contains("PropertiesDataProperty", controlCode, StringComparison.Ordinal);
         Assert.Contains("IReadOnlyDictionary<string, object?>", controlCode, StringComparison.Ordinal);
         Assert.DoesNotContain("<Button", controlXaml, StringComparison.Ordinal);
@@ -69,10 +70,7 @@ public class Issue161UiContractTests
             ReadRepoFile("src", "SkyCD.UI", "Controls", "Lists", "DetailsListView.axaml")
         };
 
-        foreach (var xaml in files)
-        {
-            Assert.DoesNotMatch(new Regex("#[0-9A-Fa-f]{3,8}"), xaml);
-        }
+        foreach (var xaml in files) Assert.DoesNotMatch(new Regex("#[0-9A-Fa-f]{3,8}"), xaml);
     }
 
     [Fact]
@@ -106,10 +104,7 @@ public class Issue161UiContractTests
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "SkyCD.slnx")))
-            {
-                return current.FullName;
-            }
+            if (File.Exists(Path.Combine(current.FullName, "SkyCD.slnx"))) return current.FullName;
 
             current = current.Parent;
         }

@@ -3,10 +3,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace SkyCD.Presentation.ViewModels;
 
 /// <summary>
-/// Represents a plugin item in the Options dialog.
+///     Represents a plugin item in the Options dialog.
 /// </summary>
 public sealed partial class OptionsPluginItem : ObservableObject
 {
+    [ObservableProperty] private bool isEnabled;
+
     public OptionsPluginItem(
         string name,
         string type,
@@ -32,7 +34,4 @@ public sealed partial class OptionsPluginItem : ObservableObject
     public string ExtendedInfo { get; }
 
     public bool SupportsConfiguration { get; }
-
-    [ObservableProperty]
-    private bool isEnabled;
 }

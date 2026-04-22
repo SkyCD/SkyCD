@@ -10,11 +10,11 @@ public class PropertiesDialogViewModelTests
     {
         var infoItems = new Dictionary<string, object?> { ["Size"] = "1024 KB" };
         var vm = new PropertiesDialogViewModel(
-            objectKey: "file123",
-            name: "document.pdf",
-            iconGlyph: "folder",
-            comments: "Important document",
-            infoProperties: infoItems);
+            "file123",
+            "document.pdf",
+            "folder",
+            "Important document",
+            infoItems);
 
         Assert.Equal("file123", vm.ObjectKey);
         Assert.Equal("document.pdf", vm.Name);

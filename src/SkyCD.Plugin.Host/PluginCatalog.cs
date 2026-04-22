@@ -4,7 +4,7 @@ using SkyCD.Plugin.Runtime.Discovery;
 namespace SkyCD.Plugin.Host;
 
 /// <summary>
-/// In-memory plugin catalog used by host services.
+///     In-memory plugin catalog used by host services.
 /// </summary>
 public sealed class PluginCatalog
 {

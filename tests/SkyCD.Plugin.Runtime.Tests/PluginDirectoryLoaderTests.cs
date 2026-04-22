@@ -14,6 +14,18 @@ public sealed class PluginDirectoryLoaderTests : IDisposable
         Directory.CreateDirectory(_root);
     }
 
+    public void Dispose()
+    {
+        if (Directory.Exists(_root))
+            try
+            {
+                Directory.Delete(_root, true);
+            }
+            catch (IOException)
+            {
+            }
+    }
+
     [Fact]
     public void LoadFromDirectories_LoadsPluginFromManifest()
     {
@@ -30,7 +42,7 @@ public sealed class PluginDirectoryLoaderTests : IDisposable
         };
 
         File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), JsonSerializer.Serialize(manifest));
-        File.Copy(Assembly.GetExecutingAssembly().Location, Path.Combine(pluginDir, manifest.Assembly), overwrite: true);
+        File.Copy(Assembly.GetExecutingAssembly().Location, Path.Combine(pluginDir, manifest.Assembly), true);
 
         var loader = new PluginDirectoryLoader();
         var result = loader.LoadFromDirectories([_root], new PluginLoadOptions { HostVersion = new Version(3, 0, 0) });
@@ -64,21 +76,6 @@ public sealed class PluginDirectoryLoaderTests : IDisposable
             diagnostic.PluginId == "tests.incompatible" &&
             diagnostic.Message.Contains("Skipped incompatible", StringComparison.OrdinalIgnoreCase));
     }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-        {
-            try
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-        }
-    }
-
 }
 
 public sealed class LoaderTestPlugin : IPlugin
@@ -89,8 +86,23 @@ public sealed class LoaderTestPlugin : IPlugin
         new Version(1, 0, 0),
         new Version(3, 0, 0));
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
 }

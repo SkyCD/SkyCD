@@ -1,7 +1,6 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Abstractions.Lifecycle;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -41,7 +40,7 @@ public class FileFormatRoutingServiceTests
         var result = await menuService.ExecuteAsync(
             "tests.menu.throw",
             new MenuCommandContext(),
-            timeout: TimeSpan.FromMilliseconds(200));
+            TimeSpan.FromMilliseconds(200));
 
         Assert.False(result.Success);
         Assert.NotNull(result.Error);
@@ -105,40 +104,57 @@ public class FileFormatRoutingServiceTests
 
     private sealed class TestReadOnlyPlugin : IPlugin, IFileFormatPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.readonly", "ReadOnly", new Version(1, 0, 0), new Version(3, 0, 0));
-
         public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
         [
-            new FileFormatDescriptor("readonly-json", "Read Only JSON", [".json"], CanRead: true, CanWrite: false)
+            new("readonly-json", "Read Only JSON", [".json"], true, false)
         ];
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new FileFormatReadResult { Success = true, Payload = "readonly" });
+        }
 
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new FileFormatReadResult { Success = true, Payload = "readonly" });
+        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new FileFormatWriteResult { Success = false, Error = "not allowed" });
+        }
 
-        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new FileFormatWriteResult { Success = false, Error = "not allowed" });
+        public PluginDescriptor Descriptor =>
+            new("tests.readonly", "ReadOnly", new Version(1, 0, 0), new Version(3, 0, 0));
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class TestReadWritePlugin : IPlugin, IFileFormatPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.readwrite", "ReadWrite", new Version(1, 0, 0), new Version(3, 0, 0));
-
         public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
         [
-            new FileFormatDescriptor("rw-json", "Read/Write JSON", [".json"], CanRead: true, CanWrite: true)
+            new("rw-json", "Read/Write JSON", [".json"], true, true)
         ];
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+            CancellationToken cancellationToken = default)
         {
             request.Source.Position = 0;
             using var reader = new StreamReader(request.Source, leaveOpen: true);
@@ -146,31 +162,78 @@ public class FileFormatRoutingServiceTests
             return Task.FromResult(new FileFormatReadResult { Success = true, Payload = text });
         }
 
-        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+            CancellationToken cancellationToken = default)
         {
             using var writer = new StreamWriter(request.Target, leaveOpen: true);
             await writer.WriteAsync("ok");
             await writer.FlushAsync(cancellationToken);
             return new FileFormatWriteResult { Success = true };
         }
+
+        public PluginDescriptor Descriptor =>
+            new("tests.readwrite", "ReadWrite", new Version(1, 0, 0), new Version(3, 0, 0));
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class ThrowingMenuPlugin : IPlugin, IMenuPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.menu", "Menu Test", new Version(1, 0, 0), new Version(3, 0, 0));
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public IReadOnlyCollection<MenuContribution> GetMenuContributions()
+        {
+            return
+            [
+                new MenuContribution("tests.menu.throw", "Throw", "Tools")
+            ];
+        }
 
-        public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
-        [
-            new MenuContribution("tests.menu.throw", "Throw", "Tools")
-        ];
-
-        public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)
+        public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+            CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("expected test failure");
+        }
+
+        public PluginDescriptor Descriptor =>
+            new("tests.menu", "Menu Test", new Version(1, 0, 0), new Version(3, 0, 0));
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
         }
     }
 }

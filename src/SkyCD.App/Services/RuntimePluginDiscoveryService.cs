@@ -1,10 +1,10 @@
-using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Runtime.Discovery;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Services;
 
@@ -15,19 +15,13 @@ public sealed class RuntimePluginDiscoveryService
 
     public IReadOnlyList<OptionsPluginItem> Discover(string pluginPath)
     {
-        if (string.IsNullOrWhiteSpace(pluginPath) || !Directory.Exists(pluginPath))
-        {
-            return [];
-        }
+        if (string.IsNullOrWhiteSpace(pluginPath) || !Directory.Exists(pluginPath)) return [];
 
         var discovered = new List<OptionsPluginItem>();
         var seenPluginIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var dllPaths = Directory.GetFiles(pluginPath, "*.dll", SearchOption.AllDirectories);
-        foreach (var dllPath in dllPaths)
-        {
-            TryDiscoverFromAssembly(dllPath, seenPluginIds, discovered);
-        }
+        foreach (var dllPath in dllPaths) TryDiscoverFromAssembly(dllPath, seenPluginIds, discovered);
 
         return discovered
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
@@ -62,10 +56,7 @@ public sealed class RuntimePluginDiscoveryService
         foreach (var plugin in plugins)
         {
             var descriptor = plugin.Plugin.Descriptor;
-            if (!seenPluginIds.Add(descriptor.Id))
-            {
-                continue;
-            }
+            if (!seenPluginIds.Add(descriptor.Id)) continue;
 
             var capabilitySummary = plugin.Capabilities.Count == 0
                 ? "Generic"

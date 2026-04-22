@@ -2,7 +2,6 @@ using System.Formats.Tar;
 using System.IO.Compression;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Tar;
@@ -33,12 +32,13 @@ public class TarArchiveIndexPluginTests
         var service = new FileFormatRoutingService(CreateCatalog());
         await using var stream = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-tar",
-            Target = stream,
-            Payload = new { }
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-tar",
+                Target = stream,
+                Payload = new { }
+            }));
 
         Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -48,7 +48,7 @@ public class TarArchiveIndexPluginTests
     {
         var service = new FileFormatRoutingService(CreateCatalog());
 
-        await using var tarStream = CreateTarFixture(gzip: false);
+        await using var tarStream = CreateTarFixture(false);
         var tarResult = await service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-tar",
@@ -58,7 +58,7 @@ public class TarArchiveIndexPluginTests
         var tarRows = Assert.IsType<List<Dictionary<string, object?>>>(tarResult.Payload);
         Assert.Contains(tarRows, row => Equals(row["fullPath"], "root/deep/įrašas.txt"));
 
-        await using var tarGzStream = CreateTarFixture(gzip: true);
+        await using var tarGzStream = CreateTarFixture(true);
         var tarGzResult = await service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-tar",
@@ -76,7 +76,7 @@ public class TarArchiveIndexPluginTests
         IDisposable? compression = null;
         if (gzip)
         {
-            compression = new GZipStream(output, CompressionLevel.SmallestSize, leaveOpen: true);
+            compression = new GZipStream(output, CompressionLevel.SmallestSize, true);
             target = (Stream)compression;
         }
         else
@@ -85,7 +85,7 @@ public class TarArchiveIndexPluginTests
         }
 
         using (compression)
-        using (var writer = new TarWriter(target, TarEntryFormat.Pax, leaveOpen: true))
+        using (var writer = new TarWriter(target, TarEntryFormat.Pax, true))
         {
             var directory = new PaxTarEntry(TarEntryType.Directory, "root/deep/");
             writer.WriteEntry(directory);

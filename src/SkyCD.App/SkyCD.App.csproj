@@ -1,48 +1,67 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>3.0.0</Version>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <Version>3.0.0</Version>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Models" />
-    <AvaloniaResource Include="Assets\**" />
-    <AvaloniaResource Include="Styles\**" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <!-- Legacy icons linked from legacy Resources folder -->
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder closed.png" Link="Assets\legacy\icon-folder.png" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd-rom with hardware.png" Link="Assets\legacy\icon-cd.png" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\around the world.png" Link="Assets\legacy\icon-network.png" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\users.png" Link="Assets\legacy\icon-users.png" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\save.ICO" Link="Assets\legacy\icon-save.ico" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder-closed.ICO" Link="Assets\legacy\icon-folder-closed.ico" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd.ICO" Link="Assets\legacy\icon-cd-disk.ico" />
-    <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico" />
-  </ItemGroup>
+    <ItemGroup>
+        <Folder Include="Models"/>
+        <AvaloniaResource Include="Assets\**"/>
+        <AvaloniaResource Include="Styles\**"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
-    
-    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
-      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <!-- Legacy icons linked from legacy Resources folder -->
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder closed.png" Link="Assets\legacy\icon-folder.png"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd-rom with hardware.png" Link="Assets\legacy\icon-cd.png"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\around the world.png" Link="Assets\legacy\icon-network.png"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\users.png" Link="Assets\legacy\icon-users.png"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\save.ICO" Link="Assets\legacy\icon-save.ico"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder-closed.ICO" Link="Assets\legacy\icon-folder-closed.ico"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd.ICO" Link="Assets\legacy\icon-cd-disk.ico"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj" />
-    <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj" />
-    <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj" />
-    <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.0.1"/>
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.1"/>
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0"/>
+        <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1"/>
+
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
+            <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+            <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
+        <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj"/>
+        <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj"/>
+        <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PluginBuildArtifact Include="..\..\Plugins\*\bin\$(Configuration)\$(TargetFramework)\*.dll"/>
+        <PluginBuildArtifact Include="..\..\Plugins\*\bin\$(Configuration)\$(TargetFramework)\*.deps.json"/>
+        <PluginBuildArtifact Include="..\..\Plugins\samples\*\bin\$(Configuration)\$(TargetFramework)\*.dll"/>
+        <PluginBuildArtifact Include="..\..\Plugins\samples\*\bin\$(Configuration)\$(TargetFramework)\*.deps.json"/>
+        <PluginManifest Include="..\..\Plugins\*\plugin.json"/>
+        <PluginManifest Include="..\..\Plugins\samples\*\plugin.json"/>
+    </ItemGroup>
+
+    <Target Name="CopyPluginsToAppOutput" AfterTargets="Build">
+        <Copy SourceFiles="@(PluginBuildArtifact)"
+              DestinationFiles="@(PluginBuildArtifact->'$(OutDir)Plugins\%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="@(PluginManifest)"
+              DestinationFiles="@(PluginManifest->'$(OutDir)Plugins\%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true"/>
+    </Target>
 </Project>

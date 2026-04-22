@@ -5,12 +5,12 @@ using SkyCD.Plugin.Runtime.Discovery;
 namespace SkyCD.Plugin.Runtime.Loading;
 
 /// <summary>
-/// Loads plugins from configured directories using plugin manifests.
+///     Loads plugins from configured directories using plugin manifests.
 /// </summary>
 public sealed class PluginDirectoryLoader
 {
-    private readonly PluginManifestReader _manifestReader = new();
     private readonly PluginDiscoveryService _discoveryService = new();
+    private readonly PluginManifestReader _manifestReader = new();
 
     public PluginLoadResult LoadFromDirectories(IEnumerable<string> directories, PluginLoadOptions options)
     {
@@ -32,9 +32,7 @@ public sealed class PluginDirectoryLoader
 
             var manifests = Directory.GetFiles(directory, "plugin.json", SearchOption.AllDirectories);
             foreach (var manifestPath in manifests)
-            {
                 TryLoadManifest(manifestPath, options, discoveredPlugins, diagnostics);
-            }
         }
 
         return new PluginLoadResult
@@ -83,7 +81,8 @@ public sealed class PluginDirectoryLoader
             {
                 PluginId = manifest.Id,
                 IsError = false,
-                Message = $"Skipped incompatible plugin. Host version {options.HostVersion} < required {minHostVersion}."
+                Message =
+                    $"Skipped incompatible plugin. Host version {options.HostVersion} < required {minHostVersion}."
             });
             return;
         }
@@ -102,7 +101,7 @@ public sealed class PluginDirectoryLoader
 
         try
         {
-            Assembly assembly = options.EnableAssemblyIsolation
+            var assembly = options.EnableAssemblyIsolation
                 ? new PluginLoadContext().LoadFromAssemblyPath(assemblyPath)
                 : Assembly.LoadFrom(assemblyPath);
 
@@ -118,10 +117,7 @@ public sealed class PluginDirectoryLoader
                 return;
             }
 
-            foreach (var plugin in discovered)
-            {
-                discoveredPlugins.Add(plugin);
-            }
+            foreach (var plugin in discovered) discoveredPlugins.Add(plugin);
         }
         catch (Exception exception)
         {
@@ -136,7 +132,7 @@ public sealed class PluginDirectoryLoader
 
     private sealed class PluginLoadContext : AssemblyLoadContext
     {
-        public PluginLoadContext() : base(isCollectible: true)
+        public PluginLoadContext() : base(true)
         {
         }
 

@@ -3,7 +3,7 @@ using SkyCD.Plugin.Abstractions.Lifecycle;
 namespace SkyCD.Plugin.Runtime.Discovery;
 
 /// <summary>
-/// Evaluates whether a plugin is compatible with the current host version.
+///     Evaluates whether a plugin is compatible with the current host version.
 /// </summary>
 public static class PluginCompatibilityEvaluator
 {

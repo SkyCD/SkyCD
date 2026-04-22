@@ -1,11 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Json;
+using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -73,11 +71,12 @@ public class JsonCatalogPluginTests
         var service = new FileFormatRoutingService(CreateCatalog());
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("{\"payload\":{\"title\":\"x\"}}"));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-json",
-            Source = stream
-        }));
+        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() =>
+            service.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "skycd-json",
+                Source = stream
+            }));
 
         Assert.Contains("schemaVersion", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

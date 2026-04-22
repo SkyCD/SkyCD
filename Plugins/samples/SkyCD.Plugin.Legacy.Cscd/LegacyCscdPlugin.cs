@@ -10,28 +10,17 @@ public sealed class LegacyCscdPlugin : IPlugin, IFileFormatPluginCapability
 {
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.legacy.cscd",
-        "Legacy CSCD Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Reads and writes legacy *.cscd compressed text catalogs.");
-
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
-        new FileFormatDescriptor("legacy-cscd", "SkyCD Compressed Text Format", [".cscd"], CanRead: true, CanWrite: true, "application/octet-stream")
+        new("legacy-cscd", "SkyCD Compressed Text Format", [".cscd"], true, true, "application/octet-stream")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var compressed = new DeflateStream(request.Source, CompressionMode.Decompress, leaveOpen: true);
+            using var compressed = new DeflateStream(request.Source, CompressionMode.Decompress, true);
             using var reader = new StreamReader(compressed, Encoding.UTF8, leaveOpen: true);
             var catalog = new LegacyCscdCatalog();
             string? line;
@@ -40,10 +29,8 @@ public sealed class LegacyCscdPlugin : IPlugin, IFileFormatPluginCapability
             while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
             {
                 processed++;
-                if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#", StringComparison.Ordinal))
-                {
-                    continue;
-                }
+                if (string.IsNullOrWhiteSpace(line) ||
+                    line.TrimStart().StartsWith("#", StringComparison.Ordinal)) continue;
 
                 var trimmed = line.Trim();
                 var sizeMatch = SizePrefix.Match(trimmed);
@@ -73,16 +60,15 @@ public sealed class LegacyCscdPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.Payload is not LegacyCscdCatalog catalog)
-        {
             return new FileFormatWriteResult { Success = false, Error = "Payload must be LegacyCscdCatalog." };
-        }
 
         try
         {
-            using var compressed = new DeflateStream(request.Target, CompressionMode.Compress, leaveOpen: true);
+            using var compressed = new DeflateStream(request.Target, CompressionMode.Compress, true);
             using var writer = new StreamWriter(compressed, Encoding.UTF8, leaveOpen: true);
             for (var i = 0; i < catalog.Entries.Count; i++)
             {
@@ -102,6 +88,33 @@ public sealed class LegacyCscdPlugin : IPlugin, IFileFormatPluginCapability
         {
             return new FileFormatWriteResult { Success = false, Error = exception.Message };
         }
+    }
+
+    public PluginDescriptor Descriptor => new(
+        "skycd.plugin.legacy.cscd",
+        "Legacy CSCD Format Plugin",
+        new Version(1, 0, 0),
+        new Version(3, 0, 0),
+        "Reads and writes legacy *.cscd compressed text catalogs.");
+
+    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 
     private static long? TryParseLegacySize(string raw)

@@ -6,6 +6,12 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class PropertiesDialogViewModel : ObservableObject
 {
+    [ObservableProperty] private string comments;
+
+    [ObservableProperty] private bool dialogAccepted;
+
+    [ObservableProperty] private string name;
+
     public PropertiesDialogViewModel(
         string objectKey,
         string name,
@@ -22,20 +28,11 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string ObjectKey { get; }
 
-    [ObservableProperty]
-    private string name;
-
     public string IconGlyph { get; }
 
     public IReadOnlyDictionary<string, object?> InfoProperties { get; }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
-
-    [ObservableProperty]
-    private string comments;
-
-    [ObservableProperty]
-    private bool dialogAccepted;
 
     [RelayCommand]
     private void Confirm()
@@ -56,26 +53,14 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     private static string NormalizeDisplayValue(object? value)
     {
-        if (value is null)
-        {
-            return GetUnknownText();
-        }
+        if (value is null) return GetUnknownText();
 
-        if (value is bool boolValue)
-        {
-            return boolValue ? GetYesText() : GetNoText();
-        }
+        if (value is bool boolValue) return boolValue ? GetYesText() : GetNoText();
 
         var text = value.ToString();
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return GetUnknownText();
-        }
+        if (string.IsNullOrWhiteSpace(text)) return GetUnknownText();
 
-        if (bool.TryParse(text, out var parsedBool))
-        {
-            return parsedBool ? GetYesText() : GetNoText();
-        }
+        if (bool.TryParse(text, out var parsedBool)) return parsedBool ? GetYesText() : GetNoText();
 
         return text;
     }
