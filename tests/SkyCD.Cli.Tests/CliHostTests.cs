@@ -3,6 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
+using System.Text.Json;
 using System.Text;
 
 namespace SkyCD.Cli.Tests;
@@ -184,6 +185,85 @@ public sealed class CliHostTests
         var text = output.ToString();
         Assert.Contains("renamed-cli.exe fileformats <subcommand> [options]", text, StringComparison.Ordinal);
         Assert.Contains("list     List available read/write format handlers", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task Plugins_WithoutSubcommand_WithJson_ShowsJsonHelp()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["plugins", "--json"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        using var json = JsonDocument.Parse(output.ToString());
+        Assert.Equal("plugins", json.RootElement.GetProperty("command").GetString());
+        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", json.RootElement.GetProperty("usage").GetString(), StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task FileFormats_WithoutSubcommand_WithJson_ShowsJsonHelp()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["fileformats", "--json"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        using var json = JsonDocument.Parse(output.ToString());
+        Assert.Equal("fileformats", json.RootElement.GetProperty("command").GetString());
+        Assert.Contains("renamed-cli.exe fileformats <subcommand> [options]", json.RootElement.GetProperty("usage").GetString(), StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task ListFormatsAlias_ResolvesToFileFormatsList()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = CreateHost(output, error, [new TestPlugin()]);
+
+        var result = await host.TryRunAsync(["list-formats"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("tests-read", text, StringComparison.Ordinal);
+        Assert.Contains("tests-write", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task ListFormatsAlias_Help_ShowsFileFormatsListUsage()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["list-formats", "--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("renamed-cli.exe fileformats list [--json]", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
     }
 
