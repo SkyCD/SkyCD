@@ -10,7 +10,8 @@ namespace SkyCD.Cli;
 public sealed class CliHost(
     TextWriter stdout,
     TextWriter stderr,
-    Func<Version, CancellationToken, Task<CliPluginRuntime>>? runtimeLoader = null)
+    Func<Version, CancellationToken, Task<CliPluginRuntime>>? runtimeLoader = null,
+    Func<string>? executableNameProvider = null)
 {
     private static readonly string[] BuiltInCommands =
     [
@@ -30,6 +31,7 @@ public sealed class CliHost(
     {
         WriteIndented = true
     };
+    private readonly Func<string> executableNameProvider = executableNameProvider ?? ResolveExecutableName;
     private readonly Func<Version, CancellationToken, Task<CliPluginRuntime>> runtimeLoaderFactory =
         runtimeLoader ?? CliPluginRuntime.LoadAsync;
 
@@ -497,12 +499,13 @@ public sealed class CliHost(
 
     private async Task WriteHelpAsync(IEnumerable<string> pluginCommands, bool jsonOutput)
     {
+        var executableName = executableNameProvider();
         var builtIn = new[]
         {
-            "open",
-            "convert",
-            "list-formats",
-            "plugins list"
+            new { Name = "open", Description = "Open and validate a catalog file." },
+            new { Name = "convert", Description = "Convert a catalog between supported formats." },
+            new { Name = "list-formats", Description = "List available read/write format handlers." },
+            new { Name = "plugins list", Description = "List loaded plugins, capabilities, and commands." }
         };
 
         if (jsonOutput)
@@ -510,15 +513,15 @@ public sealed class CliHost(
             await stdout.WriteLineAsync(JsonSerializer.Serialize(new
             {
                 description = "SkyCD command line interface",
-                usage = "skycd [options] [command]",
+                usage = $"{executableName} [options] [command]",
                 options = new[]
                 {
                     "--help     Display this help",
                     "--version  Display application version",
                     "--json     Use JSON output where supported"
                 },
-                builtInCommands = builtIn,
-                commandHelpHint = "Use `skycd <command> --help` for command-specific options.",
+                builtInCommands = builtIn.Select(static command => new { command.Name, command.Description }).ToArray(),
+                commandHelpHint = $"Use `{executableName} <command> --help` for command-specific options.",
                 pluginCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray()
             }, jsonOptions));
             return;
@@ -528,7 +531,7 @@ public sealed class CliHost(
         await stdout.WriteLineAsync("  SkyCD command line interface");
         await stdout.WriteLineAsync("");
         await stdout.WriteLineAsync("Usage:");
-        await stdout.WriteLineAsync("  skycd [options] [command]");
+        await stdout.WriteLineAsync($"  {executableName} [options] [command]");
         await stdout.WriteLineAsync("");
         await stdout.WriteLineAsync("Options:");
         await stdout.WriteLineAsync("  --help       Display this help");
@@ -538,12 +541,12 @@ public sealed class CliHost(
         await stdout.WriteLineAsync("Commands:");
         foreach (var command in builtIn)
         {
-            await stdout.WriteLineAsync($"  {command}");
+            await stdout.WriteLineAsync($"  {command.Name,-12} {command.Description}");
         }
 
         await stdout.WriteLineAsync("");
         await stdout.WriteLineAsync("Notes:");
-        await stdout.WriteLineAsync("  Use `skycd <command> --help` for command-specific options.");
+        await stdout.WriteLineAsync($"  Use `{executableName} <command> --help` for command-specific options.");
 
         var contributedCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray();
         if (contributedCommands.Length > 0)
@@ -560,10 +563,11 @@ public sealed class CliHost(
 
     private async Task WriteCommandHelpAsync(string command, bool jsonOutput)
     {
+        var executableName = executableNameProvider();
         var (usage, options, notes) = command switch
         {
             "open" => (
-                "skycd open <file> [--format <id>] [--json]",
+                $"{executableName} open <file> [--format <id>] [--json]",
                 new[]
                 {
                     "--format <id>  Override inferred format id",
@@ -575,7 +579,7 @@ public sealed class CliHost(
                     "open infers format from file extension by default."
                 }),
             "convert" => (
-                "skycd convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
+                $"{executableName} convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
                 new[]
                 {
                     "--in <file>        Input file path (required)",
@@ -590,7 +594,7 @@ public sealed class CliHost(
                     "Format ids are listed by `skycd list-formats`."
                 }),
             "list-formats" => (
-                "skycd list-formats [--json]",
+                $"{executableName} list-formats [--json]",
                 new[]
                 {
                     "--json   Use JSON output where supported",
@@ -598,7 +602,7 @@ public sealed class CliHost(
                 },
                 Array.Empty<string>()),
             "plugins list" => (
-                "skycd plugins list [--json]",
+                $"{executableName} plugins list [--json]",
                 new[]
                 {
                     "--json   Use JSON output where supported",
@@ -790,6 +794,18 @@ public sealed class CliHost(
         }
 
         return sawAny;
+    }
+
+    private static string ResolveExecutableName()
+    {
+        var arg0 = Environment.GetCommandLineArgs().FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(arg0))
+        {
+            return "skycd";
+        }
+
+        var executableName = Path.GetFileName(arg0);
+        return string.IsNullOrWhiteSpace(executableName) ? "skycd" : executableName;
     }
 
     private static string ResolveFormatId(

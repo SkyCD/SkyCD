@@ -14,7 +14,11 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
 
         var result = await host.TryRunAsync(["--help"]);
 
@@ -22,10 +26,13 @@ public sealed class CliHostTests
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
         Assert.Contains("Commands:", text, StringComparison.Ordinal);
-        Assert.Contains("  open", text, StringComparison.Ordinal);
-        Assert.Contains("  convert", text, StringComparison.Ordinal);
+        Assert.Contains("renamed-cli.exe [options] [command]", text, StringComparison.Ordinal);
+        Assert.Contains("  open         Open and validate a catalog file.", text, StringComparison.Ordinal);
+        Assert.Contains("  convert      Convert a catalog between supported formats.", text, StringComparison.Ordinal);
+        Assert.Contains("  list-formats List available read/write format handlers.", text, StringComparison.Ordinal);
+        Assert.Contains("  plugins list List loaded plugins, capabilities, and commands.", text, StringComparison.Ordinal);
         Assert.DoesNotContain("open <file>", text, StringComparison.Ordinal);
-        Assert.Contains("skycd <command> --help", text, StringComparison.Ordinal);
+        Assert.Contains("renamed-cli.exe <command> --help", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -34,7 +41,11 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
 
         var result = await host.TryRunAsync(["open", "--help"]);
 
@@ -42,7 +53,7 @@ public sealed class CliHostTests
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
         Assert.Contains("Usage:", text, StringComparison.Ordinal);
-        Assert.Contains("skycd open <file> [--format <id>] [--json]", text, StringComparison.Ordinal);
+        Assert.Contains("renamed-cli.exe open <file> [--format <id>] [--json]", text, StringComparison.Ordinal);
         Assert.Contains("--format <id>", text, StringComparison.Ordinal);
         Assert.DoesNotContain("convert --in", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
@@ -53,14 +64,18 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
 
         var result = await host.TryRunAsync(["convert", "--help"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("skycd convert --in <file> --out <file>", text, StringComparison.Ordinal);
+        Assert.Contains("renamed-cli.exe convert --in <file> --out <file>", text, StringComparison.Ordinal);
         Assert.Contains("--in-format <id>", text, StringComparison.Ordinal);
         Assert.Contains("--format <id>", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
