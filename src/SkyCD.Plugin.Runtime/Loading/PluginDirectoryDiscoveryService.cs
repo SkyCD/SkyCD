@@ -19,9 +19,14 @@ public sealed class PluginDirectoryDiscoveryService
             .ToArray();
 
         var result = loader.LoadFromDirectories(normalizedDirectories, options);
+        var deduplicatedPlugins = DeduplicateByPluginId(result.Plugins);
         if (!fallbackToAssemblyScan || result.Plugins.Count > 0)
         {
-            return result;
+            return new PluginLoadResult
+            {
+                Plugins = deduplicatedPlugins,
+                Diagnostics = result.Diagnostics
+            };
         }
 
         var diagnostics = result.Diagnostics.ToList();
@@ -35,7 +40,7 @@ public sealed class PluginDirectoryDiscoveryService
         var discovered = DiscoverByAssemblyScan(normalizedDirectories, options.HostVersion, diagnostics);
         return new PluginLoadResult
         {
-            Plugins = discovered,
+            Plugins = DeduplicateByPluginId(discovered),
             Diagnostics = diagnostics
         };
     }
@@ -79,5 +84,23 @@ public sealed class PluginDirectoryDiscoveryService
         }
 
         return plugins;
+    }
+
+    private static IReadOnlyCollection<DiscoveredPlugin> DeduplicateByPluginId(IEnumerable<DiscoveredPlugin> plugins)
+    {
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var deduplicated = new List<DiscoveredPlugin>();
+
+        foreach (var plugin in plugins)
+        {
+            if (!seenIds.Add(plugin.Plugin.Descriptor.Id))
+            {
+                continue;
+            }
+
+            deduplicated.Add(plugin);
+        }
+
+        return deduplicated;
     }
 }

@@ -296,7 +296,43 @@ public partial class MainWindow : Window
             }
         }
 
-        vm.CompleteOpenCatalog();
+        var openFormats = GetDistinctRoutes(fileFormatRoutingService.GetOpenFormats());
+        var fileTypeChoices = BuildFileTypeChoices(openFormats);
+        fileTypeChoices.Add(new FilePickerFileType("All files")
+        {
+            Patterns = ["*.*"]
+        });
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open catalog",
+            AllowMultiple = false,
+            FileTypeFilter = fileTypeChoices
+        });
+
+        var localPath = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var format = ResolveRouteByFileName(localPath, openFormats);
+            await using var source = File.OpenRead(localPath);
+            await fileFormatRoutingService.ReadAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+            {
+                FormatId = format.FormatId,
+                Source = source,
+                FileName = Path.GetFileName(localPath)
+            });
+
+            vm.CompleteOpenCatalog();
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Failed to open catalog: {ex.Message}";
+        }
     }
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
@@ -309,17 +345,8 @@ public partial class MainWindow : Window
         var targetPath = vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            var saveFormats = fileFormatRoutingService.GetSaveFormats();
-            var fileTypeChoices = new List<FilePickerFileType>();
-
-            foreach (var format in saveFormats)
-            {
-                var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
-                fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
-                {
-                    Patterns = patterns
-                });
-            }
+            var saveFormats = GetDistinctRoutes(fileFormatRoutingService.GetSaveFormats());
+            var fileTypeChoices = BuildFileTypeChoices(saveFormats);
 
             fileTypeChoices.Add(new FilePickerFileType("All files")
             {
@@ -367,17 +394,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var saveFormats = fileFormatRoutingService.GetSaveFormats();
-        var fileTypeChoices = new List<FilePickerFileType>();
-
-        foreach (var format in saveFormats)
-        {
-            var patterns = format.Extensions.Select(ext => $"*{ext}").ToArray();
-            fileTypeChoices.Add(new FilePickerFileType(format.DisplayName)
-            {
-                Patterns = patterns
-            });
-        }
+        var saveFormats = GetDistinctRoutes(fileFormatRoutingService.GetSaveFormats());
+        var fileTypeChoices = BuildFileTypeChoices(saveFormats);
 
         fileTypeChoices.Add(new FilePickerFileType("All files")
         {
@@ -780,5 +798,54 @@ public partial class MainWindow : Window
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
+    }
+
+    private static IReadOnlyList<FileFormatRoute> GetDistinctRoutes(IEnumerable<FileFormatRoute> routes)
+    {
+        return routes
+            .GroupBy(static route => route.FormatId, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .OrderBy(static route => route.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static List<FilePickerFileType> BuildFileTypeChoices(IEnumerable<FileFormatRoute> routes)
+    {
+        var choices = new List<FilePickerFileType>();
+        foreach (var route in routes)
+        {
+            var patterns = route.Extensions
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(static extension => $"*{extension}")
+                .ToArray();
+
+            choices.Add(new FilePickerFileType(route.DisplayName)
+            {
+                Patterns = patterns
+            });
+        }
+
+        return choices;
+    }
+
+    private static FileFormatRoute ResolveRouteByFileName(string path, IReadOnlyList<FileFormatRoute> routes)
+    {
+        var extension = Path.GetExtension(path);
+        if (!string.IsNullOrWhiteSpace(extension))
+        {
+            var byExtension = routes.FirstOrDefault(route =>
+                route.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
+            if (byExtension is not null)
+            {
+                return byExtension;
+            }
+        }
+
+        if (routes.Count > 0)
+        {
+            return routes[0];
+        }
+
+        throw new InvalidOperationException("No readable file format plugins are available.");
     }
 }
