@@ -97,6 +97,16 @@
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="VerticalContentAlignment" Value="Top" />
                             </Style>
+                            <Style Selector="ListBoxItem:selected">
+                                <Setter Property="Background" Value="#1E4F9A" />
+                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                            </Style>
+                            <Style Selector="TextBlock.RepositoryLink">
+                                <Setter Property="Foreground" Value="#007ACC" />
+                            </Style>
+                            <Style Selector="ListBoxItem:selected TextBlock.RepositoryLink">
+                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                            </Style>
                         </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
@@ -121,19 +131,17 @@
                                                        FontSize="14"
                                                        VerticalAlignment="Center"
                                                        MinWidth="72"
-                                                       TextAlignment="Right"
-                                                       Opacity="0.75" />
+                                                       TextAlignment="Right" />
                                         </Grid>
                                         <TextBlock Text="{Binding Copyright}"
                                                    FontSize="12"
-                                                   Opacity="0.75"
                                                    IsVisible="{Binding HasCopyright}"
                                                    TextTrimming="CharacterEllipsis"
                                                    TextWrapping="NoWrap"
                                                    Margin="0,4,0,0" />
                                         <TextBlock Text="{Binding RepositoryUrl}"
+                                                   Classes="RepositoryLink"
                                                    FontSize="12"
-                                                   Foreground="#007ACC"
                                                    TextDecorations="Underline"
                                                    IsVisible="{Binding HasRepositoryUrl}"
                                                    PointerPressed="OnOpenRepositoryUrl"
