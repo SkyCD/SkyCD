@@ -12,4 +12,10 @@
     <ProjectReference Include="..\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>SkyCD.Cli.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

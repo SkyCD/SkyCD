@@ -1,6 +1,7 @@
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Loading;
+using System.Text.Json;
 
 namespace SkyCD.Cli;
 
@@ -60,9 +61,27 @@ public sealed class CliPluginRuntime : IAsyncDisposable
 
     private static IReadOnlyList<string> GetPluginDirectories()
     {
+        var configured = Environment.GetEnvironmentVariable("SKYCD_PLUGIN_PATH");
+        var fromAppSettings = TryReadPluginPathFromAppSettings();
+        return BuildPluginDirectories(configured, fromAppSettings);
+    }
+
+    internal static IReadOnlyList<string> BuildPluginDirectories(string? configuredPluginPaths, string? appSettingsPluginPath)
+    {
         var candidates = new List<string>();
-        AddConfiguredPluginDirectories(candidates);
-        AddLocalPluginDirectories(candidates);
+
+        if (!string.IsNullOrWhiteSpace(configuredPluginPaths))
+        {
+            foreach (var segment in configuredPluginPaths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                candidates.Add(Path.GetFullPath(segment));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(appSettingsPluginPath))
+        {
+            candidates.Add(Path.GetFullPath(appSettingsPluginPath));
+        }
 
         return candidates
             .Where(directory => !string.IsNullOrWhiteSpace(directory))
@@ -70,33 +89,34 @@ public sealed class CliPluginRuntime : IAsyncDisposable
             .ToArray();
     }
 
-    private static void AddConfiguredPluginDirectories(ICollection<string> candidates)
+    internal static string? TryReadPluginPathFromAppSettings(string? appDataRoot = null)
     {
-        var configured = Environment.GetEnvironmentVariable("SKYCD_PLUGIN_PATH");
-        if (string.IsNullOrWhiteSpace(configured))
+        var root = appDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(root))
         {
-            return;
+            return null;
         }
 
-        foreach (var segment in configured.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        var optionsPath = Path.Combine(root, "SkyCD", "options.json");
+        if (!File.Exists(optionsPath))
         {
-            candidates.Add(Path.GetFullPath(segment));
+            return null;
         }
-    }
 
-    private static void AddLocalPluginDirectories(ICollection<string> candidates)
-    {
-        candidates.Add(Path.Combine(AppContext.BaseDirectory, "Plugins"));
-        candidates.Add(Path.Combine(AppContext.BaseDirectory, "Plugins", "samples"));
-        candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), "Plugins"));
-        candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), "Plugins", "samples"));
-
-        var current = new DirectoryInfo(Directory.GetCurrentDirectory());
-        for (var depth = 0; depth < 8 && current is not null; depth++)
+        try
         {
-            candidates.Add(Path.Combine(current.FullName, "Plugins"));
-            candidates.Add(Path.Combine(current.FullName, "Plugins", "samples"));
-            current = current.Parent;
+            using var document = JsonDocument.Parse(File.ReadAllText(optionsPath));
+            if (!document.RootElement.TryGetProperty("PluginPath", out var pluginPathElement))
+            {
+                return null;
+            }
+
+            var pluginPath = pluginPathElement.GetString();
+            return string.IsNullOrWhiteSpace(pluginPath) ? null : pluginPath.Trim();
+        }
+        catch
+        {
+            return null;
         }
     }
 }
