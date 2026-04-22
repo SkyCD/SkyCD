@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
+    <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
+    <ProjectReference Include="..\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj" />
+  </ItemGroup>
+
+</Project>
