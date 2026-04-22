@@ -49,6 +49,11 @@ internal static class CliStdIo
 
     public static void EnsureConsoleAttached()
     {
+        if (HasUsableStdHandle(StandardHandle.Output) || HasUsableStdHandle(StandardHandle.Error))
+        {
+            return;
+        }
+
         AttachConsole(AttachParentProcess);
     }
 
@@ -77,6 +82,12 @@ internal static class CliStdIo
         {
             return fallback;
         }
+    }
+
+    private static bool HasUsableStdHandle(StandardHandle handle)
+    {
+        var stdHandle = GetStdHandle((int)handle);
+        return stdHandle != IntPtr.Zero && stdHandle != InvalidHandleValue;
     }
 
     private static readonly IntPtr InvalidHandleValue = new(-1);
