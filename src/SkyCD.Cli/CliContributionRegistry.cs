@@ -10,16 +10,8 @@ internal sealed class CliContributionRegistry : IDisposable
     private const string CommandRegistryKey = "skycd.cli.command";
     private const string ExtensionPointRegistryKey = "skycd.cli.extension_point";
     private readonly HashSet<string> commandPaths = new(CommandComparer);
-    private readonly string[] builtInCommands;
-    private readonly string[] extensionPoints;
     private readonly Dictionary<string, string> commandOwners = new(CommandComparer);
     private ServiceProvider? provider;
-
-    public CliContributionRegistry(IEnumerable<string> builtInCommands, IEnumerable<string> extensionPoints)
-    {
-        this.builtInCommands = builtInCommands.Select(NormalizePath).Distinct(CommandComparer).ToArray();
-        this.extensionPoints = extensionPoints.Select(NormalizePath).Distinct(CommandComparer).ToArray();
-    }
 
     public IReadOnlyList<string> Errors { get; private set; } = [];
 
@@ -177,14 +169,28 @@ internal sealed class CliContributionRegistry : IDisposable
 
     private void RegisterHostCommandMetadata(IServiceCollection services)
     {
+        var builtInCommands = new[]
+        {
+            "open",
+            "convert",
+            "fileformats list",
+            "plugins list"
+        };
+
+        var extensionPoints = new[]
+        {
+            "open",
+            "convert"
+        };
+
         foreach (var builtInCommand in builtInCommands)
         {
-            services.AddKeyedSingleton<string>(CommandRegistryKey, builtInCommand);
+            services.AddKeyedSingleton<string>(CommandRegistryKey, NormalizePath(builtInCommand));
         }
 
         foreach (var extensionPoint in extensionPoints)
         {
-            services.AddKeyedSingleton<string>(ExtensionPointRegistryKey, extensionPoint);
+            services.AddKeyedSingleton<string>(ExtensionPointRegistryKey, NormalizePath(extensionPoint));
         }
     }
 }

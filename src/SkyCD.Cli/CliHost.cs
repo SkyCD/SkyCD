@@ -13,20 +13,6 @@ public sealed class CliHost(
     Func<Version, CancellationToken, Task<CliPluginRuntime>>? runtimeLoader = null,
     Func<string>? executableNameProvider = null)
 {
-    private static readonly string[] BuiltInCommands =
-    [
-        "open",
-        "convert",
-        "fileformats list",
-        "plugins list"
-    ];
-
-    private static readonly string[] ExtensionPoints =
-    [
-        "open",
-        "convert"
-    ];
-
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         WriteIndented = true
@@ -80,7 +66,7 @@ public sealed class CliHost(
         catalog.SetPlugins(runtime.DiscoveredPlugins);
         var routing = new FileFormatRoutingService(catalog);
         var pluginApi = new CliHostPluginApi(routing);
-        using var registry = new CliContributionRegistry(BuiltInCommands, ExtensionPoints);
+        using var registry = new CliContributionRegistry();
         registry.Register(runtime.DiscoveredPlugins);
 
         if (registry.Errors.Count > 0)
