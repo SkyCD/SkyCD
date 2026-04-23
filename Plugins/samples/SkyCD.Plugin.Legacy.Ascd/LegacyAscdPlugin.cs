@@ -22,11 +22,6 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
         new FileFormatDescriptor("legacy-ascd", "SkyCD Advanced Format", [".ascd"], CanRead: true, CanWrite: true, "application/octet-stream")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {
         try

@@ -27,21 +27,6 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
             MimeType: "application/json")
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {
         try
@@ -131,8 +116,4 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public ValueTask DisposeAsync()
-    {
-        return ValueTask.CompletedTask;
-    }
 }

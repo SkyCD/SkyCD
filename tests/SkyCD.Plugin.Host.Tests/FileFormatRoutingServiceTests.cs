@@ -112,11 +112,6 @@ public class FileFormatRoutingServiceTests
             new FileFormatDescriptor("readonly-json", "Read Only JSON", [".json"], CanRead: true, CanWrite: false)
         ];
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new FileFormatReadResult { Success = true, Payload = "readonly" });
 
@@ -132,11 +127,6 @@ public class FileFormatRoutingServiceTests
         [
             new FileFormatDescriptor("rw-json", "Read/Write JSON", [".json"], CanRead: true, CanWrite: true)
         ];
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
         {
@@ -158,11 +148,6 @@ public class FileFormatRoutingServiceTests
     private sealed class ThrowingMenuPlugin : IPlugin, IMenuPluginCapability
     {
         public PluginDescriptor Descriptor => new("tests.menu", "Menu Test", new Version(1, 0, 0), new Version(3, 0, 0));
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
         public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
         [
             new MenuContribution("tests.menu.throw", "Throw", "Tools")

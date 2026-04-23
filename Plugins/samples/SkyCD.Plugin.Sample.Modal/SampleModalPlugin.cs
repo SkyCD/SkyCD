@@ -12,11 +12,6 @@ public sealed class SampleModalPlugin : IPlugin, IModalPluginCapability
         new Version(3, 0, 0),
         "Example plugin that contributes a typed modal contract.");
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
     public IReadOnlyCollection<ModalDescriptor> GetModals() =>
     [
         new ModalDescriptor(

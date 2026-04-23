@@ -60,11 +60,6 @@ public sealed class PluginDiscoveryCapabilityPlugin : IPlugin, IMenuPluginCapabi
         new FileFormatDescriptor("test", "Test", [".test"], true, false)
     ];
 
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
         new MenuContribution("tests.command", "Tests", "Tools")

@@ -210,32 +210,19 @@ public sealed class PluginDiscoveryService
         return TryParseVersion(value);
     }
 
-    private sealed class AssemblyResolvedPlugin(IPlugin inner, PluginDescriptor descriptor) : IPlugin
+    private sealed class AssemblyResolvedPlugin : IPlugin
     {
-        public PluginDescriptor Descriptor => descriptor;
+        public AssemblyResolvedPlugin(IPlugin inner, PluginDescriptor descriptor)
+        {
+            _ = inner;
+            Descriptor = descriptor;
+        }
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) =>
-            inner.OnLoadAsync(context, cancellationToken);
-
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) =>
-            inner.OnInitializeAsync(context, cancellationToken);
-
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) =>
-            inner.OnActivateAsync(context, cancellationToken);
-
-        public ValueTask DisposeAsync() => inner.DisposeAsync();
+        public PluginDescriptor Descriptor { get; }
     }
 
     private sealed class AssemblyLifecyclePlugin(PluginDescriptor descriptor) : IPlugin
     {
         public PluginDescriptor Descriptor => descriptor;
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

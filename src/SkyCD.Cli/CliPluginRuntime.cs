@@ -1,4 +1,3 @@
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Loading;
 using System.Text.Json;
@@ -7,8 +6,6 @@ namespace SkyCD.Cli;
 
 public sealed class CliPluginRuntime : IAsyncDisposable
 {
-    private readonly List<IPlugin> plugins = [];
-
     public required IReadOnlyList<DiscoveredPlugin> DiscoveredPlugins { get; init; }
 
     public required IReadOnlyList<string> Diagnostics { get; init; }
@@ -34,29 +31,12 @@ public sealed class CliPluginRuntime : IAsyncDisposable
             PluginDirectories = pluginDirectories
         };
 
-        var context = new PluginLifecycleContext
-        {
-            HostVersion = hostVersion,
-            Services = null
-        };
-
-        foreach (var discovered in runtime.DiscoveredPlugins)
-        {
-            runtime.plugins.Add(discovered.Plugin);
-            await discovered.Plugin.OnLoadAsync(context, cancellationToken);
-            await discovered.Plugin.OnInitializeAsync(context, cancellationToken);
-            await discovered.Plugin.OnActivateAsync(context, cancellationToken);
-        }
-
         return runtime;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        foreach (var plugin in plugins)
-        {
-            await plugin.DisposeAsync();
-        }
+        return ValueTask.CompletedTask;
     }
 
     private static IReadOnlyList<string> GetPluginDirectories()

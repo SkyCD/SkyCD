@@ -148,11 +148,6 @@ public class ModalExtensionServiceTests
     {
         public PluginDescriptor Descriptor => new("tests.modal.echo", "Echo Modal", new Version(1, 0, 0), new Version(3, 0, 0));
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
         public IReadOnlyCollection<ModalDescriptor> GetModals() =>
         [
             new ModalDescriptor(
@@ -181,11 +176,6 @@ public class ModalExtensionServiceTests
     {
         public PluginDescriptor Descriptor => new("tests.modal.slow", "Slow Modal", new Version(1, 0, 0), new Version(3, 0, 0));
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
         public IReadOnlyCollection<ModalDescriptor> GetModals() =>
         [
             new ModalDescriptor("sample.modal.slow", "Slow", 400, 260)
@@ -205,11 +195,6 @@ public class ModalExtensionServiceTests
 
         public PluginDescriptor Descriptor => new("tests.modal.locked", "Locked Modal", new Version(1, 0, 0), new Version(3, 0, 0));
         public Task FirstOpenStarted => _firstOpenStarted.Task;
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         public void AllowCompletion() => _allowCompletion.TrySetResult();
 

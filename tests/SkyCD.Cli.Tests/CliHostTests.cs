@@ -395,11 +395,6 @@ public sealed class CliHostTests
             new("tests-write", "Tests Write", [".dst"], CanRead: false, CanWrite: true)
         ];
 
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
         public IReadOnlyCollection<CliCommandContribution> GetCliContributions() =>
         [
             new CliCommandContribution("tests greet", "greet", "Greet command"),
@@ -450,11 +445,6 @@ public sealed class CliHostTests
     private sealed class DuplicateCommandPlugin : IPlugin, ICliPluginCapability
     {
         public PluginDescriptor Descriptor => new("tests.cli.dup", "Tests CLI Dup", new Version(1, 0, 0), new Version(3, 0, 0));
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         public IReadOnlyCollection<CliCommandContribution> GetCliContributions() =>
         [
