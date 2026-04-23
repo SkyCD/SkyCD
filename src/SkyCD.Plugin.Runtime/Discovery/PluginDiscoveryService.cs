@@ -10,10 +10,6 @@ namespace SkyCD.Plugin.Runtime.Discovery;
 /// </summary>
 public sealed class PluginDiscoveryService
 {
-    private static readonly string[] IdMetadataKeys = ["SkyCD.Plugin.Id", "Plugin Id"];
-    private static readonly string[] MinHostVersionMetadataKeys = ["SkyCD.Plugin.MinHostVersion", "Min Host Version"];
-    private static readonly string[] MaxHostVersionMetadataKeys = ["SkyCD.Plugin.MaxHostVersion", "Max Host Version"];
-
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
         var assemblyDescriptor = ResolveAssemblyDescriptor(assembly);
@@ -123,7 +119,7 @@ public sealed class PluginDiscoveryService
             return null;
         }
 
-        var id = GetAssemblyMetadataValue(assembly, IdMetadataKeys) ?? assemblySimpleName;
+        var id = assembly.GetCustomAttribute<PluginIdAttribute>()?.Id ?? assemblySimpleName;
         var displayName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title
                           ?? assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
                           ?? assemblySimpleName;
@@ -132,9 +128,9 @@ public sealed class PluginDiscoveryService
                       ?? assemblyName.Version
                       ?? new Version(1, 0, 0);
 
-        var minHostVersion = TryParseVersion(GetAssemblyMetadataValue(assembly, MinHostVersionMetadataKeys))
+        var minHostVersion = TryParseVersion(assembly.GetCustomAttribute<MinHostVersionAttribute>()?.Version)
                              ?? new Version(0, 0, 0);
-        var maxHostVersion = TryParseVersion(GetAssemblyMetadataValue(assembly, MaxHostVersionMetadataKeys));
+        var maxHostVersion = TryParseVersion(assembly.GetCustomAttribute<MaxHostVersionAttribute>()?.Version);
 
         var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description
                           ?? string.Empty;
@@ -143,21 +139,6 @@ public sealed class PluginDiscoveryService
         {
             MaxHostVersion = maxHostVersion
         };
-    }
-
-    private static string? GetAssemblyMetadataValue(Assembly assembly, IEnumerable<string> keys)
-    {
-        var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToArray();
-        foreach (var key in keys)
-        {
-            var value = metadata.FirstOrDefault(attribute => attribute.Key.Equals(key, StringComparison.OrdinalIgnoreCase))?.Value;
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return null;
     }
 
     private static Version? TryParseVersion(string? value)
