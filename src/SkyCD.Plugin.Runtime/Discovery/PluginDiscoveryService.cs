@@ -12,7 +12,6 @@ public sealed class PluginDiscoveryService
     private const string EntryPointMetadataKey = "SkyCD.Plugin.EntryPoint";
     private const string IdMetadataKey = "SkyCD.Plugin.Id";
     private const string DisplayNameMetadataKey = "SkyCD.Plugin.DisplayName";
-    private const string VersionMetadataKey = "SkyCD.Plugin.Version";
     private const string MinHostVersionMetadataKey = "SkyCD.Plugin.MinHostVersion";
     private const string DescriptionMetadataKey = "SkyCD.Plugin.Description";
 
@@ -119,8 +118,7 @@ public sealed class PluginDiscoveryService
                           ?? fallback.DisplayName
                           ?? assemblySimpleName;
 
-        var versionText = GetAssemblyMetadataValue(assembly, VersionMetadataKey);
-        var version = TryParseVersion(versionText)
+        var version = ResolveReleaseVersion(assembly)
                       ?? assemblyName.Version
                       ?? fallback.Version
                       ?? new Version(1, 0, 0);
@@ -153,6 +151,35 @@ public sealed class PluginDiscoveryService
         }
 
         return Version.TryParse(value, out var parsed) ? parsed : null;
+    }
+
+    private static Version? ResolveReleaseVersion(Assembly assembly)
+    {
+        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            return null;
+        }
+
+        var value = informationalVersion.Trim();
+        if (value.StartsWith('v') || value.StartsWith('V'))
+        {
+            value = value[1..];
+        }
+
+        var plusIndex = value.IndexOf('+');
+        if (plusIndex >= 0)
+        {
+            value = value[..plusIndex];
+        }
+
+        var dashIndex = value.IndexOf('-');
+        if (dashIndex >= 0)
+        {
+            value = value[..dashIndex];
+        }
+
+        return TryParseVersion(value);
     }
 
     private sealed class AssemblyResolvedPlugin(IPlugin inner, PluginDescriptor descriptor) : IPlugin
