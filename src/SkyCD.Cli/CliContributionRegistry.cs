@@ -1,15 +1,17 @@
+using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Cli;
 
-internal sealed class CliContributionRegistry
+internal sealed class CliContributionRegistry : IDisposable
 {
     private static readonly StringComparer CommandComparer = StringComparer.OrdinalIgnoreCase;
-    private readonly Dictionary<string, RegisteredCliContribution> commands = new(CommandComparer);
-    private readonly Dictionary<string, List<RegisteredCliContribution>> extensions = new(CommandComparer);
+    private readonly HashSet<string> commandPaths = new(CommandComparer);
     private readonly HashSet<string> builtInCommands;
     private readonly HashSet<string> extensionPoints;
+    private readonly Dictionary<string, string> commandOwners = new(CommandComparer);
+    private ServiceProvider? provider;
 
     public CliContributionRegistry(IEnumerable<string> builtInCommands, IEnumerable<string> extensionPoints)
     {
@@ -19,9 +21,17 @@ internal sealed class CliContributionRegistry
 
     public IReadOnlyList<string> Errors { get; private set; } = [];
 
+    public IReadOnlyCollection<string> CommandPaths => commandPaths.ToArray();
+
     public void Register(IEnumerable<DiscoveredPlugin> plugins)
     {
+        provider?.Dispose();
+        provider = null;
+        commandPaths.Clear();
+        commandOwners.Clear();
+
         var errors = new List<string>();
+        var services = new ServiceCollection();
 
         foreach (var plugin in plugins)
         {
@@ -29,37 +39,28 @@ internal sealed class CliContributionRegistry
             {
                 foreach (var contribution in capability.GetCliContributions())
                 {
-                    RegisterContribution(plugin, capability, contribution, errors);
+                    RegisterContribution(services, plugin, capability, contribution, errors);
                 }
             }
         }
 
-        foreach (var extension in extensions.Values)
-        {
-            extension.Sort(static (left, right) =>
-            {
-                var byPriority = right.Contribution.Priority.CompareTo(left.Contribution.Priority);
-                if (byPriority != 0)
-                {
-                    return byPriority;
-                }
-
-                return StringComparer.OrdinalIgnoreCase.Compare(left.Plugin.Plugin.Descriptor.Id, right.Plugin.Plugin.Descriptor.Id);
-            });
-        }
-
         Errors = errors;
+        provider = services.BuildServiceProvider();
     }
-
-    public IReadOnlyCollection<string> CommandPaths => commands.Keys.ToArray();
 
     public RegisteredCliContribution? ResolveCommand(IReadOnlyList<string> args, out int consumedTokens)
     {
         consumedTokens = 0;
+        if (provider is null)
+        {
+            return null;
+        }
+
         for (var index = args.Count; index >= 1; index--)
         {
             var path = NormalizePath(args.Take(index));
-            if (!commands.TryGetValue(path, out var contribution))
+            var contribution = provider.GetKeyedService<RegisteredCliContribution>(ToCommandServiceKey(path));
+            if (contribution is null)
             {
                 continue;
             }
@@ -73,12 +74,26 @@ internal sealed class CliContributionRegistry
 
     public IReadOnlyList<RegisteredCliContribution> ResolveExtensions(string extensionPoint)
     {
-        return extensions.TryGetValue(NormalizePath(extensionPoint), out var contributions)
-            ? contributions
-            : [];
+        if (provider is null)
+        {
+            return [];
+        }
+
+        return provider
+            .GetKeyedServices<RegisteredCliContribution>(ToExtensionServiceKey(extensionPoint))
+            .OrderByDescending(static contribution => contribution.Contribution.Priority)
+            .ThenBy(static contribution => contribution.Plugin.Plugin.Descriptor.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public void Dispose()
+    {
+        provider?.Dispose();
+        provider = null;
     }
 
     private void RegisterContribution(
+        IServiceCollection services,
         DiscoveredPlugin plugin,
         ICliPluginCapability capability,
         CliCommandContribution contribution,
@@ -102,13 +117,7 @@ internal sealed class CliContributionRegistry
                 return;
             }
 
-            if (!extensions.TryGetValue(normalizedPath, out var list))
-            {
-                list = [];
-                extensions[normalizedPath] = list;
-            }
-
-            list.Add(registration);
+            services.AddKeyedSingleton<RegisteredCliContribution>(ToExtensionServiceKey(normalizedPath), registration);
             return;
         }
 
@@ -119,14 +128,16 @@ internal sealed class CliContributionRegistry
             return;
         }
 
-        if (commands.TryGetValue(normalizedPath, out var existing))
+        if (!commandPaths.Add(normalizedPath))
         {
+            var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
             errors.Add(
-                $"CLI command collision on '{contribution.CommandPath}' between '{existing.Plugin.Plugin.Descriptor.Id}' and '{plugin.Plugin.Descriptor.Id}'.");
+                $"CLI command collision on '{contribution.CommandPath}' between '{existingOwner}' and '{plugin.Plugin.Descriptor.Id}'.");
             return;
         }
 
-        commands[normalizedPath] = registration;
+        commandOwners[normalizedPath] = plugin.Plugin.Descriptor.Id;
+        services.AddKeyedSingleton<RegisteredCliContribution>(ToCommandServiceKey(normalizedPath), registration);
     }
 
     private static string NormalizePath(string path)
@@ -137,6 +148,16 @@ internal sealed class CliContributionRegistry
     private static string NormalizePath(IEnumerable<string> tokens)
     {
         return string.Join(' ', tokens).Trim();
+    }
+
+    private static string ToCommandServiceKey(string path)
+    {
+        return $"cmd::{NormalizePath(path).ToUpperInvariant()}";
+    }
+
+    private static string ToExtensionServiceKey(string path)
+    {
+        return $"ext::{NormalizePath(path).ToUpperInvariant()}";
     }
 }
 

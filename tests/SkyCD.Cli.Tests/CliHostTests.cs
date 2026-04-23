@@ -292,6 +292,22 @@ public sealed class CliHostTests
     }
 
     [Fact]
+    public async Task PluginCommand_IsCaseInsensitive()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var plugin = new TestPlugin();
+        var host = CreateHost(output, error, [plugin]);
+
+        var result = await host.TryRunAsync(["TeStS", "GrEeT"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        Assert.Contains("hello from plugin", output.ToString(), StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
     public async Task Convert_RunsExtensionPoint_AndTransformsPayload()
     {
         var temp = Path.Combine(Path.GetTempPath(), $"skycd-cli-{Guid.NewGuid():N}");

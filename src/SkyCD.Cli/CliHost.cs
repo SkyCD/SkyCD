@@ -80,7 +80,7 @@ public sealed class CliHost(
         catalog.SetPlugins(runtime.DiscoveredPlugins);
         var routing = new FileFormatRoutingService(catalog);
         var pluginApi = new CliHostPluginApi(routing);
-        var registry = new CliContributionRegistry(BuiltInCommands, ExtensionPoints);
+        using var registry = new CliContributionRegistry(BuiltInCommands, ExtensionPoints);
         registry.Register(runtime.DiscoveredPlugins);
 
         if (registry.Errors.Count > 0)
