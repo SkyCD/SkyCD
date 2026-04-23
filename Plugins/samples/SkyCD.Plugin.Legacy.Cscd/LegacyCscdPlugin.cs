@@ -10,12 +10,11 @@ public sealed class LegacyCscdPlugin : IPlugin, IFileFormatPluginCapability
 {
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.legacy.cscd",
-        "Legacy CSCD Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Reads and writes legacy *.cscd compressed text catalogs.");
+    public string Id => "skycd.plugin.legacy.cscd";
+    public string Name => "Legacy CSCD Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Reads and writes legacy *.cscd compressed text catalogs.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

@@ -6,12 +6,11 @@ namespace SkyCD.Plugin.Zip;
 
 public sealed class ZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.zip",
-        "ZIP Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes ZIP archive entries.");
+    public string Id => "skycd.plugin.zip";
+    public string Name => "ZIP Index Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that indexes ZIP archive entries.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

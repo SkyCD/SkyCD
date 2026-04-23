@@ -7,12 +7,11 @@ namespace SkyCD.Plugin.Html;
 
 public sealed class HtmlCatalogExportPlugin : IPlugin, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.html",
-        "HTML Export Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exports catalog payloads to HTML.");
+    public string Id => "skycd.plugin.html";
+    public string Name => "HTML Export Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that exports catalog payloads to HTML.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

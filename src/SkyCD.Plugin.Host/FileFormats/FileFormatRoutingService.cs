@@ -66,7 +66,7 @@ public sealed class FileFormatRoutingService(PluginCatalog pluginCatalog)
                 plugin.Capabilities.OfType<IFileFormatPluginCapability>()
                     .SelectMany(capability =>
                         capability.SupportedFormats.Select(format => new FileFormatRoute(
-                            plugin.Plugin.Descriptor.Id,
+                            plugin.Plugin.Id,
                             format.FormatId,
                             format.DisplayName,
                             format.Extensions,

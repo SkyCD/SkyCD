@@ -7,9 +7,9 @@ namespace SkyCD.Plugin.Runtime.Discovery;
 /// </summary>
 public static class PluginCompatibilityEvaluator
 {
-    public static bool IsCompatible(PluginDescriptor descriptor, Version hostVersion)
+    public static bool IsCompatible(Version minHostVersion, Version? maxHostVersion, Version hostVersion)
     {
-        return hostVersion >= descriptor.MinHostVersion &&
-               (descriptor.MaxHostVersion is null || hostVersion <= descriptor.MaxHostVersion);
+        return hostVersion >= minHostVersion &&
+               (maxHostVersion is null || hostVersion <= maxHostVersion);
     }
 }

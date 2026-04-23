@@ -7,12 +7,11 @@ namespace SkyCD.Plugin.Tar;
 
 public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.tar",
-        "TAR Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes TAR archive entries.");
+    public string Id => "skycd.plugin.tar";
+    public string Name => "TAR Index Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that indexes TAR archive entries.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

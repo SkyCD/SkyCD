@@ -43,8 +43,7 @@ public sealed class RuntimePluginDiscoveryService
         ISet<string> seenPluginIds,
         ICollection<OptionsPluginItem> output)
     {
-        var descriptor = plugin.Plugin.Descriptor;
-        if (!seenPluginIds.Add(descriptor.Id))
+        if (!seenPluginIds.Add(plugin.Plugin.Id))
         {
             return;
         }
@@ -55,11 +54,11 @@ public sealed class RuntimePluginDiscoveryService
                 .Select(static capability => capability.GetType().Name)
                 .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
 
-        var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
+        var extendedInfo = $"{plugin.Plugin.Id} v{plugin.Plugin.Version}";
         output.Add(new OptionsPluginItem(
-            descriptor.DisplayName,
+            plugin.Plugin.Name,
             capabilitySummary,
             extendedInfo,
-            id: descriptor.Id));
+            id: plugin.Plugin.Id));
     }
 }

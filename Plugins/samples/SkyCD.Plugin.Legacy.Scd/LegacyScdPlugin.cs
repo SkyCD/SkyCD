@@ -9,12 +9,11 @@ public sealed class LegacyScdPlugin : IPlugin, IFileFormatPluginCapability
 {
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.legacy.scd",
-        "Legacy SCD Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Reads and writes legacy *.scd text catalogs.");
+    public string Id => "skycd.plugin.legacy.scd";
+    public string Name => "Legacy SCD Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Reads and writes legacy *.scd text catalogs.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

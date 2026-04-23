@@ -146,7 +146,10 @@ public class ModalExtensionServiceTests
 
     private sealed class EchoModalPlugin : IPlugin, IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.echo", "Echo Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.modal.echo";
+        public string Name => "Echo Modal";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
 
         public IReadOnlyCollection<ModalDescriptor> GetModals() =>
         [
@@ -174,7 +177,10 @@ public class ModalExtensionServiceTests
 
     private sealed class SlowModalPlugin : IPlugin, IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.slow", "Slow Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.modal.slow";
+        public string Name => "Slow Modal";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
 
         public IReadOnlyCollection<ModalDescriptor> GetModals() =>
         [
@@ -193,7 +199,10 @@ public class ModalExtensionServiceTests
         private readonly TaskCompletionSource _firstOpenStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public PluginDescriptor Descriptor => new("tests.modal.locked", "Locked Modal", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.modal.locked";
+        public string Name => "Locked Modal";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
         public Task FirstOpenStarted => _firstOpenStarted.Task;
 
         public void AllowCompletion() => _allowCompletion.TrySetResult();

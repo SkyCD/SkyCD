@@ -89,7 +89,7 @@ internal sealed class CliContributionRegistry : IDisposable
         return provider
             .GetKeyedServices<RegisteredCliContribution>(ToExtensionServiceKey(extensionPoint))
             .OrderByDescending(static contribution => contribution.Contribution.Priority)
-            .ThenBy(static contribution => contribution.Plugin.Plugin.Descriptor.Id, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static contribution => contribution.Plugin.Plugin.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -110,7 +110,7 @@ internal sealed class CliContributionRegistry : IDisposable
     {
         if (string.IsNullOrWhiteSpace(contribution.CommandPath) || string.IsNullOrWhiteSpace(contribution.CommandId))
         {
-            errors.Add($"Plugin '{plugin.Plugin.Descriptor.Id}' has CLI contribution with missing command path or command id.");
+            errors.Add($"Plugin '{plugin.Plugin.Id}' has CLI contribution with missing command path or command id.");
             return;
         }
 
@@ -122,7 +122,7 @@ internal sealed class CliContributionRegistry : IDisposable
             if (!extensionPoints.Any(point => point.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
             {
                 errors.Add(
-                    $"Plugin '{plugin.Plugin.Descriptor.Id}' contributes extension '{contribution.CommandPath}' but no such extension point exists.");
+                    $"Plugin '{plugin.Plugin.Id}' contributes extension '{contribution.CommandPath}' but no such extension point exists.");
                 return;
             }
 
@@ -133,7 +133,7 @@ internal sealed class CliContributionRegistry : IDisposable
         if (reservedCommands.Any(command => command.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
         {
             errors.Add(
-                $"Plugin '{plugin.Plugin.Descriptor.Id}' cannot register command '{contribution.CommandPath}' because it is reserved by the host.");
+                $"Plugin '{plugin.Plugin.Id}' cannot register command '{contribution.CommandPath}' because it is reserved by the host.");
             return;
         }
 
@@ -141,11 +141,11 @@ internal sealed class CliContributionRegistry : IDisposable
         {
             var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
             errors.Add(
-                $"CLI command collision on '{contribution.CommandPath}' between '{existingOwner}' and '{plugin.Plugin.Descriptor.Id}'.");
+                $"CLI command collision on '{contribution.CommandPath}' between '{existingOwner}' and '{plugin.Plugin.Id}'.");
             return;
         }
 
-        commandOwners[normalizedPath] = plugin.Plugin.Descriptor.Id;
+        commandOwners[normalizedPath] = plugin.Plugin.Id;
         services.AddKeyedSingleton<RegisteredCliContribution>(ToCommandServiceKey(normalizedPath), registration);
     }
 

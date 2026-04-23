@@ -6,39 +6,34 @@ namespace SkyCD.Plugin.Abstractions.Lifecycle;
 public interface IPlugin
 {
     /// <summary>
-    /// Gets immutable plugin metadata.
-    /// </summary>
-    PluginDescriptor Descriptor { get; }
-
-    /// <summary>
     /// Gets the plugin identifier.
     /// </summary>
-    string Id => Descriptor.Id;
+    string Id { get; }
 
     /// <summary>
     /// Gets the plugin display name.
     /// </summary>
-    string Name => Descriptor.DisplayName;
+    string Name { get; }
 
     /// <summary>
     /// Gets the plugin semantic version.
     /// </summary>
-    Version Version => Descriptor.Version;
+    Version Version { get; }
 
     /// <summary>
     /// Gets the minimum host version supported by this plugin.
     /// </summary>
-    Version MinHostVersion => Descriptor.MinHostVersion;
+    Version MinHostVersion { get; }
 
     /// <summary>
     /// Gets the optional maximum host version supported by this plugin.
     /// </summary>
-    Version? MaxHostVersion => Descriptor.MaxHostVersion;
+    Version? MaxHostVersion => null;
 
     /// <summary>
     /// Gets the plugin description.
     /// </summary>
-    string Description => Descriptor.Description ?? string.Empty;
+    string Description => string.Empty;
 
     /// <summary>
     /// Gets the plugin assembly file name when available.

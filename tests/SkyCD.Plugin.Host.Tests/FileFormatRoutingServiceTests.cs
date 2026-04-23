@@ -105,7 +105,10 @@ public class FileFormatRoutingServiceTests
 
     private sealed class TestReadOnlyPlugin : IPlugin, IFileFormatPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.readonly", "ReadOnly", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.readonly";
+        public string Name => "ReadOnly";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
 
         public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
         [
@@ -121,7 +124,10 @@ public class FileFormatRoutingServiceTests
 
     private sealed class TestReadWritePlugin : IPlugin, IFileFormatPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.readwrite", "ReadWrite", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.readwrite";
+        public string Name => "ReadWrite";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
 
         public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
         [
@@ -147,7 +153,10 @@ public class FileFormatRoutingServiceTests
 
     private sealed class ThrowingMenuPlugin : IPlugin, IMenuPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.menu", "Menu Test", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.menu";
+        public string Name => "Menu Test";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
         public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
         [
             new MenuContribution("tests.menu.throw", "Throw", "Tools")

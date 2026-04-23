@@ -5,12 +5,11 @@ namespace SkyCD.Plugin.Sample.Modal;
 
 public sealed class SampleModalPlugin : IPlugin, IModalPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.sample.modal",
-        "Sample Modal Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that contributes a typed modal contract.");
+    public string Id => "skycd.plugin.sample.modal";
+    public string Name => "Sample Modal Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that contributes a typed modal contract.";
 
     public IReadOnlyCollection<ModalDescriptor> GetModals() =>
     [

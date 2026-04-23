@@ -17,12 +17,11 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
         _entryReader = entryReader;
     }
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.7z",
-        "7z Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes 7z archive entries.");
+    public string Id => "skycd.plugin.7z";
+    public string Name => "7z Index Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that indexes 7z archive entries.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

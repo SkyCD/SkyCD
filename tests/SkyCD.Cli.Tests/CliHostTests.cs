@@ -387,7 +387,10 @@ public sealed class CliHostTests
 
     private sealed class TestPlugin : IPlugin, IFileFormatPluginCapability, ICliPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.cli", "Tests CLI", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.cli";
+        public string Name => "Tests CLI";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
 
         public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
         [
@@ -444,7 +447,10 @@ public sealed class CliHostTests
 
     private sealed class DuplicateCommandPlugin : IPlugin, ICliPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.cli.dup", "Tests CLI Dup", new Version(1, 0, 0), new Version(3, 0, 0));
+        public string Id => "tests.cli.dup";
+        public string Name => "Tests CLI Dup";
+        public Version Version => new(1, 0, 0);
+        public Version MinHostVersion => new(3, 0, 0);
 
         public IReadOnlyCollection<CliCommandContribution> GetCliContributions() =>
         [

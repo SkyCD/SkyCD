@@ -5,12 +5,11 @@ namespace SkyCD.Plugin.Sample.Menu;
 
 public sealed class SampleMenuPlugin : IPlugin, IMenuPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.sample.menu",
-        "Sample Menu Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example menu contribution plugin.");
+    public string Id => "skycd.plugin.sample.menu";
+    public string Name => "Sample Menu Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example menu contribution plugin.";
 
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [

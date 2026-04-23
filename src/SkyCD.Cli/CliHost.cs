@@ -329,10 +329,10 @@ public sealed class CliHost(
         var pluginInfo = discoveredPlugins
             .Select(plugin => new
             {
-                PluginId = plugin.Plugin.Descriptor.Id,
-                DisplayName = plugin.Plugin.Descriptor.DisplayName,
+                PluginId = plugin.Plugin.Id,
+                DisplayName = plugin.Plugin.Name,
                 Capabilities = plugin.Capabilities.Select(static capability => capability.GetType().Name).OrderBy(static name => name).ToArray(),
-                Formats = formatsByPlugin.TryGetValue(plugin.Plugin.Descriptor.Id, out var formats)
+                Formats = formatsByPlugin.TryGetValue(plugin.Plugin.Id, out var formats)
                     ? formats
                     : Array.Empty<string>()
             })

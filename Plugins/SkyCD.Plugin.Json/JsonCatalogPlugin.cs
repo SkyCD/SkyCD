@@ -9,12 +9,11 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.json",
-        "JSON Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes JSON file format support.");
+    public string Id => "skycd.plugin.json";
+    public string Name => "JSON Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that exposes JSON file format support.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

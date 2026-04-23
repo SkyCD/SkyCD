@@ -15,7 +15,7 @@ public class PluginDiscoveryServiceTests
 
         var plugins = discovery.DiscoverFromAssembly(Assembly.GetExecutingAssembly(), new Version(3, 0, 0));
 
-        var target = Assert.Single(plugins, plugin => plugin.Plugin.Descriptor.Id == "tests.runtime.loader-plugin");
+        var target = Assert.Single(plugins, plugin => plugin.Plugin.Id == "tests.runtime.loader-plugin");
         Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is StandaloneFileFormatCapability);
@@ -40,7 +40,7 @@ public class PluginDiscoveryServiceTests
         var plugins = discovery.DiscoverFromPlugins([plugin]);
 
         var target = Assert.Single(plugins);
-        Assert.Equal("tests.plugin", target.Plugin.Descriptor.Id);
+        Assert.Equal("tests.plugin", target.Plugin.Id);
         Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
     }
@@ -48,12 +48,11 @@ public class PluginDiscoveryServiceTests
 
 public sealed class PluginDiscoveryCapabilityPlugin : IPlugin, IMenuPluginCapability, IFileFormatPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "tests.plugin",
-        "Test Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Runtime discovery test plugin");
+    public string Id => "tests.plugin";
+    public string Name => "Test Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Runtime discovery test plugin";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

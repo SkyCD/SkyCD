@@ -11,12 +11,11 @@ public sealed class TomlCatalogPlugin : IPlugin, IFileFormatPluginCapability
     private const string SchemaVersion = "skycd.catalog.v1";
     private const string HierarchyStrategy = "adjacency-list";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.toml",
-        "TOML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes TOML file format support.");
+    public string Id => "skycd.plugin.toml";
+    public string Name => "TOML Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that exposes TOML file format support.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

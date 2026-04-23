@@ -11,12 +11,11 @@ public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
     private const string NamespaceUri = "urn:skycd:catalog";
     private const string SchemaVersion = "1.0";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.xml",
-        "XML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes XML file format support.");
+    public string Id => "skycd.plugin.xml";
+    public string Name => "XML Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that exposes XML file format support.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

@@ -18,8 +18,8 @@ public sealed class PluginDiscoveryService
             return [];
         }
 
-        var assemblyDescriptor = ResolveAssemblyDescriptor(assembly);
-        if (assemblyDescriptor is null || !PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
+        var metadata = ResolveAssemblyMetadata(assembly, plugin);
+        if (metadata is null || !PluginCompatibilityEvaluator.IsCompatible(metadata.Value.MinHostVersion, metadata.Value.MaxHostVersion, hostVersion))
         {
             return [];
         }
@@ -29,7 +29,7 @@ public sealed class PluginDiscoveryService
             new DiscoveredPlugin
             {
                 Plugin = plugin,
-                Capabilities = GetServicesFromAssembly(assembly, assemblyDescriptor.Id)
+                Capabilities = GetServicesFromAssembly(assembly, metadata.Value.Id)
             }
         ];
     }
@@ -44,8 +44,8 @@ public sealed class PluginDiscoveryService
                 .First())
             .Select(plugin =>
             {
-                var descriptor = ResolveAssemblyDescriptor(plugin.GetType().Assembly);
-                if (descriptor is null)
+                var metadata = ResolveAssemblyMetadata(plugin.GetType().Assembly, plugin);
+                if (metadata is null)
                 {
                     return null;
                 }
@@ -128,7 +128,7 @@ public sealed class PluginDiscoveryService
         return discoveredServices;
     }
 
-    private static PluginDescriptor? ResolveAssemblyDescriptor(Assembly assembly)
+    private static (string Id, Version MinHostVersion, Version? MaxHostVersion)? ResolveAssemblyMetadata(Assembly assembly, IPlugin plugin)
     {
         var assemblyName = assembly.GetName();
         var assemblySimpleName = assemblyName.Name;
@@ -137,26 +137,11 @@ public sealed class PluginDiscoveryService
             return null;
         }
 
-        var id = assembly.GetCustomAttribute<PluginIdAttribute>()?.Id ?? assemblySimpleName;
-        var displayName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title
-                          ?? assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
-                          ?? assemblySimpleName;
-
-        var version = ResolveReleaseVersion(assembly)
-                      ?? assemblyName.Version
-                      ?? new Version(1, 0, 0);
-
+        var id = assembly.GetCustomAttribute<PluginIdAttribute>()?.Id ?? plugin.Id;
         var minHostVersion = TryParseVersion(assembly.GetCustomAttribute<MinHostVersionAttribute>()?.Version)
-                             ?? new Version(0, 0, 0);
+                             ?? plugin.MinHostVersion;
         var maxHostVersion = TryParseVersion(assembly.GetCustomAttribute<MaxHostVersionAttribute>()?.Version);
-
-        var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description
-                          ?? string.Empty;
-
-        return new PluginDescriptor(id, displayName, version, minHostVersion, description)
-        {
-            MaxHostVersion = maxHostVersion
-        };
+        return (id, minHostVersion, maxHostVersion ?? plugin.MaxHostVersion);
     }
 
     private static Version? TryParseVersion(string? value)
@@ -167,35 +152,6 @@ public sealed class PluginDiscoveryService
         }
 
         return Version.TryParse(value, out var parsed) ? parsed : null;
-    }
-
-    private static Version? ResolveReleaseVersion(Assembly assembly)
-    {
-        var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        if (string.IsNullOrWhiteSpace(informationalVersion))
-        {
-            return null;
-        }
-
-        var value = informationalVersion.Trim();
-        if (value.StartsWith('v') || value.StartsWith('V'))
-        {
-            value = value[1..];
-        }
-
-        var plusIndex = value.IndexOf('+');
-        if (plusIndex >= 0)
-        {
-            value = value[..plusIndex];
-        }
-
-        var dashIndex = value.IndexOf('-');
-        if (dashIndex >= 0)
-        {
-            value = value[..dashIndex];
-        }
-
-        return TryParseVersion(value);
     }
 
 }

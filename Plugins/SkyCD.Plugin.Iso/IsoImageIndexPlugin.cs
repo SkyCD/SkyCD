@@ -17,12 +17,11 @@ public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
         _entryReader = entryReader;
     }
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.iso",
-        "ISO Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes ISO image entries.");
+    public string Id => "skycd.plugin.iso";
+    public string Name => "ISO Index Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that indexes ISO image entries.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

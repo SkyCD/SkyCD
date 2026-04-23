@@ -18,7 +18,7 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
                 plugin.Capabilities.OfType<IModalPluginCapability>()
                     .SelectMany(capability =>
                         capability.GetModals().Select(modal => new ModalRegistration(
-                            plugin.Plugin.Descriptor.Id,
+                            plugin.Plugin.Id,
                             modal.ModalId,
                             modal.Title,
                             modal.Width,

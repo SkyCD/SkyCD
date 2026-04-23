@@ -9,12 +9,11 @@ public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
 {
     private static readonly string[] HeaderColumns = ["NodeId", "ParentId", "Kind", "Name", "SizeBytes"];
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.csv",
-        "CSV Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes CSV file format support.");
+    public string Id => "skycd.plugin.csv";
+    public string Name => "CSV Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that exposes CSV file format support.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

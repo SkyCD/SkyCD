@@ -14,12 +14,11 @@ public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .Build();
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.yaml",
-        "YAML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes YAML file format support.");
+    public string Id => "skycd.plugin.yaml";
+    public string Name => "YAML Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Example plugin that exposes YAML file format support.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [

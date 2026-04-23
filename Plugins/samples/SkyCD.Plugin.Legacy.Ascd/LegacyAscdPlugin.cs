@@ -10,12 +10,11 @@ public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
     private const string FormatHeaderPrefix = "# format: skycd-nf";
     private const string InsertPrefix = "INSERT INTO list";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.legacy.ascd",
-        "Legacy ASCD Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Reads and writes legacy *.ascd compressed catalogs using safe statement parsing.");
+    public string Id => "skycd.plugin.legacy.ascd";
+    public string Name => "Legacy ASCD Format Plugin";
+    public Version Version => new(1, 0, 0);
+    public Version MinHostVersion => new(3, 0, 0);
+    public string Description => "Reads and writes legacy *.ascd compressed catalogs using safe statement parsing.";
 
     public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
     [
