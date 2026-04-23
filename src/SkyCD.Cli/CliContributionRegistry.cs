@@ -11,6 +11,7 @@ internal sealed class CliContributionRegistry : IDisposable
     private const string ExtensionPointRegistryKey = "skycd.cli.extension_point";
     private readonly HashSet<string> commandPaths = new(CommandComparer);
     private readonly Dictionary<string, string> commandOwners = new(CommandComparer);
+    private readonly PluginDiscoveryService pluginDiscoveryService = new();
     private ServiceProvider? provider;
 
     public IReadOnlyList<string> Errors { get; private set; } = [];
@@ -24,6 +25,7 @@ internal sealed class CliContributionRegistry : IDisposable
         commandPaths.Clear();
         commandOwners.Clear();
 
+        var discoveredPlugins = pluginDiscoveryService.DiscoverFromPlugins(plugins.Select(static plugin => plugin.Plugin));
         var errors = new List<string>();
         var services = new ServiceCollection();
         RegisterHostCommandMetadata(services);
@@ -31,7 +33,7 @@ internal sealed class CliContributionRegistry : IDisposable
         var reservedCommands = hostMetadataProvider.GetKeyedServices<string>(CommandRegistryKey).ToArray();
         var registeredExtensionPoints = hostMetadataProvider.GetKeyedServices<string>(ExtensionPointRegistryKey).ToArray();
 
-        foreach (var plugin in plugins)
+        foreach (var plugin in discoveredPlugins)
         {
             foreach (var capability in plugin.Capabilities.OfType<ICliPluginCapability>())
             {

@@ -30,6 +30,20 @@ public class PluginDiscoveryServiceTests
         Assert.Empty(plugins);
     }
 
+    [Fact]
+    public void DiscoverFromPlugins_ReturnsCapabilitiesFromExistingInstance()
+    {
+        var discovery = new PluginDiscoveryService();
+        var plugin = new TestCapabilityPlugin();
+
+        var plugins = discovery.DiscoverFromPlugins([plugin]);
+
+        var target = Assert.Single(plugins);
+        Assert.Same(plugin, target.Plugin);
+        Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
+        Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
+    }
+
     private sealed class TestCapabilityPlugin : IPlugin, IMenuPluginCapability, IFileFormatPluginCapability
     {
         public PluginDescriptor Descriptor => new(
