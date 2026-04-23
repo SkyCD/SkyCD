@@ -105,9 +105,10 @@ public sealed class PluginDiscoveryService
         }
 
         using var provider = services.BuildServiceProvider();
-        return provider.GetKeyedServices<IPluginCapability>(pluginId)
+        var discoveredServices = provider.GetKeyedServices<IPluginCapability>(pluginId)
             .DistinctBy(static capability => capability.GetType())
             .ToList();
+        return discoveredServices;
     }
 
     private static PluginDescriptor? ResolveAssemblyDescriptor(Assembly assembly)
