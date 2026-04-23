@@ -338,7 +338,7 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public async Task DuplicatePluginCommand_ReturnsConfigurationError()
+    public async Task DuplicatePluginCommand_SameAssembly_DoesNotProduceCollisionError()
     {
         var output = new StringWriter();
         var error = new StringWriter();
@@ -347,8 +347,8 @@ public sealed class CliHostTests
         var result = await host.TryRunAsync(["tests greet"]);
 
         Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
-        Assert.Contains("CLI command collision", error.ToString(), StringComparison.Ordinal);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        Assert.DoesNotContain("CLI command collision", error.ToString(), StringComparison.Ordinal);
     }
 
     private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<IPlugin> plugins)

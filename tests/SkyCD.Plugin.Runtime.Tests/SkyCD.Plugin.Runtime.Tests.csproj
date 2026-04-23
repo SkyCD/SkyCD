@@ -23,4 +23,23 @@
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SkyCD.Plugin.Id</_Parameter1>
+      <_Parameter2>tests.runtime.assembly-plugin</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SkyCD.Plugin.DisplayName</_Parameter1>
+      <_Parameter2>Runtime Assembly Plugin</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SkyCD.Plugin.MinHostVersion</_Parameter1>
+      <_Parameter2>3.0.0</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SkyCD.Plugin.EntryPoint</_Parameter1>
+      <_Parameter2>SkyCD.Plugin.Runtime.Tests.PluginDiscoveryCapabilityPlugin</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

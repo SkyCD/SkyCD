@@ -35,7 +35,7 @@ public sealed class PluginDirectoryLoaderTests : IDisposable
         var loader = new PluginDirectoryLoader();
         var result = loader.LoadFromDirectories([_root], new PluginLoadOptions { HostVersion = new Version(3, 0, 0) });
 
-        Assert.Contains(result.Plugins, plugin => plugin.Plugin.Descriptor.Id == "tests.runtime.loader-plugin");
+        Assert.Contains(result.Plugins, plugin => plugin.Plugin.Descriptor.Id == "tests.runtime.assembly-plugin");
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.IsError);
     }
 
