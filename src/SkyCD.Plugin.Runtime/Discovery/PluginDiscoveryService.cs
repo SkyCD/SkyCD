@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 
@@ -9,36 +10,29 @@ namespace SkyCD.Plugin.Runtime.Discovery;
 /// </summary>
 public sealed class PluginDiscoveryService
 {
-    private const string EntryPointMetadataKey = "SkyCD.Plugin.EntryPoint";
     private const string IdMetadataKey = "SkyCD.Plugin.Id";
     private const string MinHostVersionMetadataKey = "SkyCD.Plugin.MinHostVersion";
 
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
-        var pluginType = ResolvePluginType(assembly);
-        if (pluginType is null)
-        {
-            return [];
-        }
-
-        if (Activator.CreateInstance(pluginType) is not IPlugin pluginInstance)
-        {
-            return [];
-        }
-
-        var assemblyDescriptor = ResolveAssemblyDescriptor(assembly, pluginInstance.Descriptor);
+        var lifecyclePlugin = CreateLifecyclePlugin(assembly);
+        var fallbackDescriptor = lifecyclePlugin?.Descriptor ?? CreateFallbackDescriptor(assembly);
+        var assemblyDescriptor = ResolveAssemblyDescriptor(assembly, fallbackDescriptor);
         if (!PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
         {
             return [];
         }
 
-        var wrapped = new AssemblyResolvedPlugin(pluginInstance, assemblyDescriptor);
+        IPlugin plugin = lifecyclePlugin is null
+            ? new AssemblyLifecyclePlugin(assemblyDescriptor)
+            : new AssemblyResolvedPlugin(lifecyclePlugin, assemblyDescriptor);
+
         return
         [
             new DiscoveredPlugin
             {
-                Plugin = wrapped,
-                Capabilities = DiscoverCapabilities(pluginInstance)
+                Plugin = plugin,
+                Capabilities = DiscoverCapabilitiesFromAssembly(assembly, assemblyDescriptor.Id)
             }
         ];
     }
@@ -84,26 +78,63 @@ public sealed class PluginDiscoveryService
         return capabilities;
     }
 
-    private static Type? ResolvePluginType(Assembly assembly)
+    private static IPlugin? CreateLifecyclePlugin(Assembly assembly)
     {
-        var entryPointTypeName = GetAssemblyMetadataValue(assembly, EntryPointMetadataKey);
-        if (!string.IsNullOrWhiteSpace(entryPointTypeName))
-        {
-            var entryPointType = assembly.GetType(entryPointTypeName, throwOnError: false, ignoreCase: false);
-            if (entryPointType is not null &&
-                !entryPointType.IsAbstract &&
-                typeof(IPlugin).IsAssignableFrom(entryPointType) &&
-                entryPointType.GetConstructor(Type.EmptyTypes) is not null)
-            {
-                return entryPointType;
-            }
-        }
-
-        return assembly.GetTypes()
+        var pluginType = assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(IPlugin).IsAssignableFrom(type))
             .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .FirstOrDefault();
+
+        if (pluginType is null)
+        {
+            return null;
+        }
+
+        return Activator.CreateInstance(pluginType) as IPlugin;
+    }
+
+    private static IReadOnlyList<IPluginCapability> DiscoverCapabilitiesFromAssembly(Assembly assembly, string pluginId)
+    {
+        var services = new ServiceCollection();
+        var capabilityTypes = assembly.GetTypes()
+            .Where(type => !type.IsAbstract && typeof(IPluginCapability).IsAssignableFrom(type))
+            .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var capabilityType in capabilityTypes)
+        {
+            if (Activator.CreateInstance(capabilityType) is not IPluginCapability capability)
+            {
+                continue;
+            }
+
+            services.AddKeyedSingleton(typeof(IPluginCapability), pluginId, capability);
+            foreach (var serviceType in capabilityType.GetInterfaces()
+                         .Where(@interface => @interface != typeof(IPluginCapability))
+                         .Where(@interface => typeof(IPluginCapability).IsAssignableFrom(@interface))
+                         .Distinct())
+            {
+                services.AddKeyedSingleton(serviceType, pluginId, capability);
+            }
+        }
+
+        using var provider = services.BuildServiceProvider();
+        return provider.GetKeyedServices<IPluginCapability>(pluginId)
+            .DistinctBy(static capability => capability.GetType())
+            .ToList();
+    }
+
+    private static PluginDescriptor CreateFallbackDescriptor(Assembly assembly)
+    {
+        var assemblyName = assembly.GetName();
+        var assemblySimpleName = assemblyName.Name ?? "plugin";
+        return new PluginDescriptor(
+            assemblySimpleName.ToLowerInvariant(),
+            assemblySimpleName,
+            ResolveReleaseVersion(assembly) ?? assemblyName.Version ?? new Version(1, 0, 0),
+            new Version(0, 0, 0));
     }
 
     private static PluginDescriptor ResolveAssemblyDescriptor(Assembly assembly, PluginDescriptor fallback)
@@ -193,5 +224,18 @@ public sealed class PluginDiscoveryService
             inner.OnActivateAsync(context, cancellationToken);
 
         public ValueTask DisposeAsync() => inner.DisposeAsync();
+    }
+
+    private sealed class AssemblyLifecyclePlugin(PluginDescriptor descriptor) : IPlugin
+    {
+        public PluginDescriptor Descriptor => descriptor;
+
+        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }
