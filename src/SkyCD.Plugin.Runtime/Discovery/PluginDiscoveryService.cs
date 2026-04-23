@@ -12,6 +12,12 @@ public sealed class PluginDiscoveryService
 {
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
+        var plugin = ResolvePluginInstance(assembly);
+        if (plugin is null)
+        {
+            return [];
+        }
+
         var assemblyDescriptor = ResolveAssemblyDescriptor(assembly);
         if (assemblyDescriptor is null || !PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
         {
@@ -22,7 +28,7 @@ public sealed class PluginDiscoveryService
         [
             new DiscoveredPlugin
             {
-                Plugin = new AssemblyLifecyclePlugin(assemblyDescriptor),
+                Plugin = new DescriptorOverridePlugin(plugin, assemblyDescriptor),
                 Capabilities = GetServicesFromAssembly(assembly, assemblyDescriptor.Id)
             }
         ];
@@ -46,7 +52,7 @@ public sealed class PluginDiscoveryService
 
                 return new DiscoveredPlugin
                 {
-                    Plugin = new AssemblyLifecyclePlugin(descriptor),
+                    Plugin = new DescriptorOverridePlugin(plugin, descriptor),
                     Capabilities = DiscoverCapabilities(plugin)
                 };
             })
@@ -76,6 +82,17 @@ public sealed class PluginDiscoveryService
         }
 
         return capabilities;
+    }
+
+    private static IPlugin? ResolvePluginInstance(Assembly assembly)
+    {
+        var pluginType = assembly.GetTypes()
+            .Where(type => !type.IsAbstract && typeof(IPlugin).IsAssignableFrom(type))
+            .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+        return pluginType is null ? null : Activator.CreateInstance(pluginType) as IPlugin;
     }
 
     private static IReadOnlyList<IPluginCapability> GetServicesFromAssembly(Assembly assembly, string pluginId)
@@ -181,8 +198,14 @@ public sealed class PluginDiscoveryService
         return TryParseVersion(value);
     }
 
-    private sealed class AssemblyLifecyclePlugin(PluginDescriptor descriptor) : IPlugin
+    private sealed class DescriptorOverridePlugin : IPlugin
     {
-        public PluginDescriptor Descriptor => descriptor;
+        public DescriptorOverridePlugin(IPlugin inner, PluginDescriptor descriptor)
+        {
+            _ = inner;
+            Descriptor = descriptor;
+        }
+
+        public PluginDescriptor Descriptor { get; }
     }
 }
