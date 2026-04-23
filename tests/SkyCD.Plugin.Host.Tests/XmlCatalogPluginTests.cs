@@ -88,7 +88,11 @@ public class XmlCatalogPluginTests
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.xml",
+                Name = "XmlCatalogPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

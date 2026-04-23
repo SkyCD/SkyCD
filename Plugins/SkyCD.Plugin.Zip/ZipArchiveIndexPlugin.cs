@@ -1,27 +1,18 @@
 using System.IO.Compression;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Zip;
 
-public sealed class ZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
 {
-    public string Id => "skycd.plugin.zip";
-    public string Name => "ZIP Index Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that indexes ZIP archive entries.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-zip",
             "ZIP Archive Index",
             [".zip"],
             CanRead: true,
             CanWrite: false,
-            MimeType: "application/zip")
-    ];
+            MimeType: "application/zip");
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

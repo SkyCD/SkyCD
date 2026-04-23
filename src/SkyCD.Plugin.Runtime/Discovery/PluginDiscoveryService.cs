@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 
@@ -12,14 +11,19 @@ public sealed class PluginDiscoveryService
 {
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
-        var plugin = ResolvePluginInstance(assembly);
-        if (plugin is null)
+        var metadata = ResolveAssemblyMetadata(assembly);
+        if (metadata is null)
         {
             return [];
         }
 
-        var metadata = ResolveAssemblyMetadata(assembly, plugin);
-        if (metadata is null || !PluginCompatibilityEvaluator.IsCompatible(metadata.Value.MinHostVersion, metadata.Value.MaxHostVersion, hostVersion))
+        if (!PluginCompatibilityEvaluator.IsCompatible(metadata.Value.MinHostVersion, metadata.Value.MaxHostVersion, hostVersion))
+        {
+            return [];
+        }
+
+        var capabilities = DiscoverCapabilitiesFromAssembly(assembly);
+        if (capabilities.Count == 0)
         {
             return [];
         }
@@ -28,107 +32,42 @@ public sealed class PluginDiscoveryService
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
-                Capabilities = GetServicesFromAssembly(assembly, metadata.Value.Id)
+                Id = metadata.Value.Id,
+                Name = metadata.Value.Name,
+                Version = metadata.Value.Version,
+                MinHostVersion = metadata.Value.MinHostVersion,
+                MaxHostVersion = metadata.Value.MaxHostVersion,
+                Description = metadata.Value.Description,
+                FileName = metadata.Value.FileName,
+                Capabilities = capabilities
             }
         ];
     }
 
-    public IReadOnlyList<DiscoveredPlugin> DiscoverFromPlugins(IEnumerable<IPlugin> plugins)
+    private static IReadOnlyList<IPluginCapability> DiscoverCapabilitiesFromAssembly(Assembly assembly)
     {
-        return plugins
-            .Where(plugin => plugin is not null)
-            .GroupBy(plugin => plugin.GetType().Assembly)
-            .Select(group => group
-                .OrderBy(plugin => plugin.GetType().FullName, StringComparer.Ordinal)
-                .First())
-            .Select(plugin =>
-            {
-                var metadata = ResolveAssemblyMetadata(plugin.GetType().Assembly, plugin);
-                if (metadata is null)
-                {
-                    return null;
-                }
-
-                return new DiscoveredPlugin
-                {
-                    Plugin = plugin,
-                    Capabilities = DiscoverCapabilities(plugin)
-                };
-            })
-            .Where(static discovered => discovered is not null)
-            .Select(static discovered => discovered!)
-            .ToList();
-    }
-
-    private static IReadOnlyList<IPluginCapability> DiscoverCapabilities(IPlugin pluginInstance)
-    {
-        var pluginType = pluginInstance.GetType();
-        var capabilityInterfaces = pluginType.GetInterfaces()
-            .Where(@interface => @interface != typeof(IPluginCapability))
-            .Where(@interface => typeof(IPluginCapability).IsAssignableFrom(@interface))
-            .Distinct()
-            .ToList();
-
-        var capabilities = new List<IPluginCapability>();
-        foreach (var capabilityType in capabilityInterfaces)
-        {
-            if (pluginInstance is IPluginCapability capability &&
-                capabilityType.IsInstanceOfType(capability) &&
-                capabilities.All(existing => !ReferenceEquals(existing, capability)))
-            {
-                capabilities.Add(capability);
-            }
-        }
-
-        return capabilities;
-    }
-
-    private static IPlugin? ResolvePluginInstance(Assembly assembly)
-    {
-        var pluginType = assembly.GetTypes()
-            .Where(type => !type.IsAbstract && typeof(IPlugin).IsAssignableFrom(type))
-            .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
-            .OrderBy(type => type.FullName, StringComparer.Ordinal)
-            .FirstOrDefault();
-
-        return pluginType is null ? null : Activator.CreateInstance(pluginType) as IPlugin;
-    }
-
-    private static IReadOnlyList<IPluginCapability> GetServicesFromAssembly(Assembly assembly, string pluginId)
-    {
-        var services = new ServiceCollection();
-        var capabilityTypes = assembly.GetTypes()
+        return assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(IPluginCapability).IsAssignableFrom(type))
             .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
-            .ToArray();
-
-        foreach (var capabilityType in capabilityTypes)
-        {
-            if (Activator.CreateInstance(capabilityType) is not IPluginCapability capability)
+            .Select(type =>
             {
-                continue;
-            }
-
-            services.AddKeyedSingleton(typeof(IPluginCapability), pluginId, capability);
-            foreach (var serviceType in capabilityType.GetInterfaces()
-                         .Where(@interface => @interface != typeof(IPluginCapability))
-                         .Where(@interface => typeof(IPluginCapability).IsAssignableFrom(@interface))
-                         .Distinct())
-            {
-                services.AddKeyedSingleton(serviceType, pluginId, capability);
-            }
-        }
-
-        using var provider = services.BuildServiceProvider();
-        var discoveredServices = provider.GetKeyedServices<IPluginCapability>(pluginId)
+                try
+                {
+                    return Activator.CreateInstance(type) as IPluginCapability;
+                }
+                catch
+                {
+                    return null;
+                }
+            })
+            .Where(static capability => capability is not null)
+            .Select(static capability => capability!)
             .DistinctBy(static capability => capability.GetType())
             .ToList();
-        return discoveredServices;
     }
 
-    private static (string Id, Version MinHostVersion, Version? MaxHostVersion)? ResolveAssemblyMetadata(Assembly assembly, IPlugin plugin)
+    private static (string Id, string Name, Version Version, Version MinHostVersion, Version? MaxHostVersion, string Description, string FileName)? ResolveAssemblyMetadata(Assembly assembly)
     {
         var assemblyName = assembly.GetName();
         var assemblySimpleName = assemblyName.Name;
@@ -137,11 +76,15 @@ public sealed class PluginDiscoveryService
             return null;
         }
 
-        var id = assembly.GetCustomAttribute<PluginIdAttribute>()?.Id ?? plugin.Id;
+        var id = assembly.GetCustomAttribute<PluginIdAttribute>()?.Id ?? assemblySimpleName;
+        var name = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? assemblySimpleName;
+        var version = assemblyName.Version ?? new Version(1, 0, 0, 0);
         var minHostVersion = TryParseVersion(assembly.GetCustomAttribute<MinHostVersionAttribute>()?.Version)
-                             ?? plugin.MinHostVersion;
+                             ?? new Version(3, 0, 0);
         var maxHostVersion = TryParseVersion(assembly.GetCustomAttribute<MaxHostVersionAttribute>()?.Version);
-        return (id, minHostVersion, maxHostVersion ?? plugin.MaxHostVersion);
+        var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description ?? string.Empty;
+        var fileName = Path.GetFileName(assembly.Location);
+        return (id, name, version, minHostVersion, maxHostVersion, description, fileName);
     }
 
     private static Version? TryParseVersion(string? value)

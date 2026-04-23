@@ -1,30 +1,21 @@
 using System.Text;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Csv;
 
-public sealed class CsvCatalogPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
 {
     private static readonly string[] HeaderColumns = ["NodeId", "ParentId", "Kind", "Name", "SizeBytes"];
 
-    public string Id => "skycd.plugin.csv";
-    public string Name => "CSV Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that exposes CSV file format support.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-csv",
             "SkyCD CSV",
             [".csv"],
             CanRead: true,
             CanWrite: true,
-            MimeType: "text/csv")
-    ];
+            MimeType: "text/csv");
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

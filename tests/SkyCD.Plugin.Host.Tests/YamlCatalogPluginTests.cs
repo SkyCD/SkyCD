@@ -89,7 +89,11 @@ public class YamlCatalogPluginTests
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.yaml",
+                Name = "YamlCatalogPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

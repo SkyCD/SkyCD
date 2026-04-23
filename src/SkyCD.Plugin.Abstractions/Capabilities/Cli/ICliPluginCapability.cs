@@ -6,9 +6,9 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Cli;
 public interface ICliPluginCapability : IPluginCapability
 {
     /// <summary>
-    /// Gets CLI command and extension contributions.
+    /// Gets CLI command or extension contribution.
     /// </summary>
-    IReadOnlyCollection<CliCommandContribution> GetCliContributions();
+    CliCommandContribution Command { get; }
 
     /// <summary>
     /// Executes a contributed command or extension hook.

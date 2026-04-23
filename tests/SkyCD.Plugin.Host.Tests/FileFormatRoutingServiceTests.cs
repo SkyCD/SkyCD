@@ -1,6 +1,5 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Host.Menu;
@@ -32,7 +31,11 @@ public class FileFormatRoutingServiceTests
         [
             new DiscoveredPlugin
             {
-                Plugin = new ThrowingMenuPlugin(),
+                Id = "tests.menu",
+                Name = "Menu Test",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [new ThrowingMenuPlugin()]
             }
         ]);
@@ -95,7 +98,11 @@ public class FileFormatRoutingServiceTests
         var catalog = new PluginCatalog();
         var discovered = capabilities.Select(capability => new DiscoveredPlugin
         {
-            Plugin = (IPlugin)capability,
+            Id = capability.SupportedFormat.FormatId,
+            Name = capability.GetType().Name,
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = "tests.dll",
             Capabilities = [capability]
         });
 
@@ -103,17 +110,10 @@ public class FileFormatRoutingServiceTests
         return catalog;
     }
 
-    private sealed class TestReadOnlyPlugin : IPlugin, IFileFormatPluginCapability
+    private sealed class TestReadOnlyPlugin : IFileFormatPluginCapability
     {
-        public string Id => "tests.readonly";
-        public string Name => "ReadOnly";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
-
-        public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-        [
-            new FileFormatDescriptor("readonly-json", "Read Only JSON", [".json"], CanRead: true, CanWrite: false)
-        ];
+        public FileFormatDescriptor SupportedFormat =>
+            new("readonly-json", "Read Only JSON", [".json"], CanRead: true, CanWrite: false);
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new FileFormatReadResult { Success = true, Payload = "readonly" });
@@ -122,17 +122,10 @@ public class FileFormatRoutingServiceTests
             Task.FromResult(new FileFormatWriteResult { Success = false, Error = "not allowed" });
     }
 
-    private sealed class TestReadWritePlugin : IPlugin, IFileFormatPluginCapability
+    private sealed class TestReadWritePlugin : IFileFormatPluginCapability
     {
-        public string Id => "tests.readwrite";
-        public string Name => "ReadWrite";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
-
-        public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-        [
-            new FileFormatDescriptor("rw-json", "Read/Write JSON", [".json"], CanRead: true, CanWrite: true)
-        ];
+        public FileFormatDescriptor SupportedFormat =>
+            new("rw-json", "Read/Write JSON", [".json"], CanRead: true, CanWrite: true);
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
         {
@@ -151,12 +144,8 @@ public class FileFormatRoutingServiceTests
         }
     }
 
-    private sealed class ThrowingMenuPlugin : IPlugin, IMenuPluginCapability
+    private sealed class ThrowingMenuPlugin : IMenuPluginCapability
     {
-        public string Id => "tests.menu";
-        public string Name => "Menu Test";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
         public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
         [
             new MenuContribution("tests.menu.throw", "Throw", "Tools")

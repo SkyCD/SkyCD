@@ -1,5 +1,3 @@
-using SkyCD.Plugin.Abstractions.Lifecycle;
-
 namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 /// <summary>
@@ -8,9 +6,9 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 public interface IFileFormatPluginCapability : IPluginCapability
 {
     /// <summary>
-    /// Gets file formats supported by this capability.
+    /// Gets file format supported by this capability.
     /// </summary>
-    IReadOnlyCollection<FileFormatDescriptor> SupportedFormats { get; }
+    FileFormatDescriptor SupportedFormat { get; }
 
     /// <summary>
     /// Reads structured payload from source stream.

@@ -64,15 +64,18 @@ public sealed class FileFormatRoutingService(PluginCatalog pluginCatalog)
         return pluginCatalog.Plugins
             .SelectMany(plugin =>
                 plugin.Capabilities.OfType<IFileFormatPluginCapability>()
-                    .SelectMany(capability =>
-                        capability.SupportedFormats.Select(format => new FileFormatRoute(
-                            plugin.Plugin.Id,
+                    .Select(capability =>
+                    {
+                        var format = capability.SupportedFormat;
+                        return new FileFormatRoute(
+                            plugin.Id,
                             format.FormatId,
                             format.DisplayName,
                             format.Extensions,
                             format.CanRead,
                             format.CanWrite,
-                            format.MimeType))))
+                            format.MimeType);
+                    }))
             .OrderBy(route => route.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -80,16 +83,17 @@ public sealed class FileFormatRoutingService(PluginCatalog pluginCatalog)
     private IFileFormatPluginCapability ResolveCapability(string formatId)
     {
         var capability = pluginCatalog.GetCapabilities<IFileFormatPluginCapability>()
-            .FirstOrDefault(candidate => candidate.SupportedFormats.Any(format =>
-                format.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase)));
+            .FirstOrDefault(candidate =>
+                candidate.SupportedFormat.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase));
 
         return capability ?? throw new FileFormatRoutingException($"No plugin capability found for format '{formatId}'.");
     }
 
     private static FileFormatDescriptor ResolveFormat(IFileFormatPluginCapability capability, string formatId)
     {
-        return capability.SupportedFormats
-            .FirstOrDefault(format => format.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new FileFormatRoutingException($"Format descriptor not found for '{formatId}'.");
+        var format = capability.SupportedFormat;
+        return format.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase)
+            ? format
+            : throw new FileFormatRoutingException($"Format descriptor not found for '{formatId}'.");
     }
 }

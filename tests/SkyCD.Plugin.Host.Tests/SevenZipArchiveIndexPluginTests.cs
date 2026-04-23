@@ -82,7 +82,11 @@ public class SevenZipArchiveIndexPluginTests
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.7z",
+                Name = "SevenZipArchiveIndexPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

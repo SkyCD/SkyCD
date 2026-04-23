@@ -1,27 +1,18 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Markdown;
 
-public sealed class MarkdownCatalogExportPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class MarkdownCatalogExportPlugin : IFileFormatPluginCapability
 {
-    public string Id => "skycd.plugin.markdown";
-    public string Name => "Markdown Export Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that exports catalog payloads to Markdown.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-md",
             "SkyCD Markdown Export",
             [".md"],
             CanRead: false,
             CanWrite: true,
-            MimeType: "text/markdown")
-    ];
+            MimeType: "text/markdown");
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

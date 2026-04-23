@@ -87,7 +87,11 @@ public class ZipArchiveIndexPluginTests
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.zip",
+                Name = "ZipArchiveIndexPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

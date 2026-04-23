@@ -1,10 +1,9 @@
 using DiscUtils.Iso9660;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Iso;
 
-public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
 {
     private readonly IIsoEntryReader _entryReader;
 
@@ -17,22 +16,14 @@ public sealed class IsoImageIndexPlugin : IPlugin, IFileFormatPluginCapability
         _entryReader = entryReader;
     }
 
-    public string Id => "skycd.plugin.iso";
-    public string Name => "ISO Index Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that indexes ISO image entries.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-iso",
             "ISO Image Index",
             [".iso"],
             CanRead: true,
             CanWrite: false,
-            MimeType: "application/x-iso9660-image")
-    ];
+            MimeType: "application/x-iso9660-image");
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

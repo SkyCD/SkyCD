@@ -64,7 +64,11 @@ public class TomlCatalogPluginTests
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.toml",
+                Name = "TomlCatalogPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

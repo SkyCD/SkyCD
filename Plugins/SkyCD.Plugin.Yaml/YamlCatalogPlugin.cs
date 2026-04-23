@@ -1,12 +1,11 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace SkyCD.Plugin.Yaml;
 
-public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
@@ -14,22 +13,14 @@ public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .Build();
 
-    public string Id => "skycd.plugin.yaml";
-    public string Name => "YAML Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that exposes YAML file format support.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-yaml",
             "SkyCD YAML",
             [".yaml", ".yml"],
             CanRead: true,
             CanWrite: true,
-            MimeType: "application/yaml")
-    ];
+            MimeType: "application/yaml");
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

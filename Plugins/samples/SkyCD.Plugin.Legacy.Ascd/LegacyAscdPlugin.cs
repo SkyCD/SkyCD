@@ -1,25 +1,17 @@
 using System.IO.Compression;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Legacy.Ascd;
 
-public sealed class LegacyAscdPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
 {
     private const string FormatHeaderPrefix = "# format: skycd-nf";
     private const string InsertPrefix = "INSERT INTO list";
 
-    public string Id => "skycd.plugin.legacy.ascd";
-    public string Name => "Legacy ASCD Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Reads and writes legacy *.ascd compressed catalogs using safe statement parsing.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor("legacy-ascd", "SkyCD Advanced Format", [".ascd"], CanRead: true, CanWrite: true, "application/octet-stream")
-    ];
+    ;
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

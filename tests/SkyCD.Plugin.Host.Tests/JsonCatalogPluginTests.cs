@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -90,7 +89,11 @@ public class JsonCatalogPluginTests
         [
             new DiscoveredPlugin
             {
-                Plugin = capability,
+                Id = "tests.json",
+                Name = "JsonCatalogPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [capability]
             }
         ]);

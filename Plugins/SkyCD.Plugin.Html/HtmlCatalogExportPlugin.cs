@@ -1,28 +1,19 @@
 using System.Net;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Html;
 
-public sealed class HtmlCatalogExportPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class HtmlCatalogExportPlugin : IFileFormatPluginCapability
 {
-    public string Id => "skycd.plugin.html";
-    public string Name => "HTML Export Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that exports catalog payloads to HTML.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-html",
             "SkyCD HTML Export",
             [".html"],
             CanRead: false,
             CanWrite: true,
-            MimeType: "text/html")
-    ];
+            MimeType: "text/html");
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

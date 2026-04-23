@@ -1,24 +1,16 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Legacy.Scd;
 
-public sealed class LegacyScdPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class LegacyScdPlugin : IFileFormatPluginCapability
 {
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
-    public string Id => "skycd.plugin.legacy.scd";
-    public string Name => "Legacy SCD Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Reads and writes legacy *.scd text catalogs.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor("legacy-scd", "SkyCD Text Format", [".scd"], CanRead: true, CanWrite: true, "text/plain")
-    ];
+    ;
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

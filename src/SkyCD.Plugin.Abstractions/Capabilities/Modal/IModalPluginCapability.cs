@@ -6,9 +6,9 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
 public interface IModalPluginCapability : IPluginCapability
 {
     /// <summary>
-    /// Gets available modal descriptors.
+    /// Gets modal descriptor.
     /// </summary>
-    IReadOnlyCollection<ModalDescriptor> GetModals();
+    ModalDescriptor Modal { get; }
 
     /// <summary>
     /// Opens a plugin-contributed modal request and returns typed output.

@@ -1,18 +1,10 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Sample.Modal;
 
-public sealed class SampleModalPlugin : IPlugin, IModalPluginCapability
+public sealed class SampleModalPlugin : IModalPluginCapability
 {
-    public string Id => "skycd.plugin.sample.modal";
-    public string Name => "Sample Modal Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that contributes a typed modal contract.";
-
-    public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-    [
+    public ModalDescriptor Modal =>
         new ModalDescriptor(
             "sample.modal.confirm-export",
             "Confirm Export",
@@ -22,8 +14,7 @@ public sealed class SampleModalPlugin : IPlugin, IModalPluginCapability
             InputContract: new ModalPayloadContract("sample.modal.confirm-export.input", IsRequired: true),
             OutputContract: new ModalPayloadContract("sample.modal.confirm-export.output", IsRequired: true),
             IsBlocking: true,
-            AllowReentry: false)
-    ];
+            AllowReentry: false);
 
     public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
     {

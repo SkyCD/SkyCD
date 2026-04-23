@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Loading;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -35,7 +34,7 @@ public sealed class PluginDirectoryLoaderTests : IDisposable
         var loader = new PluginDirectoryLoader();
         var result = loader.LoadFromDirectories([_root], new PluginLoadOptions { HostVersion = new Version(3, 0, 0) });
 
-        Assert.Contains(result.Plugins, plugin => plugin.Plugin.Id == "tests.runtime.loader-plugin");
+        Assert.Contains(result.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.IsError);
     }
 
@@ -78,14 +77,5 @@ public sealed class PluginDirectoryLoaderTests : IDisposable
             }
         }
     }
-
-}
-
-public sealed class LoaderTestPlugin : IPlugin
-{
-    public string Id => "tests.runtime.loader-plugin";
-    public string Name => "Loader Test Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
 
 }

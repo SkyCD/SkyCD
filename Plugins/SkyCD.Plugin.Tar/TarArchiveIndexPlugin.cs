@@ -1,28 +1,19 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Tar;
 
-public sealed class TarArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
-    public string Id => "skycd.plugin.tar";
-    public string Name => "TAR Index Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that indexes TAR archive entries.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-tar",
             "TAR Archive Index",
             [".tar", ".tar.gz", ".tgz"],
             CanRead: true,
             CanWrite: false,
-            MimeType: "application/x-tar")
-    ];
+            MimeType: "application/x-tar");
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

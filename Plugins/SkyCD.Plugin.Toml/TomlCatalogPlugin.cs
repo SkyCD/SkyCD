@@ -1,32 +1,23 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using Tomlyn;
 using Tomlyn.Model;
 
 namespace SkyCD.Plugin.Toml;
 
-public sealed class TomlCatalogPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
     private const string HierarchyStrategy = "adjacency-list";
 
-    public string Id => "skycd.plugin.toml";
-    public string Name => "TOML Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that exposes TOML file format support.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-toml",
             "SkyCD TOML",
             [".toml"],
             CanRead: true,
             CanWrite: true,
-            MimeType: "application/toml")
-    ];
+            MimeType: "application/toml");
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

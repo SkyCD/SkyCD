@@ -1,5 +1,4 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -138,21 +137,25 @@ public class ModalExtensionServiceTests
         var catalog = new PluginCatalog();
         catalog.SetPlugins(capabilities.Select(capability => new DiscoveredPlugin
         {
-            Plugin = (IPlugin)capability,
+            Id = capability switch
+            {
+                EchoModalPlugin => "tests.modal.echo",
+                SlowModalPlugin => "tests.modal.slow",
+                NonReentrantControlledModalPlugin => "tests.modal.locked",
+                _ => capability.Modal.ModalId
+            },
+            Name = capability.GetType().Name,
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = "tests.dll",
             Capabilities = [capability]
         }));
         return catalog;
     }
 
-    private sealed class EchoModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class EchoModalPlugin : IModalPluginCapability
     {
-        public string Id => "tests.modal.echo";
-        public string Name => "Echo Modal";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
+        public ModalDescriptor Modal =>
             new ModalDescriptor(
                 "sample.modal.echo",
                 "Echo",
@@ -162,8 +165,7 @@ public class ModalExtensionServiceTests
                 InputContract: new ModalPayloadContract("sample.modal.echo.input", IsRequired: true),
                 OutputContract: new ModalPayloadContract("sample.modal.echo.output", IsRequired: false),
                 IsBlocking: true,
-                AllowReentry: false)
-        ];
+                AllowReentry: false);
 
         public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {
@@ -175,17 +177,9 @@ public class ModalExtensionServiceTests
         }
     }
 
-    private sealed class SlowModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class SlowModalPlugin : IModalPluginCapability
     {
-        public string Id => "tests.modal.slow";
-        public string Name => "Slow Modal";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor("sample.modal.slow", "Slow", 400, 260)
-        ];
+        public ModalDescriptor Modal => new("sample.modal.slow", "Slow", 400, 260);
 
         public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {
@@ -194,23 +188,16 @@ public class ModalExtensionServiceTests
         }
     }
 
-    private sealed class NonReentrantControlledModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class NonReentrantControlledModalPlugin : IModalPluginCapability
     {
         private readonly TaskCompletionSource _firstOpenStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public string Id => "tests.modal.locked";
-        public string Name => "Locked Modal";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
         public Task FirstOpenStarted => _firstOpenStarted.Task;
 
         public void AllowCompletion() => _allowCompletion.TrySetResult();
 
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor("sample.modal.locked", "Locked", 420, 300, AllowReentry: false)
-        ];
+        public ModalDescriptor Modal => new("sample.modal.locked", "Locked", 420, 300, AllowReentry: false);
 
         public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {

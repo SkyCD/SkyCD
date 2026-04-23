@@ -2,31 +2,22 @@ using System.Globalization;
 using System.Text;
 using System.Xml;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Xml;
 
-public sealed class XmlCatalogPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
 {
     private const string NamespaceUri = "urn:skycd:catalog";
     private const string SchemaVersion = "1.0";
 
-    public string Id => "skycd.plugin.xml";
-    public string Name => "XML Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Example plugin that exposes XML file format support.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-xml",
             "SkyCD XML",
             [".xml"],
             CanRead: true,
             CanWrite: true,
-            MimeType: "application/xml")
-    ];
+            MimeType: "application/xml");
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

@@ -63,7 +63,7 @@ public sealed class PluginDirectoryDiscoveryService
                     var discovered = discoveryService.DiscoverFromAssembly(assembly, hostVersion);
                     foreach (var plugin in discovered)
                     {
-                        if (!seenIds.Add(plugin.Plugin.Id))
+                        if (!seenIds.Add(plugin.Id))
                         {
                             continue;
                         }
@@ -93,7 +93,7 @@ public sealed class PluginDirectoryDiscoveryService
 
         foreach (var plugin in plugins)
         {
-            if (!seenIds.Add(plugin.Plugin.Id))
+            if (!seenIds.Add(plugin.Id))
             {
                 continue;
             }

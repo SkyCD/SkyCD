@@ -1,5 +1,3 @@
-using SkyCD.Plugin.Abstractions.Lifecycle;
-
 namespace SkyCD.Plugin.Runtime.Discovery;
 
 /// <summary>

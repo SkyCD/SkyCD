@@ -1,7 +1,7 @@
 using SkyCD.Cli;
+using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using System.Text.Json;
 using System.Text;
@@ -243,7 +243,7 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = CreateHost(output, error, [new TestPlugin()]);
+        var host = CreateHost(output, error, CreateTestPlugins());
 
         var result = await host.TryRunAsync(["list-formats"]);
 
@@ -280,8 +280,7 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var plugin = new TestPlugin();
-        var host = CreateHost(output, error, [plugin]);
+        var host = CreateHost(output, error, CreateTestPlugins());
 
         var result = await host.TryRunAsync(["tests greet"]);
 
@@ -296,8 +295,7 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var plugin = new TestPlugin();
-        var host = CreateHost(output, error, [plugin]);
+        var host = CreateHost(output, error, CreateTestPlugins());
 
         var result = await host.TryRunAsync(["TeStS", "GrEeT"]);
 
@@ -320,8 +318,7 @@ public sealed class CliHostTests
 
             var output = new StringWriter();
             var error = new StringWriter();
-            var plugin = new TestPlugin();
-            var host = CreateHost(output, error, [plugin]);
+            var host = CreateHost(output, error, CreateTestPlugins());
 
             var result = await host.TryRunAsync(["convert", "--in", inputPath, "--out", outputPath, "--in-format", "tests-read", "--format", "tests-write"]);
 
@@ -338,93 +335,72 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public async Task DuplicatePluginCommand_SameAssembly_DoesNotProduceCollisionError()
+    public async Task DuplicatePluginCommand_ProducesCollisionError()
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = CreateHost(output, error, [new TestPlugin(), new DuplicateCommandPlugin()]);
+        var host = CreateHost(output, error, CreateTestPlugins(includeDuplicateCommand: true));
 
         var result = await host.TryRunAsync(["tests greet"]);
 
         Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        Assert.DoesNotContain("CLI command collision", error.ToString(), StringComparison.Ordinal);
+        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
+        Assert.Contains("CLI command collision", error.ToString(), StringComparison.Ordinal);
     }
 
-    private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<IPlugin> plugins)
+    private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<DiscoveredPlugin> plugins)
     {
         return new CliHost(
             stdout,
             stderr,
             (_, _) => Task.FromResult(new CliPluginRuntime
             {
-                DiscoveredPlugins = plugins.Select(ToDiscoveredPlugin).ToList(),
+                DiscoveredPlugins = plugins.ToList(),
                 Diagnostics = [],
                 PluginDirectories = []
             }));
     }
 
-    private static DiscoveredPlugin ToDiscoveredPlugin(IPlugin plugin)
+    private static IReadOnlyList<DiscoveredPlugin> CreateTestPlugins(bool includeDuplicateCommand = false)
     {
-        var capabilities = new List<SkyCD.Plugin.Abstractions.Capabilities.IPluginCapability>();
-        if (plugin is IFileFormatPluginCapability fileFormat)
+        var plugins = new List<DiscoveredPlugin>
         {
-            capabilities.Add(fileFormat);
-        }
-
-        if (plugin is ICliPluginCapability cli &&
-            capabilities.All(existing => !ReferenceEquals(existing, cli)))
-        {
-            capabilities.Add(cli);
-        }
-
-        return new DiscoveredPlugin
-        {
-            Plugin = plugin,
-            Capabilities = capabilities
+            new()
+            {
+                Id = "tests.cli",
+                Name = "Tests CLI",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.cli.dll",
+                Capabilities =
+                [
+                    new TestReadFormatCapability(),
+                    new TestWriteFormatCapability(),
+                    new TestGreetCliCapability(),
+                    new TestConvertCliExtensionCapability()
+                ]
+            }
         };
+
+        if (includeDuplicateCommand)
+        {
+            plugins.Add(new DiscoveredPlugin
+            {
+                Id = "tests.cli.dup",
+                Name = "Tests CLI Dup",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.cli.dup.dll",
+                Capabilities = [new DuplicateCommandCapability()]
+            });
+        }
+
+        return plugins;
     }
 
-    private sealed class TestPlugin : IPlugin, IFileFormatPluginCapability, ICliPluginCapability
+    private sealed class TestReadFormatCapability : IFileFormatPluginCapability
     {
-        public string Id => "tests.cli";
-        public string Name => "Tests CLI";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
-
-        public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-        [
-            new("tests-read", "Tests Read", [".src"], CanRead: true, CanWrite: false),
-            new("tests-write", "Tests Write", [".dst"], CanRead: false, CanWrite: true)
-        ];
-
-        public IReadOnlyCollection<CliCommandContribution> GetCliContributions() =>
-        [
-            new CliCommandContribution("tests greet", "greet", "Greet command"),
-            new CliCommandContribution("convert", "convert-ext", "Convert extension", CliContributionType.Extension, Priority: 10)
-        ];
-
-        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
-        {
-            return context.CommandId switch
-            {
-                "greet" => Task.FromResult(new CliCommandResult
-                {
-                    Success = true,
-                    Output = "hello from plugin"
-                }),
-                "convert-ext" => Task.FromResult(new CliCommandResult
-                {
-                    Success = true,
-                    Payload = $"{context.Payload}|ext"
-                }),
-                _ => Task.FromResult(new CliCommandResult
-                {
-                    Success = false,
-                    Error = "Unknown command id"
-                })
-            };
-        }
+        public FileFormatDescriptor SupportedFormat => new("tests-read", "Tests Read", [".src"], CanRead: true, CanWrite: false);
 
         public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
         {
@@ -436,6 +412,17 @@ public sealed class CliHostTests
             };
         }
 
+        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new FileFormatWriteResult { Success = false, Error = "read only" });
+    }
+
+    private sealed class TestWriteFormatCapability : IFileFormatPluginCapability
+    {
+        public FileFormatDescriptor SupportedFormat => new("tests-write", "Tests Write", [".dst"], CanRead: false, CanWrite: true);
+
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new FileFormatReadResult { Success = false, Error = "write only" });
+
         public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
         {
             await using var writer = new StreamWriter(request.Target, Encoding.UTF8, leaveOpen: true);
@@ -445,17 +432,38 @@ public sealed class CliHostTests
         }
     }
 
-    private sealed class DuplicateCommandPlugin : IPlugin, ICliPluginCapability
+    private sealed class TestGreetCliCapability : ICliPluginCapability
     {
-        public string Id => "tests.cli.dup";
-        public string Name => "Tests CLI Dup";
-        public Version Version => new(1, 0, 0);
-        public Version MinHostVersion => new(3, 0, 0);
+        public CliCommandContribution Command => new("tests greet", "greet", "Greet command");
 
-        public IReadOnlyCollection<CliCommandContribution> GetCliContributions() =>
-        [
-            new CliCommandContribution("tests greet", "greet", "Conflicting command")
-        ];
+        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new CliCommandResult
+            {
+                Success = true,
+                Output = "hello from plugin"
+            });
+        }
+    }
+
+    private sealed class TestConvertCliExtensionCapability : ICliPluginCapability
+    {
+        public CliCommandContribution Command =>
+            new("convert", "convert-ext", "Convert extension", CliContributionType.Extension, Priority: 10);
+
+        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new CliCommandResult
+            {
+                Success = true,
+                Payload = $"{context.Payload}|ext"
+            });
+        }
+    }
+
+    private sealed class DuplicateCommandCapability : ICliPluginCapability
+    {
+        public CliCommandContribution Command => new("tests greet", "greet", "Conflicting command");
 
         public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
         {

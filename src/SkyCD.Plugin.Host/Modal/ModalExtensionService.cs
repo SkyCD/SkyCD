@@ -16,9 +16,11 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
         return pluginCatalog.Plugins
             .SelectMany(plugin =>
                 plugin.Capabilities.OfType<IModalPluginCapability>()
-                    .SelectMany(capability =>
-                        capability.GetModals().Select(modal => new ModalRegistration(
-                            plugin.Plugin.Id,
+                    .Select(capability =>
+                    {
+                        var modal = capability.Modal;
+                        return new ModalRegistration(
+                            plugin.Id,
                             modal.ModalId,
                             modal.Title,
                             modal.Width,
@@ -29,7 +31,8 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
                             modal.InputContract?.TypeId,
                             modal.InputContract?.IsRequired ?? false,
                             modal.OutputContract?.TypeId,
-                            modal.OutputContract?.IsRequired ?? false))))
+                            modal.OutputContract?.IsRequired ?? false);
+                    }))
             .OrderBy(modal => modal.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -139,11 +142,9 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
     {
         foreach (var capability in pluginCatalog.GetCapabilities<IModalPluginCapability>())
         {
-            var modal = capability.GetModals()
-                .FirstOrDefault(candidate =>
-                    candidate.ModalId.Equals(modalId, StringComparison.OrdinalIgnoreCase));
+            var modal = capability.Modal;
 
-            if (modal is not null)
+            if (modal.ModalId.Equals(modalId, StringComparison.OrdinalIgnoreCase))
             {
                 return (capability, modal);
             }

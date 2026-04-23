@@ -2,24 +2,16 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Legacy.Cscd;
 
-public sealed class LegacyCscdPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
 {
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
-    public string Id => "skycd.plugin.legacy.cscd";
-    public string Name => "Legacy CSCD Format Plugin";
-    public Version Version => new(1, 0, 0);
-    public Version MinHostVersion => new(3, 0, 0);
-    public string Description => "Reads and writes legacy *.cscd compressed text catalogs.";
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor("legacy-cscd", "SkyCD Compressed Text Format", [".cscd"], CanRead: true, CanWrite: true, "application/octet-stream")
-    ];
+    ;
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {
