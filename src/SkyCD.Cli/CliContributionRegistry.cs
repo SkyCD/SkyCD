@@ -7,16 +7,18 @@ namespace SkyCD.Cli;
 internal sealed class CliContributionRegistry : IDisposable
 {
     private static readonly StringComparer CommandComparer = StringComparer.OrdinalIgnoreCase;
+    private const string CommandRegistryKey = "skycd.cli.command";
+    private const string ExtensionPointRegistryKey = "skycd.cli.extension_point";
     private readonly HashSet<string> commandPaths = new(CommandComparer);
-    private readonly HashSet<string> builtInCommands;
-    private readonly HashSet<string> extensionPoints;
+    private readonly string[] builtInCommands;
+    private readonly string[] extensionPoints;
     private readonly Dictionary<string, string> commandOwners = new(CommandComparer);
     private ServiceProvider? provider;
 
     public CliContributionRegistry(IEnumerable<string> builtInCommands, IEnumerable<string> extensionPoints)
     {
-        this.builtInCommands = new HashSet<string>(builtInCommands.Select(NormalizePath), CommandComparer);
-        this.extensionPoints = new HashSet<string>(extensionPoints.Select(NormalizePath), CommandComparer);
+        this.builtInCommands = builtInCommands.Select(NormalizePath).Distinct(CommandComparer).ToArray();
+        this.extensionPoints = extensionPoints.Select(NormalizePath).Distinct(CommandComparer).ToArray();
     }
 
     public IReadOnlyList<string> Errors { get; private set; } = [];
@@ -32,6 +34,7 @@ internal sealed class CliContributionRegistry : IDisposable
 
         var errors = new List<string>();
         var services = new ServiceCollection();
+        RegisterHostCommandMetadata(services);
 
         foreach (var plugin in plugins)
         {
@@ -110,7 +113,7 @@ internal sealed class CliContributionRegistry : IDisposable
 
         if (contribution.ContributionType == CliContributionType.Extension)
         {
-            if (!extensionPoints.Contains(normalizedPath))
+            if (!ContainsKeyedValue(services, ExtensionPointRegistryKey, normalizedPath))
             {
                 errors.Add(
                     $"Plugin '{plugin.Plugin.Descriptor.Id}' contributes extension '{contribution.CommandPath}' but no such extension point exists.");
@@ -121,7 +124,7 @@ internal sealed class CliContributionRegistry : IDisposable
             return;
         }
 
-        if (builtInCommands.Contains(normalizedPath))
+        if (ContainsKeyedValue(services, CommandRegistryKey, normalizedPath))
         {
             errors.Add(
                 $"Plugin '{plugin.Plugin.Descriptor.Id}' cannot register command '{contribution.CommandPath}' because it is reserved by the host.");
@@ -158,6 +161,38 @@ internal sealed class CliContributionRegistry : IDisposable
     private static string ToExtensionServiceKey(string path)
     {
         return $"ext::{NormalizePath(path).ToUpperInvariant()}";
+    }
+
+    private void RegisterHostCommandMetadata(IServiceCollection services)
+    {
+        foreach (var builtInCommand in builtInCommands)
+        {
+            services.AddKeyedSingleton<string>(CommandRegistryKey, builtInCommand);
+        }
+
+        foreach (var extensionPoint in extensionPoints)
+        {
+            services.AddKeyedSingleton<string>(ExtensionPointRegistryKey, extensionPoint);
+        }
+    }
+
+    private static bool ContainsKeyedValue(IServiceCollection services, string key, string value)
+    {
+        return services.Any(descriptor =>
+            descriptor.ServiceType == typeof(string) &&
+            Equals(descriptor.ServiceKey, key) &&
+            GetRegisteredStringValue(descriptor) is { } registered &&
+            registered.Equals(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? GetRegisteredStringValue(ServiceDescriptor descriptor)
+    {
+        if (descriptor.IsKeyedService && descriptor.KeyedImplementationInstance is string keyedValue)
+        {
+            return keyedValue;
+        }
+
+        return descriptor.ImplementationInstance as string;
     }
 }
 
