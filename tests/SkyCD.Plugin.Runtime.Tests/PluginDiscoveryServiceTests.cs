@@ -15,7 +15,7 @@ public class PluginDiscoveryServiceTests
 
         var plugins = discovery.DiscoverFromAssembly(Assembly.GetExecutingAssembly(), new Version(3, 0, 0));
 
-        var target = Assert.Single(plugins, plugin => plugin.Plugin.Descriptor.Id == "tests.runtime.assembly-plugin");
+        var target = Assert.Single(plugins, plugin => plugin.Plugin.Descriptor.Id == "tests.runtime.loader-plugin");
         Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is StandaloneFileFormatCapability);
@@ -40,7 +40,7 @@ public class PluginDiscoveryServiceTests
         var plugins = discovery.DiscoverFromPlugins([plugin]);
 
         var target = Assert.Single(plugins);
-        Assert.Equal("tests.runtime.assembly-plugin", target.Plugin.Descriptor.Id);
+        Assert.Equal("tests.plugin", target.Plugin.Descriptor.Id);
         Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
     }

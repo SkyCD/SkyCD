@@ -28,7 +28,7 @@ public sealed class PluginDiscoveryService
         [
             new DiscoveredPlugin
             {
-                Plugin = new DescriptorOverridePlugin(plugin, assemblyDescriptor),
+                Plugin = plugin,
                 Capabilities = GetServicesFromAssembly(assembly, assemblyDescriptor.Id)
             }
         ];
@@ -52,7 +52,7 @@ public sealed class PluginDiscoveryService
 
                 return new DiscoveredPlugin
                 {
-                    Plugin = new DescriptorOverridePlugin(plugin, descriptor),
+                    Plugin = plugin,
                     Capabilities = DiscoverCapabilities(plugin)
                 };
             })
@@ -198,14 +198,4 @@ public sealed class PluginDiscoveryService
         return TryParseVersion(value);
     }
 
-    private sealed class DescriptorOverridePlugin : IPlugin
-    {
-        public DescriptorOverridePlugin(IPlugin inner, PluginDescriptor descriptor)
-        {
-            _ = inner;
-            Descriptor = descriptor;
-        }
-
-        public PluginDescriptor Descriptor { get; }
-    }
 }
