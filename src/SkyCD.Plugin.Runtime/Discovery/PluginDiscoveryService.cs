@@ -11,7 +11,6 @@ public sealed class PluginDiscoveryService
 {
     private const string EntryPointMetadataKey = "SkyCD.Plugin.EntryPoint";
     private const string IdMetadataKey = "SkyCD.Plugin.Id";
-    private const string DisplayNameMetadataKey = "SkyCD.Plugin.DisplayName";
     private const string MinHostVersionMetadataKey = "SkyCD.Plugin.MinHostVersion";
     private const string DescriptionMetadataKey = "SkyCD.Plugin.Description";
 
@@ -113,8 +112,8 @@ public sealed class PluginDiscoveryService
         var assemblyName = assembly.GetName();
         var assemblySimpleName = assemblyName.Name ?? fallback.Id;
         var id = GetAssemblyMetadataValue(assembly, IdMetadataKey) ?? fallback.Id;
-        var displayName = GetAssemblyMetadataValue(assembly, DisplayNameMetadataKey)
-                          ?? assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title
+        var displayName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title
+                          ?? assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
                           ?? fallback.DisplayName
                           ?? assemblySimpleName;
 
