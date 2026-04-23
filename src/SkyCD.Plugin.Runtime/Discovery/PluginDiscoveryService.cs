@@ -17,7 +17,7 @@ public sealed class PluginDiscoveryService
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
         var assemblyDescriptor = ResolveAssemblyDescriptor(assembly);
-        if (!PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
+        if (assemblyDescriptor is null || !PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
         {
             return [];
         }
@@ -43,12 +43,19 @@ public sealed class PluginDiscoveryService
             .Select(plugin =>
             {
                 var descriptor = ResolveAssemblyDescriptor(plugin.GetType().Assembly);
+                if (descriptor is null)
+                {
+                    return null;
+                }
+
                 return new DiscoveredPlugin
                 {
                     Plugin = new AssemblyLifecyclePlugin(descriptor),
                     Capabilities = DiscoverCapabilities(plugin)
                 };
             })
+            .Where(static discovered => discovered is not null)
+            .Select(static discovered => discovered!)
             .ToList();
     }
 
@@ -107,10 +114,15 @@ public sealed class PluginDiscoveryService
             .ToList();
     }
 
-    private static PluginDescriptor ResolveAssemblyDescriptor(Assembly assembly)
+    private static PluginDescriptor? ResolveAssemblyDescriptor(Assembly assembly)
     {
         var assemblyName = assembly.GetName();
-        var assemblySimpleName = assemblyName.Name ?? "plugin";
+        var assemblySimpleName = assemblyName.Name;
+        if (string.IsNullOrWhiteSpace(assemblySimpleName))
+        {
+            return null;
+        }
+
         var id = GetAssemblyMetadataValue(assembly, IdMetadataKeys) ?? assemblySimpleName;
         var displayName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title
                           ?? assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
