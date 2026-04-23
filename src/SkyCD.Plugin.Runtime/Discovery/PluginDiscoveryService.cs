@@ -10,13 +10,14 @@ namespace SkyCD.Plugin.Runtime.Discovery;
 /// </summary>
 public sealed class PluginDiscoveryService
 {
-    private const string IdMetadataKey = "SkyCD.Plugin.Id";
-    private const string MinHostVersionMetadataKey = "SkyCD.Plugin.MinHostVersion";
+    private static readonly string[] IdMetadataKeys = ["SkyCD.Plugin.Id", "Plugin Id"];
+    private static readonly string[] MinHostVersionMetadataKeys = ["SkyCD.Plugin.MinHostVersion", "Min Host Version"];
+    private static readonly string[] MaxHostVersionMetadataKeys = ["SkyCD.Plugin.MaxHostVersion", "Max Host Version"];
 
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
         var assemblyDescriptor = ResolveAssemblyDescriptor(assembly);
-        if (assemblyDescriptor is null || !PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
+        if (!PluginCompatibilityEvaluator.IsCompatible(assemblyDescriptor, hostVersion))
         {
             return [];
         }
@@ -41,7 +42,7 @@ public sealed class PluginDiscoveryService
                 .First())
             .Select(plugin =>
             {
-                var descriptor = ResolveAssemblyDescriptor(plugin.GetType().Assembly) ?? plugin.Descriptor;
+                var descriptor = ResolveAssemblyDescriptor(plugin.GetType().Assembly);
                 return new DiscoveredPlugin
                 {
                     Plugin = new AssemblyLifecyclePlugin(descriptor),
@@ -106,23 +107,11 @@ public sealed class PluginDiscoveryService
             .ToList();
     }
 
-    private static PluginDescriptor? ResolveAssemblyDescriptor(Assembly assembly)
+    private static PluginDescriptor ResolveAssemblyDescriptor(Assembly assembly)
     {
-        var id = GetAssemblyMetadataValue(assembly, IdMetadataKey);
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return null;
-        }
-
-        var minHostVersionText = GetAssemblyMetadataValue(assembly, MinHostVersionMetadataKey);
-        var minHostVersion = TryParseVersion(minHostVersionText);
-        if (minHostVersion is null)
-        {
-            return null;
-        }
-
         var assemblyName = assembly.GetName();
-        var assemblySimpleName = assemblyName.Name ?? id;
+        var assemblySimpleName = assemblyName.Name ?? "plugin";
+        var id = GetAssemblyMetadataValue(assembly, IdMetadataKeys) ?? assemblySimpleName;
         var displayName = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title
                           ?? assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
                           ?? assemblySimpleName;
@@ -131,18 +120,32 @@ public sealed class PluginDiscoveryService
                       ?? assemblyName.Version
                       ?? new Version(1, 0, 0);
 
+        var minHostVersion = TryParseVersion(GetAssemblyMetadataValue(assembly, MinHostVersionMetadataKeys))
+                             ?? new Version(0, 0, 0);
+        var maxHostVersion = TryParseVersion(GetAssemblyMetadataValue(assembly, MaxHostVersionMetadataKeys));
+
         var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description
                           ?? string.Empty;
 
-        return new PluginDescriptor(id, displayName, version, minHostVersion, description);
+        return new PluginDescriptor(id, displayName, version, minHostVersion, description)
+        {
+            MaxHostVersion = maxHostVersion
+        };
     }
 
-    private static string? GetAssemblyMetadataValue(Assembly assembly, string key)
+    private static string? GetAssemblyMetadataValue(Assembly assembly, IEnumerable<string> keys)
     {
-        return assembly
-            .GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(attribute => attribute.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
-            ?.Value;
+        var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToArray();
+        foreach (var key in keys)
+        {
+            var value = metadata.FirstOrDefault(attribute => attribute.Key.Equals(key, StringComparison.OrdinalIgnoreCase))?.Value;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private static Version? TryParseVersion(string? value)

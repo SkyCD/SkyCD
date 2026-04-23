@@ -9,6 +9,7 @@ public static class PluginCompatibilityEvaluator
 {
     public static bool IsCompatible(PluginDescriptor descriptor, Version hostVersion)
     {
-        return hostVersion >= descriptor.MinHostVersion;
+        return hostVersion >= descriptor.MinHostVersion &&
+               (descriptor.MaxHostVersion is null || hostVersion <= descriptor.MaxHostVersion);
     }
 }

@@ -13,4 +13,10 @@ public sealed record PluginDescriptor(
     string DisplayName,
     Version Version,
     Version MinHostVersion,
-    string? Description = null);
+    string? Description = null)
+{
+    /// <summary>
+    /// Optional maximum host version supported by the plugin.
+    /// </summary>
+    public Version? MaxHostVersion { get; init; }
+}
