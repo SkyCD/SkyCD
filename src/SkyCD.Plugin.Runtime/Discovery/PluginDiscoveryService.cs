@@ -12,7 +12,6 @@ public sealed class PluginDiscoveryService
     private const string EntryPointMetadataKey = "SkyCD.Plugin.EntryPoint";
     private const string IdMetadataKey = "SkyCD.Plugin.Id";
     private const string MinHostVersionMetadataKey = "SkyCD.Plugin.MinHostVersion";
-    private const string DescriptionMetadataKey = "SkyCD.Plugin.Description";
 
     public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
     {
@@ -127,8 +126,7 @@ public sealed class PluginDiscoveryService
                              ?? fallback.MinHostVersion
                              ?? new Version(0, 0, 0);
 
-        var description = GetAssemblyMetadataValue(assembly, DescriptionMetadataKey)
-                          ?? assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description
+        var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description
                           ?? fallback.Description;
 
         return new PluginDescriptor(id, displayName, version, minHostVersion, description);
