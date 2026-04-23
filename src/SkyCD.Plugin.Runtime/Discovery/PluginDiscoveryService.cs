@@ -23,7 +23,7 @@ public sealed class PluginDiscoveryService
             new DiscoveredPlugin
             {
                 Plugin = new AssemblyLifecyclePlugin(assemblyDescriptor),
-                Capabilities = DiscoverCapabilitiesFromAssembly(assembly, assemblyDescriptor.Id)
+                Capabilities = GetServicesFromAssembly(assembly, assemblyDescriptor.Id)
             }
         ];
     }
@@ -78,7 +78,7 @@ public sealed class PluginDiscoveryService
         return capabilities;
     }
 
-    private static IReadOnlyList<IPluginCapability> DiscoverCapabilitiesFromAssembly(Assembly assembly, string pluginId)
+    private static IReadOnlyList<IPluginCapability> GetServicesFromAssembly(Assembly assembly, string pluginId)
     {
         var services = new ServiceCollection();
         var capabilityTypes = assembly.GetTypes()
