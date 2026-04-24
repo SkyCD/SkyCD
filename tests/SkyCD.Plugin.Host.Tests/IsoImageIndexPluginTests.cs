@@ -1,6 +1,6 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Iso;
 
@@ -11,7 +11,7 @@ public class IsoImageIndexPluginTests
     [Fact]
     public void OpenFormats_IncludeIso_ButSaveFormatsDoNot()
     {
-        var service = new FileFormatRoutingService(CreateCatalog(new FakeReader([])));
+        var service = new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -23,10 +23,10 @@ public class IsoImageIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnlyIsoFormat()
     {
-        var service = new FileFormatRoutingService(CreateCatalog(new FakeReader([])));
+        var service = new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
         await using var target = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-iso",
             Target = target,
@@ -45,7 +45,7 @@ public class IsoImageIndexPluginTests
             new IsoEntryInfo("ROOT/DEEP", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
             new IsoEntryInfo("ROOT/DEEP/MOVIE.MKV", IsDirectory: false, SizeBytes: 8589934592L, ModifiedUtc: new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
         ]);
-        var service = new FileFormatRoutingService(CreateCatalog(reader));
+        var service = new FileFormatManager(CreateCatalog(reader).GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream([0x43, 0x44]); // fake stream for fixture reader
 
         var result = await service.ReadAsync(new FileFormatReadRequest

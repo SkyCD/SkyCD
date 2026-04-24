@@ -1,19 +1,19 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Host.Tests;
 
-public class FileFormatRoutingServiceTests
+public class FileFormatManagerTests
 {
     [Fact]
     public void GetOpenAndSaveFormats_RespectsCapabilities()
     {
         var pluginCatalog = CreateCatalog(new TestReadOnlyPlugin(), new TestReadWritePlugin());
-        var service = new FileFormatRoutingService(pluginCatalog);
+        var service = new FileFormatManager(pluginCatalog.GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -54,7 +54,7 @@ public class FileFormatRoutingServiceTests
     public async Task WriteAsync_Throws_ForReadOnlyFormat()
     {
         var pluginCatalog = CreateCatalog(new TestReadOnlyPlugin());
-        var service = new FileFormatRoutingService(pluginCatalog);
+        var service = new FileFormatManager(pluginCatalog.GetCapabilities<IFileFormatPluginCapability>());
 
         using var stream = new MemoryStream();
         var request = new FileFormatWriteRequest
@@ -64,14 +64,14 @@ public class FileFormatRoutingServiceTests
             Payload = new { Value = "x" }
         };
 
-        await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(request));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(request));
     }
 
     [Fact]
     public async Task ReadAndWriteAsync_UsesResolvedFormatHandlers()
     {
         var pluginCatalog = CreateCatalog(new TestReadWritePlugin());
-        var service = new FileFormatRoutingService(pluginCatalog);
+        var service = new FileFormatManager(pluginCatalog.GetCapabilities<IFileFormatPluginCapability>());
 
         using var writeStream = new MemoryStream();
         var writeResult = await service.WriteAsync(new FileFormatWriteRequest

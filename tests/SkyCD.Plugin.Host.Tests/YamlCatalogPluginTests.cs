@@ -1,7 +1,7 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Yaml;
 
@@ -12,7 +12,7 @@ public class YamlCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesYamlExtensions()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -27,7 +27,7 @@ public class YamlCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsFixture()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Yaml", "catalog-v1.yaml");
 
         await using var source = File.OpenRead(fixturePath);
@@ -69,10 +69,10 @@ public class YamlCatalogPluginTests
                                        kind: folder
                                        sizeBytes: "0"
                                    """;
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(unsupported));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-yaml",
             Source = source

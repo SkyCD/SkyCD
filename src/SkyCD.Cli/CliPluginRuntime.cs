@@ -1,4 +1,5 @@
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Loading;
 using System.Text.Json;
 
@@ -11,6 +12,8 @@ public sealed class CliPluginRuntime : IAsyncDisposable
     public required IReadOnlyList<string> Diagnostics { get; init; }
 
     public required IReadOnlyList<string> PluginDirectories { get; init; }
+
+    public required IServiceProvider ServiceProvider { get; init; }
 
     public static async Task<CliPluginRuntime> LoadAsync(Version hostVersion, CancellationToken cancellationToken = default)
     {
@@ -28,14 +31,28 @@ public sealed class CliPluginRuntime : IAsyncDisposable
             Diagnostics = loadResult.Diagnostics
                 .Select(diagnostic => $"{(diagnostic.IsError ? "error" : "info")}: {diagnostic.PluginId}: {diagnostic.Message}")
                 .ToList(),
-            PluginDirectories = pluginDirectories
+            PluginDirectories = pluginDirectories,
+            ServiceProvider = new PluginServiceProviderFactory().Build(loadResult.Plugins)
         };
+
+        GlobalPluginServiceProvider.Set(runtime.ServiceProvider);
 
         return runtime;
     }
 
     public ValueTask DisposeAsync()
     {
+        if (ReferenceEquals(GlobalPluginServiceProvider.Current, ServiceProvider))
+        {
+            GlobalPluginServiceProvider.Reset();
+            return ValueTask.CompletedTask;
+        }
+
+        if (ServiceProvider is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
         return ValueTask.CompletedTask;
     }
 

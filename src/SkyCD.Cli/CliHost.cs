@@ -1,9 +1,10 @@
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
+using SkyCD.Plugin.Runtime.DependencyInjection;
 
 namespace SkyCD.Cli;
 
@@ -62,10 +63,11 @@ public sealed class CliHost(
             await stderr.WriteLineAsync(diagnostic);
         }
 
-        var catalog = new PluginCatalog();
-        catalog.SetPlugins(runtime.DiscoveredPlugins);
-        var routing = new FileFormatRoutingService(catalog);
-        var pluginApi = new CliHostPluginApi(routing);
+        var serviceProvider = new PluginServiceProviderFactory().Build(
+            runtime.DiscoveredPlugins,
+            services => services.AddSingleton<FileFormatManager>());
+        var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
+        IHostCliApi hostApi = fileFormatManager;
         using var registry = new CliContributionRegistry();
         registry.Register(runtime.DiscoveredPlugins);
 
@@ -85,8 +87,8 @@ public sealed class CliHost(
                 builtInCommand,
                 builtInArguments,
                 jsonOutput,
-                routing,
-                pluginApi,
+                fileFormatManager,
+                hostApi,
                 registry,
                 runtime.DiscoveredPlugins,
                 runtime.PluginDirectories,
@@ -98,7 +100,7 @@ public sealed class CliHost(
         if (pluginCommand is not null)
         {
             var pluginArgs = normalized.Skip(consumedTokens).ToArray();
-            var exitCode = await ExecutePluginCommandAsync(pluginCommand, pluginArgs, jsonOutput, pluginApi, cancellationToken);
+            var exitCode = await ExecutePluginCommandAsync(pluginCommand, pluginArgs, jsonOutput, hostApi, cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
 
@@ -109,7 +111,7 @@ public sealed class CliHost(
         string command,
         IReadOnlyList<string> args,
         bool jsonOutput,
-        FileFormatRoutingService routing,
+        FileFormatManager fileFormatManager,
         IHostCliApi hostApi,
         CliContributionRegistry registry,
         IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
@@ -120,12 +122,12 @@ public sealed class CliHost(
         {
             return command switch
             {
-                "open" => await ExecuteOpenAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
-                "convert" => await ExecuteConvertAsync(args, jsonOutput, routing, hostApi, registry, cancellationToken),
+                "open" => await ExecuteOpenAsync(args, jsonOutput, fileFormatManager, hostApi, registry, cancellationToken),
+                "convert" => await ExecuteConvertAsync(args, jsonOutput, fileFormatManager, hostApi, registry, cancellationToken),
                 "fileformats" => await WriteBuiltInHelpAsync("fileformats", jsonOutput),
-                "fileformats list" => await ExecuteListFormatsAsync(jsonOutput, routing, pluginDirectories),
+                "fileformats list" => await ExecuteListFormatsAsync(jsonOutput, fileFormatManager, pluginDirectories),
                 "plugins" => await WriteBuiltInHelpAsync("plugins", jsonOutput),
-                "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, routing, discoveredPlugins, pluginDirectories),
+                "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, fileFormatManager, discoveredPlugins, pluginDirectories),
                 _ => CliExitCodes.InvalidArguments
             };
         }
@@ -144,7 +146,7 @@ public sealed class CliHost(
     private async Task<int> ExecuteOpenAsync(
         IReadOnlyList<string> args,
         bool jsonOutput,
-        FileFormatRoutingService routing,
+        FileFormatManager fileFormatManager,
         IHostCliApi hostApi,
         CliContributionRegistry registry,
         CancellationToken cancellationToken)
@@ -165,9 +167,9 @@ public sealed class CliHost(
             return CliExitCodes.InvalidArguments;
         }
 
-        var resolvedFormat = ResolveFormatId(formatId, fullPath, routing.GetOpenFormats(), "read");
+        var resolvedFormat = ResolveFormatId(formatId, fullPath, fileFormatManager.GetOpenFormats(), "read");
         await using var source = File.OpenRead(fullPath);
-        var readResult = await routing.ReadAsync(new FileFormatReadRequest
+        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
         {
             FormatId = resolvedFormat,
             Source = source,
@@ -202,7 +204,7 @@ public sealed class CliHost(
     private async Task<int> ExecuteConvertAsync(
         IReadOnlyList<string> args,
         bool jsonOutput,
-        FileFormatRoutingService routing,
+        FileFormatManager fileFormatManager,
         IHostCliApi hostApi,
         CliContributionRegistry registry,
         CancellationToken cancellationToken)
@@ -227,11 +229,11 @@ public sealed class CliHost(
             return CliExitCodes.InvalidArguments;
         }
 
-        var resolvedInputFormat = ResolveFormatId(inputFormat, fullInputPath, routing.GetOpenFormats(), "read");
-        var resolvedOutputFormat = ResolveFormatId(outputFormat, fullOutputPath, routing.GetSaveFormats(), "write");
+        var resolvedInputFormat = ResolveFormatId(inputFormat, fullInputPath, fileFormatManager.GetOpenFormats(), "read");
+        var resolvedOutputFormat = ResolveFormatId(outputFormat, fullOutputPath, fileFormatManager.GetSaveFormats(), "write");
 
         await using var source = File.OpenRead(fullInputPath);
-        var readResult = await routing.ReadAsync(new FileFormatReadRequest
+        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
         {
             FormatId = resolvedInputFormat,
             Source = source,
@@ -250,7 +252,7 @@ public sealed class CliHost(
         Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath) ?? Directory.GetCurrentDirectory());
 
         await using var target = File.Create(fullOutputPath);
-        await routing.WriteAsync(new FileFormatWriteRequest
+        await fileFormatManager.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = resolvedOutputFormat,
             Target = target,
@@ -280,32 +282,32 @@ public sealed class CliHost(
 
     private async Task<int> ExecuteListFormatsAsync(
         bool jsonOutput,
-        FileFormatRoutingService routing,
+        FileFormatManager fileFormatManager,
         IReadOnlyList<string> pluginDirectories)
     {
-        var routes = routing.GetOpenFormats()
-            .Concat(routing.GetSaveFormats())
-            .GroupBy(static route => route.FormatId, StringComparer.OrdinalIgnoreCase)
+        var formats = fileFormatManager.GetOpenFormats()
+            .Concat(fileFormatManager.GetSaveFormats())
+            .GroupBy(static format => format.FormatId, StringComparer.OrdinalIgnoreCase)
             .Select(static group => group.First())
-            .OrderBy(static route => route.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static format => format.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (jsonOutput)
         {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(routes, jsonOptions));
+            await stdout.WriteLineAsync(JsonSerializer.Serialize(formats, jsonOptions));
             return CliExitCodes.Success;
         }
 
-        if (routes.Count == 0)
+        if (formats.Count == 0)
         {
             await stdout.WriteLineAsync("No file format plugins were found.");
             await stdout.WriteLineAsync($"Plugin directories checked: {string.Join(", ", pluginDirectories)}");
             return CliExitCodes.Success;
         }
 
-        foreach (var route in routes)
+        foreach (var format in formats)
         {
-            await stdout.WriteLineAsync($"{route.FormatId,-16} {route.DisplayName} [{string.Join(", ", route.Extensions)}]");
+            await stdout.WriteLineAsync($"{format.FormatId,-16} {format.DisplayName} [{string.Join(", ", format.Extensions)}]");
         }
 
         return CliExitCodes.Success;
@@ -314,16 +316,31 @@ public sealed class CliHost(
     private async Task<int> ExecutePluginsListAsync(
         bool jsonOutput,
         CliContributionRegistry registry,
-        FileFormatRoutingService routing,
+        FileFormatManager fileFormatManager,
         IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
         IReadOnlyList<string> pluginDirectories)
     {
-        var formatsByPlugin = routing.GetOpenFormats()
-            .Concat(routing.GetSaveFormats())
-            .GroupBy(static route => route.PluginId, StringComparer.OrdinalIgnoreCase)
+        var availableFormatIds = fileFormatManager.GetOpenFormats()
+            .Concat(fileFormatManager.GetSaveFormats())
+            .Select(static format => format.FormatId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var formatsByPlugin = discoveredPlugins
             .ToDictionary(
-                static group => group.Key,
-                static group => group.Select(route => route.FormatId).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(static id => id).ToArray(),
+                static plugin => plugin.Id,
+                plugin => plugin.Capabilities
+                    .OfType<IFileFormatPluginCapability>()
+                    .Select(static capability => capability.SupportedFormat.FormatId)
+                    .Where(formatId => availableFormatIds.Contains(formatId))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(static id => id)
+                    .ToArray(),
+                StringComparer.OrdinalIgnoreCase)
+            .Where(static item => item.Value.Length > 0)
+            .ToDictionary(
+                static item => item.Key,
+                static item => item.Value,
                 StringComparer.OrdinalIgnoreCase);
 
         var pluginInfo = discoveredPlugins
@@ -919,12 +936,12 @@ public sealed class CliHost(
     private static string ResolveFormatId(
         string? explicitFormatId,
         string path,
-        IReadOnlyList<FileFormatRoute> routes,
+        IReadOnlyList<FileFormatDescriptor> formats,
         string operation)
     {
         if (!string.IsNullOrWhiteSpace(explicitFormatId))
         {
-            if (routes.Any(route => route.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase)))
+            if (formats.Any(format => format.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase)))
             {
                 return explicitFormatId;
             }
@@ -938,8 +955,8 @@ public sealed class CliHost(
             throw new InvalidOperationException($"Unable to infer format for '{path}'. Provide --format explicitly.");
         }
 
-        var byExtension = routes.FirstOrDefault(route =>
-            route.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
+        var byExtension = formats.FirstOrDefault(format =>
+            format.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
         if (byExtension is null)
         {
             throw new InvalidOperationException($"No format handler registered for '{extension}' ({operation}).");

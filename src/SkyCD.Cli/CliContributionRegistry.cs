@@ -7,8 +7,6 @@ namespace SkyCD.Cli;
 internal sealed class CliContributionRegistry : IDisposable
 {
     private static readonly StringComparer CommandComparer = StringComparer.OrdinalIgnoreCase;
-    private const string CommandRegistryKey = "skycd.cli.command";
-    private const string ExtensionPointRegistryKey = "skycd.cli.extension_point";
     private readonly HashSet<string> commandPaths = new(CommandComparer);
     private readonly Dictionary<string, string> commandOwners = new(CommandComparer);
     private ServiceProvider? provider;
@@ -26,10 +24,8 @@ internal sealed class CliContributionRegistry : IDisposable
 
         var errors = new List<string>();
         var services = new ServiceCollection();
-        RegisterHostCommandMetadata(services);
-        using var hostMetadataProvider = services.BuildServiceProvider();
-        var reservedCommands = hostMetadataProvider.GetKeyedServices<string>(CommandRegistryKey).ToArray();
-        var registeredExtensionPoints = hostMetadataProvider.GetKeyedServices<string>(ExtensionPointRegistryKey).ToArray();
+        var reservedCommands = CliHostCapabilities.ReservedCommandPaths;
+        var registeredExtensionPoints = CliHostCapabilities.ExtensionPoints;
 
         foreach (var plugin in plugins)
         {
@@ -96,8 +92,8 @@ internal sealed class CliContributionRegistry : IDisposable
 
     private void RegisterContribution(
         IServiceCollection services,
-        IReadOnlyCollection<string> reservedCommands,
-        IReadOnlyCollection<string> extensionPoints,
+        IReadOnlySet<string> reservedCommands,
+        IReadOnlySet<string> extensionPoints,
         DiscoveredPlugin plugin,
         ICliPluginCapability capability,
         CliCommandContribution contribution,
@@ -114,7 +110,7 @@ internal sealed class CliContributionRegistry : IDisposable
 
         if (contribution.ContributionType == CliContributionType.Extension)
         {
-            if (!extensionPoints.Any(point => point.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
+            if (!extensionPoints.Contains(normalizedPath))
             {
                 errors.Add(
                     $"Plugin '{plugin.Id}' contributes extension '{contribution.CommandPath}' but no such extension point exists.");
@@ -125,7 +121,7 @@ internal sealed class CliContributionRegistry : IDisposable
             return;
         }
 
-        if (reservedCommands.Any(command => command.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
+        if (reservedCommands.Contains(normalizedPath))
         {
             errors.Add(
                 $"Plugin '{plugin.Id}' cannot register command '{contribution.CommandPath}' because it is reserved by the host.");
@@ -164,32 +160,27 @@ internal sealed class CliContributionRegistry : IDisposable
         return $"ext::{NormalizePath(path).ToUpperInvariant()}";
     }
 
-    private void RegisterHostCommandMetadata(IServiceCollection services)
+}
+
+internal static class CliHostCapabilities
+{
+    private static readonly StringComparer CommandComparer = StringComparer.OrdinalIgnoreCase;
+    private static readonly IReadOnlySet<string> reservedCommandPaths = new HashSet<string>(CommandComparer)
     {
-        var builtInCommands = new[]
-        {
-            "open",
-            "convert",
-            "fileformats list",
-            "plugins list"
-        };
+        "open",
+        "convert",
+        "fileformats list",
+        "plugins list"
+    };
+    private static readonly IReadOnlySet<string> extensionPoints = new HashSet<string>(CommandComparer)
+    {
+        "open",
+        "convert"
+    };
 
-        var extensionPoints = new[]
-        {
-            "open",
-            "convert"
-        };
+    public static IReadOnlySet<string> ReservedCommandPaths => reservedCommandPaths;
 
-        foreach (var builtInCommand in builtInCommands)
-        {
-            services.AddKeyedSingleton<string>(CommandRegistryKey, NormalizePath(builtInCommand));
-        }
-
-        foreach (var extensionPoint in extensionPoints)
-        {
-            services.AddKeyedSingleton<string>(ExtensionPointRegistryKey, NormalizePath(extensionPoint));
-        }
-    }
+    public static IReadOnlySet<string> ExtensionPoints => extensionPoints;
 }
 
 internal sealed record RegisteredCliContribution(

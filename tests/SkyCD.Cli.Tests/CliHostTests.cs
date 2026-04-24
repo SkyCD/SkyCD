@@ -3,6 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.DependencyInjection;
 using System.Text.Json;
 using System.Text;
 
@@ -348,6 +349,34 @@ public sealed class CliHostTests
         Assert.Contains("CLI command collision", error.ToString(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task PluginCommand_CannotOverrideBuiltInCommand()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = CreateHost(output, error, [CreateSingleCapabilityPlugin("tests.cli.reserved", new ReservedCommandCapability())]);
+
+        var result = await host.TryRunAsync(["open"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
+        Assert.Contains("cannot register command 'open' because it is reserved by the host", error.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PluginExtension_MustTargetKnownExtensionPoint()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = CreateHost(output, error, [CreateSingleCapabilityPlugin("tests.cli.badext", new UnknownExtensionPointCapability())]);
+
+        var result = await host.TryRunAsync(["convert"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
+        Assert.Contains("no such extension point exists", error.ToString(), StringComparison.Ordinal);
+    }
+
     private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<DiscoveredPlugin> plugins)
     {
         return new CliHost(
@@ -357,7 +386,8 @@ public sealed class CliHostTests
             {
                 DiscoveredPlugins = plugins.ToList(),
                 Diagnostics = [],
-                PluginDirectories = []
+                PluginDirectories = [],
+                ServiceProvider = new PluginServiceProviderFactory().Build(plugins)
             }));
     }
 
@@ -396,6 +426,19 @@ public sealed class CliHostTests
         }
 
         return plugins;
+    }
+
+    private static DiscoveredPlugin CreateSingleCapabilityPlugin(string id, IPluginCapability capability)
+    {
+        return new DiscoveredPlugin
+        {
+            Id = id,
+            Name = id,
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = $"{id}.dll",
+            Capabilities = [capability]
+        };
     }
 
     private sealed class TestReadFormatCapability : IFileFormatPluginCapability
@@ -464,6 +507,33 @@ public sealed class CliHostTests
     private sealed class DuplicateCommandCapability : ICliPluginCapability
     {
         public CliCommandContribution Command => new("tests greet", "greet", "Conflicting command");
+
+        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new CliCommandResult
+            {
+                Success = true
+            });
+        }
+    }
+
+    private sealed class ReservedCommandCapability : ICliPluginCapability
+    {
+        public CliCommandContribution Command => new("open", "reserved-open", "Attempts to override built-in command");
+
+        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new CliCommandResult
+            {
+                Success = true
+            });
+        }
+    }
+
+    private sealed class UnknownExtensionPointCapability : ICliPluginCapability
+    {
+        public CliCommandContribution Command =>
+            new("pack", "unknown-ext", "Unknown extension", CliContributionType.Extension);
 
         public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
         {

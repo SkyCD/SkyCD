@@ -1,7 +1,7 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Xml;
 
@@ -12,7 +12,7 @@ public class XmlCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesXmlPluginMetadata()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -24,7 +24,7 @@ public class XmlCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsFixturePayload_WithStableOrdering()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Xml", "catalog-v1.xml");
 
         await using var source = File.OpenRead(fixturePath);
@@ -68,10 +68,10 @@ public class XmlCatalogPluginTests
                                     <skycd:node nodeId="1" parentId="" kind="file" name="&xxe;" sizeBytes="1" />
                                   </skycd:catalog>
                                   """;
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(xxePayload));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-xml",
             Source = source

@@ -2,7 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Zip;
 
@@ -13,7 +13,7 @@ public class ZipArchiveIndexPluginTests
     [Fact]
     public void OpenFormats_IncludeZip_ButSaveFormatsDoNot()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -25,10 +25,10 @@ public class ZipArchiveIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnlyZipFormat()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var stream = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-zip",
             Target = stream,
@@ -41,7 +41,7 @@ public class ZipArchiveIndexPluginTests
     [Fact]
     public async Task ReadAsync_IndexesDeepAndUnicodeEntries_WithMetadata()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var zipStream = CreateFixtureZip();
 
         var result = await service.ReadAsync(new FileFormatReadRequest

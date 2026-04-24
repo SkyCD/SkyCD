@@ -1,7 +1,7 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Toml;
 
@@ -12,7 +12,7 @@ public class TomlCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesTomlMetadata()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -24,7 +24,7 @@ public class TomlCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsFixtureHierarchyAndMetadata()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Toml", "catalog-v1.toml");
 
         await using var source = File.OpenRead(fixturePath);

@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Json;
 
@@ -13,7 +13,7 @@ public class JsonCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesJsonPluginMetadata()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -25,7 +25,7 @@ public class JsonCatalogPluginTests
     [Fact]
     public async Task WriteAndReadAsync_RoundTripsFixturePayload_WithSchemaEnvelope()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Json", "catalog-v1.json");
 
         await using var fixtureStream = File.OpenRead(fixturePath);
@@ -69,10 +69,10 @@ public class JsonCatalogPluginTests
     [Fact]
     public async Task ReadAsync_ReturnsFailure_WhenSchemaVersionMissingOrUnknown()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("{\"payload\":{\"title\":\"x\"}}"));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-json",
             Source = stream
