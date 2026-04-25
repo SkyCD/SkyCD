@@ -7,6 +7,7 @@ using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.App.Views;
 using System;
@@ -64,9 +65,26 @@ public partial class App : Avalonia.Application
             discoveredPlugins = pluginManager.Plugins;
         }
 
-        var serviceProvider = new PluginServiceProviderFactory().Build(
-            discoveredPlugins,
-            services => services.AddSingleton<FileFormatManager>());
+        var pluginList = discoveredPlugins.ToList();
+        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+        var serviceCollectionFactory = new ServiceCollectionFactory();
+        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+
+        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+
+        foreach (var plugin in pluginList)
+        {
+            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
+            foreach (var descriptor in pluginServices)
+            {
+                services.Add(descriptor);
+            }
+        }
+
+        services.AddSingleton<FileFormatManager>();
+        var serviceProvider = services.BuildServiceProvider();
         GlobalPluginServiceProvider.Set(serviceProvider);
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
         return new PluginUiServices(fileFormatManager);

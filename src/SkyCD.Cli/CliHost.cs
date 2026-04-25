@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host.Managers;
-using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Factories;
 
 namespace SkyCD.Cli;
 
@@ -58,9 +59,11 @@ public sealed class CliHost(
 
         await using var runtime = await runtimeLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
-        var serviceProvider = new PluginServiceProviderFactory().Build(
+        var serviceCollectionFactory = new ServiceCollectionFactory();
+        var serviceProvider = BuildGlobalServiceProvider(
             runtime.DiscoveredPlugins,
-            services => services.AddSingleton<FileFormatManager>());
+            serviceCollectionFactory,
+            static services => services.AddSingleton<FileFormatManager>());
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
         IHostCliApi hostApi = fileFormatManager;
         using var registry = new CliContributionRegistry();
@@ -974,6 +977,32 @@ public sealed class CliHost(
         }
 
         return null;
+    }
+
+    private static ServiceProvider BuildGlobalServiceProvider(
+        IReadOnlyList<DiscoveredPlugin> plugins,
+        ServiceCollectionFactory serviceCollectionFactory,
+        Action<IServiceCollection>? configureHostServices = null)
+    {
+        var pluginList = plugins.ToList();
+        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+
+        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+
+        foreach (var plugin in pluginList)
+        {
+            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
+            foreach (var descriptor in pluginServices)
+            {
+                services.Add(descriptor);
+            }
+        }
+
+        configureHostServices?.Invoke(services);
+        return services.BuildServiceProvider();
     }
 
     private static string GetVersionText()

@@ -1,8 +1,10 @@
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 namespace SkyCD.Cli;
@@ -33,12 +35,31 @@ public sealed class CliPluginRuntime : IAsyncDisposable
             loggerFactory.CreateLogger<PluginManager>(),
             loggerFactory.CreateLogger("SkyCD.Plugin.Runtime.Factories.AssembliesListFactory"));
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
+        var pluginList = pluginManager.Plugins.ToList();
+        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+        var serviceCollectionFactory = new ServiceCollectionFactory();
+        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+
+        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+
+        foreach (var plugin in pluginList)
+        {
+            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
+            foreach (var descriptor in pluginServices)
+            {
+                services.Add(descriptor);
+            }
+        }
+
+        var serviceProvider = services.BuildServiceProvider();
 
         var runtime = new CliPluginRuntime
         {
-            DiscoveredPlugins = pluginManager.Plugins.ToList(),
+            DiscoveredPlugins = pluginList,
             PluginDirectories = pluginDirectories,
-            ServiceProvider = new PluginServiceProviderFactory().Build(pluginManager.Plugins)
+            ServiceProvider = serviceProvider
         };
 
         GlobalPluginServiceProvider.Set(runtime.ServiceProvider);

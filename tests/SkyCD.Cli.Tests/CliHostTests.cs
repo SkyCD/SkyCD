@@ -3,7 +3,8 @@ using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.Factories;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using System.Text;
 
@@ -423,14 +424,32 @@ public sealed class CliHostTests
 
     private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<DiscoveredPlugin> plugins)
     {
+        var pluginList = plugins.ToList();
+        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+        var serviceCollectionFactory = new ServiceCollectionFactory();
+        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+
+        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+
+        foreach (var plugin in pluginList)
+        {
+            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
+            foreach (var descriptor in pluginServices)
+            {
+                services.Add(descriptor);
+            }
+        }
+
         return new CliHost(
             stdout,
             stderr,
             (_, _) => Task.FromResult(new CliPluginRuntime
             {
-                DiscoveredPlugins = plugins.ToList(),
+                DiscoveredPlugins = pluginList,
                 PluginDirectories = [],
-                ServiceProvider = new PluginServiceProviderFactory().Build(plugins)
+                ServiceProvider = services.BuildServiceProvider()
             }));
     }
 
