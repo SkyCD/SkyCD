@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -34,7 +35,9 @@ public class PluginManagerTests
             var assemblyPath = Assembly.GetExecutingAssembly().Location;
             File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
 
-            var discovery = new PluginManager();
+            var discovery = new PluginManager(
+                NullLogger<PluginManager>.Instance,
+                NullLogger.Instance);
             discovery.Discover(root, new Version(2, 9, 0));
 
             Assert.Empty(discovery.Plugins);

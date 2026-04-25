@@ -10,27 +10,15 @@ namespace SkyCD.Plugin.Runtime.Managers;
 /// <summary>
 /// Unified plugin manager for discovery, loading, and capability lookup.
 /// </summary>
-public sealed class PluginManager
+public sealed class PluginManager(
+    ILogger<PluginManager> logger,
+    ILogger assembliesLogger)
 {
-    private readonly AssembliesListFactory _assembliesListFactory;
+    private readonly AssembliesListFactory _assembliesListFactory = new(assembliesLogger);
     private readonly DiscoveredPluginFactory _discoveredPluginFactory = new();
     private readonly List<DiscoveredPlugin> _plugins = [];
-    private readonly ILogger<PluginManager> _logger;
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => _plugins;
-
-    public PluginManager()
-        : this(NullLogger<PluginManager>.Instance, NullLogger.Instance)
-    {
-    }
-
-    public PluginManager(
-        ILogger<PluginManager> logger,
-        ILogger assembliesLogger)
-    {
-        _logger = logger;
-        _assembliesListFactory = new AssembliesListFactory(assembliesLogger);
-    }
 
     public IReadOnlyList<TCapability> GetCapabilities<TCapability>()
         where TCapability : class, IPluginCapability
@@ -70,7 +58,7 @@ public sealed class PluginManager
         }
         catch (InvalidOperationException exception)
         {
-            _logger.LogWarning(exception, "Skipped assembly '{AssemblyName}' because it does not expose a compatible plugin type.", assembly.FullName);
+            logger.LogWarning(exception, "Skipped assembly '{AssemblyName}' because it does not expose a compatible plugin type.", assembly.FullName);
             return null;
         }
     }

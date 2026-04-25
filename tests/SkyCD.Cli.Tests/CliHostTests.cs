@@ -64,6 +64,70 @@ public sealed class CliHostTests
     }
 
     [Fact]
+    public void BuildPluginDirectories_UsesConfiguredAndAppSettingsPaths_AndDeduplicates()
+    {
+        var first = Path.Combine(Path.GetTempPath(), "skycd-cli-runtime-first");
+        var second = Path.Combine(Path.GetTempPath(), "skycd-cli-runtime-second");
+        var configured = string.Join(Path.PathSeparator, [first, second, first]);
+
+        var directories = CliHost.BuildPluginDirectories(configured, second);
+
+        Assert.Equal(2, directories.Count);
+        Assert.Contains(Path.GetFullPath(first), directories, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Path.GetFullPath(second), directories, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BuildPluginDirectories_DoesNotAddLocalFallbackDirectories()
+    {
+        var directories = CliHost.BuildPluginDirectories(null, null);
+
+        Assert.Empty(directories);
+    }
+
+    [Fact]
+    public void TryReadPluginPathFromAppSettings_ReadsPluginPath()
+    {
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
+
+        try
+        {
+            var expectedPath = Path.Combine(appDataRoot, "CustomPlugins");
+            var optionsPath = Path.Combine(appDataRoot, "SkyCD", "options.json");
+            File.WriteAllText(optionsPath, JsonSerializer.Serialize(new { PluginPath = expectedPath }));
+
+            var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
+
+            Assert.Equal(expectedPath, resolved);
+        }
+        finally
+        {
+            Directory.Delete(appDataRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void TryReadPluginPathFromAppSettings_ReturnsNull_WhenFileMissingOrInvalid()
+    {
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
+
+        try
+        {
+            Assert.Null(CliHost.TryReadPluginPathFromAppSettings(appDataRoot));
+
+            var optionsPath = Path.Combine(appDataRoot, "SkyCD", "options.json");
+            File.WriteAllText(optionsPath, "{ not json");
+            Assert.Null(CliHost.TryReadPluginPathFromAppSettings(appDataRoot));
+        }
+        finally
+        {
+            Directory.Delete(appDataRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task OpenHelp_ShowsCommandSpecificOptions()
     {
         var output = new StringWriter();
@@ -445,12 +509,7 @@ public sealed class CliHostTests
         return new CliHost(
             stdout,
             stderr,
-            (_, _) => Task.FromResult(new CliPluginRuntime
-            {
-                DiscoveredPlugins = pluginList,
-                PluginDirectories = [],
-                ServiceProvider = services.BuildServiceProvider()
-            }));
+            (_, _) => Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginList));
     }
 
     private static IReadOnlyList<DiscoveredPlugin> CreateTestPlugins(bool includeDuplicateCommand = false)
