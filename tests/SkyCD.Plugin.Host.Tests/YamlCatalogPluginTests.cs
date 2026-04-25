@@ -85,7 +85,7 @@ public class YamlCatalogPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new YamlCatalogPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

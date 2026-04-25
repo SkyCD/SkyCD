@@ -99,7 +99,7 @@ public class CsvCatalogPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new CsvCatalogPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

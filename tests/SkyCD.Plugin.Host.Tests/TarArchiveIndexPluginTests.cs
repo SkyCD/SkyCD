@@ -109,7 +109,7 @@ public class TarArchiveIndexPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new TarArchiveIndexPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

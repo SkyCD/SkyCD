@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Managers;
@@ -41,6 +42,7 @@ public partial class App : Avalonia.Application
             };
             desktop.MainWindow = new MainWindow(
                 appOptionsStore,
+                pluginServices.PluginManager,
                 pluginServices.FileFormatManager)
             {
                 DataContext = new MainWindowViewModel(browserDataStore),
@@ -57,10 +59,13 @@ public partial class App : Avalonia.Application
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
             : options.PluginPath;
+        var pluginManager = new PluginManager(
+            NullLogger<PluginManager>.Instance,
+            new AssembliesListFactory(NullLogger.Instance),
+            new DiscoveredPluginFactory());
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
-            var pluginManager = new PluginManager();
             pluginManager.Discover(pluginPath, new Version(3, 0, 0));
 
             discoveredPlugins = pluginManager.Plugins;
@@ -87,7 +92,7 @@ public partial class App : Avalonia.Application
         mergedServices.AddSingleton<FileFormatManager>();
         PluginServiceProvider.Instance.Import(mergedServices);
         var fileFormatManager = PluginServiceProvider.Instance.GetRequiredService<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager, PluginServiceProvider.Instance);
+        return new PluginUiServices(fileFormatManager, pluginManager, PluginServiceProvider.Instance);
     }
 
     private static string ResolveDefaultPluginPath()
@@ -103,5 +108,8 @@ public partial class App : Avalonia.Application
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
     }
 
-    private sealed record PluginUiServices(FileFormatManager FileFormatManager, PluginServiceProvider ServiceProvider);
+    private sealed record PluginUiServices(
+        FileFormatManager FileFormatManager,
+        PluginManager PluginManager,
+        PluginServiceProvider ServiceProvider);
 }

@@ -85,7 +85,7 @@ public class JsonCatalogPluginTests
     private static PluginManager CreateCatalog()
     {
         var capability = new JsonCatalogPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

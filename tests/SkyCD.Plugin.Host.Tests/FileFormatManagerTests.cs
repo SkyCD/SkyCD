@@ -27,7 +27,7 @@ public class FileFormatManagerTests
     [Fact]
     public async Task MenuExecution_GuardsAgainstPluginErrors()
     {
-        var pluginManager = new PluginManager();
+        var pluginManager = PluginManagerTestFactory.Create();
         pluginManager.SetPlugins(
         [
             new DiscoveredPlugin
@@ -96,7 +96,7 @@ public class FileFormatManagerTests
 
     private static PluginManager CreateCatalog(params IFileFormatPluginCapability[] capabilities)
     {
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         var discovered = capabilities.Select(capability => new DiscoveredPlugin
         {
             Id = capability.SupportedFormat.FormatId,

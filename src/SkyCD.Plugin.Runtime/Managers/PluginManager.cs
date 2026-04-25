@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
@@ -15,17 +14,7 @@ public sealed class PluginManager(
     AssembliesListFactory assembliesListFactory,
     DiscoveredPluginFactory discoveredPluginFactory)
 {
-    private readonly AssembliesListFactory _assembliesListFactory = assembliesListFactory;
-    private readonly DiscoveredPluginFactory _discoveredPluginFactory = discoveredPluginFactory;
     private readonly List<DiscoveredPlugin> _plugins = [];
-
-    public PluginManager()
-        : this(
-            NullLogger<PluginManager>.Instance,
-            new AssembliesListFactory(NullLogger.Instance),
-            new DiscoveredPluginFactory())
-    {
-    }
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => _plugins;
 
@@ -57,7 +46,7 @@ public sealed class PluginManager(
     {
         try
         {
-            var plugin = _discoveredPluginFactory.BuildFromAssembly(assembly);
+            var plugin = discoveredPluginFactory.BuildFromAssembly(assembly);
             if (!PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion))
             {
                 return null;
@@ -78,7 +67,7 @@ public sealed class PluginManager(
     {
         var plugins = new List<DiscoveredPlugin>();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var assemblies = _assembliesListFactory.BuildFromPaths(directories);
+        var assemblies = assembliesListFactory.BuildFromPaths(directories);
 
         foreach (var assembly in assemblies)
         {

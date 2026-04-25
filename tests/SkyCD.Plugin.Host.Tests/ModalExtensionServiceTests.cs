@@ -135,7 +135,7 @@ public class ModalExtensionServiceTests
 
     private static PluginManager CreateCatalog(params IModalPluginCapability[] capabilities)
     {
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(capabilities.Select(capability => new DiscoveredPlugin
         {
             Id = capability switch

@@ -79,7 +79,7 @@ public class MarkdownCatalogExportPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new MarkdownCatalogExportPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

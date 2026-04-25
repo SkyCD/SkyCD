@@ -84,7 +84,7 @@ public class XmlCatalogPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new XmlCatalogPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

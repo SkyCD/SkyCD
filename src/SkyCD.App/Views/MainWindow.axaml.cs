@@ -22,7 +22,7 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private readonly AppOptionsStore appOptionsStore;
-    private readonly PluginManager pluginManager = new();
+    private readonly PluginManager pluginManager;
     private readonly FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -31,9 +31,11 @@ public partial class MainWindow : Window
 
     public MainWindow(
         AppOptionsStore appOptionsStore,
+        PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
         this.appOptionsStore = appOptionsStore;
+        this.pluginManager = pluginManager;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;

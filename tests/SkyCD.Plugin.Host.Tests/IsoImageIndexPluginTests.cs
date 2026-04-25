@@ -65,7 +65,7 @@ public class IsoImageIndexPluginTests
     private static PluginManager CreateCatalog(IIsoEntryReader reader)
     {
         var plugin = new IsoImageIndexPlugin(reader);
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

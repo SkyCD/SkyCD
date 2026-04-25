@@ -83,7 +83,7 @@ public class ZipArchiveIndexPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new ZipArchiveIndexPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

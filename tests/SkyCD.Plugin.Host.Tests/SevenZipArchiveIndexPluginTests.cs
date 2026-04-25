@@ -78,7 +78,7 @@ public class SevenZipArchiveIndexPluginTests
     private static PluginManager CreateCatalog(ISevenZipEntryReader reader)
     {
         var plugin = new SevenZipArchiveIndexPlugin(reader);
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

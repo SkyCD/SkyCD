@@ -80,7 +80,7 @@ public class HtmlCatalogExportPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new HtmlCatalogExportPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

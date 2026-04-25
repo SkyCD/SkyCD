@@ -60,7 +60,7 @@ public class TomlCatalogPluginTests
     private static PluginManager CreateCatalog()
     {
         var plugin = new TomlCatalogPlugin();
-        var catalog = new PluginManager();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin
