@@ -3,6 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Html;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -76,10 +77,10 @@ public class HtmlCatalogExportPluginTests
         Assert.Contains("track &amp; one.mp3", html);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new HtmlCatalogExportPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

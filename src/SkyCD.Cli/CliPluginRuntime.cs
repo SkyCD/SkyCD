@@ -1,6 +1,6 @@
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.Loading;
+using SkyCD.Plugin.Runtime.Managers;
 using System.Text.Json;
 
 namespace SkyCD.Cli;
@@ -18,21 +18,17 @@ public sealed class CliPluginRuntime : IAsyncDisposable
     public static async Task<CliPluginRuntime> LoadAsync(Version hostVersion, CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        var discoveryService = new PluginDirectoryDiscoveryService();
-        var loadResult = discoveryService.Discover(pluginDirectories, new PluginLoadOptions
-        {
-            HostVersion = hostVersion,
-            EnableAssemblyIsolation = false
-        }, fallbackToAssemblyScan: true);
+        var pluginManager = new PluginManager();
+        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
 
         var runtime = new CliPluginRuntime
         {
-            DiscoveredPlugins = loadResult.Plugins.ToList(),
-            Diagnostics = loadResult.Diagnostics
+            DiscoveredPlugins = pluginManager.Plugins.ToList(),
+            Diagnostics = pluginManager.Diagnostics
                 .Select(diagnostic => $"{(diagnostic.IsError ? "error" : "info")}: {diagnostic.PluginId}: {diagnostic.Message}")
                 .ToList(),
             PluginDirectories = pluginDirectories,
-            ServiceProvider = new PluginServiceProviderFactory().Build(loadResult.Plugins)
+            ServiceProvider = new PluginServiceProviderFactory().Build(pluginManager.Plugins)
         };
 
         GlobalPluginServiceProvider.Set(runtime.ServiceProvider);

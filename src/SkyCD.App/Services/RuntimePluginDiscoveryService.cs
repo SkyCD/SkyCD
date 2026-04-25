@@ -1,5 +1,6 @@
 using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Runtime.Loading;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +10,7 @@ namespace SkyCD.App.Services;
 
 public sealed class RuntimePluginDiscoveryService
 {
-    private readonly PluginDirectoryDiscoveryService discoveryService = new();
+    private readonly PluginManager pluginManager = new();
     private readonly Version hostVersion = new(3, 0, 0);
 
     public IReadOnlyList<OptionsPluginItem> Discover(string pluginPath)
@@ -22,13 +23,9 @@ public sealed class RuntimePluginDiscoveryService
         var discovered = new List<OptionsPluginItem>();
         var seenPluginIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var loadResult = discoveryService.Discover([pluginPath], new PluginLoadOptions
-        {
-            HostVersion = hostVersion,
-            EnableAssemblyIsolation = false
-        }, fallbackToAssemblyScan: true);
+        pluginManager.Discover(pluginPath, hostVersion);
 
-        foreach (var plugin in loadResult.Plugins)
+        foreach (var plugin in pluginManager.Plugins)
         {
             TryAdd(plugin, seenPluginIds, discovered);
         }

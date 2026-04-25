@@ -4,6 +4,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Csv;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -95,10 +96,10 @@ public class CsvCatalogPluginTests
         Assert.Contains("11,10,file,readme.txt,15", text);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new CsvCatalogPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

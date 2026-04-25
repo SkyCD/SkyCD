@@ -1,67 +1,62 @@
 using System.Reflection;
-using System.Text.Json;
-using SkyCD.Plugin.Runtime.Loading;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
-public sealed class PluginDirectoryLoaderTests : IDisposable
+public sealed class PluginManagerLoadingTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"skycd-plugins-{Guid.NewGuid():N}");
 
-    public PluginDirectoryLoaderTests()
+    public PluginManagerLoadingTests()
     {
         Directory.CreateDirectory(_root);
     }
 
     [Fact]
-    public void LoadFromDirectories_LoadsPluginFromManifest()
+    public void LoadFromDirectories_LoadsPluginFromAssemblyWithoutManifest()
     {
         var pluginDir = Path.Combine(_root, "good");
         Directory.CreateDirectory(pluginDir);
 
-        var manifest = new PluginManifest
-        {
-            Id = "tests.loader",
-            Version = "1.0.0",
-            MinHostVersion = "3.0.0",
-            Assembly = Path.GetFileName(Assembly.GetExecutingAssembly().Location),
-            Capabilities = ["tests"]
-        };
+        var assemblyName = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
+        File.Copy(Assembly.GetExecutingAssembly().Location, Path.Combine(pluginDir, assemblyName), overwrite: true);
 
-        File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), JsonSerializer.Serialize(manifest));
-        File.Copy(Assembly.GetExecutingAssembly().Location, Path.Combine(pluginDir, manifest.Assembly), overwrite: true);
+        var pluginManager = new PluginManager();
+        pluginManager.Discover(_root, new Version(3, 0, 0));
 
-        var loader = new PluginDirectoryLoader();
-        var result = loader.LoadFromDirectories([_root], new PluginLoadOptions { HostVersion = new Version(3, 0, 0) });
-
-        Assert.Contains(result.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
-        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.IsError);
+        Assert.Contains(pluginManager.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
+        Assert.DoesNotContain(pluginManager.Diagnostics, diagnostic => diagnostic.IsError);
     }
 
     [Fact]
-    public void LoadFromDirectories_SkipsIncompatiblePluginAndReportsDiagnostic()
+    public void LoadFromDirectories_ReportsDiagnosticWhenAssemblyLoadFails()
     {
-        var pluginDir = Path.Combine(_root, "incompatible");
+        var pluginDir = Path.Combine(_root, "invalid");
         Directory.CreateDirectory(pluginDir);
+        File.WriteAllText(Path.Combine(pluginDir, "broken.dll"), "this is not a valid .NET assembly");
 
-        var manifest = new PluginManifest
-        {
-            Id = "tests.incompatible",
-            Version = "1.0.0",
-            MinHostVersion = "4.0.0",
-            Assembly = "missing.dll",
-            Capabilities = []
-        };
+        var pluginManager = new PluginManager();
+        pluginManager.Discover(_root, new Version(3, 0, 0));
 
-        File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), JsonSerializer.Serialize(manifest));
+        Assert.Empty(pluginManager.Plugins);
+        Assert.Contains(pluginManager.Diagnostics, diagnostic =>
+            diagnostic.PluginId == "<assembly-scan>" &&
+            diagnostic.Message.Contains("broken.dll", StringComparison.OrdinalIgnoreCase));
+    }
 
-        var loader = new PluginDirectoryLoader();
-        var result = loader.LoadFromDirectories([_root], new PluginLoadOptions { HostVersion = new Version(3, 0, 0) });
+    [Fact]
+    public void LoadFromDirectories_ReportsDiagnosticWhenDirectoryDoesNotExist()
+    {
+        var missingDirectory = Path.Combine(_root, "missing");
+        var pluginManager = new PluginManager();
 
-        Assert.Empty(result.Plugins);
-        Assert.Contains(result.Diagnostics, diagnostic =>
-            diagnostic.PluginId == "tests.incompatible" &&
-            diagnostic.Message.Contains("Skipped incompatible", StringComparison.OrdinalIgnoreCase));
+        pluginManager.Discover(missingDirectory, new Version(3, 0, 0));
+
+        Assert.Empty(pluginManager.Plugins);
+        Assert.Contains(pluginManager.Diagnostics, diagnostic =>
+            diagnostic.PluginId == "<directory>" &&
+            diagnostic.Message.Contains(missingDirectory, StringComparison.OrdinalIgnoreCase));
     }
 
     public void Dispose()

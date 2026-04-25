@@ -1,15 +1,17 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Menu;
 
 /// <summary>
 /// Host service for menu contribution discovery and guarded command execution.
 /// </summary>
-public sealed class MenuExtensionService(PluginCatalog pluginCatalog)
+public sealed class MenuExtensionService(PluginManager pluginManager)
 {
     public IReadOnlyList<MenuContribution> GetMenuContributions(string? location = null)
     {
-        var contributions = pluginCatalog
+        var contributions = pluginManager
             .GetCapabilities<IMenuPluginCapability>()
             .SelectMany(capability => capability.GetMenuContributions())
             .AsEnumerable();
@@ -32,7 +34,7 @@ public sealed class MenuExtensionService(PluginCatalog pluginCatalog)
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        var matchingCapability = pluginCatalog
+        var matchingCapability = pluginManager
             .GetCapabilities<IMenuPluginCapability>()
             .FirstOrDefault(capability =>
                 capability.GetMenuContributions().Any(contribution =>

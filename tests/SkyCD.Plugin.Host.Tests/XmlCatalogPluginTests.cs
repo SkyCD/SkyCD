@@ -3,6 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Xml;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -80,10 +81,10 @@ public class XmlCatalogPluginTests
         Assert.Contains("DTD", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new XmlCatalogPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

@@ -3,6 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Toml;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -56,10 +57,10 @@ public class TomlCatalogPluginTests
         Assert.Contains("[[nodes]]", text);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new TomlCatalogPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

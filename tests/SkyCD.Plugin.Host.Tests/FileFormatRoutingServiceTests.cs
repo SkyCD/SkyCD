@@ -4,6 +4,7 @@ using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -12,8 +13,8 @@ public class FileFormatManagerTests
     [Fact]
     public void GetOpenAndSaveFormats_RespectsCapabilities()
     {
-        var pluginCatalog = CreateCatalog(new TestReadOnlyPlugin(), new TestReadWritePlugin());
-        var service = new FileFormatManager(pluginCatalog.GetCapabilities<IFileFormatPluginCapability>());
+        var pluginManager = CreateCatalog(new TestReadOnlyPlugin(), new TestReadWritePlugin());
+        var service = new FileFormatManager(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -26,8 +27,8 @@ public class FileFormatManagerTests
     [Fact]
     public async Task MenuExecution_GuardsAgainstPluginErrors()
     {
-        var pluginCatalog = new PluginCatalog();
-        pluginCatalog.SetPlugins(
+        var pluginManager = new PluginManager();
+        pluginManager.SetPlugins(
         [
             new DiscoveredPlugin
             {
@@ -40,7 +41,7 @@ public class FileFormatManagerTests
             }
         ]);
 
-        var menuService = new MenuExtensionService(pluginCatalog);
+        var menuService = new MenuExtensionService(pluginManager);
         var result = await menuService.ExecuteAsync(
             "tests.menu.throw",
             new MenuCommandContext(),
@@ -53,8 +54,8 @@ public class FileFormatManagerTests
     [Fact]
     public async Task WriteAsync_Throws_ForReadOnlyFormat()
     {
-        var pluginCatalog = CreateCatalog(new TestReadOnlyPlugin());
-        var service = new FileFormatManager(pluginCatalog.GetCapabilities<IFileFormatPluginCapability>());
+        var pluginManager = CreateCatalog(new TestReadOnlyPlugin());
+        var service = new FileFormatManager(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
 
         using var stream = new MemoryStream();
         var request = new FileFormatWriteRequest
@@ -70,8 +71,8 @@ public class FileFormatManagerTests
     [Fact]
     public async Task ReadAndWriteAsync_UsesResolvedFormatHandlers()
     {
-        var pluginCatalog = CreateCatalog(new TestReadWritePlugin());
-        var service = new FileFormatManager(pluginCatalog.GetCapabilities<IFileFormatPluginCapability>());
+        var pluginManager = CreateCatalog(new TestReadWritePlugin());
+        var service = new FileFormatManager(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
 
         using var writeStream = new MemoryStream();
         var writeResult = await service.WriteAsync(new FileFormatWriteRequest
@@ -93,9 +94,9 @@ public class FileFormatManagerTests
         Assert.Equal("ok", readResult.Payload?.ToString());
     }
 
-    private static PluginCatalog CreateCatalog(params IFileFormatPluginCapability[] capabilities)
+    private static PluginManager CreateCatalog(params IFileFormatPluginCapability[] capabilities)
     {
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         var discovered = capabilities.Select(capability => new DiscoveredPlugin
         {
             Id = capability.SupportedFormat.FormatId,

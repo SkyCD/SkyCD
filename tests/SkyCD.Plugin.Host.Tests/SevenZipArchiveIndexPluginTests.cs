@@ -2,6 +2,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.SevenZip;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -74,10 +75,10 @@ public class SevenZipArchiveIndexPluginTests
         Assert.Contains("SEVENZIP_UNSUPPORTED_METHOD", exception.Message);
     }
 
-    private static PluginCatalog CreateCatalog(ISevenZipEntryReader reader)
+    private static PluginManager CreateCatalog(ISevenZipEntryReader reader)
     {
         var plugin = new SevenZipArchiveIndexPlugin(reader);
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

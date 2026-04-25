@@ -7,7 +7,7 @@ using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Loading;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.App.Views;
 using System;
 using System.Collections.Generic;
@@ -60,14 +60,10 @@ public partial class App : Avalonia.Application
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
-            var discoveryService = new PluginDirectoryDiscoveryService();
-            var loadResult = discoveryService.Discover([pluginPath], new PluginLoadOptions
-            {
-                HostVersion = new Version(3, 0, 0),
-                EnableAssemblyIsolation = false
-            }, fallbackToAssemblyScan: true);
+            var pluginManager = new PluginManager();
+            pluginManager.Discover(pluginPath, new Version(3, 0, 0));
 
-            discoveredPlugins = loadResult.Plugins;
+            discoveredPlugins = pluginManager.Plugins;
         }
 
         var serviceProvider = new PluginServiceProviderFactory().Build(

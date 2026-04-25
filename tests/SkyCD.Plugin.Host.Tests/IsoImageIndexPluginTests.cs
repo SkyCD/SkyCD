@@ -2,6 +2,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Iso;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -61,10 +62,10 @@ public class IsoImageIndexPluginTests
         Assert.Contains(rows, row => Equals(row["sizeBytes"], "8589934592"));
     }
 
-    private static PluginCatalog CreateCatalog(IIsoEntryReader reader)
+    private static PluginManager CreateCatalog(IIsoEntryReader reader)
     {
         var plugin = new IsoImageIndexPlugin(reader);
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

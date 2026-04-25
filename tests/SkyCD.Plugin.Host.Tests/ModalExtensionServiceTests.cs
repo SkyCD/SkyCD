@@ -2,6 +2,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Modal;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -10,8 +11,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsTypedPayload_WhenModalSucceeds()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var pluginManager = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionService(pluginManager);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -30,8 +31,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsError_WhenInputTypeMismatches()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var pluginManager = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionService(pluginManager);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -49,8 +50,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsError_WhenPermissionMissing()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var pluginManager = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionService(pluginManager);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -67,8 +68,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsCanceledResult_WhenTimeoutExpires()
     {
-        var pluginCatalog = CreateCatalog(new SlowModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var pluginManager = CreateCatalog(new SlowModalPlugin());
+        var service = new ModalExtensionService(pluginManager);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -86,8 +87,8 @@ public class ModalExtensionServiceTests
     public async Task OpenAsync_RejectsReentrantOpen_WhenModalDoesNotAllowIt()
     {
         var plugin = new NonReentrantControlledModalPlugin();
-        var pluginCatalog = CreateCatalog(plugin);
-        var service = new ModalExtensionService(pluginCatalog);
+        var pluginManager = CreateCatalog(plugin);
+        var service = new ModalExtensionService(pluginManager);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var firstOpen = service.OpenAsync(
@@ -119,8 +120,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public void GetModalRegistrations_ProjectsModalMetadata()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var pluginManager = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionService(pluginManager);
 
         var registrations = service.GetModalRegistrations();
         var modal = Assert.Single(registrations);
@@ -132,9 +133,9 @@ public class ModalExtensionServiceTests
         Assert.True(modal.IsBlocking);
     }
 
-    private static PluginCatalog CreateCatalog(params IModalPluginCapability[] capabilities)
+    private static PluginManager CreateCatalog(params IModalPluginCapability[] capabilities)
     {
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(capabilities.Select(capability => new DiscoveredPlugin
         {
             Id = capability switch

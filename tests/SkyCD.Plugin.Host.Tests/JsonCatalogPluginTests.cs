@@ -4,6 +4,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Json;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -81,10 +82,10 @@ public class JsonCatalogPluginTests
         Assert.Contains("schemaVersion", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var capability = new JsonCatalogPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

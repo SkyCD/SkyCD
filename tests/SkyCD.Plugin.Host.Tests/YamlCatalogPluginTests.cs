@@ -3,6 +3,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Yaml;
 
 namespace SkyCD.Plugin.Host.Tests;
@@ -81,10 +82,10 @@ public class YamlCatalogPluginTests
         Assert.Contains("YAML_UNSUPPORTED_CONSTRUCT", exception.Message);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new YamlCatalogPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = new PluginManager();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin

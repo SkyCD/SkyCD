@@ -1,19 +1,21 @@
 using System.Collections.Concurrent;
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Modal;
 
 /// <summary>
 /// Host facade for plugin modal registration and guarded modal execution.
 /// </summary>
-public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
+public sealed class ModalExtensionService(PluginManager pluginManager)
 {
     private readonly SemaphoreSlim _blockingModalGate = new(1, 1);
     private readonly ConcurrentDictionary<string, byte> _activeModalIds = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<ModalRegistration> GetModalRegistrations()
     {
-        return pluginCatalog.Plugins
+        return pluginManager.Plugins
             .SelectMany(plugin =>
                 plugin.Capabilities.OfType<IModalPluginCapability>()
                     .Select(capability =>
@@ -140,7 +142,7 @@ public sealed class ModalExtensionService(PluginCatalog pluginCatalog)
 
     private (IModalPluginCapability Capability, ModalDescriptor Modal) ResolveCapability(string modalId)
     {
-        foreach (var capability in pluginCatalog.GetCapabilities<IModalPluginCapability>())
+        foreach (var capability in pluginManager.GetCapabilities<IModalPluginCapability>())
         {
             var modal = capability.Modal;
 

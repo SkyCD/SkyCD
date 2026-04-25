@@ -1,52 +1,49 @@
 using System.Reflection;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Lifecycle;
+using SkyCD.Plugin.Runtime.Discovery;
 
-namespace SkyCD.Plugin.Runtime.Discovery;
+namespace SkyCD.Plugin.Runtime.Factories;
 
-/// <summary>
-/// Discovers plugin instances and capabilities from assemblies.
-/// </summary>
-public sealed class PluginDiscoveryService
+internal sealed class DiscoveredPluginFactory
 {
-    public IReadOnlyList<DiscoveredPlugin> DiscoverFromAssembly(Assembly assembly, Version hostVersion)
+    public DiscoveredPlugin BuildFromAssembly(Assembly assembly)
     {
-        var metadata = ResolveAssemblyMetadata(assembly);
-        if (metadata is null)
-        {
-            return [];
-        }
-
-        if (!PluginCompatibilityEvaluator.IsCompatible(metadata.Value.MinHostVersion, metadata.Value.MaxHostVersion, hostVersion))
-        {
-            return [];
-        }
+        var metadata = ResolveAssemblyMetadata(assembly)
+                       ?? throw new InvalidOperationException($"Assembly '{assembly.FullName}' does not provide a valid plugin identity.");
 
         var capabilities = DiscoverCapabilitiesFromAssembly(assembly);
         if (capabilities.Count == 0)
         {
-            return [];
+            throw new InvalidOperationException($"Assembly '{assembly.FullName}' does not expose plugin capabilities.");
         }
 
-        return
-        [
-            new DiscoveredPlugin
-            {
-                Id = metadata.Value.Id,
-                Name = metadata.Value.Name,
-                Version = metadata.Value.Version,
-                MinHostVersion = metadata.Value.MinHostVersion,
-                MaxHostVersion = metadata.Value.MaxHostVersion,
-                Description = metadata.Value.Description,
-                FileName = metadata.Value.FileName,
-                Capabilities = capabilities
-            }
-        ];
+        return new DiscoveredPlugin
+        {
+            Id = metadata.Id,
+            Name = metadata.Name,
+            Version = metadata.Version,
+            MinHostVersion = metadata.MinHostVersion,
+            MaxHostVersion = metadata.MaxHostVersion,
+            Description = metadata.Description,
+            FileName = metadata.FileName,
+            Capabilities = capabilities
+        };
     }
 
     private static IReadOnlyList<IPluginCapability> DiscoverCapabilitiesFromAssembly(Assembly assembly)
     {
-        return assembly.GetTypes()
+        Type[] types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException($"Failed to inspect assembly '{assembly.FullName}'.", exception);
+        }
+
+        return types
             .Where(type => !type.IsAbstract && typeof(IPluginCapability).IsAssignableFrom(type))
             .Where(type => type.GetConstructor(Type.EmptyTypes) is not null)
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
@@ -96,5 +93,4 @@ public sealed class PluginDiscoveryService
 
         return Version.TryParse(value, out var parsed) ? parsed : null;
     }
-
 }

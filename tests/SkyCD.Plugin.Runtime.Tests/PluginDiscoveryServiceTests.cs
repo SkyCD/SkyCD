@@ -2,19 +2,19 @@ using System.Reflection;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
-public class PluginDiscoveryServiceTests
+public class PluginManagerTests
 {
     [Fact]
-    public void DiscoverFromAssembly_ReturnsCompatiblePluginAndCapabilities()
+    public void BuildFromAssembly_ReturnsPluginAndCapabilities()
     {
-        var discovery = new PluginDiscoveryService();
+        var factory = new DiscoveredPluginFactory();
 
-        var plugins = discovery.DiscoverFromAssembly(Assembly.GetExecutingAssembly(), new Version(3, 0, 0));
-
-        var target = Assert.Single(plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
+        var target = factory.BuildFromAssembly(Assembly.GetExecutingAssembly());
         Assert.Contains(target.Capabilities, capability => capability is IMenuPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is StandaloneFileFormatCapability);
@@ -24,23 +24,36 @@ public class PluginDiscoveryServiceTests
     }
 
     [Fact]
-    public void DiscoverFromAssembly_SkipsIncompatiblePlugin()
+    public void Discover_SkipsIncompatiblePlugin()
     {
-        var discovery = new PluginDiscoveryService();
+        var root = Path.Combine(Path.GetTempPath(), $"skycd-plugin-compat-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
 
-        var plugins = discovery.DiscoverFromAssembly(Assembly.GetExecutingAssembly(), new Version(2, 9, 0));
+        try
+        {
+            var assemblyPath = Assembly.GetExecutingAssembly().Location;
+            File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
 
-        Assert.Empty(plugins);
+            var discovery = new PluginManager();
+            discovery.Discover(root, new Version(2, 9, 0));
+
+            Assert.Empty(discovery.Plugins);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
     }
 
     [Fact]
-    public void DiscoverFromAssembly_UsesAssemblyMetadata()
+    public void BuildFromAssembly_UsesAssemblyMetadata()
     {
-        var discovery = new PluginDiscoveryService();
+        var factory = new DiscoveredPluginFactory();
 
-        var plugins = discovery.DiscoverFromAssembly(Assembly.GetExecutingAssembly(), new Version(3, 0, 0));
-
-        var target = Assert.Single(plugins);
+        var target = factory.BuildFromAssembly(Assembly.GetExecutingAssembly());
         Assert.Equal("tests.runtime.assembly-plugin", target.Id);
         Assert.Equal("SkyCD.Plugin.Runtime.Tests", target.Name);
         Assert.Equal(Assembly.GetExecutingAssembly().GetName().Version, target.Version);
