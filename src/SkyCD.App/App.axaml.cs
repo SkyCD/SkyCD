@@ -10,6 +10,7 @@ using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.App.Views;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,7 +37,7 @@ public partial class App : Avalonia.Application
             desktop.Exit += (_, _) =>
             {
                 browserDataStore.Dispose();
-                GlobalPluginServiceProvider.Reset();
+                PluginServiceProvider.Instance.Import(new ServiceCollection());
             };
             desktop.MainWindow = new MainWindow(
                 appOptionsStore,
@@ -85,7 +86,7 @@ public partial class App : Avalonia.Application
 
         services.AddSingleton<FileFormatManager>();
         var serviceProvider = services.BuildServiceProvider();
-        GlobalPluginServiceProvider.Set(serviceProvider);
+        PluginServiceProvider.Instance.Import(serviceProvider);
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
         return new PluginUiServices(fileFormatManager);
     }

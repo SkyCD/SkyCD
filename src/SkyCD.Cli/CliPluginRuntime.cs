@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Cli;
 
@@ -54,6 +55,7 @@ public sealed class CliPluginRuntime : IAsyncDisposable
         }
 
         var serviceProvider = services.BuildServiceProvider();
+        PluginServiceProvider.Instance.Import(serviceProvider);
 
         var runtime = new CliPluginRuntime
         {
@@ -62,24 +64,12 @@ public sealed class CliPluginRuntime : IAsyncDisposable
             ServiceProvider = serviceProvider
         };
 
-        GlobalPluginServiceProvider.Set(runtime.ServiceProvider);
-
         return runtime;
     }
 
     public ValueTask DisposeAsync()
     {
-        if (ReferenceEquals(GlobalPluginServiceProvider.Current, ServiceProvider))
-        {
-            GlobalPluginServiceProvider.Reset();
-            return ValueTask.CompletedTask;
-        }
-
-        if (ServiceProvider is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
-
+        PluginServiceProvider.Instance.Import(new ServiceCollection());
         return ValueTask.CompletedTask;
     }
 
