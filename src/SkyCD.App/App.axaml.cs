@@ -30,7 +30,6 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var appOptionsStore = new AppOptionsStore();
-            var pluginDiscoveryService = new RuntimePluginDiscoveryService();
             var pluginServices = CreatePluginServices(appOptionsStore);
 
             desktop.Exit += (_, _) =>
@@ -40,7 +39,6 @@ public partial class App : Avalonia.Application
             };
             desktop.MainWindow = new MainWindow(
                 appOptionsStore,
-                pluginDiscoveryService,
                 pluginServices.FileFormatManager)
             {
                 DataContext = new MainWindowViewModel(browserDataStore),

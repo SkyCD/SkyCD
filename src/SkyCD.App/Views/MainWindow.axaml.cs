@@ -7,6 +7,7 @@ using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host.Managers;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private readonly AppOptionsStore appOptionsStore;
-    private readonly RuntimePluginDiscoveryService pluginDiscoveryService;
+    private readonly PluginManager pluginManager = new();
     private readonly FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -30,11 +31,9 @@ public partial class MainWindow : Window
 
     public MainWindow(
         AppOptionsStore appOptionsStore,
-        RuntimePluginDiscoveryService pluginDiscoveryService,
         FileFormatManager fileFormatManager)
     {
         this.appOptionsStore = appOptionsStore;
-        this.pluginDiscoveryService = pluginDiscoveryService;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -725,7 +724,27 @@ public partial class MainWindow : Window
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
     {
         dialogVm.CapturePluginStates();
-        var plugins = pluginDiscoveryService.Discover(dialogVm.PluginPath);
+        pluginManager.Discover(dialogVm.PluginPath, new Version(3, 0, 0));
+
+        var plugins = pluginManager.Plugins
+            .Select(static plugin =>
+            {
+                var capabilitySummary = plugin.Capabilities.Count == 0
+                    ? "Generic"
+                    : string.Join(", ", plugin.Capabilities
+                        .Select(static capability => capability.GetType().Name)
+                        .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
+
+                var extendedInfo = $"{plugin.Id} v{plugin.Version}";
+                return new OptionsPluginItem(
+                    plugin.Name,
+                    capabilitySummary,
+                    extendedInfo,
+                    id: plugin.Id);
+            })
+            .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
         dialogVm.SetPlugins(plugins);
     }
 
