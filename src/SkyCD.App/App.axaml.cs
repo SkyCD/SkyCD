@@ -37,7 +37,7 @@ public partial class App : Avalonia.Application
             desktop.Exit += (_, _) =>
             {
                 browserDataStore.Dispose();
-                PluginServiceProvider.Instance.Import(new ServiceCollection());
+                pluginServices.ServiceProvider.Dispose();
             };
             desktop.MainWindow = new MainWindow(
                 appOptionsStore,
@@ -69,26 +69,25 @@ public partial class App : Avalonia.Application
         var pluginList = discoveredPlugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
         var serviceCollectionFactory = new ServiceCollectionFactory();
-        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+        IServiceCollection mergedServices = new ServiceCollection();
 
-        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
 
         foreach (var plugin in pluginList)
         {
-            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
-            foreach (var descriptor in pluginServices)
+            var pluginDescriptors = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
+            foreach (var descriptor in pluginDescriptors)
             {
-                services.Add(descriptor);
+                mergedServices.Add(descriptor);
             }
         }
 
-        services.AddSingleton<FileFormatManager>();
-        var serviceProvider = services.BuildServiceProvider();
-        PluginServiceProvider.Instance.Import(serviceProvider);
-        var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager);
+        mergedServices.AddSingleton<FileFormatManager>();
+        PluginServiceProvider.Instance.Import(mergedServices);
+        var fileFormatManager = PluginServiceProvider.Instance.GetRequiredService<FileFormatManager>();
+        return new PluginUiServices(fileFormatManager, PluginServiceProvider.Instance);
     }
 
     private static string ResolveDefaultPluginPath()
@@ -104,5 +103,5 @@ public partial class App : Avalonia.Application
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
     }
 
-    private sealed record PluginUiServices(FileFormatManager FileFormatManager);
+    private sealed record PluginUiServices(FileFormatManager FileFormatManager, PluginServiceProvider ServiceProvider);
 }

@@ -1,18 +1,22 @@
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.Plugin.Runtime.Managers;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Cli;
 
 public sealed class CliHost(
     TextWriter stdout,
     TextWriter stderr,
-    Func<Version, CancellationToken, Task<CliPluginRuntime>>? runtimeLoader = null,
+    Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null,
     Func<string>? executableNameProvider = null)
 {
     private readonly JsonSerializerOptions jsonOptions = new()
@@ -20,8 +24,8 @@ public sealed class CliHost(
         WriteIndented = true
     };
     private readonly Func<string> executableNameProvider = executableNameProvider ?? ResolveExecutableName;
-    private readonly Func<Version, CancellationToken, Task<CliPluginRuntime>> runtimeLoaderFactory =
-        runtimeLoader ?? CliPluginRuntime.LoadAsync;
+    private readonly Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>> pluginLoaderFactory =
+        pluginLoader ?? LoadDiscoveredPluginsAsync;
 
     public async Task<CliRunResult> TryRunAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -57,17 +61,19 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
         }
 
-        await using var runtime = await runtimeLoaderFactory(new Version(3, 0, 0), cancellationToken);
+        var pluginDirectories = GetPluginDirectories();
+        var discoveredPlugins = await pluginLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
         var serviceCollectionFactory = new ServiceCollectionFactory();
         var serviceProvider = BuildGlobalServiceProvider(
-            runtime.DiscoveredPlugins,
+            discoveredPlugins,
             serviceCollectionFactory,
             static services => services.AddSingleton<FileFormatManager>());
+        using var _ = serviceProvider;
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
         IHostCliApi hostApi = fileFormatManager;
         using var registry = new CliContributionRegistry();
-        registry.Register(runtime.DiscoveredPlugins);
+        registry.Register(discoveredPlugins);
 
         if (registry.Errors.Count > 0)
         {
@@ -88,8 +94,8 @@ public sealed class CliHost(
                 fileFormatManager,
                 hostApi,
                 registry,
-                runtime.DiscoveredPlugins,
-                runtime.PluginDirectories,
+                discoveredPlugins,
+                pluginDirectories,
                 cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
@@ -103,6 +109,67 @@ public sealed class CliHost(
         }
 
         return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
+    }
+
+    internal static IReadOnlyList<string> GetPluginDirectories()
+    {
+        var configured = Environment.GetEnvironmentVariable("SKYCD_PLUGIN_PATH");
+        var fromAppSettings = TryReadPluginPathFromAppSettings();
+        return BuildPluginDirectories(configured, fromAppSettings);
+    }
+
+    internal static IReadOnlyList<string> BuildPluginDirectories(string? configuredPluginPaths, string? appSettingsPluginPath)
+    {
+        var candidates = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(configuredPluginPaths))
+        {
+            foreach (var segment in configuredPluginPaths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                candidates.Add(Path.GetFullPath(segment));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(appSettingsPluginPath))
+        {
+            candidates.Add(Path.GetFullPath(appSettingsPluginPath));
+        }
+
+        return candidates
+            .Where(directory => !string.IsNullOrWhiteSpace(directory))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    internal static string? TryReadPluginPathFromAppSettings(string? appDataRoot = null)
+    {
+        var root = appDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return null;
+        }
+
+        var optionsPath = Path.Combine(root, "SkyCD", "options.json");
+        if (!File.Exists(optionsPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(optionsPath));
+            if (!document.RootElement.TryGetProperty("PluginPath", out var pluginPathElement))
+            {
+                return null;
+            }
+
+            var pluginPath = pluginPathElement.GetString();
+            return string.IsNullOrWhiteSpace(pluginPath) ? null : pluginPath.Trim();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private async Task<int> ExecuteBuiltInAsync(
@@ -979,30 +1046,54 @@ public sealed class CliHost(
         return null;
     }
 
-    private static ServiceProvider BuildGlobalServiceProvider(
+    private static PluginServiceProvider BuildGlobalServiceProvider(
         IReadOnlyList<DiscoveredPlugin> plugins,
         ServiceCollectionFactory serviceCollectionFactory,
         Action<IServiceCollection>? configureHostServices = null)
     {
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+        IServiceCollection mergedServices = new ServiceCollection();
 
-        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
 
         foreach (var plugin in pluginList)
         {
-            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
-            foreach (var descriptor in pluginServices)
+            var pluginDescriptors = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
+            foreach (var descriptor in pluginDescriptors)
             {
-                services.Add(descriptor);
+                mergedServices.Add(descriptor);
             }
         }
 
-        configureHostServices?.Invoke(services);
-        return services.BuildServiceProvider();
+        configureHostServices?.Invoke(mergedServices);
+        PluginServiceProvider.Instance.Import(mergedServices);
+        return PluginServiceProvider.Instance;
+    }
+
+    private static Task<IReadOnlyList<DiscoveredPlugin>> LoadDiscoveredPluginsAsync(
+        Version hostVersion,
+        CancellationToken cancellationToken = default)
+    {
+        var pluginDirectories = GetPluginDirectories();
+        using var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Information);
+            builder.AddSimpleConsole(options =>
+            {
+                options.ColorBehavior = LoggerColorBehavior.Disabled;
+                options.SingleLine = true;
+                options.TimestampFormat = string.Empty;
+            });
+        });
+
+        var pluginManager = new PluginManager(
+            loggerFactory.CreateLogger<PluginManager>(),
+            loggerFactory.CreateLogger("SkyCD.Plugin.Runtime.Factories.AssembliesListFactory"));
+        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
+        return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());
     }
 
     private static string GetVersionText()
