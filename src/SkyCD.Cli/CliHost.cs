@@ -1091,7 +1091,8 @@ public sealed class CliHost(
 
         var pluginManager = new PluginManager(
             loggerFactory.CreateLogger<PluginManager>(),
-            loggerFactory.CreateLogger("SkyCD.Plugin.Runtime.Factories.AssembliesListFactory"));
+            new AssembliesListFactory(loggerFactory.CreateLogger("SkyCD.Plugin.Runtime.Factories.AssembliesListFactory")),
+            new DiscoveredPluginFactory());
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
         return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());
     }

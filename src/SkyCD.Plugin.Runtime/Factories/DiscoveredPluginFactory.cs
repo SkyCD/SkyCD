@@ -5,7 +5,7 @@ using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
-internal sealed class DiscoveredPluginFactory
+public sealed class DiscoveredPluginFactory
 {
     public DiscoveredPlugin BuildFromAssembly(Assembly assembly)
     {

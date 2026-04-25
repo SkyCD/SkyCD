@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
-internal sealed class AssembliesListFactory(ILogger logger)
+public sealed class AssembliesListFactory(ILogger logger)
 {
     public IReadOnlyCollection<Assembly> BuildFromPaths(
         IEnumerable<string> directories)

@@ -37,7 +37,8 @@ public class PluginManagerTests
 
             var discovery = new PluginManager(
                 NullLogger<PluginManager>.Instance,
-                NullLogger.Instance);
+                new AssembliesListFactory(NullLogger.Instance),
+                new DiscoveredPluginFactory());
             discovery.Discover(root, new Version(2, 9, 0));
 
             Assert.Empty(discovery.Plugins);

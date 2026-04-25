@@ -12,11 +12,20 @@ namespace SkyCD.Plugin.Runtime.Managers;
 /// </summary>
 public sealed class PluginManager(
     ILogger<PluginManager> logger,
-    ILogger assembliesLogger)
+    AssembliesListFactory assembliesListFactory,
+    DiscoveredPluginFactory discoveredPluginFactory)
 {
-    private readonly AssembliesListFactory _assembliesListFactory = new(assembliesLogger);
-    private readonly DiscoveredPluginFactory _discoveredPluginFactory = new();
+    private readonly AssembliesListFactory _assembliesListFactory = assembliesListFactory;
+    private readonly DiscoveredPluginFactory _discoveredPluginFactory = discoveredPluginFactory;
     private readonly List<DiscoveredPlugin> _plugins = [];
+
+    public PluginManager()
+        : this(
+            NullLogger<PluginManager>.Instance,
+            new AssembliesListFactory(NullLogger.Instance),
+            new DiscoveredPluginFactory())
+    {
+    }
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => _plugins;
 
