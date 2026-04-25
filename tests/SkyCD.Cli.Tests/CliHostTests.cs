@@ -40,6 +40,29 @@ public sealed class CliHostTests
     }
 
     [Fact]
+    public async Task RootHelp_WithWindowsSwitch_ShowsConciseCommandList()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["/?"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("Commands:", text, StringComparison.Ordinal);
+        Assert.Contains("renamed-cli.exe [options] [command]", text, StringComparison.Ordinal);
+        Assert.Contains("  open         Open and validate a catalog file.", text, StringComparison.Ordinal);
+        Assert.Contains("  plugins      Inspect loaded plugins and capabilities.", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
     public async Task OpenHelp_ShowsCommandSpecificOptions()
     {
         var output = new StringWriter();
@@ -96,6 +119,27 @@ public sealed class CliHostTests
             () => "renamed-cli.exe");
 
         var result = await host.TryRunAsync(["plugins", "--help"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        var text = output.ToString();
+        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", text, StringComparison.Ordinal);
+        Assert.Contains("list     List loaded plugins, capabilities, and commands", text, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task PluginsHelp_WithWindowsSwitch_ShowsListSubcommand()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(
+            output,
+            error,
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
+            () => "renamed-cli.exe");
+
+        var result = await host.TryRunAsync(["plugins", "/?"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);

@@ -868,7 +868,8 @@ public sealed class CliHost(
     private static bool IsHelpToken(string token)
     {
         return token.Equals("--help", StringComparison.OrdinalIgnoreCase)
-               || token.Equals("-h", StringComparison.OrdinalIgnoreCase);
+               || token.Equals("-h", StringComparison.OrdinalIgnoreCase)
+               || token.Equals("/?", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsVersionToken(string token)
