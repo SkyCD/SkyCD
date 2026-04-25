@@ -69,6 +69,35 @@ public sealed class PluginManagerLoadingTests : IDisposable
             entry.Message.Contains(missingDirectory, StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void LoadFromDirectories_IgnoresObjAndReferenceOutputs_AndDeduplicatesAssemblyName()
+    {
+        var pluginA = Path.Combine(_root, "a");
+        var pluginB = Path.Combine(_root, "b");
+        var objOutput = Path.Combine(pluginA, "obj", "Release", "net10.0");
+        var binOutput = Path.Combine(pluginB, "bin", "Release", "net10.0");
+        Directory.CreateDirectory(objOutput);
+        Directory.CreateDirectory(binOutput);
+
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        var assemblyName = Path.GetFileName(assemblyPath);
+        File.Copy(assemblyPath, Path.Combine(objOutput, assemblyName), overwrite: true);
+        File.Copy(assemblyPath, Path.Combine(binOutput, assemblyName), overwrite: true);
+
+        var logger = new TestLogger<PluginManager>();
+        var assembliesLogger = new TestLogger<AssembliesListFactory>();
+        var pluginManager = new PluginManager(logger, assembliesLogger);
+        var combinedPaths = string.Join(Path.PathSeparator, pluginA, pluginB);
+
+        pluginManager.Discover(combinedPaths, new Version(3, 0, 0));
+
+        Assert.Contains(pluginManager.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
+        Assert.DoesNotContain(
+            assembliesLogger.Entries,
+            entry => entry.LogLevel == LogLevel.Warning &&
+                     entry.Message.Contains("already loaded", StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
