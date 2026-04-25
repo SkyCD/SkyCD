@@ -385,7 +385,6 @@ public sealed class CliHostTests
             (_, _) => Task.FromResult(new CliPluginRuntime
             {
                 DiscoveredPlugins = plugins.ToList(),
-                Diagnostics = [],
                 PluginDirectories = [],
                 ServiceProvider = new PluginServiceProviderFactory().Build(plugins)
             }));

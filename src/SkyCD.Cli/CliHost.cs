@@ -58,11 +58,6 @@ public sealed class CliHost(
 
         await using var runtime = await runtimeLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
-        foreach (var diagnostic in runtime.Diagnostics.Where(static entry => entry.StartsWith("info:", StringComparison.OrdinalIgnoreCase)))
-        {
-            await stderr.WriteLineAsync(diagnostic);
-        }
-
         var serviceProvider = new PluginServiceProviderFactory().Build(
             runtime.DiscoveredPlugins,
             services => services.AddSingleton<FileFormatManager>());

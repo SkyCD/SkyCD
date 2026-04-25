@@ -1,13 +1,13 @@
 using System.Reflection;
-using SkyCD.Plugin.Runtime.Loading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
-internal sealed class AssembliesListFactory
+internal sealed class AssembliesListFactory(ILogger logger)
 {
     public IReadOnlyCollection<Assembly> BuildFromPaths(
-        IEnumerable<string> directories,
-        ICollection<PluginLoadDiagnostic> diagnostics)
+        IEnumerable<string> directories)
     {
         var assemblies = new List<Assembly>();
         var seenAssemblyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -16,12 +16,7 @@ internal sealed class AssembliesListFactory
         {
             if (!Directory.Exists(directory))
             {
-                diagnostics.Add(new PluginLoadDiagnostic
-                {
-                    PluginId = "<directory>",
-                    IsError = false,
-                    Message = $"Plugin directory not found: {directory}"
-                });
+                logger.LogWarning("Plugin directory not found: {Directory}", directory);
                 continue;
             }
 
@@ -39,12 +34,7 @@ internal sealed class AssembliesListFactory
                 }
                 catch (Exception exception)
                 {
-                    diagnostics.Add(new PluginLoadDiagnostic
-                    {
-                        PluginId = "<assembly-scan>",
-                        IsError = false,
-                        Message = $"Skipped '{fullPath}': {exception.Message}"
-                    });
+                    logger.LogWarning(exception, "Skipped '{AssemblyPath}' while scanning plugin assemblies.", fullPath);
                 }
             }
         }

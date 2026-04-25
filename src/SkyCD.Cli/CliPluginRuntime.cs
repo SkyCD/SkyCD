@@ -1,6 +1,8 @@
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Managers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using System.Text.Json;
 
 namespace SkyCD.Cli;
@@ -9,8 +11,6 @@ public sealed class CliPluginRuntime : IAsyncDisposable
 {
     public required IReadOnlyList<DiscoveredPlugin> DiscoveredPlugins { get; init; }
 
-    public required IReadOnlyList<string> Diagnostics { get; init; }
-
     public required IReadOnlyList<string> PluginDirectories { get; init; }
 
     public required IServiceProvider ServiceProvider { get; init; }
@@ -18,15 +18,25 @@ public sealed class CliPluginRuntime : IAsyncDisposable
     public static async Task<CliPluginRuntime> LoadAsync(Version hostVersion, CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        var pluginManager = new PluginManager();
+        using var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Information);
+            builder.AddSimpleConsole(options =>
+            {
+                options.ColorBehavior = LoggerColorBehavior.Disabled;
+                options.SingleLine = true;
+                options.TimestampFormat = string.Empty;
+            });
+        });
+
+        var pluginManager = new PluginManager(
+            loggerFactory.CreateLogger<PluginManager>(),
+            loggerFactory.CreateLogger("SkyCD.Plugin.Runtime.Factories.AssembliesListFactory"));
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
 
         var runtime = new CliPluginRuntime
         {
             DiscoveredPlugins = pluginManager.Plugins.ToList(),
-            Diagnostics = pluginManager.Diagnostics
-                .Select(diagnostic => $"{(diagnostic.IsError ? "error" : "info")}: {diagnostic.PluginId}: {diagnostic.Message}")
-                .ToList(),
             PluginDirectories = pluginDirectories,
             ServiceProvider = new PluginServiceProviderFactory().Build(pluginManager.Plugins)
         };
