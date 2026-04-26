@@ -15,35 +15,20 @@ namespace SkyCD.Cli;
 public sealed class CliHost(
     TextWriter stdout,
     TextWriter stderr,
-    Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null,
-    Func<string>? executableNameProvider = null)
+    Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null)
 {
     private sealed record SystemCommandNamespace(
         string BasePath,
-        bool SupportsExtensions = false,
         string[]? Subcommands = null);
 
-    private sealed record SystemCommandDefinition(
-        string Path,
-        bool HasSubcommands = false,
-        bool SupportsExtensions = false);
-
     private static readonly SystemCommandNamespace[] SystemCommandNamespaces = DiscoverSystemCommandNamespaces();
-
-    private static readonly SystemCommandDefinition[] SystemCommandDefinitions = BuildSystemCommandDefinitions();
-    private static readonly HashSet<string> SystemCommandPathSet = SystemCommandDefinitions
-        .Select(static definition => definition.Path)
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    private static readonly int MaxSystemCommandTokenCount = SystemCommandDefinitions
-        .Select(static definition => definition.Path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length)
-        .DefaultIfEmpty(1)
-        .Max();
+    private static readonly string[] SystemCommandPaths = BuildSystemCommandPaths();
+    private static readonly HashSet<string> SystemCommandPathSet = SystemCommandPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
     private static readonly Lock ConsoleRedirectLock = new();
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         WriteIndented = true
     };
-    private readonly Func<string> executableNameProvider = executableNameProvider ?? ResolveExecutableName;
     private readonly Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>> pluginLoaderFactory =
         pluginLoader ?? LoadDiscoveredPluginsAsync;
 
@@ -56,44 +41,28 @@ public sealed class CliHost(
 
         var (jsonOutput, commandTokens) = ExtractJsonFlag(args);
         var normalized = Normalize(commandTokens);
+        var routedTokens = ExpandCompositeCommandToken(normalized);
 
-        if (normalized.Count == 1 && IsHelpToken(normalized[0]))
-        {
-            await WriteHelpAsync(Array.Empty<string>(), jsonOutput);
-            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
-        }
-
-        if (TryGetBuiltInHelpCommand(normalized, out var helpCommand))
-        {
-            await WriteCommandHelpAsync(helpCommand, jsonOutput);
-            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
-        }
-
-        if (TryGetImplicitBuiltInHelpCommand(normalized, out var implicitHelpCommand))
-        {
-            await WriteCommandHelpAsync(implicitHelpCommand, jsonOutput);
-            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
-        }
-
-        if (normalized.Count == 1 && IsVersionToken(normalized[0]))
+        if (routedTokens.Count == 1 && IsVersionToken(routedTokens[0]))
         {
             await stdout.WriteLineAsync(GetVersionText());
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
         }
 
-        if (TryGetConcatenatedSubcommandHint(normalized, out var invalidCommandEarly, out var suggestedCommandEarly))
+        if (TryGetConcatenatedSubcommandHint(routedTokens, out var invalidCommandEarly, out var suggestedCommandEarly))
         {
             await stderr.WriteLineAsync($"Unknown command '{invalidCommandEarly}'. Did you mean '{suggestedCommandEarly}'?");
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.InvalidArguments };
         }
 
-        if (ShouldHandleWithSystemRunner(normalized) && !RequiresPluginRuntime(normalized))
+        if (ShouldHandleWithSystemRunner(routedTokens) && CanRunWithoutPluginRuntime(routedTokens))
         {
+            var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
             var lightweightFileFormatManager = new FileFormatManager(Array.Empty<IFileFormatPluginCapability>());
             using var lightweightRegistry = new CliContributionRegistry();
             lightweightRegistry.Register([]);
             var exitCode = await ExecuteSystemCommandAsync(
-                normalized,
+                systemRunnerTokens,
                 jsonOutput,
                 lightweightFileFormatManager,
                 lightweightRegistry,
@@ -125,10 +94,11 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.ConfigurationError };
         }
 
-        if (ShouldHandleWithSystemRunner(normalized))
+        if (ShouldHandleWithSystemRunner(routedTokens))
         {
+            var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
             var exitCode = await ExecuteSystemCommandAsync(
-                normalized,
+                systemRunnerTokens,
                 jsonOutput,
                 fileFormatManager,
                 registry,
@@ -138,10 +108,10 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
 
-        var pluginCommand = registry.ResolveCommand(normalized, out var consumedTokens);
+        var pluginCommand = registry.ResolveCommand(routedTokens, out var consumedTokens);
         if (pluginCommand is not null)
         {
-            var pluginArgs = normalized.Skip(consumedTokens).ToArray();
+            var pluginArgs = routedTokens.Skip(consumedTokens).ToArray();
             var exitCode = await ExecutePluginCommandAsync(pluginCommand, pluginArgs, jsonOutput, cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
@@ -305,46 +275,34 @@ public sealed class CliHost(
 
     internal static IReadOnlySet<string> GetSystemCommandPaths()
     {
-        return SystemCommandDefinitions
-            .Select(static command => command.Path)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return SystemCommandPathSet;
     }
 
-    private static bool RequiresPluginRuntime(IReadOnlyList<string> args)
+    private static bool CanRunWithoutPluginRuntime(IReadOnlyList<string> args)
     {
         if (args.Count == 0)
         {
-            return false;
+            return true;
         }
 
         if (args.Any(IsHelpToken))
         {
-            return false;
+            return true;
         }
 
         if (args.Any(IsVersionToken))
         {
-            return false;
+            return true;
         }
 
-        if (!TryFindMatchedSystemCommandPath(args, out var matchedCommandPath, out var consumedTokens))
+        if (args.Count == 1)
         {
-            return false;
+            return SystemCommandNamespaces.Any(systemNamespace =>
+                systemNamespace.Subcommands is { Length: > 0 }
+                && systemNamespace.BasePath.Equals(args[0], StringComparison.OrdinalIgnoreCase));
         }
 
-        var owningNamespace = SystemCommandNamespaces.FirstOrDefault(systemNamespace =>
-            systemNamespace.BasePath.Equals(
-                matchedCommandPath.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0],
-                StringComparison.OrdinalIgnoreCase));
-
-        if (owningNamespace is not null
-            && owningNamespace.Subcommands is { Length: > 0 }
-            && consumedTokens == 1)
-        {
-            return false;
-        }
-
-        return true;
+        return false;
     }
 
     internal async Task<CliExitCodes> ExecuteOpenAsync(
@@ -585,14 +543,8 @@ public sealed class CliHost(
         bool jsonOutput,
         CancellationToken cancellationToken)
     {
-        if (pluginArgs.Count > 0)
-        {
-            await stderr.WriteLineAsync($"Unknown arguments for command '{command.CommandPath}': {string.Join(" ", pluginArgs)}");
-            return CliExitCodes.InvalidArguments;
-        }
-
         var executionResult = await ExecuteWithTimeoutAsync(
-            token => InvokePluginCommandAsync(command, token),
+            token => InvokePluginCommandAsync(command, pluginArgs, token),
             cancellationToken);
 
         if (!executionResult.Success)
@@ -617,35 +569,48 @@ public sealed class CliHost(
         return executionResult.ExitCode;
     }
 
-    private static async Task<PluginCommandExecutionResult> InvokePluginCommandAsync(
+    private async Task<PluginCommandExecutionResult> InvokePluginCommandAsync(
         RegisteredCliContribution command,
+        IReadOnlyList<string> pluginArgs,
         CancellationToken cancellationToken)
     {
         try
         {
-            var parameters = command.ExecuteMethod.GetParameters();
-            object?[] args = parameters.Length switch
-            {
-                0 => [],
-                1 when parameters[0].ParameterType == typeof(CancellationToken) => [cancellationToken],
-                _ => throw new InvalidOperationException(
-                    $"Unsupported Execute signature on '{command.ExecuteMethod.DeclaringType?.FullName}'.")
-            };
-            var rawResult = command.ExecuteMethod.Invoke(command.CommandInstance, args);
+            var runnerType = typeof(AppRunner<>).MakeGenericType(command.CommandInstance.GetType());
+            var runner = Activator.CreateInstance(runnerType, new AppSettings(), new Resources())
+                         ?? throw new InvalidOperationException($"Failed to create CLI runner for '{command.CommandPath}'.");
 
-            return rawResult switch
+            var runMethod = runner.GetType().GetMethod("Run", [typeof(string[])])
+                           ?? throw new InvalidOperationException($"Could not resolve Run(string[]) for '{command.CommandPath}'.");
+
+            var canonicalPluginArgs = CanonicalizePluginCommandTokens(command.CommandInstance.GetType(), pluginArgs);
+            var normalizedArgs = NormalizeSystemRunnerArgs(canonicalPluginArgs);
+            var exitCode = await Task.Run(() =>
             {
-                null => new PluginCommandExecutionResult(true, null, null, CliExitCodes.Success),
-                string output => new PluginCommandExecutionResult(true, output, null, CliExitCodes.Success),
-                int exitCode => new PluginCommandExecutionResult(
-                    true,
-                    null,
-                    null,
-                    Enum.IsDefined(typeof(CliExitCodes), exitCode) ? (CliExitCodes)exitCode : CliExitCodes.Success),
-                CliExitCodes exitCode => new PluginCommandExecutionResult(true, null, null, exitCode),
-                Task task => await UnwrapTaskResultAsync(task),
-                _ => new PluginCommandExecutionResult(true, Convert.ToString(rawResult), null, CliExitCodes.Success)
-            };
+                lock (ConsoleRedirectLock)
+                {
+                    var previousOut = System.Console.Out;
+                    var previousError = System.Console.Error;
+                    try
+                    {
+                        System.Console.SetOut(TextWriter.Synchronized(stdout));
+                        System.Console.SetError(TextWriter.Synchronized(stderr));
+                        return (int)(runMethod.Invoke(runner, [normalizedArgs]) ?? (int)CliExitCodes.Success);
+                    }
+                    finally
+                    {
+                        System.Console.SetOut(previousOut);
+                        System.Console.SetError(previousError);
+                    }
+                }
+            }, cancellationToken);
+
+            var mappedExitCode = Enum.IsDefined(typeof(CliExitCodes), exitCode)
+                ? (CliExitCodes)exitCode
+                : CliExitCodes.InvalidArguments;
+            return mappedExitCode == CliExitCodes.Success
+                ? new PluginCommandExecutionResult(true, null, null, mappedExitCode)
+                : new PluginCommandExecutionResult(false, null, $"Plugin command returned {mappedExitCode}.", mappedExitCode);
         }
         catch (TargetInvocationException exception)
         {
@@ -655,32 +620,6 @@ public sealed class CliHost(
         {
             return new PluginCommandExecutionResult(false, null, exception.Message, CliExitCodes.CommandFailed);
         }
-    }
-
-    private static async Task<PluginCommandExecutionResult> UnwrapTaskResultAsync(Task task)
-    {
-        await task;
-
-        var taskType = task.GetType();
-        if (!taskType.IsGenericType)
-        {
-            return new PluginCommandExecutionResult(true, null, null, CliExitCodes.Success);
-        }
-
-        var resultProperty = taskType.GetProperty("Result");
-        var resultValue = resultProperty?.GetValue(task);
-        return resultValue switch
-        {
-            null => new PluginCommandExecutionResult(true, null, null, CliExitCodes.Success),
-            string output => new PluginCommandExecutionResult(true, output, null, CliExitCodes.Success),
-            int exitCode => new PluginCommandExecutionResult(
-                true,
-                null,
-                null,
-                Enum.IsDefined(typeof(CliExitCodes), exitCode) ? (CliExitCodes)exitCode : CliExitCodes.Success),
-            CliExitCodes exitCode => new PluginCommandExecutionResult(true, null, null, exitCode),
-            _ => new PluginCommandExecutionResult(true, Convert.ToString(resultValue), null, CliExitCodes.Success)
-        };
     }
 
     private static async Task<PluginCommandExecutionResult> ExecuteWithTimeoutAsync(
@@ -710,285 +649,6 @@ public sealed class CliHost(
         string? Error,
         CliExitCodes ExitCode);
 
-    private async Task WriteHelpAsync(IEnumerable<string> pluginCommands, bool jsonOutput)
-    {
-        var executableName = NormalizeExecutableName(executableNameProvider());
-        var builtIn = new[]
-        {
-            new { Name = "open", Description = "Open and validate a catalog file." },
-            new { Name = "convert", Description = "Convert a catalog between supported formats." },
-            new { Name = "fileformats", Description = "Work with file format handlers." },
-            new { Name = "plugins", Description = "Inspect loaded plugins and capabilities." }
-        };
-
-        if (jsonOutput)
-        {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
-            {
-                description = "SkyCD command line interface",
-                usage = $"{executableName} [options] [command]",
-                options = new[]
-                {
-                    "--help     Display this help",
-                    "--version  Display application version",
-                    "--json     Use JSON output where supported"
-                },
-                builtInCommands = builtIn.Select(static command => new { command.Name, command.Description }).ToArray(),
-                commandHelpHint = $"Use `{executableName} <command> --help` for command-specific options.",
-                pluginCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray()
-            }, jsonOptions));
-            return;
-        }
-
-        await stdout.WriteLineAsync("Description:");
-        await stdout.WriteLineAsync("  SkyCD command line interface");
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Usage:");
-        await stdout.WriteLineAsync($"  {executableName} [options] [command]");
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Options:");
-        await stdout.WriteLineAsync("  --help       Display this help");
-        await stdout.WriteLineAsync("  --version    Display application version");
-        await stdout.WriteLineAsync("  --json       Use JSON output where supported");
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Commands:");
-        foreach (var command in builtIn)
-        {
-            await stdout.WriteLineAsync($"  {command.Name,-12} {command.Description}");
-        }
-
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Notes:");
-        await stdout.WriteLineAsync($"  Use `{executableName} <command> --help` for command-specific options.");
-
-        var contributedCommands = pluginCommands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray();
-        if (contributedCommands.Length > 0)
-        {
-            await stdout.WriteLineAsync("");
-            await stdout.WriteLineAsync("Plugin Commands:");
-        }
-
-        foreach (var pluginCommand in contributedCommands)
-        {
-            await stdout.WriteLineAsync($"  {pluginCommand}");
-        }
-    }
-
-    private async Task WriteCommandHelpAsync(string command, bool jsonOutput)
-    {
-        var executableName = NormalizeExecutableName(executableNameProvider());
-        var (usage, options, notes) = command switch
-        {
-            "open" => (
-                $"{executableName} open <file> [--format <id>] [--json]",
-                new[]
-                {
-                    "--format <id>  Override inferred format id",
-                    "--json         Use JSON output where supported",
-                    "--help         Display this help"
-                },
-                new[]
-                {
-                    "open infers format from file extension by default."
-                }),
-            "convert" => (
-                $"{executableName} convert --in <file> --out <file> [--in-format <id>] [--format <id>] [--json]",
-                new[]
-                {
-                    "--in <file>        Input file path (required)",
-                    "--out <file>       Output file path (required)",
-                    "--in-format <id>   Override inferred input format id",
-                    "--format <id>      Override inferred output format id",
-                    "--json             Use JSON output where supported",
-                    "--help             Display this help"
-                },
-                new[]
-                {
-                    $"Format ids are listed by `{executableName} fileformats list`."
-                }),
-            "fileformats" => (
-                $"{executableName} fileformats <subcommand> [options]",
-                new[]
-                {
-                    "list     List available read/write format handlers",
-                    "--help   Display this help"
-                },
-                Array.Empty<string>()),
-            "fileformats list" => (
-                $"{executableName} fileformats list [--json]",
-                new[]
-                {
-                    "--json   Use JSON output where supported",
-                    "--help   Display this help"
-                },
-                Array.Empty<string>()),
-            "plugins" => (
-                $"{executableName} plugins <subcommand> [options]",
-                new[]
-                {
-                    "list     List loaded plugins, capabilities, and commands",
-                    "--help   Display this help"
-                },
-                Array.Empty<string>()),
-            "plugins list" => (
-                $"{executableName} plugins list [--json]",
-                new[]
-                {
-                    "--json   Use JSON output where supported",
-                    "--help   Display this help"
-                },
-                Array.Empty<string>()),
-            _ => throw new InvalidOperationException($"Unsupported help command: {command}")
-        };
-
-        if (jsonOutput)
-        {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
-            {
-                command,
-                usage,
-                options,
-                notes
-            }, jsonOptions));
-            return;
-        }
-
-        await stdout.WriteLineAsync("Description:");
-        await stdout.WriteLineAsync($"  {command} command");
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Usage:");
-        await stdout.WriteLineAsync($"  {usage}");
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Options:");
-        foreach (var option in options)
-        {
-            await stdout.WriteLineAsync($"  {option}");
-        }
-
-        if (notes.Length == 0)
-        {
-            return;
-        }
-
-        await stdout.WriteLineAsync("");
-        await stdout.WriteLineAsync("Notes:");
-        foreach (var note in notes)
-        {
-            await stdout.WriteLineAsync($"  {note}");
-        }
-    }
-
-    private static bool TrySplitBuiltIn(
-        IReadOnlyList<string> args,
-        out string command,
-        out IReadOnlyList<string> remaining)
-    {
-        command = string.Empty;
-        remaining = [];
-
-        if (args.Count == 1 && IsHelpToken(args[0]))
-        {
-            command = "help";
-            return true;
-        }
-
-        if (args.Count == 1 && IsVersionToken(args[0]))
-        {
-            command = "version";
-            return true;
-        }
-
-        if (args.Count > 0 && args[0].Equals("open", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "open";
-            remaining = args.Skip(1).ToArray();
-            return true;
-        }
-
-        if (args.Count > 0 && args[0].Equals("convert", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "convert";
-            remaining = args.Skip(1).ToArray();
-            return true;
-        }
-
-        if (args.Count == 1 && args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "plugins";
-            return true;
-        }
-
-        if (args.Count >= 2 &&
-            args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase) &&
-            args[1].Equals("list", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "plugins list";
-            remaining = args.Skip(2).ToArray();
-            return true;
-        }
-
-        if (args.Count == 1 && args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "fileformats";
-            return true;
-        }
-
-        if (args.Count >= 2 &&
-            args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase) &&
-            args[1].Equals("list", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "fileformats list";
-            remaining = args.Skip(2).ToArray();
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryGetBuiltInHelpCommand(IReadOnlyList<string> args, out string command)
-    {
-        command = string.Empty;
-
-        foreach (var definition in SystemCommandDefinitions.OrderByDescending(static item =>
-                     item.Path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length))
-        {
-            var commandTokens = definition.Path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (args.Count <= commandTokens.Length || !StartsWithTokens(args, commandTokens))
-            {
-                continue;
-            }
-
-            if (!ContainsOnlyHelpTokens(args.Skip(commandTokens.Length)))
-            {
-                continue;
-            }
-
-            command = definition.Path;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryGetImplicitBuiltInHelpCommand(IReadOnlyList<string> args, out string command)
-    {
-        command = string.Empty;
-        if (args.Count != 1)
-        {
-            return false;
-        }
-
-        var matchingNamespace = SystemCommandNamespaces.FirstOrDefault(systemNamespace =>
-            systemNamespace.Subcommands is { Length: > 0 }
-            && systemNamespace.BasePath.Equals(args[0], StringComparison.OrdinalIgnoreCase));
-        if (matchingNamespace is not null)
-        {
-            command = matchingNamespace.BasePath;
-            return true;
-        }
-
-        return false;
-    }
 
     private static bool TryGetConcatenatedSubcommandHint(
         IReadOnlyList<string> args,
@@ -1036,6 +696,24 @@ public sealed class CliHost(
         return false;
     }
 
+    private static IReadOnlyList<string> NormalizeImplicitNamespaceHelp(IReadOnlyList<string> args)
+    {
+        if (args.Count != 1)
+        {
+            return args;
+        }
+
+        var commandNamespace = SystemCommandNamespaces.FirstOrDefault(systemNamespace =>
+            systemNamespace.Subcommands is { Length: > 0 }
+            && systemNamespace.BasePath.Equals(args[0], StringComparison.OrdinalIgnoreCase));
+        if (commandNamespace is null)
+        {
+            return args;
+        }
+
+        return [args[0], "--help"];
+    }
+
     private static (bool JsonOutput, IReadOnlyList<string> Tokens) ExtractJsonFlag(IReadOnlyList<string> args)
     {
         var json = false;
@@ -1063,6 +741,18 @@ public sealed class CliHost(
             .ToArray();
     }
 
+    private static IReadOnlyList<string> ExpandCompositeCommandToken(IReadOnlyList<string> args)
+    {
+        if (args.Count != 1 || !args[0].Contains(' ', StringComparison.Ordinal))
+        {
+            return args;
+        }
+
+        return args[0]
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToArray();
+    }
+
     private static bool IsHelpToken(string token)
     {
         return token.Equals("--help", StringComparison.OrdinalIgnoreCase)
@@ -1076,103 +766,50 @@ public sealed class CliHost(
                || token.Equals("-v", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool ContainsOnlyHelpTokens(IEnumerable<string> args)
+    private static IReadOnlyList<string> CanonicalizePluginCommandTokens(Type rootCommandType, IReadOnlyList<string> args)
     {
-        var sawAny = false;
-        foreach (var token in args)
-        {
-            if (!IsHelpToken(token))
-            {
-                return false;
-            }
-
-            sawAny = true;
-        }
-
-        return sawAny;
-    }
-
-    private static string ResolveExecutableName()
-    {
-        var arg0 = Environment.GetCommandLineArgs().FirstOrDefault();
-        return NormalizeExecutableName(arg0);
-    }
-
-    private static string NormalizeExecutableName(string? executableNameCandidate)
-    {
-        if (string.IsNullOrWhiteSpace(executableNameCandidate))
-        {
-            return "skycd";
-        }
-
-        var executableName = Path.GetFileName(executableNameCandidate);
-        if (string.IsNullOrWhiteSpace(executableName))
-        {
-            return "skycd";
-        }
-
-        if (OperatingSystem.IsWindows())
-        {
-            if (executableName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-            {
-                return Path.ChangeExtension(executableName, ".exe");
-            }
-
-            if (!Path.HasExtension(executableName))
-            {
-                return $"{executableName}.exe";
-            }
-        }
-
-        return executableName;
-    }
-
-    private static bool TryFindMatchedSystemCommandPath(
-        IReadOnlyList<string> args,
-        out string matchedCommandPath,
-        out int consumedTokens)
-    {
-        matchedCommandPath = string.Empty;
-        consumedTokens = 0;
-
         if (args.Count == 0)
         {
-            return false;
+            return args;
         }
 
-        var maxTokens = Math.Min(args.Count, MaxSystemCommandTokenCount);
-        for (var tokenCount = maxTokens; tokenCount >= 1; tokenCount--)
+        var canonical = args.ToArray();
+        var currentType = rootCommandType;
+
+        for (var index = 0; index < canonical.Length; index++)
         {
-            var candidate = string.Join(' ', args.Take(tokenCount));
-            if (!SystemCommandPathSet.Contains(candidate))
+            var token = canonical[index];
+            if (token.StartsWith("-", StringComparison.Ordinal))
             {
-                continue;
+                break;
             }
 
-            matchedCommandPath = candidate;
-            consumedTokens = tokenCount;
-            return true;
-        }
+            var subcommands = GetSubcommandTypes(currentType)
+                .Select(subcommandType => new
+                {
+                    Name = GetDeclaredCommandName(subcommandType),
+                    Type = subcommandType
+                })
+                .Where(static item => !string.IsNullOrWhiteSpace(item.Name))
+                .ToList();
 
-        return false;
-    }
-
-    private static bool StartsWithTokens(IReadOnlyList<string> args, IReadOnlyList<string> expectedPrefix)
-    {
-        if (args.Count < expectedPrefix.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < expectedPrefix.Count; index++)
-        {
-            if (!args[index].Equals(expectedPrefix[index], StringComparison.OrdinalIgnoreCase))
+            if (subcommands.Count == 0)
             {
-                return false;
+                break;
             }
+
+            var match = subcommands.FirstOrDefault(item =>
+                item.Name.Equals(token, StringComparison.OrdinalIgnoreCase));
+            if (match is null)
+            {
+                break;
+            }
+
+            canonical[index] = match.Name;
+            currentType = match.Type;
         }
 
-        return true;
+        return canonical;
     }
 
     private static SystemCommandNamespace[] DiscoverSystemCommandNamespaces()
@@ -1195,7 +832,6 @@ public sealed class CliHost(
 
             discoveredNamespaces.Add(new SystemCommandNamespace(
                 basePath,
-                SupportsExtensions: true,
                 Subcommands: subcommands.Length == 0 ? null : subcommands));
         }
 
@@ -1234,28 +870,24 @@ public sealed class CliHost(
         return string.IsNullOrWhiteSpace(namedName) ? string.Empty : namedName.Trim();
     }
 
-    private static SystemCommandDefinition[] BuildSystemCommandDefinitions()
+    private static string[] BuildSystemCommandPaths()
     {
-        var definitions = new List<SystemCommandDefinition>();
+        var commandPaths = new List<string>();
 
         foreach (var systemNamespace in SystemCommandNamespaces)
         {
-            var hasSubcommands = systemNamespace.Subcommands is { Length: > 0 };
-            definitions.Add(new SystemCommandDefinition(
-                systemNamespace.BasePath,
-                HasSubcommands: hasSubcommands,
-                SupportsExtensions: systemNamespace.SupportsExtensions));
+            commandPaths.Add(systemNamespace.BasePath);
 
-            if (!hasSubcommands)
+            if (systemNamespace.Subcommands is not { Length: > 0 })
             {
                 continue;
             }
 
-            definitions.AddRange(systemNamespace.Subcommands!.Select(subcommand =>
-                new SystemCommandDefinition($"{systemNamespace.BasePath} {subcommand}")));
+            commandPaths.AddRange(systemNamespace.Subcommands!.Select(subcommand =>
+                $"{systemNamespace.BasePath} {subcommand}"));
         }
 
-        return definitions.ToArray();
+        return commandPaths.ToArray();
     }
 
     private static string ResolveFormatId(

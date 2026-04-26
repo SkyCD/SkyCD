@@ -21,23 +21,19 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["--help"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("Commands:", text, StringComparison.Ordinal);
-        Assert.Contains("renamed-cli.exe [options] [command]", text, StringComparison.Ordinal);
-        Assert.Contains("  open         Open and validate a catalog file.", text, StringComparison.Ordinal);
-        Assert.Contains("  convert      Convert a catalog between supported formats.", text, StringComparison.Ordinal);
-        Assert.Contains("  fileformats  Work with file format handlers.", text, StringComparison.Ordinal);
-        Assert.Contains("  plugins      Inspect loaded plugins and capabilities.", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("plugins list", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("open <file>", text, StringComparison.Ordinal);
-        Assert.Contains("renamed-cli.exe <command> --help", text, StringComparison.Ordinal);
+        Assert.Contains("Usage:", text, StringComparison.Ordinal);
+        Assert.Contains("[command]", text, StringComparison.Ordinal);
+        Assert.Contains("open", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("convert", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("fileformats", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("plugins", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -49,18 +45,17 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["/?"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("Commands:", text, StringComparison.Ordinal);
-        Assert.Contains("renamed-cli.exe [options] [command]", text, StringComparison.Ordinal);
-        Assert.Contains("  open         Open and validate a catalog file.", text, StringComparison.Ordinal);
-        Assert.Contains("  plugins      Inspect loaded plugins and capabilities.", text, StringComparison.Ordinal);
+        Assert.Contains("Usage:", text, StringComparison.Ordinal);
+        Assert.Contains("[command]", text, StringComparison.Ordinal);
+        Assert.Contains("open", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("plugins", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -136,8 +131,7 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["open", "--help"]);
 
@@ -145,9 +139,8 @@ public sealed class CliHostTests
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
         Assert.Contains("Usage:", text, StringComparison.Ordinal);
-        Assert.Contains("renamed-cli.exe open <file> [--format <id>] [--json]", text, StringComparison.Ordinal);
-        Assert.Contains("--format <id>", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("convert --in", text, StringComparison.Ordinal);
+        Assert.Contains("open [options]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--format", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -159,17 +152,17 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["convert", "--help"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("renamed-cli.exe convert --in <file> --out <file>", text, StringComparison.Ordinal);
-        Assert.Contains("--in-format <id>", text, StringComparison.Ordinal);
-        Assert.Contains("--format <id>", text, StringComparison.Ordinal);
+        Assert.Contains("convert [options]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--in", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--out", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--in-format", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -181,16 +174,15 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["plugins", "--help"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", text, StringComparison.Ordinal);
-        Assert.Contains("list     List loaded plugins, capabilities, and commands", text, StringComparison.Ordinal);
+        Assert.Contains("plugins [command]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("list", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -202,16 +194,15 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["plugins", "/?"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", text, StringComparison.Ordinal);
-        Assert.Contains("list     List loaded plugins, capabilities, and commands", text, StringComparison.Ordinal);
+        Assert.Contains("plugins [command]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("list", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -223,45 +214,32 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["fileformats", "--help"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("renamed-cli.exe fileformats <subcommand> [options]", text, StringComparison.Ordinal);
-        Assert.Contains("list     List available read/write format handlers", text, StringComparison.Ordinal);
+        Assert.Contains("fileformats [command]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("list", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
     [Fact]
-    public async Task RootHelp_NormalizesDllNameToExe()
+    public async Task RootHelp_UsesCommandDotNetUsageFormat()
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = new CliHost(
-            output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "SkyCD.App.dll");
+        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["--help"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        if (OperatingSystem.IsWindows())
-        {
-            Assert.Contains("SkyCD.App.exe [options] [command]", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("SkyCD.App.dll [options] [command]", text, StringComparison.Ordinal);
-        }
-        else
-        {
-            Assert.Contains("SkyCD.App.dll [options] [command]", text, StringComparison.Ordinal);
-        }
-
+        Assert.Contains("Usage:", text, StringComparison.Ordinal);
+        Assert.Contains("[command]", text, StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -273,16 +251,15 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["plugins"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", text, StringComparison.Ordinal);
-        Assert.Contains("list     List loaded plugins, capabilities, and commands", text, StringComparison.Ordinal);
+        Assert.Contains("plugins [command]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("list", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -294,58 +271,51 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["fileformats"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         var text = output.ToString();
-        Assert.Contains("renamed-cli.exe fileformats <subcommand> [options]", text, StringComparison.Ordinal);
-        Assert.Contains("list     List available read/write format handlers", text, StringComparison.Ordinal);
+        Assert.Contains("fileformats [command]", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("list", text, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
     [Fact]
-    public async Task Plugins_WithoutSubcommand_WithJson_ShowsJsonHelp()
+    public async Task Plugins_WithoutSubcommand_WithJson_ShowsHelp()
     {
         var output = new StringWriter();
         var error = new StringWriter();
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["plugins", "--json"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        using var json = JsonDocument.Parse(output.ToString());
-        Assert.Equal("plugins", json.RootElement.GetProperty("command").GetString());
-        Assert.Contains("renamed-cli.exe plugins <subcommand> [options]", json.RootElement.GetProperty("usage").GetString(), StringComparison.Ordinal);
+        Assert.Contains("plugins [command]", output.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
     [Fact]
-    public async Task FileFormats_WithoutSubcommand_WithJson_ShowsJsonHelp()
+    public async Task FileFormats_WithoutSubcommand_WithJson_ShowsHelp()
     {
         var output = new StringWriter();
         var error = new StringWriter();
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["fileformats", "--json"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        using var json = JsonDocument.Parse(output.ToString());
-        Assert.Equal("fileformats", json.RootElement.GetProperty("command").GetString());
-        Assert.Contains("renamed-cli.exe fileformats <subcommand> [options]", json.RootElement.GetProperty("usage").GetString(), StringComparison.Ordinal);
+        Assert.Contains("fileformats [command]", output.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
 
@@ -371,8 +341,7 @@ public sealed class CliHostTests
         var host = new CliHost(
             output,
             error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."),
-            () => "renamed-cli.exe");
+            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
 
         var result = await host.TryRunAsync(["list-formats", "--help"]);
 
@@ -389,7 +358,6 @@ public sealed class CliHostTests
         var host = CreateHost(output, error, CreateTestPlugins());
 
         var result = await host.TryRunAsync(["tests greet"]);
-
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         Assert.Contains("hello from plugin", output.ToString(), StringComparison.Ordinal);
@@ -404,7 +372,6 @@ public sealed class CliHostTests
         var host = CreateHost(output, error, CreateTestPlugins());
 
         var result = await host.TryRunAsync(["TeStS", "GrEeT"]);
-
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         Assert.Contains("hello from plugin", output.ToString(), StringComparison.Ordinal);
@@ -620,38 +587,50 @@ public sealed class CliHostTests
     }
 
     [Command("tests")]
-    private sealed class TestCliRootCommand : ICliPluginCapability
+    public sealed class TestCliRootCommand : ICliPluginCapability
     {
         [Subcommand]
         public TestGreetCliCommand Greet { get; } = new();
     }
 
     [Command("greet")]
-    private sealed class TestGreetCliCommand
+    public sealed class TestGreetCliCommand
     {
         [DefaultCommand]
-        public string Execute() => "hello from plugin";
+        public int Execute()
+        {
+            System.Console.WriteLine("hello from plugin");
+            return 0;
+        }
     }
 
     [Command("tests")]
-    private sealed class DuplicateCliRootCommand : ICliPluginCapability
+    public sealed class DuplicateCliRootCommand : ICliPluginCapability
     {
         [Subcommand]
         public DuplicateGreetCliCommand Greet { get; } = new();
     }
 
     [Command("greet")]
-    private sealed class DuplicateGreetCliCommand
+    public sealed class DuplicateGreetCliCommand
     {
         [DefaultCommand]
-        public string Execute() => "duplicate";
+        public int Execute()
+        {
+            System.Console.WriteLine("duplicate");
+            return 0;
+        }
     }
 
     [Command("open")]
-    private sealed class ReservedCommandCapability : ICliPluginCapability
+    public sealed class ReservedCommandCapability : ICliPluginCapability
     {
         [DefaultCommand]
-        public string Execute() => "reserved";
+        public int Execute()
+        {
+            System.Console.WriteLine("reserved");
+            return 0;
+        }
     }
 
     private sealed class MissingCommandAttributeCapability : ICliPluginCapability

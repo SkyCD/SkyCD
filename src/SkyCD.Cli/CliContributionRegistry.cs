@@ -1,5 +1,4 @@
 using System.Reflection;
-using CommandDotNet;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Runtime.Discovery;
 
@@ -29,7 +28,7 @@ internal sealed class CliContributionRegistry : IDisposable
         {
             foreach (var capability in plugin.Capabilities.OfType<ICliPluginCapability>())
             {
-                RegisterCapabilityCommands(plugin, capability, reservedCommands, errors);
+                RegisterContribution(plugin, capability, reservedCommands, errors);
             }
         }
 
@@ -60,105 +59,42 @@ internal sealed class CliContributionRegistry : IDisposable
         // Kept for compatibility with existing call sites and lifecycle patterns.
     }
 
-    private void RegisterCapabilityCommands(
+    private void RegisterContribution(
         DiscoveredPlugin plugin,
         ICliPluginCapability capability,
         IReadOnlySet<string> reservedCommands,
         ICollection<string> errors)
     {
-        var rootType = capability.GetType();
-        var rootCommandName = GetDeclaredCommandName(rootType);
-        if (string.IsNullOrWhiteSpace(rootCommandName))
+        var commandPath = GetDeclaredCommandName(capability.GetType());
+        if (string.IsNullOrWhiteSpace(commandPath))
         {
-            errors.Add($"Plugin '{plugin.Id}' CLI capability '{rootType.FullName}' is missing [Command(\"name\")] attribute.");
+            errors.Add($"Plugin '{plugin.Id}' CLI capability '{capability.GetType().FullName}' is missing [Command(\"name\")] attribute.");
             return;
         }
 
-        RegisterCommandNode(plugin, capability, rootType, rootCommandName, reservedCommands, errors);
-    }
-
-    private void RegisterCommandNode(
-        DiscoveredPlugin plugin,
-        object instance,
-        Type commandType,
-        string commandPath,
-        IReadOnlySet<string> reservedCommands,
-        ICollection<string> errors)
-    {
         var normalizedPath = NormalizePath(commandPath);
-
-        var executeMethod = ResolveExecuteMethod(commandType);
-        if (executeMethod is not null)
+        if (reservedCommands.Contains(normalizedPath))
         {
-            if (reservedCommands.Contains(normalizedPath))
-            {
-                errors.Add(
-                    $"Plugin '{plugin.Id}' cannot register command '{normalizedPath}' because it is reserved by the host.");
-            }
-            else if (!commandPaths.Add(normalizedPath))
-            {
-                var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
-                errors.Add(
-                    $"CLI command collision on '{normalizedPath}' between '{existingOwner}' and '{plugin.Id}'.");
-            }
-            else
-            {
-                commandOwners[normalizedPath] = plugin.Id;
-                commandHandlers[normalizedPath] = new RegisteredCliContribution(plugin, normalizedPath, instance, executeMethod);
-            }
+            errors.Add(
+                $"Plugin '{plugin.Id}' cannot register command '{normalizedPath}' because it is reserved by the host.");
+            return;
         }
 
-        foreach (var subcommandProperty in GetSubcommandProperties(commandType))
+        if (!commandPaths.Add(normalizedPath))
         {
-            var subcommandType = subcommandProperty.PropertyType;
-            var subcommandName = GetDeclaredCommandName(subcommandType);
-            if (string.IsNullOrWhiteSpace(subcommandName))
-            {
-                errors.Add(
-                    $"Plugin '{plugin.Id}' subcommand '{subcommandType.FullName}' is missing [Command(\"name\")] attribute.");
-                continue;
-            }
-
-            var subcommandInstance = subcommandProperty.GetValue(instance) ?? Activator.CreateInstance(subcommandType);
-            if (subcommandInstance is null)
-            {
-                errors.Add(
-                    $"Plugin '{plugin.Id}' could not instantiate CLI subcommand '{subcommandType.FullName}'.");
-                continue;
-            }
-
-            RegisterCommandNode(
-                plugin,
-                subcommandInstance,
-                subcommandType,
-                $"{normalizedPath} {subcommandName}",
-                reservedCommands,
-                errors);
+            var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
+            errors.Add(
+                $"CLI command collision on '{normalizedPath}' between '{existingOwner}' and '{plugin.Id}'.");
+            return;
         }
-    }
 
-    private static MethodInfo? ResolveExecuteMethod(Type commandType)
-    {
-        return commandType
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-            .FirstOrDefault(method =>
-                method.Name.Equals("Execute", StringComparison.Ordinal)
-                && method.GetParameters().Length <= 1
-                && (method.GetParameters().Length == 0
-                    || method.GetParameters()[0].ParameterType == typeof(CancellationToken)));
-    }
-
-    private static IEnumerable<PropertyInfo> GetSubcommandProperties(Type commandType)
-    {
-        return commandType
-            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(static property => property.GetCustomAttribute<SubcommandAttribute>() is not null);
+        commandOwners[normalizedPath] = plugin.Id;
+        commandHandlers[normalizedPath] = new RegisteredCliContribution(plugin, normalizedPath, capability);
     }
 
     private static string GetDeclaredCommandName(Type commandType)
     {
-        var commandAttributeData = commandType.CustomAttributes.FirstOrDefault(attribute =>
-            attribute.AttributeType == typeof(CommandAttribute));
+        var commandAttributeData = commandType.CustomAttributes.FirstOrDefault(attribute => attribute.AttributeType.Name == "CommandAttribute");
         if (commandAttributeData is null)
         {
             return string.Empty;
@@ -191,5 +127,4 @@ internal sealed class CliContributionRegistry : IDisposable
 internal sealed record RegisteredCliContribution(
     DiscoveredPlugin Plugin,
     string CommandPath,
-    object CommandInstance,
-    MethodInfo ExecuteMethod);
+    ICliPluginCapability CommandInstance);
