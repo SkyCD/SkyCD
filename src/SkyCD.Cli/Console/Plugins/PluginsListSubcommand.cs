@@ -1,10 +1,11 @@
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console.Plugins;
 
 [Command("list")]
-internal sealed class PluginsListSubcommand
+internal sealed class PluginsListSubcommand : ICliPluginCapability
 {
     [DefaultCommand]
     public async Task<int> Execute()

@@ -1,11 +1,12 @@
 using CommandDotNet;
 using SkyCD.Cli.Console.FileFormats;
 using SkyCD.Cli.Console.Plugins;
+using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console;
 
 [Command("skycd")]
-internal sealed class RootCommand
+internal sealed class RootCommand : ICliPluginCapability
 {
     [Subcommand]
     public OpenCommand Open { get; } = new();

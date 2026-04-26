@@ -1,10 +1,11 @@
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console.FileFormats;
 
 [Command("list")]
-internal sealed class FileFormatsListCommand
+internal sealed class FileFormatsListCommand : ICliPluginCapability
 {
     [DefaultCommand]
     public async Task<int> Execute()

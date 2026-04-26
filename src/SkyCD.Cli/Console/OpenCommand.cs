@@ -1,10 +1,11 @@
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console;
 
 [Command("open")]
-internal sealed class OpenCommand
+internal sealed class OpenCommand : ICliPluginCapability
 {
     [DefaultCommand]
     public async Task<int> Execute(

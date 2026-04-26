@@ -1,10 +1,11 @@
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console;
 
 [Command("convert")]
-internal sealed class ConvertCommand
+internal sealed class ConvertCommand : ICliPluginCapability
 {
     [DefaultCommand]
     public async Task<int> Execute(
