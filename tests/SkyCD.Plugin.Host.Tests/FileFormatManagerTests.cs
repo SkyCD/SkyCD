@@ -1,10 +1,9 @@
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.Managers;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -41,7 +40,7 @@ public class FileFormatManagerTests
             }
         ]);
 
-        var menuService = new MenuExtensionService(pluginManager);
+        var menuService = new MenuExtensionManager(pluginManager.GetCapabilities<IMenuPluginCapability>());
         var result = await menuService.ExecuteAsync(
             "tests.menu.throw",
             new MenuCommandContext(),

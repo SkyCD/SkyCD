@@ -5,10 +5,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host.Managers;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.Plugin.Runtime.Managers;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Cli;
@@ -67,11 +66,10 @@ public sealed class CliHost(
         var serviceCollectionFactory = new ServiceCollectionFactory();
         var serviceProvider = BuildGlobalServiceProvider(
             discoveredPlugins,
-            serviceCollectionFactory,
-            static services => services.AddSingleton<FileFormatManager>());
+            serviceCollectionFactory);
         using var _ = serviceProvider;
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
-        IHostCliApi hostApi = fileFormatManager;
+        IHostCliApi hostApi = new FileFormatHostCliApi(fileFormatManager);
         using var registry = new CliContributionRegistry();
         registry.Register(discoveredPlugins);
 
@@ -172,7 +170,7 @@ public sealed class CliHost(
         }
     }
 
-    private async Task<int> ExecuteBuiltInAsync(
+    private async Task<CliExitCodes> ExecuteBuiltInAsync(
         string command,
         IReadOnlyList<string> args,
         bool jsonOutput,
@@ -208,7 +206,7 @@ public sealed class CliHost(
         }
     }
 
-    private async Task<int> ExecuteOpenAsync(
+    private async Task<CliExitCodes> ExecuteOpenAsync(
         IReadOnlyList<string> args,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
@@ -266,7 +264,7 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<int> ExecuteConvertAsync(
+    private async Task<CliExitCodes> ExecuteConvertAsync(
         IReadOnlyList<string> args,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
@@ -345,7 +343,7 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<int> ExecuteListFormatsAsync(
+    private async Task<CliExitCodes> ExecuteListFormatsAsync(
         bool jsonOutput,
         FileFormatManager fileFormatManager,
         IReadOnlyList<string> pluginDirectories)
@@ -378,7 +376,7 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<int> ExecutePluginsListAsync(
+    private async Task<CliExitCodes> ExecutePluginsListAsync(
         bool jsonOutput,
         CliContributionRegistry registry,
         FileFormatManager fileFormatManager,
@@ -462,13 +460,13 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<int> WriteBuiltInHelpAsync(string command, bool jsonOutput)
+    private async Task<CliExitCodes> WriteBuiltInHelpAsync(string command, bool jsonOutput)
     {
         await WriteCommandHelpAsync(command, jsonOutput);
         return CliExitCodes.Success;
     }
 
-    private async Task<int> ExecutePluginCommandAsync(
+    private async Task<CliExitCodes> ExecutePluginCommandAsync(
         RegisteredCliContribution command,
         IReadOnlyList<string> pluginArgs,
         bool jsonOutput,
@@ -1048,12 +1046,11 @@ public sealed class CliHost(
 
     private static PluginServiceProvider BuildGlobalServiceProvider(
         IReadOnlyList<DiscoveredPlugin> plugins,
-        ServiceCollectionFactory serviceCollectionFactory,
-        Action<IServiceCollection>? configureHostServices = null)
+        ServiceCollectionFactory serviceCollectionFactory)
     {
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        IServiceCollection mergedServices = new ServiceCollection();
+        IServiceCollection mergedServices = serviceCollectionFactory.BuildCommonServiceCollection();
 
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
@@ -1068,7 +1065,6 @@ public sealed class CliHost(
             }
         }
 
-        configureHostServices?.Invoke(mergedServices);
         PluginServiceProvider.Instance.Import(mergedServices);
         return PluginServiceProvider.Instance;
     }
@@ -1103,5 +1099,28 @@ public sealed class CliHost(
                       ?? typeof(CliHost).Assembly.GetName().Version?.ToString()
                       ?? "unknown";
         return $"SkyCD {version}";
+    }
+
+    private sealed class FileFormatHostCliApi(FileFormatManager fileFormatManager) : IHostCliApi
+    {
+        public IReadOnlyList<FileFormatDescriptor> GetReadableFormats()
+        {
+            return fileFormatManager.GetReadableFormats();
+        }
+
+        public IReadOnlyList<FileFormatDescriptor> GetWritableFormats()
+        {
+            return fileFormatManager.GetWritableFormats();
+        }
+
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+        {
+            return fileFormatManager.ReadAsync(request, cancellationToken);
+        }
+
+        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+        {
+            return fileFormatManager.WriteAsync(request, cancellationToken);
+        }
     }
 }

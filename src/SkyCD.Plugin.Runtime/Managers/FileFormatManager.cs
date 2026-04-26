@@ -1,12 +1,11 @@
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
-namespace SkyCD.Plugin.Host.Managers;
+namespace SkyCD.Plugin.Runtime.Managers;
 
 /// <summary>
 /// Shared catalog facade for file-format metadata and read/write operations.
 /// </summary>
-public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> fileFormatProviders) : IHostCliApi
+public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> fileFormatProviders)
 {
     public IReadOnlyList<FileFormatDescriptor> GetOpenFormats()
     {

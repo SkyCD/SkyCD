@@ -1,40 +1,39 @@
 using System.Collections.Concurrent;
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
-using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Modal;
 
 /// <summary>
 /// Host facade for plugin modal registration and guarded modal execution.
 /// </summary>
-public sealed class ModalExtensionService(PluginManager pluginManager)
+public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> modalCapabilities)
 {
+    private readonly IReadOnlyList<ModalBinding> _bindings = modalCapabilities
+        .Select(capability =>
+        {
+            var pluginId = capability.GetType().Assembly.GetName().Name ?? capability.GetType().FullName ?? "unknown";
+            return new ModalBinding(pluginId, capability, capability.Modal);
+        })
+        .ToList();
     private readonly SemaphoreSlim _blockingModalGate = new(1, 1);
     private readonly ConcurrentDictionary<string, byte> _activeModalIds = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<ModalRegistration> GetModalRegistrations()
     {
-        return pluginManager.Plugins
-            .SelectMany(plugin =>
-                plugin.Capabilities.OfType<IModalPluginCapability>()
-                    .Select(capability =>
-                    {
-                        var modal = capability.Modal;
-                        return new ModalRegistration(
-                            plugin.Id,
-                            modal.ModalId,
-                            modal.Title,
-                            modal.Width,
-                            modal.Height,
-                            modal.RequiredPermissions ?? [],
-                            modal.IsBlocking,
-                            modal.AllowReentry,
-                            modal.InputContract?.TypeId,
-                            modal.InputContract?.IsRequired ?? false,
-                            modal.OutputContract?.TypeId,
-                            modal.OutputContract?.IsRequired ?? false);
-                    }))
+        return _bindings
+            .Select(binding => new ModalRegistration(
+                binding.PluginId,
+                binding.Modal.ModalId,
+                binding.Modal.Title,
+                binding.Modal.Width,
+                binding.Modal.Height,
+                binding.Modal.RequiredPermissions ?? [],
+                binding.Modal.IsBlocking,
+                binding.Modal.AllowReentry,
+                binding.Modal.InputContract?.TypeId,
+                binding.Modal.InputContract?.IsRequired ?? false,
+                binding.Modal.OutputContract?.TypeId,
+                binding.Modal.OutputContract?.IsRequired ?? false))
             .OrderBy(modal => modal.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -142,14 +141,11 @@ public sealed class ModalExtensionService(PluginManager pluginManager)
 
     private (IModalPluginCapability Capability, ModalDescriptor Modal) ResolveCapability(string modalId)
     {
-        foreach (var capability in pluginManager.GetCapabilities<IModalPluginCapability>())
+        var binding = _bindings.FirstOrDefault(binding =>
+            binding.Modal.ModalId.Equals(modalId, StringComparison.OrdinalIgnoreCase));
+        if (binding is not null)
         {
-            var modal = capability.Modal;
-
-            if (modal.ModalId.Equals(modalId, StringComparison.OrdinalIgnoreCase))
-            {
-                return (capability, modal);
-            }
+            return (binding.Capability, binding.Modal);
         }
 
         throw new InvalidOperationException($"No plugin capability found for modal '{modalId}'.");
@@ -187,4 +183,9 @@ public sealed class ModalExtensionService(PluginManager pluginManager)
             ? null
             : $"{kind} payload type mismatch. Expected '{contract.TypeId}' but got '{payload.TypeId}'.";
     }
+
+    private sealed record ModalBinding(
+        string PluginId,
+        IModalPluginCapability Capability,
+        ModalDescriptor Modal);
 }

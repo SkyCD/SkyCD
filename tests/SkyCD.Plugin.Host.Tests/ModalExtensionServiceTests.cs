@@ -1,8 +1,5 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Modal;
-using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -11,8 +8,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsTypedPayload_WhenModalSucceeds()
     {
-        var pluginManager = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginManager);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -31,8 +28,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsError_WhenInputTypeMismatches()
     {
-        var pluginManager = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginManager);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -50,8 +47,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsError_WhenPermissionMissing()
     {
-        var pluginManager = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginManager);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -68,8 +65,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsCanceledResult_WhenTimeoutExpires()
     {
-        var pluginManager = CreateCatalog(new SlowModalPlugin());
-        var service = new ModalExtensionService(pluginManager);
+        var plugins = CreateCatalog(new SlowModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -87,8 +84,8 @@ public class ModalExtensionServiceTests
     public async Task OpenAsync_RejectsReentrantOpen_WhenModalDoesNotAllowIt()
     {
         var plugin = new NonReentrantControlledModalPlugin();
-        var pluginManager = CreateCatalog(plugin);
-        var service = new ModalExtensionService(pluginManager);
+        var plugins = CreateCatalog(plugin);
+        var service = new ModalExtensionManager(plugins);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var firstOpen = service.OpenAsync(
@@ -120,38 +117,22 @@ public class ModalExtensionServiceTests
     [Fact]
     public void GetModalRegistrations_ProjectsModalMetadata()
     {
-        var pluginManager = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginManager);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var registrations = service.GetModalRegistrations();
         var modal = Assert.Single(registrations);
 
-        Assert.Equal("tests.modal.echo", modal.PluginId);
+        Assert.Equal(typeof(EchoModalPlugin).Assembly.GetName().Name, modal.PluginId);
         Assert.Equal("sample.modal.echo", modal.ModalId);
         Assert.Equal("sample.modal.echo.input", modal.InputTypeId);
         Assert.Equal("sample.modal.echo.output", modal.OutputTypeId);
         Assert.True(modal.IsBlocking);
     }
 
-    private static PluginManager CreateCatalog(params IModalPluginCapability[] capabilities)
+    private static IReadOnlyCollection<IModalPluginCapability> CreateCatalog(params IModalPluginCapability[] capabilities)
     {
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(capabilities.Select(capability => new DiscoveredPlugin
-        {
-            Id = capability switch
-            {
-                EchoModalPlugin => "tests.modal.echo",
-                SlowModalPlugin => "tests.modal.slow",
-                NonReentrantControlledModalPlugin => "tests.modal.locked",
-                _ => capability.Modal.ModalId
-            },
-            Name = capability.GetType().Name,
-            Version = new Version(1, 0, 0),
-            MinHostVersion = new Version(3, 0, 0),
-            FileName = "tests.dll",
-            Capabilities = [capability]
-        }));
-        return catalog;
+        return capabilities.ToList();
     }
 
     private sealed class EchoModalPlugin : IModalPluginCapability

@@ -1,19 +1,20 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Host.Menu;
 
 /// <summary>
-/// Host service for menu contribution discovery and guarded command execution.
+/// Host facade for menu contribution discovery and guarded command execution.
 /// </summary>
-public sealed class MenuExtensionService(PluginManager pluginManager)
+public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menuCapabilities)
 {
+    private readonly IReadOnlyList<(IMenuPluginCapability Capability, IReadOnlyCollection<MenuContribution> Contributions)> _bindings = menuCapabilities
+        .Select(static capability => (capability, capability.GetMenuContributions()))
+        .ToList();
+
     public IReadOnlyList<MenuContribution> GetMenuContributions(string? location = null)
     {
-        var contributions = pluginManager
-            .GetCapabilities<IMenuPluginCapability>()
-            .SelectMany(capability => capability.GetMenuContributions())
+        var contributions = _bindings
+            .SelectMany(binding => binding.Contributions)
             .AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(location))
@@ -34,11 +35,7 @@ public sealed class MenuExtensionService(PluginManager pluginManager)
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        var matchingCapability = pluginManager
-            .GetCapabilities<IMenuPluginCapability>()
-            .FirstOrDefault(capability =>
-                capability.GetMenuContributions().Any(contribution =>
-                    contribution.CommandId.Equals(commandId, StringComparison.OrdinalIgnoreCase)));
+        var matchingCapability = ResolveCapability(commandId);
 
         if (matchingCapability is null)
         {
@@ -74,5 +71,14 @@ public sealed class MenuExtensionService(PluginManager pluginManager)
                 Error = exception.Message
             };
         }
+    }
+
+    private IMenuPluginCapability? ResolveCapability(string commandId)
+    {
+        return _bindings
+            .Where(binding => binding.Contributions.Any(contribution =>
+                contribution.CommandId.Equals(commandId, StringComparison.OrdinalIgnoreCase)))
+            .Select(static binding => binding.Capability)
+            .FirstOrDefault();
     }
 }

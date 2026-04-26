@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
+    <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
   </ItemGroup>
 
   <ItemGroup>

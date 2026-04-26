@@ -5,11 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Host.Managers;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.App.Views;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using System;
@@ -74,7 +73,7 @@ public partial class App : Avalonia.Application
         var pluginList = discoveredPlugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
         var serviceCollectionFactory = new ServiceCollectionFactory();
-        IServiceCollection mergedServices = new ServiceCollection();
+        IServiceCollection mergedServices = serviceCollectionFactory.BuildCommonServiceCollection();
 
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
@@ -89,7 +88,6 @@ public partial class App : Avalonia.Application
             }
         }
 
-        mergedServices.AddSingleton<FileFormatManager>();
         PluginServiceProvider.Instance.Import(mergedServices);
         var fileFormatManager = PluginServiceProvider.Instance.GetRequiredService<FileFormatManager>();
         return new PluginUiServices(fileFormatManager, pluginManager, PluginServiceProvider.Instance);

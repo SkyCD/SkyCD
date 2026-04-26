@@ -6,7 +6,6 @@ using Avalonia.VisualTree;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Host.Managers;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using System;
