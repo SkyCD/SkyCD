@@ -22,8 +22,6 @@ internal sealed class ConvertCommand
             outputFormat,
             context.JsonOutput,
             context.FileFormatManager,
-            context.HostApi,
-            context.Registry,
             context.CancellationToken);
     }
 }

@@ -4,7 +4,6 @@ using CommandDotNet;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
@@ -19,8 +18,6 @@ public sealed class CliHost(
     Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null,
     Func<string>? executableNameProvider = null)
 {
-    private const string DeprecatedListFormatsAlias = "list-formats";
-
     private sealed record SystemCommandNamespace(
         string BasePath,
         bool SupportsExtensions = false,
@@ -30,17 +27,6 @@ public sealed class CliHost(
         string Path,
         bool HasSubcommands = false,
         bool SupportsExtensions = false);
-
-    private static readonly string[] ExtensionPointBaseCommands =
-    [
-        "open",
-        "convert"
-    ];
-
-    private static readonly Dictionary<string, string> DeprecatedCommandAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [DeprecatedListFormatsAlias] = "fileformats list"
-    };
 
     private static readonly SystemCommandNamespace[] SystemCommandNamespaces = DiscoverSystemCommandNamespaces();
 
@@ -95,17 +81,21 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
         }
 
+        if (TryGetConcatenatedSubcommandHint(normalized, out var invalidCommandEarly, out var suggestedCommandEarly))
+        {
+            await stderr.WriteLineAsync($"Unknown command '{invalidCommandEarly}'. Did you mean '{suggestedCommandEarly}'?");
+            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.InvalidArguments };
+        }
+
         if (ShouldHandleWithSystemRunner(normalized) && !RequiresPluginRuntime(normalized))
         {
             var lightweightFileFormatManager = new FileFormatManager(Array.Empty<IFileFormatPluginCapability>());
-            IHostCliApi lightweightHostApi = new FileFormatHostCliApi(lightweightFileFormatManager);
             using var lightweightRegistry = new CliContributionRegistry();
             lightweightRegistry.Register([]);
             var exitCode = await ExecuteSystemCommandAsync(
                 normalized,
                 jsonOutput,
                 lightweightFileFormatManager,
-                lightweightHostApi,
                 lightweightRegistry,
                 [],
                 [],
@@ -122,7 +112,6 @@ public sealed class CliHost(
             serviceCollectionFactory);
         using var _ = serviceProvider;
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
-        var hostApi = serviceProvider.GetRequiredService<IHostCliApi>();
         using var registry = new CliContributionRegistry();
         registry.Register(discoveredPlugins);
 
@@ -142,7 +131,6 @@ public sealed class CliHost(
                 normalized,
                 jsonOutput,
                 fileFormatManager,
-                hostApi,
                 registry,
                 discoveredPlugins,
                 pluginDirectories,
@@ -154,14 +142,8 @@ public sealed class CliHost(
         if (pluginCommand is not null)
         {
             var pluginArgs = normalized.Skip(consumedTokens).ToArray();
-            var exitCode = await ExecutePluginCommandAsync(pluginCommand, pluginArgs, jsonOutput, hostApi, cancellationToken);
+            var exitCode = await ExecutePluginCommandAsync(pluginCommand, pluginArgs, jsonOutput, cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
-        }
-
-        if (TryGetConcatenatedSubcommandHint(normalized, out var invalidCommand, out var suggestedCommand))
-        {
-            await stderr.WriteLineAsync($"Unknown command '{invalidCommand}'. Did you mean '{suggestedCommand}'?");
-            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.InvalidArguments };
         }
 
         return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
@@ -232,7 +214,6 @@ public sealed class CliHost(
         IReadOnlyList<string> args,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
-        IHostCliApi hostApi,
         CliContributionRegistry registry,
         IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
         IReadOnlyList<string> pluginDirectories,
@@ -243,7 +224,6 @@ public sealed class CliHost(
             this,
             jsonOutput,
             fileFormatManager,
-            hostApi,
             registry,
             discoveredPlugins,
             pluginDirectories,
@@ -330,14 +310,6 @@ public sealed class CliHost(
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    internal static IReadOnlySet<string> GetExtensionPointPaths()
-    {
-        return SystemCommandDefinitions
-            .Where(static command => command.SupportsExtensions || command.HasSubcommands)
-            .Select(static command => command.Path)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
-
     private static bool RequiresPluginRuntime(IReadOnlyList<string> args)
     {
         if (args.Count == 0)
@@ -372,13 +344,6 @@ public sealed class CliHost(
             return false;
         }
 
-        if (SystemCommandDefinitions.Any(definition =>
-                definition.Path.Equals(matchedCommandPath, StringComparison.OrdinalIgnoreCase)
-                && definition.SupportsExtensions))
-        {
-            return true;
-        }
-
         return true;
     }
 
@@ -387,8 +352,6 @@ public sealed class CliHost(
         string? formatId,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
-        IHostCliApi hostApi,
-        CliContributionRegistry registry,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(file))
@@ -412,20 +375,6 @@ public sealed class CliHost(
             Source = source,
             FileName = Path.GetFileName(fullPath)
         }, cancellationToken);
-
-        var extensionResult = await ExecuteExtensionsAsync(
-            "open",
-            BuildOpenExtensionArguments(file, formatId),
-            jsonOutput,
-            readResult.Payload,
-            hostApi,
-            registry,
-            cancellationToken);
-        if (!extensionResult.Success)
-        {
-            await stderr.WriteLineAsync(extensionResult.Error ?? "Plugin extension failed.");
-            return CliExitCodes.CommandFailed;
-        }
 
         if (jsonOutput)
         {
@@ -452,8 +401,6 @@ public sealed class CliHost(
         string? outputFormat,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
-        IHostCliApi hostApi,
-        CliContributionRegistry registry,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(inputPath) || string.IsNullOrWhiteSpace(outputPath))
@@ -482,21 +429,7 @@ public sealed class CliHost(
             FileName = Path.GetFileName(fullInputPath)
         }, cancellationToken);
 
-        var extensionResult = await ExecuteExtensionsAsync(
-            "convert",
-            BuildConvertExtensionArguments(inputPath, outputPath, inputFormat, outputFormat),
-            jsonOutput,
-            readResult.Payload,
-            hostApi,
-            registry,
-            cancellationToken);
-        if (!extensionResult.Success)
-        {
-            await stderr.WriteLineAsync(extensionResult.Error ?? "Plugin extension failed.");
-            return CliExitCodes.CommandFailed;
-        }
-
-        var payload = extensionResult.Payload ?? readResult.Payload
+        var payload = readResult.Payload
             ?? throw new InvalidOperationException("Source format returned empty payload.");
         Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath) ?? Directory.GetCurrentDirectory());
 
@@ -527,45 +460,6 @@ public sealed class CliHost(
         }
 
         return CliExitCodes.Success;
-    }
-
-    private static IReadOnlyList<string> BuildOpenExtensionArguments(string file, string? formatId)
-    {
-        var args = new List<string> { file };
-        if (!string.IsNullOrWhiteSpace(formatId))
-        {
-            args.Add("--format");
-            args.Add(formatId);
-        }
-
-        return args;
-    }
-
-    private static IReadOnlyList<string> BuildConvertExtensionArguments(
-        string inputPath,
-        string outputPath,
-        string? inputFormat,
-        string? outputFormat)
-    {
-        var args = new List<string>
-        {
-            "--in", inputPath,
-            "--out", outputPath
-        };
-
-        if (!string.IsNullOrWhiteSpace(inputFormat))
-        {
-            args.Add("--in-format");
-            args.Add(inputFormat);
-        }
-
-        if (!string.IsNullOrWhiteSpace(outputFormat))
-        {
-            args.Add("--format");
-            args.Add(outputFormat);
-        }
-
-        return args;
     }
 
     internal async Task<CliExitCodes> ExecuteListFormatsAsync(
@@ -685,96 +579,112 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<CliExitCodes> WriteBuiltInHelpAsync(string command, bool jsonOutput)
-    {
-        await WriteCommandHelpAsync(command, jsonOutput);
-        return CliExitCodes.Success;
-    }
-
     private async Task<CliExitCodes> ExecutePluginCommandAsync(
         RegisteredCliContribution command,
         IReadOnlyList<string> pluginArgs,
         bool jsonOutput,
-        IHostCliApi hostApi,
         CancellationToken cancellationToken)
     {
-        var result = await ExecuteWithTimeoutAsync(
-            token => command.Capability.ExecuteCliCommandAsync(new CliCommandContext
-            {
-                CommandPath = command.Contribution.CommandPath,
-                CommandId = command.Contribution.CommandId,
-                Arguments = pluginArgs,
-                JsonOutput = jsonOutput,
-                HostApi = hostApi
-            }, token),
+        if (pluginArgs.Count > 0)
+        {
+            await stderr.WriteLineAsync($"Unknown arguments for command '{command.CommandPath}': {string.Join(" ", pluginArgs)}");
+            return CliExitCodes.InvalidArguments;
+        }
+
+        var executionResult = await ExecuteWithTimeoutAsync(
+            token => InvokePluginCommandAsync(command, token),
             cancellationToken);
 
-        if (!result.Success)
+        if (!executionResult.Success)
         {
-            await stderr.WriteLineAsync(result.Error ?? "Plugin command failed.");
+            await stderr.WriteLineAsync(executionResult.Error ?? "Plugin command failed.");
             return CliExitCodes.CommandFailed;
         }
 
-        if (!string.IsNullOrWhiteSpace(result.Output))
+        if (!string.IsNullOrWhiteSpace(executionResult.Output))
         {
-            await stdout.WriteLineAsync(result.Output);
+            await stdout.WriteLineAsync(executionResult.Output);
         }
         else if (jsonOutput)
         {
             await stdout.WriteLineAsync(JsonSerializer.Serialize(new
             {
                 success = true,
-                command = command.Contribution.CommandPath
+                command = command.CommandPath
             }, jsonOptions));
         }
 
-        return CliExitCodes.Success;
+        return executionResult.ExitCode;
     }
 
-    private async Task<CliCommandResult> ExecuteExtensionsAsync(
-        string extensionPoint,
-        IReadOnlyList<string> args,
-        bool jsonOutput,
-        object? payload,
-        IHostCliApi hostApi,
-        CliContributionRegistry registry,
+    private static async Task<PluginCommandExecutionResult> InvokePluginCommandAsync(
+        RegisteredCliContribution command,
         CancellationToken cancellationToken)
     {
-        var currentPayload = payload;
-        foreach (var extension in registry.ResolveExtensions(extensionPoint))
+        try
         {
-            var result = await ExecuteWithTimeoutAsync(
-                token => extension.Capability.ExecuteCliCommandAsync(new CliCommandContext
-                {
-                    CommandPath = extension.Contribution.CommandPath,
-                    CommandId = extension.Contribution.CommandId,
-                    Arguments = args,
-                    JsonOutput = jsonOutput,
-                    Payload = currentPayload,
-                    HostApi = hostApi
-                }, token),
-                cancellationToken);
-
-            if (!result.Success)
+            var parameters = command.ExecuteMethod.GetParameters();
+            object?[] args = parameters.Length switch
             {
-                return result;
-            }
+                0 => [],
+                1 when parameters[0].ParameterType == typeof(CancellationToken) => [cancellationToken],
+                _ => throw new InvalidOperationException(
+                    $"Unsupported Execute signature on '{command.ExecuteMethod.DeclaringType?.FullName}'.")
+            };
+            var rawResult = command.ExecuteMethod.Invoke(command.CommandInstance, args);
 
-            if (result.Payload is not null)
+            return rawResult switch
             {
-                currentPayload = result.Payload;
-            }
+                null => new PluginCommandExecutionResult(true, null, null, CliExitCodes.Success),
+                string output => new PluginCommandExecutionResult(true, output, null, CliExitCodes.Success),
+                int exitCode => new PluginCommandExecutionResult(
+                    true,
+                    null,
+                    null,
+                    Enum.IsDefined(typeof(CliExitCodes), exitCode) ? (CliExitCodes)exitCode : CliExitCodes.Success),
+                CliExitCodes exitCode => new PluginCommandExecutionResult(true, null, null, exitCode),
+                Task task => await UnwrapTaskResultAsync(task),
+                _ => new PluginCommandExecutionResult(true, Convert.ToString(rawResult), null, CliExitCodes.Success)
+            };
+        }
+        catch (TargetInvocationException exception)
+        {
+            return new PluginCommandExecutionResult(false, null, exception.InnerException?.Message ?? exception.Message, CliExitCodes.CommandFailed);
+        }
+        catch (Exception exception)
+        {
+            return new PluginCommandExecutionResult(false, null, exception.Message, CliExitCodes.CommandFailed);
+        }
+    }
+
+    private static async Task<PluginCommandExecutionResult> UnwrapTaskResultAsync(Task task)
+    {
+        await task;
+
+        var taskType = task.GetType();
+        if (!taskType.IsGenericType)
+        {
+            return new PluginCommandExecutionResult(true, null, null, CliExitCodes.Success);
         }
 
-        return new CliCommandResult
+        var resultProperty = taskType.GetProperty("Result");
+        var resultValue = resultProperty?.GetValue(task);
+        return resultValue switch
         {
-            Success = true,
-            Payload = currentPayload
+            null => new PluginCommandExecutionResult(true, null, null, CliExitCodes.Success),
+            string output => new PluginCommandExecutionResult(true, output, null, CliExitCodes.Success),
+            int exitCode => new PluginCommandExecutionResult(
+                true,
+                null,
+                null,
+                Enum.IsDefined(typeof(CliExitCodes), exitCode) ? (CliExitCodes)exitCode : CliExitCodes.Success),
+            CliExitCodes exitCode => new PluginCommandExecutionResult(true, null, null, exitCode),
+            _ => new PluginCommandExecutionResult(true, Convert.ToString(resultValue), null, CliExitCodes.Success)
         };
     }
 
-    private static async Task<CliCommandResult> ExecuteWithTimeoutAsync(
-        Func<CancellationToken, Task<CliCommandResult>> executor,
+    private static async Task<PluginCommandExecutionResult> ExecuteWithTimeoutAsync(
+        Func<CancellationToken, Task<PluginCommandExecutionResult>> executor,
         CancellationToken cancellationToken)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -786,21 +696,19 @@ public sealed class CliHost(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new CliCommandResult
-            {
-                Success = false,
-                Error = "Plugin CLI handler timed out after 5 seconds."
-            };
+            return new PluginCommandExecutionResult(false, null, "Plugin CLI handler timed out after 5 seconds.", CliExitCodes.CommandFailed);
         }
         catch (Exception exception)
         {
-            return new CliCommandResult
-            {
-                Success = false,
-                Error = exception.Message
-            };
+            return new PluginCommandExecutionResult(false, null, exception.Message, CliExitCodes.CommandFailed);
         }
     }
+
+    private sealed record PluginCommandExecutionResult(
+        bool Success,
+        string? Output,
+        string? Error,
+        CliExitCodes ExitCode);
 
     private async Task WriteHelpAsync(IEnumerable<string> pluginCommands, bool jsonOutput)
     {
@@ -1096,10 +1004,10 @@ public sealed class CliHost(
         }
 
         var first = args[0];
-        if (DeprecatedCommandAliases.TryGetValue(first, out var deprecatedAliasTarget))
+        if (first.Equals("list-formats", StringComparison.OrdinalIgnoreCase))
         {
             invalidCommand = first;
-            suggestedCommand = deprecatedAliasTarget;
+            suggestedCommand = "fileformats list";
             return true;
         }
 
@@ -1287,7 +1195,7 @@ public sealed class CliHost(
 
             discoveredNamespaces.Add(new SystemCommandNamespace(
                 basePath,
-                SupportsExtensions: ExtensionPointBaseCommands.Contains(basePath, StringComparer.OrdinalIgnoreCase),
+                SupportsExtensions: true,
                 Subcommands: subcommands.Length == 0 ? null : subcommands));
         }
 
@@ -1389,7 +1297,6 @@ public sealed class CliHost(
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
         IServiceCollection mergedServices = serviceCollectionFactory.BuildCommonServiceCollection();
-        mergedServices.AddSingleton<IHostCliApi, FileFormatHostCliApi>();
 
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
@@ -1438,28 +1345,5 @@ public sealed class CliHost(
                       ?? typeof(CliHost).Assembly.GetName().Version?.ToString()
                       ?? "unknown";
         return $"SkyCD {version}";
-    }
-
-    private sealed class FileFormatHostCliApi(FileFormatManager fileFormatManager) : IHostCliApi
-    {
-        public IReadOnlyList<FileFormatDescriptor> GetReadableFormats()
-        {
-            return fileFormatManager.GetReadableFormats();
-        }
-
-        public IReadOnlyList<FileFormatDescriptor> GetWritableFormats()
-        {
-            return fileFormatManager.GetWritableFormats();
-        }
-
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
-        {
-            return fileFormatManager.ReadAsync(request, cancellationToken);
-        }
-
-        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
-        {
-            return fileFormatManager.WriteAsync(request, cancellationToken);
-        }
     }
 }

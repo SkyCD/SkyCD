@@ -5,6 +5,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
 using Microsoft.Extensions.DependencyInjection;
+using CommandDotNet;
 using System.Text.Json;
 using System.Text;
 
@@ -439,7 +440,7 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public async Task Convert_RunsExtensionPoint_AndTransformsPayload()
+    public async Task Convert_WritesPayloadWithoutCliExtensions()
     {
         var temp = Path.Combine(Path.GetTempPath(), $"skycd-cli-{Guid.NewGuid():N}");
         Directory.CreateDirectory(temp);
@@ -458,7 +459,7 @@ public sealed class CliHostTests
             Assert.True(result.Handled);
             Assert.Equal(CliExitCodes.Success, result.ExitCode);
             var converted = await File.ReadAllTextAsync(outputPath, Encoding.UTF8);
-            Assert.Equal("seed|ext", converted);
+            Assert.Equal("seed", converted);
             Assert.Equal(string.Empty, error.ToString());
         }
         finally
@@ -496,17 +497,17 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public async Task PluginExtension_MustTargetKnownExtensionPoint()
+    public async Task PluginCommand_MissingCommandAttribute_ProducesConfigurationError()
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = CreateHost(output, error, [CreateSingleCapabilityPlugin("tests.cli.badext", new UnknownExtensionPointCapability())]);
+        var host = CreateHost(output, error, [CreateSingleCapabilityPlugin("tests.cli.bad", new MissingCommandAttributeCapability())]);
 
-        var result = await host.TryRunAsync(["convert"]);
+        var result = await host.TryRunAsync(["tests"]);
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
-        Assert.Contains("no such extension point exists", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("missing [Command(\"name\")] attribute", error.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<DiscoveredPlugin> plugins)
@@ -550,8 +551,7 @@ public sealed class CliHostTests
                 [
                     new TestReadFormatCapability(),
                     new TestWriteFormatCapability(),
-                    new TestGreetCliCapability(),
-                    new TestConvertCliExtensionCapability()
+                    new TestCliRootCommand()
                 ]
             }
         };
@@ -565,7 +565,7 @@ public sealed class CliHostTests
                 Version = new Version(1, 0, 0),
                 MinHostVersion = new Version(3, 0, 0),
                 FileName = "tests.cli.dup.dll",
-                Capabilities = [new DuplicateCommandCapability()]
+                Capabilities = [new DuplicateCliRootCommand()]
             });
         }
 
@@ -619,72 +619,42 @@ public sealed class CliHostTests
         }
     }
 
-    private sealed class TestGreetCliCapability : ICliPluginCapability
+    [Command("tests")]
+    private sealed class TestCliRootCommand : ICliPluginCapability
     {
-        public CliCommandContribution Command => new("tests greet", "greet", "Greet command");
-
-        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new CliCommandResult
-            {
-                Success = true,
-                Output = "hello from plugin"
-            });
-        }
+        [Subcommand]
+        public TestGreetCliCommand Greet { get; } = new();
     }
 
-    private sealed class TestConvertCliExtensionCapability : ICliPluginCapability
+    [Command("greet")]
+    private sealed class TestGreetCliCommand
     {
-        public CliCommandContribution Command =>
-            new("convert", "convert-ext", "Convert extension", CliContributionType.Extension, Priority: 10);
-
-        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new CliCommandResult
-            {
-                Success = true,
-                Payload = $"{context.Payload}|ext"
-            });
-        }
+        [DefaultCommand]
+        public string Execute() => "hello from plugin";
     }
 
-    private sealed class DuplicateCommandCapability : ICliPluginCapability
+    [Command("tests")]
+    private sealed class DuplicateCliRootCommand : ICliPluginCapability
     {
-        public CliCommandContribution Command => new("tests greet", "greet", "Conflicting command");
-
-        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new CliCommandResult
-            {
-                Success = true
-            });
-        }
+        [Subcommand]
+        public DuplicateGreetCliCommand Greet { get; } = new();
     }
 
+    [Command("greet")]
+    private sealed class DuplicateGreetCliCommand
+    {
+        [DefaultCommand]
+        public string Execute() => "duplicate";
+    }
+
+    [Command("open")]
     private sealed class ReservedCommandCapability : ICliPluginCapability
     {
-        public CliCommandContribution Command => new("open", "reserved-open", "Attempts to override built-in command");
-
-        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new CliCommandResult
-            {
-                Success = true
-            });
-        }
+        [DefaultCommand]
+        public string Execute() => "reserved";
     }
 
-    private sealed class UnknownExtensionPointCapability : ICliPluginCapability
+    private sealed class MissingCommandAttributeCapability : ICliPluginCapability
     {
-        public CliCommandContribution Command =>
-            new("pack", "unknown-ext", "Unknown extension", CliContributionType.Extension);
-
-        public Task<CliCommandResult> ExecuteCliCommandAsync(CliCommandContext context, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new CliCommandResult
-            {
-                Success = true
-            });
-        }
     }
 }

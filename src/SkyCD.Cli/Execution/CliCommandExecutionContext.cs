@@ -1,4 +1,3 @@
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -8,7 +7,6 @@ internal sealed record CliCommandExecutionContext(
     CliHost Host,
     bool JsonOutput,
     FileFormatManager FileFormatManager,
-    IHostCliApi HostApi,
     CliContributionRegistry Registry,
     IReadOnlyList<DiscoveredPlugin> DiscoveredPlugins,
     IReadOnlyList<string> PluginDirectories,

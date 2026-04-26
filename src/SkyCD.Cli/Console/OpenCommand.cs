@@ -18,8 +18,6 @@ internal sealed class OpenCommand
             formatId,
             context.JsonOutput,
             context.FileFormatManager,
-            context.HostApi,
-            context.Registry,
             context.CancellationToken);
     }
 }

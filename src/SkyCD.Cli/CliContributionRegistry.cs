@@ -1,4 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+using CommandDotNet;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Runtime.Discovery;
 
@@ -9,7 +10,7 @@ internal sealed class CliContributionRegistry : IDisposable
     private static readonly StringComparer CommandComparer = StringComparer.OrdinalIgnoreCase;
     private readonly HashSet<string> commandPaths = new(CommandComparer);
     private readonly Dictionary<string, string> commandOwners = new(CommandComparer);
-    private ServiceProvider? provider;
+    private readonly Dictionary<string, RegisteredCliContribution> commandHandlers = new(CommandComparer);
 
     public IReadOnlyList<string> Errors { get; private set; } = [];
 
@@ -17,48 +18,32 @@ internal sealed class CliContributionRegistry : IDisposable
 
     public void Register(IEnumerable<DiscoveredPlugin> plugins)
     {
-        provider?.Dispose();
-        provider = null;
         commandPaths.Clear();
         commandOwners.Clear();
+        commandHandlers.Clear();
 
         var errors = new List<string>();
-        var services = new ServiceCollection();
         var reservedCommands = CliHost.GetSystemCommandPaths();
-        var registeredExtensionPoints = CliHost.GetExtensionPointPaths();
 
         foreach (var plugin in plugins)
         {
             foreach (var capability in plugin.Capabilities.OfType<ICliPluginCapability>())
             {
-                RegisterContribution(
-                    services,
-                    reservedCommands,
-                    registeredExtensionPoints,
-                    plugin,
-                    capability,
-                    capability.Command,
-                    errors);
+                RegisterCapabilityCommands(plugin, capability, reservedCommands, errors);
             }
         }
 
         Errors = errors;
-        provider = services.BuildServiceProvider();
     }
 
     public RegisteredCliContribution? ResolveCommand(IReadOnlyList<string> args, out int consumedTokens)
     {
         consumedTokens = 0;
-        if (provider is null)
-        {
-            return null;
-        }
 
         for (var index = args.Count; index >= 1; index--)
         {
             var path = NormalizePath(args.Take(index));
-            var contribution = provider.GetKeyedService<RegisteredCliContribution>(ToCommandServiceKey(path));
-            if (contribution is null)
+            if (!commandHandlers.TryGetValue(path, out var contribution))
             {
                 continue;
             }
@@ -70,99 +55,141 @@ internal sealed class CliContributionRegistry : IDisposable
         return null;
     }
 
-    public IReadOnlyList<RegisteredCliContribution> ResolveExtensions(string extensionPoint)
-    {
-        if (provider is null)
-        {
-            return [];
-        }
-
-        return provider
-            .GetKeyedServices<RegisteredCliContribution>(ToExtensionServiceKey(extensionPoint))
-            .OrderByDescending(static contribution => contribution.Contribution.Priority)
-            .ThenBy(static contribution => contribution.Plugin.Id, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
     public void Dispose()
     {
-        provider?.Dispose();
-        provider = null;
+        // Kept for compatibility with existing call sites and lifecycle patterns.
     }
 
-    private void RegisterContribution(
-        IServiceCollection services,
-        IReadOnlySet<string> reservedCommands,
-        IReadOnlySet<string> extensionPoints,
+    private void RegisterCapabilityCommands(
         DiscoveredPlugin plugin,
         ICliPluginCapability capability,
-        CliCommandContribution contribution,
+        IReadOnlySet<string> reservedCommands,
         ICollection<string> errors)
     {
-        if (string.IsNullOrWhiteSpace(contribution.CommandPath) || string.IsNullOrWhiteSpace(contribution.CommandId))
+        var rootType = capability.GetType();
+        var rootCommandName = GetDeclaredCommandName(rootType);
+        if (string.IsNullOrWhiteSpace(rootCommandName))
         {
-            errors.Add($"Plugin '{plugin.Id}' has CLI contribution with missing command path or command id.");
+            errors.Add($"Plugin '{plugin.Id}' CLI capability '{rootType.FullName}' is missing [Command(\"name\")] attribute.");
             return;
         }
 
-        var normalizedPath = NormalizePath(contribution.CommandPath);
-        var registration = new RegisteredCliContribution(plugin, capability, contribution);
+        RegisterCommandNode(plugin, capability, rootType, rootCommandName, reservedCommands, errors);
+    }
 
-        if (contribution.ContributionType == CliContributionType.Extension)
+    private void RegisterCommandNode(
+        DiscoveredPlugin plugin,
+        object instance,
+        Type commandType,
+        string commandPath,
+        IReadOnlySet<string> reservedCommands,
+        ICollection<string> errors)
+    {
+        var normalizedPath = NormalizePath(commandPath);
+
+        var executeMethod = ResolveExecuteMethod(commandType);
+        if (executeMethod is not null)
         {
-            if (!extensionPoints.Contains(normalizedPath))
+            if (reservedCommands.Contains(normalizedPath))
             {
                 errors.Add(
-                    $"Plugin '{plugin.Id}' contributes extension '{contribution.CommandPath}' but no such extension point exists.");
-                return;
+                    $"Plugin '{plugin.Id}' cannot register command '{normalizedPath}' because it is reserved by the host.");
+            }
+            else if (!commandPaths.Add(normalizedPath))
+            {
+                var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
+                errors.Add(
+                    $"CLI command collision on '{normalizedPath}' between '{existingOwner}' and '{plugin.Id}'.");
+            }
+            else
+            {
+                commandOwners[normalizedPath] = plugin.Id;
+                commandHandlers[normalizedPath] = new RegisteredCliContribution(plugin, normalizedPath, instance, executeMethod);
+            }
+        }
+
+        foreach (var subcommandProperty in GetSubcommandProperties(commandType))
+        {
+            var subcommandType = subcommandProperty.PropertyType;
+            var subcommandName = GetDeclaredCommandName(subcommandType);
+            if (string.IsNullOrWhiteSpace(subcommandName))
+            {
+                errors.Add(
+                    $"Plugin '{plugin.Id}' subcommand '{subcommandType.FullName}' is missing [Command(\"name\")] attribute.");
+                continue;
             }
 
-            services.AddKeyedSingleton<RegisteredCliContribution>(ToExtensionServiceKey(normalizedPath), registration);
-            return;
-        }
+            var subcommandInstance = subcommandProperty.GetValue(instance) ?? Activator.CreateInstance(subcommandType);
+            if (subcommandInstance is null)
+            {
+                errors.Add(
+                    $"Plugin '{plugin.Id}' could not instantiate CLI subcommand '{subcommandType.FullName}'.");
+                continue;
+            }
 
-        if (reservedCommands.Contains(normalizedPath))
+            RegisterCommandNode(
+                plugin,
+                subcommandInstance,
+                subcommandType,
+                $"{normalizedPath} {subcommandName}",
+                reservedCommands,
+                errors);
+        }
+    }
+
+    private static MethodInfo? ResolveExecuteMethod(Type commandType)
+    {
+        return commandType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            .FirstOrDefault(method =>
+                method.Name.Equals("Execute", StringComparison.Ordinal)
+                && method.GetParameters().Length <= 1
+                && (method.GetParameters().Length == 0
+                    || method.GetParameters()[0].ParameterType == typeof(CancellationToken)));
+    }
+
+    private static IEnumerable<PropertyInfo> GetSubcommandProperties(Type commandType)
+    {
+        return commandType
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(static property => property.GetCustomAttribute<SubcommandAttribute>() is not null);
+    }
+
+    private static string GetDeclaredCommandName(Type commandType)
+    {
+        var commandAttributeData = commandType.CustomAttributes.FirstOrDefault(attribute =>
+            attribute.AttributeType == typeof(CommandAttribute));
+        if (commandAttributeData is null)
         {
-            errors.Add(
-                $"Plugin '{plugin.Id}' cannot register command '{contribution.CommandPath}' because it is reserved by the host.");
-            return;
+            return string.Empty;
         }
 
-        if (!commandPaths.Add(normalizedPath))
+        if (commandAttributeData.ConstructorArguments.Count > 0
+            && commandAttributeData.ConstructorArguments[0].ArgumentType == typeof(string)
+            && commandAttributeData.ConstructorArguments[0].Value is string ctorValue
+            && !string.IsNullOrWhiteSpace(ctorValue))
         {
-            var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
-            errors.Add(
-                $"CLI command collision on '{contribution.CommandPath}' between '{existingOwner}' and '{plugin.Id}'.");
-            return;
+            return ctorValue.Trim();
         }
 
-        commandOwners[normalizedPath] = plugin.Id;
-        services.AddKeyedSingleton<RegisteredCliContribution>(ToCommandServiceKey(normalizedPath), registration);
+        return string.Empty;
+    }
+
+    private static string NormalizePath(IEnumerable<string> tokens)
+    {
+        return string.Join(' ', tokens)
+            .Trim()
+            .ToLowerInvariant();
     }
 
     private static string NormalizePath(string path)
     {
         return NormalizePath(path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
-
-    private static string NormalizePath(IEnumerable<string> tokens)
-    {
-        return string.Join(' ', tokens).Trim();
-    }
-
-    private static string ToCommandServiceKey(string path)
-    {
-        return $"cmd::{NormalizePath(path).ToUpperInvariant()}";
-    }
-
-    private static string ToExtensionServiceKey(string path)
-    {
-        return $"ext::{NormalizePath(path).ToUpperInvariant()}";
-    }
-
 }
 
 internal sealed record RegisteredCliContribution(
     DiscoveredPlugin Plugin,
-    ICliPluginCapability Capability,
-    CliCommandContribution Contribution);
+    string CommandPath,
+    object CommandInstance,
+    MethodInfo ExecuteMethod);
