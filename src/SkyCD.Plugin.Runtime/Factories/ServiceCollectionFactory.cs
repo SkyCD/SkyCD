@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Localization;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Runtime.Managers;
@@ -15,6 +16,7 @@ public sealed class ServiceCollectionFactory
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton<II18nService, I18nService>();
         services.AddSingleton<FileFormatManager>();
         services.AddSingleton<MenuExtensionManager>();
         services.AddSingleton<ModalExtensionManager>();

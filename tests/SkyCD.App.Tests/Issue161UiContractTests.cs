@@ -38,8 +38,8 @@ public class Issue161UiContractTests
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
         Assert.Contains("<TabControl", xaml, StringComparison.Ordinal);
-        Assert.Contains("Header=\"General\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Header=\"Properties\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"{loc:Loc Key=window.properties.general}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"{loc:Loc Key=window.properties.properties}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("<cc:PropertiesList", xaml, StringComparison.Ordinal);
     }
 
@@ -55,8 +55,8 @@ public class Issue161UiContractTests
         Assert.Contains("IReadOnlyDictionary<string, object?>", controlCode, StringComparison.Ordinal);
         Assert.DoesNotContain("<Button", controlXaml, StringComparison.Ordinal);
         Assert.Contains("PropertiesData=\"{Binding InfoProperties}\"", appXaml, StringComparison.Ordinal);
-        Assert.Contains("PropertyHeader=\"Property\"", appXaml, StringComparison.Ordinal);
-        Assert.Contains("ValueHeader=\"Value\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("PropertyHeader=\"{loc:Loc Key=window.properties.property_header}\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("ValueHeader=\"{loc:Loc Key=window.properties.value_header}\"", appXaml, StringComparison.Ordinal);
     }
 
     [Fact]

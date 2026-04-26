@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:SkyCD.App.Localization"
         x:Class="SkyCD.App.Views.UnsavedChangesWindow"
         Width="430"
         Height="170"
@@ -8,10 +9,10 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
-        Title="Unsaved Changes">
+        Title="{loc:Loc Key=window.unsaved_changes.title}">
 
     <Grid RowDefinitions="*,Auto" Margin="16">
-        <TextBlock Text="This collection was edited. Do you want to save it?"
+        <TextBlock Text="{loc:Loc Key=window.unsaved_changes.message}"
                    TextWrapping="Wrap"
                    VerticalAlignment="Center"/>
 
@@ -20,13 +21,13 @@
                     HorizontalAlignment="Right"
                     Spacing="8"
                     Margin="0,14,0,0">
-            <Button Content="Yes"
+            <Button Content="{loc:Loc Key=common.yes}"
                     MinWidth="90"
                     Click="OnYesClicked"/>
-            <Button Content="No"
+            <Button Content="{loc:Loc Key=common.no}"
                     MinWidth="90"
                     Click="OnNoClicked"/>
-            <Button Content="Cancel"
+            <Button Content="{loc:Loc Key=common.cancel}"
                     MinWidth="90"
                     IsCancel="True"
                     Click="OnCancelClicked"/>

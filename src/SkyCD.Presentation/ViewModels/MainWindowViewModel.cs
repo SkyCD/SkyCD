@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Plugin.Abstractions.Localization;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -9,6 +10,7 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly IBrowserDataStore browserDataStore;
+    private readonly II18nService i18n;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
@@ -17,7 +19,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
-    private const string DefaultStatusText = "Done.";
+    private readonly string defaultStatusText;
 
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
@@ -30,13 +32,21 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? ExitRequested;
 
     public MainWindowViewModel()
-        : this(new InMemoryBrowserDataStore())
+        : this(new InMemoryBrowserDataStore(), new I18nService())
     {
     }
 
     public MainWindowViewModel(IBrowserDataStore browserDataStore)
+        : this(browserDataStore, new I18nService())
+    {
+    }
+
+    public MainWindowViewModel(IBrowserDataStore browserDataStore, II18nService i18n)
     {
         this.browserDataStore = browserDataStore ?? throw new ArgumentNullException(nameof(browserDataStore));
+        this.i18n = i18n ?? throw new ArgumentNullException(nameof(i18n));
+        defaultStatusText = T("common.done");
+        statusText = defaultStatusText;
         TreeNodes = browserDataStore.GetTreeNodes();
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
@@ -156,7 +166,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool isDirtyDocument;
 
     [ObservableProperty]
-    private string statusText = DefaultStatusText;
+    private string statusText = string.Empty;
 
     [ObservableProperty]
     private bool isProgressVisible;
@@ -199,7 +209,7 @@ public partial class MainWindowViewModel : ObservableObject
         ClipboardItem = null;
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
-        StatusText = "Created a new catalog.";
+        StatusText = T("status.created_new_catalog");
     }
 
     [RelayCommand]
@@ -216,9 +226,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     public void CompleteOpenCatalog()
     {
-        StartOperation("Loading catalog...");
-        SetProgress(35, "Parsing catalog...");
-        SetProgress(80, "Updating browser...");
+        StartOperation(T("status.loading_catalog"));
+        SetProgress(35, T("status.parsing_catalog"));
+        SetProgress(80, T("status.updating_browser"));
         CompleteOperation();
 
         IsDirtyDocument = false;
@@ -235,7 +245,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(CurrentCatalogPath))
         {
-            StatusText = "Use Save As to select file location.";
+            StatusText = T("status.use_save_as");
             return;
         }
 
@@ -249,13 +259,13 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        StartOperation("Saving catalog...");
-        SetProgress(40, "Parsing items...");
-        SetProgress(90, "Updating indexes...");
+        StartOperation(T("status.saving_catalog"));
+        SetProgress(40, T("status.parsing_items"));
+        SetProgress(90, T("status.updating_indexes"));
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog to {GetDisplayFileName(filePath)}.";
+        StatusText = F("status.saved_catalog_to", GetDisplayFileName(filePath));
         IsDirtyDocument = false;
     }
 
@@ -278,13 +288,13 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        StartOperation("Saving catalog...");
-        SetProgress(50, "Parsing items...");
-        SetProgress(95, "Updating indexes...");
+        StartOperation(T("status.saving_catalog"));
+        SetProgress(50, T("status.parsing_items"));
+        SetProgress(95, T("status.updating_indexes"));
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog as {GetDisplayFileName(filePath)}.";
+        StatusText = F("status.saved_catalog_as", GetDisplayFileName(filePath));
         IsDirtyDocument = false;
     }
 
@@ -293,7 +303,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (!TryBuildPropertiesDialog(out var dialog))
         {
-            StatusText = "Unknown selected object.";
+            StatusText = T("status.unknown_selected_object");
             return;
         }
 
@@ -310,7 +320,7 @@ public partial class MainWindowViewModel : ObservableObject
                 ApplyBrowserItemRenameIfNeeded(dialog);
                 commentsByObjectKey[dialog.ObjectKey] = comments;
                 IsDirtyDocument = true;
-                StatusText = DefaultStatusText;
+                StatusText = defaultStatusText;
             }
         });
     }
@@ -318,7 +328,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ExitApplication()
     {
-        StatusText = "Exit requested.";
+        StatusText = T("status.exit_requested");
         ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -332,7 +342,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var itemName = string.IsNullOrWhiteSpace(suggestedName)
-            ? $"Imported Item {DateTime.Now:HHmmss}"
+            ? F("status.imported_item_default", DateTime.Now.ToString("HHmmss"))
             : suggestedName.Trim();
 
         if (!addedItemsByNodeKey.TryGetValue(nodeKey, out var addedItems))
@@ -347,7 +357,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
             item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
         IsDirtyDocument = true;
-        StatusText = $"Added {itemName}.";
+        StatusText = F("status.added_item", itemName);
     }
 
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
@@ -369,7 +379,7 @@ public partial class MainWindowViewModel : ObservableObject
         var deletedName = SelectedBrowserItem.Name;
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = true;
-        StatusText = $"Deleted {deletedName}.";
+        StatusText = F("status.deleted_item", deletedName);
     }
 
     [RelayCommand]
@@ -377,11 +387,11 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (OptionsRequested is null)
         {
-            StatusText = "Options dialog is not implemented yet.";
+            StatusText = T("status.options_not_implemented");
             return;
         }
 
-        var dialog = new OptionsDialogViewModel(["English", "Lithuanian"]);
+        var dialog = new OptionsDialogViewModel(i18n, ["English", "Lithuanian"]);
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,
@@ -392,7 +402,7 @@ public partial class MainWindowViewModel : ObservableObject
                     return;
                 }
 
-                StatusText = $"Options saved (Language: {language}).";
+                StatusText = F("status.options_saved_language", language);
             }
         });
     }
@@ -407,11 +417,11 @@ public partial class MainWindowViewModel : ObservableObject
                 FileName = "https://sourceforge.net/projects/skycd/",
                 UseShellExecute = true
             });
-            StatusText = "Opening SourceForge project website...";
+            StatusText = T("status.opening_sourceforge");
         }
         catch (Exception ex)
         {
-            StatusText = $"Failed to open SourceForge website: {ex.Message}";
+            StatusText = F("status.failed_open_sourceforge", ex.Message);
         }
     }
 
@@ -425,11 +435,11 @@ public partial class MainWindowViewModel : ObservableObject
                 FileName = "https://github.com/SkyCD/SkyCD",
                 UseShellExecute = true
             });
-            StatusText = "Opening GitHub project area...";
+            StatusText = T("status.opening_github");
         }
         catch (Exception ex)
         {
-            StatusText = $"Failed to open GitHub area: {ex.Message}";
+            StatusText = F("status.failed_open_github", ex.Message);
         }
     }
 
@@ -438,12 +448,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (AboutRequested is null)
         {
-            StatusText = "About dialog is not implemented yet.";
+            StatusText = T("status.about_not_implemented");
             return;
         }
 
         AboutRequested.Invoke(this, EventArgs.Empty);
-        StatusText = DefaultStatusText;
+        StatusText = defaultStatusText;
     }
 
     [RelayCommand(CanExecute = nameof(CanExpandSelection))]
@@ -456,7 +466,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         targetNode.IsExpanded = true;
         SelectedTreeNode = targetNode;
-        StatusText = $"Expanded {targetNode.Title}.";
+        StatusText = F("status.expanded", targetNode.Title);
     }
 
     [RelayCommand(CanExecute = nameof(CanCollapseSelection))]
@@ -469,7 +479,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         targetNode.IsExpanded = false;
         SelectedTreeNode = targetNode;
-        StatusText = $"Collapsed {targetNode.Title}.";
+        StatusText = F("status.collapsed", targetNode.Title);
     }
 
     [RelayCommand]
@@ -478,7 +488,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (Enum.TryParse<BrowserViewMode>(modeKey, true, out var mode))
         {
             CurrentViewMode = mode;
-            StatusText = $"View mode: {GetViewModeDisplayName(mode)}.";
+            StatusText = F("status.view_mode", GetViewModeDisplayName(mode));
         }
     }
 
@@ -489,7 +499,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             CurrentSortMode = sortMode;
             RefreshBrowserItemsForSelection();
-            StatusText = $"Arrange icons by: {sortMode}.";
+            StatusText = F("status.arrange_icons_by", GetSortModeDisplayName(sortMode));
         }
     }
 
@@ -502,8 +512,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Refresh()
     {
-        StartOperation("Updating view...");
-        SetProgress(60, "Parsing catalog...");
+        StartOperation(T("status.updating_view"));
+        SetProgress(60, T("status.parsing_catalog"));
         RefreshBrowserItemsForSelection();
         CompleteOperation();
     }
@@ -517,7 +527,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         ClipboardItem = SelectedBrowserItem;
-        StatusText = $"Copied {SelectedBrowserItem.Name}.";
+        StatusText = F("status.copied", SelectedBrowserItem.Name);
     }
 
     [RelayCommand(CanExecute = nameof(IsPasteEnabled))]
@@ -531,7 +541,7 @@ public partial class MainWindowViewModel : ObservableObject
         // In a real implementation, this would add a copy of the item to the current location
         // For now, we'll just show a status message
         IsDirtyDocument = true;
-        StatusText = $"Pasted {ClipboardItem.Name}.";
+        StatusText = F("status.pasted", ClipboardItem.Name);
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateToFolder))]
@@ -540,7 +550,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (TryResolveNodeFromBrowserSelection(out var targetNode))
         {
             SelectedTreeNode = targetNode;
-            StatusText = $"Navigated to {targetNode.Title}.";
+            StatusText = F("status.navigated", targetNode.Title);
         }
     }
 
@@ -559,7 +569,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         ClipboardItem = SelectedBrowserItem;
         IsDirtyDocument = true;
-        StatusText = $"Cut {SelectedBrowserItem.Name}.";
+        StatusText = F("status.cut", SelectedBrowserItem.Name);
     }
 
     public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
@@ -570,13 +580,24 @@ public partial class MainWindowViewModel : ObservableObject
         RefreshBrowserItemsForSelection();
     }
 
-    private static string GetViewModeDisplayName(BrowserViewMode viewMode)
+    private string GetViewModeDisplayName(BrowserViewMode viewMode)
     {
         return viewMode switch
         {
-            BrowserViewMode.SmallIcons => "Small Icons",
-            BrowserViewMode.LargeIcons => "Large Icons",
+            BrowserViewMode.SmallIcons => T("view_mode.small_icons"),
+            BrowserViewMode.LargeIcons => T("view_mode.large_icons"),
             _ => viewMode.ToString()
+        };
+    }
+
+    private string GetSortModeDisplayName(BrowserSortMode sortMode)
+    {
+        return sortMode switch
+        {
+            BrowserSortMode.Name => T("sort_mode.name"),
+            BrowserSortMode.Type => T("sort_mode.type"),
+            BrowserSortMode.Size => T("sort_mode.size"),
+            _ => sortMode.ToString()
         };
     }
 
@@ -647,7 +668,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey);
-            var nodeTitle = SelectedTreeNode?.Title ?? "Library";
+            var nodeTitle = SelectedTreeNode?.Title ?? T("browser.library");
             var infoProperties = BuildBrowserItemInfoProperties(SelectedBrowserItem, nodeTitle);
 
             dialog = new PropertiesDialogViewModel(
@@ -655,7 +676,8 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedBrowserItem.Name,
                 SelectedBrowserItem.IconGlyph,
                 comments,
-                infoProperties);
+                infoProperties,
+                i18n);
             return true;
         }
 
@@ -669,7 +691,8 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                new Dictionary<string, object?>());
+                new Dictionary<string, object?>(),
+                i18n);
             return true;
         }
 
@@ -677,7 +700,7 @@ public partial class MainWindowViewModel : ObservableObject
         return false;
     }
 
-    private static IReadOnlyDictionary<string, object?> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
+    private IReadOnlyDictionary<string, object?> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
     {
         if (!SupportsInfoTab(item.Type))
         {
@@ -686,9 +709,9 @@ public partial class MainWindowViewModel : ObservableObject
 
         return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase)
         {
-            ["Type"] = item.Type,
-            ["Size"] = item.Size,
-            ["Location"] = nodeTitle
+            [T("browser.info.type")] = item.Type,
+            [T("browser.info.size")] = item.Size,
+            [T("browser.info.location")] = nodeTitle
         };
     }
 
@@ -860,7 +883,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void CompleteOperation()
     {
         SetProgress(100);
-        SetStatus(DefaultStatusText);
+        SetStatus(defaultStatusText);
         IsProgressVisible = false;
         ProgressValue = 0;
         TrackProgress(0);
@@ -933,5 +956,15 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
+    }
+
+    private string T(string key)
+    {
+        return i18n.Get(key);
+    }
+
+    private string F(string key, params object[] args)
+    {
+        return i18n.Format(key, args);
     }
 }

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using SkyCD.Plugin.Abstractions.Localization;
 using SkyCD.App.Models;
 using SkyCD.App.Services;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     private readonly AppOptionsStore appOptionsStore;
     private readonly PluginManager pluginManager;
     private readonly FileFormatManager fileFormatManager;
+    private readonly II18nService i18n;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
@@ -36,18 +38,21 @@ public partial class MainWindow : Window
                 NullLogger<PluginManager>.Instance,
                 new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
                 new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory()),
-            new FileFormatManager([]))
+            new FileFormatManager([]),
+            new I18nService())
     {
     }
 
     public MainWindow(
         AppOptionsStore appOptionsStore,
         PluginManager pluginManager,
-        FileFormatManager fileFormatManager)
+        FileFormatManager fileFormatManager,
+        II18nService i18n)
     {
         this.appOptionsStore = appOptionsStore;
         this.pluginManager = pluginManager;
         this.fileFormatManager = fileFormatManager;
+        this.i18n = i18n ?? throw new ArgumentNullException(nameof(i18n));
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
@@ -162,11 +167,11 @@ public partial class MainWindow : Window
     {
         if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)
         {
-            Title = "* SkyCD";
+            Title = $"* {T("window.main.title")}";
         }
         else
         {
-            Title = "SkyCD";
+            Title = T("window.main.title");
         }
     }
 
@@ -230,7 +235,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dialogVm = new AddToListDialogViewModel();
+        var dialogVm = new AddToListDialogViewModel(i18n);
         var dialog = new AddToListWindow
         {
             DataContext = dialogVm
@@ -253,7 +258,7 @@ public partial class MainWindow : Window
             var loginAccepted = await loginDialog.ShowDialog<bool?>(this);
             if (loginAccepted != true)
             {
-                vm.StatusText = "Login canceled.";
+                vm.StatusText = T("status.login_canceled");
                 return;
             }
         }
@@ -309,14 +314,14 @@ public partial class MainWindow : Window
         }
 
         var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetOpenFormats()).ToList();
-        fileTypeChoices.Add(new FilePickerFileType("All files")
+        fileTypeChoices.Add(new FilePickerFileType(T("filepicker.all_files"))
         {
             Patterns = ["*.*"]
         });
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open catalog",
+            Title = T("filepicker.open_catalog"),
             AllowMultiple = false,
             FileTypeFilter = fileTypeChoices
         });
@@ -332,7 +337,7 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(localPath);
             if (!capability.SupportedFormat.CanRead)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is not readable.");
+                throw new InvalidOperationException(F("status.failed_open_catalog_unreadable", capability.SupportedFormat.FormatId));
             }
 
             await using var source = File.OpenRead(localPath);
@@ -347,7 +352,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.StatusText = $"Failed to open catalog: {ex.Message}";
+            vm.StatusText = F("status.failed_open_catalog", ex.Message);
         }
     }
 
@@ -363,7 +368,7 @@ public partial class MainWindow : Window
         {
             var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetSaveFormats()).ToList();
 
-            fileTypeChoices.Add(new FilePickerFileType("All files")
+            fileTypeChoices.Add(new FilePickerFileType(T("filepicker.all_files"))
             {
                 Patterns = ["*.*"]
             });
@@ -372,7 +377,7 @@ public partial class MainWindow : Window
 
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Save catalog",
+                Title = T("filepicker.save_catalog"),
                 SuggestedFileName = $"catalog.{defaultExtension}",
                 DefaultExtension = defaultExtension,
                 FileTypeChoices = fileTypeChoices
@@ -391,7 +396,7 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(targetPath);
             if (!capability.SupportedFormat.CanWrite)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is read-only.");
+                throw new InvalidOperationException(F("status.failed_save_catalog_readonly", capability.SupportedFormat.FormatId));
             }
 
             var content = """
@@ -403,7 +408,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+            vm.StatusText = F("status.failed_save_catalog", ex.Message);
         }
     }
 
@@ -416,7 +421,7 @@ public partial class MainWindow : Window
 
         var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetSaveFormats()).ToList();
 
-        fileTypeChoices.Add(new FilePickerFileType("All files")
+        fileTypeChoices.Add(new FilePickerFileType(T("filepicker.all_files"))
         {
             Patterns = ["*.*"]
         });
@@ -425,7 +430,7 @@ public partial class MainWindow : Window
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save catalog as",
+            Title = T("filepicker.save_catalog_as"),
             SuggestedFileName = $"catalog.{defaultExtension}",
             DefaultExtension = defaultExtension,
             FileTypeChoices = fileTypeChoices
@@ -442,7 +447,7 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(localPath);
             if (!capability.SupportedFormat.CanWrite)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is read-only.");
+                throw new InvalidOperationException(F("status.failed_save_catalog_readonly", capability.SupportedFormat.FormatId));
             }
 
             var content = """
@@ -454,7 +459,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+            vm.StatusText = F("status.failed_save_catalog", ex.Message);
         }
     }
 
@@ -518,7 +523,7 @@ public partial class MainWindow : Window
     private async void OnAboutRequested(object? sender, EventArgs e)
     {
         var version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "3.0.0";
-        var dialogVm = new AboutDialogViewModel("SkyCD", version, "https://github.com/SkyCD/SkyCD");
+        var dialogVm = new AboutDialogViewModel("SkyCD", version, "https://github.com/SkyCD/SkyCD", i18n: i18n);
         var dialog = new AboutWindow
         {
             DataContext = dialogVm
@@ -529,7 +534,7 @@ public partial class MainWindow : Window
 
     private async Task ShowAddProgressAsync(AddToListDialogViewModel addDialog)
     {
-        var progressVm = new AddingProgressDialogViewModel();
+        var progressVm = new AddingProgressDialogViewModel(i18n);
         var progressDialog = new AddingProgressWindow
         {
             DataContext = progressVm
@@ -551,27 +556,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private static IReadOnlyList<(string Text, int Value)> BuildAddProgressSteps(AddToListDialogViewModel addDialog)
+    private IReadOnlyList<(string Text, int Value)> BuildAddProgressSteps(AddToListDialogViewModel addDialog)
     {
         return addDialog.SourceMode switch
         {
             AddToListSourceMode.Internet =>
             [
-                ("Reading directory from remote server...", 20),
-                ("Preparing database for modifications...", 55),
-                ("Updating indexes...", 100)
+                (T("progress.reading_remote_directory"), 20),
+                (T("progress.preparing_database_for_modifications"), 55),
+                (T("status.updating_indexes"), 100)
             ],
             AddToListSourceMode.Folder =>
             [
-                ("Reading source folder...", 25),
-                ("Preparing database for modifications...", 60),
-                ("Updating indexes...", 100)
+                (T("progress.reading_source_folder"), 25),
+                (T("progress.preparing_database_for_modifications"), 60),
+                (T("status.updating_indexes"), 100)
             ],
             _ =>
             [
-                ("Reading media metadata...", 35),
-                ("Preparing database for modifications...", 70),
-                ("Updating indexes...", 100)
+                (T("progress.reading_media_metadata"), 35),
+                (T("progress.preparing_database_for_modifications"), 70),
+                (T("status.updating_indexes"), 100)
             ]
         };
     }
@@ -705,7 +710,7 @@ public partial class MainWindow : Window
 
         var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Select plug-in directory",
+            Title = T("filepicker.select_plugin_directory"),
             AllowMultiple = false
         });
 
@@ -740,10 +745,10 @@ public partial class MainWindow : Window
         pluginManager.Discover(dialogVm.PluginPath, new Version(3, 0, 0));
 
         var plugins = pluginManager.Plugins
-            .Select(static plugin =>
+            .Select(plugin =>
             {
                 var capabilitySummary = plugin.Capabilities.Count == 0
-                    ? "Generic"
+                    ? T("plugin.capability.generic")
                     : string.Join(", ", plugin.Capabilities
                         .Select(static capability => capability.GetType().Name)
                         .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
@@ -772,6 +777,16 @@ public partial class MainWindow : Window
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private string T(string key)
+    {
+        return i18n.Get(key);
+    }
+
+    private string F(string key, params object[] args)
+    {
+        return i18n.Format(key, args);
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="common.done" xml:space="preserve"><value>Done.</value></data>
+  <data name="common.unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="common.yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="common.no" xml:space="preserve"><value>No</value></data>
+  <data name="common.ok" xml:space="preserve"><value>OK</value></data>
+  <data name="common.cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="common.close" xml:space="preserve"><value>Close</value></data>
+  <data name="common.save" xml:space="preserve"><value>Save</value></data>
+  <data name="common.search" xml:space="preserve"><value>Search</value></data>
+  <data name="common.tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="browser.library" xml:space="preserve"><value>Library</value></data>
+  <data name="browser.info.type" xml:space="preserve"><value>Type</value></data>
+  <data name="browser.info.size" xml:space="preserve"><value>Size</value></data>
+  <data name="browser.info.location" xml:space="preserve"><value>Location</value></data>
+  <data name="browser.item_type.folder" xml:space="preserve"><value>Folder</value></data>
+  <data name="status.created_new_catalog" xml:space="preserve"><value>Created new catalog.</value></data>
+  <data name="status.loading_catalog" xml:space="preserve"><value>Loading catalog...</value></data>
+  <data name="status.parsing_catalog" xml:space="preserve"><value>Parsing catalog...</value></data>
+  <data name="status.updating_browser" xml:space="preserve"><value>Updating browser...</value></data>
+  <data name="status.use_save_as" xml:space="preserve"><value>No catalog path. Use Save As first.</value></data>
+  <data name="status.saving_catalog" xml:space="preserve"><value>Saving catalog...</value></data>
+  <data name="status.parsing_items" xml:space="preserve"><value>Parsing items...</value></data>
+  <data name="status.updating_indexes" xml:space="preserve"><value>Updating indexes...</value></data>
+  <data name="status.saved_catalog_to" xml:space="preserve"><value>Saved catalog to {0}.</value></data>
+  <data name="status.saved_catalog_as" xml:space="preserve"><value>Saved catalog as {0}.</value></data>
+  <data name="status.unknown_selected_object" xml:space="preserve"><value>Unknown selected object.</value></data>
+  <data name="status.exit_requested" xml:space="preserve"><value>Exit requested.</value></data>
+  <data name="status.added_item" xml:space="preserve"><value>Added {0}.</value></data>
+  <data name="status.deleted_item" xml:space="preserve"><value>Deleted {0}.</value></data>
+  <data name="status.options_not_implemented" xml:space="preserve"><value>Options dialog is not available.</value></data>
+  <data name="status.options_saved_language" xml:space="preserve"><value>Saved options (language: {0}).</value></data>
+  <data name="status.opening_sourceforge" xml:space="preserve"><value>Opening SourceForge page...</value></data>
+  <data name="status.failed_open_sourceforge" xml:space="preserve"><value>Failed to open SourceForge page: {0}</value></data>
+  <data name="status.opening_github" xml:space="preserve"><value>Opening GitHub page...</value></data>
+  <data name="status.failed_open_github" xml:space="preserve"><value>Failed to open GitHub page: {0}</value></data>
+  <data name="status.about_not_implemented" xml:space="preserve"><value>About dialog is not available.</value></data>
+  <data name="status.expanded" xml:space="preserve"><value>Expanded {0}.</value></data>
+  <data name="status.collapsed" xml:space="preserve"><value>Collapsed {0}.</value></data>
+  <data name="status.view_mode" xml:space="preserve"><value>View mode: {0}</value></data>
+  <data name="status.arrange_icons_by" xml:space="preserve"><value>Arrange icons by {0}.</value></data>
+  <data name="status.updating_view" xml:space="preserve"><value>Updating view...</value></data>
+  <data name="status.copied" xml:space="preserve"><value>Copied {0}.</value></data>
+  <data name="status.pasted" xml:space="preserve"><value>Pasted {0}.</value></data>
+  <data name="status.navigated" xml:space="preserve"><value>Navigated to {0}.</value></data>
+  <data name="status.cut" xml:space="preserve"><value>Cut {0}.</value></data>
+  <data name="status.imported_item_default" xml:space="preserve"><value>Imported Item {0}</value></data>
+  <data name="status.login_canceled" xml:space="preserve"><value>Login canceled.</value></data>
+  <data name="status.failed_open_catalog" xml:space="preserve"><value>Failed to open catalog: {0}</value></data>
+  <data name="status.failed_save_catalog" xml:space="preserve"><value>Failed to save catalog: {0}</value></data>
+  <data name="status.failed_open_catalog_unreadable" xml:space="preserve"><value>Format '{0}' is not readable.</value></data>
+  <data name="status.failed_save_catalog_readonly" xml:space="preserve"><value>Format '{0}' is read-only.</value></data>
+  <data name="view_mode.small_icons" xml:space="preserve"><value>Small icons</value></data>
+  <data name="view_mode.large_icons" xml:space="preserve"><value>Large icons</value></data>
+  <data name="sort_mode.name" xml:space="preserve"><value>Name</value></data>
+  <data name="sort_mode.type" xml:space="preserve"><value>Type</value></data>
+  <data name="sort_mode.size" xml:space="preserve"><value>Size</value></data>
+  <data name="options.category.plugins" xml:space="preserve"><value>Plugins</value></data>
+  <data name="options.category.language" xml:space="preserve"><value>Language</value></data>
+  <data name="options.info.configure_not_implemented" xml:space="preserve"><value>Configuration for "{0}" is not implemented yet.</value></data>
+  <data name="options.info.loaded_plugins" xml:space="preserve"><value>Loaded plugins: {0}</value></data>
+  <data name="options.no_search_results" xml:space="preserve"><value>No settings match the current search.</value></data>
+  <data name="add.validation.media_name_for_new" xml:space="preserve"><value>Media name is required when creating a new media entry.</value></data>
+  <data name="add.validation.media_name_for_source" xml:space="preserve"><value>Media name is required when importing from media.</value></data>
+  <data name="add.validation.folder_path_required" xml:space="preserve"><value>Folder path is required when importing from folder.</value></data>
+  <data name="add.validation.address_required" xml:space="preserve"><value>Address is required when importing from internet.</value></data>
+  <data name="add.label.address" xml:space="preserve"><value>Address:</value></data>
+  <data name="add.label.folder" xml:space="preserve"><value>Folder:</value></data>
+  <data name="progress.preparing_database" xml:space="preserve"><value>Preparing database...</value></data>
+  <data name="progress.reading_remote_directory" xml:space="preserve"><value>Reading directory from remote server...</value></data>
+  <data name="progress.preparing_database_for_modifications" xml:space="preserve"><value>Preparing database for modifications...</value></data>
+  <data name="progress.reading_source_folder" xml:space="preserve"><value>Reading source folder...</value></data>
+  <data name="progress.reading_media_metadata" xml:space="preserve"><value>Reading media metadata...</value></data>
+  <data name="window.main.title" xml:space="preserve"><value>SkyCD</value></data>
+  <data name="window.options.title" xml:space="preserve"><value>Options</value></data>
+  <data name="window.properties.title" xml:space="preserve"><value>Properties</value></data>
+  <data name="window.add_to_list.title" xml:space="preserve"><value>Add To List</value></data>
+  <data name="window.adding.title" xml:space="preserve"><value>Adding</value></data>
+  <data name="window.login.title" xml:space="preserve"><value>Server login</value></data>
+  <data name="window.unsaved_changes.title" xml:space="preserve"><value>Unsaved Changes</value></data>
+  <data name="window.about.title" xml:space="preserve"><value>About SkyCD</value></data>
+  <data name="window.unsaved_changes.message" xml:space="preserve"><value>This collection was edited. Do you want to save it?</value></data>
+  <data name="window.login.message" xml:space="preserve"><value>Enter server credentials.</value></data>
+  <data name="window.login.username" xml:space="preserve"><value>User name</value></data>
+  <data name="window.login.password" xml:space="preserve"><value>Password</value></data>
+  <data name="window.properties.general" xml:space="preserve"><value>General</value></data>
+  <data name="window.properties.properties" xml:space="preserve"><value>Properties</value></data>
+  <data name="window.properties.name" xml:space="preserve"><value>Name:</value></data>
+  <data name="window.properties.comments" xml:space="preserve"><value>Comments:</value></data>
+  <data name="window.properties.property_header" xml:space="preserve"><value>Property</value></data>
+  <data name="window.properties.value_header" xml:space="preserve"><value>Value</value></data>
+  <data name="window.options.settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="window.options.navigate_hint" xml:space="preserve"><value>Use arrows to navigate categories</value></data>
+  <data name="window.options.project_settings" xml:space="preserve"><value>Project Settings</value></data>
+  <data name="window.options.plugin_path" xml:space="preserve"><value>Plug-in path:</value></data>
+  <data name="window.options.browse" xml:space="preserve"><value>Browse...</value></data>
+  <data name="window.options.plugins" xml:space="preserve"><value>Plug-ins</value></data>
+  <data name="window.options.enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="window.options.name" xml:space="preserve"><value>Name</value></data>
+  <data name="window.options.type" xml:space="preserve"><value>Type</value></data>
+  <data name="window.options.source" xml:space="preserve"><value>Source</value></data>
+  <data name="window.options.actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="window.options.refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="window.options.configure" xml:space="preserve"><value>Configure</value></data>
+  <data name="window.options.application_settings" xml:space="preserve"><value>Application Settings</value></data>
+  <data name="window.options.language" xml:space="preserve"><value>Language:</value></data>
+  <data name="window.add.from_media" xml:space="preserve"><value>From Media</value></data>
+  <data name="window.add.from_folder" xml:space="preserve"><value>From Folder</value></data>
+  <data name="window.add.from_internet" xml:space="preserve"><value>From Internet</value></data>
+  <data name="window.add.media_full_name" xml:space="preserve"><value>Select full name for selected media:</value></data>
+  <data name="window.add.select_drive" xml:space="preserve"><value>Select drive:</value></data>
+  <data name="window.add.include_media_info" xml:space="preserve"><value>Include Media Info</value></data>
+  <data name="window.add.select_folder" xml:space="preserve"><value>Select Folder:</value></data>
+  <data name="window.add.include_subfolders" xml:space="preserve"><value>Include Subfolders</value></data>
+  <data name="window.add.enter_internet_address" xml:space="preserve"><value>Enter Internet address:</value></data>
+  <data name="window.add.all_contents_add" xml:space="preserve"><value>All contents add...</value></data>
+  <data name="window.add.misc" xml:space="preserve"><value>Misc</value></data>
+  <data name="window.add.as_new_media" xml:space="preserve"><value>As new Media</value></data>
+  <data name="window.add.to_selected_media_folder" xml:space="preserve"><value>To selected Media/Folder</value></data>
+  <data name="window.add.include_extended_info" xml:space="preserve"><value>Include Extended Info</value></data>
+  <data name="window.about.system_info" xml:space="preserve"><value>System info</value></data>
+  <data name="window.about.loaded_assemblies" xml:space="preserve"><value>Loaded assemblies</value></data>
+  <data name="window.about.project_license" xml:space="preserve"><value>Project license</value></data>
+  <data name="window.about.cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="window.about.memory" xml:space="preserve"><value>Memory</value></data>
+  <data name="window.about.threads" xml:space="preserve"><value>Threads</value></data>
+  <data name="window.about.uptime" xml:space="preserve"><value>Uptime</value></data>
+  <data name="menu.file" xml:space="preserve"><value>_File</value></data>
+  <data name="menu.edit" xml:space="preserve"><value>_Edit</value></data>
+  <data name="menu.view" xml:space="preserve"><value>_View</value></data>
+  <data name="menu.tools" xml:space="preserve"><value>_Tools</value></data>
+  <data name="menu.help" xml:space="preserve"><value>_Help</value></data>
+  <data name="menu.new" xml:space="preserve"><value>_New</value></data>
+  <data name="menu.open" xml:space="preserve"><value>_Open...</value></data>
+  <data name="menu.save" xml:space="preserve"><value>_Save</value></data>
+  <data name="menu.save_as" xml:space="preserve"><value>Save _As...</value></data>
+  <data name="menu.properties" xml:space="preserve"><value>_Properties...</value></data>
+  <data name="menu.exit" xml:space="preserve"><value>E_xit</value></data>
+  <data name="menu.add" xml:space="preserve"><value>_Add...</value></data>
+  <data name="menu.delete" xml:space="preserve"><value>_Delete</value></data>
+  <data name="menu.status_bar" xml:space="preserve"><value>_StatusBar</value></data>
+  <data name="menu.tiles" xml:space="preserve"><value>_Tiles</value></data>
+  <data name="menu.small_icons" xml:space="preserve"><value>Small _Icons</value></data>
+  <data name="menu.large_icons" xml:space="preserve"><value>L_arge Icons</value></data>
+  <data name="menu.list" xml:space="preserve"><value>_List</value></data>
+  <data name="menu.details" xml:space="preserve"><value>_Details</value></data>
+  <data name="menu.arrange_icons_by" xml:space="preserve"><value>Arrange Icons By</value></data>
+  <data name="menu.name" xml:space="preserve"><value>_Name</value></data>
+  <data name="menu.type" xml:space="preserve"><value>_Type</value></data>
+  <data name="menu.size" xml:space="preserve"><value>_Size</value></data>
+  <data name="menu.refresh" xml:space="preserve"><value>_Refresh</value></data>
+  <data name="menu.options" xml:space="preserve"><value>_Options...</value></data>
+  <data name="menu.project_sourceforge" xml:space="preserve"><value>Project website in _SourceForge.NET</value></data>
+  <data name="menu.project_github" xml:space="preserve"><value>Project area in _GitHub</value></data>
+  <data name="menu.about" xml:space="preserve"><value>_About...</value></data>
+  <data name="menu.expand" xml:space="preserve"><value>_Expand</value></data>
+  <data name="menu.collapse" xml:space="preserve"><value>C_ollapse</value></data>
+  <data name="menu.copy" xml:space="preserve"><value>_Copy</value></data>
+  <data name="menu.paste" xml:space="preserve"><value>_Paste</value></data>
+  <data name="menu.cut" xml:space="preserve"><value>Cu_t</value></data>
+  <data name="toolbar.new" xml:space="preserve"><value>_New</value></data>
+  <data name="toolbar.open" xml:space="preserve"><value>_Open</value></data>
+  <data name="toolbar.save" xml:space="preserve"><value>_Save</value></data>
+  <data name="details.header.name" xml:space="preserve"><value>Name</value></data>
+  <data name="details.header.type" xml:space="preserve"><value>Type</value></data>
+  <data name="details.header.size" xml:space="preserve"><value>Size</value></data>
+  <data name="filepicker.open_catalog" xml:space="preserve"><value>Open catalog</value></data>
+  <data name="filepicker.save_catalog" xml:space="preserve"><value>Save catalog</value></data>
+  <data name="filepicker.save_catalog_as" xml:space="preserve"><value>Save catalog as</value></data>
+  <data name="filepicker.all_files" xml:space="preserve"><value>All files</value></data>
+  <data name="filepicker.select_plugin_directory" xml:space="preserve"><value>Select plug-in directory</value></data>
+  <data name="plugin.capability.generic" xml:space="preserve"><value>Generic</value></data>
+  <data name="about.threads_count" xml:space="preserve"><value>{0} threads</value></data>
+  <data name="about.license_not_found" xml:space="preserve"><value>Not found. Expected at: {0} or {1}</value></data>
+</root>

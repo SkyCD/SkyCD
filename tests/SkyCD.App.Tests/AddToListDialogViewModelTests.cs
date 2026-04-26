@@ -14,7 +14,7 @@ public class AddToListDialogViewModelTests
         };
 
         Assert.False(vm.CanConfirm);
-        Assert.Equal("Media name is required for media source.", vm.ValidationMessage);
+        Assert.Equal("Media name is required when importing from media.", vm.ValidationMessage);
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public class AddToListDialogViewModelTests
         };
 
         Assert.False(vm.CanConfirm);
-        Assert.Equal("Folder path is required for folder source.", vm.ValidationMessage);
+        Assert.Equal("Folder path is required when importing from folder.", vm.ValidationMessage);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class AddToListDialogViewModelTests
         };
 
         Assert.False(vm.CanConfirm);
-        Assert.Equal("Address is required for internet source.", vm.ValidationMessage);
+        Assert.Equal("Address is required when importing from internet.", vm.ValidationMessage);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class AddToListDialogViewModelTests
         };
 
         Assert.False(vm.CanConfirm);
-        Assert.Equal("Media name is required when adding as new media.", vm.ValidationMessage);
+        Assert.Equal("Media name is required when creating a new media entry.", vm.ValidationMessage);
     }
 
     [Fact]

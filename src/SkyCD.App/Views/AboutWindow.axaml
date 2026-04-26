@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:loc="clr-namespace:SkyCD.App.Localization"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
         Width="480"
@@ -10,7 +11,7 @@
         CanMaximize="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
-        Title="About SkyCD">
+        Title="{loc:Loc Key=window.about.title}">
 
     <Design.DataContext>
         <vm:AboutDialogViewModel ProductName="SkyCD" Version="3.0.0" Website="https://github.com/SkyCD/SkyCD"/>
@@ -33,15 +34,15 @@
         </StackPanel>
 
         <StackPanel Margin="8" Spacing="6" Height="32" DockPanel.Dock="Bottom">
-            <Button HorizontalAlignment="Right" Width="80" Margin="0,8,0,0" Command="{Binding ConfirmCommand}">Close</Button>
+            <Button HorizontalAlignment="Right" Width="80" Margin="0,8,0,0" Command="{Binding ConfirmCommand}">{loc:Loc Key=common.close}</Button>
         </StackPanel>
 
         <TabControl Name="MainTabs">
-            <TabItem Header="System info" FontSize="14">
+            <TabItem Header="{loc:Loc Key=window.about.system_info}" FontSize="14">
                 <Grid Margin="8">
                     <StackPanel Spacing="10">
                         <StackPanel>
-                            <TextBlock Text="CPU" FontWeight="SemiBold" />
+                            <TextBlock Text="{loc:Loc Key=window.about.cpu}" FontWeight="SemiBold" />
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10" Width="220" />
                                 <TextBlock Text="{Binding CpuUsage}" VerticalAlignment="Center" />
@@ -49,7 +50,7 @@
                         </StackPanel>
 
                         <StackPanel>
-                            <TextBlock Text="Memory" FontWeight="SemiBold" />
+                            <TextBlock Text="{loc:Loc Key=window.about.memory}" FontWeight="SemiBold" />
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10" Width="220" />
                                 <StackPanel>
@@ -62,14 +63,14 @@
                         <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
                             <Border Grid.Column="0" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE" BorderThickness="1" Margin="0,0,8,0">
                                 <StackPanel>
-                                    <TextBlock Text="Threads" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{loc:Loc Key=window.about.threads}" FontWeight="SemiBold" FontSize="12" />
                                     <TextBlock Text="{Binding ThreadInfo}" FontSize="20" FontWeight="Bold" />
                                 </StackPanel>
                             </Border>
 
                             <Border Grid.Column="1" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE" BorderThickness="1" Margin="8,0,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="Uptime" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{loc:Loc Key=window.about.uptime}" FontWeight="SemiBold" FontSize="12" />
                                     <TextBlock Text="{Binding UptimeFriendly}" FontSize="20" FontWeight="Bold" />
                                     <TextBlock Text="{Binding StartTime}" FontSize="11" Opacity="0.75" />
                                 </StackPanel>
@@ -78,7 +79,7 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
-            <TabItem Header="Loaded assemblies" FontSize="14">
+            <TabItem Header="{loc:Loc Key=window.about.loaded_assemblies}" FontSize="14">
                 <Grid Margin="8">
                     <ListBox ItemsSource="{Binding LoadedAssemblies}"
                              SelectionMode="Multiple"
@@ -170,7 +171,7 @@
                     </ListBox>
                 </Grid>
             </TabItem>
-            <TabItem Header="Project license" FontSize="14" IsSelected="True">
+            <TabItem Header="{loc:Loc Key=window.about.project_license}" FontSize="14" IsSelected="True">
                 <Grid Margin="8">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Visible" AllowAutoHide="False">
                         <TextBox Text="{Binding LicenseText}"

@@ -436,7 +436,7 @@ public class MainWindowViewModelTests
 
         vm.OpenAboutCommand.Execute(null);
 
-        Assert.Equal("About dialog is not implemented yet.", vm.StatusText);
+        Assert.Equal("About dialog is not available.", vm.StatusText);
     }
 
     [Fact]
@@ -454,7 +454,7 @@ public class MainWindowViewModelTests
         Assert.Equal("Lithuanian", request.Dialog.Languages[1].Name);
 
         request.Complete(true, @"C:\Plugins", "Lithuanian");
-        Assert.Equal("Options saved (Language: Lithuanian).", vm.StatusText);
+        Assert.Equal("Saved options (language: Lithuanian).", vm.StatusText);
     }
 
     [Fact]
@@ -464,7 +464,7 @@ public class MainWindowViewModelTests
 
         vm.OpenOptionsCommand.Execute(null);
 
-        Assert.Equal("Options dialog is not implemented yet.", vm.StatusText);
+        Assert.Equal("Options dialog is not available.", vm.StatusText);
     }
 
     [Fact]

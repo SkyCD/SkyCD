@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:loc="clr-namespace:SkyCD.App.Localization"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
         Width="428"
@@ -14,7 +15,7 @@
         CanMinimize="False"
         ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
-        Title="Add To List">
+        Title="{loc:Loc Key=window.add_to_list.title}">
 
     <Design.DataContext>
         <vm:AddToListDialogViewModel/>
@@ -67,7 +68,7 @@
                                Height="48"
                                Stretch="Uniform"
                                Source="/Assets/add-from-media.png"/>
-                        <TextBlock Text="From Media" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="{loc:Loc Key=window.add.from_media}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Button>
                 <Button Height="70"
@@ -81,7 +82,7 @@
                                Height="48"
                                Stretch="Uniform"
                                Source="/Assets/add-from-folder.png"/>
-                        <TextBlock Text="From Folder" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="{loc:Loc Key=window.add.from_folder}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Button>
                 <Button Height="70"
@@ -95,7 +96,7 @@
                                Height="48"
                                Stretch="Uniform"
                                Source="/Assets/add-from-internet.png"/>
-                        <TextBlock Text="From Internet" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="{loc:Loc Key=window.add.from_internet}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -104,7 +105,7 @@
         <StackPanel Grid.Column="1"
                     Grid.ColumnSpan="2"
                     Spacing="4">
-            <TextBlock Text="Select full name for selected media:"/>
+            <TextBlock Text="{loc:Loc Key=window.add.media_full_name}"/>
             <TextBox Text="{Binding MediaName}"/>
         </StackPanel>
 
@@ -112,25 +113,25 @@
               Grid.Column="1"
               Grid.ColumnSpan="2">
             <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="4">
-                <TextBlock Text="Select drive:"/>
-                <CheckBox Content="Include Media Info"
+                <TextBlock Text="{loc:Loc Key=window.add.select_drive}"/>
+                <CheckBox Content="{loc:Loc Key=window.add.include_media_info}"
                           IsChecked="{Binding IncludeMediaInfo}"/>
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="4">
-                <TextBlock Text="Select Folder:"/>
+                <TextBlock Text="{loc:Loc Key=window.add.select_folder}"/>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                     <TextBox Text="{Binding SourceValue}"/>
                     <Button Grid.Column="1"
                             Content="..."
                             Width="28"/>
                 </Grid>
-                <CheckBox Content="Include Subfolders"
+                <CheckBox Content="{loc:Loc Key=window.add.include_subfolders}"
                           IsChecked="{Binding IncludeSubfolders}"/>
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="4">
-                <TextBlock Text="Enter Internet address:"/>
+                <TextBlock Text="{loc:Loc Key=window.add.enter_internet_address}"/>
                 <TextBox Text="{Binding SourceValue}"/>
             </StackPanel>
         </Grid>
@@ -139,21 +140,21 @@
                     Grid.Column="1"
                     Grid.ColumnSpan="2"
                     TabStripPlacement="Bottom">
-            <TabItem Header="All contents add...">
+            <TabItem Header="{loc:Loc Key=window.add.all_contents_add}">
                 <StackPanel Margin="10" Spacing="6">
-                    <RadioButton Content="As new Media"
+                    <RadioButton Content="{loc:Loc Key=window.add.as_new_media}"
                                  IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
                                  CommandParameter="NewMedia"/>
-                    <RadioButton Content="To selected Media/Folder"
+                    <RadioButton Content="{loc:Loc Key=window.add.to_selected_media_folder}"
                                  IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
                                  CommandParameter="SelectedFolder"/>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="Misc">
+            <TabItem Header="{loc:Loc Key=window.add.misc}">
                 <StackPanel Margin="10" Spacing="6">
-                    <CheckBox Content="Include Extended Info"
+                    <CheckBox Content="{loc:Loc Key=window.add.include_extended_info}"
                               IsChecked="{Binding IncludeExtendedInfo}"/>
                 </StackPanel>
             </TabItem>
@@ -173,12 +174,12 @@
               ColumnDefinitions="Auto,Auto"
               ColumnSpacing="6">
             <Button Grid.Column="0"
-                    Content="OK"
+                    Content="{loc:Loc Key=common.ok}"
                     Width="72"
                     Height="25"
                     Command="{Binding ConfirmCommand}"/>
             <Button Grid.Column="1"
-                    Content="Cancel"
+                    Content="{loc:Loc Key=common.cancel}"
                     Width="72"
                     Height="25"
                     Click="OnCancelClicked"/>

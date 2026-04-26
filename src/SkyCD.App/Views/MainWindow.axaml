@@ -3,6 +3,7 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:loc="clr-namespace:SkyCD.App.Localization"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -11,7 +12,7 @@
         Icon="/Assets/skycd.ico"
         MinWidth="700"
         MinHeight="450"
-        Title="SkyCD">
+        Title="{loc:Loc Key=window.main.title}">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
@@ -20,136 +21,136 @@
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter"/>
         <ContextMenu x:Key="BrowserContextMenu">
-            <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="list"/>
-            <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="list"/>
+            <MenuItem Header="{loc:Loc Key=menu.expand}" Command="{Binding ExpandSelectionCommand}" CommandParameter="list"/>
+            <MenuItem Header="{loc:Loc Key=menu.collapse}" Command="{Binding CollapseSelectionCommand}" CommandParameter="list"/>
             <Separator/>
-            <MenuItem Header="_View">
-                <MenuItem Header="Small _Icons"
+            <MenuItem Header="{loc:Loc Key=menu.view}">
+                <MenuItem Header="{loc:Loc Key=menu.small_icons}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="SmallIcons"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsSmallIconsViewChecked}"/>
-                <MenuItem Header="L_arge Icons"
+                <MenuItem Header="{loc:Loc Key=menu.large_icons}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="LargeIcons"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsLargeIconsViewChecked}"/>
-                <MenuItem Header="_List"
+                <MenuItem Header="{loc:Loc Key=menu.list}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="List"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsListViewChecked}"/>
-                <MenuItem Header="_Details"
+                <MenuItem Header="{loc:Loc Key=menu.details}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="Details"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsDetailsViewChecked}"/>
-                <MenuItem Header="_Tiles"
+                <MenuItem Header="{loc:Loc Key=menu.tiles}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="Tiles"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsTilesViewChecked}"/>
             </MenuItem>
             <Separator/>
-            <MenuItem Header="Arrange Icons By">
-                <MenuItem Header="_Name"
+            <MenuItem Header="{loc:Loc Key=menu.arrange_icons_by}">
+                <MenuItem Header="{loc:Loc Key=menu.name}"
                           Command="{Binding SetSortModeCommand}"
                           CommandParameter="Name"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsSortByNameChecked}"/>
-                <MenuItem Header="_Type"
+                <MenuItem Header="{loc:Loc Key=menu.type}"
                           Command="{Binding SetSortModeCommand}"
                           CommandParameter="Type"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsSortByTypeChecked}"/>
             </MenuItem>
-            <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.refresh}" Command="{Binding RefreshCommand}"/>
             <Separator/>
-            <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
-            <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.add}" Command="{Binding AddItemCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.delete}" Command="{Binding DeleteItemCommand}"/>
             <Separator/>
-            <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.properties}" Command="{Binding OpenPropertiesCommand}"/>
         </ContextMenu>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File">
-                <MenuItem Header="_New" HotKey="Ctrl+N" Command="{Binding NewCatalogCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.file}">
+                <MenuItem Header="{loc:Loc Key=menu.new}" HotKey="Ctrl+N" Command="{Binding NewCatalogCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Open..." HotKey="Ctrl+O" Command="{Binding OpenCatalogCommand}"/>
-                <MenuItem Header="_Save" HotKey="Ctrl+S" Command="{Binding SaveCatalogCommand}"/>
-                <MenuItem Header="Save _As..." HotKey="F12" Command="{Binding SaveCatalogAsCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.open}" HotKey="Ctrl+O" Command="{Binding OpenCatalogCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.save}" HotKey="Ctrl+S" Command="{Binding SaveCatalogCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.save_as}" HotKey="F12" Command="{Binding SaveCatalogAsCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.properties}" Command="{Binding OpenPropertiesCommand}"/>
                 <Separator/>
-                <MenuItem Header="E_xit" Command="{Binding ExitApplicationCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.exit}" Command="{Binding ExitApplicationCommand}"/>
             </MenuItem>
-            <MenuItem Header="_Edit">
-                <MenuItem Header="_Add..." HotKey="F2" Command="{Binding AddItemCommand}"/>
-                <MenuItem Header="_Delete" HotKey="Delete" Command="{Binding DeleteItemCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.edit}">
+                <MenuItem Header="{loc:Loc Key=menu.add}" HotKey="F2" Command="{Binding AddItemCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.delete}" HotKey="Delete" Command="{Binding DeleteItemCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Properties" HotKey="Alt+Enter" Command="{Binding OpenPropertiesCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.properties}" HotKey="Alt+Enter" Command="{Binding OpenPropertiesCommand}"/>
             </MenuItem>
-            <MenuItem Header="_View">
-                <MenuItem Header="_StatusBar"
+            <MenuItem Header="{loc:Loc Key=menu.view}">
+                <MenuItem Header="{loc:Loc Key=menu.status_bar}"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsStatusBarVisible}"
                           Command="{Binding ToggleStatusBarCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Tiles"
+                <MenuItem Header="{loc:Loc Key=menu.tiles}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="Tiles"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsTilesViewChecked}"/>
-                <MenuItem Header="Small _Icons"
+                <MenuItem Header="{loc:Loc Key=menu.small_icons}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="SmallIcons"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsSmallIconsViewChecked}"/>
-                <MenuItem Header="L_arge Icons"
+                <MenuItem Header="{loc:Loc Key=menu.large_icons}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="LargeIcons"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsLargeIconsViewChecked}"/>
-                <MenuItem Header="_List"
+                <MenuItem Header="{loc:Loc Key=menu.list}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="List"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsListViewChecked}"/>
-                <MenuItem Header="_Details"
+                <MenuItem Header="{loc:Loc Key=menu.details}"
                           Command="{Binding SetViewModeCommand}"
                           CommandParameter="Details"
                           ToggleType="CheckBox"
                           IsChecked="{Binding IsDetailsViewChecked}"/>
                 <Separator/>
-                <MenuItem Header="Arrange Icons By">
-                    <MenuItem Header="_Name"
+                <MenuItem Header="{loc:Loc Key=menu.arrange_icons_by}">
+                    <MenuItem Header="{loc:Loc Key=menu.name}"
                               Command="{Binding SetSortModeCommand}"
                               CommandParameter="Name"
                               ToggleType="CheckBox"
                               IsChecked="{Binding IsSortByNameChecked}"/>
-                    <MenuItem Header="_Type"
+                    <MenuItem Header="{loc:Loc Key=menu.type}"
                               Command="{Binding SetSortModeCommand}"
                               CommandParameter="Type"
                               ToggleType="CheckBox"
                               IsChecked="{Binding IsSortByTypeChecked}"/>
-                    <MenuItem Header="_Size"
+                    <MenuItem Header="{loc:Loc Key=menu.size}"
                               Command="{Binding SetSortModeCommand}"
                               CommandParameter="Size"
                               ToggleType="CheckBox"
                               IsChecked="{Binding IsSortBySizeChecked}"/>
                 </MenuItem>
-                <MenuItem Header="_Refresh" HotKey="F5" Command="{Binding RefreshCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.refresh}" HotKey="F5" Command="{Binding RefreshCommand}"/>
             </MenuItem>
-            <MenuItem Header="_Tools">
-                <MenuItem Header="_Options..." HotKey="Ctrl+Alt+O" Command="{Binding OpenOptionsCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.tools}">
+                <MenuItem Header="{loc:Loc Key=menu.options}" HotKey="Ctrl+Alt+O" Command="{Binding OpenOptionsCommand}"/>
             </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="Project website in _SourceForge.NET" Command="{Binding OpenProjectWebsiteCommand}"/>
-                <MenuItem Header="Project area in _GitHub" Command="{Binding OpenGithubAreaCommand}"/>
+            <MenuItem Header="{loc:Loc Key=menu.help}">
+                <MenuItem Header="{loc:Loc Key=menu.project_sourceforge}" Command="{Binding OpenProjectWebsiteCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.project_github}" Command="{Binding OpenGithubAreaCommand}"/>
                 <Separator/>
-                <MenuItem Header="_About..." Command="{Binding OpenAboutCommand}"/>
+                <MenuItem Header="{loc:Loc Key=menu.about}" Command="{Binding OpenAboutCommand}"/>
             </MenuItem>
         </Menu>
 
@@ -158,19 +159,19 @@
                 <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Image Width="16" Height="16" Source="/Assets/add-from-media.png"/>
-                        <TextBlock Text="_New"/>
+                        <TextBlock Text="{loc:Loc Key=toolbar.new}"/>
                     </StackPanel>
                 </cc:ClassicToolbarButton>
                 <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Image Width="16" Height="16" Source="/Assets/add-from-folder.png"/>
-                        <TextBlock Text="_Open"/>
+                        <TextBlock Text="{loc:Loc Key=toolbar.open}"/>
                     </StackPanel>
                 </cc:ClassicToolbarButton>
                 <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Image Width="16" Height="16" Source="/Assets/add-from-internet.png"/>
-                        <TextBlock Text="_Save"/>
+                        <TextBlock Text="{loc:Loc Key=toolbar.save}"/>
                     </StackPanel>
                 </cc:ClassicToolbarButton>
             </cc:ClassicToolbar.Items>
@@ -221,64 +222,64 @@
                 </TreeView.ItemTemplate>
                 <TreeView.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="_Expand" Command="{Binding ExpandSelectionCommand}" CommandParameter="tree"/>
-                        <MenuItem Header="C_ollapse" Command="{Binding CollapseSelectionCommand}" CommandParameter="tree"/>
+                        <MenuItem Header="{loc:Loc Key=menu.expand}" Command="{Binding ExpandSelectionCommand}" CommandParameter="tree"/>
+                        <MenuItem Header="{loc:Loc Key=menu.collapse}" Command="{Binding CollapseSelectionCommand}" CommandParameter="tree"/>
                         <Separator/>
-                        <MenuItem Header="_View">
-                            <MenuItem Header="Small _Icons"
+                        <MenuItem Header="{loc:Loc Key=menu.view}">
+                            <MenuItem Header="{loc:Loc Key=menu.small_icons}"
                                       Command="{Binding SetViewModeCommand}"
                                       CommandParameter="SmallIcons"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSmallIconsViewChecked}"/>
-                            <MenuItem Header="L_arge Icons"
+                            <MenuItem Header="{loc:Loc Key=menu.large_icons}"
                                       Command="{Binding SetViewModeCommand}"
                                       CommandParameter="LargeIcons"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsLargeIconsViewChecked}"/>
-                            <MenuItem Header="_List"
+                            <MenuItem Header="{loc:Loc Key=menu.list}"
                                       Command="{Binding SetViewModeCommand}"
                                       CommandParameter="List"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsListViewChecked}"/>
-                            <MenuItem Header="_Details"
+                            <MenuItem Header="{loc:Loc Key=menu.details}"
                                       Command="{Binding SetViewModeCommand}"
                                       CommandParameter="Details"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsDetailsViewChecked}"/>
-                            <MenuItem Header="_Tiles"
+                            <MenuItem Header="{loc:Loc Key=menu.tiles}"
                                       Command="{Binding SetViewModeCommand}"
                                       CommandParameter="Tiles"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsTilesViewChecked}"/>
                         </MenuItem>
                         <Separator/>
-                        <MenuItem Header="Arrange Icons By">
-                            <MenuItem Header="_Name"
+                        <MenuItem Header="{loc:Loc Key=menu.arrange_icons_by}">
+                            <MenuItem Header="{loc:Loc Key=menu.name}"
                                       Command="{Binding SetSortModeCommand}"
                                       CommandParameter="Name"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortByNameChecked}"/>
-                            <MenuItem Header="_Type"
+                            <MenuItem Header="{loc:Loc Key=menu.type}"
                                       Command="{Binding SetSortModeCommand}"
                                       CommandParameter="Type"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortByTypeChecked}"/>
-                            <MenuItem Header="_Size"
+                            <MenuItem Header="{loc:Loc Key=menu.size}"
                                       Command="{Binding SetSortModeCommand}"
                                       CommandParameter="Size"
                                       ToggleType="CheckBox"
                                       IsChecked="{Binding IsSortBySizeChecked}"/>
                         </MenuItem>
-                        <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.refresh}" Command="{Binding RefreshCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Add..." Command="{Binding AddItemCommand}"/>
-                        <MenuItem Header="_Delete" Command="{Binding DeleteItemCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.add}" Command="{Binding AddItemCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.delete}" Command="{Binding DeleteItemCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Copy" HotKey="Ctrl+C" Command="{Binding CopyCommand}"/>
-                        <MenuItem Header="_Paste" HotKey="Ctrl+V" Command="{Binding PasteCommand}"/>
-                        <MenuItem Header="Cu_t" HotKey="Ctrl+X" Command="{Binding CutCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.copy}" HotKey="Ctrl+C" Command="{Binding CopyCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.paste}" HotKey="Ctrl+V" Command="{Binding PasteCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.cut}" HotKey="Ctrl+X" Command="{Binding CutCommand}"/>
                         <Separator/>
-                        <MenuItem Header="_Properties..." Command="{Binding OpenPropertiesCommand}"/>
+                        <MenuItem Header="{loc:Loc Key=menu.properties}" Command="{Binding OpenPropertiesCommand}"/>
                     </ContextMenu>
                 </TreeView.ContextMenu>
             </TreeView>
@@ -305,9 +306,9 @@
                             Padding="4,2">
                         <Grid ColumnDefinitions="24,*,150,120">
                             <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
-                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
-                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
-                            <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
+                            <TextBlock Grid.Column="1" Text="{loc:Loc Key=details.header.name}" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="2" Text="{loc:Loc Key=details.header.type}" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="3" Text="{loc:Loc Key=details.header.size}" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
                         </Grid>
                     </Border>
                 </cc:DetailsListView.HeaderContent>

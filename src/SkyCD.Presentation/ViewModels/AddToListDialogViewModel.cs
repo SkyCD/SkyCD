@@ -1,12 +1,21 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Plugin.Abstractions.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class AddToListDialogViewModel : ObservableObject
 {
+    private readonly II18nService i18n;
+
     public AddToListDialogViewModel()
+        : this(new I18nService())
     {
+    }
+
+    public AddToListDialogViewModel(II18nService i18n)
+    {
+        this.i18n = i18n ?? throw new ArgumentNullException(nameof(i18n));
         RecomputeValidation();
     }
 
@@ -49,7 +58,9 @@ public partial class AddToListDialogViewModel : ObservableObject
     [ObservableProperty]
     private string? validationMessage;
 
-    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? "Address" : "Folder";
+    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet
+        ? i18n.Get("add.label.address")
+        : i18n.Get("add.label.folder");
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()
@@ -112,19 +123,19 @@ public partial class AddToListDialogViewModel : ObservableObject
         if (TargetPlacement == AddToListTargetPlacement.NewMedia &&
             string.IsNullOrWhiteSpace(MediaName))
         {
-            return "Media name is required when adding as new media.";
+            return i18n.Get("add.validation.media_name_for_new");
         }
 
         return SourceMode switch
         {
             AddToListSourceMode.Media => string.IsNullOrWhiteSpace(MediaName)
-                ? "Media name is required for media source."
+                ? i18n.Get("add.validation.media_name_for_source")
                 : null,
             AddToListSourceMode.Folder => string.IsNullOrWhiteSpace(SourceValue)
-                ? "Folder path is required for folder source."
+                ? i18n.Get("add.validation.folder_path_required")
                 : null,
             AddToListSourceMode.Internet => string.IsNullOrWhiteSpace(SourceValue)
-                ? "Address is required for internet source."
+                ? i18n.Get("add.validation.address_required")
                 : null,
             _ => null
         };

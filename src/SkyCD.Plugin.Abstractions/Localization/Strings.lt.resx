@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="common.done" xml:space="preserve"><value>Atlikta.</value></data>
+  <data name="common.unknown" xml:space="preserve"><value>Nežinoma</value></data>
+  <data name="common.yes" xml:space="preserve"><value>Taip</value></data>
+  <data name="common.no" xml:space="preserve"><value>Ne</value></data>
+  <data name="common.ok" xml:space="preserve"><value>Gerai</value></data>
+  <data name="common.cancel" xml:space="preserve"><value>Atšaukti</value></data>
+  <data name="common.close" xml:space="preserve"><value>Uždaryti</value></data>
+  <data name="common.save" xml:space="preserve"><value>Išsaugoti</value></data>
+  <data name="common.search" xml:space="preserve"><value>Paieška</value></data>
+  <data name="common.tools" xml:space="preserve"><value>Įrankiai</value></data>
+  <data name="browser.library" xml:space="preserve"><value>Biblioteka</value></data>
+  <data name="browser.info.type" xml:space="preserve"><value>Tipas</value></data>
+  <data name="browser.info.size" xml:space="preserve"><value>Dydis</value></data>
+  <data name="browser.info.location" xml:space="preserve"><value>Vieta</value></data>
+  <data name="browser.item_type.folder" xml:space="preserve"><value>Aplankas</value></data>
+  <data name="status.created_new_catalog" xml:space="preserve"><value>Sukurtas naujas katalogas.</value></data>
+  <data name="status.loading_catalog" xml:space="preserve"><value>Įkeliamas katalogas...</value></data>
+  <data name="status.parsing_catalog" xml:space="preserve"><value>Apdorojamas katalogas...</value></data>
+  <data name="status.updating_browser" xml:space="preserve"><value>Atnaujinama naršyklė...</value></data>
+  <data name="status.use_save_as" xml:space="preserve"><value>Nenurodytas katalogo kelias. Pirmiausia naudokite „Save As“.</value></data>
+  <data name="status.saving_catalog" xml:space="preserve"><value>Išsaugomas katalogas...</value></data>
+  <data name="status.parsing_items" xml:space="preserve"><value>Apdorojami įrašai...</value></data>
+  <data name="status.updating_indexes" xml:space="preserve"><value>Atnaujinami indeksai...</value></data>
+  <data name="status.saved_catalog_to" xml:space="preserve"><value>Katalogas išsaugotas į {0}.</value></data>
+  <data name="status.saved_catalog_as" xml:space="preserve"><value>Katalogas išsaugotas kaip {0}.</value></data>
+  <data name="status.unknown_selected_object" xml:space="preserve"><value>Nežinomas pasirinktas objektas.</value></data>
+  <data name="status.exit_requested" xml:space="preserve"><value>Paprašyta išeiti.</value></data>
+  <data name="status.added_item" xml:space="preserve"><value>Pridėta: {0}.</value></data>
+  <data name="status.deleted_item" xml:space="preserve"><value>Ištrinta: {0}.</value></data>
+  <data name="status.options_not_implemented" xml:space="preserve"><value>Nustatymų langas nepasiekiamas.</value></data>
+  <data name="status.options_saved_language" xml:space="preserve"><value>Nustatymai išsaugoti (kalba: {0}).</value></data>
+  <data name="status.opening_sourceforge" xml:space="preserve"><value>Atidaromas SourceForge puslapis...</value></data>
+  <data name="status.failed_open_sourceforge" xml:space="preserve"><value>Nepavyko atidaryti SourceForge puslapio: {0}</value></data>
+  <data name="status.opening_github" xml:space="preserve"><value>Atidaromas GitHub puslapis...</value></data>
+  <data name="status.failed_open_github" xml:space="preserve"><value>Nepavyko atidaryti GitHub puslapio: {0}</value></data>
+  <data name="status.about_not_implemented" xml:space="preserve"><value>Apie langas nepasiekiamas.</value></data>
+  <data name="status.expanded" xml:space="preserve"><value>Išskleista: {0}.</value></data>
+  <data name="status.collapsed" xml:space="preserve"><value>Sutraukta: {0}.</value></data>
+  <data name="status.view_mode" xml:space="preserve"><value>Peržiūros režimas: {0}</value></data>
+  <data name="status.arrange_icons_by" xml:space="preserve"><value>Piktogramos rikiuojamos pagal {0}.</value></data>
+  <data name="status.updating_view" xml:space="preserve"><value>Atnaujinamas vaizdas...</value></data>
+  <data name="status.copied" xml:space="preserve"><value>Nukopijuota: {0}.</value></data>
+  <data name="status.pasted" xml:space="preserve"><value>Įklijuota: {0}.</value></data>
+  <data name="status.navigated" xml:space="preserve"><value>Pereita į {0}.</value></data>
+  <data name="status.cut" xml:space="preserve"><value>Iškirpta: {0}.</value></data>
+  <data name="status.imported_item_default" xml:space="preserve"><value>Importuotas įrašas {0}</value></data>
+  <data name="status.login_canceled" xml:space="preserve"><value>Prisijungimas atšauktas.</value></data>
+  <data name="status.failed_open_catalog" xml:space="preserve"><value>Nepavyko atidaryti katalogo: {0}</value></data>
+  <data name="status.failed_save_catalog" xml:space="preserve"><value>Nepavyko išsaugoti katalogo: {0}</value></data>
+  <data name="status.failed_open_catalog_unreadable" xml:space="preserve"><value>Formatas „{0}“ yra neskaitomas.</value></data>
+  <data name="status.failed_save_catalog_readonly" xml:space="preserve"><value>Formatas „{0}“ yra tik skaitymui.</value></data>
+  <data name="view_mode.small_icons" xml:space="preserve"><value>Mažos piktogramos</value></data>
+  <data name="view_mode.large_icons" xml:space="preserve"><value>Didelės piktogramos</value></data>
+  <data name="sort_mode.name" xml:space="preserve"><value>pavadinimą</value></data>
+  <data name="sort_mode.type" xml:space="preserve"><value>tipą</value></data>
+  <data name="sort_mode.size" xml:space="preserve"><value>dydį</value></data>
+  <data name="options.category.plugins" xml:space="preserve"><value>Papildiniai</value></data>
+  <data name="options.category.language" xml:space="preserve"><value>Kalba</value></data>
+  <data name="options.info.configure_not_implemented" xml:space="preserve"><value>„{0}“ konfigūravimas dar neįgyvendintas.</value></data>
+  <data name="options.info.loaded_plugins" xml:space="preserve"><value>Įkelta papildinių: {0}</value></data>
+  <data name="options.no_search_results" xml:space="preserve"><value>Nėra nustatymų, atitinkančių paiešką.</value></data>
+  <data name="add.validation.media_name_for_new" xml:space="preserve"><value>Kuriant naują laikmeną reikia nurodyti pavadinimą.</value></data>
+  <data name="add.validation.media_name_for_source" xml:space="preserve"><value>Importuojant iš laikmenos reikia pavadinimo.</value></data>
+  <data name="add.validation.folder_path_required" xml:space="preserve"><value>Importuojant iš aplanko būtinas aplanko kelias.</value></data>
+  <data name="add.validation.address_required" xml:space="preserve"><value>Importuojant iš interneto būtinas adresas.</value></data>
+  <data name="add.label.address" xml:space="preserve"><value>Adresas:</value></data>
+  <data name="add.label.folder" xml:space="preserve"><value>Aplankas:</value></data>
+  <data name="progress.preparing_database" xml:space="preserve"><value>Ruošiama duomenų bazė...</value></data>
+  <data name="progress.reading_remote_directory" xml:space="preserve"><value>Skaitomas katalogas iš nutolusio serverio...</value></data>
+  <data name="progress.preparing_database_for_modifications" xml:space="preserve"><value>Ruošiama duomenų bazė pakeitimams...</value></data>
+  <data name="progress.reading_source_folder" xml:space="preserve"><value>Skaitomas šaltinio aplankas...</value></data>
+  <data name="progress.reading_media_metadata" xml:space="preserve"><value>Skaitomi laikmenos metaduomenys...</value></data>
+  <data name="window.main.title" xml:space="preserve"><value>SkyCD</value></data>
+  <data name="window.options.title" xml:space="preserve"><value>Nustatymai</value></data>
+  <data name="window.properties.title" xml:space="preserve"><value>Savybės</value></data>
+  <data name="window.add_to_list.title" xml:space="preserve"><value>Pridėti į sąrašą</value></data>
+  <data name="window.adding.title" xml:space="preserve"><value>Pridedama</value></data>
+  <data name="window.login.title" xml:space="preserve"><value>Serverio prisijungimas</value></data>
+  <data name="window.unsaved_changes.title" xml:space="preserve"><value>Neišsaugoti pakeitimai</value></data>
+  <data name="window.about.title" xml:space="preserve"><value>Apie SkyCD</value></data>
+  <data name="window.unsaved_changes.message" xml:space="preserve"><value>Kolekcija buvo pakeista. Ar norite išsaugoti?</value></data>
+  <data name="window.login.message" xml:space="preserve"><value>Įveskite serverio prisijungimo duomenis.</value></data>
+  <data name="window.login.username" xml:space="preserve"><value>Vartotojo vardas</value></data>
+  <data name="window.login.password" xml:space="preserve"><value>Slaptažodis</value></data>
+  <data name="window.properties.general" xml:space="preserve"><value>Bendra</value></data>
+  <data name="window.properties.properties" xml:space="preserve"><value>Savybės</value></data>
+  <data name="window.properties.name" xml:space="preserve"><value>Pavadinimas:</value></data>
+  <data name="window.properties.comments" xml:space="preserve"><value>Komentarai:</value></data>
+  <data name="window.properties.property_header" xml:space="preserve"><value>Savybė</value></data>
+  <data name="window.properties.value_header" xml:space="preserve"><value>Reikšmė</value></data>
+  <data name="window.options.settings" xml:space="preserve"><value>Nustatymai</value></data>
+  <data name="window.options.navigate_hint" xml:space="preserve"><value>Naršykite kategorijas rodyklių klavišais</value></data>
+  <data name="window.options.project_settings" xml:space="preserve"><value>Projekto nustatymai</value></data>
+  <data name="window.options.plugin_path" xml:space="preserve"><value>Papildinių kelias:</value></data>
+  <data name="window.options.browse" xml:space="preserve"><value>Naršyti...</value></data>
+  <data name="window.options.plugins" xml:space="preserve"><value>Papildiniai</value></data>
+  <data name="window.options.enabled" xml:space="preserve"><value>Įjungta</value></data>
+  <data name="window.options.name" xml:space="preserve"><value>Pavadinimas</value></data>
+  <data name="window.options.type" xml:space="preserve"><value>Tipas</value></data>
+  <data name="window.options.source" xml:space="preserve"><value>Šaltinis</value></data>
+  <data name="window.options.actions" xml:space="preserve"><value>Veiksmai</value></data>
+  <data name="window.options.refresh" xml:space="preserve"><value>Atnaujinti</value></data>
+  <data name="window.options.configure" xml:space="preserve"><value>Konfigūruoti</value></data>
+  <data name="window.options.application_settings" xml:space="preserve"><value>Programos nustatymai</value></data>
+  <data name="window.options.language" xml:space="preserve"><value>Kalba:</value></data>
+  <data name="window.add.from_media" xml:space="preserve"><value>Iš laikmenos</value></data>
+  <data name="window.add.from_folder" xml:space="preserve"><value>Iš aplanko</value></data>
+  <data name="window.add.from_internet" xml:space="preserve"><value>Iš interneto</value></data>
+  <data name="window.add.media_full_name" xml:space="preserve"><value>Pasirinkite pilną laikmenos pavadinimą:</value></data>
+  <data name="window.add.select_drive" xml:space="preserve"><value>Pasirinkite diską:</value></data>
+  <data name="window.add.include_media_info" xml:space="preserve"><value>Įtraukti laikmenos informaciją</value></data>
+  <data name="window.add.select_folder" xml:space="preserve"><value>Pasirinkite aplanką:</value></data>
+  <data name="window.add.include_subfolders" xml:space="preserve"><value>Įtraukti poaplankius</value></data>
+  <data name="window.add.enter_internet_address" xml:space="preserve"><value>Įveskite interneto adresą:</value></data>
+  <data name="window.add.all_contents_add" xml:space="preserve"><value>Pridėti visą turinį...</value></data>
+  <data name="window.add.misc" xml:space="preserve"><value>Kita</value></data>
+  <data name="window.add.as_new_media" xml:space="preserve"><value>Kaip naują laikmeną</value></data>
+  <data name="window.add.to_selected_media_folder" xml:space="preserve"><value>Į pasirinktą laikmeną/aplanką</value></data>
+  <data name="window.add.include_extended_info" xml:space="preserve"><value>Įtraukti išplėstinę informaciją</value></data>
+  <data name="window.about.system_info" xml:space="preserve"><value>Sistemos informacija</value></data>
+  <data name="window.about.loaded_assemblies" xml:space="preserve"><value>Įkeltos bibliotekos</value></data>
+  <data name="window.about.project_license" xml:space="preserve"><value>Projekto licencija</value></data>
+  <data name="window.about.cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="window.about.memory" xml:space="preserve"><value>Atmintis</value></data>
+  <data name="window.about.threads" xml:space="preserve"><value>Gijos</value></data>
+  <data name="window.about.uptime" xml:space="preserve"><value>Veikimo laikas</value></data>
+  <data name="menu.file" xml:space="preserve"><value>_Failas</value></data>
+  <data name="menu.edit" xml:space="preserve"><value>_Redaguoti</value></data>
+  <data name="menu.view" xml:space="preserve"><value>_Rodymas</value></data>
+  <data name="menu.tools" xml:space="preserve"><value>_Įrankiai</value></data>
+  <data name="menu.help" xml:space="preserve"><value>_Pagalba</value></data>
+  <data name="menu.new" xml:space="preserve"><value>_Naujas</value></data>
+  <data name="menu.open" xml:space="preserve"><value>_Atidaryti...</value></data>
+  <data name="menu.save" xml:space="preserve"><value>_Išsaugoti</value></data>
+  <data name="menu.save_as" xml:space="preserve"><value>Išsaugoti _kaip...</value></data>
+  <data name="menu.properties" xml:space="preserve"><value>_Savybės...</value></data>
+  <data name="menu.exit" xml:space="preserve"><value>I_šeiti</value></data>
+  <data name="menu.add" xml:space="preserve"><value>_Pridėti...</value></data>
+  <data name="menu.delete" xml:space="preserve"><value>_Ištrinti</value></data>
+  <data name="menu.status_bar" xml:space="preserve"><value>_Būsenos juosta</value></data>
+  <data name="menu.tiles" xml:space="preserve"><value>_Plytelės</value></data>
+  <data name="menu.small_icons" xml:space="preserve"><value>Mažos _piktogramos</value></data>
+  <data name="menu.large_icons" xml:space="preserve"><value>Didelės p_iktogramos</value></data>
+  <data name="menu.list" xml:space="preserve"><value>_Sąrašas</value></data>
+  <data name="menu.details" xml:space="preserve"><value>_Detalės</value></data>
+  <data name="menu.arrange_icons_by" xml:space="preserve"><value>Rikiuoti piktogramas pagal</value></data>
+  <data name="menu.name" xml:space="preserve"><value>_Pavadinimą</value></data>
+  <data name="menu.type" xml:space="preserve"><value>_Tipą</value></data>
+  <data name="menu.size" xml:space="preserve"><value>_Dydį</value></data>
+  <data name="menu.refresh" xml:space="preserve"><value>_Atnaujinti</value></data>
+  <data name="menu.options" xml:space="preserve"><value>_Nustatymai...</value></data>
+  <data name="menu.project_sourceforge" xml:space="preserve"><value>Projekto svetainė _SourceForge.NET</value></data>
+  <data name="menu.project_github" xml:space="preserve"><value>Projekto sritis _GitHub</value></data>
+  <data name="menu.about" xml:space="preserve"><value>_Apie...</value></data>
+  <data name="menu.expand" xml:space="preserve"><value>_Išskleisti</value></data>
+  <data name="menu.collapse" xml:space="preserve"><value>S_utraukti</value></data>
+  <data name="menu.copy" xml:space="preserve"><value>_Kopijuoti</value></data>
+  <data name="menu.paste" xml:space="preserve"><value>_Įklijuoti</value></data>
+  <data name="menu.cut" xml:space="preserve"><value>Iš_kerpti</value></data>
+  <data name="toolbar.new" xml:space="preserve"><value>_Naujas</value></data>
+  <data name="toolbar.open" xml:space="preserve"><value>_Atidaryti</value></data>
+  <data name="toolbar.save" xml:space="preserve"><value>_Išsaugoti</value></data>
+  <data name="details.header.name" xml:space="preserve"><value>Pavadinimas</value></data>
+  <data name="details.header.type" xml:space="preserve"><value>Tipas</value></data>
+  <data name="details.header.size" xml:space="preserve"><value>Dydis</value></data>
+  <data name="filepicker.open_catalog" xml:space="preserve"><value>Atidaryti katalogą</value></data>
+  <data name="filepicker.save_catalog" xml:space="preserve"><value>Išsaugoti katalogą</value></data>
+  <data name="filepicker.save_catalog_as" xml:space="preserve"><value>Išsaugoti katalogą kaip</value></data>
+  <data name="filepicker.all_files" xml:space="preserve"><value>Visi failai</value></data>
+  <data name="filepicker.select_plugin_directory" xml:space="preserve"><value>Pasirinkite papildinių katalogą</value></data>
+  <data name="plugin.capability.generic" xml:space="preserve"><value>Bendras</value></data>
+  <data name="about.threads_count" xml:space="preserve"><value>{0} gijos</value></data>
+  <data name="about.license_not_found" xml:space="preserve"><value>Nerasta. Tikėtasi: {0} arba {1}</value></data>
+</root>

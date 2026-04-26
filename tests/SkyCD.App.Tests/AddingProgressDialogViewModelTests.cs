@@ -9,7 +9,7 @@ public class AddingProgressDialogViewModelTests
     {
         var vm = new AddingProgressDialogViewModel();
 
-        Assert.Equal("Preparing database for modifications...", vm.OperationText);
+        Assert.Equal("Preparing database...", vm.OperationText);
     }
 
     [Fact]

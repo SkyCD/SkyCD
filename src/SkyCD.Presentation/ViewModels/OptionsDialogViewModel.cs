@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Plugin.Abstractions.Localization;
 using System.Collections.ObjectModel;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -7,14 +8,26 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class OptionsDialogViewModel : ObservableObject
 {
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly II18nService i18n;
 
     public OptionsDialogViewModel()
-        : this(["English", "Lithuanian"])
+        : this(new I18nService(), ["English", "Lithuanian"])
     {
     }
 
     public OptionsDialogViewModel(IEnumerable<string> availableLanguages)
+        : this(new I18nService(), availableLanguages)
     {
+    }
+
+    public OptionsDialogViewModel(II18nService i18n)
+        : this(i18n, ["English", "Lithuanian"])
+    {
+    }
+
+    public OptionsDialogViewModel(II18nService i18n, IEnumerable<string> availableLanguages)
+    {
+        this.i18n = i18n ?? throw new ArgumentNullException(nameof(i18n));
         foreach (var language in availableLanguages.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             Languages.Add(LanguageItem.Create(language));
@@ -25,6 +38,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             Languages.Add(LanguageItem.Create("English"));
         }
 
+        InitializeCategories();
         selectedLanguage = Languages[0];
         RefreshFilteredCategories();
         selectedSettingCategory = CurrentCategoryName;
@@ -60,7 +74,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     [ObservableProperty]
     private string? selectedSettingCategory;
 
-    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
+    public IReadOnlyList<string> SettingCategories { get; private set; } = [];
 
     public string CurrentCategoryName => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
 
@@ -125,7 +139,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             return;
         }
 
-        InfoMessage = $"Configure '{SelectedPlugin.Name}' is not implemented yet.";
+        InfoMessage = i18n.Format("options.info.configure_not_implemented", SelectedPlugin.Name);
     }
 
     [RelayCommand]
@@ -150,7 +164,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         SelectedPlugin = Plugins.FirstOrDefault();
-        InfoMessage = $"Loaded {Plugins.Count} plugin(s).";
+        InfoMessage = i18n.Format("options.info.loaded_plugins", Plugins.Count);
         ConfigurePluginCommand.NotifyCanExecuteChanged();
     }
 
@@ -283,5 +297,19 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowLanguageSection));
         OnPropertyChanged(nameof(HasVisibleCategoryContent));
         OnPropertyChanged(nameof(ShowNoSearchResults));
+    }
+
+    partial void OnInfoMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(InfoMessage));
+    }
+
+    private void InitializeCategories()
+    {
+        SettingCategories =
+        [
+            i18n.Get("options.category.plugins"),
+            i18n.Get("options.category.language")
+        ];
     }
 }

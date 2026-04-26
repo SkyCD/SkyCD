@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:loc="clr-namespace:SkyCD.App.Localization"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -11,7 +12,7 @@
         CanResize="False"
         CanMinimize="False"
         Icon="/Assets/skycd.ico"
-        Title="Options">
+        Title="{loc:Loc Key=window.options.title}">
 
     <Design.DataContext>
         <vm:OptionsDialogViewModel/>
@@ -21,7 +22,7 @@
         <Border BorderBrush="#2A2A2A"
                 BorderThickness="0,0,0,1"
                 Padding="14,10,14,8">
-            <TextBlock Text="Settings"
+            <TextBlock Text="{loc:Loc Key=window.options.settings}"
                        FontSize="18"
                        FontWeight="SemiBold"/>
         </Border>
@@ -36,7 +37,7 @@
                     Padding="8"
                     Grid.RowSpan="2">
                 <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
-                    <TextBox PlaceholderText="Search"
+                    <TextBox PlaceholderText="{loc:Loc Key=common.search}"
                              Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <ListBox Grid.Row="1"
@@ -52,7 +53,7 @@
                     <TextBlock Grid.Row="2"
                                Foreground="#8C8C8C"
                                FontSize="11"
-                               Text="Use arrows to navigate categories"/>
+                               Text="{loc:Loc Key=window.options.navigate_hint}"/>
                 </Grid>
             </Border>
 
@@ -65,21 +66,21 @@
                               VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="12">
                         <TextBlock FontSize="16" FontWeight="SemiBold">
-                            <Run Text="Tools"/>
+                            <Run Text="{loc:Loc Key=common.tools}"/>
                             <Run Text="  >  "/>
                             <Run Text="{Binding CurrentCategoryName}"/>
                         </TextBlock>
 
                         <StackPanel IsVisible="{Binding ShowPluginPathSection}" Spacing="8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Project Settings" FontSize="15"/>
+                                <TextBlock Text="{loc:Loc Key=window.options.project_settings}" FontSize="15"/>
                                 <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
                             </Grid>
                             <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
-                                <TextBlock Text="Plug-in path:" VerticalAlignment="Center"/>
+                                <TextBlock Text="{loc:Loc Key=window.options.plugin_path}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1" Text="{Binding PluginPath}"/>
                                 <Button Grid.Column="2"
-                                        Content="Browse..."
+                                        Content="{loc:Loc Key=window.options.browse}"
                                         MinWidth="90"
                                         Command="{Binding BrowsePluginPathCommand}"/>
                             </Grid>
@@ -87,7 +88,7 @@
 
                         <StackPanel IsVisible="{Binding ShowPluginListSection}" Spacing="8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Plug-ins" FontSize="15"/>
+                                <TextBlock Text="{loc:Loc Key=window.options.plugins}" FontSize="15"/>
                                 <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
                             </Grid>
                             <Border BorderBrush="#2E2E2E"
@@ -95,10 +96,10 @@
                                 <Grid RowDefinitions="Auto,*">
                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                         <Grid ColumnDefinitions="Auto,2*,2*,3*">
-                                            <TextBlock Text="Enabled" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Column="3" Text="Source" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{loc:Loc Key=window.options.enabled}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{loc:Loc Key=window.options.name}" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="2" Text="{loc:Loc Key=window.options.type}" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="3" Text="{loc:Loc Key=window.options.source}" FontWeight="SemiBold"/>
                                         </Grid>
                                     </Border>
                                     <ListBox Grid.Row="1"
@@ -124,14 +125,14 @@
 
                         <StackPanel IsVisible="{Binding ShowPluginActionsSection}" Spacing="8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Actions" FontSize="15"/>
+                                <TextBlock Text="{loc:Loc Key=window.options.actions}" FontSize="15"/>
                                 <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
                             </Grid>
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Refresh"
+                                <Button Content="{loc:Loc Key=window.options.refresh}"
                                         MinWidth="90"
                                         Command="{Binding RefreshPluginsCommand}"/>
-                                <Button Content="Configure"
+                                <Button Content="{loc:Loc Key=window.options.configure}"
                                         MinWidth="90"
                                         Command="{Binding ConfigurePluginCommand}"/>
                             </StackPanel>
@@ -142,11 +143,11 @@
 
                         <StackPanel IsVisible="{Binding ShowLanguageSection}" Spacing="8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Application Settings" FontSize="15"/>
+                                <TextBlock Text="{loc:Loc Key=window.options.application_settings}" FontSize="15"/>
                                 <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
                             </Grid>
                             <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
-                                <TextBlock Text="Language:" VerticalAlignment="Top"/>
+                                <TextBlock Text="{loc:Loc Key=window.options.language}" VerticalAlignment="Top"/>
                                 <ListBox Grid.Column="1"
                                          MinHeight="220"
                                          ItemsSource="{Binding Languages}"
@@ -165,7 +166,7 @@
                                 BorderThickness="1"
                                 CornerRadius="4"
                                 Padding="10">
-                            <TextBlock Text="No settings match the current search."
+                            <TextBlock Text="{loc:Loc Key=options.no_search_results}"
                                        TextWrapping="Wrap"/>
                         </Border>
                     </StackPanel>
@@ -177,11 +178,11 @@
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="8">
-                <Button Content="Save"
+                <Button Content="{loc:Loc Key=common.save}"
                         MinWidth="90"
                         IsDefault="True"
                         Command="{Binding ConfirmCommand}"/>
-                <Button Content="Cancel"
+                <Button Content="{loc:Loc Key=common.cancel}"
                         MinWidth="90"
                         IsCancel="True"
                         Click="OnCancelClicked"/>

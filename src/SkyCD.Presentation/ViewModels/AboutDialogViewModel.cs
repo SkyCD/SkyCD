@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Plugin.Abstractions.Localization;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -10,6 +11,7 @@ public partial class AboutDialogViewModel : ObservableObject
 {
     private readonly Process currentProcess;
     private readonly TimeProvider timeProvider;
+    private readonly II18nService i18n;
     private TimeSpan lastTotalProcessorTime;
     private DateTimeOffset lastSampleTimeUtc;
 
@@ -21,7 +23,8 @@ public partial class AboutDialogViewModel : ObservableObject
             AppDomain.CurrentDomain.GetAssemblies(),
             AppContext.BaseDirectory,
             Process.GetCurrentProcess(),
-            TimeProvider.System)
+            TimeProvider.System,
+            new I18nService())
     {
     }
 
@@ -32,8 +35,10 @@ public partial class AboutDialogViewModel : ObservableObject
         IEnumerable<Assembly>? loadedAssemblies = null,
         string? baseDirectory = null,
         Process? process = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        II18nService? i18n = null)
     {
+        this.i18n = i18n ?? new I18nService();
         ProductName = productName;
         Version = version;
         Website = website;
@@ -43,7 +48,7 @@ public partial class AboutDialogViewModel : ObservableObject
             : baseDirectory;
 
         LicensePath = ResolveLicensePath(normalizedBaseDirectory) ?? Path.Combine(normalizedBaseDirectory, "LICENSE.md");
-        LicenseText = LoadLicenseText(normalizedBaseDirectory);
+        LicenseText = LoadLicenseText(normalizedBaseDirectory, this.i18n);
 
         LoadedAssemblies = new ObservableCollection<LoadedAssemblyEntry>(
             BuildLoadedAssemblyEntries(loadedAssemblies ?? AppDomain.CurrentDomain.GetAssemblies()));
@@ -130,7 +135,7 @@ public partial class AboutDialogViewModel : ObservableObject
                 ? Math.Clamp((double)currentProcess.WorkingSet64 / totalAvailableMemory * 100d, 0d, 100d)
                 : 0d;
 
-            ThreadInfo = $"{currentProcess.Threads.Count} threads";
+            ThreadInfo = this.i18n.Format("about.threads_count", currentProcess.Threads.Count);
 
             var uptime = DateTime.Now - currentProcess.StartTime;
             UptimeFriendly = AboutDialogFormatting.FormatFriendlyTime(uptime);
@@ -142,8 +147,9 @@ public partial class AboutDialogViewModel : ObservableObject
         }
     }
 
-    public static string LoadLicenseText(string baseDirectory)
+    public static string LoadLicenseText(string baseDirectory, II18nService? i18n = null)
     {
+        var localizer = i18n ?? new I18nService();
         var resolvedPath = ResolveLicensePath(baseDirectory);
         if (!string.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath))
         {
@@ -152,7 +158,7 @@ public partial class AboutDialogViewModel : ObservableObject
 
         var expectedMarkdownPath = Path.Combine(baseDirectory, "LICENSE.md");
         var expectedPlainPath = Path.Combine(baseDirectory, "LICENSE");
-        return $"Not found. Expected at: {expectedMarkdownPath} or {expectedPlainPath}";
+        return localizer.Format("about.license_not_found", expectedMarkdownPath, expectedPlainPath);
     }
 
     private static string? ResolveLicensePath(string baseDirectory)

@@ -10,6 +10,7 @@ using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.App.Views;
+using SkyCD.Plugin.Abstractions.Localization;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using System;
 using System.Collections.Generic;
@@ -42,9 +43,10 @@ public partial class App : Avalonia.Application
             desktop.MainWindow = new MainWindow(
                 appOptionsStore,
                 pluginServices.PluginManager,
-                pluginServices.FileFormatManager)
+                pluginServices.FileFormatManager,
+                pluginServices.I18n)
             {
-                DataContext = new MainWindowViewModel(browserDataStore),
+                DataContext = new MainWindowViewModel(browserDataStore, pluginServices.I18n),
             };
         }
 
@@ -90,7 +92,8 @@ public partial class App : Avalonia.Application
 
         PluginServiceProvider.Instance.Import(mergedServices);
         var fileFormatManager = PluginServiceProvider.Instance.GetRequiredService<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager, pluginManager, PluginServiceProvider.Instance);
+        var i18n = PluginServiceProvider.Instance.GetRequiredService<II18nService>();
+        return new PluginUiServices(fileFormatManager, pluginManager, i18n, PluginServiceProvider.Instance);
     }
 
     private static string ResolveDefaultPluginPath()
@@ -109,5 +112,6 @@ public partial class App : Avalonia.Application
     private sealed record PluginUiServices(
         FileFormatManager FileFormatManager,
         PluginManager PluginManager,
+        II18nService I18n,
         PluginServiceProvider ServiceProvider);
 }
