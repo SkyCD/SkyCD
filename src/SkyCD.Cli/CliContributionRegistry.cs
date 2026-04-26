@@ -24,8 +24,8 @@ internal sealed class CliContributionRegistry : IDisposable
 
         var errors = new List<string>();
         var services = new ServiceCollection();
-        var reservedCommands = CliHostCapabilities.ReservedCommandPaths;
-        var registeredExtensionPoints = CliHostCapabilities.ExtensionPoints;
+        var reservedCommands = CliHost.GetSystemCommandPaths();
+        var registeredExtensionPoints = CliHost.GetExtensionPointPaths();
 
         foreach (var plugin in plugins)
         {
@@ -160,27 +160,6 @@ internal sealed class CliContributionRegistry : IDisposable
         return $"ext::{NormalizePath(path).ToUpperInvariant()}";
     }
 
-}
-
-internal static class CliHostCapabilities
-{
-    private static readonly StringComparer CommandComparer = StringComparer.OrdinalIgnoreCase;
-    private static readonly IReadOnlySet<string> reservedCommandPaths = new HashSet<string>(CommandComparer)
-    {
-        "open",
-        "convert",
-        "fileformats list",
-        "plugins list"
-    };
-    private static readonly IReadOnlySet<string> extensionPoints = new HashSet<string>(CommandComparer)
-    {
-        "open",
-        "convert"
-    };
-
-    public static IReadOnlySet<string> ReservedCommandPaths => reservedCommandPaths;
-
-    public static IReadOnlySet<string> ExtensionPoints => extensionPoints;
 }
 
 internal sealed record RegisteredCliContribution(

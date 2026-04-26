@@ -349,7 +349,7 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public async Task ListFormatsAlias_ResolvesToFileFormatsList()
+    public async Task ListFormatsAlias_IsRejectedWithHint()
     {
         var output = new StringWriter();
         var error = new StringWriter();
@@ -358,15 +358,12 @@ public sealed class CliHostTests
         var result = await host.TryRunAsync(["list-formats"]);
 
         Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        var text = output.ToString();
-        Assert.Contains("tests-read", text, StringComparison.Ordinal);
-        Assert.Contains("tests-write", text, StringComparison.Ordinal);
-        Assert.Equal(string.Empty, error.ToString());
+        Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ListFormatsAlias_Help_ShowsFileFormatsListUsage()
+    public async Task ListFormatsAlias_Help_IsRejectedWithHint()
     {
         var output = new StringWriter();
         var error = new StringWriter();
@@ -379,10 +376,8 @@ public sealed class CliHostTests
         var result = await host.TryRunAsync(["list-formats", "--help"]);
 
         Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        var text = output.ToString();
-        Assert.Contains("renamed-cli.exe fileformats list [--json]", text, StringComparison.Ordinal);
-        Assert.Equal(string.Empty, error.ToString());
+        Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -413,6 +408,34 @@ public sealed class CliHostTests
         Assert.Equal(CliExitCodes.Success, result.ExitCode);
         Assert.Contains("hello from plugin", output.ToString(), StringComparison.Ordinal);
         Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task PluginsList_AsConcatenatedToken_ReturnsInvalidArgumentsWithHint()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = CreateHost(output, error, CreateTestPlugins());
+
+        var result = await host.TryRunAsync(["pluginslist"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Contains("Unknown command 'pluginslist'. Did you mean 'plugins list'?", error.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FileFormatsList_AsConcatenatedToken_ReturnsInvalidArgumentsWithHint()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = CreateHost(output, error, CreateTestPlugins());
+
+        var result = await host.TryRunAsync(["fileformatslist"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
+        Assert.Contains("Unknown command 'fileformatslist'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

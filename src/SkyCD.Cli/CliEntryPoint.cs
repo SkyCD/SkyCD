@@ -12,15 +12,15 @@ public static class CliEntryPoint
             cts.Cancel();
         };
 
-        Console.CancelKeyPress += handler;
+        System.Console.CancelKeyPress += handler;
         try
         {
-            var host = new CliHost(stdout ?? Console.Out, stderr ?? Console.Error);
+            var host = new CliHost(stdout ?? System.Console.Out, stderr ?? System.Console.Error);
             return host.TryRunAsync(args, cts.Token).GetAwaiter().GetResult();
         }
         finally
         {
-            Console.CancelKeyPress -= handler;
+            System.Console.CancelKeyPress -= handler;
         }
     }
 }

@@ -1,12 +1,13 @@
 using System.Reflection;
 using System.Text.Json;
+using CommandDotNet;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Factories;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
@@ -18,6 +19,26 @@ public sealed class CliHost(
     Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null,
     Func<string>? executableNameProvider = null)
 {
+    private sealed record SystemCommandNamespace(
+        string BasePath,
+        bool SupportsExtensions = false,
+        string[]? Subcommands = null);
+
+    private sealed record SystemCommandDefinition(
+        string Path,
+        bool HasSubcommands = false,
+        bool SupportsExtensions = false);
+
+    private static readonly SystemCommandNamespace[] SystemCommandNamespaces =
+    [
+        new("open", SupportsExtensions: true),
+        new("convert", SupportsExtensions: true),
+        new("fileformats", Subcommands: ["list"]),
+        new("plugins", Subcommands: ["list"])
+    ];
+
+    private static readonly SystemCommandDefinition[] SystemCommandDefinitions = BuildSystemCommandDefinitions();
+    private static readonly Lock ConsoleRedirectLock = new();
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         WriteIndented = true
@@ -60,6 +81,24 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.Success };
         }
 
+        if (ShouldHandleWithSystemRunner(normalized) && !RequiresPluginRuntime(normalized))
+        {
+            var lightweightFileFormatManager = new FileFormatManager(Array.Empty<IFileFormatPluginCapability>());
+            IHostCliApi lightweightHostApi = new FileFormatHostCliApi(lightweightFileFormatManager);
+            using var lightweightRegistry = new CliContributionRegistry();
+            lightweightRegistry.Register([]);
+            var exitCode = await ExecuteSystemCommandAsync(
+                normalized,
+                jsonOutput,
+                lightweightFileFormatManager,
+                lightweightHostApi,
+                lightweightRegistry,
+                [],
+                [],
+                cancellationToken);
+            return new CliRunResult { Handled = true, ExitCode = exitCode };
+        }
+
         var pluginDirectories = GetPluginDirectories();
         var discoveredPlugins = await pluginLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
@@ -83,11 +122,10 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.ConfigurationError };
         }
 
-        if (TrySplitBuiltIn(normalized, out var builtInCommand, out var builtInArguments))
+        if (ShouldHandleWithSystemRunner(normalized))
         {
-            var exitCode = await ExecuteBuiltInAsync(
-                builtInCommand,
-                builtInArguments,
+            var exitCode = await ExecuteSystemCommandAsync(
+                normalized,
                 jsonOutput,
                 fileFormatManager,
                 hostApi,
@@ -104,6 +142,12 @@ public sealed class CliHost(
             var pluginArgs = normalized.Skip(consumedTokens).ToArray();
             var exitCode = await ExecutePluginCommandAsync(pluginCommand, pluginArgs, jsonOutput, hostApi, cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
+        }
+
+        if (TryGetConcatenatedSubcommandHint(normalized, out var invalidCommand, out var suggestedCommand))
+        {
+            await stderr.WriteLineAsync($"Unknown command '{invalidCommand}'. Did you mean '{suggestedCommand}'?");
+            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.InvalidArguments };
         }
 
         return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
@@ -170,8 +214,7 @@ public sealed class CliHost(
         }
     }
 
-    private async Task<CliExitCodes> ExecuteBuiltInAsync(
-        string command,
+    private async Task<CliExitCodes> ExecuteSystemCommandAsync(
         IReadOnlyList<string> args,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
@@ -181,18 +224,42 @@ public sealed class CliHost(
         IReadOnlyList<string> pluginDirectories,
         CancellationToken cancellationToken)
     {
+        var runnerArgs = NormalizeSystemRunnerArgs(args);
+        var context = new SkyCD.Cli.Execution.CliCommandExecutionContext(
+            this,
+            jsonOutput,
+            fileFormatManager,
+            hostApi,
+            registry,
+            discoveredPlugins,
+            pluginDirectories,
+            cancellationToken);
+
         try
         {
-            return command switch
+            SkyCD.Cli.Execution.CliCommandExecutionContextScope.Current = context;
+            var appRunner = new AppRunner<SkyCD.Cli.Console.RootCommand>().UseDefaultMiddleware();
+            int exitCode;
+            lock (ConsoleRedirectLock)
             {
-                "open" => await ExecuteOpenAsync(args, jsonOutput, fileFormatManager, hostApi, registry, cancellationToken),
-                "convert" => await ExecuteConvertAsync(args, jsonOutput, fileFormatManager, hostApi, registry, cancellationToken),
-                "fileformats" => await WriteBuiltInHelpAsync("fileformats", jsonOutput),
-                "fileformats list" => await ExecuteListFormatsAsync(jsonOutput, fileFormatManager, pluginDirectories),
-                "plugins" => await WriteBuiltInHelpAsync("plugins", jsonOutput),
-                "plugins list" => await ExecutePluginsListAsync(jsonOutput, registry, fileFormatManager, discoveredPlugins, pluginDirectories),
-                _ => CliExitCodes.InvalidArguments
-            };
+                var previousOut = System.Console.Out;
+                var previousError = System.Console.Error;
+                try
+                {
+                    System.Console.SetOut(TextWriter.Synchronized(stdout));
+                    System.Console.SetError(TextWriter.Synchronized(stderr));
+                    exitCode = appRunner.Run(runnerArgs);
+                }
+                finally
+                {
+                    System.Console.SetOut(previousOut);
+                    System.Console.SetError(previousError);
+                }
+            }
+
+            return Enum.IsDefined(typeof(CliExitCodes), exitCode)
+                ? (CliExitCodes)exitCode
+                : CliExitCodes.InvalidArguments;
         }
         catch (OperationCanceledException)
         {
@@ -204,19 +271,108 @@ public sealed class CliHost(
             await stderr.WriteLineAsync($"Command failed: {exception.Message}");
             return CliExitCodes.CommandFailed;
         }
+        finally
+        {
+            SkyCD.Cli.Execution.CliCommandExecutionContextScope.Current = null;
+        }
     }
 
-    private async Task<CliExitCodes> ExecuteOpenAsync(
-        IReadOnlyList<string> args,
+    private static string[] NormalizeSystemRunnerArgs(IReadOnlyList<string> args)
+    {
+        if (args.Count == 0)
+        {
+            return [];
+        }
+
+        var normalized = new string[args.Count];
+        for (var index = 0; index < args.Count; index++)
+        {
+            normalized[index] = args[index].Equals("/?", StringComparison.OrdinalIgnoreCase)
+                ? "--help"
+                : args[index];
+        }
+
+        return normalized;
+    }
+
+    private static bool ShouldHandleWithSystemRunner(IReadOnlyList<string> args)
+    {
+        if (args.Count == 0)
+        {
+            return false;
+        }
+
+        var first = args[0];
+        return SystemCommandNamespaces.Any(command =>
+                   command.BasePath.Equals(first, StringComparison.OrdinalIgnoreCase))
+               || IsHelpToken(first)
+               || IsVersionToken(first);
+    }
+
+    internal static IReadOnlySet<string> GetSystemCommandPaths()
+    {
+        return SystemCommandDefinitions
+            .Select(static command => command.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    internal static IReadOnlySet<string> GetExtensionPointPaths()
+    {
+        return SystemCommandDefinitions
+            .Where(static command => command.SupportsExtensions || command.HasSubcommands)
+            .Select(static command => command.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresPluginRuntime(IReadOnlyList<string> args)
+    {
+        if (args.Count == 0)
+        {
+            return false;
+        }
+
+        if (args.Any(IsHelpToken))
+        {
+            return false;
+        }
+
+        if (args.Any(IsVersionToken))
+        {
+            return false;
+        }
+
+        var first = args[0];
+        if (first.Equals("open", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (first.Equals("convert", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (first.Equals("fileformats", StringComparison.OrdinalIgnoreCase)
+            && args.Count >= 2
+            && args[1].Equals("list", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return first.Equals("plugins", StringComparison.OrdinalIgnoreCase)
+               && args.Count >= 2
+               && args[1].Equals("list", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal async Task<CliExitCodes> ExecuteOpenAsync(
+        string? file,
+        string? formatId,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
         IHostCliApi hostApi,
         CliContributionRegistry registry,
         CancellationToken cancellationToken)
     {
-        var file = args.FirstOrDefault(static token => !token.StartsWith("--", StringComparison.Ordinal));
-        var formatId = ReadOption(args, "--format");
-
         if (string.IsNullOrWhiteSpace(file))
         {
             await stderr.WriteLineAsync("Missing required argument: <file>");
@@ -239,7 +395,14 @@ public sealed class CliHost(
             FileName = Path.GetFileName(fullPath)
         }, cancellationToken);
 
-        var extensionResult = await ExecuteExtensionsAsync("open", args, jsonOutput, readResult.Payload, hostApi, registry, cancellationToken);
+        var extensionResult = await ExecuteExtensionsAsync(
+            "open",
+            BuildOpenExtensionArguments(file, formatId),
+            jsonOutput,
+            readResult.Payload,
+            hostApi,
+            registry,
+            cancellationToken);
         if (!extensionResult.Success)
         {
             await stderr.WriteLineAsync(extensionResult.Error ?? "Plugin extension failed.");
@@ -264,19 +427,17 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<CliExitCodes> ExecuteConvertAsync(
-        IReadOnlyList<string> args,
+    internal async Task<CliExitCodes> ExecuteConvertAsync(
+        string? inputPath,
+        string? outputPath,
+        string? inputFormat,
+        string? outputFormat,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
         IHostCliApi hostApi,
         CliContributionRegistry registry,
         CancellationToken cancellationToken)
     {
-        var inputPath = ReadOption(args, "--in");
-        var outputPath = ReadOption(args, "--out");
-        var inputFormat = ReadOption(args, "--in-format");
-        var outputFormat = ReadOption(args, "--format");
-
         if (string.IsNullOrWhiteSpace(inputPath) || string.IsNullOrWhiteSpace(outputPath))
         {
             await stderr.WriteLineAsync("Missing required options: --in <file> --out <file>");
@@ -303,7 +464,14 @@ public sealed class CliHost(
             FileName = Path.GetFileName(fullInputPath)
         }, cancellationToken);
 
-        var extensionResult = await ExecuteExtensionsAsync("convert", args, jsonOutput, readResult.Payload, hostApi, registry, cancellationToken);
+        var extensionResult = await ExecuteExtensionsAsync(
+            "convert",
+            BuildConvertExtensionArguments(inputPath, outputPath, inputFormat, outputFormat),
+            jsonOutput,
+            readResult.Payload,
+            hostApi,
+            registry,
+            cancellationToken);
         if (!extensionResult.Success)
         {
             await stderr.WriteLineAsync(extensionResult.Error ?? "Plugin extension failed.");
@@ -343,7 +511,46 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<CliExitCodes> ExecuteListFormatsAsync(
+    private static IReadOnlyList<string> BuildOpenExtensionArguments(string file, string? formatId)
+    {
+        var args = new List<string> { file };
+        if (!string.IsNullOrWhiteSpace(formatId))
+        {
+            args.Add("--format");
+            args.Add(formatId);
+        }
+
+        return args;
+    }
+
+    private static IReadOnlyList<string> BuildConvertExtensionArguments(
+        string inputPath,
+        string outputPath,
+        string? inputFormat,
+        string? outputFormat)
+    {
+        var args = new List<string>
+        {
+            "--in", inputPath,
+            "--out", outputPath
+        };
+
+        if (!string.IsNullOrWhiteSpace(inputFormat))
+        {
+            args.Add("--in-format");
+            args.Add(inputFormat);
+        }
+
+        if (!string.IsNullOrWhiteSpace(outputFormat))
+        {
+            args.Add("--format");
+            args.Add(outputFormat);
+        }
+
+        return args;
+    }
+
+    internal async Task<CliExitCodes> ExecuteListFormatsAsync(
         bool jsonOutput,
         FileFormatManager fileFormatManager,
         IReadOnlyList<string> pluginDirectories)
@@ -376,7 +583,7 @@ public sealed class CliHost(
         return CliExitCodes.Success;
     }
 
-    private async Task<CliExitCodes> ExecutePluginsListAsync(
+    internal async Task<CliExitCodes> ExecutePluginsListAsync(
         bool jsonOutput,
         CliContributionRegistry registry,
         FileFormatManager fileFormatManager,
@@ -809,12 +1016,6 @@ public sealed class CliHost(
             return true;
         }
 
-        if (args.Count == 1 && args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "fileformats list";
-            return true;
-        }
-
         return false;
     }
 
@@ -872,14 +1073,6 @@ public sealed class CliHost(
             return true;
         }
 
-        if (args.Count >= 2 &&
-            args[0].Equals("list-formats", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(1)))
-        {
-            command = "fileformats list";
-            return true;
-        }
-
         return false;
     }
 
@@ -901,6 +1094,52 @@ public sealed class CliHost(
         {
             command = "fileformats";
             return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetConcatenatedSubcommandHint(
+        IReadOnlyList<string> args,
+        out string invalidCommand,
+        out string suggestedCommand)
+    {
+        invalidCommand = string.Empty;
+        suggestedCommand = string.Empty;
+
+        if (args.Count == 0)
+        {
+            return false;
+        }
+
+        var first = args[0];
+        if (first.Equals("list-formats", StringComparison.OrdinalIgnoreCase))
+        {
+            invalidCommand = first;
+            suggestedCommand = "fileformats list";
+            return true;
+        }
+
+        if (args.Count != 1)
+        {
+            return false;
+        }
+
+        var candidate = first;
+        foreach (var systemNamespace in SystemCommandNamespaces.Where(static ns => ns.Subcommands is { Length: > 0 }))
+        {
+            foreach (var subcommand in systemNamespace.Subcommands!)
+            {
+                var concatenated = $"{systemNamespace.BasePath}{subcommand}";
+                if (!candidate.Equals(concatenated, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                invalidCommand = candidate;
+                suggestedCommand = $"{systemNamespace.BasePath} {subcommand}";
+                return true;
+            }
         }
 
         return false;
@@ -997,6 +1236,30 @@ public sealed class CliHost(
         return executableName;
     }
 
+    private static SystemCommandDefinition[] BuildSystemCommandDefinitions()
+    {
+        var definitions = new List<SystemCommandDefinition>();
+
+        foreach (var systemNamespace in SystemCommandNamespaces)
+        {
+            var hasSubcommands = systemNamespace.Subcommands is { Length: > 0 };
+            definitions.Add(new SystemCommandDefinition(
+                systemNamespace.BasePath,
+                HasSubcommands: hasSubcommands,
+                SupportsExtensions: systemNamespace.SupportsExtensions));
+
+            if (!hasSubcommands)
+            {
+                continue;
+            }
+
+            definitions.AddRange(systemNamespace.Subcommands!.Select(subcommand =>
+                new SystemCommandDefinition($"{systemNamespace.BasePath} {subcommand}")));
+        }
+
+        return definitions.ToArray();
+    }
+
     private static string ResolveFormatId(
         string? explicitFormatId,
         string path,
@@ -1027,21 +1290,6 @@ public sealed class CliHost(
         }
 
         return byExtension.FormatId;
-    }
-
-    private static string? ReadOption(IReadOnlyList<string> args, string name)
-    {
-        for (var index = 0; index < args.Count - 1; index++)
-        {
-            if (!args[index].Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            return args[index + 1];
-        }
-
-        return null;
     }
 
     private static PluginServiceProvider BuildGlobalServiceProvider(
