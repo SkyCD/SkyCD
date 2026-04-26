@@ -1,10 +1,9 @@
 using SharpCompress.Archives.SevenZip;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.SevenZip;
 
-public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
 {
     private readonly ISevenZipEntryReader _entryReader;
 
@@ -17,28 +16,14 @@ public sealed class SevenZipArchiveIndexPlugin : IPlugin, IFileFormatPluginCapab
         _entryReader = entryReader;
     }
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.7z",
-        "7z Index Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that indexes 7z archive entries.");
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-7z",
             "7z Archive Index",
             [".7z"],
             CanRead: true,
             CanWrite: false,
-            MimeType: "application/x-7z-compressed")
-    ];
-
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+            MimeType: "application/x-7z-compressed");
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

@@ -1,6 +1,4 @@
 using SkyCD.Plugin.Abstractions.Capabilities;
-using SkyCD.Plugin.Abstractions.Lifecycle;
-
 namespace SkyCD.Plugin.Runtime.Discovery;
 
 /// <summary>
@@ -8,7 +6,19 @@ namespace SkyCD.Plugin.Runtime.Discovery;
 /// </summary>
 public sealed class DiscoveredPlugin
 {
-    public required IPlugin Plugin { get; init; }
+    public required string Id { get; init; }
+
+    public required string Name { get; init; }
+
+    public required Version Version { get; init; }
+
+    public required Version MinHostVersion { get; init; }
+
+    public Version? MaxHostVersion { get; init; }
+
+    public string Description { get; init; } = string.Empty;
+
+    public required string FileName { get; init; }
 
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
 }

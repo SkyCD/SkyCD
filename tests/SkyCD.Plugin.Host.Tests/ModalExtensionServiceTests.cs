@@ -1,8 +1,5 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
-using SkyCD.Plugin.Abstractions.Lifecycle;
-using SkyCD.Plugin.Host;
 using SkyCD.Plugin.Host.Modal;
-using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -11,8 +8,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsTypedPayload_WhenModalSucceeds()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -31,8 +28,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsError_WhenInputTypeMismatches()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -50,8 +47,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsError_WhenPermissionMissing()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -68,8 +65,8 @@ public class ModalExtensionServiceTests
     [Fact]
     public async Task OpenAsync_ReturnsCanceledResult_WhenTimeoutExpires()
     {
-        var pluginCatalog = CreateCatalog(new SlowModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var plugins = CreateCatalog(new SlowModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var result = await service.OpenAsync(
             new ModalOpenRequest
@@ -87,8 +84,8 @@ public class ModalExtensionServiceTests
     public async Task OpenAsync_RejectsReentrantOpen_WhenModalDoesNotAllowIt()
     {
         var plugin = new NonReentrantControlledModalPlugin();
-        var pluginCatalog = CreateCatalog(plugin);
-        var service = new ModalExtensionService(pluginCatalog);
+        var plugins = CreateCatalog(plugin);
+        var service = new ModalExtensionManager(plugins);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var firstOpen = service.OpenAsync(
@@ -120,41 +117,27 @@ public class ModalExtensionServiceTests
     [Fact]
     public void GetModalRegistrations_ProjectsModalMetadata()
     {
-        var pluginCatalog = CreateCatalog(new EchoModalPlugin());
-        var service = new ModalExtensionService(pluginCatalog);
+        var plugins = CreateCatalog(new EchoModalPlugin());
+        var service = new ModalExtensionManager(plugins);
 
         var registrations = service.GetModalRegistrations();
         var modal = Assert.Single(registrations);
 
-        Assert.Equal("tests.modal.echo", modal.PluginId);
+        Assert.Equal(typeof(EchoModalPlugin).Assembly.GetName().Name, modal.PluginId);
         Assert.Equal("sample.modal.echo", modal.ModalId);
         Assert.Equal("sample.modal.echo.input", modal.InputTypeId);
         Assert.Equal("sample.modal.echo.output", modal.OutputTypeId);
         Assert.True(modal.IsBlocking);
     }
 
-    private static PluginCatalog CreateCatalog(params IModalPluginCapability[] capabilities)
+    private static IReadOnlyCollection<IModalPluginCapability> CreateCatalog(params IModalPluginCapability[] capabilities)
     {
-        var catalog = new PluginCatalog();
-        catalog.SetPlugins(capabilities.Select(capability => new DiscoveredPlugin
-        {
-            Plugin = (IPlugin)capability,
-            Capabilities = [capability]
-        }));
-        return catalog;
+        return capabilities.ToList();
     }
 
-    private sealed class EchoModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class EchoModalPlugin : IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.echo", "Echo Modal", new Version(1, 0, 0), new Version(3, 0, 0));
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
+        public ModalDescriptor Modal =>
             new ModalDescriptor(
                 "sample.modal.echo",
                 "Echo",
@@ -164,8 +147,7 @@ public class ModalExtensionServiceTests
                 InputContract: new ModalPayloadContract("sample.modal.echo.input", IsRequired: true),
                 OutputContract: new ModalPayloadContract("sample.modal.echo.output", IsRequired: false),
                 IsBlocking: true,
-                AllowReentry: false)
-        ];
+                AllowReentry: false);
 
         public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {
@@ -177,19 +159,9 @@ public class ModalExtensionServiceTests
         }
     }
 
-    private sealed class SlowModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class SlowModalPlugin : IModalPluginCapability
     {
-        public PluginDescriptor Descriptor => new("tests.modal.slow", "Slow Modal", new Version(1, 0, 0), new Version(3, 0, 0));
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor("sample.modal.slow", "Slow", 400, 260)
-        ];
+        public ModalDescriptor Modal => new("sample.modal.slow", "Slow", 400, 260);
 
         public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {
@@ -198,25 +170,16 @@ public class ModalExtensionServiceTests
         }
     }
 
-    private sealed class NonReentrantControlledModalPlugin : IPlugin, IModalPluginCapability
+    private sealed class NonReentrantControlledModalPlugin : IModalPluginCapability
     {
         private readonly TaskCompletionSource _firstOpenStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public PluginDescriptor Descriptor => new("tests.modal.locked", "Locked Modal", new Version(1, 0, 0), new Version(3, 0, 0));
         public Task FirstOpenStarted => _firstOpenStarted.Task;
-
-        public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         public void AllowCompletion() => _allowCompletion.TrySetResult();
 
-        public IReadOnlyCollection<ModalDescriptor> GetModals() =>
-        [
-            new ModalDescriptor("sample.modal.locked", "Locked", 420, 300, AllowReentry: false)
-        ];
+        public ModalDescriptor Modal => new("sample.modal.locked", "Locked", 420, 300, AllowReentry: false);
 
         public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
         {

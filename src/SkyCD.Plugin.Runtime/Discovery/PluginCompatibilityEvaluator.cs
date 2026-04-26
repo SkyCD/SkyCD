@@ -1,5 +1,3 @@
-using SkyCD.Plugin.Abstractions.Lifecycle;
-
 namespace SkyCD.Plugin.Runtime.Discovery;
 
 /// <summary>
@@ -7,8 +5,9 @@ namespace SkyCD.Plugin.Runtime.Discovery;
 /// </summary>
 public static class PluginCompatibilityEvaluator
 {
-    public static bool IsCompatible(PluginDescriptor descriptor, Version hostVersion)
+    public static bool IsCompatible(Version minHostVersion, Version? maxHostVersion, Version hostVersion)
     {
-        return hostVersion >= descriptor.MinHostVersion;
+        return hostVersion >= minHostVersion &&
+               (maxHostVersion is null || hostVersion <= maxHostVersion);
     }
 }

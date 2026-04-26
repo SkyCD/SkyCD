@@ -11,8 +11,8 @@ Applies to `SkyCD.Plugin.Abstractions` and runtime discovery behavior.
 
 ## Host Compatibility
 - Every plugin must declare:
-  - `PluginDescriptor.Version`
-  - `PluginDescriptor.MinHostVersion`
+  - `IPlugin.Version`
+  - `IPlugin.MinHostVersion`
 - Runtime compatibility check:
   - plugin is loadable only if `HostVersion >= MinHostVersion`
 

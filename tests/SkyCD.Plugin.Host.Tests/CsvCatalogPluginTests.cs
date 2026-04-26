@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Csv;
 
@@ -13,7 +13,7 @@ public class CsvCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesCsvPluginMetadata()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -25,7 +25,7 @@ public class CsvCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_PreservesHierarchyAndSizeFields()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Csv", "catalog-hierarchy.csv");
 
         await using var source = File.OpenRead(fixturePath);
@@ -72,7 +72,7 @@ public class CsvCatalogPluginTests
     [Fact]
     public async Task WriteAsync_AcceptsJsonArrayPayload()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var payload = JsonSerializer.Deserialize<JsonElement>(
             """
             [
@@ -95,15 +95,19 @@ public class CsvCatalogPluginTests
         Assert.Contains("11,10,file,readme.txt,15", text);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new CsvCatalogPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.csv",
+                Name = "CsvCatalogPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

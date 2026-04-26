@@ -33,6 +33,7 @@
   "failOnUnknownLicense": true,
   "allowedUnknownLicensePackages": [
     "Avalonia.Angle.Windows.Natives",
-    "AvaloniaUI.DiagnosticsSupport"
+    "AvaloniaUI.DiagnosticsSupport",
+    "CommandDotNet"
   ]
 }

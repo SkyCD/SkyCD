@@ -24,7 +24,7 @@ sealed class Program
             stderr: CliStdIo.CreateErrorWriter());
         if (cliResult.Handled)
         {
-            Environment.ExitCode = cliResult.ExitCode;
+            Environment.ExitCode = (int)cliResult.ExitCode;
             return;
         }
 
@@ -34,9 +34,6 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-#if DEBUG
-            .WithDeveloperTools()
-#endif
             .WithInterFont()
             .LogToTrace();
 }

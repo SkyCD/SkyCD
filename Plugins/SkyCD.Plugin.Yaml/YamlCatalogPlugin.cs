@@ -1,12 +1,11 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace SkyCD.Plugin.Yaml;
 
-public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
@@ -14,28 +13,14 @@ public sealed class YamlCatalogPlugin : IPlugin, IFileFormatPluginCapability
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .Build();
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.yaml",
-        "YAML Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes YAML file format support.");
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-yaml",
             "SkyCD YAML",
             [".yaml", ".yml"],
             CanRead: true,
             CanWrite: true,
-            MimeType: "application/yaml")
-    ];
-
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+            MimeType: "application/yaml");
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

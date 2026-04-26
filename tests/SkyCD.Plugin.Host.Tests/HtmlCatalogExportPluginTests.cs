@@ -1,7 +1,7 @@
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host;
-using SkyCD.Plugin.Host.FileFormats;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Html;
 
@@ -12,7 +12,7 @@ public class HtmlCatalogExportPluginTests
     [Fact]
     public void SaveFormats_IncludeHtml_ButOpenFormatsDoNot()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -24,10 +24,10 @@ public class HtmlCatalogExportPluginTests
     [Fact]
     public async Task ReadAsync_IsBlocked_ForWriteOnlyHtmlFormat()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes("<html></html>"));
 
-        var exception = await Assert.ThrowsAsync<FileFormatRoutingException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-html",
             Source = source
@@ -39,7 +39,7 @@ public class HtmlCatalogExportPluginTests
     [Fact]
     public async Task WriteAsync_ExportsNavigationStructure_WithEscapedNames()
     {
-        var service = new FileFormatRoutingService(CreateCatalog());
+        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         var payload = new List<Dictionary<string, object?>>
         {
             new(StringComparer.OrdinalIgnoreCase)
@@ -76,15 +76,19 @@ public class HtmlCatalogExportPluginTests
         Assert.Contains("track &amp; one.mp3", html);
     }
 
-    private static PluginCatalog CreateCatalog()
+    private static PluginManager CreateCatalog()
     {
         var plugin = new HtmlCatalogExportPlugin();
-        var catalog = new PluginCatalog();
+        var catalog = PluginManagerTestFactory.Create();
         catalog.SetPlugins(
         [
             new DiscoveredPlugin
             {
-                Plugin = plugin,
+                Id = "tests.html",
+                Name = "HtmlCatalogExportPluginTests",
+                Version = new Version(1, 0, 0),
+                MinHostVersion = new Version(3, 0, 0),
+                FileName = "tests.dll",
                 Capabilities = [plugin]
             }
         ]);

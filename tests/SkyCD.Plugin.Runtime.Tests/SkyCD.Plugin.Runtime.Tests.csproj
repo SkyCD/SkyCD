@@ -23,4 +23,16 @@
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIdAttribute">
+      <_Parameter1>tests.runtime.assembly-plugin</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MinHostVersionAttribute">
+      <_Parameter1>3.0.0</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MaxHostVersionAttribute">
+      <_Parameter1>3.0.0</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

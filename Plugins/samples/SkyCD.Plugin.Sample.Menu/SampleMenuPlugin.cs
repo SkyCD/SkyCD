@@ -1,22 +1,9 @@
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Sample.Menu;
 
-public sealed class SampleMenuPlugin : IPlugin, IMenuPluginCapability
+public sealed class SampleMenuPlugin : IMenuPluginCapability
 {
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.sample.menu",
-        "Sample Menu Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example menu contribution plugin.");
-
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
         new MenuContribution("sample.menu.notify", "Notification", "Tools", Order: 100)

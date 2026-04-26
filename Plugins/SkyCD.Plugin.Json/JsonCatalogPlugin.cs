@@ -1,46 +1,21 @@
 using System.Text;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Lifecycle;
 
 namespace SkyCD.Plugin.Json;
 
-public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
+public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
-    public PluginDescriptor Descriptor => new(
-        "skycd.plugin.json",
-        "JSON Format Plugin",
-        new Version(1, 0, 0),
-        new Version(3, 0, 0),
-        "Example plugin that exposes JSON file format support.");
-
-    public IReadOnlyCollection<FileFormatDescriptor> SupportedFormats =>
-    [
+    public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
             "skycd-json",
             "SkyCD JSON",
             [".json"],
             CanRead: true,
             CanWrite: true,
-            MimeType: "application/json")
-    ];
-
-    public ValueTask OnLoadAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask OnInitializeAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask OnActivateAsync(PluginLifecycleContext context, CancellationToken cancellationToken = default)
-    {
-        return ValueTask.CompletedTask;
-    }
+            MimeType: "application/json");
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {
@@ -131,8 +106,4 @@ public sealed class JsonCatalogPlugin : IPlugin, IFileFormatPluginCapability
         }
     }
 
-    public ValueTask DisposeAsync()
-    {
-        return ValueTask.CompletedTask;
-    }
 }

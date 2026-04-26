@@ -4,5 +4,5 @@ public sealed class CliRunResult
 {
     public required bool Handled { get; init; }
 
-    public int ExitCode { get; init; }
+    public CliExitCodes ExitCode { get; init; }
 }
