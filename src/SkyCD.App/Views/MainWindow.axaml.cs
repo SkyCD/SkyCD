@@ -8,6 +8,7 @@ using SkyCD.App.Services;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -27,6 +28,17 @@ public partial class MainWindow : Window
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
+
+    public MainWindow()
+        : this(
+            new AppOptionsStore(),
+            new PluginManager(
+                NullLogger<PluginManager>.Instance,
+                new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
+                new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory()),
+            new FileFormatManager([]))
+    {
+    }
 
     public MainWindow(
         AppOptionsStore appOptionsStore,
