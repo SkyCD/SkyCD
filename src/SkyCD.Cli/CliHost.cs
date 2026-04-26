@@ -19,6 +19,8 @@ public sealed class CliHost(
     Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null,
     Func<string>? executableNameProvider = null)
 {
+    private const string DeprecatedListFormatsAlias = "list-formats";
+
     private sealed record SystemCommandNamespace(
         string BasePath,
         bool SupportsExtensions = false,
@@ -29,15 +31,27 @@ public sealed class CliHost(
         bool HasSubcommands = false,
         bool SupportsExtensions = false);
 
-    private static readonly SystemCommandNamespace[] SystemCommandNamespaces =
+    private static readonly string[] ExtensionPointBaseCommands =
     [
-        new("open", SupportsExtensions: true),
-        new("convert", SupportsExtensions: true),
-        new("fileformats", Subcommands: ["list"]),
-        new("plugins", Subcommands: ["list"])
+        "open",
+        "convert"
     ];
 
+    private static readonly Dictionary<string, string> DeprecatedCommandAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [DeprecatedListFormatsAlias] = "fileformats list"
+    };
+
+    private static readonly SystemCommandNamespace[] SystemCommandNamespaces = DiscoverSystemCommandNamespaces();
+
     private static readonly SystemCommandDefinition[] SystemCommandDefinitions = BuildSystemCommandDefinitions();
+    private static readonly HashSet<string> SystemCommandPathSet = SystemCommandDefinitions
+        .Select(static definition => definition.Path)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private static readonly int MaxSystemCommandTokenCount = SystemCommandDefinitions
+        .Select(static definition => definition.Path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length)
+        .DefaultIfEmpty(1)
+        .Max();
     private static readonly Lock ConsoleRedirectLock = new();
     private readonly JsonSerializerOptions jsonOptions = new()
     {
@@ -108,7 +122,7 @@ public sealed class CliHost(
             serviceCollectionFactory);
         using var _ = serviceProvider;
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
-        IHostCliApi hostApi = new FileFormatHostCliApi(fileFormatManager);
+        var hostApi = serviceProvider.GetRequiredService<IHostCliApi>();
         using var registry = new CliContributionRegistry();
         registry.Register(discoveredPlugins);
 
@@ -341,27 +355,31 @@ public sealed class CliHost(
             return false;
         }
 
-        var first = args[0];
-        if (first.Equals("open", StringComparison.OrdinalIgnoreCase))
+        if (!TryFindMatchedSystemCommandPath(args, out var matchedCommandPath, out var consumedTokens))
+        {
+            return false;
+        }
+
+        var owningNamespace = SystemCommandNamespaces.FirstOrDefault(systemNamespace =>
+            systemNamespace.BasePath.Equals(
+                matchedCommandPath.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[0],
+                StringComparison.OrdinalIgnoreCase));
+
+        if (owningNamespace is not null
+            && owningNamespace.Subcommands is { Length: > 0 }
+            && consumedTokens == 1)
+        {
+            return false;
+        }
+
+        if (SystemCommandDefinitions.Any(definition =>
+                definition.Path.Equals(matchedCommandPath, StringComparison.OrdinalIgnoreCase)
+                && definition.SupportsExtensions))
         {
             return true;
         }
 
-        if (first.Equals("convert", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (first.Equals("fileformats", StringComparison.OrdinalIgnoreCase)
-            && args.Count >= 2
-            && args[1].Equals("list", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return first.Equals("plugins", StringComparison.OrdinalIgnoreCase)
-               && args.Count >= 2
-               && args[1].Equals("list", StringComparison.OrdinalIgnoreCase);
+        return true;
     }
 
     internal async Task<CliExitCodes> ExecuteOpenAsync(
@@ -1023,53 +1041,21 @@ public sealed class CliHost(
     {
         command = string.Empty;
 
-        if (args.Count >= 2 &&
-            args[0].Equals("open", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(1)))
+        foreach (var definition in SystemCommandDefinitions.OrderByDescending(static item =>
+                     item.Path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length))
         {
-            command = "open";
-            return true;
-        }
+            var commandTokens = definition.Path.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (args.Count <= commandTokens.Length || !StartsWithTokens(args, commandTokens))
+            {
+                continue;
+            }
 
-        if (args.Count >= 2 &&
-            args[0].Equals("convert", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(1)))
-        {
-            command = "convert";
-            return true;
-        }
+            if (!ContainsOnlyHelpTokens(args.Skip(commandTokens.Length)))
+            {
+                continue;
+            }
 
-        if (args.Count >= 2 &&
-            args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(1)))
-        {
-            command = "plugins";
-            return true;
-        }
-
-        if (args.Count >= 3 &&
-            args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase) &&
-            args[1].Equals("list", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(2)))
-        {
-            command = "plugins list";
-            return true;
-        }
-
-        if (args.Count >= 2 &&
-            args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(1)))
-        {
-            command = "fileformats";
-            return true;
-        }
-
-        if (args.Count >= 3 &&
-            args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase) &&
-            args[1].Equals("list", StringComparison.OrdinalIgnoreCase) &&
-            ContainsOnlyHelpTokens(args.Skip(2)))
-        {
-            command = "fileformats list";
+            command = definition.Path;
             return true;
         }
 
@@ -1084,15 +1070,12 @@ public sealed class CliHost(
             return false;
         }
 
-        if (args[0].Equals("plugins", StringComparison.OrdinalIgnoreCase))
+        var matchingNamespace = SystemCommandNamespaces.FirstOrDefault(systemNamespace =>
+            systemNamespace.Subcommands is { Length: > 0 }
+            && systemNamespace.BasePath.Equals(args[0], StringComparison.OrdinalIgnoreCase));
+        if (matchingNamespace is not null)
         {
-            command = "plugins";
-            return true;
-        }
-
-        if (args[0].Equals("fileformats", StringComparison.OrdinalIgnoreCase))
-        {
-            command = "fileformats";
+            command = matchingNamespace.BasePath;
             return true;
         }
 
@@ -1113,10 +1096,10 @@ public sealed class CliHost(
         }
 
         var first = args[0];
-        if (first.Equals("list-formats", StringComparison.OrdinalIgnoreCase))
+        if (DeprecatedCommandAliases.TryGetValue(first, out var deprecatedAliasTarget))
         {
             invalidCommand = first;
-            suggestedCommand = "fileformats list";
+            suggestedCommand = deprecatedAliasTarget;
             return true;
         }
 
@@ -1236,6 +1219,113 @@ public sealed class CliHost(
         return executableName;
     }
 
+    private static bool TryFindMatchedSystemCommandPath(
+        IReadOnlyList<string> args,
+        out string matchedCommandPath,
+        out int consumedTokens)
+    {
+        matchedCommandPath = string.Empty;
+        consumedTokens = 0;
+
+        if (args.Count == 0)
+        {
+            return false;
+        }
+
+        var maxTokens = Math.Min(args.Count, MaxSystemCommandTokenCount);
+        for (var tokenCount = maxTokens; tokenCount >= 1; tokenCount--)
+        {
+            var candidate = string.Join(' ', args.Take(tokenCount));
+            if (!SystemCommandPathSet.Contains(candidate))
+            {
+                continue;
+            }
+
+            matchedCommandPath = candidate;
+            consumedTokens = tokenCount;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool StartsWithTokens(IReadOnlyList<string> args, IReadOnlyList<string> expectedPrefix)
+    {
+        if (args.Count < expectedPrefix.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < expectedPrefix.Count; index++)
+        {
+            if (!args[index].Equals(expectedPrefix[index], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static SystemCommandNamespace[] DiscoverSystemCommandNamespaces()
+    {
+        var rootCommandType = typeof(SkyCD.Cli.Console.RootCommand);
+        var discoveredNamespaces = new List<SystemCommandNamespace>();
+
+        foreach (var subcommandType in GetSubcommandTypes(rootCommandType))
+        {
+            var basePath = GetDeclaredCommandName(subcommandType);
+            if (string.IsNullOrWhiteSpace(basePath))
+            {
+                continue;
+            }
+
+            var subcommands = GetSubcommandTypes(subcommandType)
+                .Select(GetDeclaredCommandName)
+                .Where(static name => !string.IsNullOrWhiteSpace(name))
+                .ToArray()!;
+
+            discoveredNamespaces.Add(new SystemCommandNamespace(
+                basePath,
+                SupportsExtensions: ExtensionPointBaseCommands.Contains(basePath, StringComparer.OrdinalIgnoreCase),
+                Subcommands: subcommands.Length == 0 ? null : subcommands));
+        }
+
+        return discoveredNamespaces
+            .OrderBy(static systemNamespace => systemNamespace.BasePath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IEnumerable<Type> GetSubcommandTypes(Type commandType)
+    {
+        return commandType
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(static property => property.GetCustomAttribute<SubcommandAttribute>() is not null)
+            .Select(static property => property.PropertyType);
+    }
+
+    private static string GetDeclaredCommandName(Type commandType)
+    {
+        var attributeData = commandType.CustomAttributes.FirstOrDefault(attribute =>
+            attribute.AttributeType == typeof(CommandAttribute));
+        if (attributeData is null)
+        {
+            return string.Empty;
+        }
+
+        if (attributeData.ConstructorArguments.Count > 0
+            && attributeData.ConstructorArguments[0].ArgumentType == typeof(string)
+            && attributeData.ConstructorArguments[0].Value is string ctorValue
+            && !string.IsNullOrWhiteSpace(ctorValue))
+        {
+            return ctorValue.Trim();
+        }
+
+        var commandAttribute = commandType.GetCustomAttribute<CommandAttribute>();
+        var namedName = commandAttribute?.Name;
+        return string.IsNullOrWhiteSpace(namedName) ? string.Empty : namedName.Trim();
+    }
+
     private static SystemCommandDefinition[] BuildSystemCommandDefinitions()
     {
         var definitions = new List<SystemCommandDefinition>();
@@ -1299,6 +1389,7 @@ public sealed class CliHost(
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
         IServiceCollection mergedServices = serviceCollectionFactory.BuildCommonServiceCollection();
+        mergedServices.AddSingleton<IHostCliApi, FileFormatHostCliApi>();
 
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
