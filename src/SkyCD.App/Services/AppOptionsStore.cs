@@ -14,9 +14,9 @@ public sealed class AppOptionsStore : IDisposable
     private readonly bool ownsLocalStore;
     private readonly string legacyOptionsFilePath;
 
-    public AppOptionsStore(CouchbaseLocalStore? localStore = null, string? appDataRoot = null)
+    public AppOptionsStore(CouchbaseLocalStore? localStore = null)
     {
-        this.localStore = localStore ?? new CouchbaseLocalStore(appDataRoot);
+        this.localStore = localStore ?? new CouchbaseLocalStore();
         ownsLocalStore = localStore is null;
         legacyOptionsFilePath = Path.Combine(this.localStore.DatabaseDirectory, "options.json");
     }

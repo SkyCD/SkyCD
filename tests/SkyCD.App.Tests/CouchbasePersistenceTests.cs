@@ -6,11 +6,20 @@ namespace SkyCD.App.Tests;
 public sealed class CouchbasePersistenceTests : IDisposable
 {
     private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-cblite-{Guid.NewGuid():N}");
+    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
+    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+
+    public CouchbasePersistenceTests()
+    {
+        Directory.CreateDirectory(appDataRoot);
+        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
+    }
 
     [Fact]
     public void BrowserDataStore_LoadsSeededCatalogData()
     {
-        using var localStore = new CouchbaseLocalStore(appDataRoot);
+        using var localStore = new CouchbaseLocalStore();
         var dataStore = new CouchbaseLiteBrowserDataStore(localStore);
 
         var roots = dataStore.GetTreeNodes();
@@ -42,12 +51,12 @@ public sealed class CouchbasePersistenceTests : IDisposable
             OptionsTabIndex = 2
         };
 
-        using (var writerStore = new AppOptionsStore(appDataRoot: appDataRoot))
+        using (var writerStore = new AppOptionsStore())
         {
             writerStore.Save(expected);
         }
 
-        using var readerStore = new AppOptionsStore(appDataRoot: appDataRoot);
+        using var readerStore = new AppOptionsStore();
         var actual = readerStore.Load();
 
         Assert.Equal(expected.WindowLeft, actual.WindowLeft);
@@ -67,6 +76,9 @@ public sealed class CouchbasePersistenceTests : IDisposable
 
     public void Dispose()
     {
+        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
+
         if (Directory.Exists(appDataRoot))
         {
             try
