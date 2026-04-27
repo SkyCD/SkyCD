@@ -25,7 +25,7 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
         {
             using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
             var text = await reader.ReadToEndAsync(cancellationToken);
-            var model = Tomlyn.Toml.ToModel(text) as TomlTable;
+            var model = TomlSerializer.Deserialize<TomlTable>(text);
             if (model is null)
             {
                 return new FileFormatReadResult { Success = false, Error = "Invalid TOML document." };
@@ -105,7 +105,7 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
 
             table["nodes"] = array;
 
-            var text = Tomlyn.Toml.FromModel(table);
+            var text = TomlSerializer.Serialize(table);
             await using var writer = new StreamWriter(request.Target, new UTF8Encoding(false), leaveOpen: true);
             await writer.WriteAsync(text.AsMemory(), cancellationToken);
             await writer.FlushAsync(cancellationToken);
