@@ -31,7 +31,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
         : this(
-            new AppOptionsStore(),
+            new AppOptionsStore(new CouchbaseLocalStore()),
             new PluginManager(
                 NullLogger<PluginManager>.Instance,
                 new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),

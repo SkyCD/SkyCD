@@ -6,15 +6,13 @@ using System.Linq;
 
 namespace SkyCD.App.Services;
 
-public sealed class AppOptionsStore : IDisposable
+public sealed class AppOptionsStore
 {
     private readonly CouchbaseLocalStore localStore;
-    private readonly bool ownsLocalStore;
 
-    public AppOptionsStore(CouchbaseLocalStore? localStore = null)
+    public AppOptionsStore(CouchbaseLocalStore localStore)
     {
-        this.localStore = localStore ?? new CouchbaseLocalStore();
-        ownsLocalStore = localStore is null;
+        this.localStore = localStore;
     }
 
     public AppOptions Load()
@@ -55,14 +53,6 @@ public sealed class AppOptionsStore : IDisposable
         SetNullableDouble(document, "treePaneWidth", options.TreePaneWidth);
 
         settingsCollection.Save(document);
-    }
-
-    public void Dispose()
-    {
-        if (ownsLocalStore)
-        {
-            localStore.Dispose();
-        }
     }
 
     private static AppOptions ToAppOptions(Document document)

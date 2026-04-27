@@ -51,12 +51,14 @@ public sealed class CouchbasePersistenceTests : IDisposable
             OptionsTabIndex = 2
         };
 
-        using (var writerStore = new AppOptionsStore())
+        using (var writerLocalStore = new CouchbaseLocalStore())
         {
+            var writerStore = new AppOptionsStore(writerLocalStore);
             writerStore.Save(expected);
         }
 
-        using var readerStore = new AppOptionsStore();
+        using var readerLocalStore = new CouchbaseLocalStore();
+        var readerStore = new AppOptionsStore(readerLocalStore);
         var actual = readerStore.Load();
 
         Assert.Equal(expected.WindowLeft, actual.WindowLeft);
