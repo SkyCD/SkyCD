@@ -20,7 +20,13 @@ namespace SkyCD.App;
 
 public partial class App : Avalonia.Application
 {
-    private readonly SqliteBrowserDataStore browserDataStore = new();
+    private readonly CouchbaseLocalStore localStore = new();
+    private readonly CouchbaseLiteBrowserDataStore browserDataStore;
+
+    public App()
+    {
+        browserDataStore = new CouchbaseLiteBrowserDataStore(localStore);
+    }
 
     public override void Initialize()
     {
@@ -31,12 +37,13 @@ public partial class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var appOptionsStore = new AppOptionsStore();
+            var appOptionsStore = new AppOptionsStore(localStore);
             var pluginServices = CreatePluginServices(appOptionsStore);
 
             desktop.Exit += (_, _) =>
             {
-                browserDataStore.Dispose();
+                appOptionsStore.Dispose();
+                localStore.Dispose();
                 pluginServices.ServiceProvider.Dispose();
             };
             desktop.MainWindow = new MainWindow(

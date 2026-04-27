@@ -1,0 +1,82 @@
+using SkyCD.App.Models;
+using SkyCD.App.Services;
+
+namespace SkyCD.App.Tests;
+
+public sealed class CouchbasePersistenceTests : IDisposable
+{
+    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-cblite-{Guid.NewGuid():N}");
+
+    [Fact]
+    public void BrowserDataStore_LoadsSeededCatalogData()
+    {
+        using var localStore = new CouchbaseLocalStore(appDataRoot);
+        var dataStore = new CouchbaseLiteBrowserDataStore(localStore);
+
+        var roots = dataStore.GetTreeNodes();
+        Assert.Single(roots);
+        Assert.Equal("Library", roots[0].Title);
+
+        var items = dataStore.GetBrowserItems("movies");
+        Assert.Equal(2, items.Count);
+        Assert.Contains(items, static item => item.Name == "Interstellar.mkv");
+    }
+
+    [Fact]
+    public void AppOptionsStore_PersistsOptionsAcrossInstances()
+    {
+        var expected = new AppOptions
+        {
+            WindowLeft = 25,
+            WindowTop = 35,
+            WindowWidth = 1200,
+            WindowHeight = 850,
+            WindowState = "Maximized",
+            TreePaneWidth = 320,
+            IsStatusBarVisible = false,
+            BrowserViewMode = "Tiles",
+            BrowserSortMode = "Type",
+            PluginPath = @"C:\plugins\custom",
+            Language = "Lithuanian",
+            DisabledPluginIds = ["plugin.a", "plugin.b"],
+            OptionsTabIndex = 2
+        };
+
+        using (var writerStore = new AppOptionsStore(appDataRoot: appDataRoot))
+        {
+            writerStore.Save(expected);
+        }
+
+        using var readerStore = new AppOptionsStore(appDataRoot: appDataRoot);
+        var actual = readerStore.Load();
+
+        Assert.Equal(expected.WindowLeft, actual.WindowLeft);
+        Assert.Equal(expected.WindowTop, actual.WindowTop);
+        Assert.Equal(expected.WindowWidth, actual.WindowWidth);
+        Assert.Equal(expected.WindowHeight, actual.WindowHeight);
+        Assert.Equal(expected.WindowState, actual.WindowState);
+        Assert.Equal(expected.TreePaneWidth, actual.TreePaneWidth);
+        Assert.Equal(expected.IsStatusBarVisible, actual.IsStatusBarVisible);
+        Assert.Equal(expected.BrowserViewMode, actual.BrowserViewMode);
+        Assert.Equal(expected.BrowserSortMode, actual.BrowserSortMode);
+        Assert.Equal(expected.PluginPath, actual.PluginPath);
+        Assert.Equal(expected.Language, actual.Language);
+        Assert.Equal(expected.DisabledPluginIds, actual.DisabledPluginIds);
+        Assert.Equal(expected.OptionsTabIndex, actual.OptionsTabIndex);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(appDataRoot))
+        {
+            try
+            {
+                Directory.Delete(appDataRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Couchbase Lite can release file handles slightly after dispose on some systems.
+            }
+        }
+    }
+}

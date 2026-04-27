@@ -36,7 +36,8 @@
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+    
+    <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
   </ItemGroup>
 
   <ItemGroup>

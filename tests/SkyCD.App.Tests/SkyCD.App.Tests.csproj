@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Application\SkyCD.Application.csproj" />
+    <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Domain\SkyCD.Domain.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj" />
   </ItemGroup>
