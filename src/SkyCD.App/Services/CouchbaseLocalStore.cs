@@ -1,6 +1,9 @@
 using Couchbase.Lite;
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace SkyCD.App.Services;
 
@@ -8,7 +11,10 @@ public sealed class CouchbaseLocalStore : IDisposable
 {
     public enum LocalCollection
     {
+        [EnumMember(Value = "catalog")]
         Catalog,
+
+        [EnumMember(Value = "settings")]
         Settings
     }
 
@@ -54,11 +60,16 @@ public sealed class CouchbaseLocalStore : IDisposable
 
     private static string GetCollectionName(LocalCollection collection)
     {
-        return collection switch
+        var enumMember = typeof(LocalCollection)
+            .GetMember(collection.ToString())
+            .FirstOrDefault()?
+            .GetCustomAttribute<EnumMemberAttribute>();
+
+        if (!string.IsNullOrWhiteSpace(enumMember?.Value))
         {
-            LocalCollection.Catalog => "catalog",
-            LocalCollection.Settings => "settings",
-            _ => throw new ArgumentOutOfRangeException(nameof(collection), collection, null)
-        };
+            return enumMember.Value;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(collection), collection, null);
     }
 }
