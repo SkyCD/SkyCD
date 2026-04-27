@@ -2,9 +2,7 @@ using Couchbase.Lite;
 using SkyCD.App.Models;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 
 namespace SkyCD.App.Services;
 
@@ -12,13 +10,11 @@ public sealed class AppOptionsStore : IDisposable
 {
     private readonly CouchbaseLocalStore localStore;
     private readonly bool ownsLocalStore;
-    private readonly string legacyOptionsFilePath;
 
     public AppOptionsStore(CouchbaseLocalStore? localStore = null)
     {
         this.localStore = localStore ?? new CouchbaseLocalStore();
         ownsLocalStore = localStore is null;
-        legacyOptionsFilePath = Path.Combine(this.localStore.DatabaseDirectory, "options.json");
     }
 
     public AppOptions Load()
@@ -28,12 +24,6 @@ public sealed class AppOptionsStore : IDisposable
         if (document is not null)
         {
             return ToAppOptions(document);
-        }
-
-        if (TryLoadLegacyOptions(out var legacyOptions))
-        {
-            Save(legacyOptions);
-            return legacyOptions;
         }
 
         return new AppOptions();
@@ -72,27 +62,6 @@ public sealed class AppOptionsStore : IDisposable
         if (ownsLocalStore)
         {
             localStore.Dispose();
-        }
-    }
-
-    private bool TryLoadLegacyOptions(out AppOptions options)
-    {
-        options = new AppOptions();
-
-        if (!File.Exists(legacyOptionsFilePath))
-        {
-            return false;
-        }
-
-        try
-        {
-            var json = File.ReadAllText(legacyOptionsFilePath);
-            options = JsonSerializer.Deserialize<AppOptions>(json) ?? new AppOptions();
-            return true;
-        }
-        catch
-        {
-            return false;
         }
     }
 
