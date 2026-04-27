@@ -56,6 +56,57 @@ public class TomlCatalogPluginTests
         Assert.Contains("[[nodes]]", text);
     }
 
+    [Fact]
+    public async Task ReadAsync_WithMissingKeys_ShouldNotThrow()
+    {
+        var plugin = new TomlCatalogPlugin();
+        var toml = @"
+[schema]
+version = ""skycd.catalog.v1""
+hierarchy = ""adjacency-list""
+
+[[nodes]]
+name = ""Missing IDs""
+";
+        using var source = new MemoryStream(Encoding.UTF8.GetBytes(toml));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "skycd-toml",
+            Source = source
+        });
+
+        Assert.True(result.Success, $"Should be successful but got error: {result.Error}");
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+        Assert.Single(rows);
+        Assert.False(rows[0].ContainsKey("nodeId") && rows[0]["nodeId"] != null, "nodeId should be null or missing");
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithIntegerSizeBytes_ShouldWork()
+    {
+        var plugin = new TomlCatalogPlugin();
+        var toml = @"
+[schema]
+version = ""skycd.catalog.v1""
+hierarchy = ""adjacency-list""
+
+[[nodes]]
+nodeId = ""1""
+name = ""Test""
+sizeBytes = 123
+";
+        using var source = new MemoryStream(Encoding.UTF8.GetBytes(toml));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "skycd-toml",
+            Source = source
+        });
+
+        Assert.True(result.Success, $"Should be successful but got error: {result.Error}");
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+        Assert.Equal("123", rows[0]["sizeBytes"]);
+    }
+
     private static PluginManager CreateCatalog()
     {
         var plugin = new TomlCatalogPlugin();
