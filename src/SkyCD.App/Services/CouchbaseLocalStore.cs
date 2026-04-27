@@ -6,9 +6,13 @@ namespace SkyCD.App.Services;
 
 public sealed class CouchbaseLocalStore : IDisposable
 {
+    public enum LocalCollection
+    {
+        Catalog,
+        Settings
+    }
+
     public const string DatabaseName = "skycd";
-    public const string CatalogCollectionName = "catalog";
-    public const string SettingsCollectionName = "settings";
     public const string AppOptionsDocumentId = "app-options";
 
     private readonly Database database;
@@ -31,15 +35,30 @@ public sealed class CouchbaseLocalStore : IDisposable
         };
 
         database = new Database(DatabaseName, configuration);
-        CatalogCollection = database.GetCollection(CatalogCollectionName, Collection.DefaultScopeName)
-            ?? database.CreateCollection(CatalogCollectionName, Collection.DefaultScopeName);
-        SettingsCollection = database.GetCollection(SettingsCollectionName, Collection.DefaultScopeName)
-            ?? database.CreateCollection(SettingsCollectionName, Collection.DefaultScopeName);
+        CatalogCollection = GetOrCreateCollection(LocalCollection.Catalog);
+        SettingsCollection = GetOrCreateCollection(LocalCollection.Settings);
     }
 
     public void Dispose()
     {
         database.Close();
         database.Dispose();
+    }
+
+    private Collection GetOrCreateCollection(LocalCollection collection)
+    {
+        var collectionName = GetCollectionName(collection);
+        return database.GetCollection(collectionName, Collection.DefaultScopeName)
+            ?? database.CreateCollection(collectionName, Collection.DefaultScopeName);
+    }
+
+    private static string GetCollectionName(LocalCollection collection)
+    {
+        return collection switch
+        {
+            LocalCollection.Catalog => "catalog",
+            LocalCollection.Settings => "settings",
+            _ => throw new ArgumentOutOfRangeException(nameof(collection), collection, null)
+        };
     }
 }
