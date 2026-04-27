@@ -38,6 +38,8 @@
     </PackageReference>
     
     <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
+    
+    <PackageReference Include="Couchbase.Lite.Mapping" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>

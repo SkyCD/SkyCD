@@ -13,10 +13,10 @@ public sealed class CouchbaseLocalStore : IDisposable
 
     public string DatabaseDirectory =>
         Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "SkyCD"
         );
-    
+
     public DatabaseConfiguration Configuration =>
         new DatabaseConfiguration
         {
