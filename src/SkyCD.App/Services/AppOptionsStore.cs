@@ -23,7 +23,7 @@ public sealed class AppOptionsStore : IDisposable
 
     public AppOptions Load()
     {
-        var settingsCollection = localStore.GetCollection(CouchbaseLocalStore.LocalCollection.Settings);
+        var settingsCollection = localStore.GetCollection(LocalCollection.Settings);
         using var document = settingsCollection.GetDocument(CouchbaseLocalStore.AppOptionsDocumentId);
         if (document is not null)
         {
@@ -41,7 +41,7 @@ public sealed class AppOptionsStore : IDisposable
 
     public void Save(AppOptions options)
     {
-        var settingsCollection = localStore.GetCollection(CouchbaseLocalStore.LocalCollection.Settings);
+        var settingsCollection = localStore.GetCollection(LocalCollection.Settings);
         var disabledPluginIds = new MutableArrayObject();
         foreach (var id in (options.DisabledPluginIds ?? []).Where(static value => !string.IsNullOrWhiteSpace(value)))
         {

@@ -14,7 +14,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     public CouchbaseLiteBrowserDataStore(CouchbaseLocalStore localStore)
     {
-        _catalogCollection = localStore.GetCollection(CouchbaseLocalStore.LocalCollection.Catalog);
+        _catalogCollection = localStore.GetCollection(LocalCollection.Catalog);
         EnsureSeedData();
     }
 

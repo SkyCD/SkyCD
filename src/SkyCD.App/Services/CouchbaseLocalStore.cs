@@ -9,15 +9,6 @@ namespace SkyCD.App.Services;
 
 public sealed class CouchbaseLocalStore : IDisposable
 {
-    public enum LocalCollection
-    {
-        [EnumMember(Value = "catalog")]
-        Catalog,
-
-        [EnumMember(Value = "settings")]
-        Settings
-    }
-
     public const string DatabaseName = "skycd";
     public const string AppOptionsDocumentId = "app-options";
 
