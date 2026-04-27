@@ -23,7 +23,8 @@ public sealed class AppOptionsStore : IDisposable
 
     public AppOptions Load()
     {
-        using var document = localStore.SettingsCollection.GetDocument(CouchbaseLocalStore.AppOptionsDocumentId);
+        var settingsCollection = localStore.GetCollection(CouchbaseLocalStore.LocalCollection.Settings);
+        using var document = settingsCollection.GetDocument(CouchbaseLocalStore.AppOptionsDocumentId);
         if (document is not null)
         {
             return ToAppOptions(document);
@@ -40,6 +41,7 @@ public sealed class AppOptionsStore : IDisposable
 
     public void Save(AppOptions options)
     {
+        var settingsCollection = localStore.GetCollection(CouchbaseLocalStore.LocalCollection.Settings);
         var disabledPluginIds = new MutableArrayObject();
         foreach (var id in (options.DisabledPluginIds ?? []).Where(static value => !string.IsNullOrWhiteSpace(value)))
         {
@@ -62,7 +64,7 @@ public sealed class AppOptionsStore : IDisposable
         SetNullableDouble(document, "windowHeight", options.WindowHeight);
         SetNullableDouble(document, "treePaneWidth", options.TreePaneWidth);
 
-        localStore.SettingsCollection.Save(document);
+        settingsCollection.Save(document);
     }
 
     public void Dispose()

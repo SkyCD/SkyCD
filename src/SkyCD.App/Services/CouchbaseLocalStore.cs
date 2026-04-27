@@ -23,10 +23,6 @@ public sealed class CouchbaseLocalStore : IDisposable
 
     private readonly Database database;
 
-    public Collection CatalogCollection { get; }
-
-    public Collection SettingsCollection { get; }
-
     public string DatabaseDirectory { get; }
 
     public CouchbaseLocalStore(string? appDataRoot = null)
@@ -41,14 +37,19 @@ public sealed class CouchbaseLocalStore : IDisposable
         };
 
         database = new Database(DatabaseName, configuration);
-        CatalogCollection = GetOrCreateCollection(LocalCollection.Catalog);
-        SettingsCollection = GetOrCreateCollection(LocalCollection.Settings);
+        _ = GetOrCreateCollection(LocalCollection.Catalog);
+        _ = GetOrCreateCollection(LocalCollection.Settings);
     }
 
     public void Dispose()
     {
         database.Close();
         database.Dispose();
+    }
+
+    public Collection GetCollection(LocalCollection collection)
+    {
+        return GetOrCreateCollection(collection);
     }
 
     private Collection GetOrCreateCollection(LocalCollection collection)

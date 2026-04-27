@@ -10,18 +10,18 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 {
     private const string RootKey = "__root__";
     private const string CatalogSeedDocumentId = "catalog-seed";
-    private readonly Collection catalogCollection;
+    private readonly Collection _catalogCollection;
 
     public CouchbaseLiteBrowserDataStore(CouchbaseLocalStore localStore)
     {
-        catalogCollection = localStore.CatalogCollection;
+        _catalogCollection = localStore.GetCollection(CouchbaseLocalStore.LocalCollection.Catalog);
         EnsureSeedData();
     }
 
     public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
     {
         var records = new List<TreeNodeRecord>();
-        using var seedDocument = catalogCollection.GetDocument(CatalogSeedDocumentId);
+        using var seedDocument = _catalogCollection.GetDocument(CatalogSeedDocumentId);
         var treeNodes = seedDocument?.GetArray("treeNodes");
         if (treeNodes is null)
         {
@@ -68,7 +68,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return [];
         }
 
-        using var seedDocument = catalogCollection.GetDocument(CatalogSeedDocumentId);
+        using var seedDocument = _catalogCollection.GetDocument(CatalogSeedDocumentId);
         var items = seedDocument?.GetArray("browserItems");
         if (items is null)
         {
@@ -129,7 +129,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private void EnsureSeedData()
     {
-        if (catalogCollection.GetDocument(CatalogSeedDocumentId) is not null)
+        if (_catalogCollection.GetDocument(CatalogSeedDocumentId) is not null)
         {
             return;
         }
@@ -154,7 +154,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         using var document = new MutableDocument(CatalogSeedDocumentId);
         document.SetArray("treeNodes", treeNodes)
             .SetArray("browserItems", browserItems);
-        catalogCollection.Save(document);
+        _catalogCollection.Save(document);
     }
 
     private static void AddTreeNode(
