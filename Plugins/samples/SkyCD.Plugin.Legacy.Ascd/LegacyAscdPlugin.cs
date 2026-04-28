@@ -176,7 +176,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         var inQuotes = false;
         for (var i = openParen + 1; i < line.Length; i++)
         {
-            if (line[i] == '\'' && (i == 0 || line[i-1] != '\\'))
+            if (line[i] == '\'' && (i == 0 || line[i - 1] != '\\'))
             {
                 // Simple quote tracking (it's actually '' for escaped quotes in SQL, but this is simple enough)
                 inQuotes = !inQuotes;
