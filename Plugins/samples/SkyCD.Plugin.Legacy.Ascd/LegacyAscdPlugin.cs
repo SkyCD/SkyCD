@@ -51,7 +51,13 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
                     continue;
                 }
 
-                if (!TryParseInsertStatement(line.Trim(), out var entry, out var error))
+                var trimmedLine = line.Trim();
+                if (!trimmedLine.StartsWith(InsertPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!TryParseInsertStatement(trimmedLine, out var entry, out var error))
                 {
                     return new FileFormatReadResult
                     {
@@ -153,6 +159,8 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             return false;
         }
 
+        // Trim trailing semicolons and whitespaces for legacy parser tolerance
+        line = line.TrimEnd(' ', '\t', '\r', '\n', ';');
         var valuesTokenIndex = line.IndexOf("VALUES", StringComparison.OrdinalIgnoreCase);
         if (valuesTokenIndex < 0)
         {
@@ -162,8 +170,25 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         }
 
         var openParen = line.IndexOf('(', valuesTokenIndex);
-        var closeParen = line.LastIndexOf(')');
-        if (openParen < 0 || closeParen <= openParen || closeParen != line.Length - 1)
+        // the drop table might have parenthesis? Usually not. Let's find the closing parenthesis of the VALUES clause.
+
+        var closeParen = -1;
+        var inQuotes = false;
+        for (var i = openParen + 1; i < line.Length; i++)
+        {
+            if (line[i] == '\'' && (i == 0 || line[i-1] != '\\'))
+            {
+                // Simple quote tracking (it's actually '' for escaped quotes in SQL, but this is simple enough)
+                inQuotes = !inQuotes;
+            }
+            if (!inQuotes && line[i] == ')')
+            {
+                closeParen = i;
+                break;
+            }
+        }
+
+        if (closeParen <= openParen)
         {
             entry = default!;
             error = "Only a single VALUES(...) statement is supported.";
@@ -183,6 +208,12 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             return false;
         }
 
+        var appId = values[6];
+        if (appId == "<?Application_ID?>")
+        {
+            appId = Guid.Empty.ToString();
+        }
+
         entry = new LegacyAscdEntry
         {
             Id = values[0],
@@ -191,7 +222,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             Type = values[3],
             PropertiesXml = values[4],
             SizeBytes = TryParseSize(values[5]),
-            ApplicationId = values[6]
+            ApplicationId = appId
         };
         error = string.Empty;
         return true;

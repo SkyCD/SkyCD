@@ -111,12 +111,13 @@ public class LegacyAscdPluginTests
     }
 
     [Fact]
-    public async Task ReadAsync_RejectsUnexpectedSqlPayload()
+    public async Task ReadAsync_ToleratesTrailingJunkAndSubstitutesAppId()
     {
         var plugin = new LegacyAscdPlugin();
         var payload =
             """
             # format: skycd-nf 1.0
+            SOME RANDOM TEXT
             INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>'); DROP TABLE list;
             """;
         var compressed = CompressText(payload);
@@ -128,8 +129,10 @@ public class LegacyAscdPluginTests
             Source = source
         });
 
-        Assert.False(result.Success);
-        Assert.Contains("single VALUES", result.Error ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.Success, result.Error);
+        var catalog = Assert.IsType<LegacyAscdCatalog>(result.Payload);
+        var entry = Assert.Single(catalog.Entries);
+        Assert.Equal(Guid.Empty.ToString(), entry.ApplicationId);
     }
 
     private static byte[] CompressText(string text)
