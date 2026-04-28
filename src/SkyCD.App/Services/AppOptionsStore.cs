@@ -1,53 +1,31 @@
+using Couchbase.Lite;
 using SkyCD.App.Models;
+using SkyCD.App.Services.Documents;
 using System;
-using System.IO;
-using System.Text.Json;
 
 namespace SkyCD.App.Services;
 
 public sealed class AppOptionsStore
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true
-    };
+    private readonly CouchbaseLocalStore localStore;
 
-    private readonly string optionsFilePath;
-
-    public AppOptionsStore()
+    public AppOptionsStore(CouchbaseLocalStore localStore)
     {
-        var appDataRoot = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var optionsDirectory = Path.Combine(appDataRoot, "SkyCD");
-        optionsFilePath = Path.Combine(optionsDirectory, "options.json");
+        this.localStore = localStore;
     }
 
     public AppOptions Load()
     {
-        if (!File.Exists(optionsFilePath))
-        {
-            return new AppOptions();
-        }
-
-        try
-        {
-            var json = File.ReadAllText(optionsFilePath);
-            return JsonSerializer.Deserialize<AppOptions>(json) ?? new AppOptions();
-        }
-        catch
-        {
-            return new AppOptions();
-        }
+        var settingsCollection = localStore.GetCollection(LocalCollection.Settings);
+        using var document = settingsCollection.GetDocument(CouchbaseLocalStore.AppOptionsDocumentId);
+        return AppOptionsDocument.FromDocument(document)?.ToAppOptions() ?? new AppOptions();
     }
 
     public void Save(AppOptions options)
     {
-        var directory = Path.GetDirectoryName(optionsFilePath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var json = JsonSerializer.Serialize(options, SerializerOptions);
-        File.WriteAllText(optionsFilePath, json);
+        var settingsCollection = localStore.GetCollection(LocalCollection.Settings);
+        using var document = AppOptionsDocument.FromAppOptions(options)
+            .ToMutableDocument(CouchbaseLocalStore.AppOptionsDocumentId);
+        settingsCollection.Save(document);
     }
 }

@@ -4,6 +4,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
+using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
 using CommandDotNet;
 using System.Text.Json;
@@ -82,7 +83,7 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void TryReadPluginPathFromAppSettings_ReadsPluginPath()
+    public void TryReadPluginPathFromAppSettings_ReadsPluginPath_FromSettingsCollection()
     {
         var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
@@ -90,6 +91,37 @@ public sealed class CliHostTests
         try
         {
             var expectedPath = Path.Combine(appDataRoot, "CustomPlugins");
+
+            var configuration = new DatabaseConfiguration
+            {
+                Directory = Path.Combine(appDataRoot, "SkyCD")
+            };
+
+            using var database = new Database("skycd", configuration);
+            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
+            var appOptions = new MutableDocument("app-options");
+            appOptions.SetString("pluginPath", expectedPath);
+            settings.Save(appOptions);
+
+            var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
+
+            Assert.Equal(expectedPath, resolved);
+        }
+        finally
+        {
+            Directory.Delete(appDataRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void TryReadPluginPathFromAppSettings_FallsBackToLegacyJson_WhenSettingsCollectionMissing()
+    {
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
+
+        try
+        {
+            var expectedPath = Path.Combine(appDataRoot, "LegacyPlugins");
             var optionsPath = Path.Combine(appDataRoot, "SkyCD", "options.json");
             File.WriteAllText(optionsPath, JsonSerializer.Serialize(new { PluginPath = expectedPath }));
 
@@ -104,17 +136,13 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void TryReadPluginPathFromAppSettings_ReturnsNull_WhenFileMissingOrInvalid()
+    public void TryReadPluginPathFromAppSettings_ReturnsNull_WhenNoSettingsExist()
     {
         var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
 
         try
         {
-            Assert.Null(CliHost.TryReadPluginPathFromAppSettings(appDataRoot));
-
-            var optionsPath = Path.Combine(appDataRoot, "SkyCD", "options.json");
-            File.WriteAllText(optionsPath, "{ not json");
             Assert.Null(CliHost.TryReadPluginPathFromAppSettings(appDataRoot));
         }
         finally

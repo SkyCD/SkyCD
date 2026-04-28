@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using CommandDotNet;
+using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -157,7 +158,55 @@ public sealed class CliHost(
             return null;
         }
 
-        var optionsPath = Path.Combine(root, "SkyCD", "options.json");
+        var optionsDirectory = Path.Combine(root, "SkyCD");
+        var pluginPathFromDb = TryReadPluginPathFromSettingsCollection(optionsDirectory);
+        if (!string.IsNullOrWhiteSpace(pluginPathFromDb))
+        {
+            return pluginPathFromDb;
+        }
+
+        return TryReadLegacyPluginPathFromJson(optionsDirectory);
+    }
+
+    private static string? TryReadPluginPathFromSettingsCollection(string optionsDirectory)
+    {
+        if (!Directory.Exists(optionsDirectory))
+        {
+            return null;
+        }
+
+        try
+        {
+            var configuration = new DatabaseConfiguration
+            {
+                Directory = optionsDirectory
+            };
+
+            using var database = new Database("skycd", configuration);
+            var settings = database.GetCollection("settings", Collection.DefaultScopeName);
+            if (settings is null)
+            {
+                return null;
+            }
+
+            var appOptions = settings.GetDocument("app-options");
+            var pluginPath = appOptions?.GetString("pluginPath");
+            return string.IsNullOrWhiteSpace(pluginPath) ? null : pluginPath.Trim();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryReadLegacyPluginPathFromJson(string optionsDirectory)
+    {
+        if (!Directory.Exists(optionsDirectory))
+        {
+            return null;
+        }
+
+        var optionsPath = Path.Combine(optionsDirectory, "options.json");
         if (!File.Exists(optionsPath))
         {
             return null;

@@ -20,7 +20,7 @@ namespace SkyCD.App;
 
 public partial class App : Avalonia.Application
 {
-    private readonly SqliteBrowserDataStore browserDataStore = new();
+    private IServiceProvider? appServiceProvider;
 
     public override void Initialize()
     {
@@ -31,12 +31,14 @@ public partial class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var appOptionsStore = new AppOptionsStore();
+            appServiceProvider = BuildAppServiceProvider();
+            var appOptionsStore = appServiceProvider.GetRequiredService<AppOptionsStore>();
+            var mainWindowViewModel = appServiceProvider.GetRequiredService<MainWindowViewModel>();
             var pluginServices = CreatePluginServices(appOptionsStore);
 
             desktop.Exit += (_, _) =>
             {
-                browserDataStore.Dispose();
+                (appServiceProvider as IDisposable)?.Dispose();
                 pluginServices.ServiceProvider.Dispose();
             };
             desktop.MainWindow = new MainWindow(
@@ -44,7 +46,7 @@ public partial class App : Avalonia.Application
                 pluginServices.PluginManager,
                 pluginServices.FileFormatManager)
             {
-                DataContext = new MainWindowViewModel(browserDataStore),
+                DataContext = mainWindowViewModel,
             };
         }
 
@@ -110,4 +112,14 @@ public partial class App : Avalonia.Application
         FileFormatManager FileFormatManager,
         PluginManager PluginManager,
         PluginServiceProvider ServiceProvider);
+
+    private static IServiceProvider BuildAppServiceProvider()
+    {
+        return new ServiceCollection()
+            .AddSingleton<CouchbaseLocalStore>()
+            .AddSingleton<AppOptionsStore>()
+            .AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>()
+            .AddSingleton<MainWindowViewModel>()
+            .BuildServiceProvider();
+    }
 }
