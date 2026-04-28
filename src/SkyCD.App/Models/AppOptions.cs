@@ -1,3 +1,4 @@
+using SkyCD.Presentation.ViewModels;
 using System.Collections.Generic;
 
 namespace SkyCD.App.Models;
@@ -18,9 +19,9 @@ public sealed class AppOptions
 
     public bool IsStatusBarVisible { get; set; } = true;
 
-    public string BrowserViewMode { get; set; } = "Details";
+    public BrowserViewMode BrowserViewMode { get; set; } = BrowserViewMode.Details;
 
-    public string BrowserSortMode { get; set; } = "Name";
+    public BrowserSortMode BrowserSortMode { get; set; } = BrowserSortMode.Name;
 
     public string PluginPath { get; set; } = string.Empty;
 

@@ -1,5 +1,6 @@
 using SkyCD.App.Models;
 using SkyCD.App.Services;
+using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Tests;
 
@@ -43,8 +44,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
             WindowState = "Maximized",
             TreePaneWidth = 320,
             IsStatusBarVisible = false,
-            BrowserViewMode = "Tiles",
-            BrowserSortMode = "Type",
+            BrowserViewMode = BrowserViewMode.Tiles,
+            BrowserSortMode = BrowserSortMode.Type,
             PluginPath = @"C:\plugins\custom",
             Language = "Lithuanian",
             DisabledPluginIds = ["plugin.a", "plugin.b"],

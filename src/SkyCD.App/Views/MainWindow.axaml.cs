@@ -180,8 +180,8 @@ public partial class MainWindow : Window
         var options = appOptionsStore.Load();
         ApplyWindowBounds(options);
         vm.ApplySessionState(
-            ParseBrowserViewMode(options.BrowserViewMode),
-            ParseBrowserSortMode(options.BrowserSortMode),
+            options.BrowserViewMode,
+            options.BrowserSortMode,
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
 
@@ -607,8 +607,8 @@ public partial class MainWindow : Window
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
-        options.BrowserViewMode = vm.CurrentViewMode.ToString();
-        options.BrowserSortMode = vm.CurrentSortMode.ToString();
+        options.BrowserViewMode = vm.CurrentViewMode;
+        options.BrowserSortMode = vm.CurrentSortMode;
         appOptionsStore.Save(options);
     }
 

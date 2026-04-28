@@ -1,5 +1,7 @@
 using Couchbase.Lite;
+using Couchbase.Lite.Mapping;
 using SkyCD.App.Models;
+using SkyCD.Presentation.ViewModels;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -49,102 +51,10 @@ public sealed class AppOptionsDocument
 
     public static AppOptionsDocument? FromDocument(Document? document)
     {
-        if (document is null)
-        {
-            return null;
-        }
-
-        var disabledPluginIds = new List<string>();
-        var disabledPluginIdsArray = document.GetArray("disabledPluginIds");
-        if (disabledPluginIdsArray is not null)
-        {
-            for (var index = 0; index < disabledPluginIdsArray.Count; index++)
-            {
-                var value = disabledPluginIdsArray.GetString(index);
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    disabledPluginIds.Add(value);
-                }
-            }
-        }
-
-        var window = document.GetDictionary("window");
-        var browser = document.GetDictionary("browser");
-
-        return new AppOptionsDocument
-        {
-            Window = new WindowOptionsDocument
-            {
-                Left = TryGetInt(window, "left"),
-                Top = TryGetInt(window, "top"),
-                Width = TryGetDouble(window, "width"),
-                Height = TryGetDouble(window, "height"),
-                State = window?.GetString("state") ?? "Normal",
-                TreePaneWidth = TryGetDouble(window, "treePaneWidth")
-            },
-            IsStatusBarVisible = document.GetBoolean("isStatusBarVisible"),
-            Browser = new BrowserOptionsDocument
-            {
-                ViewMode = browser?.GetString("viewMode") ?? "Details",
-                SortMode = browser?.GetString("sortMode") ?? "Name"
-            },
-            PluginPath = document.GetString("pluginPath") ?? string.Empty,
-            Language = document.GetString("language") ?? "English",
-            DisabledPluginIds = disabledPluginIds,
-            OptionsTabIndex = document.GetInt("optionsTabIndex")
-        };
+        return document?.ToObject<AppOptionsDocument>();
     }
 
-    public MutableDocument ToMutableDocument(string documentId)
-    {
-        var disabledPluginIds = new MutableArrayObject();
-        foreach (var id in DisabledPluginIds.Where(static value => !string.IsNullOrWhiteSpace(value)))
-        {
-            disabledPluginIds.AddString(id);
-        }
 
-        var window = new MutableDictionaryObject();
-        window.SetString("state", Window.State);
-        if (Window.Left.HasValue)
-        {
-            window.SetInt("left", Window.Left.Value);
-        }
-
-        if (Window.Top.HasValue)
-        {
-            window.SetInt("top", Window.Top.Value);
-        }
-
-        if (Window.Width.HasValue)
-        {
-            window.SetDouble("width", Window.Width.Value);
-        }
-
-        if (Window.Height.HasValue)
-        {
-            window.SetDouble("height", Window.Height.Value);
-        }
-
-        if (Window.TreePaneWidth.HasValue)
-        {
-            window.SetDouble("treePaneWidth", Window.TreePaneWidth.Value);
-        }
-
-        var browser = new MutableDictionaryObject();
-        browser.SetString("viewMode", Browser.ViewMode);
-        browser.SetString("sortMode", Browser.SortMode);
-
-        var document = new MutableDocument(documentId);
-        document.SetDictionary("window", window)
-            .SetBoolean("isStatusBarVisible", IsStatusBarVisible)
-            .SetDictionary("browser", browser)
-            .SetString("pluginPath", PluginPath)
-            .SetString("language", Language)
-            .SetInt("optionsTabIndex", OptionsTabIndex)
-            .SetArray("disabledPluginIds", disabledPluginIds);
-
-        return document;
-    }
 
     public AppOptions ToAppOptions()
     {
@@ -165,16 +75,6 @@ public sealed class AppOptionsDocument
             OptionsTabIndex = OptionsTabIndex
         };
     }
-
-    private static int? TryGetInt(DictionaryObject? dictionary, string key)
-    {
-        return dictionary?.Contains(key) == true ? dictionary.GetInt(key) : null;
-    }
-
-    private static double? TryGetDouble(DictionaryObject? dictionary, string key)
-    {
-        return dictionary?.Contains(key) == true ? dictionary.GetDouble(key) : null;
-    }
 }
 
 public sealed class WindowOptionsDocument
@@ -194,7 +94,7 @@ public sealed class WindowOptionsDocument
 
 public sealed class BrowserOptionsDocument
 {
-    public string ViewMode { get; init; } = "Details";
+    public BrowserViewMode ViewMode { get; init; } = BrowserViewMode.Details;
 
-    public string SortMode { get; init; } = "Name";
+    public BrowserSortMode SortMode { get; init; } = BrowserSortMode.Name;
 }
