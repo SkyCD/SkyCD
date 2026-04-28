@@ -6,14 +6,14 @@ namespace SkyCD.App.Services.Documents;
 
 public sealed class CatalogDocument
 {
-    public IReadOnlyList<Dictionary<string, object>> Entries { get; init; } = [];
+    public IReadOnlyList<Dictionary<string, object?>> Entries { get; init; } = [];
 
     public static CatalogDocument CreateDefault()
     {
-        var entries = new List<Dictionary<string, object>>
+        var entries = new List<Dictionary<string, object?>>
         {
             // Root level
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "library" },
                 { "Name", "Library" },
@@ -24,7 +24,7 @@ public sealed class CatalogDocument
             },
             
             // Library subfolders
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "movies" },
                 { "Name", "Movies" },
@@ -33,7 +33,7 @@ public sealed class CatalogDocument
                 { "Size", 0L },
                 { "ChildrenCount", 128L }
             },
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "music" },
                 { "Name", "Music" },
@@ -42,7 +42,7 @@ public sealed class CatalogDocument
                 { "Size", 0L },
                 { "ChildrenCount", 340L }
             },
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "projects" },
                 { "Name", "Projects" },
@@ -53,7 +53,7 @@ public sealed class CatalogDocument
             },
             
             // Movies
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "interstellar" },
                 { "Name", "Interstellar.mkv" },
@@ -62,7 +62,7 @@ public sealed class CatalogDocument
                 { "Size", 12100000000L },
                 { "ChildrenCount", 0L }
             },
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "arrival" },
                 { "Name", "Arrival.mkv" },
@@ -73,7 +73,7 @@ public sealed class CatalogDocument
             },
             
             // Music
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "classical-collection" },
                 { "Name", "Classical Collection" },
@@ -82,7 +82,7 @@ public sealed class CatalogDocument
                 { "Size", 0L },
                 { "ChildrenCount", 42L }
             },
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "concert-2025" },
                 { "Name", "Concert-2025.flac" },
@@ -93,7 +93,7 @@ public sealed class CatalogDocument
             },
             
             // Projects
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "skycd-v3" },
                 { "Name", "SkyCD v3" },
@@ -102,7 +102,7 @@ public sealed class CatalogDocument
                 { "Size", 0L },
                 { "ChildrenCount", 11L }
             },
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 { "Id", "plugin-benchmarks" },
                 { "Name", "Plugin Benchmarks" },

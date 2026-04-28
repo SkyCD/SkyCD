@@ -71,7 +71,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private static IReadOnlyList<BrowserTreeNode> BuildTreeNodes(
         string parentId,
-        IReadOnlyDictionary<string, List<Dictionary<string, object>>> childrenByParent)
+        IReadOnlyDictionary<string, List<Dictionary<string, object?>>> childrenByParent)
     {
         if (!childrenByParent.TryGetValue(parentId, out var children))
         {
