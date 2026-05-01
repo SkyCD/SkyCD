@@ -4,7 +4,7 @@ using SkyCD.Domain.Catalogs;
 
 namespace SkyCD.Infrastructure.Persistence;
 
-public sealed class CatalogRepository(SkyCdDbContext dbContext) : ICatalogRepository
+public sealed class CatalogRepository(SkyCDDbContext dbContext) : ICatalogRepository
 {
     public async Task AddAsync(Catalog catalog, CancellationToken cancellationToken = default)
     {

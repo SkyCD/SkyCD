@@ -3,7 +3,7 @@ using SkyCD.Domain.Catalogs;
 
 namespace SkyCD.Infrastructure.Persistence;
 
-public sealed class SkyCdDbContext(DbContextOptions<SkyCdDbContext> options) : DbContext(options)
+public sealed class SkyCDDbContext(DbContextOptions<SkyCDDbContext> options) : DbContext(options)
 {
     public DbSet<Catalog> Catalogs => Set<Catalog>();
 

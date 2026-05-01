@@ -9,8 +9,8 @@ using SkyCD.Infrastructure.Persistence;
 
 namespace SkyCD.Infrastructure.Persistence.Migrations
 {
-    [DbContext(typeof(SkyCdDbContext))]
-    partial class SkyCdDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(SkyCDDbContext))]
+    partial class SkyCDDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {

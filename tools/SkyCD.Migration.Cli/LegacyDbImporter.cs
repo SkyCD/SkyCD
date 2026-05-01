@@ -10,8 +10,8 @@ public sealed class LegacyDbImporter
     public async Task<LegacyImportResult> ImportAsync(string legacyPath, string targetPath, bool dryRun, CancellationToken cancellationToken = default)
     {
         var targetConnection = $"Data Source={targetPath}";
-        await using var targetContext = new SkyCdDbContext(
-            new DbContextOptionsBuilder<SkyCdDbContext>()
+        await using var targetContext = new SkyCDDbContext(
+            new DbContextOptionsBuilder<SkyCDDbContext>()
                 .UseSqlite(targetConnection)
                 .Options);
 

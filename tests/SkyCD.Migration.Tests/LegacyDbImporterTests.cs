@@ -29,8 +29,8 @@ public sealed class LegacyDbImporterTests : IDisposable
         Assert.Equal(2, result.ImportedNodes);
         Assert.Empty(result.Errors);
 
-        await using var context = new SkyCdDbContext(
-            new DbContextOptionsBuilder<SkyCdDbContext>()
+        await using var context = new SkyCDDbContext(
+            new DbContextOptionsBuilder<SkyCDDbContext>()
                 .UseSqlite($"Data Source={targetPath}")
                 .Options);
 

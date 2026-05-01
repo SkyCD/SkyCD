@@ -2,7 +2,7 @@ using SkyCD.Application.Abstractions;
 
 namespace SkyCD.Infrastructure.Persistence;
 
-public sealed class EfUnitOfWork(SkyCdDbContext dbContext) : IUnitOfWork
+public sealed class EfUnitOfWork(SkyCDDbContext dbContext) : IUnitOfWork
 {
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

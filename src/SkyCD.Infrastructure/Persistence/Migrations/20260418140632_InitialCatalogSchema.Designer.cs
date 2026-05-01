@@ -10,7 +10,7 @@ using SkyCD.Infrastructure.Persistence;
 
 namespace SkyCD.Infrastructure.Persistence.Migrations
 {
-    [DbContext(typeof(SkyCdDbContext))]
+    [DbContext(typeof(SkyCDDbContext))]
     [Migration("20260418140632_InitialCatalogSchema")]
     partial class InitialCatalogSchema
     {

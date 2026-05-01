@@ -61,13 +61,13 @@ public sealed class SqlitePersistenceTests : IDisposable
         Assert.Null(deleted);
     }
 
-    private SkyCdDbContext CreateContext()
+    private SkyCDDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<SkyCdDbContext>()
+        var options = new DbContextOptionsBuilder<SkyCDDbContext>()
             .UseSqlite($"Data Source={_dbPath}")
             .Options;
 
-        return new SkyCdDbContext(options);
+        return new SkyCDDbContext(options);
     }
 
     public void Dispose()

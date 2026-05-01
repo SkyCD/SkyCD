@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace SkyCD.Infrastructure.Persistence;
 
-public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<SkyCdDbContext>
+public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<SkyCDDbContext>
 {
-    public SkyCdDbContext CreateDbContext(string[] args)
+    public SkyCDDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<SkyCdDbContext>();
+        var optionsBuilder = new DbContextOptionsBuilder<SkyCDDbContext>();
         optionsBuilder.UseSqlite("Data Source=skycd.v3.db");
-        return new SkyCdDbContext(optionsBuilder.Options);
+        return new SkyCDDbContext(optionsBuilder.Options);
     }
 }
