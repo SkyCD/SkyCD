@@ -1,14 +1,19 @@
 using Couchbase.Lite;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.Mapping;
+using SkyCD.Couchbase.Repositories;
 using System;
 using System.IO;
+using SkyCD.Couchbase.Repository;
 
 namespace SkyCD.App.Services;
 
 public sealed class CouchbaseLocalStore : IDisposable
 {
     private const string DatabaseName = "skycd";
-    public const string AppOptionsDocumentId = "app-options";
 
+    private readonly DatabaseManager _databaseManager;
+    private readonly RepositoryManager _repositoryManager;
     private readonly Database _database;
 
     public string DatabaseDirectory =>
@@ -24,10 +29,16 @@ public sealed class CouchbaseLocalStore : IDisposable
         };
 
     public CouchbaseLocalStore()
+        : this(new DatabaseManager())
     {
-        Directory.CreateDirectory(Configuration.Directory);
+    }
 
-        _database = new Database(DatabaseName, Configuration);
+    public CouchbaseLocalStore(DatabaseManager databaseManager)
+    {
+        _databaseManager = databaseManager;
+        _repositoryManager = new RepositoryManager(_databaseManager);
+        Directory.CreateDirectory(Configuration.Directory);
+        _database = _databaseManager.Connect(DatabaseName, Configuration.Directory);
     }
 
     public void Dispose()
@@ -36,20 +47,24 @@ public sealed class CouchbaseLocalStore : IDisposable
         _database.Dispose();
     }
 
-    public Collection GetCollection(LocalCollection collection)
+    public RepositoryBase GetRepository<TDocument>()
+        where TDocument : class
     {
-        return GetOrCreateCollection(collection);
+        var repository = _repositoryManager.For<TDocument>();
+        var collection = _database.GetCollection(repository.CollectionName, Collection.DefaultScopeName)
+            ?? _database.CreateCollection(repository.CollectionName, Collection.DefaultScopeName);
+        repository.Collection = collection;
+        return repository;
     }
 
-    private Collection GetOrCreateCollection(LocalCollection collection)
+    public RepositoryBase GetRepository(Type documentType)
     {
-        var collectionName = GetCollectionName(collection);
-        return _database.GetCollection(collectionName, Collection.DefaultScopeName)
-            ?? _database.CreateCollection(collectionName, Collection.DefaultScopeName);
-    }
+        ArgumentNullException.ThrowIfNull(documentType);
 
-    private static string GetCollectionName(LocalCollection collection)
-    {
-        return collection.ToString().ToLower();
+        var repository = _repositoryManager.For(documentType);
+        var collection = _database.GetCollection(repository.CollectionName, Collection.DefaultScopeName)
+            ?? _database.CreateCollection(repository.CollectionName, Collection.DefaultScopeName);
+        repository.Collection = collection;
+        return repository;
     }
 }

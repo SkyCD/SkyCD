@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models" />
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="Styles\**" />
   </ItemGroup>
@@ -38,8 +37,6 @@
     </PackageReference>
     
     <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
-    
-    <PackageReference Include="Couchbase.Lite.Mapping" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,5 +45,6 @@
     <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj" />
     <ProjectReference Include="..\SkyCD.Cli\SkyCD.Cli.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
+    <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
   </ItemGroup>
 </Project>

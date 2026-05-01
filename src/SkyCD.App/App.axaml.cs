@@ -10,6 +10,7 @@ using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.App.Views;
+using SkyCD.App.Documents;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using System;
 using System.Collections.Generic;
@@ -32,9 +33,9 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             appServiceProvider = BuildAppServiceProvider();
-            var appOptionsStore = appServiceProvider.GetRequiredService<AppOptionsStore>();
+            var localStore = appServiceProvider.GetRequiredService<CouchbaseLocalStore>();
             var mainWindowViewModel = appServiceProvider.GetRequiredService<MainWindowViewModel>();
-            var pluginServices = CreatePluginServices(appOptionsStore);
+            var pluginServices = CreatePluginServices(localStore);
 
             desktop.Exit += (_, _) =>
             {
@@ -42,7 +43,7 @@ public partial class App : Avalonia.Application
                 pluginServices.ServiceProvider.Dispose();
             };
             desktop.MainWindow = new MainWindow(
-                appOptionsStore,
+                localStore,
                 pluginServices.PluginManager,
                 pluginServices.FileFormatManager)
             {
@@ -53,10 +54,11 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static PluginUiServices CreatePluginServices(AppOptionsStore appOptionsStore)
+    private static PluginUiServices CreatePluginServices(CouchbaseLocalStore localStore)
     {
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
-        var options = appOptionsStore.Load();
+        var options = localStore.GetRepository<AppOptionsDocument>()
+            .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
             : options.PluginPath;
@@ -117,7 +119,6 @@ public partial class App : Avalonia.Application
     {
         return new ServiceCollection()
             .AddSingleton<CouchbaseLocalStore>()
-            .AddSingleton<AppOptionsStore>()
             .AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>()
             .AddSingleton<MainWindowViewModel>()
             .BuildServiceProvider();

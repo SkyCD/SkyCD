@@ -1,43 +1,47 @@
 using Couchbase.Lite;
-using SkyCD.App.Services.Documents;
+using Couchbase.Lite.Query;
+using SkyCD.Couchbase.Mapping;
+using SkyCD.App.Documents;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Presentation.ViewModels.Catalog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CatalogEntryDocument = SkyCD.App.Documents.CatalogDocument;
 
 namespace SkyCD.App.Services;
 
 public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 {
-    private const string CatalogDocumentId = "catalog";
     private readonly Collection _catalogCollection;
 
     public CouchbaseLiteBrowserDataStore(CouchbaseLocalStore localStore)
     {
-        _catalogCollection = localStore.GetCollection(LocalCollection.Catalog);
+        var catalogRepository = localStore.GetRepository<CatalogEntryDocument>();
+        _catalogCollection = catalogRepository.Collection;
         EnsureSeedData();
     }
 
     public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
     {
-        using var doc = _catalogCollection.GetDocument(CatalogDocumentId);
-        var catalogDocument = SkyCD.App.Services.Documents.CatalogDocument.FromDocument(doc);
-        if (catalogDocument is null)
-        {
-            return [];
-        }
+        var entries = LoadCatalogEntries();
 
         // Get all non-file entries for tree view
-        var treeEntries = catalogDocument.Entries.Where(entry => 
-            !string.Equals(entry["Type"] as string, "File", StringComparison.OrdinalIgnoreCase))
+        var treeEntries = entries.Where(entry =>
+            !string.Equals(entry.Type, "File", StringComparison.OrdinalIgnoreCase))
             .ToList();
         
         var childrenByParent = treeEntries
-            .GroupBy(record => record["ParentId"] as string ?? "__root__", StringComparer.OrdinalIgnoreCase)
+            .GroupBy(record => record.ParentId ?? "__root__", StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        return BuildTreeNodes("__root__", childrenByParent);
+        var roots = BuildTreeNodes("__root__", childrenByParent);
+        if (roots.Count > 0)
+        {
+            return roots;
+        }
+
+        return BuildDefaultTreeNodes();
     }
 
     public IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)
@@ -47,23 +51,35 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return [];
         }
 
-        using var doc = _catalogCollection.GetDocument(CatalogDocumentId);
-        var catalogDocument = SkyCD.App.Services.Documents.CatalogDocument.FromDocument(doc);
-        if (catalogDocument is null)
-        {
-            return [];
-        }
+        var entries = LoadCatalogEntries();
 
-        return catalogDocument.Entries
-            .Where(item => item["ParentId"] as string == nodeKey)
+        var items = entries
+            .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item => 
             {
-                var type = ParseCatalogEntryType(item["Type"] as string);
-                var size = Convert.ToInt64(item["Size"]);
+                var type = ParseCatalogEntryType(item.Type);
                 return new BrowserItem(
-                    item["Name"] as string ?? string.Empty,
+                    item.Name,
                     GetItemTypeDisplayName(type),
-                    FormatSize(size),
+                    FormatSize(item.Size),
+                    GetIconGlyph(type));
+            })
+            .ToArray();
+
+        if (items.Length > 0)
+        {
+            return items;
+        }
+
+        return SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries()
+            .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
+            .Select(item =>
+            {
+                var type = ParseCatalogEntryType(item.Type);
+                return new BrowserItem(
+                    item.Name,
+                    GetItemTypeDisplayName(type),
+                    FormatSize(item.Size),
                     GetIconGlyph(type));
             })
             .ToArray();
@@ -71,7 +87,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private static IReadOnlyList<BrowserTreeNode> BuildTreeNodes(
         string parentId,
-        IReadOnlyDictionary<string, List<Dictionary<string, object?>>> childrenByParent)
+        IReadOnlyDictionary<string, List<CatalogEntryDocument>> childrenByParent)
     {
         if (!childrenByParent.TryGetValue(parentId, out var children))
         {
@@ -81,15 +97,28 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         return children
             .Select(entry => 
             {
-                var type = ParseCatalogEntryType(entry["Type"] as string);
+                var type = ParseCatalogEntryType(entry.Type);
                 return new BrowserTreeNode(
-                    entry["Id"] as string ?? string.Empty,
-                    entry["Name"] as string ?? string.Empty,
+                    entry.Id,
+                    entry.Name,
                     GetIconGlyph(type),
-                    BuildTreeNodes(entry["Id"] as string ?? string.Empty, childrenByParent),
+                    BuildTreeNodes(entry.Id, childrenByParent),
                     isExpanded: parentId == "__root__");
             })
             .ToArray();
+    }
+
+    private static IReadOnlyList<BrowserTreeNode> BuildDefaultTreeNodes()
+    {
+        var entries = SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries()
+            .Where(entry => !string.Equals(entry.Type, "File", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var byParent = entries
+            .GroupBy(record => record.ParentId ?? "__root__", StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        return BuildTreeNodes("__root__", byParent);
     }
 
     private static CatalogEntryType ParseCatalogEntryType(string? typeStr)
@@ -150,12 +179,45 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private void EnsureSeedData()
     {
-        if (_catalogCollection.GetDocument(CatalogDocumentId) is not null)
+        if (LoadCatalogEntries().Count > 0)
         {
             return;
         }
 
-        using var document = SkyCD.App.Services.Documents.CatalogDocument.CreateDefault().ToMutableDocument(CatalogDocumentId);
-        _catalogCollection.Save(document);
+        foreach (var entry in SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries())
+        {
+            using var document = entry.ToMutableDocument(entry.Id);
+            _catalogCollection.Save(document);
+        }
+    }
+
+    private IReadOnlyList<CatalogEntryDocument> LoadCatalogEntries()
+    {
+        using var query = QueryBuilder
+            .Select(SelectResult.All())
+            .From(DataSource.Collection(_catalogCollection));
+
+        using var results = query.Execute();
+        var entries = new List<CatalogEntryDocument>();
+
+        foreach (var row in results)
+        {
+            var dictionary = row.GetDictionary(_catalogCollection.Name);
+            if (dictionary is null)
+            {
+                continue;
+            }
+
+            using var document = new MutableDocument(dictionary.ToDictionary());
+            var mapped = document.FromDocument<CatalogEntryDocument>();
+            if (mapped is not null)
+            {
+                entries.Add(mapped);
+            }
+        }
+
+        return entries.Count > 0
+            ? entries
+            : SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries();
     }
 }

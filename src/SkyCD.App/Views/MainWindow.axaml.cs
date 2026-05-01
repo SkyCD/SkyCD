@@ -3,8 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
-using SkyCD.App.Models;
 using SkyCD.App.Services;
+using SkyCD.App.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
@@ -21,7 +21,7 @@ namespace SkyCD.App.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly AppOptionsStore appOptionsStore;
+    private readonly CouchbaseLocalStore localStore;
     private readonly PluginManager pluginManager;
     private readonly FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
@@ -31,7 +31,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
         : this(
-            new AppOptionsStore(new CouchbaseLocalStore()),
+            new CouchbaseLocalStore(),
             new PluginManager(
                 NullLogger<PluginManager>.Instance,
                 new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
@@ -41,11 +41,11 @@ public partial class MainWindow : Window
     }
 
     public MainWindow(
-        AppOptionsStore appOptionsStore,
+        CouchbaseLocalStore localStore,
         PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
-        this.appOptionsStore = appOptionsStore;
+        this.localStore = localStore;
         this.pluginManager = pluginManager;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
@@ -177,11 +177,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
         ApplyWindowBounds(options);
         vm.ApplySessionState(
-            options.BrowserViewMode,
-            options.BrowserSortMode,
+            options.Browser.ViewMode,
+            options.Browser.SortMode,
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
 
@@ -471,7 +471,7 @@ public partial class MainWindow : Window
 
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
     {
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
             : options.PluginPath;
@@ -502,7 +502,7 @@ public partial class MainWindow : Window
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
-            appOptionsStore.Save(options);
+            SaveAppOptions(options);
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -585,63 +585,72 @@ public partial class MainWindow : Window
 
     private void SaveUiState(MainWindowViewModel vm)
     {
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
 
         // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
-            options.WindowLeft = Position.X;
-            options.WindowTop = Position.Y;
-            options.WindowWidth = Width;
-            options.WindowHeight = Height;
-            options.WindowState = "Normal";
+            options.Window.Left = Position.X;
+            options.Window.Top = Position.Y;
+            options.Window.Width = Width;
+            options.Window.Height = Height;
+            options.Window.State = WindowState.Normal;
         }
         else if (WindowState == WindowState.Maximized)
         {
-            options.WindowState = "Maximized";
+            options.Window.State = WindowState.Maximized;
         }
 
         if (TreePaneColumn.Width.IsAbsolute)
         {
-            options.TreePaneWidth = TreePaneColumn.Width.Value;
+            options.Window.TreePaneWidth = TreePaneColumn.Width.Value;
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
-        options.BrowserViewMode = vm.CurrentViewMode;
-        options.BrowserSortMode = vm.CurrentSortMode;
-        appOptionsStore.Save(options);
+        options.Browser.ViewMode = vm.CurrentViewMode;
+        options.Browser.SortMode = vm.CurrentSortMode;
+        SaveAppOptions(options);
     }
 
-    private void ApplyWindowBounds(AppOptions options)
+    private AppOptionsDocument LoadAppOptions()
     {
-        if (options.WindowWidth is > 0)
+        return localStore.GetRepository<AppOptionsDocument>()
+            .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
+    }
+
+    private void SaveAppOptions(AppOptionsDocument options)
+    {
+        localStore.GetRepository<AppOptionsDocument>()
+            .Save(AppOptionsDocument.DocumentId, options);
+    }
+
+    private void ApplyWindowBounds(AppOptionsDocument options)
+    {
+        if (options.Window.Width is > 0)
         {
-            Width = options.WindowWidth.Value;
+            Width = options.Window.Width.Value;
         }
 
-        if (options.WindowHeight is > 0)
+        if (options.Window.Height is > 0)
         {
-            Height = options.WindowHeight.Value;
+            Height = options.Window.Height.Value;
         }
 
-        if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
+        if (options.Window.Left.HasValue && options.Window.Top.HasValue)
         {
             Position = ClampPositionToVisibleBounds(
-                new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value),
+                new PixelPoint(options.Window.Left.Value, options.Window.Top.Value),
                 Width,
                 Height);
         }
 
-        if (options.TreePaneWidth is >= 160)
+        if (options.Window.TreePaneWidth is >= 160)
         {
-            TreePaneColumn.Width = new GridLength(options.TreePaneWidth.Value, GridUnitType.Pixel);
+            TreePaneColumn.Width = new GridLength(options.Window.TreePaneWidth.Value, GridUnitType.Pixel);
         }
 
         // Restore window state
-        if (string.Equals(options.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase))
-        {
-            WindowState = WindowState.Maximized;
-        }
+        WindowState = options.Window.State;
     }
 
     private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth, double requestedHeight)

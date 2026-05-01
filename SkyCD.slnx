@@ -23,6 +23,7 @@
   <Folder Name="/src/">
     <Project Path="src/SkyCD.App/SkyCD.App.csproj" />
     <Project Path="src/SkyCD.Cli/SkyCD.Cli.csproj" />
+    <Project Path="src/SkyCD.Couchbase/SkyCD.Couchbase.csproj" />
     <Project Path="src/SkyCD.UI/SkyCD.UI.csproj" />
     <Project Path="src/SkyCD.Application/SkyCD.Application.csproj" />
     <Project Path="src/SkyCD.Domain/SkyCD.Domain.csproj" />
