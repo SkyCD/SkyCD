@@ -9,41 +9,41 @@ namespace SkyCD.Couchbase;
 public class DatabaseManager : IDisposable
 {
     private const string DefaultConnectionKey = "default";
-    private static readonly DatabaseCollection LocalDatabases = new();
+    private readonly DatabaseCollection localDatabases = new();
     
-    internal DatabaseCollection DatabasesCollection => LocalDatabases;
+    internal DatabaseCollection DatabasesCollection => localDatabases;
 
-    public static CblDatabase Connect(string databaseName, CblDatabaseConfiguration configuration)
+    public CblDatabase Connect(string databaseName, CblDatabaseConfiguration configuration)
     {
-        LocalDatabases.Add(databaseName, configuration);
+        localDatabases.Add(databaseName, configuration);
         
-        return LocalDatabases[databaseName];
+        return localDatabases[databaseName];
     }
     
     public CblDatabase this[string key]
     {
-        get => LocalDatabases[key];
-        set => LocalDatabases[key] = value;
+        get => localDatabases[key];
+        set => localDatabases[key] = value;
     }
 
-    public static CblDatabase GetDatabase(string connectionKey = DefaultConnectionKey)
+    public CblDatabase GetDatabase(string connectionKey = DefaultConnectionKey)
     {
-        return LocalDatabases[connectionKey];
+        return localDatabases[connectionKey];
     }
 
     public CblDatabase Connect(string databaseName, string directoryPath)
     {
-        LocalDatabases.Add(databaseName, new CblDatabaseConfiguration
+        localDatabases.Add(databaseName, new CblDatabaseConfiguration
         {
             Directory = directoryPath
         });
         
-        return LocalDatabases[databaseName];
+        return localDatabases[databaseName];
     }
 
     public bool Disconnect(string databaseName)
     {
-        return LocalDatabases.Remove(databaseName);
+        return localDatabases.Remove(databaseName);
     }
 
     public CblDatabase GetFor<TDocument>()
@@ -66,6 +66,6 @@ public class DatabaseManager : IDisposable
 
     public void Dispose()
     {
-        LocalDatabases.Clear();
+        localDatabases.Clear();
     }
 }

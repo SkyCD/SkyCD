@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
+using SkyCD.Couchbase;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.DependencyInjection;
@@ -118,6 +119,7 @@ public partial class App : Avalonia.Application
     private static IServiceProvider BuildAppServiceProvider()
     {
         return new ServiceCollection()
+            .AddSingleton<DatabaseManager>()
             .AddSingleton<CouchbaseLocalStore>()
             .AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>()
             .AddSingleton<MainWindowViewModel>()
