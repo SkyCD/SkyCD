@@ -7,5 +7,10 @@
 
   <ItemGroup>
     <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\\SkyCD.Plugin.Runtime\\SkyCD.Plugin.Runtime.csproj" />
   </ItemGroup>
 </Project>

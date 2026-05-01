@@ -33,10 +33,10 @@ public sealed class CouchbaseLocalStore : IDisposable
     {
     }
 
-    public CouchbaseLocalStore(DatabaseManager databaseManager)
+    public CouchbaseLocalStore(DatabaseManager databaseManager, RepositoryManager? repositoryManager = null)
     {
         _databaseManager = databaseManager;
-        _repositoryManager = new RepositoryManager(_databaseManager);
+        _repositoryManager = repositoryManager ?? new RepositoryManager(_databaseManager);
         Directory.CreateDirectory(Configuration.Directory);
         _database = _databaseManager.Connect(DatabaseName, Configuration.Directory);
     }
