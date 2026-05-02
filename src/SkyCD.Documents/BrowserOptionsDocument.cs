@@ -1,6 +1,6 @@
 using SkyCD.Presentation.ViewModels;
 
-namespace SkyCD.App.Documents;
+namespace SkyCD.Documents;
 
 public sealed class BrowserOptionsDocument
 {

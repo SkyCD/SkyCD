@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using SkyCD.Couchbase.Attributes;
 
-namespace SkyCD.App.Documents;
+namespace SkyCD.Documents;
 
 [CouchbaseDocument("catalog")]
 public sealed class CatalogDocument

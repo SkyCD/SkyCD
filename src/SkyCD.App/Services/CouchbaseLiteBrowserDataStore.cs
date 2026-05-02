@@ -1,13 +1,13 @@
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
 using SkyCD.Couchbase.Mapping;
-using SkyCD.App.Documents;
+using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Presentation.ViewModels.Catalog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CatalogEntryDocument = SkyCD.App.Documents.CatalogDocument;
+using CatalogEntryDocument = SkyCD.Documents.CatalogDocument;
 
 namespace SkyCD.App.Services;
 
@@ -71,7 +71,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return items;
         }
 
-        return SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries()
+        return SkyCD.Documents.CatalogDocument.CreateDefaultEntries()
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item =>
             {
@@ -110,7 +110,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private static IReadOnlyList<BrowserTreeNode> BuildDefaultTreeNodes()
     {
-        var entries = SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries()
+        var entries = SkyCD.Documents.CatalogDocument.CreateDefaultEntries()
             .Where(entry => !string.Equals(entry.Type, "File", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
@@ -184,7 +184,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return;
         }
 
-        foreach (var entry in SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries())
+        foreach (var entry in SkyCD.Documents.CatalogDocument.CreateDefaultEntries())
         {
             using var document = entry.ToMutableDocument(entry.Id);
             _catalogCollection.Save(document);
@@ -218,6 +218,6 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
         return entries.Count > 0
             ? entries
-            : SkyCD.App.Documents.CatalogDocument.CreateDefaultEntries();
+            : SkyCD.Documents.CatalogDocument.CreateDefaultEntries();
     }
 }

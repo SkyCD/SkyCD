@@ -1,7 +1,7 @@
 using SkyCD.Couchbase.Attributes;
 using System.Collections.Generic;
 
-namespace SkyCD.App.Documents;
+namespace SkyCD.Documents;
 
 [CouchbaseDocument("settings")]
 public sealed class AppOptionsDocument

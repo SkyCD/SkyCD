@@ -1,5 +1,6 @@
 using System.Reflection;
 using Couchbase.Lite;
+using Couchbase.Lite.Query;
 using SkyCD.Couchbase.Mapping;
 
 namespace SkyCD.Couchbase.Repository;
@@ -51,6 +52,37 @@ public abstract class RepositoryBase
 
         using var document = value.ToMutableDocument(id);
         Collection.Save(document);
+    }
+
+    public IReadOnlyList<TDocument> GetAll<TDocument>()
+        where TDocument : class, new()
+    {
+        using var query = QueryBuilder
+            .Select(SelectResult.All())
+            .From(DataSource.Collection(Collection));
+
+        using var results = query.Execute();
+        var items = new List<TDocument>();
+
+        foreach (var row in results)
+        {
+            var dictionary = row.GetDictionary(Collection.Name);
+            if (dictionary is null)
+            {
+                continue;
+            }
+
+            using var document = new MutableDocument(dictionary.ToDictionary());
+            var mapped = document.FromDocument<TDocument>();
+            if (mapped is null)
+            {
+                continue;
+            }
+
+            items.Add(mapped);
+        }
+
+        return items;
     }
 
     private static void TryAssignId<TDocument>(TDocument document, string id)

@@ -2,8 +2,9 @@ using SkyCD.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
 using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
 using CommandDotNet;
@@ -509,8 +510,8 @@ public sealed class CliHostTests
     {
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        var serviceCollectionFactory = new ServiceCollectionFactory();
-        var services = serviceCollectionFactory.BuildCommonServiceCollection();
+        var services = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
@@ -518,11 +519,7 @@ public sealed class CliHostTests
 
         foreach (var plugin in pluginList)
         {
-            var pluginServices = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
-            foreach (var descriptor in pluginServices)
-            {
-                services.Add(descriptor);
-            }
+            services.AddPluginRegistrator(plugin);
         }
 
         return new CliHost(

@@ -1,15 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
-using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
-public sealed class ServiceCollectionFactoryTests
+public sealed class ServiceRegistratorTests
 {
     [Fact]
-    public void BuildPluginServiceCollection_RegistersPluginCapabilities()
+    public void PluginCapabilityServiceRegistrator_RegistersPluginCapabilities()
     {
         var plugin = new DiscoveredPlugin
         {
@@ -24,23 +24,20 @@ public sealed class ServiceCollectionFactoryTests
             ]
         };
 
-        var factory = new ServiceCollectionFactory();
-        var commonServices = factory.BuildCommonServiceCollection();
+        var services = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
+
         var pluginById = new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase)
         {
             [plugin.Id] = plugin
         };
-        commonServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>([plugin]);
-        commonServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
-        commonServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
 
-        var pluginServices = factory.BuildPluginServiceCollection(plugin);
-        foreach (var descriptor in pluginServices)
-        {
-            commonServices.Add(descriptor);
-        }
+        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>([plugin]);
+        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
+        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+        services.AddRegistrator<PluginServiceRegistrator>();
 
-        using var provider = commonServices.BuildServiceProvider();
+        using var provider = services.BuildServiceProvider();
 
         var discovered = provider.GetRequiredService<IReadOnlyList<DiscoveredPlugin>>();
         var byId = provider.GetRequiredService<IReadOnlyDictionary<string, DiscoveredPlugin>>();
@@ -57,10 +54,10 @@ public sealed class ServiceCollectionFactoryTests
     }
 
     [Fact]
-    public void BuildCommonServiceCollection_RegistersLoggerFactory()
+    public void CommonRuntimeServiceRegistrator_RegistersLoggerFactory()
     {
-        var factory = new ServiceCollectionFactory();
-        var services = factory.BuildCommonServiceCollection();
+        var services = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         using var provider = services.BuildServiceProvider();
         Assert.NotNull(provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());

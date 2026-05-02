@@ -1,5 +1,5 @@
 using SkyCD.App.Services;
-using SkyCD.App.Documents;
+using SkyCD.Documents;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Presentation.ViewModels;
 using Couchbase.Lite;

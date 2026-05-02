@@ -41,6 +41,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj" />
+    <ProjectReference Include="..\SkyCD.Documents\SkyCD.Documents.csproj" />
     <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj" />
     <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj" />
     <ProjectReference Include="..\SkyCD.Cli\SkyCD.Cli.csproj" />

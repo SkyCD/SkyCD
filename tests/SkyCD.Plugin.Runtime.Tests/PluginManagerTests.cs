@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
+using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -38,7 +39,9 @@ public class PluginManagerTests
             var discovery = new PluginManager(
                 NullLogger<PluginManager>.Instance,
                 new AssembliesListFactory(NullLogger.Instance),
-                new DiscoveredPluginFactory());
+                new DiscoveredPluginFactory(),
+                new PluginDocumentFactory(),
+                CreateRepositoryManager());
             discovery.Discover(root, new Version(2, 9, 0));
 
             Assert.Empty(discovery.Plugins);
@@ -61,6 +64,15 @@ public class PluginManagerTests
         Assert.Equal("tests.runtime.assembly-plugin", target.Id);
         Assert.Equal("SkyCD.Plugin.Runtime.Tests", target.Name);
         Assert.Equal(Assembly.GetExecutingAssembly().GetName().Version, target.Version);
+    }
+
+    private static RepositoryManager CreateRepositoryManager()
+    {
+        var databaseManager = new DatabaseManager();
+        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginRuntimeTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        databaseManager.Connect("default", directory);
+        return new RepositoryManager(databaseManager);
     }
 }
 

@@ -4,7 +4,8 @@ using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using SkyCD.App.Services;
-using SkyCD.App.Documents;
+using SkyCD.Couchbase;
+using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
@@ -35,7 +36,9 @@ public partial class MainWindow : Window
             new PluginManager(
                 NullLogger<PluginManager>.Instance,
                 new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
-                new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory()),
+                new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory(),
+                new SkyCD.Plugin.Runtime.Factories.PluginDocumentFactory(),
+                CreateDesignTimeRepositoryManager()),
             new FileFormatManager([]))
     {
     }
@@ -484,7 +487,6 @@ public partial class MainWindow : Window
             e.Dialog.SelectedLanguage = language;
         }
 
-        e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
@@ -500,9 +502,10 @@ public partial class MainWindow : Window
         {
             options.PluginPath = e.Dialog.PluginPath;
             options.Language = e.Dialog.SelectedLanguage.Name;
-            options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
+            pluginManager.SavePluginEnabledStates(
+                e.Dialog.Plugins.Select(static plugin => (plugin.Id, plugin.IsEnabled)));
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -747,22 +750,38 @@ public partial class MainWindow : Window
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, new Version(3, 0, 0));
+        var descriptors = pluginManager.GetPluginDescriptors();
+        var loadedById = pluginManager.Plugins
+            .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
 
-        var plugins = pluginManager.Plugins
-            .Select(static plugin =>
+        var plugins = descriptors
+            .Select(descriptor =>
             {
-                var capabilitySummary = plugin.Capabilities.Count == 0
-                    ? "Generic"
-                    : string.Join(", ", plugin.Capabilities
-                        .Select(static capability => capability.GetType().Name)
-                        .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
+                if (loadedById.TryGetValue(descriptor.Id, out var loaded))
+                {
+                    var loadedCapabilitySummary = loaded.Capabilities.Count == 0
+                        ? "Generic"
+                        : string.Join(", ", loaded.Capabilities
+                            .Select(static capability => capability.GetType().Name)
+                            .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
 
-                var extendedInfo = $"{plugin.Id} v{plugin.Version}";
+                    return new OptionsPluginItem(
+                        loaded.Name,
+                        loadedCapabilitySummary,
+                        $"{loaded.Id} v{loaded.Version}",
+                        isEnabled: descriptor.IsEnabled,
+                        id: loaded.Id);
+                }
+
+                var capabilitySummary = "Unavailable";
+                var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
+
                 return new OptionsPluginItem(
-                    plugin.Name,
+                    descriptor.Name,
                     capabilitySummary,
                     extendedInfo,
-                    id: plugin.Id);
+                    isEnabled: descriptor.IsEnabled,
+                    id: descriptor.Id);
             })
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -842,6 +861,15 @@ public partial class MainWindow : Window
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
+    }
+
+    private static RepositoryManager CreateDesignTimeRepositoryManager()
+    {
+        var databaseManager = new DatabaseManager();
+        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "MainWindow");
+        Directory.CreateDirectory(directory);
+        databaseManager.Connect("default", directory);
+        return new RepositoryManager(databaseManager);
     }
 
 }

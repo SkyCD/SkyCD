@@ -5,10 +5,13 @@ using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Cli;
@@ -76,10 +79,9 @@ public sealed class CliHost(
         var pluginDirectories = GetPluginDirectories();
         var discoveredPlugins = await pluginLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
-        var serviceCollectionFactory = new ServiceCollectionFactory();
-        var serviceProvider = BuildGlobalServiceProvider(
-            discoveredPlugins,
-            serviceCollectionFactory);
+        var serviceProvider = PluginServiceProvider.Instance;
+        ConfigureGlobalServiceProvider(serviceProvider, discoveredPlugins);
+        
         using var _ = serviceProvider;
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
         using var registry = new CliContributionRegistry();
@@ -971,29 +973,21 @@ public sealed class CliHost(
         return byExtension.FormatId;
     }
 
-    private static PluginServiceProvider BuildGlobalServiceProvider(
-        IReadOnlyList<DiscoveredPlugin> plugins,
-        ServiceCollectionFactory serviceCollectionFactory)
+    private static void ConfigureGlobalServiceProvider(
+        PluginServiceProvider serviceProvider,
+        IReadOnlyList<DiscoveredPlugin> plugins)
     {
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        IServiceCollection mergedServices = serviceCollectionFactory.BuildCommonServiceCollection();
+        IServiceCollection mergedServices = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+        mergedServices.AddPluginRegistrator(pluginList);
 
-        foreach (var plugin in pluginList)
-        {
-            var pluginDescriptors = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
-            foreach (var descriptor in pluginDescriptors)
-            {
-                mergedServices.Add(descriptor);
-            }
-        }
-
-        PluginServiceProvider.Instance.Import(mergedServices);
-        return PluginServiceProvider.Instance;
+        serviceProvider.Register(mergedServices);
     }
 
     private static Task<IReadOnlyList<DiscoveredPlugin>> LoadDiscoveredPluginsAsync(
@@ -1015,9 +1009,22 @@ public sealed class CliHost(
         var pluginManager = new PluginManager(
             loggerFactory.CreateLogger<PluginManager>(),
             new AssembliesListFactory(loggerFactory.CreateLogger("SkyCD.Plugin.Runtime.Factories.AssembliesListFactory")),
-            new DiscoveredPluginFactory());
+            new DiscoveredPluginFactory(),
+            new PluginDocumentFactory(),
+            CreateRepositoryManager());
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
         return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());
+    }
+
+    private static RepositoryManager CreateRepositoryManager()
+    {
+        var databaseManager = new DatabaseManager();
+        var directory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "SkyCD");
+        Directory.CreateDirectory(directory);
+        databaseManager.Connect("default", directory);
+        return new RepositoryManager(databaseManager);
     }
 
     private static string GetVersionText()

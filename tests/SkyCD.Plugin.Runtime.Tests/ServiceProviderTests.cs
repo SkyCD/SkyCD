@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -11,10 +12,10 @@ public sealed class ServiceProviderTests
     [Fact]
     public void Constructor_RegistersCommonAndHostServices()
     {
-        using var provider = new PluginServiceProvider();
+        var provider = PluginServiceProvider.Instance;
         IServiceCollection hostServices = new ServiceCollection();
         hostServices.AddSingleton<SampleService>();
-        provider.Import(hostServices);
+        provider.Register(hostServices);
 
         var loggerFactory = provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory));
         var sample = provider.GetService(typeof(SampleService));
@@ -37,7 +38,7 @@ public sealed class ServiceProviderTests
             Capabilities = [new SampleCapability()]
         };
 
-        using var provider = new PluginServiceProvider();
+        var provider = PluginServiceProvider.Instance;
         IServiceCollection metadata = new ServiceCollection();
         metadata.AddSingleton<IReadOnlyList<DiscoveredPlugin>>([plugin]);
         metadata.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
@@ -46,8 +47,10 @@ public sealed class ServiceProviderTests
             {
                 [plugin.Id] = plugin
             });
-        provider.Import(metadata);
-        provider.Import(new ServiceCollectionFactory().BuildPluginServiceCollection(plugin));
+        provider.Register(metadata);
+        var pluginServices = new ServiceCollection()
+            .AddPluginRegistrator(plugin);
+        provider.Register(pluginServices);
         var list = provider.GetService(typeof(IReadOnlyList<DiscoveredPlugin>));
         var byId = provider.GetService(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>));
         var capability = provider.GetService(typeof(SampleCapability));
