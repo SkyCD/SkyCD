@@ -8,6 +8,7 @@ using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Managers;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using SkyCD.Presentation.ViewModels;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -743,6 +744,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        PluginServiceProvider.RebuildGlobal();
         RefreshPlugins(dialogVm);
     }
 

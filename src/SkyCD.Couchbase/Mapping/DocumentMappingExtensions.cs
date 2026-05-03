@@ -88,6 +88,32 @@ public static class DocumentMappingExtensions
             return Convert.ToString(raw, CultureInfo.InvariantCulture);
         }
 
+        if (effectiveTarget == typeof(DateTimeOffset))
+        {
+            return raw switch
+            {
+                DateTimeOffset dateTimeOffset => dateTimeOffset,
+                DateTime dateTime => new DateTimeOffset(dateTime),
+                string stringValue when DateTimeOffset.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedOffset) => parsedOffset,
+                string stringValue when DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime) => new DateTimeOffset(parsedDateTime),
+                long unixMilliseconds => DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds),
+                double unixMillisecondsDouble => DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(unixMillisecondsDouble, CultureInfo.InvariantCulture)),
+                _ => null
+            };
+        }
+
+        if (effectiveTarget == typeof(DateTime))
+        {
+            return raw switch
+            {
+                DateTime dateTime => dateTime,
+                DateTimeOffset dateTimeOffset => dateTimeOffset.UtcDateTime,
+                string stringValue when DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime) => parsedDateTime,
+                string stringValue when DateTimeOffset.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedOffset) => parsedOffset.UtcDateTime,
+                _ => null
+            };
+        }
+
         if (effectiveTarget.IsPrimitive || effectiveTarget == typeof(decimal))
         {
             return Convert.ChangeType(raw, effectiveTarget, CultureInfo.InvariantCulture);

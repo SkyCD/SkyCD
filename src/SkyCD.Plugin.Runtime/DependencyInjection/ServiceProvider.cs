@@ -29,10 +29,9 @@ public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
     {
         var services = new ServiceCollection()
                 .AddRegistrator<CommonRuntimeServiceRegistrator>()
-                .AddRegistrator<PluginServiceRegistrator>()
             ;
         CouchbaseServiceRegistrator.RegisterServices(services);
-            
+
         _instance = new ServiceProvider(services);
     } 
 

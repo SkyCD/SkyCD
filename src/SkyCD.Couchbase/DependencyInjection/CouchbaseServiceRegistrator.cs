@@ -1,13 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.IO;
 
 namespace SkyCD.Couchbase.DependencyInjection;
 
-public static class CouchbaseServiceRegistrator
+public sealed class CouchbaseServiceRegistrator : IServiceRegistrator
 {
     private const string AppDirectoryName = "SkyCD";
     private const string DefaultDatabaseName = "default";
+    private const string LocalStoreDatabaseName = "skycd";
 
     public static void RegisterServices(IServiceCollection services)
     {
@@ -20,6 +19,7 @@ public static class CouchbaseServiceRegistrator
 
             Directory.CreateDirectory(databaseDirectory);
             manager.Connect(DefaultDatabaseName, databaseDirectory);
+            manager.Connect(LocalStoreDatabaseName, databaseDirectory);
 
             return manager;
         });

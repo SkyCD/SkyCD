@@ -163,6 +163,19 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.Contains("legacy.plugin", result.DisabledPluginIds);
     }
 
+    [Fact]
+    public void FromDocument_ParsesDateTimeOffset_WhenValueStoredAsString()
+    {
+        const string isoValue = "2026-05-03T00:24:03.007+00:00";
+        using var doc = new MutableDocument("date-mapping");
+        doc.SetString("Timestamp", isoValue);
+
+        var result = doc.FromDocument<DateContainerDocument>();
+
+        Assert.NotNull(result);
+        Assert.Equal(DateTimeOffset.Parse(isoValue, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind), result!.Timestamp);
+    }
+
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("APPDATA", previousAppData);
@@ -179,5 +192,10 @@ public sealed class CouchbasePersistenceTests : IDisposable
                 // Couchbase Lite can release file handles slightly after dispose on some systems.
             }
         }
+    }
+
+    private sealed class DateContainerDocument
+    {
+        public DateTimeOffset Timestamp { get; set; }
     }
 }
