@@ -68,7 +68,7 @@ public partial class App : Avalonia.Application
             : options.PluginPath;
         var pluginManager = new PluginManager(
             NullLogger<PluginManager>.Instance,
-            new AssembliesListFactory(NullLogger.Instance),
+            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
             new DiscoveredPluginFactory(),
             new PluginDocumentFactory(),
             repositoryManager);

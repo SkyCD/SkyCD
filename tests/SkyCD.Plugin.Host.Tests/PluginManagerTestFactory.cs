@@ -11,7 +11,7 @@ internal static class PluginManagerTestFactory
     {
         return new PluginManager(
             NullLogger<PluginManager>.Instance,
-            new AssembliesListFactory(NullLogger.Instance),
+            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
             new DiscoveredPluginFactory(),
             new PluginDocumentFactory(),
             CreateRepositoryManager());

@@ -35,7 +35,7 @@ public partial class MainWindow : Window
             new CouchbaseLocalStore(),
             new PluginManager(
                 NullLogger<PluginManager>.Instance,
-                new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
+                new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger<SkyCD.Plugin.Runtime.Factories.AssembliesListFactory>.Instance),
                 new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory(),
                 new SkyCD.Plugin.Runtime.Factories.PluginDocumentFactory(),
                 CreateDesignTimeRepositoryManager()),
