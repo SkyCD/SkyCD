@@ -30,7 +30,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         var treeEntries = entries.Where(entry =>
             !string.Equals(entry.Type, "File", StringComparison.OrdinalIgnoreCase))
             .ToList();
-        
+
         var childrenByParent = treeEntries
             .GroupBy(record => record.ParentId ?? "__root__", StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
@@ -55,7 +55,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
         var items = entries
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
-            .Select(item => 
+            .Select(item =>
             {
                 var type = ParseCatalogEntryType(item.Type);
                 return new BrowserItem(
@@ -95,7 +95,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         }
 
         return children
-            .Select(entry => 
+            .Select(entry =>
             {
                 var type = ParseCatalogEntryType(entry.Type);
                 return new BrowserTreeNode(
@@ -128,8 +128,8 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return CatalogEntryType.File;
         }
 
-        return Enum.TryParse<CatalogEntryType>(typeStr, true, out var type) 
-            ? type 
+        return Enum.TryParse<CatalogEntryType>(typeStr, true, out var type)
+            ? type
             : CatalogEntryType.File;
     }
 

@@ -81,7 +81,7 @@ public sealed class CliHost(
 
         var serviceProvider = PluginServiceProvider.Instance;
         ConfigureGlobalServiceProvider(serviceProvider, discoveredPlugins);
-        
+
         using var _ = serviceProvider;
         var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
         using var registry = new CliContributionRegistry();

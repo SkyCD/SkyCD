@@ -14,10 +14,10 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
         services.AddSingleton<DiscoveredPluginFactory>();
         services.AddSingleton<PluginDocumentFactory>();
         services.AddSingleton<PluginManager>();
-        
+
         var provider = services.BuildServiceProvider();
         var pluginManager = ActivatorUtilities.CreateInstance<PluginManager>(provider);
-        
+
         foreach (var plugin in pluginManager.Plugins)
         {
             RegisterServices(services, plugin);

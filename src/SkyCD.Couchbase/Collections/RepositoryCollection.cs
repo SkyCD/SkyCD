@@ -19,7 +19,7 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
             throw new InvalidOperationException(
                 $"Type '{type.FullName}' must be annotated with [CouchbaseDocument(\"collection\")].");
         }
-        
+
         return documentMapping;
     }
 
@@ -43,17 +43,17 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         return database.GetCollection(collectionName, CblCollection.DefaultScopeName)
                ?? database.CreateCollection(collectionName, CblCollection.DefaultScopeName);
     }
-    
+
     public RepositoryBase GetOrAdd(Type key)
     {
         return inner.GetOrAdd(key, type =>
         {
             var documentMapping = GetDocumentMapping(type);
             var repository = CreateInstanceForRepository(documentMapping.RepositoryType);
-            
+
             repository.Initialize(type, documentMapping.CollectionName);
             repository.Collection = GetOrCreate(documentMapping.Database, documentMapping.CollectionName);
-            
+
             return repository;
         });
     }

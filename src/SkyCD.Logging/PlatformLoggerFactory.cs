@@ -28,7 +28,7 @@ public sealed class PlatformLoggerFactory : ILoggerFactory
             {
                 return field;
             }
-            
+
             ILoggingDriver[] drivers =
             [
                 new WindowsEventLogDriver(),

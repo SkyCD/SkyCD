@@ -20,7 +20,7 @@ public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
             {
                 RebuildGlobal();
             }
-            
+
             return _instance!;
         }
     }
@@ -33,7 +33,7 @@ public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
         CouchbaseServiceRegistrator.RegisterServices(services);
 
         _instance = new ServiceProvider(services);
-    } 
+    }
 
     private readonly IServiceCollection descriptors = new ServiceCollection();
     private MsServiceProvider container;

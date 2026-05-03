@@ -7,7 +7,7 @@ namespace SkyCD.Couchbase.Collections;
 internal sealed class DatabaseCollection : IDictionary<string, Database>
 {
     private readonly ConcurrentDictionary<string, Database> inner = new();
-    
+
     public ICollection<string> Keys => inner.Keys;
     public ICollection<Database> Values => inner.Values;
     public int Count => inner.Count;
@@ -26,7 +26,7 @@ internal sealed class DatabaseCollection : IDictionary<string, Database>
         get => inner[key];
         set => inner[key] = value;
     }
-    
+
     public void Add(string databaseName, DatabaseConfiguration configuration)
     {
         Add(databaseName, new Database(databaseName, configuration));
@@ -35,7 +35,7 @@ internal sealed class DatabaseCollection : IDictionary<string, Database>
     public void Add(string databaseName, Database database)
     {
         var fullDirectoryPath = Path.GetFullPath(database.Config.Directory);
-        
+
         Directory.CreateDirectory(fullDirectoryPath);
         inner.TryAdd(databaseName, database);
     }

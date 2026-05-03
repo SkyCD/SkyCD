@@ -26,7 +26,7 @@ internal sealed class UnixDomainSocketSyslogLoggerProvider(string appName) : ILo
             {
                 return field == string.Empty ? null : field;
             }
-            
+
             var candidates = new[] { "/dev/log", "/var/run/log" };
             foreach (var candidate in candidates)
             {
@@ -34,12 +34,12 @@ internal sealed class UnixDomainSocketSyslogLoggerProvider(string appName) : ILo
                 {
                     continue;
                 }
-                    
+
                 return field = candidate;
             }
 
             field = "";
-            
+
             return null;
         }
     }

@@ -10,16 +10,16 @@ public class DatabaseManager : IDisposable
 {
     private const string DefaultConnectionKey = "default";
     private readonly DatabaseCollection localDatabases = new();
-    
+
     internal DatabaseCollection DatabasesCollection => localDatabases;
 
     public CblDatabase Connect(string databaseName, CblDatabaseConfiguration configuration)
     {
         localDatabases.Add(databaseName, configuration);
-        
+
         return localDatabases[databaseName];
     }
-    
+
     public CblDatabase this[string key]
     {
         get => localDatabases[key];
@@ -37,7 +37,7 @@ public class DatabaseManager : IDisposable
         {
             Directory = directoryPath
         });
-        
+
         return localDatabases[databaseName];
     }
 

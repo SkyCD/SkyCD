@@ -52,16 +52,16 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
                 dictionary.SetDate(key, dateTimeOffset);
                 return;
             case IEnumerable enumerable and not string:
-            {
-                var array = new MutableArrayObject();
-                foreach (var item in enumerable)
                 {
-                    array.AddValue(ToMutableValue(item));
-                }
+                    var array = new MutableArrayObject();
+                    foreach (var item in enumerable)
+                    {
+                        array.AddValue(ToMutableValue(item));
+                    }
 
-                dictionary.SetArray(key, array);
-                return;
-            }
+                    dictionary.SetArray(key, array);
+                    return;
+                }
         }
 
         var nestedDictionary = new MutableDictionaryObject();
@@ -84,15 +84,15 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
             case DateTimeOffset dateTimeOffset:
                 return dateTimeOffset;
             case IEnumerable enumerable and not string:
-            {
-                var array = new MutableArrayObject();
-                foreach (var item in enumerable)
                 {
-                    array.AddValue(ToMutableValue(item));
-                }
+                    var array = new MutableArrayObject();
+                    foreach (var item in enumerable)
+                    {
+                        array.AddValue(ToMutableValue(item));
+                    }
 
-                return array;
-            }
+                    return array;
+                }
         }
 
         var nestedDictionary = new MutableDictionaryObject();
