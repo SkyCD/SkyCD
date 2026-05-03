@@ -1,14 +1,12 @@
 using Microsoft.Extensions.Logging;
-using System.Reflection;
+using SkyCD.Logging.Helpers;
 using System.Runtime.Versioning;
 
 namespace SkyCD.Logging.Logger;
 
 [SupportedOSPlatform(SupportedOsPlatforms.Android)]
-internal sealed class AndroidLogcatLogger(string tag, string category) : ILogger
+internal sealed class AndroidLogcatLogger<TCategoryName>(string tag, string category) : ILogger<TCategoryName>
 {
-    private static readonly MethodInfo? WriteLineMethod = ResolveWriteLineMethod();
-
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         return null;
@@ -38,10 +36,15 @@ internal sealed class AndroidLogcatLogger(string tag, string category) : ILogger
         }
 
         var composed = $"{category} [{eventId.Id}] {message}";
-        WriteLineMethod?.Invoke(null, [Map(logLevel), tag, composed]);
+        WritePlatformLog(logLevel, tag, composed);
     }
 
-    private static int Map(LogLevel level)
+    private static void WritePlatformLog(LogLevel level, string tag, string message)
+    {
+        AndroidInteropHelper.WriteLogLine(MapPriority(level), tag, message);
+    }
+
+    private static int MapPriority(LogLevel level)
     {
         return level switch
         {
@@ -53,11 +56,5 @@ internal sealed class AndroidLogcatLogger(string tag, string category) : ILogger
             LogLevel.Critical => 7,
             _ => 4
         };
-    }
-
-    private static MethodInfo? ResolveWriteLineMethod()
-    {
-        var logType = Type.GetType("Android.Util.Log, Mono.Android");
-        return logType?.GetMethod("WriteLine", BindingFlags.Public | BindingFlags.Static, [typeof(int), typeof(string), typeof(string)]);
     }
 }

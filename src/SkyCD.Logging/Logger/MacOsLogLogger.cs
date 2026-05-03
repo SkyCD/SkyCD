@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
+using SkyCD.Logging.Helpers;
 using System.Runtime.Versioning;
 
 namespace SkyCD.Logging.Logger;
@@ -8,11 +8,8 @@ namespace SkyCD.Logging.Logger;
 [SupportedOSPlatform(SupportedOsPlatforms.Ios)]
 [SupportedOSPlatform(SupportedOsPlatforms.TvOs)]
 [SupportedOSPlatform(SupportedOsPlatforms.WatchOs)]
-internal sealed class MacOsLogLogger(IntPtr log, string category) : ILogger
+internal sealed class MacOsLogLogger<TCategoryName>(IntPtr log, string category) : ILogger<TCategoryName>
 {
-    [DllImport("/usr/lib/libSystem.dylib", EntryPoint = "os_log_with_type", CallingConvention = CallingConvention.Cdecl)]
-    private static extern void WriteOsLogMessage(IntPtr osLog, byte type, string format, __arglist);
-
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         return null;
@@ -42,7 +39,7 @@ internal sealed class MacOsLogLogger(IntPtr log, string category) : ILogger
         }
 
         var composed = $"{category} [{eventId.Id}] {message}";
-        WriteOsLogMessage(log, Map(logLevel), "%{public}s", __arglist(composed));
+        AppleInteropHelper.WriteAppleLogMessage(log, Map(logLevel), "%{public}s", __arglist(composed));
     }
 
     private static byte Map(LogLevel level)

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SkyCD.Logging.Helpers;
 using SkyCD.Logging.Logger;
 using System.Runtime.Versioning;
 
@@ -10,7 +11,7 @@ internal sealed class UnixDomainSocketSyslogLoggerProvider(string appName) : ILo
 {
     public ILogger CreateLogger(string categoryName)
     {
-        return new UnixDomainSocketSyslogLogger(appName, categoryName, SocketPath);
+        return LoggerCategoryTypeHelper.CreateGenericLogger<UnixDomainSocketSyslogLogger<object>>(categoryName, appName, categoryName, SocketPath);
     }
 
     public void Dispose()
