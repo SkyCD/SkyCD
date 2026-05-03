@@ -6,7 +6,6 @@ public sealed class CouchbaseServiceRegistrator : IServiceRegistrator
 {
     private const string AppDirectoryName = "SkyCD";
     private const string DefaultDatabaseName = "default";
-    private const string LocalStoreDatabaseName = "skycd";
 
     public static void RegisterServices(IServiceCollection services)
     {
@@ -19,7 +18,6 @@ public sealed class CouchbaseServiceRegistrator : IServiceRegistrator
 
             Directory.CreateDirectory(databaseDirectory);
             manager.Connect(DefaultDatabaseName, databaseDirectory);
-            manager.Connect(LocalStoreDatabaseName, databaseDirectory);
 
             return manager;
         });
