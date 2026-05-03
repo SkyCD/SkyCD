@@ -3,10 +3,13 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
 using SkyCD.App.Services;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Managers;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using SkyCD.Presentation.ViewModels;
@@ -25,7 +28,7 @@ public partial class MainWindow : Window
 {
     private readonly CouchbaseLocalStore localStore;
     private readonly PluginManager pluginManager;
-    private readonly FileFormatManager fileFormatManager;
+    private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
@@ -501,12 +504,16 @@ public partial class MainWindow : Window
         var accepted = await dialog.ShowDialog<bool?>(this);
         if (accepted == true)
         {
+            var pluginStates = e.Dialog.Plugins
+                .Select(static plugin => (plugin.Id, plugin.IsEnabled))
+                .ToArray();
+
             options.PluginPath = e.Dialog.PluginPath;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
-            pluginManager.SavePluginEnabledStates(
-                e.Dialog.Plugins.Select(static plugin => (plugin.Id, plugin.IsEnabled)));
+            pluginManager.SavePluginEnabledStates(pluginStates);
+            RebuildPluginRuntimeServices(options.PluginPath);
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -744,7 +751,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        PluginServiceProvider.RebuildGlobal();
+        RebuildPluginRuntimeServices(dialogVm.PluginPath);
         RefreshPlugins(dialogVm);
     }
 
@@ -789,6 +796,31 @@ public partial class MainWindow : Window
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
+    }
+
+    private void RebuildPluginRuntimeServices(string? pluginPath)
+    {
+        var resolvedPluginPath = string.IsNullOrWhiteSpace(pluginPath)
+            ? ResolveDefaultPluginPath()
+            : pluginPath;
+
+        pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
+
+        var discoveredPlugins = pluginManager.Plugins.ToList();
+        var pluginById = discoveredPlugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+
+        IServiceCollection mergedServices = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
+
+        mergedServices.AddSingleton<IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(discoveredPlugins);
+        mergedServices.AddSingleton<IReadOnlyCollection<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(discoveredPlugins);
+        mergedServices.AddSingleton<IReadOnlyDictionary<string, SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginById);
+        mergedServices.AddPluginRegistrator(discoveredPlugins);
+
+        PluginServiceProvider.RebuildGlobal();
+        var runtimeProvider = PluginServiceProvider.Instance;
+        runtimeProvider.Register(mergedServices);
+        fileFormatManager = runtimeProvider.GetRequiredService<FileFormatManager>();
     }
 
     private static string ResolveDefaultPluginPath()

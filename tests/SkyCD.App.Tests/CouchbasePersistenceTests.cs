@@ -57,7 +57,6 @@ public sealed class CouchbasePersistenceTests : IDisposable
             },
             PluginPath = @"C:\plugins\custom",
             Language = "Lithuanian",
-            DisabledPluginIds = ["plugin.a", "plugin.b"],
             OptionsTabIndex = 2
         };
 
@@ -82,7 +81,6 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.Equal(expected.Browser.SortMode, actual.Browser.SortMode);
         Assert.Equal(expected.PluginPath, actual.PluginPath);
         Assert.Equal(expected.Language, actual.Language);
-        Assert.Equal(expected.DisabledPluginIds, actual.DisabledPluginIds);
         Assert.Equal(expected.OptionsTabIndex, actual.OptionsTabIndex);
     }
 
@@ -116,7 +114,6 @@ public sealed class CouchbasePersistenceTests : IDisposable
             },
             PluginPath = "vfs://plugins",
             Language = "English",
-            DisabledPluginIds = ["plugin.x"],
             OptionsTabIndex = 1
         };
 
@@ -125,7 +122,6 @@ public sealed class CouchbasePersistenceTests : IDisposable
 
         Assert.NotNull(restoredOptions);
         Assert.Equal(options.PluginPath, restoredOptions!.PluginPath);
-        Assert.Equal(options.DisabledPluginIds, restoredOptions.DisabledPluginIds);
         Assert.Equal(options.Browser.ViewMode, restoredOptions.Browser.ViewMode);
     }
 
@@ -144,23 +140,18 @@ public sealed class CouchbasePersistenceTests : IDisposable
         browser.SetString("ViewMode", BrowserViewMode.LargeIcons.ToString());
         browser.SetString("SortMode", BrowserSortMode.Size.ToString());
 
-        var disabledPlugins = new MutableArrayObject();
-        disabledPlugins.AddString("legacy.plugin");
-
         using var doc = new MutableDocument("app-options");
         doc.SetDictionary("Window", window);
         doc.SetBoolean("IsStatusBarVisible", true);
         doc.SetDictionary("Browser", browser);
         doc.SetString("PluginPath", @"C:\plugins\legacy");
         doc.SetString("Language", "English");
-        doc.SetArray("DisabledPluginIds", disabledPlugins);
         doc.SetInt("OptionsTabIndex", 1);
 
         var result = doc.FromDocument<AppOptionsDocument>();
 
         Assert.NotNull(result);
         Assert.Equal(@"C:\plugins\legacy", result!.PluginPath);
-        Assert.Contains("legacy.plugin", result.DisabledPluginIds);
     }
 
     [Fact]

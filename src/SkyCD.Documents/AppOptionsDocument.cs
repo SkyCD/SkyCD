@@ -1,6 +1,4 @@
 using SkyCD.Couchbase.Attributes;
-using System.Collections.Generic;
-
 namespace SkyCD.Documents;
 
 [CouchbaseDocument("settings")]
@@ -17,8 +15,6 @@ public sealed class AppOptionsDocument
     public string PluginPath { get; set; } = string.Empty;
 
     public string Language { get; set; } = "English";
-
-    public IReadOnlyList<string> DisabledPluginIds { get; set; } = [];
 
     public int OptionsTabIndex { get; set; }
 }

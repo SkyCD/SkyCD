@@ -145,7 +145,10 @@ public partial class OptionsDialogViewModel : ObservableObject
         Plugins.Clear();
         foreach (var plugin in snapshot)
         {
-            plugin.IsEnabled = !disabledPluginIds.Contains(plugin.Id);
+            if (disabledPluginIds.Contains(plugin.Id))
+            {
+                plugin.IsEnabled = false;
+            }
             Plugins.Add(plugin);
         }
 

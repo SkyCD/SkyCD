@@ -121,7 +121,7 @@
                                                 <DataTemplate x:DataType="vm:OptionsPluginItem">
                                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                            <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Top" Margin="0,2,0,0"/>
                                                             <StackPanel Grid.Column="1" Spacing="2">
                                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                                                 <TextBlock Text="{Binding Type}" Foreground="#9CA3AF" TextTrimming="CharacterEllipsis"/>
