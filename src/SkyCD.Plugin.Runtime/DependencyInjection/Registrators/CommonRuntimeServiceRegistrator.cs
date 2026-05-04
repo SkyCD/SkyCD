@@ -13,7 +13,7 @@ public sealed class CommonRuntimeServiceRegistrator : IServiceRegistrator
     public static void RegisterServices(IServiceCollection services)
     {
         services.AddSingleton<ILoggerFactory, PlatformLoggerFactory>();
-        services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
+        services.AddLogging();
         services.AddSingleton<FileFormatManager>();
         services.AddSingleton<MenuExtensionManager>();
         services.AddSingleton<ModalExtensionManager>();
