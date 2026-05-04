@@ -8,6 +8,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Company>SkyCD</Company>
+    <Authors>SkyCD</Authors>
   </PropertyGroup>
 
 </Project>

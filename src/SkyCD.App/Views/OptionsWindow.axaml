@@ -125,7 +125,6 @@
                                                             <StackPanel Grid.Column="1" Spacing="2">
                                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                                                 <TextBlock Text="{Binding Type}" Foreground="#9CA3AF" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Text="{Binding ExtendedInfo}" Foreground="#8C8C8C" FontSize="11" TextTrimming="CharacterEllipsis"/>
                                                             </StackPanel>
                                                         </Grid>
                                                     </Border>
