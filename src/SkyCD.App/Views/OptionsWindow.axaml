@@ -137,7 +137,13 @@
                                 <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="12">
                                     <StackPanel Spacing="3">
                                         <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="18" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding SelectedPlugin.Type}" Foreground="#9CA3AF"/>
+                                        <Button Content="{Binding SelectedPlugin.Type}"
+                                                Foreground="#9CA3AF"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                HorizontalAlignment="Left"
+                                                Command="{Binding OpenSelectedPluginAuthorUrlCommand}"/>
                                         <TextBlock Text="{Binding SelectedPlugin.ExtendedInfo}" Foreground="#8C8C8C" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">

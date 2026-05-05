@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -128,6 +129,21 @@ public partial class OptionsDialogViewModel : ObservableObject
         InfoMessage = $"Configure '{SelectedPlugin.Name}' is not implemented yet.";
     }
 
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginAuthorUrl))]
+    private void OpenSelectedPluginAuthorUrl()
+    {
+        if (SelectedPlugin is null || string.IsNullOrWhiteSpace(SelectedPlugin.AuthorUrl))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = SelectedPlugin.AuthorUrl,
+            UseShellExecute = true
+        });
+    }
+
     [RelayCommand]
     private void Confirm()
     {
@@ -137,6 +153,11 @@ public partial class OptionsDialogViewModel : ObservableObject
     private bool CanConfigure()
     {
         return SelectedPlugin is not null && SelectedPlugin.SupportsConfiguration;
+    }
+
+    private bool CanOpenSelectedPluginAuthorUrl()
+    {
+        return SelectedPlugin is not null && SelectedPlugin.HasAuthorUrl;
     }
 
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
@@ -196,6 +217,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+        OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedTabIndexChanged(int value)

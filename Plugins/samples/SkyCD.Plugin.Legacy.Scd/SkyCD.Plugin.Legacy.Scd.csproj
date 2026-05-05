@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
@@ -11,5 +11,9 @@
     <Company>SkyCD</Company>
     <Authors>SkyCD</Authors>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/" />
+  </ItemGroup>
 
 </Project>

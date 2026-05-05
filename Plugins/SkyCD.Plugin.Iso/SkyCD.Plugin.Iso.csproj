@@ -16,4 +16,8 @@
     <Authors>SkyCD</Authors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/" />
+  </ItemGroup>
+
 </Project>

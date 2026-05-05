@@ -773,7 +773,8 @@ public partial class MainWindow : Window
                         string.IsNullOrWhiteSpace(loaded.Author?.Name) ? "Unknown author" : loaded.Author.Name,
                         $"{loaded.Id} v{loaded.Version}",
                         isEnabled: descriptor.IsEnabled,
-                        id: loaded.Id);
+                        id: loaded.Id,
+                        authorUrl: loaded.Author?.Url);
                 }
 
                 var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
@@ -786,7 +787,8 @@ public partial class MainWindow : Window
                     authorSummary,
                     extendedInfo,
                     isEnabled: descriptor.IsEnabled,
-                    id: descriptor.Id);
+                    id: descriptor.Id,
+                    authorUrl: descriptor.Author?.Url);
             })
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();

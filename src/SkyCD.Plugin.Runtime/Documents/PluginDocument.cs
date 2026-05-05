@@ -12,6 +12,8 @@ public sealed class PluginDocument
 
     public PluginAuthorDocument? Author { get; set; }
 
+    public string? ProjectUrl { get; set; }
+
     public string Version { get; set; } = "1.0.0";
 
     public PluginConstraintsDocument Constraints { get; set; } = new();

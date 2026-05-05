@@ -13,6 +13,8 @@ public sealed class DiscoveredPlugin
 
     public PluginAuthorDocument? Author { get; init; }
 
+    public string? ProjectUrl { get; init; }
+
     public required Version Version { get; init; }
 
     public required Version MinHostVersion { get; init; }
