@@ -124,10 +124,4 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
             };
         }
     }
-
-    private sealed class YamlCatalogDocument
-    {
-        public string? SchemaVersion { get; set; }
-        public List<Dictionary<string, string?>>? Payload { get; set; }
-    }
 }
