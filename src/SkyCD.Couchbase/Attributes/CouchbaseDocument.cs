@@ -1,5 +1,4 @@
 using System;
-using SkyCD.Couchbase.Repositories;
 using SkyCD.Couchbase.Repository;
 
 namespace SkyCD.Couchbase.Attributes;

@@ -1,6 +1,4 @@
-using SkyCD.Couchbase.Repository;
-
-namespace SkyCD.Couchbase.Repositories;
+namespace SkyCD.Couchbase.Repository;
 
 public sealed class DefaultRepository : RepositoryBase
 {
