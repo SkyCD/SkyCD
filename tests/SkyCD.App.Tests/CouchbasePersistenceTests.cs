@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Couchbase.Lite;
+using Microsoft.Extensions.DependencyInjection;
 using SkyCD.App.Services;
+using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
@@ -28,8 +30,11 @@ public sealed class CouchbasePersistenceTests : IDisposable
     [Fact]
     public void BrowserDataStore_LoadsSeededCatalogData()
     {
-        using var localStore = new CouchbaseLocalStore();
-        var dataStore = new CouchbaseLiteBrowserDataStore(localStore);
+        var services = new ServiceCollection();
+        CouchbaseServiceRegistrator.RegisterServices(services);
+        services.AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>();
+        using var provider = services.BuildServiceProvider();
+        var dataStore = provider.GetRequiredService<IBrowserDataStore>();
 
         var roots = dataStore.GetTreeNodes();
         Assert.Single(roots);
@@ -65,17 +70,31 @@ public sealed class CouchbasePersistenceTests : IDisposable
             OptionsTabIndex = 2
         };
 
-        using (var writerLocalStore = new CouchbaseLocalStore())
+        var databaseDirectory = Path.Combine(appDataRoot, "SkyCD");
+        Directory.CreateDirectory(databaseDirectory);
+
+        var configuration = new DatabaseConfiguration
         {
-            var writerRepository = writerLocalStore.GetRepository<AppOptionsDocument>();
-            writerRepository.Save(AppOptionsDocument.DocumentId, expected);
+            Directory = databaseDirectory
+        };
+
+        using (var writerDb = new Database("default", configuration))
+        {
+            var writerCollection = writerDb.GetCollection("settings", Collection.DefaultScopeName)
+                                   ?? writerDb.CreateCollection("settings", Collection.DefaultScopeName);
+            using var writerDocument = expected.ToMutableDocument(AppOptionsDocument.DocumentId);
+            writerCollection.Save(writerDocument);
         }
 
-        using var readerLocalStore = new CouchbaseLocalStore();
-        var readerRepository = readerLocalStore.GetRepository<AppOptionsDocument>();
-        var actual = readerRepository.GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
+        using var readerDb = new Database("default", configuration);
+        var readerCollection = readerDb.GetCollection("settings", Collection.DefaultScopeName)
+                               ?? readerDb.CreateCollection("settings", Collection.DefaultScopeName);
+        using var readerDocument = readerCollection.GetDocument(AppOptionsDocument.DocumentId);
+        var actual = readerDocument?.FromDocument<AppOptionsDocument>();
 
-        Assert.Equal(expected.Window.Left, actual.Window.Left);
+        Assert.NotNull(actual);
+
+        Assert.Equal(expected.Window.Left, actual!.Window.Left);
         Assert.Equal(expected.Window.Top, actual.Window.Top);
         Assert.Equal(expected.Window.Width, actual.Window.Width);
         Assert.Equal(expected.Window.Height, actual.Window.Height);

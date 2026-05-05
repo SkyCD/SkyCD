@@ -4,6 +4,7 @@ using System.Linq;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
 using SkyCD.Couchbase.Mapping;
+using SkyCD.Couchbase;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Presentation.ViewModels.Catalog;
 using CatalogEntryDocument = SkyCD.Documents.CatalogDocument;
@@ -14,9 +15,12 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 {
     private readonly Collection _catalogCollection;
 
-    public CouchbaseLiteBrowserDataStore(CouchbaseLocalStore localStore)
+    public CouchbaseLiteBrowserDataStore(DatabaseManager databaseManager, RepositoryManager repositoryManager)
     {
-        var catalogRepository = localStore.GetRepository<CatalogEntryDocument>();
+        var catalogRepository = repositoryManager.For<CatalogEntryDocument>();
+        var database = databaseManager.GetFor<CatalogEntryDocument>();
+        catalogRepository.Collection = database.GetCollection(catalogRepository.CollectionName, Collection.DefaultScopeName)
+                                     ?? database.CreateCollection(catalogRepository.CollectionName, Collection.DefaultScopeName);
         _catalogCollection = catalogRepository.Collection;
         EnsureSeedData();
     }

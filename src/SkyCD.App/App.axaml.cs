@@ -49,10 +49,10 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static PluginUiServices CreatePluginServices(CouchbaseLocalStore localStore, RepositoryManager repositoryManager)
+    private static PluginUiServices CreatePluginServices(DatabaseManager databaseManager, RepositoryManager repositoryManager)
     {
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
-        var options = localStore.GetRepository<AppOptionsDocument>()
+        var options = repositoryManager.For<AppOptionsDocument>()
             .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
@@ -108,14 +108,13 @@ public partial class App : Avalonia.Application
         var services = new ServiceCollection();
         CouchbaseServiceRegistrator.RegisterServices(services);
         services
-            .AddSingleton<CouchbaseLocalStore>()
             .AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>()
             .AddSingleton<MainWindowViewModel>()
             .AddSingleton(static provider =>
             {
-                var localStore = provider.GetRequiredService<CouchbaseLocalStore>();
+                var databaseManager = provider.GetRequiredService<DatabaseManager>();
                 var repositoryManager = provider.GetRequiredService<RepositoryManager>();
-                return CreatePluginServices(localStore, repositoryManager);
+                return CreatePluginServices(databaseManager, repositoryManager);
             })
             .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().PluginManager)
             .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().FileFormatManager)

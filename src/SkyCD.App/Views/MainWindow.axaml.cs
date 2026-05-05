@@ -13,6 +13,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.App.Services;
+using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
@@ -26,7 +27,7 @@ namespace SkyCD.App.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly CouchbaseLocalStore localStore;
+    private readonly RepositoryManager repositoryManager;
     private readonly PluginManager pluginManager;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
@@ -35,11 +36,11 @@ public partial class MainWindow : Window
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
-        CouchbaseLocalStore localStore,
+        RepositoryManager repositoryManager,
         PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
-        this.localStore = localStore;
+        this.repositoryManager = repositoryManager;
         this.pluginManager = pluginManager;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
@@ -612,13 +613,13 @@ public partial class MainWindow : Window
 
     private AppOptionsDocument LoadAppOptions()
     {
-        return localStore.GetRepository<AppOptionsDocument>()
+        return repositoryManager.For<AppOptionsDocument>()
             .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
     }
 
     private void SaveAppOptions(AppOptionsDocument options)
     {
-        localStore.GetRepository<AppOptionsDocument>()
+        repositoryManager.For<AppOptionsDocument>()
             .Save(AppOptionsDocument.DocumentId, options);
     }
 
