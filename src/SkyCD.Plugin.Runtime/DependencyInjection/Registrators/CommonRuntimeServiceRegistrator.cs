@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using SkyCD.Logging;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Modal;
-using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;

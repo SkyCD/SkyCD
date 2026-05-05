@@ -1,3 +1,4 @@
+using System;
 using RepoBase = SkyCD.Couchbase.Repository.RepositoryBase;
 using RepoCollection = SkyCD.Couchbase.Collections.RepositoryCollection;
 

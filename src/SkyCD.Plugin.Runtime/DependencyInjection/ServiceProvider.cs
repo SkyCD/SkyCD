@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;

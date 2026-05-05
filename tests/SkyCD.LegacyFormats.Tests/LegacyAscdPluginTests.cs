@@ -1,5 +1,11 @@
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Ascd;
+using Xunit;
 
 namespace SkyCD.LegacyFormats.Tests;
 
@@ -138,7 +144,7 @@ public class LegacyAscdPluginTests
     private static byte[] CompressText(string text)
     {
         using var output = new MemoryStream();
-        using (var compressed = new System.IO.Compression.DeflateStream(output, System.IO.Compression.CompressionMode.Compress, leaveOpen: true))
+        using (var compressed = new DeflateStream(output, CompressionMode.Compress, leaveOpen: true))
         using (var writer = new StreamWriter(compressed))
         {
             writer.Write(text);

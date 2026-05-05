@@ -1,4 +1,5 @@
 using SkyCD.Couchbase.Attributes;
+
 namespace SkyCD.Documents;
 
 [CouchbaseDocument("settings")]

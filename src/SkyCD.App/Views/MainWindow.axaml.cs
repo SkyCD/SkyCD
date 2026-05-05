@@ -1,26 +1,29 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using SkyCD.Presentation.ViewModels;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App.Views;
 
@@ -39,9 +42,9 @@ public partial class MainWindow : Window
             new CouchbaseLocalStore(),
             new PluginManager(
                 NullLogger<PluginManager>.Instance,
-                new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger<SkyCD.Plugin.Runtime.Factories.AssembliesListFactory>.Instance),
-                new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory(),
-                new SkyCD.Plugin.Runtime.Factories.PluginDocumentFactory(),
+                new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+                new DiscoveredPluginFactory(),
+                new PluginDocumentFactory(),
                 CreateDesignTimeRepositoryManager()),
             new FileFormatManager([]))
     {
@@ -99,7 +102,7 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainWindowViewModel.IsDirtyDocument))
         {
@@ -343,7 +346,7 @@ public partial class MainWindow : Window
             }
 
             await using var source = File.OpenRead(localPath);
-            await fileFormatManager.ReadAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+            await fileFormatManager.ReadAsync(new FileFormatReadRequest
             {
                 FormatId = capability.SupportedFormat.FormatId,
                 Source = source,
@@ -810,9 +813,9 @@ public partial class MainWindow : Window
         IServiceCollection mergedServices = new ServiceCollection()
             .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
-        mergedServices.AddSingleton<IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(discoveredPlugins);
-        mergedServices.AddSingleton<IReadOnlyCollection<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(discoveredPlugins);
-        mergedServices.AddSingleton<IReadOnlyDictionary<string, SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginById);
+        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(discoveredPlugins);
+        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(discoveredPlugins);
+        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
         mergedServices.AddPluginRegistrator(discoveredPlugins);
 
         PluginServiceProvider.RebuildGlobal();

@@ -1,7 +1,8 @@
-using Couchbase.Lite;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using Couchbase.Lite;
 
 namespace SkyCD.Couchbase.Decorators;
 

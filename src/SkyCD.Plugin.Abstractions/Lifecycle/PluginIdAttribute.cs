@@ -1,3 +1,5 @@
+using System;
+
 namespace SkyCD.Plugin.Abstractions.Lifecycle;
 
 /// <summary>

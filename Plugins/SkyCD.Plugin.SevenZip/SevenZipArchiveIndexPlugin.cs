@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SharpCompress.Archives.SevenZip;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 

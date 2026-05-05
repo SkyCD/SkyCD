@@ -1,8 +1,9 @@
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities;
-using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 

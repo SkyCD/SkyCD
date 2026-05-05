@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;

@@ -1,9 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
   </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -11,9 +9,7 @@
     <Company>SkyCD</Company>
     <Authors>SkyCD</Authors>
   </PropertyGroup>
-
   <ItemGroup>
     <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/" />
   </ItemGroup>
-
 </Project>

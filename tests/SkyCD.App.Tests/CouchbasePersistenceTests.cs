@@ -1,9 +1,14 @@
-using SkyCD.App.Services;
-using SkyCD.Documents;
-using SkyCD.Couchbase.Mapping;
-using SkyCD.Presentation.ViewModels;
-using Couchbase.Lite;
+using System;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using Avalonia.Controls;
+using Couchbase.Lite;
+using SkyCD.App.Services;
+using SkyCD.Couchbase.Mapping;
+using SkyCD.Documents;
+using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 
@@ -164,7 +169,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         var result = doc.FromDocument<DateContainerDocument>();
 
         Assert.NotNull(result);
-        Assert.Equal(DateTimeOffset.Parse(isoValue, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind), result!.Timestamp);
+        Assert.Equal(DateTimeOffset.Parse(isoValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), result!.Timestamp);
     }
 
     public void Dispose()

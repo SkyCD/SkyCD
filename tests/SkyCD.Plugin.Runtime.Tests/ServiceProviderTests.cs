@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
+using Xunit;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -17,7 +20,7 @@ public sealed class ServiceProviderTests
         hostServices.AddSingleton<SampleService>();
         provider.Register(hostServices);
 
-        var loggerFactory = provider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory));
+        var loggerFactory = provider.GetService(typeof(ILoggerFactory));
         var sample = provider.GetService(typeof(SampleService));
 
         Assert.NotNull(loggerFactory);

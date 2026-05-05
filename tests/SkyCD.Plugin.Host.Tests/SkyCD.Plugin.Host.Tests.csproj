@@ -1,23 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
-
   <ItemGroup>
-    <Using Include="Xunit" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj" />
@@ -25,17 +20,16 @@
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Html\SkyCD.Plugin.Html.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Json\SkyCD.Plugin.Json.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.SevenZip\SkyCD.Plugin.SevenZip.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj" />
-<ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.SevenZip\SkyCD.Plugin.SevenZip.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Toml\SkyCD.Plugin.Toml.csproj" />
+    <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Tar\SkyCD.Plugin.Tar.csproj" />
     <ProjectReference Include="..\..\Plugins\samples\SkyCD.Plugin.Sample.Modal\SkyCD.Plugin.Sample.Modal.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Xml\SkyCD.Plugin.Xml.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Yaml\SkyCD.Plugin.Yaml.csproj" />
     <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Zip\SkyCD.Plugin.Zip.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="Fixtures\Csv\catalog-hierarchy.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

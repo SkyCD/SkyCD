@@ -1,4 +1,4 @@
-﻿namespace SkyCD.Presentation.ViewModels.Catalog;
+namespace SkyCD.Presentation.ViewModels.Catalog;
 
 public enum CatalogEntryType
 {

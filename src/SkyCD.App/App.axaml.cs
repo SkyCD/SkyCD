@@ -1,24 +1,23 @@
-using Avalonia;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
+using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
-using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Documents;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.App.Views;
-using SkyCD.Documents;
+using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Presentation.ViewModels;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 
 namespace SkyCD.App;
 

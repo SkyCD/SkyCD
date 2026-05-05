@@ -1,3 +1,5 @@
+using System;
+
 namespace SkyCD.Presentation.ViewModels;
 
 public static class AboutDialogFormatting

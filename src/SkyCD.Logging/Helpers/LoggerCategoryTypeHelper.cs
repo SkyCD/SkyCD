@@ -1,6 +1,7 @@
-using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace SkyCD.Logging.Helpers;
 

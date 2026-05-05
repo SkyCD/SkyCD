@@ -1,10 +1,9 @@
-using Avalonia;
-using Avalonia.Data.Converters;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace SkyCD.App.Converters;
 

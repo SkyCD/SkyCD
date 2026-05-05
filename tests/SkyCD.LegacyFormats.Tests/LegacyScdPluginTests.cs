@@ -1,6 +1,9 @@
-using System.Text;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Scd;
+using Xunit;
 
 namespace SkyCD.LegacyFormats.Tests;
 

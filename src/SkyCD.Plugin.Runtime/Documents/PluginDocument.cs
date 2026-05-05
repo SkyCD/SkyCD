@@ -1,3 +1,4 @@
+using System;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Plugin.Runtime.Repositories;
 

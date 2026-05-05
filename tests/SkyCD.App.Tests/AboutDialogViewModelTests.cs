@@ -1,4 +1,7 @@
+using System;
+using System.IO;
 using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 

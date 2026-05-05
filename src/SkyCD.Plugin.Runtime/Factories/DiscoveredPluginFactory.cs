@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Lifecycle;
@@ -69,7 +73,7 @@ public sealed class DiscoveredPluginFactory
             .ToList();
     }
 
-    private static (string Id, string Name, string AuthorName, string? AuthorUrl, string? ProjectUrl, Version Version, Version MinHostVersion, Version? MaxHostVersion, string Description, string FileName)? ResolveAssemblyMetadata(Assembly assembly)
+    private static (string Id, string Name, string AuthorName, string? AuthorUrl, string? ProjectUrl, System.Version Version, System.Version MinHostVersion, System.Version? MaxHostVersion, string Description, string FileName)? ResolveAssemblyMetadata(Assembly assembly)
     {
         var assemblyName = assembly.GetName();
         var assemblySimpleName = assemblyName.Name;

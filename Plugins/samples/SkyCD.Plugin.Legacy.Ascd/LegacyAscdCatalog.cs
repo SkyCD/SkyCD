@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SkyCD.Plugin.Legacy.Ascd;
 
 public sealed class LegacyAscdCatalog

@@ -1,5 +1,8 @@
+using System;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using SkyCD.Logging.Helpers;
+using Xunit;
 
 namespace SkyCD.Logging.Tests;
 

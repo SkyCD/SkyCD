@@ -1,6 +1,7 @@
+using System;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using SkyCD.Logging.Drivers;
-using System.Reflection;
 
 namespace SkyCD.Logging;
 

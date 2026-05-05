@@ -1,3 +1,5 @@
+using System;
+
 namespace SkyCD.Domain.Catalogs;
 
 public sealed class CatalogTag

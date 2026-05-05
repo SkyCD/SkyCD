@@ -1,8 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
+using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
@@ -60,6 +65,6 @@ public sealed class ServiceRegistratorTests
             .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         using var provider = services.BuildServiceProvider();
-        Assert.NotNull(provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());
+        Assert.NotNull(provider.GetRequiredService<ILoggerFactory>());
     }
 }

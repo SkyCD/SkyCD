@@ -1,9 +1,8 @@
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.VisualTree;
-using SkyCD.Presentation.ViewModels;
 using System;
 using System.ComponentModel;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Views;
 

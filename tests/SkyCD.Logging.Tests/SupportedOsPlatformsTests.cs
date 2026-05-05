@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using Xunit;
+
 namespace SkyCD.Logging.Tests;
 
 public sealed class SupportedOsPlatformsTests

@@ -1,17 +1,25 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using SkyCD.Cli.Console;
+using SkyCD.Cli.Execution;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Cli;
@@ -236,12 +244,12 @@ public sealed class CliHost(
         bool jsonOutput,
         FileFormatManager fileFormatManager,
         CliContributionRegistry registry,
-        IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
+        IReadOnlyList<DiscoveredPlugin> discoveredPlugins,
         IReadOnlyList<string> pluginDirectories,
         CancellationToken cancellationToken)
     {
         var runnerArgs = NormalizeSystemRunnerArgs(args);
-        var context = new SkyCD.Cli.Execution.CliCommandExecutionContext(
+        var context = new CliCommandExecutionContext(
             this,
             jsonOutput,
             fileFormatManager,
@@ -252,8 +260,8 @@ public sealed class CliHost(
 
         try
         {
-            SkyCD.Cli.Execution.CliCommandExecutionContextScope.Current = context;
-            var appRunner = new AppRunner<SkyCD.Cli.Console.RootCommand>().UseDefaultMiddleware();
+            CliCommandExecutionContextScope.Current = context;
+            var appRunner = new AppRunner<RootCommand>().UseDefaultMiddleware();
             int exitCode;
             lock (ConsoleRedirectLock)
             {
@@ -288,7 +296,7 @@ public sealed class CliHost(
         }
         finally
         {
-            SkyCD.Cli.Execution.CliCommandExecutionContextScope.Current = null;
+            CliCommandExecutionContextScope.Current = null;
         }
     }
 
@@ -508,7 +516,7 @@ public sealed class CliHost(
         bool jsonOutput,
         CliContributionRegistry registry,
         FileFormatManager fileFormatManager,
-        IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> discoveredPlugins,
+        IReadOnlyList<DiscoveredPlugin> discoveredPlugins,
         IReadOnlyList<string> pluginDirectories)
     {
         var availableFormatIds = fileFormatManager.GetOpenFormats()
@@ -865,7 +873,7 @@ public sealed class CliHost(
 
     private static SystemCommandNamespace[] DiscoverSystemCommandNamespaces()
     {
-        var rootCommandType = typeof(SkyCD.Cli.Console.RootCommand);
+        var rootCommandType = typeof(RootCommand);
         var discoveredNamespaces = new List<SystemCommandNamespace>();
 
         foreach (var subcommandType in GetSubcommandTypes(rootCommandType))

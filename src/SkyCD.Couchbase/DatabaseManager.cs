@@ -1,6 +1,7 @@
+using System;
+using System.Reflection;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Collections;
-using System.Reflection;
 using CblDatabase = Couchbase.Lite.Database;
 using CblDatabaseConfiguration = Couchbase.Lite.DatabaseConfiguration;
 

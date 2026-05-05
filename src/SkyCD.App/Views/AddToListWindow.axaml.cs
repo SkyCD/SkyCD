@@ -1,7 +1,8 @@
+using System;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using SkyCD.Presentation.ViewModels;
-using System;
 
 namespace SkyCD.App.Views;
 
@@ -27,7 +28,7 @@ public partial class AddToListWindow : Window
         }
     }
 
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is AddToListDialogViewModel vm &&
             e.PropertyName == nameof(AddToListDialogViewModel.DialogAccepted) &&
