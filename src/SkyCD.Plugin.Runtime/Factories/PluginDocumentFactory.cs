@@ -14,6 +14,7 @@ public sealed class PluginDocumentFactory
         {
             Id = plugin.Id,
             Name = plugin.Name,
+            Author = plugin.Author,
             Version = plugin.Version.ToString(),
             Constraints = new PluginConstraintsDocument
             {

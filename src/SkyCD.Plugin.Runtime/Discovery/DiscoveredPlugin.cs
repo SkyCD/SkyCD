@@ -1,4 +1,5 @@
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Runtime.Documents;
 namespace SkyCD.Plugin.Runtime.Discovery;
 
 /// <summary>
@@ -9,6 +10,8 @@ public sealed class DiscoveredPlugin
     public required string Id { get; init; }
 
     public required string Name { get; init; }
+
+    public PluginAuthorDocument? Author { get; init; }
 
     public required Version Version { get; init; }
 

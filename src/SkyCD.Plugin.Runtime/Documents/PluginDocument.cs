@@ -10,6 +10,8 @@ public sealed class PluginDocument
 
     public string Name { get; set; } = string.Empty;
 
+    public PluginAuthorDocument? Author { get; set; }
+
     public string Version { get; set; } = "1.0.0";
 
     public PluginConstraintsDocument Constraints { get; set; } = new();

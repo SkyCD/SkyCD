@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -769,17 +768,17 @@ public partial class MainWindow : Window
             {
                 if (loadedById.TryGetValue(descriptor.Id, out var loaded))
                 {
-                    var author = ResolvePluginAuthor(loaded);
-
                     return new OptionsPluginItem(
                         loaded.Name,
-                        author,
+                        string.IsNullOrWhiteSpace(loaded.Author?.Name) ? "Unknown author" : loaded.Author.Name,
                         $"{loaded.Id} v{loaded.Version}",
                         isEnabled: descriptor.IsEnabled,
                         id: loaded.Id);
                 }
 
-                var authorSummary = "Unknown author";
+                var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
+                    ? "Unknown author"
+                    : descriptor.Author.Name;
                 var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
 
                 return new OptionsPluginItem(
@@ -793,29 +792,6 @@ public partial class MainWindow : Window
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
-    }
-
-    private static string ResolvePluginAuthor(SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin plugin)
-    {
-        var sourceAssembly = plugin.Capabilities.FirstOrDefault()?.GetType().Assembly;
-        if (sourceAssembly is null)
-        {
-            return "Unknown author";
-        }
-
-        var company = sourceAssembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company;
-        if (string.IsNullOrWhiteSpace(company))
-        {
-            return "Unknown author";
-        }
-
-        if (string.Equals(company, plugin.Name, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(company, plugin.Id, StringComparison.OrdinalIgnoreCase))
-        {
-            return "Unknown author";
-        }
-
-        return company;
     }
 
     private void RebuildPluginRuntimeServices(string? pluginPath)

@@ -119,6 +119,25 @@ public static class DocumentMappingExtensions
             return Convert.ChangeType(raw, effectiveTarget, CultureInfo.InvariantCulture);
         }
 
+        // Backward compatibility: allow previously scalar string values
+        // to hydrate into newer object documents with a writable Name property.
+        if (raw is string legacyString)
+        {
+            var nameProperty = effectiveTarget.GetProperty("Name", BindingFlags.Public | BindingFlags.Instance);
+            if (nameProperty is not null &&
+                nameProperty.CanWrite &&
+                nameProperty.PropertyType == typeof(string) &&
+                nameProperty.GetIndexParameters().Length == 0)
+            {
+                var shaped = Activator.CreateInstance(effectiveTarget);
+                if (shaped is not null)
+                {
+                    nameProperty.SetValue(shaped, legacyString);
+                    return shaped;
+                }
+            }
+        }
+
         return raw switch
         {
             IDictionaryObject rawDictionary => ReadObjectFromDictionary(rawDictionary, effectiveTarget),
