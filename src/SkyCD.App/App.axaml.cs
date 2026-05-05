@@ -5,7 +5,6 @@ using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
@@ -14,7 +13,6 @@ using SkyCD.Documents;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
@@ -35,23 +33,17 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             appServiceProvider = BuildAppServiceProvider();
-            var localStore = appServiceProvider.GetRequiredService<CouchbaseLocalStore>();
+            var pluginServices = appServiceProvider.GetRequiredService<PluginUiServices>();
             var mainWindowViewModel = appServiceProvider.GetRequiredService<MainWindowViewModel>();
-            var repositoryManager = appServiceProvider.GetRequiredService<RepositoryManager>();
-            var pluginServices = CreatePluginServices(localStore, repositoryManager);
+            var mainWindow = appServiceProvider.GetRequiredService<MainWindow>();
+            mainWindow.DataContext = mainWindowViewModel;
 
             desktop.Exit += (_, _) =>
             {
                 (appServiceProvider as IDisposable)?.Dispose();
                 pluginServices.ServiceProvider.Dispose();
             };
-            desktop.MainWindow = new MainWindow(
-                localStore,
-                pluginServices.PluginManager,
-                pluginServices.FileFormatManager)
-            {
-                DataContext = mainWindowViewModel,
-            };
+            desktop.MainWindow = mainWindow;
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -65,12 +57,13 @@ public partial class App : Avalonia.Application
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
             : options.PluginPath;
-        var pluginManager = new PluginManager(
-            NullLogger<PluginManager>.Instance,
-            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
-            new DiscoveredPluginFactory(),
-            new PluginDocumentFactory(),
-            repositoryManager);
+        IServiceCollection mergedServices = new ServiceCollection()
+            .AddSingleton(repositoryManager)
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
+
+        var runtimeProvider = PluginServiceProvider.Instance;
+        runtimeProvider.Register(mergedServices);
+        var pluginManager = runtimeProvider.GetRequiredService<PluginManager>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
@@ -81,15 +74,12 @@ public partial class App : Avalonia.Application
 
         var pluginList = discoveredPlugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        IServiceCollection mergedServices = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
         mergedServices.AddPluginRegistrator(discoveredPlugins);
 
-        var runtimeProvider = PluginServiceProvider.Instance;
         runtimeProvider.Register(mergedServices);
         var fileFormatManager = runtimeProvider.GetRequiredService<FileFormatManager>();
         return new PluginUiServices(fileFormatManager, pluginManager, runtimeProvider);
@@ -117,10 +107,20 @@ public partial class App : Avalonia.Application
     {
         var services = new ServiceCollection();
         CouchbaseServiceRegistrator.RegisterServices(services);
-        return services
+        services
             .AddSingleton<CouchbaseLocalStore>()
             .AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>()
             .AddSingleton<MainWindowViewModel>()
-            .BuildServiceProvider();
+            .AddSingleton(static provider =>
+            {
+                var localStore = provider.GetRequiredService<CouchbaseLocalStore>();
+                var repositoryManager = provider.GetRequiredService<RepositoryManager>();
+                return CreatePluginServices(localStore, repositoryManager);
+            })
+            .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().PluginManager)
+            .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().FileFormatManager)
+            .AddSingleton<MainWindow>();
+
+        return services.BuildServiceProvider();
     }
 }

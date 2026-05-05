@@ -1003,36 +1003,10 @@ public sealed class CliHost(
         CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.SetMinimumLevel(LogLevel.Information);
-            builder.AddSimpleConsole(options =>
-            {
-                options.ColorBehavior = LoggerColorBehavior.Disabled;
-                options.SingleLine = true;
-                options.TimestampFormat = string.Empty;
-            });
-        });
-
-        var pluginManager = new PluginManager(
-            loggerFactory.CreateLogger<PluginManager>(),
-            new AssembliesListFactory(loggerFactory.CreateLogger<AssembliesListFactory>()),
-            new DiscoveredPluginFactory(),
-            new PluginDocumentFactory(),
-            CreateRepositoryManager());
+        PluginServiceProvider.RebuildGlobal();
+        var pluginManager = PluginServiceProvider.Instance.GetRequiredService<PluginManager>();
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
         return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());
-    }
-
-    private static RepositoryManager CreateRepositoryManager()
-    {
-        var databaseManager = new DatabaseManager();
-        var directory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "SkyCD");
-        Directory.CreateDirectory(directory);
-        databaseManager.Connect("default", directory);
-        return new RepositoryManager(databaseManager);
     }
 
     private static string GetVersionText()

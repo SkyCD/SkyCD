@@ -12,15 +12,12 @@ using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Services;
-using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
@@ -36,19 +33,6 @@ public partial class MainWindow : Window
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
-
-    public MainWindow()
-        : this(
-            new CouchbaseLocalStore(),
-            new PluginManager(
-                NullLogger<PluginManager>.Instance,
-                new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
-                new DiscoveredPluginFactory(),
-                new PluginDocumentFactory(),
-                CreateDesignTimeRepositoryManager()),
-            new FileFormatManager([]))
-    {
-    }
 
     public MainWindow(
         CouchbaseLocalStore localStore,
@@ -896,15 +880,6 @@ public partial class MainWindow : Window
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
-    }
-
-    private static RepositoryManager CreateDesignTimeRepositoryManager()
-    {
-        var databaseManager = new DatabaseManager();
-        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "MainWindow");
-        Directory.CreateDirectory(directory);
-        databaseManager.Connect("default", directory);
-        return new RepositoryManager(databaseManager);
     }
 
 }
