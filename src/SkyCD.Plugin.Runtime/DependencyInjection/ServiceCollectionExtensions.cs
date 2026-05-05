@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -27,9 +28,21 @@ public static class ServiceCollectionExtensions
     }
 
     public static IServiceCollection AddRegistrator<TRegistrator>(this IServiceCollection services)
-        where TRegistrator : IServiceRegistrator
     {
-        TRegistrator.RegisterServices(services);
+        ArgumentNullException.ThrowIfNull(services);
+
+        var registerMethod = typeof(TRegistrator).GetMethod(
+            "RegisterServices",
+            BindingFlags.Public | BindingFlags.Static,
+            [typeof(IServiceCollection)]);
+
+        if (registerMethod is null)
+        {
+            throw new InvalidOperationException(
+                $"{typeof(TRegistrator).FullName} must expose public static void RegisterServices(IServiceCollection services).");
+        }
+
+        registerMethod.Invoke(null, [services]);
         return services;
     }
 

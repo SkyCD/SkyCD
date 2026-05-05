@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SkyCD.Couchbase.DependencyInjection;
 
-public sealed class CouchbaseServiceRegistrator : IServiceRegistrator
+public sealed class CouchbaseServiceRegistrator
 {
     private const string AppDirectoryName = "SkyCD";
     private const string DefaultDatabaseName = "default";

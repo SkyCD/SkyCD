@@ -29,10 +29,11 @@ public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
 
     public static void RebuildGlobal()
     {
-        var services = new ServiceCollection()
-                .AddRegistrator<CommonRuntimeServiceRegistrator>()
-            ;
-        CouchbaseServiceRegistrator.RegisterServices(services);
+        var services = new ServiceCollection();
+        services
+            .AddRegistrator<CommonRuntimeServiceRegistrator>()
+            .AddRegistrator<CouchbaseServiceRegistrator>()
+            .AddRegistrator<PluginServiceRegistrator>();
 
         _instance = new ServiceProvider(services);
     }
