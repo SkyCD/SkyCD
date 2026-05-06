@@ -6,10 +6,12 @@ namespace SkyCD.Documents;
 [CouchbaseDocument("catalog")]
 public sealed class CatalogDocument
 {
+    [Id]
     public string Id { get; init; } = string.Empty;
 
     public string Name { get; init; } = string.Empty;
 
+    [ParentId]
     public string? ParentId { get; init; }
 
     public string Type { get; init; } = "File";

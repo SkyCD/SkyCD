@@ -51,9 +51,11 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         {
             var documentMapping = GetDocumentMapping(type);
             var repository = CreateInstanceForRepository(documentMapping.RepositoryType);
-
-            repository.Initialize(type, documentMapping.CollectionName);
-            repository.Collection = GetOrCreate(documentMapping.Database, documentMapping.CollectionName);
+            var collection = GetOrCreate(documentMapping.Database, documentMapping.CollectionName);
+            repository.Initialize(
+                documentType: type,
+                collectionName: documentMapping.CollectionName,
+                collection: collection);
 
             return repository;
         });

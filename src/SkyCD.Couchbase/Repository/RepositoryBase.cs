@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
+using SkyCD.Couchbase.Attributes;
+using SkyCD.Couchbase.Helpers;
 using SkyCD.Couchbase.Mapping;
+using SkyCD.Couchbase.Models;
 
 namespace SkyCD.Couchbase.Repository;
 
@@ -11,15 +14,22 @@ public abstract class RepositoryBase
 {
     public Type DocumentType { get; private set; } = null!;
     public string CollectionName { get; private set; } = string.Empty;
+    public DocumentPropertyBinding IdProperty { get; internal set; } = new("Id", null);
     public Collection Collection { get; internal set; } = null!;
 
-    internal void Initialize(Type documentType, string collectionName)
+    internal virtual void Initialize(Type documentType, string collectionName, Collection collection)
     {
         ArgumentNullException.ThrowIfNull(documentType);
         ArgumentException.ThrowIfNullOrWhiteSpace(collectionName);
+        ArgumentNullException.ThrowIfNull(collection);
 
         DocumentType = documentType;
         CollectionName = collectionName;
+        Collection = collection;
+        IdProperty = AttributeHelper.ResolveStringPropertyWithAttributeOrDefault(
+            documentType: documentType,
+            attributeType: typeof(Id),
+            defaultPropertyName: "Id");
     }
 
     public TDocument? Get<TDocument>(string id)
@@ -87,16 +97,15 @@ public abstract class RepositoryBase
         return items;
     }
 
-    private static void TryAssignId<TDocument>(TDocument document, string id)
+    private void TryAssignId<TDocument>(TDocument document, string id)
         where TDocument : class
     {
-        var idProperty = typeof(TDocument).GetProperty("Id", BindingFlags.Instance | BindingFlags.Public);
-        if (idProperty is null || idProperty.PropertyType != typeof(string))
+        if (IdProperty.Property is null)
         {
             return;
         }
 
-        var current = idProperty.GetValue(document) as string;
+        var current = IdProperty.Property.GetValue(document) as string;
         if (!string.IsNullOrWhiteSpace(current))
         {
             return;
@@ -104,7 +113,7 @@ public abstract class RepositoryBase
 
         try
         {
-            idProperty.SetValue(document, id);
+            IdProperty.Property.SetValue(document, id);
         }
         catch (ArgumentException)
         {
