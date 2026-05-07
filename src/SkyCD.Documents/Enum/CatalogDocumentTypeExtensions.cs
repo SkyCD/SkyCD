@@ -13,13 +13,8 @@ public static class CatalogDocumentTypeExtensions
 
     public static string ToDisplayName(this CatalogDocumentType type)
     {
-        return type switch
-        {
-            CatalogDocumentType.File => "File",
-            CatalogDocumentType.Media => "Media",
-            CatalogDocumentType.Folder => "Folder",
-            CatalogDocumentType.NetworkResource => "Network Resource",
-            _ => "Unknown"
-        };
+        var field = typeof(CatalogDocumentType).GetField(type.ToString(), BindingFlags.Public | BindingFlags.Static);
+        var displayNameAttribute = field?.GetCustomAttribute<DisplayNameAttribute>();
+        return displayNameAttribute?.Value ?? "Unknown";
     }
 }
