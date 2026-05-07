@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Couchbase.Lite;
-using Couchbase.Lite.Query;
-using SkyCD.Couchbase.Mapping;
 using SkyCD.Couchbase;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
@@ -15,38 +12,42 @@ namespace SkyCD.App.Services;
 
 public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 {
-    private readonly Collection _catalogCollection;
-    private readonly CatalogDocumentRepository _catalogRepository;
+    private readonly CatalogDocumentRepository catalogRepository;
 
-    public CouchbaseLiteBrowserDataStore(DatabaseManager databaseManager, RepositoryManager repositoryManager)
+    public CouchbaseLiteBrowserDataStore(RepositoryManager repositoryManager)
     {
-        _catalogRepository = repositoryManager.For<CatalogEntryDocument>() as CatalogDocumentRepository
+        catalogRepository = repositoryManager.For<CatalogEntryDocument>() as CatalogDocumentRepository
             ?? throw new InvalidOperationException("Catalog document repository must be CatalogDocumentRepository.");
-        var catalogRepository = _catalogRepository;
-        var database = databaseManager.GetFor<CatalogEntryDocument>();
-        catalogRepository.Collection = database.GetCollection(catalogRepository.CollectionName, Collection.DefaultScopeName)
-                                     ?? database.CreateCollection(catalogRepository.CollectionName, Collection.DefaultScopeName);
-        _catalogCollection = catalogRepository.Collection;
         EnsureSeedData();
     }
 
     public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
     {
-        var entries = LoadCatalogEntries();
+        var roots = catalogRepository
+            .GetRoots<CatalogEntryDocument>()
+            .Where(entry => entry.Type != CatalogDocumentType.File)
+            .ToArray();
 
-        // Get all non-file entries for tree view
-        var treeEntries = entries.Where(entry =>
-            entry.Type != CatalogDocumentType.File)
-            .ToList();
+        var treeNodes = roots
+            .Select(root =>
+            {
+                var descendants = catalogRepository
+                    .GetDescendantsOf<CatalogEntryDocument>(root.Id)
+                    .Where(entry => entry.Type != CatalogDocumentType.File)
+                    .ToList();
+                descendants.Add(root);
 
-        var childrenByParent = treeEntries
-            .GroupBy(record => record.ParentId ?? "__root__", StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+                var byParent = descendants
+                    .GroupBy(entry => entry.ParentId ?? "__root__", StringComparer.Ordinal)
+                    .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
 
-        var roots = BuildTreeNodes("__root__", childrenByParent);
-        if (roots.Count > 0)
+                return BuildTreeNodeFromLookup(root, byParent, isExpanded: true);
+            })
+            .ToArray();
+
+        if (treeNodes.Length > 0)
         {
-            return roots;
+            return treeNodes;
         }
 
         return BuildDefaultTreeNodes();
@@ -59,10 +60,9 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return [];
         }
 
-        var entries = LoadCatalogEntries();
+        var entries = catalogRepository.GetChildrenOf<CatalogEntryDocument>(nodeKey);
 
         var items = entries
-            .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item =>
             {
                 var type = MapCatalogEntryType(item.Type);
@@ -79,7 +79,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return items;
         }
 
-        return _catalogRepository.CreateDefaultEntries()
+        return catalogRepository.CreateDefaultEntries()
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item =>
             {
@@ -93,40 +93,56 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             .ToArray();
     }
 
-    private static IReadOnlyList<BrowserTreeNode> BuildTreeNodes(
-        string parentId,
-        IReadOnlyDictionary<string, List<CatalogEntryDocument>> childrenByParent)
+    private static BrowserTreeNode BuildTreeNodeFromLookup(
+        CatalogEntryDocument entry,
+        IReadOnlyDictionary<string, List<CatalogEntryDocument>> byParent,
+        bool isExpanded)
     {
-        if (!childrenByParent.TryGetValue(parentId, out var children))
-        {
-            return [];
-        }
+        byParent.TryGetValue(entry.Id, out var childrenOfCurrent);
 
-        return children
-            .Select(entry =>
-            {
-                var type = MapCatalogEntryType(entry.Type);
-                return new BrowserTreeNode(
-                    entry.Id,
-                    entry.Name,
-                    GetIconGlyph(type),
-                    BuildTreeNodes(entry.Id, childrenByParent),
-                    isExpanded: parentId == "__root__");
-            })
+        var children = (childrenOfCurrent ?? [])
+            .Select(child => BuildTreeNodeFromLookup(child, byParent, isExpanded: false))
             .ToArray();
+
+        var type = MapCatalogEntryType(entry.Type);
+        return new BrowserTreeNode(
+            entry.Id,
+            entry.Name,
+            GetIconGlyph(type),
+            children,
+            isExpanded);
     }
 
     private IReadOnlyList<BrowserTreeNode> BuildDefaultTreeNodes()
     {
-        var entries = _catalogRepository.CreateDefaultEntries()
+        var entries = catalogRepository.CreateDefaultEntries()
             .Where(entry => entry.Type != CatalogDocumentType.File)
             .ToList();
+        var byId = entries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
 
-        var byParent = entries
-            .GroupBy(record => record.ParentId ?? "__root__", StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+        return entries
+            .Where(entry => string.IsNullOrWhiteSpace(entry.ParentId))
+            .Select(entry => BuildDefaultTreeNode(entry, byId, isExpanded: true))
+            .ToArray();
+    }
 
-        return BuildTreeNodes("__root__", byParent);
+    private static BrowserTreeNode BuildDefaultTreeNode(
+        CatalogEntryDocument entry,
+        IReadOnlyDictionary<string, CatalogEntryDocument> byId,
+        bool isExpanded)
+    {
+        var children = byId.Values
+            .Where(candidate => string.Equals(candidate.ParentId, entry.Id, StringComparison.Ordinal))
+            .Select(child => BuildDefaultTreeNode(child, byId, isExpanded: false))
+            .ToArray();
+
+        var type = MapCatalogEntryType(entry.Type);
+        return new BrowserTreeNode(
+            entry.Id,
+            entry.Name,
+            GetIconGlyph(type),
+            children,
+            isExpanded);
     }
 
     private static CatalogEntryType MapCatalogEntryType(CatalogDocumentType type)
@@ -187,45 +203,14 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private void EnsureSeedData()
     {
-        if (LoadCatalogEntries().Count > 0)
+        if (catalogRepository.GetAll<CatalogEntryDocument>().Count > 0)
         {
             return;
         }
 
-        foreach (var entry in _catalogRepository.CreateDefaultEntries())
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
         {
-            using var document = entry.ToMutableDocument(entry.Id);
-            _catalogCollection.Save(document);
+            catalogRepository.Save(entry.Id, entry);
         }
-    }
-
-    private IReadOnlyList<CatalogEntryDocument> LoadCatalogEntries()
-    {
-        using var query = QueryBuilder
-            .Select(SelectResult.All())
-            .From(DataSource.Collection(_catalogCollection));
-
-        using var results = query.Execute();
-        var entries = new List<CatalogEntryDocument>();
-
-        foreach (var row in results)
-        {
-            var dictionary = row.GetDictionary(_catalogCollection.Name);
-            if (dictionary is null)
-            {
-                continue;
-            }
-
-            using var document = new MutableDocument(dictionary.ToDictionary());
-            var mapped = document.FromDocument<CatalogEntryDocument>();
-            if (mapped is not null)
-            {
-                entries.Add(mapped);
-            }
-        }
-
-        return entries.Count > 0
-            ? entries
-            : _catalogRepository.CreateDefaultEntries();
     }
 }
