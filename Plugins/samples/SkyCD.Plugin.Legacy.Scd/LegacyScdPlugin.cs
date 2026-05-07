@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Humanizer;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Legacy.Scd;
@@ -93,19 +94,28 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
 
     private static long? TryParseLegacySize(string raw)
     {
-        var value = raw.Trim().ToUpperInvariant();
-        if (value.EndsWith("KB") && double.TryParse(value[..^2], out var kb)) return (long)(kb * 1024d);
-        if (value.EndsWith("MB") && double.TryParse(value[..^2], out var mb)) return (long)(mb * 1024d * 1024d);
-        if (value.EndsWith("GB") && double.TryParse(value[..^2], out var gb)) return (long)(gb * 1024d * 1024d * 1024d);
-        if (long.TryParse(value, out var bytes)) return bytes;
+        var value = raw.Trim();
+        if (ByteSize.TryParse(value, out var size))
+        {
+            return (long)size.Bytes;
+        }
+
+        var normalized = Regex.Replace(value, "(?<number>\\d(?:[\\d.,]*\\d)?)(?<unit>[A-Za-z]+)$", "${number} ${unit}");
+        if (ByteSize.TryParse(normalized, out size))
+        {
+            return (long)size.Bytes;
+        }
+
+        if (long.TryParse(value, out var bytes))
+        {
+            return bytes;
+        }
+
         return null;
     }
 
     private static string FormatLegacySize(long bytes)
     {
-        if (bytes >= 1024L * 1024L * 1024L) return $"{bytes / (1024d * 1024d * 1024d):0.##}GB";
-        if (bytes >= 1024L * 1024L) return $"{bytes / (1024d * 1024d):0.##}MB";
-        if (bytes >= 1024L) return $"{bytes / 1024d:0.##}KB";
-        return bytes.ToString();
+        return bytes.Bytes().Humanize("0.##").Replace(" ", string.Empty, StringComparison.Ordinal);
     }
 }

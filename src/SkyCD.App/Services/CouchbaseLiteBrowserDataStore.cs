@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Humanizer;
 using SkyCD.Couchbase;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
@@ -171,22 +172,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
     private static string FormatSize(long bytes)
     {
-        if (bytes == 0)
-        {
-            return "0 Bytes";
-        }
-
-        string[] sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-        int order = 0;
-        double size = bytes;
-
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:0.##} {sizes[order]}";
+        return bytes.Bytes().Humanize("0.##");
     }
 
     private static string GetIconGlyph(CatalogEntryType type)

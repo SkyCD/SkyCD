@@ -1,4 +1,5 @@
 using System;
+using Humanizer;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -6,25 +7,10 @@ public static class AboutDialogFormatting
 {
     public static string FormatBytes(long bytes)
     {
-        if (bytes < 1024)
-        {
-            return $"{bytes} B";
-        }
-
-        var kiloBytes = bytes / 1024d;
-        if (kiloBytes < 1024d)
-        {
-            return $"{kiloBytes:0.0} KB";
-        }
-
-        var megaBytes = kiloBytes / 1024d;
-        if (megaBytes < 1024d)
-        {
-            return $"{megaBytes:0.0} MB";
-        }
-
-        var gigaBytes = megaBytes / 1024d;
-        return $"{gigaBytes:0.0} GB";
+        var size = bytes.Bytes();
+        return Math.Abs(bytes) < 1024
+            ? size.ToString("0")
+            : size.ToString("0.0");
     }
 
     public static string FormatFriendlyTime(TimeSpan duration)

@@ -12,4 +12,7 @@
   <ItemGroup>
     <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Humanizer.Core" Version="3.0.1" />
+  </ItemGroup>
 </Project>
