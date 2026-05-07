@@ -5,6 +5,8 @@ using Couchbase.Lite;
 using Couchbase.Lite.Query;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Couchbase;
+using SkyCD.Documents.Enum;
+using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Presentation.ViewModels.Catalog;
 using CatalogEntryDocument = SkyCD.Documents.CatalogDocument;
@@ -14,10 +16,13 @@ namespace SkyCD.App.Services;
 public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 {
     private readonly Collection _catalogCollection;
+    private readonly CatalogDocumentRepository _catalogRepository;
 
     public CouchbaseLiteBrowserDataStore(DatabaseManager databaseManager, RepositoryManager repositoryManager)
     {
-        var catalogRepository = repositoryManager.For<CatalogEntryDocument>();
+        _catalogRepository = repositoryManager.For<CatalogEntryDocument>() as CatalogDocumentRepository
+            ?? throw new InvalidOperationException("Catalog document repository must be CatalogDocumentRepository.");
+        var catalogRepository = _catalogRepository;
         var database = databaseManager.GetFor<CatalogEntryDocument>();
         catalogRepository.Collection = database.GetCollection(catalogRepository.CollectionName, Collection.DefaultScopeName)
                                      ?? database.CreateCollection(catalogRepository.CollectionName, Collection.DefaultScopeName);
@@ -31,7 +36,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
         // Get all non-file entries for tree view
         var treeEntries = entries.Where(entry =>
-            !string.Equals(entry.Type, "File", StringComparison.OrdinalIgnoreCase))
+            entry.Type != CatalogDocumentType.File)
             .ToList();
 
         var childrenByParent = treeEntries
@@ -60,7 +65,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item =>
             {
-                var type = ParseCatalogEntryType(item.Type);
+                var type = MapCatalogEntryType(item.Type);
                 return new BrowserItem(
                     item.Name,
                     GetItemTypeDisplayName(type),
@@ -74,11 +79,11 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return items;
         }
 
-        return CatalogEntryDocument.CreateDefaultEntries()
+        return _catalogRepository.CreateDefaultEntries()
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item =>
             {
-                var type = ParseCatalogEntryType(item.Type);
+                var type = MapCatalogEntryType(item.Type);
                 return new BrowserItem(
                     item.Name,
                     GetItemTypeDisplayName(type),
@@ -100,7 +105,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         return children
             .Select(entry =>
             {
-                var type = ParseCatalogEntryType(entry.Type);
+                var type = MapCatalogEntryType(entry.Type);
                 return new BrowserTreeNode(
                     entry.Id,
                     entry.Name,
@@ -111,10 +116,10 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             .ToArray();
     }
 
-    private static IReadOnlyList<BrowserTreeNode> BuildDefaultTreeNodes()
+    private IReadOnlyList<BrowserTreeNode> BuildDefaultTreeNodes()
     {
-        var entries = CatalogEntryDocument.CreateDefaultEntries()
-            .Where(entry => !string.Equals(entry.Type, "File", StringComparison.OrdinalIgnoreCase))
+        var entries = _catalogRepository.CreateDefaultEntries()
+            .Where(entry => entry.Type != CatalogDocumentType.File)
             .ToList();
 
         var byParent = entries
@@ -124,16 +129,16 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         return BuildTreeNodes("__root__", byParent);
     }
 
-    private static CatalogEntryType ParseCatalogEntryType(string? typeStr)
+    private static CatalogEntryType MapCatalogEntryType(CatalogDocumentType type)
     {
-        if (string.IsNullOrWhiteSpace(typeStr))
+        return type switch
         {
-            return CatalogEntryType.File;
-        }
-
-        return Enum.TryParse<CatalogEntryType>(typeStr, true, out var type)
-            ? type
-            : CatalogEntryType.File;
+            CatalogDocumentType.File => CatalogEntryType.File,
+            CatalogDocumentType.Media => CatalogEntryType.Media,
+            CatalogDocumentType.Folder => CatalogEntryType.Folder,
+            CatalogDocumentType.NetworkResource => CatalogEntryType.NetworkResource,
+            _ => CatalogEntryType.File
+        };
     }
 
     private static string GetItemTypeDisplayName(CatalogEntryType type)
@@ -187,7 +192,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             return;
         }
 
-        foreach (var entry in CatalogEntryDocument.CreateDefaultEntries())
+        foreach (var entry in _catalogRepository.CreateDefaultEntries())
         {
             using var document = entry.ToMutableDocument(entry.Id);
             _catalogCollection.Save(document);
@@ -221,6 +226,6 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
 
         return entries.Count > 0
             ? entries
-            : CatalogEntryDocument.CreateDefaultEntries();
+            : _catalogRepository.CreateDefaultEntries();
     }
 }

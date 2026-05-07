@@ -9,6 +9,7 @@ using SkyCD.App.Services;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
+using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -111,7 +112,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     [Fact]
     public void DocumentSerialization_WorksWithoutMappingExtensions_UsingInMemoryDocuments()
     {
-        var catalog = CatalogDocument.CreateDefaultEntries().First();
+        var catalog = new CatalogDocumentRepository().CreateDefaultEntries().First();
         using var catalogDoc = catalog.ToMutableDocument(catalog.Id);
         var restoredCatalog = catalogDoc.FromDocument<CatalogDocument>();
 
