@@ -1,6 +1,10 @@
+using System;
+using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Legacy.Cscd;

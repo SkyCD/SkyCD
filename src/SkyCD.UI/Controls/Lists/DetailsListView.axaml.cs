@@ -3,6 +3,7 @@ using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 
@@ -14,7 +15,7 @@ public partial class DetailsListView : UserControl
         AvaloniaProperty.Register<DetailsListView, IEnumerable?>(nameof(ItemsSource));
 
     public static readonly StyledProperty<object?> SelectedItemProperty =
-        AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+        AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem), defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<object?> HeaderContentProperty =
         AvaloniaProperty.Register<DetailsListView, object?>(nameof(HeaderContent));

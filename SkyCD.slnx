@@ -23,10 +23,13 @@
   <Folder Name="/src/">
     <Project Path="src/SkyCD.App/SkyCD.App.csproj" />
     <Project Path="src/SkyCD.Cli/SkyCD.Cli.csproj" />
+    <Project Path="src/SkyCD.Couchbase/SkyCD.Couchbase.csproj" />
     <Project Path="src/SkyCD.UI/SkyCD.UI.csproj" />
     <Project Path="src/SkyCD.Application/SkyCD.Application.csproj" />
     <Project Path="src/SkyCD.Domain/SkyCD.Domain.csproj" />
+    <Project Path="src/SkyCD.Documents/SkyCD.Documents.csproj" />
     <Project Path="src/SkyCD.Infrastructure/SkyCD.Infrastructure.csproj" />
+    <Project Path="src/SkyCD.Logging/SkyCD.Logging.csproj" />
     <Project Path="src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj" />
     <Project Path="src/SkyCD.Plugin.Host/SkyCD.Plugin.Host.csproj" />
     <Project Path="src/SkyCD.Plugin.Runtime/SkyCD.Plugin.Runtime.csproj" />
@@ -37,13 +40,10 @@
     <Project Path="tests/SkyCD.Cli.Tests/SkyCD.Cli.Tests.csproj" />
     <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj" />
     <Project Path="tests/SkyCD.Domain.Tests/SkyCD.Domain.Tests.csproj" />
-    <Project Path="tests/SkyCD.Infrastructure.Tests/SkyCD.Infrastructure.Tests.csproj" />
     <Project Path="tests/SkyCD.LegacyFormats.Tests/SkyCD.LegacyFormats.Tests.csproj" />
-    <Project Path="tests/SkyCD.Migration.Tests/SkyCD.Migration.Tests.csproj" />
+    <Project Path="tests/SkyCD.Logging.Tests/SkyCD.Logging.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj" />
     <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj" />
   </Folder>
-  <Folder Name="/tools/">
-    <Project Path="tools/SkyCD.Migration.Cli/SkyCD.Migration.Cli.csproj" />
-  </Folder>
+  <Folder Name="/tools/" />
 </Solution>

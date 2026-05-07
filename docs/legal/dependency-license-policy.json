@@ -34,6 +34,9 @@
   "allowedUnknownLicensePackages": [
     "Avalonia.Angle.Windows.Natives",
     "AvaloniaUI.DiagnosticsSupport",
-    "CommandDotNet"
+    "CommandDotNet",
+    "Couchbase.Lite",
+    "Couchbase.Lite.Support.NetDesktop",
+    "SerialQueue"
   ]
 }

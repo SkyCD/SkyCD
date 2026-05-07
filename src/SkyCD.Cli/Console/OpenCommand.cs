@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.Cli.Execution;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;

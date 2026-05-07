@@ -1,4 +1,5 @@
 using SkyCD.Domain.Catalogs;
+using Xunit;
 
 namespace SkyCD.Domain.Tests;
 

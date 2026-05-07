@@ -20,6 +20,11 @@ dotnet test SkyCD.slnx --configuration Release
 dotnet format SkyCD.slnx --verify-no-changes
 ```
 
+## Local persistence
+SkyCD desktop now stores local data in Couchbase Lite under `%APPDATA%/SkyCD`:
+- `catalog` collection: browser/catalog seed data.
+- `settings` collection: application options (window state, plugin path, language, UI preferences).
+
 Legacy VB.NET/WinForms code is archived for reference/migration and is non-default for new feature work.
 
 ![](https://a.fsdn.com/con/app/proj/skycd/screenshots/94408.jpg)

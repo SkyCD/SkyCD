@@ -1,4 +1,7 @@
+using System;
+using System.IO;
 using Microsoft.Extensions.Logging.Abstractions;
+using SkyCD.Couchbase;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -10,7 +13,18 @@ internal static class PluginManagerTestFactory
     {
         return new PluginManager(
             NullLogger<PluginManager>.Instance,
-            new AssembliesListFactory(NullLogger.Instance),
-            new DiscoveredPluginFactory());
+            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+            new DiscoveredPluginFactory(),
+            new PluginDocumentFactory(),
+            CreateRepositoryManager());
+    }
+
+    private static RepositoryManager CreateRepositoryManager()
+    {
+        var databaseManager = new DatabaseManager();
+        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginHostTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        databaseManager.Connect("default", directory);
+        return new RepositoryManager(databaseManager);
     }
 }

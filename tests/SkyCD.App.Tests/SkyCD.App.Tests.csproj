@@ -1,27 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
-
   <ItemGroup>
-    <Using Include="Xunit" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Application\SkyCD.Application.csproj" />
+    <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Domain\SkyCD.Domain.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj" />
   </ItemGroup>
-
 </Project>

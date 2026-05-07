@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using SkyCD.UI.Controls;
+using Xunit;
 
 namespace SkyCD.UI.Tests;
 

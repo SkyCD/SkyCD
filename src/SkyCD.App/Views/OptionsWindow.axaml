@@ -7,7 +7,7 @@
         Height="520"
         MinWidth="700"
         MinHeight="460"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         CanResize="False"
         CanMinimize="False"
         Icon="/Assets/skycd.ico"
@@ -61,115 +61,164 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="14">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="12">
-                        <TextBlock FontSize="16" FontWeight="SemiBold">
-                            <Run Text="Tools"/>
-                            <Run Text="  >  "/>
-                            <Run Text="{Binding CurrentCategoryName}"/>
-                        </TextBlock>
+                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
+                      RowSpacing="10">
+                    <TextBlock FontSize="16" FontWeight="SemiBold">
+                        <Run Text="Tools"/>
+                        <Run Text="  >  "/>
+                        <Run Text="{Binding CurrentCategoryName}"/>
+                    </TextBlock>
 
-                        <StackPanel IsVisible="{Binding ShowPluginPathSection}" Spacing="8">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Project Settings" FontSize="15"/>
-                                <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
-                            </Grid>
-                            <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
-                                <TextBlock Text="Plug-in path:" VerticalAlignment="Center"/>
-                                <TextBox Grid.Column="1" Text="{Binding PluginPath}"/>
-                                <Button Grid.Column="2"
-                                        Content="Browse..."
-                                        MinWidth="90"
-                                        Command="{Binding BrowsePluginPathCommand}"/>
-                            </Grid>
-                        </StackPanel>
-
-                        <StackPanel IsVisible="{Binding ShowPluginListSection}" Spacing="8">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Plug-ins" FontSize="15"/>
-                                <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
-                            </Grid>
-                            <Border BorderBrush="#2E2E2E"
-                                    BorderThickness="1">
-                                <Grid RowDefinitions="Auto,*">
-                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                        <Grid ColumnDefinitions="Auto,2*,2*,3*">
-                                            <TextBlock Text="Enabled" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Column="3" Text="Source" FontWeight="SemiBold"/>
-                                        </Grid>
-                                    </Border>
-                                    <ListBox Grid.Row="1"
-                                             MinHeight="220"
-                                             ItemsSource="{Binding Plugins}"
-                                             SelectedItem="{Binding SelectedPlugin}">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:OptionsPluginItem">
-                                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,5">
-                                                    <Grid ColumnDefinitions="Auto,2*,2*,3*">
-                                                        <CheckBox IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Type}"/>
-                                                        <TextBlock Grid.Column="3" Text="{Binding ExtendedInfo}"/>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-
-                        <StackPanel IsVisible="{Binding ShowPluginActionsSection}" Spacing="8">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Actions" FontSize="15"/>
-                                <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
-                            </Grid>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Refresh"
-                                        MinWidth="90"
-                                        Command="{Binding RefreshPluginsCommand}"/>
-                                <Button Content="Configure"
-                                        MinWidth="90"
-                                        Command="{Binding ConfigurePluginCommand}"/>
-                            </StackPanel>
-                            <TextBlock IsVisible="{Binding ShowPluginInfoSection}"
-                                       Text="{Binding InfoMessage}"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-
-                        <StackPanel IsVisible="{Binding ShowLanguageSection}" Spacing="8">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="Application Settings" FontSize="15"/>
-                                <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
-                            </Grid>
-                            <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
-                                <TextBlock Text="Language:" VerticalAlignment="Top"/>
-                                <ListBox Grid.Column="1"
-                                         MinHeight="220"
-                                         ItemsSource="{Binding Languages}"
-                                         SelectedItem="{Binding SelectedLanguage}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:LanguageItem">
-                                            <TextBlock Text="{Binding DisplayText}"/>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </Grid>
-                        </StackPanel>
-
-                        <Border IsVisible="{Binding ShowNoSearchResults}"
-                                BorderBrush="#6A5C2D"
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                Padding="10">
-                            <TextBlock Text="No settings match the current search."
-                                       TextWrapping="Wrap"/>
-                        </Border>
+                    <StackPanel Grid.Row="1"
+                                IsVisible="{Binding ShowPluginPathSection}"
+                                Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="Project Settings" FontSize="15"/>
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                            <TextBlock Text="Plug-in path:" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding PluginPath}"/>
+                            <Button Grid.Column="2"
+                                    Content="Browse..."
+                                    MinWidth="90"
+                                    Command="{Binding BrowsePluginPathCommand}"/>
+                        </Grid>
                     </StackPanel>
-                </ScrollViewer>
+
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowPluginListSection}"
+                          RowDefinitions="Auto,Auto,*"
+                          RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="Plug-ins" FontSize="15"/>
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBox Width="260"
+                                     PlaceholderText="Type to filter installed plugins"/>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       Foreground="#8C8C8C"
+                                       Text="{Binding InfoMessage}"/>
+                        </Grid>
+                        <Border Grid.Row="2"
+                                BorderBrush="#2E2E2E"
+                                BorderThickness="1">
+                            <Grid ColumnDefinitions="2*,3*">
+                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
+                                    <Grid RowDefinitions="Auto,*">
+                                        <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                <TextBlock Text="On" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Column="1" Text="Installed" FontWeight="SemiBold"/>
+                                            </Grid>
+                                        </Border>
+                                        <ListBox Grid.Row="1"
+                                                 ItemsSource="{Binding Plugins}"
+                                                 SelectedItem="{Binding SelectedPlugin}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:OptionsPluginItem">
+                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding Type}" Foreground="#9CA3AF" TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Border>
+
+                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="12">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="18" FontWeight="SemiBold"/>
+                                        <Button Content="{Binding SelectedPlugin.Type}"
+                                                Foreground="#9CA3AF"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                HorizontalAlignment="Left"
+                                                Command="{Binding OpenSelectedPluginAuthorUrlCommand}"/>
+                                        <TextBlock Text="{Binding SelectedPlugin.ExtendedInfo}" Foreground="#8C8C8C" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                        <Button Content="Refresh"
+                                                MinWidth="90"
+                                                Command="{Binding RefreshPluginsCommand}"/>
+                                        <Button Content="Configure"
+                                                MinWidth="90"
+                                                Command="{Binding ConfigurePluginCommand}"/>
+                                    </StackPanel>
+                                    <Border Grid.Row="2"
+                                            BorderBrush="#2E2E2E"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="10">
+                                        <TextBlock Text="{Binding InfoMessage}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#CFCFCF"/>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <StackPanel Grid.Row="3"
+                                IsVisible="False"
+                                Spacing="6">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="Actions" FontSize="15"/>
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Refresh"
+                                    MinWidth="90"
+                                    Command="{Binding RefreshPluginsCommand}"/>
+                            <Button Content="Configure"
+                                    MinWidth="90"
+                                    Command="{Binding ConfigurePluginCommand}"/>
+                        </StackPanel>
+                        <TextBlock IsVisible="{Binding ShowPluginInfoSection}"
+                                   Text="{Binding InfoMessage}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2"
+                                IsVisible="{Binding ShowLanguageSection}"
+                                Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="Application Settings" FontSize="15"/>
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                            <TextBlock Text="Language:" VerticalAlignment="Top"/>
+                            <ListBox Grid.Column="1"
+                                     ItemsSource="{Binding Languages}"
+                                     SelectedItem="{Binding SelectedLanguage}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:LanguageItem">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </StackPanel>
+
+                    <Border Grid.Row="4"
+                            IsVisible="{Binding ShowNoSearchResults}"
+                            BorderBrush="#6A5C2D"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="10">
+                        <TextBlock Text="No settings match the current search."
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                </Grid>
             </Border>
         </Grid>
 

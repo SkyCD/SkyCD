@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SkyCD.Domain.Catalogs;
 
 public static class CatalogValidator

@@ -1,4 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -117,11 +123,5 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
                 Error = exception.Message
             };
         }
-    }
-
-    private sealed class YamlCatalogDocument
-    {
-        public string? SchemaVersion { get; set; }
-        public List<Dictionary<string, string?>>? Payload { get; set; }
     }
 }

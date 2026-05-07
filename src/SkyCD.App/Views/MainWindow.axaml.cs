@@ -1,51 +1,46 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Platform.Storage;
-using Avalonia.VisualTree;
-using SkyCD.App.Models;
-using SkyCD.App.Services;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Presentation.ViewModels;
-using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
+using SkyCD.App.Services;
+using SkyCD.Couchbase;
+using SkyCD.Documents;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Presentation.ViewModels;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly AppOptionsStore appOptionsStore;
+    private readonly RepositoryManager repositoryManager;
     private readonly PluginManager pluginManager;
-    private readonly FileFormatManager fileFormatManager;
+    private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
-    public MainWindow()
-        : this(
-            new AppOptionsStore(),
-            new PluginManager(
-                NullLogger<PluginManager>.Instance,
-                new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
-                new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory()),
-            new FileFormatManager([]))
-    {
-    }
-
     public MainWindow(
-        AppOptionsStore appOptionsStore,
+        RepositoryManager repositoryManager,
         PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
-        this.appOptionsStore = appOptionsStore;
+        this.repositoryManager = repositoryManager;
         this.pluginManager = pluginManager;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
@@ -92,7 +87,7 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainWindowViewModel.IsDirtyDocument))
         {
@@ -177,11 +172,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
         ApplyWindowBounds(options);
         vm.ApplySessionState(
-            ParseBrowserViewMode(options.BrowserViewMode),
-            ParseBrowserSortMode(options.BrowserSortMode),
+            options.Browser.ViewMode,
+            options.Browser.SortMode,
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
 
@@ -336,7 +331,7 @@ public partial class MainWindow : Window
             }
 
             await using var source = File.OpenRead(localPath);
-            await fileFormatManager.ReadAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+            await fileFormatManager.ReadAsync(new FileFormatReadRequest
             {
                 FormatId = capability.SupportedFormat.FormatId,
                 Source = source,
@@ -471,7 +466,7 @@ public partial class MainWindow : Window
 
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
     {
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
             : options.PluginPath;
@@ -484,7 +479,6 @@ public partial class MainWindow : Window
             e.Dialog.SelectedLanguage = language;
         }
 
-        e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
@@ -498,11 +492,16 @@ public partial class MainWindow : Window
         var accepted = await dialog.ShowDialog<bool?>(this);
         if (accepted == true)
         {
+            var pluginStates = e.Dialog.Plugins
+                .Select(static plugin => (plugin.Id, plugin.IsEnabled))
+                .ToArray();
+
             options.PluginPath = e.Dialog.PluginPath;
             options.Language = e.Dialog.SelectedLanguage.Name;
-            options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
-            appOptionsStore.Save(options);
+            SaveAppOptions(options);
+            pluginManager.SavePluginEnabledStates(pluginStates);
+            RebuildPluginRuntimeServices(options.PluginPath);
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -585,63 +584,72 @@ public partial class MainWindow : Window
 
     private void SaveUiState(MainWindowViewModel vm)
     {
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
 
         // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
-            options.WindowLeft = Position.X;
-            options.WindowTop = Position.Y;
-            options.WindowWidth = Width;
-            options.WindowHeight = Height;
-            options.WindowState = "Normal";
+            options.Window.Left = Position.X;
+            options.Window.Top = Position.Y;
+            options.Window.Width = Width;
+            options.Window.Height = Height;
+            options.Window.State = WindowState.Normal;
         }
         else if (WindowState == WindowState.Maximized)
         {
-            options.WindowState = "Maximized";
+            options.Window.State = WindowState.Maximized;
         }
 
         if (TreePaneColumn.Width.IsAbsolute)
         {
-            options.TreePaneWidth = TreePaneColumn.Width.Value;
+            options.Window.TreePaneWidth = TreePaneColumn.Width.Value;
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
-        options.BrowserViewMode = vm.CurrentViewMode.ToString();
-        options.BrowserSortMode = vm.CurrentSortMode.ToString();
-        appOptionsStore.Save(options);
+        options.Browser.ViewMode = vm.CurrentViewMode;
+        options.Browser.SortMode = vm.CurrentSortMode;
+        SaveAppOptions(options);
     }
 
-    private void ApplyWindowBounds(AppOptions options)
+    private AppOptionsDocument LoadAppOptions()
     {
-        if (options.WindowWidth is > 0)
+        return repositoryManager.For<AppOptionsDocument>()
+            .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
+    }
+
+    private void SaveAppOptions(AppOptionsDocument options)
+    {
+        repositoryManager.For<AppOptionsDocument>()
+            .Save(AppOptionsDocument.DocumentId, options);
+    }
+
+    private void ApplyWindowBounds(AppOptionsDocument options)
+    {
+        if (options.Window.Width is > 0)
         {
-            Width = options.WindowWidth.Value;
+            Width = options.Window.Width.Value;
         }
 
-        if (options.WindowHeight is > 0)
+        if (options.Window.Height is > 0)
         {
-            Height = options.WindowHeight.Value;
+            Height = options.Window.Height.Value;
         }
 
-        if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
+        if (options.Window.Left.HasValue && options.Window.Top.HasValue)
         {
             Position = ClampPositionToVisibleBounds(
-                new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value),
+                new PixelPoint(options.Window.Left.Value, options.Window.Top.Value),
                 Width,
                 Height);
         }
 
-        if (options.TreePaneWidth is >= 160)
+        if (options.Window.TreePaneWidth is >= 160)
         {
-            TreePaneColumn.Width = new GridLength(options.TreePaneWidth.Value, GridUnitType.Pixel);
+            TreePaneColumn.Width = new GridLength(options.Window.TreePaneWidth.Value, GridUnitType.Pixel);
         }
 
         // Restore window state
-        if (string.Equals(options.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase))
-        {
-            WindowState = WindowState.Maximized;
-        }
+        WindowState = options.Window.State;
     }
 
     private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth, double requestedHeight)
@@ -731,6 +739,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        RebuildPluginRuntimeServices(dialogVm.PluginPath);
         RefreshPlugins(dialogVm);
     }
 
@@ -738,27 +747,66 @@ public partial class MainWindow : Window
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, new Version(3, 0, 0));
+        var descriptors = pluginManager.GetPluginDescriptors();
+        var loadedById = pluginManager.Plugins
+            .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
 
-        var plugins = pluginManager.Plugins
-            .Select(static plugin =>
+        var plugins = descriptors
+            .Select(descriptor =>
             {
-                var capabilitySummary = plugin.Capabilities.Count == 0
-                    ? "Generic"
-                    : string.Join(", ", plugin.Capabilities
-                        .Select(static capability => capability.GetType().Name)
-                        .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
+                if (loadedById.TryGetValue(descriptor.Id, out var loaded))
+                {
+                    return new OptionsPluginItem(
+                        loaded.Name,
+                        string.IsNullOrWhiteSpace(loaded.Author?.Name) ? "Unknown author" : loaded.Author.Name,
+                        $"{loaded.Id} v{loaded.Version}",
+                        isEnabled: descriptor.IsEnabled,
+                        id: loaded.Id,
+                        authorUrl: loaded.Author?.Url);
+                }
 
-                var extendedInfo = $"{plugin.Id} v{plugin.Version}";
+                var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
+                    ? "Unknown author"
+                    : descriptor.Author.Name;
+                var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
+
                 return new OptionsPluginItem(
-                    plugin.Name,
-                    capabilitySummary,
+                    descriptor.Name,
+                    authorSummary,
                     extendedInfo,
-                    id: plugin.Id);
+                    isEnabled: descriptor.IsEnabled,
+                    id: descriptor.Id,
+                    authorUrl: descriptor.Author?.Url);
             })
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
+    }
+
+    private void RebuildPluginRuntimeServices(string? pluginPath)
+    {
+        var resolvedPluginPath = string.IsNullOrWhiteSpace(pluginPath)
+            ? ResolveDefaultPluginPath()
+            : pluginPath;
+
+        pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
+
+        var discoveredPlugins = pluginManager.Plugins.ToList();
+        var pluginById = discoveredPlugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+
+        IServiceCollection mergedServices = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>();
+
+        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(discoveredPlugins);
+        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(discoveredPlugins);
+        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+        mergedServices.AddPluginRegistrator(discoveredPlugins);
+
+        PluginServiceProvider.RebuildGlobal();
+        var runtimeProvider = PluginServiceProvider.Instance;
+        runtimeProvider.Register(mergedServices);
+        fileFormatManager = runtimeProvider.GetRequiredService<FileFormatManager>();
     }
 
     private static string ResolveDefaultPluginPath()

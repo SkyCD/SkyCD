@@ -1,4 +1,5 @@
 using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 

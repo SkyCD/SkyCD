@@ -1,3 +1,14 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using SkyCD.Domain.Catalogs;
@@ -10,8 +21,8 @@ public sealed class LegacyDbImporter
     public async Task<LegacyImportResult> ImportAsync(string legacyPath, string targetPath, bool dryRun, CancellationToken cancellationToken = default)
     {
         var targetConnection = $"Data Source={targetPath}";
-        await using var targetContext = new SkyCdDbContext(
-            new DbContextOptionsBuilder<SkyCdDbContext>()
+        await using var targetContext = new SkyCDDbContext(
+            new DbContextOptionsBuilder<SkyCDDbContext>()
                 .UseSqlite(targetConnection)
                 .Options);
 

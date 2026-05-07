@@ -1,28 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
-
   <ItemGroup>
-    <Using Include="Xunit" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIdAttribute">
       <_Parameter1>tests.runtime.assembly-plugin</_Parameter1>
@@ -34,5 +28,4 @@
       <_Parameter1>3.0.0</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
-
 </Project>

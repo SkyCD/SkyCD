@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SkyCD.Presentation.ViewModels;
 
 public interface IBrowserDataStore
