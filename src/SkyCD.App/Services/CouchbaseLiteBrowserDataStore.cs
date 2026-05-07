@@ -6,7 +6,6 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Formatting;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.Presentation.ViewModels.Catalog;
 using CatalogEntryDocument = SkyCD.Documents.CatalogDocument;
 
 namespace SkyCD.App.Services;
@@ -66,12 +65,11 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
         var items = entries
             .Select(item =>
             {
-                var type = MapCatalogEntryType(item.Type);
                 return new BrowserItem(
                     item.Name,
-                    GetItemTypeDisplayName(type),
+                    item.Type.ToDisplayName(),
                     SizeFormatting.FormatBytes(item.Size, "0.##"),
-                    GetIconGlyph(type));
+                    item.Type.ResolveIconGlyph());
             })
             .ToArray();
 
@@ -84,12 +82,11 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .Select(item =>
             {
-                var type = MapCatalogEntryType(item.Type);
                 return new BrowserItem(
                     item.Name,
-                    GetItemTypeDisplayName(type),
+                    item.Type.ToDisplayName(),
                     SizeFormatting.FormatBytes(item.Size, "0.##"),
-                    GetIconGlyph(type));
+                    item.Type.ResolveIconGlyph());
             })
             .ToArray();
     }
@@ -105,11 +102,10 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             .Select(child => BuildTreeNodeFromLookup(child, byParent, isExpanded: false))
             .ToArray();
 
-        var type = MapCatalogEntryType(entry.Type);
         return new BrowserTreeNode(
             entry.Id,
             entry.Name,
-            GetIconGlyph(type),
+            entry.Type.ResolveIconGlyph(),
             children,
             isExpanded);
     }
@@ -137,49 +133,12 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             .Select(child => BuildDefaultTreeNode(child, byId, isExpanded: false))
             .ToArray();
 
-        var type = MapCatalogEntryType(entry.Type);
         return new BrowserTreeNode(
             entry.Id,
             entry.Name,
-            GetIconGlyph(type),
+            entry.Type.ResolveIconGlyph(),
             children,
             isExpanded);
-    }
-
-    private static CatalogEntryType MapCatalogEntryType(CatalogDocumentType type)
-    {
-        return type switch
-        {
-            CatalogDocumentType.File => CatalogEntryType.File,
-            CatalogDocumentType.Media => CatalogEntryType.Media,
-            CatalogDocumentType.Folder => CatalogEntryType.Folder,
-            CatalogDocumentType.NetworkResource => CatalogEntryType.NetworkResource,
-            _ => CatalogEntryType.File
-        };
-    }
-
-    private static string GetItemTypeDisplayName(CatalogEntryType type)
-    {
-        return type switch
-        {
-            CatalogEntryType.File => "File",
-            CatalogEntryType.Media => "Media",
-            CatalogEntryType.Folder => "Folder",
-            CatalogEntryType.NetworkResource => "Network Resource",
-            _ => "Unknown"
-        };
-    }
-
-    private static string GetIconGlyph(CatalogEntryType type)
-    {
-        return type switch
-        {
-            CatalogEntryType.File => "file",
-            CatalogEntryType.Media => "video",
-            CatalogEntryType.Folder => "folder",
-            CatalogEntryType.NetworkResource => "network",
-            _ => "file"
-        };
     }
 
     private void EnsureSeedData()
