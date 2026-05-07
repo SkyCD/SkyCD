@@ -1,18 +1,8 @@
 using System;
-using Humanizer;
-
 namespace SkyCD.Presentation.ViewModels;
 
 public static class AboutDialogFormatting
 {
-    public static string FormatBytes(long bytes)
-    {
-        var size = bytes.Bytes();
-        return Math.Abs(bytes) < 1024
-            ? size.ToString("0")
-            : size.ToString("0.0");
-    }
-
     public static string FormatFriendlyTime(TimeSpan duration)
     {
         if (duration.TotalDays >= 1)

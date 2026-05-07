@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Formatting;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -126,8 +127,8 @@ public partial class AboutDialogViewModel : ObservableObject
 
             CpuPercent = Math.Clamp(cpu, 0d, 100d);
             CpuUsage = $"{CpuPercent:0.0} %";
-            WorkingSet = AboutDialogFormatting.FormatBytes(currentProcess.WorkingSet64);
-            ManagedHeap = AboutDialogFormatting.FormatBytes(GC.GetTotalMemory(false));
+            WorkingSet = SizeFormatting.FormatAboutDialogBytes(currentProcess.WorkingSet64);
+            ManagedHeap = SizeFormatting.FormatAboutDialogBytes(GC.GetTotalMemory(false));
 
             var totalAvailableMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             MemoryPercent = totalAvailableMemory > 0

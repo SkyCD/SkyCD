@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Humanizer;
 using SkyCD.Couchbase;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Formatting;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Presentation.ViewModels.Catalog;
 using CatalogEntryDocument = SkyCD.Documents.CatalogDocument;
@@ -70,7 +70,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
                 return new BrowserItem(
                     item.Name,
                     GetItemTypeDisplayName(type),
-                    FormatSize(item.Size),
+                    SizeFormatting.FormatBytes(item.Size, "0.##"),
                     GetIconGlyph(type));
             })
             .ToArray();
@@ -88,7 +88,7 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
                 return new BrowserItem(
                     item.Name,
                     GetItemTypeDisplayName(type),
-                    FormatSize(item.Size),
+                    SizeFormatting.FormatBytes(item.Size, "0.##"),
                     GetIconGlyph(type));
             })
             .ToArray();
@@ -168,11 +168,6 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
             CatalogEntryType.NetworkResource => "Network Resource",
             _ => "Unknown"
         };
-    }
-
-    private static string FormatSize(long bytes)
-    {
-        return bytes.Bytes().Humanize("0.##");
     }
 
     private static string GetIconGlyph(CatalogEntryType type)

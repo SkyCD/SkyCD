@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Humanizer;
+using SkyCD.Formatting;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Legacy.Scd;
@@ -38,7 +38,9 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
                 var sizeMatch = SizePrefix.Match(trimmed);
                 if (sizeMatch.Success)
                 {
-                    var size = TryParseLegacySize(sizeMatch.Groups["size"].Value);
+                    var size = SizeFormatting.TryParseBytes(sizeMatch.Groups["size"].Value, out var parsedBytes)
+                        ? (long?)parsedBytes
+                        : null;
                     catalog.Entries.Add(new LegacyScdEntry
                     {
                         Path = sizeMatch.Groups["path"].Value.Trim(),
@@ -76,7 +78,7 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
             {
                 var entry = catalog.Entries[i];
                 var line = entry.SizeBytes is > 0
-                    ? $"[{FormatLegacySize(entry.SizeBytes.Value)}] {entry.Path}"
+                    ? $"[{SizeFormatting.FormatBytes(entry.SizeBytes.Value, "0.##", removeSpace: true)}] {entry.Path}"
                     : entry.Path;
                 await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
                 request.Progress?.Report((int)((i + 1d) / catalog.Entries.Count * 100d));
@@ -90,32 +92,5 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
         {
             return new FileFormatWriteResult { Success = false, Error = exception.Message };
         }
-    }
-
-    private static long? TryParseLegacySize(string raw)
-    {
-        var value = raw.Trim();
-        if (ByteSize.TryParse(value, out var size))
-        {
-            return (long)size.Bytes;
-        }
-
-        var normalized = Regex.Replace(value, "(?<number>\\d(?:[\\d.,]*\\d)?)(?<unit>[A-Za-z]+)$", "${number} ${unit}");
-        if (ByteSize.TryParse(normalized, out size))
-        {
-            return (long)size.Bytes;
-        }
-
-        if (long.TryParse(value, out var bytes))
-        {
-            return bytes;
-        }
-
-        return null;
-    }
-
-    private static string FormatLegacySize(long bytes)
-    {
-        return bytes.Bytes().Humanize("0.##").Replace(" ", string.Empty, StringComparison.Ordinal);
     }
 }

@@ -28,6 +28,7 @@
     <Project Path="src/SkyCD.Application/SkyCD.Application.csproj" />
     <Project Path="src/SkyCD.Domain/SkyCD.Domain.csproj" />
     <Project Path="src/SkyCD.Documents/SkyCD.Documents.csproj" />
+    <Project Path="src/SkyCD.Formatting/SkyCD.Formatting.csproj" />
     <Project Path="src/SkyCD.Infrastructure/SkyCD.Infrastructure.csproj" />
     <Project Path="src/SkyCD.Logging/SkyCD.Logging.csproj" />
     <Project Path="src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj" />

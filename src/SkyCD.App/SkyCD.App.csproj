@@ -32,7 +32,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
-    <PackageReference Include="Humanizer.Core" Version="3.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj" />
@@ -42,5 +41,6 @@
     <ProjectReference Include="..\SkyCD.Cli\SkyCD.Cli.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
     <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
+    <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj" />
   </ItemGroup>
 </Project>

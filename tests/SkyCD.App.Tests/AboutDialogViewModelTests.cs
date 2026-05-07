@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using SkyCD.Formatting;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -124,7 +125,7 @@ public class AboutDialogViewModelTests
     [InlineData(1048576, "1.0 MB")]
     public void FormatBytes_ReturnsExpectedText(long bytes, string expected)
     {
-        Assert.Equal(expected, AboutDialogFormatting.FormatBytes(bytes));
+        Assert.Equal(expected, SizeFormatting.FormatAboutDialogBytes(bytes));
     }
 
     [Theory]
