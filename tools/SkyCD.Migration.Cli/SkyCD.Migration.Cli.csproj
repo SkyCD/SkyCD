@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SkyCD.Application\SkyCD.Application.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj" />
   </ItemGroup>
   <ItemGroup>

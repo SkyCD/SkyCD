@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\SkyCD.Application\SkyCD.Application.csproj" />
     <ProjectReference Include="..\SkyCD.Documents\SkyCD.Documents.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj" />
