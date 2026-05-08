@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SkyCD.Infrastructure\SkyCD.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\SkyCD.Domain\SkyCD.Domain.csproj" />
     <ProjectReference Include="..\..\src\SkyCD.Application\SkyCD.Application.csproj" />
+    <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />

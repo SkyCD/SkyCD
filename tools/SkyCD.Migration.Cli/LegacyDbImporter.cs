@@ -10,9 +10,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using SkyCD.Domain.Catalogs;
-using SkyCD.Infrastructure.Persistence;
+using SkyCD.Documents;
+using SkyCD.Documents.Enum;
 
 namespace SkyCD.Migration.Cli;
 
@@ -20,13 +19,7 @@ public sealed class LegacyDbImporter
 {
     public async Task<LegacyImportResult> ImportAsync(string legacyPath, string targetPath, bool dryRun, CancellationToken cancellationToken = default)
     {
-        var targetConnection = $"Data Source={targetPath}";
-        await using var targetContext = new SkyCDDbContext(
-            new DbContextOptionsBuilder<SkyCDDbContext>()
-                .UseSqlite(targetConnection)
-                .Options);
-
-        await targetContext.Database.MigrateAsync(cancellationToken);
+        _ = targetPath;
 
         await using var legacyConnection = new SqliteConnection($"Data Source={legacyPath};Mode=ReadOnly");
         await legacyConnection.OpenAsync(cancellationToken);
@@ -44,44 +37,53 @@ public sealed class LegacyDbImporter
 
         foreach (var aidGroup in groupedByAid)
         {
-            var catalog = new Catalog
+            var now = DateTimeOffset.UtcNow;
+            var catalogId = Guid.NewGuid().ToString("N");
+            var catalogName = $"Imported Legacy Catalog ({aidGroup.Key})";
+            var rootId = $"catalog-{catalogId}";
+            var root = new CatalogDocument
             {
-                Name = $"Imported Legacy Catalog ({aidGroup.Key})",
-                SchemaVersion = 1,
-                CreatedUtc = DateTimeOffset.UtcNow,
-                UpdatedUtc = DateTimeOffset.UtcNow
+                Id = rootId,
+                Name = catalogName,
+                ParentId = null,
+                Type = CatalogDocumentType.Folder,
+                Size = 0,
+                ChildrenCount = 0
             };
+
+            var documents = new List<CatalogDocument> { root };
 
             foreach (var row in aidGroup)
             {
-                var kind = row.Type.Equals("scdFile", StringComparison.OrdinalIgnoreCase)
-                    ? CatalogNodeKind.File
-                    : CatalogNodeKind.Folder;
+                var type = row.Type.Equals("scdFile", StringComparison.OrdinalIgnoreCase)
+                    ? CatalogDocumentType.File
+                    : CatalogDocumentType.Folder;
+                var parentId = row.ParentId < 0 ? rootId : $"{catalogId}-{row.ParentId}";
+                var id = $"{catalogId}-{row.Id}";
 
-                catalog.Nodes.Add(new CatalogNode
+                documents.Add(new CatalogDocument
                 {
-                    Id = row.Id,
-                    CatalogId = catalog.Id,
-                    ParentId = row.ParentId < 0 ? null : row.ParentId,
-                    Kind = kind,
+                    Id = id,
+                    ParentId = parentId,
+                    Type = type,
                     Name = string.IsNullOrWhiteSpace(row.Name) ? $"Unnamed-{row.Id}" : row.Name,
-                    SizeBytes = kind == CatalogNodeKind.File ? row.Size : null,
-                    MetadataJson = row.Properties
+                    Size = type == CatalogDocumentType.File ? (row.Size ?? 0) : 0,
+                    ChildrenCount = 0
                 });
                 importedNodes++;
             }
 
-            var validationErrors = CatalogValidator.Validate(catalog);
+            var validationErrors = ValidateCatalogDocuments(catalogName, documents);
             if (validationErrors.Count > 0)
             {
-                errors.AddRange(validationErrors.Select(error => $"Catalog '{catalog.Name}': {error}"));
+                errors.AddRange(validationErrors);
                 continue;
             }
 
             if (!dryRun)
             {
-                await targetContext.Catalogs.AddAsync(catalog, cancellationToken);
-                await targetContext.SaveChangesAsync(cancellationToken);
+                errors.Add($"Catalog '{catalogName}': Persisting imports is not supported after infrastructure removal. Use dry-run mode.");
+                continue;
             }
 
             importedCatalogs++;
@@ -111,6 +113,37 @@ public sealed class LegacyDbImporter
         }
 
         return rows;
+    }
+
+    private static IReadOnlyList<string> ValidateCatalogDocuments(string catalogName, IReadOnlyList<CatalogDocument> documents)
+    {
+        var errors = new List<string>();
+
+        if (documents.Count == 0)
+        {
+            errors.Add($"Catalog '{catalogName}': No documents to import.");
+            return errors;
+        }
+
+        foreach (var document in documents)
+        {
+            if (string.IsNullOrWhiteSpace(document.Name))
+            {
+                errors.Add($"Catalog '{catalogName}': Document '{document.Id}' name is required.");
+            }
+
+            if (document.Type == CatalogDocumentType.Folder && document.Size != 0)
+            {
+                errors.Add($"Catalog '{catalogName}': Folder '{document.Id}' size must be zero.");
+            }
+
+            if (document.Size < 0)
+            {
+                errors.Add($"Catalog '{catalogName}': Document '{document.Id}' size cannot be negative.");
+            }
+        }
+
+        return errors;
     }
 }
 
