@@ -1,5 +1,3 @@
-using SkyCD.Presentation.ViewModels;
-
 namespace SkyCD.Documents;
 
 public sealed class BrowserOptionsDocument

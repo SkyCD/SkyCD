@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Couchbase;
+using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Formatting;
@@ -69,7 +70,10 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
                     item.Name,
                     item.Type.ToDisplayName(),
                     SizeFormatting.FormatBytes(item.Size, "0.##"),
-                    item.Type.ResolveIconGlyph());
+                    item.Type.ResolveIconGlyph())
+                {
+                    Id = item.Id
+                };
             })
             .ToArray();
 
@@ -86,9 +90,22 @@ public sealed class CouchbaseLiteBrowserDataStore : IBrowserDataStore
                     item.Name,
                     item.Type.ToDisplayName(),
                     SizeFormatting.FormatBytes(item.Size, "0.##"),
-                    item.Type.ResolveIconGlyph());
+                    item.Type.ResolveIconGlyph())
+                {
+                    Id = item.Id
+                };
             })
             .ToArray();
+    }
+
+    public PropertiesCollection GetBrowserItemInfoProperties(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return new PropertiesCollection();
+        }
+
+        return catalogRepository.Get<CatalogEntryDocument>(itemId)?.Properties ?? new PropertiesCollection();
     }
 
     private static BrowserTreeNode BuildTreeNodeFromLookup(

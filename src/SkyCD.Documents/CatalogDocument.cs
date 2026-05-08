@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SkyCD.Couchbase.Attributes;
+using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 
@@ -22,4 +23,5 @@ public sealed class CatalogDocument
 
     public long ChildrenCount { get; init; }
 
+    public PropertiesCollection Properties { get; init; } = new();
 }

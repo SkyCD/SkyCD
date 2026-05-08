@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using SkyCD.Documents;
+using SkyCD.Documents.Collections;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -77,7 +79,7 @@ public class UISmokeTests
             "Test Item",
             "folder",
             "Test comments",
-            new Dictionary<string, object?>());
+            new PropertiesCollection());
 
         Assert.False(vm.DialogAccepted);
         vm.ConfirmCommand.Execute(null);

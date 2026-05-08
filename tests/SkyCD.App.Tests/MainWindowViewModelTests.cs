@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.Documents;
+using SkyCD.Documents.Collections;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -675,6 +677,14 @@ public class MainWindowViewModelTests
             return nodeKey == "root"
                 ? [new BrowserItem("Sample.txt", "File", "12 KB", "F")]
                 : [];
+        }
+
+        public PropertiesCollection GetBrowserItemInfoProperties(string itemId)
+        {
+            return new PropertiesCollection(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Sample"] = itemId
+            });
         }
     }
 }

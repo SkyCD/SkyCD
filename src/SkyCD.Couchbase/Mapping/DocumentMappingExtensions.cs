@@ -122,6 +122,40 @@ public static class DocumentMappingExtensions
             return Convert.ChangeType(raw, effectiveTarget, CultureInfo.InvariantCulture);
         }
 
+        if (raw is IDictionaryObject dictionaryObject &&
+            typeof(IDictionary<string, object?>).IsAssignableFrom(effectiveTarget))
+        {
+            var mapped = CreateDictionaryInstance(effectiveTarget);
+            foreach (var key in dictionaryObject.Keys)
+            {
+                var value = dictionaryObject.GetValue(key);
+                mapped[key] = value switch
+                {
+                    IDictionaryObject nestedDictionary => ConvertToTargetType(nestedDictionary, typeof(Dictionary<string, object?>)),
+                    ArrayObject nestedArray => ConvertArray(nestedArray, typeof(List<object?>)),
+                    _ => value
+                };
+            }
+
+            return mapped;
+        }
+
+        if (raw is ArrayObject dictionaryKeysArray &&
+            typeof(IDictionary<string, object?>).IsAssignableFrom(effectiveTarget))
+        {
+            var mapped = CreateDictionaryInstance(effectiveTarget);
+            for (var i = 0; i < dictionaryKeysArray.Count; i++)
+            {
+                var keyValue = dictionaryKeysArray.GetValue(i);
+                if (keyValue is string key && !mapped.ContainsKey(key))
+                {
+                    mapped[key] = null;
+                }
+            }
+
+            return mapped;
+        }
+
         // Backward compatibility: allow previously scalar string values
         // to hydrate into newer object documents with a writable Name property.
         if (raw is string legacyString)
@@ -147,6 +181,21 @@ public static class DocumentMappingExtensions
             ArrayObject rawArray => ConvertArray(rawArray, effectiveTarget),
             _ => raw
         };
+    }
+
+    private static IDictionary<string, object?> CreateDictionaryInstance(Type dictionaryType)
+    {
+        if (dictionaryType == typeof(Dictionary<string, object?>))
+        {
+            return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase);
+        }
+
+        if (Activator.CreateInstance(dictionaryType) is IDictionary<string, object?> typedDictionary)
+        {
+            return typedDictionary;
+        }
+
+        return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase);
     }
 
     private static object ConvertArray(ArrayObject rawArray, Type targetType)

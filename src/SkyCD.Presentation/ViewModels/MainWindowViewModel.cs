@@ -6,12 +6,16 @@ using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Localization;
+using SkyCD.Documents;
+using SkyCD.Documents.Collections;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly IBrowserDataStore browserDataStore;
+    private readonly IStringLocalizer propertyValueLocalizer;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
@@ -33,13 +37,25 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? ExitRequested;
 
     public MainWindowViewModel()
-        : this(new InMemoryBrowserDataStore())
+        : this(
+            new InMemoryBrowserDataStore(),
+            new PropertyValueLocalizer())
     {
     }
 
     public MainWindowViewModel(IBrowserDataStore browserDataStore)
+        : this(
+            browserDataStore,
+            new PropertyValueLocalizer())
+    {
+    }
+
+    public MainWindowViewModel(
+        IBrowserDataStore browserDataStore,
+        IStringLocalizer propertyValueLocalizer)
     {
         this.browserDataStore = browserDataStore ?? throw new ArgumentNullException(nameof(browserDataStore));
+        this.propertyValueLocalizer = propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         TreeNodes = browserDataStore.GetTreeNodes();
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
@@ -650,15 +666,15 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey);
-            var nodeTitle = SelectedTreeNode?.Title ?? "Library";
-            var infoProperties = BuildBrowserItemInfoProperties(SelectedBrowserItem, nodeTitle);
+            var infoProperties = browserDataStore.GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
                 SelectedBrowserItem.Name,
                 SelectedBrowserItem.IconGlyph,
                 comments,
-                infoProperties);
+                infoProperties,
+                propertyValueLocalizer);
             return true;
         }
 
@@ -672,32 +688,13 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                new Dictionary<string, object?>());
+                new PropertiesCollection(),
+                propertyValueLocalizer);
             return true;
         }
 
         dialog = null;
         return false;
-    }
-
-    private static IReadOnlyDictionary<string, object?> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
-    {
-        if (!SupportsInfoTab(item.Type))
-        {
-            return new Dictionary<string, object?>();
-        }
-
-        return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase)
-        {
-            ["Type"] = item.Type,
-            ["Size"] = item.Size,
-            ["Location"] = nodeTitle
-        };
-    }
-
-    private static bool SupportsInfoTab(string? itemType)
-    {
-        return !string.Equals(itemType, "Folder", StringComparison.OrdinalIgnoreCase);
     }
 
     private string GetObjectComments(string objectKey)
@@ -937,4 +934,5 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
     }
+
 }

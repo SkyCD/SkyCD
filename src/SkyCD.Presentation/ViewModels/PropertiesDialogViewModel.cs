@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Localization;
+using SkyCD.Documents.Collections;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -14,13 +16,14 @@ public partial class PropertiesDialogViewModel : ObservableObject
         string name,
         string iconGlyph,
         string comments,
-        IReadOnlyDictionary<string, object?> infoProperties)
+        PropertiesCollection infoProperties,
+        IStringLocalizer? localizer = null)
     {
         ObjectKey = objectKey;
         this.name = name;
         IconGlyph = iconGlyph;
         this.comments = comments;
-        InfoProperties = NormalizeInfoProperties(infoProperties);
+        InfoProperties = NormalizeInfoProperties(infoProperties, localizer ?? new PropertyValueLocalizer());
     }
 
     public string ObjectKey { get; }
@@ -30,7 +33,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string IconGlyph { get; }
 
-    public IReadOnlyDictionary<string, object?> InfoProperties { get; }
+    public PropertiesCollection InfoProperties { get; }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 
@@ -46,61 +49,54 @@ public partial class PropertiesDialogViewModel : ObservableObject
         DialogAccepted = true;
     }
 
-    private static IReadOnlyDictionary<string, object?> NormalizeInfoProperties(
-        IReadOnlyDictionary<string, object?> infoProperties)
+    private static PropertiesCollection NormalizeInfoProperties(
+        PropertiesCollection infoProperties,
+        IStringLocalizer localizer)
     {
-        return infoProperties
-            .OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase)
-            .ToDictionary(
-                item => item.Key,
-                item => (object?)NormalizeDisplayValue(item.Value),
-                StringComparer.CurrentCultureIgnoreCase);
+        var normalizedDisplay = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+        foreach (var (key, value) in infoProperties)
+        {
+            normalizedDisplay[key] = NormalizeDisplayValue(value, localizer);
+        }
+
+        return new PropertiesCollection(normalizedDisplay.ToDictionary(
+            item => item.Key,
+            item => (object?)item.Value,
+            StringComparer.CurrentCultureIgnoreCase));
     }
 
-    private static string NormalizeDisplayValue(object? value)
+    private static string NormalizeDisplayValue(
+        object? value,
+        IStringLocalizer localizer,
+        CultureInfo? culture = null)
     {
+        culture ??= CultureInfo.CurrentUICulture;
+        var unknownText = localizer["Unknown"].Value;
+        var yesText = localizer["Yes"].Value;
+        var noText = localizer["No"].Value;
+
         if (value is null)
         {
-            return GetUnknownText();
+            return unknownText;
         }
 
         if (value is bool boolValue)
         {
-            return boolValue ? GetYesText() : GetNoText();
+            return boolValue ? yesText : noText;
         }
 
         var text = value.ToString();
         if (string.IsNullOrWhiteSpace(text))
         {
-            return GetUnknownText();
+            return unknownText;
         }
 
         if (bool.TryParse(text, out var parsedBool))
         {
-            return parsedBool ? GetYesText() : GetNoText();
+            return parsedBool ? yesText : noText;
         }
 
         return text;
     }
 
-    private static string GetUnknownText()
-    {
-        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase)
-            ? "Nežinoma"
-            : "Unknown";
-    }
-
-    private static string GetYesText()
-    {
-        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase)
-            ? "Taip"
-            : "Yes";
-    }
-
-    private static string GetNoText()
-    {
-        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase)
-            ? "Ne"
-            : "No";
-    }
 }
