@@ -5,7 +5,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
-using SkyCD.App.Services;
+using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
@@ -29,21 +29,23 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void BrowserDataStore_LoadsSeededCatalogData()
+    public void MainWindowViewModel_LoadsSeededCatalogDataFromRepository()
     {
         var services = new ServiceCollection();
         CouchbaseServiceRegistrator.RegisterServices(services);
-        services.AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>();
         using var provider = services.BuildServiceProvider();
-        var dataStore = provider.GetRequiredService<IBrowserDataStore>();
+        var repositoryManager = provider.GetRequiredService<RepositoryManager>();
+        var catalogRepository = repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository;
+        Assert.NotNull(catalogRepository);
+        var viewModel = new MainWindowViewModel(catalogRepository!);
 
-        var roots = dataStore.GetTreeNodes();
+        var roots = viewModel.TreeNodes;
         Assert.Single(roots);
         Assert.Equal("Library", roots[0].Title);
 
-        var items = dataStore.GetBrowserItems("movies");
-        Assert.Equal(2, items.Count);
-        Assert.Contains(items, static item => item.Name == "Interstellar.mkv");
+        viewModel.SelectedTreeNode = roots[0].Children.Single(child => child.Key == "movies");
+        Assert.Equal(2, viewModel.BrowserItems.Count);
+        Assert.Contains(viewModel.BrowserItems, static item => item.Name == "Interstellar.mkv");
     }
 
     [Fact]

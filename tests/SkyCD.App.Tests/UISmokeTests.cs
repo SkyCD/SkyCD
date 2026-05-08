@@ -15,7 +15,7 @@ public class UISmokeTests
     [Fact]
     public void MainWindow_ShellInitializesWithDefaultState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         Assert.Equal(BrowserViewMode.Details, vm.CurrentViewMode);
         Assert.Equal(BrowserSortMode.Name, vm.CurrentSortMode);
@@ -26,7 +26,7 @@ public class UISmokeTests
     [Fact]
     public void BrowserViewMode_CanBeSwitched()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var initialMode = vm.CurrentViewMode;
 
         vm.SetViewModeCommand.Execute("LargeIcons");
@@ -39,7 +39,7 @@ public class UISmokeTests
     [Fact]
     public void BrowserSortMode_CanBeSwitched()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var initialMode = vm.CurrentSortMode;
 
         vm.SetSortModeCommand.Execute("Type");
@@ -143,11 +143,17 @@ public class UISmokeTests
     [Fact]
     public void MainShell_StatusBarToggle_Works()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var initialState = vm.IsStatusBarVisible;
 
         vm.ToggleStatusBarCommand.Execute(null);
 
         Assert.NotEqual(initialState, vm.IsStatusBarVisible);
     }
+
+    private static MainWindowViewModel CreateViewModel()
+    {
+        return new MainWindowViewModel(TestCatalogEntries.Default());
+    }
 }
+

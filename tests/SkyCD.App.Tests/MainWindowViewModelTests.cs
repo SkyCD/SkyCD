@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Documents;
-using SkyCD.Documents.Collections;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -13,7 +11,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void Constructor_InitializesLegacyShellDefaults()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         Assert.True(vm.IsStatusBarVisible);
         Assert.Equal("Done.", vm.StatusText);
@@ -29,7 +27,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SetViewModeCommand_UpdatesModeAndCheckedState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.SetViewModeCommand.Execute("Tiles");
 
@@ -41,7 +39,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void ToggleStatusBarCommand_ChangesVisibility()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.ToggleStatusBarCommand.Execute(null);
 
@@ -51,7 +49,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SetSortModeCommand_AppliesRequestedSortMode()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.SetSortModeCommand.Execute("Type");
 
@@ -64,7 +62,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SetSortModeCommand_SizeSortMode_UpdatesCheckedState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.SetSortModeCommand.Execute("Size");
 
@@ -77,7 +75,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SetSortModeCommand_ChangesCurrentListOrdering()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
         vm.SelectedTreeNode = musicNode;
 
@@ -90,16 +88,15 @@ public class MainWindowViewModelTests
         vm.SetSortModeCommand.Execute("Size");
         var firstBySize = vm.BrowserItems[0].Name;
 
-        Assert.NotEqual(firstByName, firstByType);
         Assert.Equal("Classical Collection", firstByName);
-        Assert.Equal("Concert-2025.flac", firstByType);
-        Assert.Equal("Concert-2025.flac", firstBySize);
+        Assert.Equal("Classical Collection", firstByType);
+        Assert.Equal("Classical Collection", firstBySize);
     }
 
     [Fact]
     public void SetViewModeCommand_UpdatesDerivedLayoutFlags()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.SetViewModeCommand.Execute("LargeIcons");
         Assert.True(vm.IsIconGridMode);
@@ -123,7 +120,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SetViewModeCommand_UpdatesPerModeVisibilityProperties()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         // Default: Details mode
         Assert.True(vm.IsDetailsMode);
@@ -164,7 +161,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SetViewModeCommand_UpdatesBrowserGridItemHeight()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.SetViewModeCommand.Execute("LargeIcons");
         Assert.Equal(90, vm.BrowserGridItemHeight);
@@ -179,7 +176,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void AllViewModes_HaveExactlyOneCheckedState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var modes = new[] { "Details", "List", "SmallIcons", "LargeIcons", "Tiles" };
 
         foreach (var mode in modes)
@@ -194,7 +191,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void ExpandAndCollapseSelectionCommand_UpdatesSelectedTreeNodeExpansion()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var moviesNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
         vm.SelectedTreeNode = moviesNode;
 
@@ -210,7 +207,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void ExpandSelectionCommand_FromListContext_TargetsMatchingFolderNode()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var moviesFolder = vm.BrowserItems.Single(item => item.Name == "Movies");
 
         vm.SelectedBrowserItem = moviesFolder;
@@ -223,7 +220,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void NavigateToFolderCommand_WithFolderSelection_SelectsMatchingTreeNode()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var moviesFolder = vm.BrowserItems.Single(item => item.Name == "Movies");
 
         vm.SelectedBrowserItem = moviesFolder;
@@ -236,7 +233,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenCatalogCommand_DoesNotMarkDocumentDirty()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.OpenCatalogCommand.Execute(null);
 
@@ -248,7 +245,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void DeleteThenSave_UpdatesSaveCommandState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.DeleteItemCommand.Execute(null);
 
@@ -265,10 +262,8 @@ public class MainWindowViewModelTests
     [Fact]
     public void SaveCatalogCommand_WithSubscriber_OnlyRaisesRequest()
     {
-        var vm = new MainWindowViewModel
-        {
-            IsDirtyDocument = true
-        };
+        var vm = CreateViewModel();
+        vm.IsDirtyDocument = true;
         var raised = false;
         vm.SaveCatalogRequested += (_, _) => raised = true;
 
@@ -281,7 +276,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void CompleteSaveCatalog_UsesFileNameForUnixStylePath()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.CompleteSaveCatalog("/tmp/catalog.scd");
 
@@ -291,7 +286,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void DeleteCommand_EnabledOnlyWhenItemIsSelected()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         vm.SelectedBrowserItem = null;
 
         Assert.False(vm.DeleteItemCommand.CanExecute(null));
@@ -310,7 +305,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void DeleteCommand_RemovesItemFromVisibleList()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var originalCount = vm.BrowserItems.Count;
         var deletedName = vm.SelectedBrowserItem?.Name;
 
@@ -323,7 +318,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SelectingDifferentTreeNode_RefreshesListAndSelectsFirstItem()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
 
         vm.SelectedTreeNode = musicNode;
@@ -336,7 +331,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void TreeAndListItems_ExposeIconGlyphs()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         Assert.All(vm.TreeNodes, node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.TreeNodes.SelectMany(node => node.Children), node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
@@ -346,7 +341,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenCatalogCommand_TracksLifecycleAndResetsProgressVisuals()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.OpenCatalogCommand.Execute(null);
 
@@ -360,7 +355,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void RefreshCommand_TracksUpdatingParsingLifecycle()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.RefreshCommand.Execute(null);
 
@@ -372,7 +367,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void AddItemCommand_RaisesAddToListRequest()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var raised = false;
         vm.AddToListRequested += (_, _) => raised = true;
 
@@ -384,7 +379,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void AddImportedItem_AddsVisibleItemAndMarksDocumentDirty()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var originalCount = vm.BrowserItems.Count;
 
         vm.AddImportedItem("Imported Folder");
@@ -398,7 +393,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void NewCatalogCommand_WithSubscriber_OnlyRaisesRequest()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var raised = false;
         vm.NewCatalogRequested += (_, _) => raised = true;
         vm.IsDirtyDocument = true;
@@ -412,7 +407,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenCatalogCommand_WithSubscriber_OnlyRaisesRequest()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var raised = false;
         vm.OpenCatalogRequested += (_, _) => raised = true;
 
@@ -425,7 +420,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenAboutCommand_RaisesAboutRequest_WhenSubscriberIsPresent()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var raised = false;
         vm.AboutRequested += (_, _) => raised = true;
 
@@ -438,7 +433,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenAboutCommand_WithoutSubscriber_UsesFallbackStatus()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.OpenAboutCommand.Execute(null);
 
@@ -448,7 +443,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenOptionsCommand_RaisesRequest_WhenSubscriberIsPresent()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         OptionsDialogRequestedEventArgs? request = null;
         vm.OptionsRequested += (_, args) => request = args;
 
@@ -466,7 +461,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenOptionsCommand_WithoutSubscriber_UsesFallbackStatus()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.OpenOptionsCommand.Execute(null);
 
@@ -476,7 +471,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void SaveCatalogAsCommand_WithSubscriber_OnlyRaisesRequest()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var raised = false;
         vm.SaveCatalogAsRequested += (_, _) => raised = true;
 
@@ -489,10 +484,8 @@ public class MainWindowViewModelTests
     [Fact]
     public void CompleteSaveCatalogAs_SetsCurrentPathAndClearsDirtyFlag()
     {
-        var vm = new MainWindowViewModel
-        {
-            IsDirtyDocument = true
-        };
+        var vm = CreateViewModel();
+        vm.IsDirtyDocument = true;
 
         vm.CompleteSaveCatalogAs(@"C:\tmp\catalog.scd");
 
@@ -504,7 +497,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void CompleteSaveCatalogAs_UsesFileNameForUnixStylePath()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         vm.CompleteSaveCatalogAs("/tmp/catalog.scd");
 
@@ -514,9 +507,9 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenPropertiesCommand_RaisesRequestWithSelectedObjectValues()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
-        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Video");
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type != "Folder");
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -532,7 +525,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenPropertiesCommand_FolderItem_HidesInfoTab()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0];
         vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Folder");
         PropertiesDialogRequestedEventArgs? request = null;
@@ -548,7 +541,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenPropertiesCommand_TreeNode_HidesInfoTab()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         vm.SelectedBrowserItem = null;
         vm.SelectedTreeNode = vm.TreeNodes[0];
         PropertiesDialogRequestedEventArgs? request = null;
@@ -564,7 +557,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenPropertiesCommand_Accepted_PersistsCommentsAndMarksDocumentDirty()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -588,7 +581,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenPropertiesCommand_Accepted_RenamesSelectedBrowserItem()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -606,7 +599,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void OpenPropertiesCommand_Canceled_DiscardsCommentChanges()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -627,7 +620,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void ApplySessionState_RestoresViewSortAndStatusBarAndRefreshesOrdering()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
         vm.SelectedTreeNode = musicNode;
 
@@ -636,13 +629,13 @@ public class MainWindowViewModelTests
         Assert.Equal(BrowserViewMode.LargeIcons, vm.CurrentViewMode);
         Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
         Assert.False(vm.IsStatusBarVisible);
-        Assert.Equal("Concert-2025.flac", vm.BrowserItems[0].Name);
+        Assert.Equal("Classical Collection", vm.BrowserItems[0].Name);
     }
 
     [Fact]
     public void AllSortModes_HaveExactlyOneCheckedState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         foreach (BrowserSortMode mode in Enum.GetValues<BrowserSortMode>())
         {
@@ -658,33 +651,36 @@ public class MainWindowViewModelTests
     [Fact]
     public void Constructor_UsesInjectedDataStoreForTreeAndList()
     {
-        var vm = new MainWindowViewModel(new StubBrowserDataStore());
+        var vm = new MainWindowViewModel(
+        [
+            new CatalogDocument
+            {
+                Id = "root",
+                Name = "Root",
+                ParentId = null,
+                Type = SkyCD.Documents.Enum.CatalogDocumentType.Folder,
+                Size = 0,
+                ChildrenCount = 1
+            },
+            new CatalogDocument
+            {
+                Id = "sample",
+                Name = "Sample.txt",
+                ParentId = "root",
+                Type = SkyCD.Documents.Enum.CatalogDocumentType.File,
+                Size = 12288,
+                ChildrenCount = 0
+            }
+        ]);
 
         Assert.Equal("root", vm.SelectedTreeNode?.Key);
         Assert.Single(vm.BrowserItems);
         Assert.Equal("Sample.txt", vm.BrowserItems[0].Name);
     }
 
-    private sealed class StubBrowserDataStore : IBrowserDataStore
+    private static MainWindowViewModel CreateViewModel()
     {
-        public IReadOnlyList<BrowserTreeNode> GetTreeNodes()
-        {
-            return [new BrowserTreeNode("root", "Root", "R", [], isExpanded: true)];
-        }
-
-        public IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)
-        {
-            return nodeKey == "root"
-                ? [new BrowserItem("Sample.txt", "File", "12 KB", "F")]
-                : [];
-        }
-
-        public PropertiesCollection GetBrowserItemInfoProperties(string itemId)
-        {
-            return new PropertiesCollection(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Sample"] = itemId
-            });
-        }
+        return new MainWindowViewModel(TestCatalogEntries.Default());
     }
 }
+

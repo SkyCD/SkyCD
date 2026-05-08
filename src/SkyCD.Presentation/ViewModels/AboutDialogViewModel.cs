@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -138,8 +139,8 @@ public partial class AboutDialogViewModel : ObservableObject
             ThreadInfo = $"{currentProcess.Threads.Count} threads";
 
             var uptime = DateTime.Now - currentProcess.StartTime;
-            UptimeFriendly = AboutDialogFormatting.FormatFriendlyTime(uptime);
-            StartTime = AboutDialogFormatting.FormatStartTime(currentProcess.StartTime);
+            UptimeFriendly = TimeFormatting.FormatAboutDialogDuration(uptime);
+            StartTime = currentProcess.StartTime.ToString("f", CultureInfo.CurrentCulture);
         }
         catch
         {

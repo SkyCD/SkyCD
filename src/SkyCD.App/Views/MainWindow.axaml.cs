@@ -12,7 +12,6 @@ using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
-using SkyCD.App.Services;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;

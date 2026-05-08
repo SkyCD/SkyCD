@@ -7,14 +7,18 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
+using SkyCD.Documents.Enum;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
+using SkyCD.Documents.Repository;
+using SkyCD.Formatting;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IBrowserDataStore browserDataStore;
+    private readonly CatalogDocumentRepository? catalogRepository;
+    private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
@@ -36,27 +40,36 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(CatalogDocumentRepository catalogRepository)
         : this(
-            new InMemoryBrowserDataStore(),
-            new PropertyValueLocalizer())
-    {
-    }
-
-    public MainWindowViewModel(IBrowserDataStore browserDataStore)
-        : this(
-            browserDataStore,
+            catalogRepository,
             new PropertyValueLocalizer())
     {
     }
 
     public MainWindowViewModel(
-        IBrowserDataStore browserDataStore,
+        CatalogDocumentRepository catalogRepository,
         IStringLocalizer propertyValueLocalizer)
     {
-        this.browserDataStore = browserDataStore ?? throw new ArgumentNullException(nameof(browserDataStore));
+        this.catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
         this.propertyValueLocalizer = propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
-        TreeNodes = browserDataStore.GetTreeNodes();
+        EnsureSeedData();
+        TreeNodes = GetTreeNodes();
+
+        var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
+        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
+        SelectedTreeNode = TreeNodes.FirstOrDefault();
+        RefreshBrowserItemsForSelection();
+    }
+
+    public MainWindowViewModel(
+        IReadOnlyList<CatalogDocument> catalogEntries,
+        IStringLocalizer? propertyValueLocalizer = null)
+    {
+        inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
+        this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
+        TreeNodes = BuildTreeNodesFromEntries(inMemoryCatalogEntries);
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
@@ -666,7 +679,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey);
-            var infoProperties = browserDataStore.GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
+            var infoProperties = GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -727,7 +740,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var baseItems = browserDataStore.GetBrowserItems(nodeKey);
+        var baseItems = GetBrowserItems(nodeKey);
         if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
         {
             baseItems = baseItems
@@ -934,5 +947,162 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
     }
+    
+    private void EnsureSeedData()
+    {
+        if (catalogRepository is null || catalogRepository.GetAll<CatalogDocument>().Count > 0)
+        {
+            return;
+        }
 
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+    }
+
+    private IReadOnlyList<BrowserTreeNode> GetTreeNodes()
+    {
+        if (catalogRepository is not null)
+        {
+            var roots = catalogRepository
+                .GetRoots<CatalogDocument>()
+                .Where(entry => entry.Type != CatalogDocumentType.File)
+                .ToArray();
+
+            var treeNodes = roots
+                .Select(root =>
+                {
+                    var descendants = catalogRepository
+                        .GetDescendantsOf<CatalogDocument>(root.Id)
+                        .Where(entry => entry.Type != CatalogDocumentType.File)
+                        .ToList();
+                    descendants.Add(root);
+
+                    var byParent = descendants
+                        .GroupBy(entry => entry.ParentId ?? "__root__", StringComparer.Ordinal)
+                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+                    return BuildTreeNodeFromLookup(root, byParent, isExpanded: true);
+                })
+                .ToArray();
+
+            if (treeNodes.Length > 0)
+            {
+                return treeNodes;
+            }
+
+            return BuildTreeNodesFromEntries(catalogRepository.CreateDefaultEntries());
+        }
+
+        return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
+    }
+
+    private IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey))
+        {
+            return [];
+        }
+
+        if (catalogRepository is not null)
+        {
+            var entries = catalogRepository.GetChildrenOf<CatalogDocument>(nodeKey);
+            if (entries.Count > 0)
+            {
+                return MapBrowserItems(entries);
+            }
+
+            var defaults = catalogRepository.CreateDefaultEntries()
+                .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
+                .ToArray();
+            return MapBrowserItems(defaults);
+        }
+
+        var inMemoryEntries = (inMemoryCatalogEntries ?? [])
+            .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
+            .ToArray();
+        return MapBrowserItems(inMemoryEntries);
+    }
+
+    private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return new PropertiesCollection();
+        }
+
+        if (catalogRepository is not null)
+        {
+            return catalogRepository.Get<CatalogDocument>(itemId)?.Properties ?? new PropertiesCollection();
+        }
+
+        return (inMemoryCatalogEntries ?? [])
+            .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal))
+            ?.Properties ?? new PropertiesCollection();
+    }
+
+    private static IReadOnlyList<BrowserItem> MapBrowserItems(IReadOnlyList<CatalogDocument> entries)
+    {
+        return entries
+            .Select(item => new BrowserItem(
+                item.Name,
+                item.Type.ToDisplayName(),
+                SizeFormatting.FormatBytes(item.Size, "0.##"),
+                item.Type.ResolveIconGlyph())
+            {
+                Id = item.Id
+            })
+            .ToArray();
+    }
+
+    private static BrowserTreeNode BuildTreeNodeFromLookup(
+        CatalogDocument entry,
+        IReadOnlyDictionary<string, List<CatalogDocument>> byParent,
+        bool isExpanded)
+    {
+        byParent.TryGetValue(entry.Id, out var childrenOfCurrent);
+
+        var children = (childrenOfCurrent ?? [])
+            .Select(child => BuildTreeNodeFromLookup(child, byParent, isExpanded: false))
+            .ToArray();
+
+        return new BrowserTreeNode(
+            entry.Id,
+            entry.Name,
+            entry.Type.ResolveIconGlyph(),
+            children,
+            isExpanded);
+    }
+
+    private static IReadOnlyList<BrowserTreeNode> BuildTreeNodesFromEntries(IReadOnlyList<CatalogDocument> entries)
+    {
+        var filteredEntries = entries
+            .Where(entry => entry.Type != CatalogDocumentType.File)
+            .ToList();
+        var byId = filteredEntries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+
+        return filteredEntries
+            .Where(entry => string.IsNullOrWhiteSpace(entry.ParentId))
+            .Select(entry => BuildTreeNode(entry, byId, isExpanded: true))
+            .ToArray();
+    }
+
+    private static BrowserTreeNode BuildTreeNode(
+        CatalogDocument entry,
+        IReadOnlyDictionary<string, CatalogDocument> byId,
+        bool isExpanded)
+    {
+        var children = byId.Values
+            .Where(candidate => string.Equals(candidate.ParentId, entry.Id, StringComparison.Ordinal))
+            .Select(child => BuildTreeNode(child, byId, isExpanded: false))
+            .ToArray();
+
+        return new BrowserTreeNode(
+            entry.Id,
+            entry.Name,
+            entry.Type.ResolveIconGlyph(),
+            children,
+            isExpanded);
+    }
 }

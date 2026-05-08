@@ -5,11 +5,11 @@ using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
-using SkyCD.App.Services;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Documents;
+using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -108,8 +108,17 @@ public partial class App : Avalonia.Application
         var services = new ServiceCollection();
         CouchbaseServiceRegistrator.RegisterServices(services);
         services
-            .AddSingleton<IBrowserDataStore, CouchbaseLiteBrowserDataStore>()
-            .AddSingleton<MainWindowViewModel>()
+            .AddSingleton(static provider =>
+            {
+                var repositoryManager = provider.GetRequiredService<RepositoryManager>();
+                return repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository
+                    ?? throw new InvalidOperationException("Catalog document repository must be CatalogDocumentRepository.");
+            })
+            .AddSingleton(static provider =>
+            {
+                var catalogRepository = provider.GetRequiredService<CatalogDocumentRepository>();
+                return new MainWindowViewModel(catalogRepository);
+            })
             .AddSingleton(static provider =>
             {
                 var databaseManager = provider.GetRequiredService<DatabaseManager>();

@@ -129,14 +129,14 @@ public class AboutDialogViewModelTests
     }
 
     [Theory]
-    [InlineData(0, 0, 0, 3, "03s")]
-    [InlineData(0, 0, 2, 5, "02m 05s")]
-    [InlineData(0, 1, 4, 9, "01h 04m 09s")]
-    [InlineData(2, 7, 30, 12, "2d 07h 30m")]
+    [InlineData(0, 0, 0, 3, "3 seconds")]
+    [InlineData(0, 0, 2, 5, "2 minutes 5 seconds")]
+    [InlineData(0, 1, 4, 9, "1 hour 4 minutes 9 seconds")]
+    [InlineData(2, 7, 30, 12, "2 days 7 hours 30 minutes")]
     public void FormatFriendlyTime_ReturnsExpectedText(int days, int hours, int minutes, int seconds, string expected)
     {
         var duration = TimeSpan.FromDays(days) + TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes) + TimeSpan.FromSeconds(seconds);
 
-        Assert.Equal(expected, AboutDialogFormatting.FormatFriendlyTime(duration));
+        Assert.Equal(expected, TimeFormatting.FormatAboutDialogDuration(duration));
     }
 }
