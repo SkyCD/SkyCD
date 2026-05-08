@@ -8,7 +8,7 @@ public sealed class CatalogEntry
 
     public string? ParentId { get; init; }
 
-    public CatalogEntryType Type { get; init; }
+    public CatalogEntryType Type { get; init; } = CatalogEntryType.File;
 
     public long Size { get; init; }
 
