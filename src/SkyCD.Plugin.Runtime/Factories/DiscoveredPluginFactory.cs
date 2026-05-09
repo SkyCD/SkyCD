@@ -7,6 +7,7 @@ using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
+using SkyCD.Plugin.Runtime.Exceptions;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
@@ -15,12 +16,12 @@ public sealed class DiscoveredPluginFactory
     public DiscoveredPlugin BuildFromAssembly(Assembly assembly)
     {
         var metadata = ResolveAssemblyMetadata(assembly)
-                       ?? throw new InvalidOperationException($"Assembly '{assembly.FullName}' does not provide a valid plugin identity.");
+                       ?? throw new PluginAssemblyIdentityException(assembly.FullName ?? assembly.GetName().Name ?? "unknown");
 
         var capabilities = DiscoverCapabilitiesFromAssembly(assembly);
         if (capabilities.Count == 0)
         {
-            throw new InvalidOperationException($"Assembly '{assembly.FullName}' does not expose plugin capabilities.");
+            throw new PluginAssemblyCapabilitiesMissingException(assembly.FullName ?? assembly.GetName().Name ?? "unknown");
         }
 
         return new DiscoveredPlugin
@@ -49,7 +50,7 @@ public sealed class DiscoveredPluginFactory
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException($"Failed to inspect assembly '{assembly.FullName}'.", exception);
+            throw new PluginAssemblyInspectionException(assembly.FullName ?? assembly.GetName().Name ?? "unknown", exception);
         }
 
         return types

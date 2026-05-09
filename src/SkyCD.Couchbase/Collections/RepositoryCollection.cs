@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using SkyCD.Couchbase.Attributes;
+using SkyCD.Couchbase.Exceptions;
 using SkyCD.Couchbase.Repository;
 using CblCollection = Couchbase.Lite.Collection;
 
@@ -17,8 +18,7 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         var mapping = type.GetCustomAttributes(typeof(CouchbaseDocument), inherit: true);
         if (mapping.Length == 0 || mapping[0] is not CouchbaseDocument documentMapping)
         {
-            throw new InvalidOperationException(
-                $"Type '{type.FullName}' must be annotated with [CouchbaseDocument(\"collection\")].");
+            throw new CouchbaseDocumentAttributeMissingException(type);
         }
 
         return documentMapping;
@@ -30,8 +30,7 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
 
         if (instance is not RepositoryBase @base)
         {
-            throw new InvalidOperationException(
-                $"Repository type '{type.FullName}' must have a public parameterless constructor.");
+            throw new RepositoryConstructorInvalidException(type);
         }
 
         return @base;
@@ -76,7 +75,7 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
     {
         if (!inner.TryAdd(key, value))
         {
-            throw new ArgumentException($"An item with the same key has already been added. Key: {key}", nameof(key));
+            throw new DuplicateRepositoryKeyException(key);
         }
     }
 

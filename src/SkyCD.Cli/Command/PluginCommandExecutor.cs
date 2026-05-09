@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
+using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
 
 namespace SkyCD.Cli.Command;
@@ -61,10 +62,10 @@ internal static class PluginCommandExecutor
         {
             var runnerType = typeof(AppRunner<>).MakeGenericType(command.CommandInstance.GetType());
             var runner = Activator.CreateInstance(runnerType, new AppSettings(), new Resources())
-                         ?? throw new InvalidOperationException($"Failed to create CLI runner for '{command.CommandPath}'.");
+                         ?? throw new CliRunnerCreationException(command.CommandPath);
 
             var runMethod = runner.GetType().GetMethod("Run", [typeof(string[])])
-                           ?? throw new InvalidOperationException($"Could not resolve Run(string[]) for '{command.CommandPath}'.");
+                           ?? throw new CliRunnerMethodResolutionException(command.CommandPath);
 
             var canonicalPluginArgs = CanonicalizePluginCommandTokens(command.CommandInstance.GetType(), pluginArgs);
             var normalizedArgs = NormalizeSystemRunnerArgs(canonicalPluginArgs);

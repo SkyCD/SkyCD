@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.Exceptions;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 
@@ -54,7 +55,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             }
         }
 
-        throw new InvalidOperationException("Unsupported file format");
+        throw new UnsupportedFileFormatException(fileName);
     }
 
     public string GetPreferredSaveExtension(string fallback = "scd")
@@ -81,13 +82,13 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);
         if (!formatHandler.SupportedFormat.CanRead)
         {
-            throw new InvalidOperationException($"Format '{formatHandler.SupportedFormat.FormatId}' is not readable.");
+            throw new FileFormatNotReadableException(formatHandler.SupportedFormat.FormatId);
         }
 
         var result = await formatHandler.ReadAsync(request, cancellationToken);
         if (!result.Success)
         {
-            throw new InvalidOperationException(result.Error ?? "Read operation failed.");
+            throw new FileFormatReadFailedException(result.Error);
         }
 
         return result;
@@ -98,12 +99,12 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);
         if (!formatHandler.SupportedFormat.CanWrite)
         {
-            throw new InvalidOperationException($"Format '{formatHandler.SupportedFormat.FormatId}' is read-only.");
+            throw new FileFormatReadOnlyException(formatHandler.SupportedFormat.FormatId);
         }
 
         var result = await formatHandler.WriteAsync(request, cancellationToken);
         
-        return !result.Success ? throw new InvalidOperationException(result.Error ?? "Write operation failed.") : result;
+        return !result.Success ? throw new FileFormatWriteFailedException(result.Error) : result;
     }
 
     private IFileFormatPluginCapability ResolveHandler(string? formatId, string? fileName)
@@ -118,7 +119,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             }
         }
 
-        return !string.IsNullOrWhiteSpace(fileName) ? GetInstanceFor(fileName) : throw new InvalidOperationException("Unable to resolve file format handler.");
+        return !string.IsNullOrWhiteSpace(fileName) ? GetInstanceFor(fileName) : throw new FileFormatHandlerResolutionException();
     }
 
     private static FileFormatFilterCollection BuildFilters(IReadOnlyList<FileFormatDescriptor> formats)

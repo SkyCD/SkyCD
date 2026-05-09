@@ -1,4 +1,5 @@
 using System;
+using SkyCD.Couchbase.Exceptions;
 using SkyCD.Couchbase.Repository;
 
 namespace SkyCD.Couchbase.Attributes;
@@ -10,16 +11,13 @@ public sealed class CouchbaseDocument : Attribute
     {
         if (string.IsNullOrWhiteSpace(collectionName))
         {
-            throw new ArgumentException("Collection name cannot be null or whitespace.", nameof(collectionName));
+            throw new CouchbaseCollectionNameInvalidException();
         }
 
         repositoryType ??= typeof(DefaultRepository);
         if (!typeof(RepositoryBase).IsAssignableFrom(repositoryType))
         {
-            throw new ArgumentException(
-                $"Repository type must inherit {nameof(RepositoryBase)}.",
-                nameof(repositoryType)
-            );
+            throw new CouchbaseRepositoryTypeInvalidException();
         }
 
         CollectionName = collectionName;

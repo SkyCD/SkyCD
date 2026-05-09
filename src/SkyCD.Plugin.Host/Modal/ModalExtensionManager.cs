@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
+using SkyCD.Plugin.Host.Exceptions;
 
 namespace SkyCD.Plugin.Host.Modal;
 
@@ -153,7 +154,7 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
             return (binding.Capability, binding.Modal);
         }
 
-        throw new InvalidOperationException($"No plugin capability found for modal '{modalId}'.");
+        throw new ModalCapabilityNotFoundException(modalId);
     }
 
     private static string? ValidatePermissions(ModalDescriptor modal, IReadOnlyCollection<string> grantedPermissions)

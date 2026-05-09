@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Cli.Exceptions;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console;
@@ -17,7 +18,7 @@ internal sealed class ConvertCommand : ICliPluginCapability
         [Option("format")] string? outputFormat = null)
     {
         var context = CliCommandExecutionContextScope.Current
-                      ?? throw new InvalidOperationException("CLI command context is missing.");
+                      ?? throw new CliCommandContextMissingException();
         return (int)await context.Host.ExecuteConvertAsync(
             inputPath,
             outputPath,

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Repositories;
@@ -171,7 +172,7 @@ public sealed class PluginManager(
             return typed;
         }
 
-        throw new InvalidOperationException("Repository for PluginDocument must be PluginRepository.");
+        throw new PluginDocumentRepositoryTypeMismatchException();
     }
 
     private sealed record DiscoveredPluginSnapshot(DiscoveredPlugin Plugin, string AssemblyPath);

@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Collections;
+using SkyCD.Couchbase.Exceptions;
 using CblDatabase = Couchbase.Lite.Database;
 using CblDatabaseConfiguration = Couchbase.Lite.DatabaseConfiguration;
 
@@ -58,8 +59,7 @@ public class DatabaseManager : IDisposable
         ArgumentNullException.ThrowIfNull(documentType);
 
         var mapping = documentType.GetCustomAttribute<CouchbaseDocument>()
-            ?? throw new InvalidOperationException(
-                $"Type '{documentType.FullName}' must be annotated with [CouchbaseDocument(\"collection\")].");
+            ?? throw new CouchbaseDocumentAttributeMissingException(documentType);
 
         var connectionKey = string.IsNullOrWhiteSpace(mapping.Database) ? "default" : mapping.Database;
         return GetDatabase(connectionKey);

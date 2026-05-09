@@ -11,6 +11,7 @@ using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Cli.Command;
 using SkyCD.Cli.Console;
+using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -450,7 +451,7 @@ public sealed class CliHost(
         }, cancellationToken);
 
         var payload = readResult.Payload
-            ?? throw new InvalidOperationException("Source format returned empty payload.");
+            ?? throw new CliSourcePayloadMissingException();
         Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath) ?? Directory.GetCurrentDirectory());
 
         await using var target = File.Create(fullOutputPath);
@@ -689,20 +690,20 @@ public sealed class CliHost(
                 return explicitFormatId;
             }
 
-            throw new InvalidOperationException($"Format '{explicitFormatId}' does not support {operation}.");
+            throw new CliFormatOperationNotSupportedException(explicitFormatId, operation);
         }
 
         var extension = Path.GetExtension(path);
         if (string.IsNullOrWhiteSpace(extension))
         {
-            throw new InvalidOperationException($"Unable to infer format for '{path}'. Provide --format explicitly.");
+            throw new CliFormatInferenceFailedException(path);
         }
 
         var byExtension = formats.FirstOrDefault(format =>
             format.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
         if (byExtension is null)
         {
-            throw new InvalidOperationException($"No format handler registered for '{extension}' ({operation}).");
+            throw new CliFormatHandlerMissingException(extension, operation);
         }
 
         return byExtension.FormatId;

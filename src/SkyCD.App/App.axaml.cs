@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using SkyCD.App.Exceptions;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
@@ -112,7 +113,7 @@ public partial class App : Avalonia.Application
             {
                 var repositoryManager = provider.GetRequiredService<RepositoryManager>();
                 return repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository
-                    ?? throw new InvalidOperationException("Catalog document repository must be CatalogDocumentRepository.");
+                    ?? throw new CatalogRepositoryTypeMismatchException();
             })
             .AddSingleton(static provider =>
             {

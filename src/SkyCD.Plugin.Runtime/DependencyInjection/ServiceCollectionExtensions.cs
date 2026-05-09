@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Exceptions;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection;
 
@@ -38,8 +39,7 @@ public static class ServiceCollectionExtensions
 
         if (registerMethod is null)
         {
-            throw new InvalidOperationException(
-                $"{typeof(TRegistrator).FullName} must expose public static void RegisterServices(IServiceCollection services).");
+            throw new RegistratorMethodMissingException(typeof(TRegistrator));
         }
 
         registerMethod.Invoke(null, [services]);

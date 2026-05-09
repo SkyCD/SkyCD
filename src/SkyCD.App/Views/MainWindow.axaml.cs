@@ -18,6 +18,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
@@ -330,7 +331,7 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(localPath);
             if (!capability.SupportedFormat.CanRead)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is not readable.");
+                throw new FileFormatNotReadableException(capability.SupportedFormat.FormatId);
             }
 
             await using var source = File.OpenRead(localPath);
@@ -387,7 +388,7 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(targetPath);
             if (!capability.SupportedFormat.CanWrite)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is read-only.");
+                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
             }
 
             var content = """
@@ -436,7 +437,7 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(localPath);
             if (!capability.SupportedFormat.CanWrite)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is read-only.");
+                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
             }
 
             var content = """
