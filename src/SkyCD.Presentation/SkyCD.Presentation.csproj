@@ -3,6 +3,7 @@
     <ProjectReference Include="..\SkyCD.Documents\SkyCD.Documents.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj" />
+    <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

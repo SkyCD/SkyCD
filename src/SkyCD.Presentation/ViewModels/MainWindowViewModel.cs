@@ -7,10 +7,11 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
-using SkyCD.Documents.Enum;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
+using SkyCD.Documents.Enum;
+using SkyCD.UI.Controls.Lists;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -78,6 +79,12 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
+    public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns { get; } =
+    [
+        new() { Header = "Name", ValuePath = "Name", Width = new Avalonia.Controls.GridLength(1, Avalonia.Controls.GridUnitType.Star) },
+        new() { Header = "Type", ValuePath = "DisplayType", Width = new Avalonia.Controls.GridLength(150, Avalonia.Controls.GridUnitType.Pixel) },
+        new() { Header = "Size", ValuePath = "DisplaySize", Width = new Avalonia.Controls.GridLength(120, Avalonia.Controls.GridUnitType.Pixel), HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right, ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right }
+    ];
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
@@ -97,11 +104,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsDetailsViewChecked => CurrentViewMode == BrowserViewMode.Details;
 
-    public bool IsSortByNameChecked => CurrentSortMode == BrowserSortMode.Name;
+    public bool IsSortByNameChecked => IsSortMode("Name");
 
-    public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
+    public bool IsSortByTypeChecked => IsSortMode("Type");
 
-    public bool IsSortBySizeChecked => CurrentSortMode == BrowserSortMode.Size;
+    public bool IsSortBySizeChecked => IsSortMode("Size");
 
     public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
 
@@ -178,7 +185,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSortByNameChecked))]
     [NotifyPropertyChangedFor(nameof(IsSortByTypeChecked))]
-    private BrowserSortMode currentSortMode = BrowserSortMode.Name;
+    [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
+    private string currentSortMode = "Name";
 
     [ObservableProperty]
     private bool isStatusBarVisible = true;
@@ -524,12 +532,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void SetSortMode(string sortKey)
     {
-        if (Enum.TryParse<BrowserSortMode>(sortKey, true, out var sortMode))
-        {
-            CurrentSortMode = sortMode;
-            RefreshBrowserItemsForSelection();
-            StatusText = $"Arrange icons by: {sortMode}.";
-        }
+        CurrentSortMode = NormalizeSortMode(sortKey);
+        RefreshBrowserItemsForSelection();
+        StatusText = $"Arrange icons by: {CurrentSortMode}.";
     }
 
     [RelayCommand]
@@ -601,10 +606,10 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = $"Cut {SelectedBrowserItem.Name}.";
     }
 
-    public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
+    public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
-        CurrentSortMode = sortMode;
+        CurrentSortMode = NormalizeSortMode(sortMode);
         IsStatusBarVisible = isStatusBarVisible;
         RefreshBrowserItemsForSelection();
     }
@@ -795,12 +800,12 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var refreshedItems = CurrentSortMode switch
+        var refreshedItems = NormalizeSortMode(CurrentSortMode) switch
         {
-            BrowserSortMode.Type => items.OrderBy(static item => item.DisplayType)
+            "Type" => items.OrderBy(static item => item.DisplayType)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            BrowserSortMode.Size => items.OrderBy(static item => item.Size)
+            "Size" => items.OrderBy(static item => item.Size)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
@@ -943,11 +948,27 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowDetailsColumns));
     }
 
-    partial void OnCurrentSortModeChanged(BrowserSortMode value)
+    partial void OnCurrentSortModeChanged(string value)
     {
+        CurrentSortMode = NormalizeSortMode(value);
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
         OnPropertyChanged(nameof(IsSortBySizeChecked));
+    }
+
+    private bool IsSortMode(string expected)
+    {
+        return string.Equals(CurrentSortMode, expected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeSortMode(string? sortMode)
+    {
+        return sortMode?.Trim().ToLowerInvariant() switch
+        {
+            "type" => "Type",
+            "size" => "Size",
+            _ => "Name"
+        };
     }
 
     partial void OnIsDirtyDocumentChanged(bool value)

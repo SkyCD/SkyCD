@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
+             x:Class="SkyCD.UI.Controls.Lists.BrowserItemsView"
+             x:Name="Root">
+    <Grid>
+        <cl:DetailsListView x:Name="DetailsListView"
+                            IsVisible="False"
+                            ListMinWidth="{Binding ListMinWidth, ElementName=Root}"
+                            ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                            SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
+                            ListContextMenu="{Binding ListContextMenu, ElementName=Root}"
+                            HeaderContent="{Binding HeaderContent, ElementName=Root}"
+                            RowTemplate="{Binding DetailsRowTemplate, ElementName=Root}"/>
+
+        <ListBox x:Name="ListModeListBox"
+                 MinWidth="{Binding ListMinWidth, ElementName=Root}"
+                 IsVisible="False"
+                 ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                 SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
+                 ContextMenu="{Binding ListContextMenu, ElementName=Root}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+
+        <ListBox x:Name="IconGridListBox"
+                 MinWidth="{Binding ListMinWidth, ElementName=Root}"
+                 IsVisible="False"
+                 ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                 SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
+                 ContextMenu="{Binding ListContextMenu, ElementName=Root}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+    </Grid>
+</UserControl>

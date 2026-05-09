@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
-        xmlns:docs="clr-namespace:SkyCD.Documents;assembly=SkyCD.Documents"
         xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI"
         xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
@@ -9,6 +8,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SkyCD.App.Views.MainWindow"
+        x:Name="RootWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/skycd.ico"
         MinWidth="700"
@@ -287,101 +287,19 @@
                           Background="#CFCFCF"
                           ShowsPreview="True"/>
 
-            <!-- Details View: tabular list with column headers -->
-            <cl:DetailsListView Grid.Column="2"
-                                IsVisible="{Binding IsDetailsMode}"
-                                ListMinWidth="240"
-                                ItemsSource="{Binding BrowserItems}"
-                                SelectedItem="{Binding SelectedBrowserItem}"
-                                ContextRequested="OnBrowserContextRequested"
-                                ListContextMenu="{DynamicResource BrowserContextMenu}"
-                                DoubleTapped="OnBrowserListDoubleTapped">
-                <cl:DetailsListView.HeaderContent>
-                    <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
-                            BorderThickness="0,0,0,1"
-                            Background="{DynamicResource ThemeControlMidBrush}"
-                            Padding="4,2">
-                        <Grid ColumnDefinitions="24,*,150,120">
-                            <TextBlock Text="" FontWeight="SemiBold" FontSize="12"/>
-                            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" FontSize="12"/>
-                            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
-                            <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
-                        </Grid>
-                    </Border>
-                </cl:DetailsListView.HeaderContent>
-                <cl:DetailsListView.RowTemplate>
-                    <DataTemplate x:DataType="docs:CatalogDocument">
-                        <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
-                            <Image Width="16" Height="16" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                            <TextBlock Grid.Column="2" Text="{Binding DisplayType}"/>
-                            <TextBlock Grid.Column="3" Text="{Binding DisplaySize}" HorizontalAlignment="Right"/>
-                        </Grid>
-                    </DataTemplate>
-                </cl:DetailsListView.RowTemplate>
-            </cl:DetailsListView>
-
-            <!-- List View: wrapping simple icon+name layout -->
-            <ListBox Grid.Column="2"
-                     MinWidth="240"
-                     IsVisible="{Binding IsListMode}"
-                     ItemsSource="{Binding BrowserItems}"
-                     SelectedItem="{Binding SelectedBrowserItem}"
-                     ContextRequested="OnBrowserContextRequested"
-                     ContextMenu="{DynamicResource BrowserContextMenu}"
-                     DoubleTapped="OnBrowserListDoubleTapped">
-                <ListBox.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,2">
-                            <Image Width="14" Height="14" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
-                            <TextBlock Text="{Binding Name}" FontSize="13"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-
-            <!-- Icon Grid View: Tiles / Small Icons / Large Icons -->
-            <ListBox Grid.Column="2"
-                     MinWidth="240"
-                     IsVisible="{Binding IsIconGridMode}"
-                     ItemsSource="{Binding BrowserItems}"
-                     SelectedItem="{Binding SelectedBrowserItem}"
-                     ContextRequested="OnBrowserContextRequested"
-                     ContextMenu="{DynamicResource BrowserContextMenu}"
-                     DoubleTapped="OnBrowserListDoubleTapped">
-                <ListBox.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Border Width="{Binding $parent[Window].DataContext.BrowserGridItemWidth}"
-                                Height="{Binding $parent[Window].DataContext.BrowserGridItemHeight}"
-                                Margin="6"
-                                Padding="8"
-                                BorderBrush="#D0D0D0"
-                                BorderThickness="1"
-                                CornerRadius="4">
-                            <StackPanel>
-                                <Image Width="32" Height="32" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"
-                                           HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding Name}" TextAlignment="Center" TextWrapping="Wrap"/>
-                                <StackPanel Margin="0,4,0,0"
-                                            IsVisible="{Binding $parent[Window].DataContext.IsTilesMode}">
-                                    <TextBlock Text="{Binding DisplayType}" HorizontalAlignment="Center" FontSize="12"/>
-                                    <TextBlock Text="{Binding DisplaySize}" HorizontalAlignment="Center" FontSize="12"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+            <cl:BrowserItemsView Grid.Column="2"
+                                 ListMinWidth="240"
+                                 ItemsSource="{Binding BrowserItems}"
+                                 SelectedItem="{Binding SelectedBrowserItem}"
+                                 ViewMode="{Binding CurrentViewMode}"
+                                 DetailsColumns="{Binding BrowserDetailsColumns}"
+                                 BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
+                                 BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
+                                 IconConverter="{StaticResource IconConverter}"
+                                 ContextRequested="OnBrowserContextRequested"
+                                 ListContextMenu="{DynamicResource BrowserContextMenu}"
+                                 DoubleTapped="OnBrowserListDoubleTapped">
+            </cl:BrowserItemsView>
         </Grid>
     </DockPanel>
 

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
+using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -19,7 +20,7 @@ public class MainWindowViewModelTests
         Assert.False(vm.IsSaveEnabled);
         Assert.True(vm.IsDeleteEnabled);
         Assert.Equal(BrowserViewMode.Details, vm.CurrentViewMode);
-        Assert.Equal(BrowserSortMode.Name, vm.CurrentSortMode);
+        Assert.Equal("Name", vm.CurrentSortMode);
         Assert.Equal("library", vm.SelectedTreeNode?.Key);
         Assert.NotEmpty(vm.BrowserItems);
         Assert.Equal(vm.BrowserItems[0], vm.SelectedBrowserItem);
@@ -54,7 +55,7 @@ public class MainWindowViewModelTests
 
         vm.SetSortModeCommand.Execute("Type");
 
-        Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
+        Assert.Equal("Type", vm.CurrentSortMode);
         Assert.True(vm.IsSortByTypeChecked);
         Assert.False(vm.IsSortByNameChecked);
         Assert.False(vm.IsSortBySizeChecked);
@@ -67,7 +68,7 @@ public class MainWindowViewModelTests
 
         vm.SetSortModeCommand.Execute("Size");
 
-        Assert.Equal(BrowserSortMode.Size, vm.CurrentSortMode);
+        Assert.Equal("Size", vm.CurrentSortMode);
         Assert.True(vm.IsSortBySizeChecked);
         Assert.False(vm.IsSortByNameChecked);
         Assert.False(vm.IsSortByTypeChecked);
@@ -625,10 +626,10 @@ public class MainWindowViewModelTests
         var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
         vm.SelectedTreeNode = musicNode;
 
-        vm.ApplySessionState(BrowserViewMode.LargeIcons, BrowserSortMode.Type, false);
+        vm.ApplySessionState(BrowserViewMode.LargeIcons, "Type", false);
 
         Assert.Equal(BrowserViewMode.LargeIcons, vm.CurrentViewMode);
-        Assert.Equal(BrowserSortMode.Type, vm.CurrentSortMode);
+        Assert.Equal("Type", vm.CurrentSortMode);
         Assert.False(vm.IsStatusBarVisible);
         Assert.Equal("Classical Collection", vm.BrowserItems[0].Name);
     }
@@ -638,9 +639,9 @@ public class MainWindowViewModelTests
     {
         var vm = CreateViewModel();
 
-        foreach (BrowserSortMode mode in Enum.GetValues<BrowserSortMode>())
+        foreach (var mode in new[] { "Name", "Type", "Size" })
         {
-            vm.SetSortModeCommand.Execute(mode.ToString());
+            vm.SetSortModeCommand.Execute(mode);
 
             var checkedCount = new[] { vm.IsSortByNameChecked, vm.IsSortByTypeChecked, vm.IsSortBySizeChecked }
                 .Count(c => c);

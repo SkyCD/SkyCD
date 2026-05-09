@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
+using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -19,7 +20,7 @@ public class UISmokeTests
         var vm = CreateViewModel();
 
         Assert.Equal(BrowserViewMode.Details, vm.CurrentViewMode);
-        Assert.Equal(BrowserSortMode.Name, vm.CurrentSortMode);
+        Assert.Equal("Name", vm.CurrentSortMode);
         Assert.NotNull(vm.SelectedTreeNode);
         Assert.NotEmpty(vm.BrowserItems);
     }
@@ -47,7 +48,7 @@ public class UISmokeTests
         var newMode = vm.CurrentSortMode;
 
         Assert.NotEqual(initialMode, newMode);
-        Assert.Equal(BrowserSortMode.Type, newMode);
+        Assert.Equal("Type", newMode);
     }
 
     [Fact]

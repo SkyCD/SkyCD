@@ -10,6 +10,7 @@ using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
+using SkyCD.UI.Controls.Lists;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
@@ -67,7 +68,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
             Browser = new BrowserOptionsDocument
             {
                 ViewMode = BrowserViewMode.Tiles,
-                SortMode = BrowserSortMode.Type
+                SortMode = "Type"
             },
             PluginPath = @"C:\plugins\custom",
             Language = "Lithuanian",
@@ -138,7 +139,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
             Browser = new BrowserOptionsDocument
             {
                 ViewMode = BrowserViewMode.Details,
-                SortMode = BrowserSortMode.Name
+                SortMode = "Name"
             },
             PluginPath = "vfs://plugins",
             Language = "English",
@@ -166,7 +167,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
 
         var browser = new MutableDictionaryObject();
         browser.SetString("ViewMode", BrowserViewMode.LargeIcons.ToString());
-        browser.SetString("SortMode", BrowserSortMode.Size.ToString());
+        browser.SetString("SortMode", "Size");
 
         using var doc = new MutableDocument("app-options");
         doc.SetDictionary("Window", window);
