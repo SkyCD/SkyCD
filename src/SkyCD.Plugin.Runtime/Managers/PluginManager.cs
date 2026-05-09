@@ -24,7 +24,7 @@ public sealed class PluginManager(
     PluginDocumentFactory pluginDocumentFactory,
     RepositoryManager repositoryManager)
 {
-    private readonly List<DiscoveredPlugin> plugins = [];
+    private readonly DiscoveredPluginCollection plugins = [];
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => plugins;
 
@@ -39,8 +39,6 @@ public sealed class PluginManager(
 
     public void Discover(string? pluginDirectory, Version hostVersion)
     {
-        plugins.Clear();
-
         var normalizedDirectories = (pluginDirectory ?? string.Empty)
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(static path => !string.IsNullOrWhiteSpace(path))
@@ -52,17 +50,7 @@ public sealed class PluginManager(
         var repository = GetPluginRepository();
         repository.UpsertPluginDocuments(MapToPluginDocuments(discovered));
         var descriptors = GetPluginDescriptors();
-        var discoveredById = discovered.ToDictionary(static item => item.Plugin.Id, static item => item.Plugin, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var descriptor in descriptors.Where(static descriptor => descriptor.IsEnabled && descriptor.IsAvailable))
-        {
-            if (!discoveredById.TryGetValue(descriptor.Id, out var plugin))
-            {
-                continue;
-            }
-
-            plugins.Add(plugin);
-        }
+        plugins.Import(discovered.Select(static snapshot => snapshot.Plugin).ToArray(), descriptors);
     }
 
     public IReadOnlyList<PluginDocument> GetPluginDescriptors()
