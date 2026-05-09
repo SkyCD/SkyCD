@@ -12,6 +12,7 @@
 9. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
 10. After each code change, if the build fails, do not commit the changes.
 11. If possible, everytime write integration tests for new functionality
+12. Prefer custom exception types over generic exceptions where practical. Custom exceptions must keep predefined message templates, allow only parameter differences, and be defined one class per file.
 
 ## Project Structure (SkyCD)
 - `src/`: active v3 application code.
