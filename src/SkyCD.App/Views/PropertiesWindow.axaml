@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
-        xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
+        xmlns:cp="clr-namespace:SkyCD.UI.Controls.Properties;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
@@ -54,7 +54,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Properties" IsVisible="{Binding HasInfoTab}">
-                <cc:PropertiesList Margin="8,8,8,10"
+                <cp:PropertiesList Margin="8,8,8,10"
                                    PropertiesData="{Binding InfoProperties}"
                                    PropertyHeader="Property"
                                    ValueHeader="Value"/>

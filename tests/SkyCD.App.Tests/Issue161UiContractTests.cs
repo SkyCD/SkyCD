@@ -12,8 +12,8 @@ public class Issue161UiContractTests
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
 
-        Assert.Contains("<cc:ClassicToolbar", xaml, StringComparison.Ordinal);
-        Assert.Contains("<cc:DetailsListView", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ct:ClassicToolbar", xaml, StringComparison.Ordinal);
+        Assert.Contains("<cl:DetailsListView", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -31,8 +31,8 @@ public class Issue161UiContractTests
         Assert.Contains("interface IClassicToolbarItem", itemInterface, StringComparison.Ordinal);
         Assert.Contains("IClassicToolbarItem", buttonType, StringComparison.Ordinal);
         Assert.Contains("IClassicToolbarItem", separatorType, StringComparison.Ordinal);
-        Assert.Contains("<cc:ClassicToolbar.Items>", appXaml, StringComparison.Ordinal);
-        Assert.Contains("<cc:ClassicToolbarButton", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<ct:ClassicToolbar.Items>", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<ct:ClassicToolbarButton", appXaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class Issue161UiContractTests
         Assert.Contains("<TabControl", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"General\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Properties\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("<cc:PropertiesList", xaml, StringComparison.Ordinal);
+        Assert.Contains("<cp:PropertiesList", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -93,8 +93,8 @@ public class Issue161UiContractTests
         Assert.DoesNotContain("Text=\"Name\"", controlXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Type\"", controlXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Size\"", controlXaml, StringComparison.Ordinal);
-        Assert.Contains("<cc:DetailsListView.HeaderContent>", appXaml, StringComparison.Ordinal);
-        Assert.Contains("<cc:DetailsListView.RowTemplate>", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<cl:DetailsListView.HeaderContent>", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<cl:DetailsListView.RowTemplate>", appXaml, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] parts)

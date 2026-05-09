@@ -283,7 +283,7 @@ public sealed class CliHost(
                 }
             }
 
-            return Enum.IsDefined(typeof(CliExitCodes), exitCode)
+            return System.Enum.IsDefined(typeof(CliExitCodes), exitCode)
                 ? (CliExitCodes)exitCode
                 : CliExitCodes.InvalidArguments;
         }

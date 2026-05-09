@@ -2,7 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:docs="clr-namespace:SkyCD.Documents;assembly=SkyCD.Documents"
-        xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
+        xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI"
+        xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -150,28 +151,28 @@
             </MenuItem>
         </Menu>
 
-        <cc:ClassicToolbar DockPanel.Dock="Top">
-            <cc:ClassicToolbar.Items>
-                <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
+        <ct:ClassicToolbar DockPanel.Dock="Top">
+            <ct:ClassicToolbar.Items>
+                <ct:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Image Width="16" Height="16" Source="/Assets/add-from-media.png"/>
                         <TextBlock Text="_New"/>
                     </StackPanel>
-                </cc:ClassicToolbarButton>
-                <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
+                </ct:ClassicToolbarButton>
+                <ct:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Image Width="16" Height="16" Source="/Assets/add-from-folder.png"/>
                         <TextBlock Text="_Open"/>
                     </StackPanel>
-                </cc:ClassicToolbarButton>
-                <cc:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
+                </ct:ClassicToolbarButton>
+                <ct:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Image Width="16" Height="16" Source="/Assets/add-from-internet.png"/>
                         <TextBlock Text="_Save"/>
                     </StackPanel>
-                </cc:ClassicToolbarButton>
-            </cc:ClassicToolbar.Items>
-        </cc:ClassicToolbar>
+                </ct:ClassicToolbarButton>
+            </ct:ClassicToolbar.Items>
+        </ct:ClassicToolbar>
 
         <Border DockPanel.Dock="Bottom"
                 IsVisible="{Binding IsStatusBarVisible}"
@@ -287,7 +288,7 @@
                           ShowsPreview="True"/>
 
             <!-- Details View: tabular list with column headers -->
-            <cc:DetailsListView Grid.Column="2"
+            <cl:DetailsListView Grid.Column="2"
                                 IsVisible="{Binding IsDetailsMode}"
                                 ListMinWidth="240"
                                 ItemsSource="{Binding BrowserItems}"
@@ -295,7 +296,7 @@
                                 ContextRequested="OnBrowserContextRequested"
                                 ListContextMenu="{DynamicResource BrowserContextMenu}"
                                 DoubleTapped="OnBrowserListDoubleTapped">
-                <cc:DetailsListView.HeaderContent>
+                <cl:DetailsListView.HeaderContent>
                     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                             BorderThickness="0,0,0,1"
                             Background="{DynamicResource ThemeControlMidBrush}"
@@ -307,8 +308,8 @@
                             <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Right"/>
                         </Grid>
                     </Border>
-                </cc:DetailsListView.HeaderContent>
-                <cc:DetailsListView.RowTemplate>
+                </cl:DetailsListView.HeaderContent>
+                <cl:DetailsListView.RowTemplate>
                     <DataTemplate x:DataType="docs:CatalogDocument">
                         <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
                             <Image Width="16" Height="16" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
@@ -317,8 +318,8 @@
                             <TextBlock Grid.Column="3" Text="{Binding DisplaySize}" HorizontalAlignment="Right"/>
                         </Grid>
                     </DataTemplate>
-                </cc:DetailsListView.RowTemplate>
-            </cc:DetailsListView>
+                </cl:DetailsListView.RowTemplate>
+            </cl:DetailsListView>
 
             <!-- List View: wrapping simple icon+name layout -->
             <ListBox Grid.Column="2"

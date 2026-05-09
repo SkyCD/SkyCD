@@ -1,5 +1,7 @@
 using System.Collections.Generic;
-using SkyCD.UI.Controls;
+using SkyCD.UI.Controls.Lists;
+using SkyCD.UI.Controls.Properties;
+using SkyCD.UI.Controls.Toolbars;
 using Xunit;
 
 namespace SkyCD.UI.Tests;

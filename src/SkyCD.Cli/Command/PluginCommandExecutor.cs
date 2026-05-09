@@ -88,7 +88,7 @@ internal static class PluginCommandExecutor
                 }
             }, cancellationToken);
 
-            var mappedExitCode = Enum.IsDefined(typeof(CliExitCodes), exitCode)
+            var mappedExitCode = System.Enum.IsDefined(typeof(CliExitCodes), exitCode)
                 ? (CliExitCodes)exitCode
                 : CliExitCodes.InvalidArguments;
             return mappedExitCode == CliExitCodes.Success

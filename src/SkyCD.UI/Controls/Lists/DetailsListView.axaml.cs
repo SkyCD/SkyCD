@@ -7,7 +7,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 
-namespace SkyCD.UI.Controls;
+namespace SkyCD.UI.Controls.Lists;
 
 public partial class DetailsListView : UserControl
 {
