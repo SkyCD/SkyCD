@@ -1,3 +1,4 @@
+using SkyCD.Documents.Enum;
 namespace SkyCD.Documents;
 
 public sealed class BrowserOptionsDocument

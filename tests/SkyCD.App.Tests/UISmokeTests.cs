@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
+using SkyCD.Documents.Enum;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 

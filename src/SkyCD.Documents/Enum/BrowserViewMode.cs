@@ -1,4 +1,4 @@
-namespace SkyCD.Documents;
+namespace SkyCD.Documents.Enum;
 
 public enum BrowserViewMode
 {

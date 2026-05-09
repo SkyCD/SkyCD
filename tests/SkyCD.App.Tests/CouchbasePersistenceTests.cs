@@ -9,6 +9,7 @@ using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
+using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using Xunit;

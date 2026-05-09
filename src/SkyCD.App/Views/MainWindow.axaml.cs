@@ -14,6 +14,7 @@ using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
+using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
