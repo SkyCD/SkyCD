@@ -302,7 +302,9 @@ public partial class MainWindow : Window
             }
         }
 
-        var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetOpenFormats()).ToList();
+        var fileTypeChoices = fileFormatManager.GetOpenFilters()
+            .ToFilePickerTypes()
+            .ToList();
         fileTypeChoices.Add(new FilePickerFileType("All files")
         {
             Patterns = ["*.*"]
@@ -355,7 +357,9 @@ public partial class MainWindow : Window
         var targetPath = vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetSaveFormats()).ToList();
+            var fileTypeChoices = fileFormatManager.GetSaveFilters()
+                .ToFilePickerTypes()
+                .ToList();
 
             fileTypeChoices.Add(new FilePickerFileType("All files")
             {
@@ -408,7 +412,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetSaveFormats()).ToList();
+        var fileTypeChoices = fileFormatManager.GetSaveFilters()
+            .ToFilePickerTypes()
+            .ToList();
 
         fileTypeChoices.Add(new FilePickerFileType("All files")
         {
@@ -833,19 +839,6 @@ public partial class MainWindow : Window
         }
 
         return null;
-    }
-
-    private static IReadOnlyList<FilePickerFileType> BuildDialogFilters(IReadOnlyList<FileFormatDescriptor> formats)
-    {
-        return formats
-            .Select(format => new FilePickerFileType(format.DisplayName)
-            {
-                Patterns = format.Extensions
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Select(static extension => $"*{extension}")
-                    .ToArray()
-            })
-            .ToArray();
     }
 
     private static T? FindAncestor<T>(Visual? visual) where T : class

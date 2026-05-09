@@ -13,6 +13,16 @@ namespace SkyCD.Plugin.Runtime.Managers;
 /// </summary>
 public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> fileFormatProviders)
 {
+    public FileFormatFilterCollection GetOpenFilters()
+    {
+        return BuildFilters(GetOpenFormats());
+    }
+
+    public FileFormatFilterCollection GetSaveFilters()
+    {
+        return BuildFilters(GetSaveFormats());
+    }
+
     public IReadOnlyList<FileFormatDescriptor> GetOpenFormats()
     {
         return fileFormatProviders
@@ -92,12 +102,8 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         }
 
         var result = await formatHandler.WriteAsync(request, cancellationToken);
-        if (!result.Success)
-        {
-            throw new InvalidOperationException(result.Error ?? "Write operation failed.");
-        }
-
-        return result;
+        
+        return !result.Success ? throw new InvalidOperationException(result.Error ?? "Write operation failed.") : result;
     }
 
     private IFileFormatPluginCapability ResolveHandler(string? formatId, string? fileName)
@@ -112,11 +118,32 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(fileName))
+        return !string.IsNullOrWhiteSpace(fileName) ? GetInstanceFor(fileName) : throw new InvalidOperationException("Unable to resolve file format handler.");
+    }
+
+    private static FileFormatFilterCollection BuildFilters(IReadOnlyList<FileFormatDescriptor> formats)
+    {
+        var filters = formats
+            .Select(format => new FileFormatFilterDescriptor(
+                format.DisplayName,
+                format.Extensions
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Select(static extension => NormalizePattern(extension))
+                    .ToArray()))
+            .ToArray();
+        
+        return new FileFormatFilterCollection(filters);
+    }
+
+    private static string NormalizePattern(string extension)
+    {
+        var trimmed = extension.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
         {
-            return GetInstanceFor(fileName);
+            return "*.*";
         }
 
-        throw new InvalidOperationException("Unable to resolve file format handler.");
+        var normalized = trimmed.StartsWith('.') ? trimmed : $".{trimmed}";
+        return $"*{normalized}";
     }
 }
