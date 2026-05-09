@@ -9,19 +9,15 @@ using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using SkyCD.Cli.Command;
 using SkyCD.Cli.Console;
 using SkyCD.Cli.Execution;
-using SkyCD.Couchbase;
+using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Cli;
 
@@ -71,8 +67,9 @@ public sealed class CliHost(
         if (ShouldHandleWithSystemRunner(routedTokens) && CanRunWithoutPluginRuntime(routedTokens))
         {
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
-            var lightweightFileFormatManager = new FileFormatManager(Array.Empty<IFileFormatPluginCapability>());
-            using var lightweightRegistry = new CliContributionRegistry();
+            using var lightweightServiceProvider = BuildCliRuntimeServiceProvider([]);
+            var lightweightFileFormatManager = lightweightServiceProvider.GetRequiredService<FileFormatManager>();
+            var lightweightRegistry = lightweightServiceProvider.GetRequiredService<CliContributionRegistry>();
             lightweightRegistry.Register([]);
             var exitCode = await ExecuteSystemCommandAsync(
                 systemRunnerTokens,
@@ -88,12 +85,9 @@ public sealed class CliHost(
         var pluginDirectories = GetPluginDirectories();
         var discoveredPlugins = await pluginLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
-        var serviceProvider = PluginServiceProvider.Instance;
-        ConfigureGlobalServiceProvider(serviceProvider, discoveredPlugins);
-
-        using var _ = serviceProvider;
-        var fileFormatManager = serviceProvider.GetRequiredService<FileFormatManager>();
-        using var registry = new CliContributionRegistry();
+        using var runtimeServiceProvider = BuildCliRuntimeServiceProvider(discoveredPlugins);
+        var fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
+        var registry = runtimeServiceProvider.GetRequiredService<CliContributionRegistry>();
         registry.Register(discoveredPlugins);
 
         if (registry.Errors.Count > 0)
@@ -714,8 +708,7 @@ public sealed class CliHost(
         return byExtension.FormatId;
     }
 
-    private static void ConfigureGlobalServiceProvider(
-        PluginServiceProvider serviceProvider,
+    private static Microsoft.Extensions.DependencyInjection.ServiceProvider BuildCliRuntimeServiceProvider(
         IReadOnlyList<DiscoveredPlugin> plugins)
     {
         var pluginList = plugins.ToList();
@@ -723,12 +716,13 @@ public sealed class CliHost(
         IServiceCollection mergedServices = new ServiceCollection()
             .AddRegistrator<CommonRuntimeServiceRegistrator>();
 
+        mergedServices.AddSingleton<CliContributionRegistry>();
         mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
         mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
         mergedServices.AddPluginRegistrator(pluginList);
 
-        serviceProvider.Register(mergedServices);
+        return mergedServices.BuildServiceProvider();
     }
 
     private static Task<IReadOnlyList<DiscoveredPlugin>> LoadDiscoveredPluginsAsync(
@@ -736,8 +730,12 @@ public sealed class CliHost(
         CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        PluginServiceProvider.RebuildGlobal();
-        var pluginManager = PluginServiceProvider.Instance.GetRequiredService<PluginManager>();
+        var services = new ServiceCollection()
+            .AddRegistrator<CommonRuntimeServiceRegistrator>()
+            .AddRegistrator<CouchbaseServiceRegistrator>()
+            .AddRegistrator<PluginServiceRegistrator>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var pluginManager = serviceProvider.GetRequiredService<PluginManager>();
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
         return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());
     }

@@ -125,6 +125,7 @@ public partial class App : Avalonia.Application
                 var repositoryManager = provider.GetRequiredService<RepositoryManager>();
                 return CreatePluginServices(databaseManager, repositoryManager);
             })
+            .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().ServiceProvider)
             .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().PluginManager)
             .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().FileFormatManager)
             .AddSingleton<MainWindow>();

@@ -11,13 +11,16 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App.Views;
 
@@ -26,6 +29,7 @@ public partial class MainWindow : Window
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
     private readonly RepositoryManager repositoryManager;
     private readonly PluginManager pluginManager;
+    private readonly PluginServiceProvider runtimeServiceProvider;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -35,10 +39,12 @@ public partial class MainWindow : Window
     public MainWindow(
         RepositoryManager repositoryManager,
         PluginManager pluginManager,
+        PluginServiceProvider runtimeServiceProvider,
         FileFormatManager fileFormatManager)
     {
         this.repositoryManager = repositoryManager;
         this.pluginManager = pluginManager;
+        this.runtimeServiceProvider = runtimeServiceProvider;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -774,7 +780,16 @@ public partial class MainWindow : Window
             : pluginPath;
 
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
-        fileFormatManager = new FileFormatManager(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
+
+        var pluginList = pluginManager.Plugins.ToList();
+        IServiceCollection services = new ServiceCollection();
+        services.AddSingleton<IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyCollection<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
+        services.AddSingleton<IReadOnlyDictionary<string, SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(
+            pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase));
+        services.AddPluginRegistrator(pluginList);
+        runtimeServiceProvider.Register(services);
+        fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
     }
 
     private static string ResolveDefaultPluginPath()
