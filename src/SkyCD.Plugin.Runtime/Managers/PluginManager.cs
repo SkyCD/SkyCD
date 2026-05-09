@@ -112,7 +112,9 @@ public sealed class PluginManager(
 
         foreach (var snapshot in discovered)
         {
-            documents.Add(pluginDocumentFactory.Create(snapshot.Plugin, snapshot.AssemblyPath, now));
+            documents.Add(
+                pluginDocumentFactory.Create(snapshot.Plugin, snapshot.AssemblyPath, now)
+            );
         }
 
         return documents;
@@ -123,12 +125,8 @@ public sealed class PluginManager(
         try
         {
             var plugin = discoveredPluginFactory.BuildFromAssembly(assembly);
-            if (!PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion))
-            {
-                return null;
-            }
-
-            return plugin;
+            
+            return !PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion) ? null : plugin;
         }
         catch (InvalidOperationException exception)
         {
