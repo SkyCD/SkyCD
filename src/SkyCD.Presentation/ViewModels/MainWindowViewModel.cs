@@ -11,7 +11,6 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
-using SkyCD.Formatting;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -23,7 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<BrowserItem>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
@@ -149,13 +148,13 @@ public partial class MainWindowViewModel : ObservableObject
     public IReadOnlyList<int> ProgressTransitions => progressTransitions;
 
     [ObservableProperty]
-    private IReadOnlyList<BrowserItem> browserItems = [];
+    private IReadOnlyList<CatalogDocument> browserItems = [];
 
     [ObservableProperty]
     private BrowserTreeNode? selectedTreeNode;
 
     [ObservableProperty]
-    private BrowserItem? selectedBrowserItem;
+    private CatalogDocument? selectedBrowserItem;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
@@ -197,7 +196,7 @@ public partial class MainWindowViewModel : ObservableObject
     private int progressValue;
 
     [ObservableProperty]
-    private BrowserItem? clipboardItem;
+    private CatalogDocument? clipboardItem;
 
     [ObservableProperty]
     private string? currentCatalogPath;
@@ -373,7 +372,15 @@ public partial class MainWindowViewModel : ObservableObject
             addedItemsByNodeKey[nodeKey] = addedItems;
         }
 
-        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "folder");
+        var importedItem = new CatalogDocument
+        {
+            Id = $"imported-{Guid.NewGuid():N}",
+            Name = itemName,
+            ParentId = nodeKey,
+            Type = CatalogDocumentType.Folder,
+            Size = 0,
+            ChildrenCount = 0
+        };
         addedItems.Add(importedItem);
         RefreshBrowserItemsForSelection();
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
@@ -654,7 +661,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool TryResolveNodeFromBrowserSelection([NotNullWhen(true)] out BrowserTreeNode? targetNode)
     {
         if (SelectedBrowserItem is not null &&
-            SelectedBrowserItem.Type.Equals("Folder", StringComparison.OrdinalIgnoreCase))
+            SelectedBrowserItem.Type == CatalogDocumentType.Folder)
         {
             if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
             {
@@ -717,7 +724,7 @@ public partial class MainWindowViewModel : ObservableObject
             : string.Empty;
     }
 
-    private string GetBrowserItemObjectKey(BrowserItem item)
+    private string GetBrowserItemObjectKey(CatalogDocument item)
     {
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var originalName = ResolveOriginalBrowserItemName(nodeKey, item.Name);
@@ -762,9 +769,21 @@ public partial class MainWindowViewModel : ObservableObject
             items = items
                 .Select(item =>
                 {
-                    return renamedItems.TryGetValue(item.Name, out var renamedName)
-                        ? item with { Name = renamedName }
-                        : item;
+                    if (!renamedItems.TryGetValue(item.Name, out var renamedName))
+                    {
+                        return item;
+                    }
+
+                    return new CatalogDocument
+                    {
+                        Id = item.Id,
+                        Name = renamedName,
+                        ParentId = item.ParentId,
+                        Type = item.Type,
+                        Size = item.Size,
+                        ChildrenCount = item.ChildrenCount,
+                        Properties = item.Properties
+                    };
                 })
                 .ToArray();
         }
@@ -778,10 +797,10 @@ public partial class MainWindowViewModel : ObservableObject
 
         var refreshedItems = CurrentSortMode switch
         {
-            BrowserSortMode.Type => items.OrderBy(static item => item.Type)
+            BrowserSortMode.Type => items.OrderBy(static item => item.DisplayType)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            BrowserSortMode.Size => items.OrderBy(static item => item.Size, StringComparer.OrdinalIgnoreCase)
+            BrowserSortMode.Size => items.OrderBy(static item => item.Size)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
@@ -890,7 +909,7 @@ public partial class MainWindowViewModel : ObservableObject
         progressTransitions.Add(value);
     }
 
-    partial void OnSelectedBrowserItemChanged(BrowserItem? value)
+    partial void OnSelectedBrowserItemChanged(CatalogDocument? value)
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
@@ -942,7 +961,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ProgressText));
     }
 
-    partial void OnClipboardItemChanged(BrowserItem? value)
+    partial void OnClipboardItemChanged(CatalogDocument? value)
     {
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
@@ -998,7 +1017,7 @@ public partial class MainWindowViewModel : ObservableObject
         return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
     }
 
-    private IReadOnlyList<BrowserItem> GetBrowserItems(string nodeKey)
+    private IReadOnlyList<CatalogDocument> GetBrowserItems(string nodeKey)
     {
         if (string.IsNullOrWhiteSpace(nodeKey))
         {
@@ -1010,19 +1029,19 @@ public partial class MainWindowViewModel : ObservableObject
             var entries = catalogRepository.GetChildrenOf<CatalogDocument>(nodeKey);
             if (entries.Count > 0)
             {
-                return MapBrowserItems(entries);
+                return entries;
             }
 
             var defaults = catalogRepository.CreateDefaultEntries()
                 .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
                 .ToArray();
-            return MapBrowserItems(defaults);
+            return defaults;
         }
 
         var inMemoryEntries = (inMemoryCatalogEntries ?? [])
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .ToArray();
-        return MapBrowserItems(inMemoryEntries);
+        return inMemoryEntries;
     }
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
@@ -1040,20 +1059,6 @@ public partial class MainWindowViewModel : ObservableObject
         return (inMemoryCatalogEntries ?? [])
             .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal))
             ?.Properties ?? new PropertiesCollection();
-    }
-
-    private static IReadOnlyList<BrowserItem> MapBrowserItems(IReadOnlyList<CatalogDocument> entries)
-    {
-        return entries
-            .Select(item => new BrowserItem(
-                item.Name,
-                item.Type.ToDisplayName(),
-                SizeFormatting.FormatBytes(item.Size, "0.##"),
-                item.Type.ResolveIconGlyph())
-            {
-                Id = item.Id
-            })
-            .ToArray();
     }
 
     private static BrowserTreeNode BuildTreeNodeFromLookup(
@@ -1106,3 +1111,4 @@ public partial class MainWindowViewModel : ObservableObject
             isExpanded);
     }
 }
+

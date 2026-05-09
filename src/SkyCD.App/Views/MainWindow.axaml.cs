@@ -133,7 +133,7 @@ public partial class MainWindow : Window
 
         var hit = listBox.InputHitTest(point) as Visual;
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
-        if (listBoxItem?.DataContext is BrowserItem item)
+        if (listBoxItem?.DataContext is CatalogDocument item)
         {
             subscribedViewModel.SelectedBrowserItem = item;
             return;

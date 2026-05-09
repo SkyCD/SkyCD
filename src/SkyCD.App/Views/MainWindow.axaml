@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:docs="clr-namespace:SkyCD.Documents;assembly=SkyCD.Documents"
         xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -12,10 +13,6 @@
         MinWidth="700"
         MinHeight="450"
         Title="SkyCD">
-
-    <Design.DataContext>
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
 
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter"/>
@@ -312,12 +309,12 @@
                     </Border>
                 </cc:DetailsListView.HeaderContent>
                 <cc:DetailsListView.RowTemplate>
-                    <DataTemplate x:DataType="vm:BrowserItem">
+                    <DataTemplate x:DataType="docs:CatalogDocument">
                         <Grid ColumnDefinitions="24,*,150,120" Margin="4,2">
                             <Image Width="16" Height="16" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Type}"/>
-                            <TextBlock Grid.Column="3" Text="{Binding Size}" HorizontalAlignment="Right"/>
+                            <TextBlock Grid.Column="2" Text="{Binding DisplayType}"/>
+                            <TextBlock Grid.Column="3" Text="{Binding DisplaySize}" HorizontalAlignment="Right"/>
                         </Grid>
                     </DataTemplate>
                 </cc:DetailsListView.RowTemplate>
@@ -376,8 +373,8 @@
                                 <TextBlock Text="{Binding Name}" TextAlignment="Center" TextWrapping="Wrap"/>
                                 <StackPanel Margin="0,4,0,0"
                                             IsVisible="{Binding $parent[Window].DataContext.IsTilesMode}">
-                                    <TextBlock Text="{Binding Type}" HorizontalAlignment="Center" FontSize="12"/>
-                                    <TextBlock Text="{Binding Size}" HorizontalAlignment="Center" FontSize="12"/>
+                                    <TextBlock Text="{Binding DisplayType}" HorizontalAlignment="Center" FontSize="12"/>
+                                    <TextBlock Text="{Binding DisplaySize}" HorizontalAlignment="Center" FontSize="12"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

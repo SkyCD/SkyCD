@@ -3,6 +3,7 @@ using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Formatting;
 
 namespace SkyCD.Documents;
 
@@ -24,4 +25,10 @@ public sealed class CatalogDocument
     public long ChildrenCount { get; init; }
 
     public PropertiesCollection Properties { get; init; } = new();
+
+    public string DisplayType => Type.ToDisplayName();
+
+    public string DisplaySize => SizeFormatting.FormatBytes(Size, "0.##");
+
+    public string IconGlyph => Type.ResolveIconGlyph();
 }

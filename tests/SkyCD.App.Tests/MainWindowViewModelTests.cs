@@ -509,7 +509,7 @@ public class MainWindowViewModelTests
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
-        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type != "Folder");
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type != SkyCD.Documents.Enum.CatalogDocumentType.Folder);
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -527,7 +527,7 @@ public class MainWindowViewModelTests
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0];
-        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == "Folder");
+        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == SkyCD.Documents.Enum.CatalogDocumentType.Folder);
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
