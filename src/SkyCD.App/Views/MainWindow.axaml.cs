@@ -696,13 +696,6 @@ public partial class MainWindow : Window
             : BrowserViewMode.Details;
     }
 
-    private static BrowserSortMode ParseBrowserSortMode(string? value)
-    {
-        return Enum.TryParse<BrowserSortMode>(value, true, out var mode)
-            ? mode
-            : BrowserSortMode.Name;
-    }
-
     private async void OnBrowsePluginPathRequested(object? sender, EventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
