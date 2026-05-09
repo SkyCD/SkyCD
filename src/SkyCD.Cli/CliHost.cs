@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.Cli.Command;
 using SkyCD.Cli.Console;
 using SkyCD.Cli.Exceptions;
@@ -709,21 +709,20 @@ public sealed class CliHost(
         return byExtension.FormatId;
     }
 
-    private static Microsoft.Extensions.DependencyInjection.ServiceProvider BuildCliRuntimeServiceProvider(
+    private static SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider BuildCliRuntimeServiceProvider(
         IReadOnlyList<DiscoveredPlugin> plugins)
     {
         var pluginList = plugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        IServiceCollection mergedServices = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
-
-        mergedServices.AddSingleton<CliContributionRegistry>();
-        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        mergedServices.AddPluginRegistrator(pluginList);
-
-        return mergedServices.BuildServiceProvider();
+        return new SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider(registrator =>
+        {
+            registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
+            registrator.Register<CliContributionRegistry>(Reuse.Singleton);
+            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+            registrator.AddPluginRegistrator(pluginList);
+        });
     }
 
     private static Task<IReadOnlyList<DiscoveredPlugin>> LoadDiscoveredPluginsAsync(
@@ -731,11 +730,13 @@ public sealed class CliHost(
         CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        var services = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>()
-            .AddRegistrator<CouchbaseServiceRegistrator>()
-            .AddRegistrator<PluginServiceRegistrator>();
-        using var serviceProvider = services.BuildServiceProvider();
+        using var serviceProvider = new SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider(registrator =>
+        {
+            registrator
+                .AddRegistrator<CommonRuntimeServiceRegistrator>()
+                .AddRegistrator<CouchbaseServiceRegistrator>()
+                .AddRegistrator<PluginServiceRegistrator>();
+        });
         var pluginManager = serviceProvider.GetRequiredService<PluginManager>();
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
         return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -31,51 +31,45 @@ public sealed class ServiceRegistratorTests
             ]
         };
 
-        var services = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
+        using var provider = new Container();
+        provider.AddRegistrator<CommonRuntimeServiceRegistrator>();
         var databasePath = Path.Combine(Path.GetTempPath(), "skycd-runtime-registrator-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(databasePath);
-        services.AddSingleton<DatabaseManager>(_ =>
+        provider.RegisterDelegate<DatabaseManager>(_ =>
         {
             var manager = new DatabaseManager();
             manager.Connect("default", databasePath);
             return manager;
-        });
-        services.AddSingleton<RepositoryManager>();
+        }, Reuse.Singleton);
+        provider.Register<RepositoryManager>(Reuse.Singleton);
 
         var pluginById = new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase)
         {
             [plugin.Id] = plugin
         };
 
-        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>([plugin]);
-        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
-        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        services.AddPluginRegistrator(plugin);
+        provider.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([plugin]);
+        provider.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
+        provider.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+        provider.AddPluginRegistrator(plugin);
 
-        using var provider = services.BuildServiceProvider();
-
-        var discovered = provider.GetRequiredService<IReadOnlyList<DiscoveredPlugin>>();
-        var byId = provider.GetRequiredService<IReadOnlyDictionary<string, DiscoveredPlugin>>();
-        var formatCapabilities = provider.GetServices<IFileFormatPluginCapability>().ToList();
-        var keyedFormatCapabilities = provider
-            .GetKeyedServices<IFileFormatPluginCapability>(typeof(IFileFormatPluginCapability))
-            .ToList();
+        var discovered = provider.Resolve<IReadOnlyList<DiscoveredPlugin>>();
+        var byId = provider.Resolve<IReadOnlyDictionary<string, DiscoveredPlugin>>();
+        var formatCapabilities = provider.ResolveMany<IFileFormatPluginCapability>().ToList();
+        var keyedFormatCapability = provider.Resolve<IFileFormatPluginCapability>(serviceKey: typeof(IFileFormatPluginCapability));
 
         Assert.Single(discovered);
         Assert.Same(plugin, discovered[0]);
         Assert.Same(plugin, byId["tests.runtime.di"]);
         Assert.Contains(formatCapabilities, capability => capability is StandaloneFileFormatCapability);
-        Assert.Contains(keyedFormatCapabilities, capability => capability is StandaloneFileFormatCapability);
+        Assert.IsType<StandaloneFileFormatCapability>(keyedFormatCapability);
     }
 
     [Fact]
     public void CommonRuntimeServiceRegistrator_RegistersLoggerFactory()
     {
-        var services = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
-
-        using var provider = services.BuildServiceProvider();
-        Assert.NotNull(provider.GetRequiredService<ILoggerFactory>());
+        using var provider = new Container();
+        provider.AddRegistrator<CommonRuntimeServiceRegistrator>();
+        Assert.NotNull(provider.Resolve<ILoggerFactory>());
     }
 }

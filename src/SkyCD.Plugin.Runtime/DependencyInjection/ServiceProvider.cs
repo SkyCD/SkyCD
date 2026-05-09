@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
-using MsServiceProvider = Microsoft.Extensions.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection;
 
 /// <summary>
-/// Wrapper around Microsoft DI service provider used by plugin runtime.
+/// Wrapper around DryIoc container used by plugin runtime.
 /// </summary>
-public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
+public sealed class ServiceProvider : IDisposable
 {
     private static ServiceProvider? _instance;
 
@@ -29,64 +28,59 @@ public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
 
     public static void RebuildGlobal()
     {
-        var services = new ServiceCollection();
-        services
-            .AddRegistrator<CommonRuntimeServiceRegistrator>()
-            .AddRegistrator<CouchbaseServiceRegistrator>()
-            .AddRegistrator<PluginServiceRegistrator>();
-
-        _instance = new ServiceProvider(services);
+        _instance = new ServiceProvider(registrator =>
+        {
+            registrator
+                .AddRegistrator<CommonRuntimeServiceRegistrator>()
+                .AddRegistrator<CouchbaseServiceRegistrator>()
+                .AddRegistrator<PluginServiceRegistrator>();
+        });
     }
 
-    private readonly IServiceCollection descriptors = new ServiceCollection();
-    private MsServiceProvider container;
+    private readonly List<Action<IContainer>> registrations = [];
+    private IContainer container;
 
-    public ServiceProvider(IServiceCollection services)
+    public ServiceProvider(Action<IContainer> register)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        foreach (var descriptor in services)
-        {
-            descriptors.Add(descriptor);
-        }
-
-        container = new ServiceCollection().BuildServiceProvider();
-        RebuildFromDescriptors();
+        ArgumentNullException.ThrowIfNull(register);
+        container = new Container();
+        Register(register);
     }
 
     public object? GetService(Type serviceType)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
-        return container.GetService(serviceType);
+        return container.Resolve(serviceType, ifUnresolved: IfUnresolved.ReturnDefault);
     }
 
     public object? GetKeyedService(Type serviceType, object? serviceKey)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
-        return container.GetKeyedService(serviceType, serviceKey);
+        return container.Resolve(serviceType, serviceKey: serviceKey, ifUnresolved: IfUnresolved.ReturnDefault);
     }
 
     public object GetRequiredKeyedService(Type serviceType, object? serviceKey)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
-        return container.GetRequiredKeyedService(serviceType, serviceKey);
+        return container.Resolve(serviceType, serviceKey: serviceKey, ifUnresolved: IfUnresolved.Throw);
     }
 
-    public void Register(IServiceCollection services)
+    public T GetRequiredService<T>() where T : notnull
     {
-        ArgumentNullException.ThrowIfNull(services);
-        Register((IEnumerable<ServiceDescriptor>)services);
+        return container.Resolve<T>();
     }
 
-    public void Register(IEnumerable<ServiceDescriptor> serviceDescriptors)
+    public object GetRequiredService(Type serviceType)
     {
-        ArgumentNullException.ThrowIfNull(serviceDescriptors);
+        ArgumentNullException.ThrowIfNull(serviceType);
+        return container.Resolve(serviceType);
+    }
 
-        foreach (var descriptor in serviceDescriptors)
-        {
-            descriptors.Add(descriptor);
-        }
-
-        RebuildFromDescriptors();
+    public void Register(Action<IContainer> register)
+    {
+        ArgumentNullException.ThrowIfNull(register);
+        registrations.Add(register);
+        RebuildContainer();
     }
 
     public void Dispose()
@@ -94,17 +88,15 @@ public sealed class ServiceProvider : IDisposable, IKeyedServiceProvider
         container.Dispose();
     }
 
-    private void RebuildFromDescriptors()
+    private void RebuildContainer()
     {
-        IServiceCollection services = new ServiceCollection();
-        foreach (var descriptor in descriptors)
+        var next = new Container();
+        foreach (var registration in registrations)
         {
-            services.Add(descriptor);
+            registration(next);
         }
-
         var previous = container;
-        container = services.BuildServiceProvider();
+        container = next;
         previous.Dispose();
     }
-
 }

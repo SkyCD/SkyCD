@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -155,22 +155,21 @@ public sealed class RuntimeCoverageTests
     }
 
     [Fact]
-    public void ServiceCollectionExtensions_RegistersGenericAndInstancePluginServices()
+    public void RegistratorExtensions_RegistersGenericAndInstancePluginServices()
     {
-        var services = new ServiceCollection();
+        using var services = new Container();
         services.AddPluginService<IPluginCapability, FakePluginCapability>();
         var instance = new FakePluginCapability();
         services.AddPluginService(typeof(IPluginCapability), instance);
-        using var provider = services.BuildServiceProvider();
 
-        Assert.NotNull(provider.GetService<IPluginCapability>());
-        Assert.NotNull(provider.GetKeyedService<IPluginCapability>(typeof(IPluginCapability)));
+        Assert.NotNull(services.Resolve<IPluginCapability>(ifUnresolved: IfUnresolved.ReturnDefault));
+        Assert.NotNull(services.Resolve<IPluginCapability>(serviceKey: typeof(IPluginCapability), ifUnresolved: IfUnresolved.ReturnDefault));
     }
 
     [Fact]
-    public void ServiceCollectionExtensions_AddRegistrator_ThrowsWhenMethodMissing()
+    public void RegistratorExtensions_AddRegistrator_ThrowsWhenMethodMissing()
     {
-        var services = new ServiceCollection();
+        using var services = new Container();
         Assert.ThrowsAny<InvalidOperationException>(() => services.AddRegistrator<MissingRegisterMethod>());
     }
 

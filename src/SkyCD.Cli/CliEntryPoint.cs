@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Threading;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SkyCD.Cli;
 
@@ -20,10 +19,7 @@ public static class CliEntryPoint
         System.Console.CancelKeyPress += handler;
         try
         {
-            var services = new ServiceCollection();
-            using var serviceProvider = services.BuildServiceProvider();
-            var host = ActivatorUtilities.CreateInstance<CliHost>(
-                serviceProvider,
+            var host = new CliHost(
                 stdout ?? System.Console.Out,
                 stderr ?? System.Console.Error);
             return host.TryRunAsync(args, cts.Token).GetAwaiter().GetResult();

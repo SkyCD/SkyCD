@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Couchbase.Lite;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Mapping;
@@ -33,10 +33,9 @@ public sealed class CouchbasePersistenceTests : IDisposable
     [Fact]
     public void MainWindowViewModel_LoadsSeededCatalogDataFromRepository()
     {
-        var services = new ServiceCollection();
-        CouchbaseServiceRegistrator.RegisterServices(services);
-        using var provider = services.BuildServiceProvider();
-        var repositoryManager = provider.GetRequiredService<RepositoryManager>();
+        using var provider = new Container();
+        CouchbaseServiceRegistrator.RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
         var catalogRepository = repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository;
         Assert.NotNull(catalogRepository);
         var viewModel = new MainWindowViewModel(catalogRepository!);

@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
-using Microsoft.Extensions.DependencyInjection;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -515,19 +514,6 @@ public sealed class CliHostTests
     private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<DiscoveredPlugin> plugins)
     {
         var pluginList = plugins.ToList();
-        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        var services = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
-
-        services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-
-        foreach (var plugin in pluginList)
-        {
-            services.AddPluginRegistrator(plugin);
-        }
-
         return new CliHost(
             stdout,
             stderr,

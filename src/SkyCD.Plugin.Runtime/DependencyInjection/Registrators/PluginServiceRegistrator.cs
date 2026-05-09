@@ -1,5 +1,5 @@
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
@@ -7,36 +7,28 @@ using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 
-public sealed class PluginServiceRegistrator : IServiceRegistrator
+public sealed class PluginServiceRegistrator
 {
-    public static void RegisterServices(IServiceCollection services)
+    public static void RegisterServices(IRegistrator registrator)
     {
-        services.AddSingleton<AssembliesListFactory>();
-        services.AddSingleton<DiscoveredPluginFactory>();
-        services.AddSingleton<PluginDocumentFactory>();
-        services.AddSingleton<PluginManager>();
-
-        var provider = services.BuildServiceProvider();
-        var pluginManager = ActivatorUtilities.CreateInstance<PluginManager>(provider);
-
-        foreach (var plugin in pluginManager.Plugins)
-        {
-            RegisterServices(services, plugin);
-        }
+        registrator.Register<AssembliesListFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<DiscoveredPluginFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<PluginDocumentFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 
-    public static void RegisterServices(IServiceCollection services, DiscoveredPlugin plugin)
+    public static void RegisterServices(IRegistrator registrator, DiscoveredPlugin plugin)
     {
         foreach (var capability in plugin.Capabilities)
         {
-            services.AddPluginService(capability.GetType(), capability);
+            registrator.AddPluginService(capability.GetType(), capability);
 
             foreach (var interfaceType in capability.GetType()
                          .GetInterfaces()
                          .Where(static type => type != typeof(IPluginCapability))
                          .Where(static type => typeof(IPluginCapability).IsAssignableFrom(type)))
             {
-                services.AddPluginService(interfaceType, capability);
+                registrator.AddPluginService(interfaceType, capability);
             }
         }
     }

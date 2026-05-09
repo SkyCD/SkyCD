@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 
 namespace SkyCD.Couchbase.DependencyInjection;
 
@@ -9,9 +9,9 @@ public sealed class CouchbaseServiceRegistrator
     private const string AppDirectoryName = "SkyCD";
     private const string DefaultDatabaseName = "default";
 
-    public static void RegisterServices(IServiceCollection services)
+    public static void RegisterServices(IRegistrator registrator)
     {
-        services.AddSingleton<DatabaseManager>(static _ =>
+        registrator.RegisterDelegate<DatabaseManager>(static _ =>
         {
             var manager = new DatabaseManager();
             var databaseDirectory = Path.Combine(
@@ -22,7 +22,7 @@ public sealed class CouchbaseServiceRegistrator
             manager.Connect(DefaultDatabaseName, databaseDirectory);
 
             return manager;
-        });
-        services.AddSingleton<RepositoryManager>();
+        }, Reuse.Singleton);
+        registrator.Register<RepositoryManager>(Reuse.Singleton);
     }
 }

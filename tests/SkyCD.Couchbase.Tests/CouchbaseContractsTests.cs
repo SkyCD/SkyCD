@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Couchbase.Lite;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Collections;
@@ -179,12 +179,11 @@ public class CouchbaseContractsTests
     [Fact]
     public void CouchbaseServiceRegistrator_RegistersManagers()
     {
-        var services = new ServiceCollection();
-        CouchbaseServiceRegistrator.RegisterServices(services);
-        using var provider = services.BuildServiceProvider();
+        using var provider = new Container();
+        CouchbaseServiceRegistrator.RegisterServices(provider);
 
-        var databaseManager = provider.GetService<DatabaseManager>();
-        var repositoryManager = provider.GetService<RepositoryManager>();
+        var databaseManager = provider.Resolve<DatabaseManager>(ifUnresolved: IfUnresolved.ReturnDefault);
+        var repositoryManager = provider.Resolve<RepositoryManager>(ifUnresolved: IfUnresolved.ReturnDefault);
 
         Assert.NotNull(databaseManager);
         Assert.NotNull(repositoryManager);

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Microsoft.Extensions.DependencyInjection;
+using DryIoc;
 using SkyCD.App.Exceptions;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
@@ -22,7 +22,7 @@ namespace SkyCD.App;
 
 public partial class App : Avalonia.Application
 {
-    private IServiceProvider? appServiceProvider;
+    private PluginServiceProvider? appServiceProvider;
 
     public override void Initialize()
     {
@@ -41,7 +41,7 @@ public partial class App : Avalonia.Application
 
             desktop.Exit += (_, _) =>
             {
-                (appServiceProvider as IDisposable)?.Dispose();
+                appServiceProvider.Dispose();
                 pluginServices.ServiceProvider.Dispose();
             };
             desktop.MainWindow = mainWindow;
@@ -58,12 +58,10 @@ public partial class App : Avalonia.Application
         var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
             ? ResolveDefaultPluginPath()
             : options.PluginPath;
-        IServiceCollection mergedServices = new ServiceCollection()
-            .AddSingleton(repositoryManager)
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
+        Action<IContainer> registrations = registrator => registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         var runtimeProvider = PluginServiceProvider.Instance;
-        runtimeProvider.Register(mergedServices);
+        runtimeProvider.Register(registrations);
         var pluginManager = runtimeProvider.GetRequiredService<PluginManager>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
@@ -76,12 +74,13 @@ public partial class App : Avalonia.Application
         var pluginList = discoveredPlugins.ToList();
         var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
 
-        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        mergedServices.AddPluginRegistrator(discoveredPlugins);
-
-        runtimeProvider.Register(mergedServices);
+        runtimeProvider.Register(registrator =>
+        {
+            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>(pluginList);
+            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
+            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
+            registrator.AddPluginRegistrator(discoveredPlugins);
+        });
         var fileFormatManager = runtimeProvider.GetRequiredService<FileFormatManager>();
         return new PluginUiServices(fileFormatManager, pluginManager, runtimeProvider);
     }
@@ -104,33 +103,32 @@ public partial class App : Avalonia.Application
         PluginManager PluginManager,
         PluginServiceProvider ServiceProvider);
 
-    private static IServiceProvider BuildAppServiceProvider()
+    private static PluginServiceProvider BuildAppServiceProvider()
     {
-        var services = new ServiceCollection();
-        CouchbaseServiceRegistrator.RegisterServices(services);
-        services
-            .AddSingleton(static provider =>
+        return new PluginServiceProvider(registrator =>
+        {
+            CouchbaseServiceRegistrator.RegisterServices(registrator);
+            registrator.RegisterDelegate(static resolver =>
             {
-                var repositoryManager = provider.GetRequiredService<RepositoryManager>();
+                var repositoryManager = resolver.Resolve<RepositoryManager>();
                 return repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository
-                    ?? throw new CatalogRepositoryTypeMismatchException();
-            })
-            .AddSingleton(static provider =>
+                       ?? throw new CatalogRepositoryTypeMismatchException();
+            }, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver =>
             {
-                var catalogRepository = provider.GetRequiredService<CatalogDocumentRepository>();
+                var catalogRepository = resolver.Resolve<CatalogDocumentRepository>();
                 return new MainWindowViewModel(catalogRepository);
-            })
-            .AddSingleton(static provider =>
+            }, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver =>
             {
-                var databaseManager = provider.GetRequiredService<DatabaseManager>();
-                var repositoryManager = provider.GetRequiredService<RepositoryManager>();
+                var databaseManager = resolver.Resolve<DatabaseManager>();
+                var repositoryManager = resolver.Resolve<RepositoryManager>();
                 return CreatePluginServices(databaseManager, repositoryManager);
-            })
-            .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().ServiceProvider)
-            .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().PluginManager)
-            .AddSingleton(static provider => provider.GetRequiredService<PluginUiServices>().FileFormatManager)
-            .AddSingleton<MainWindow>();
-
-        return services.BuildServiceProvider();
+            }, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager, Reuse.Singleton);
+            registrator.Register<MainWindow>(Reuse.Singleton);
+        });
     }
 }

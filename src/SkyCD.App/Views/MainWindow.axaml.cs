@@ -8,10 +8,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using DryIoc;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
@@ -784,13 +784,14 @@ public partial class MainWindow : Window
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
 
         var pluginList = pluginManager.Plugins.ToList();
-        IServiceCollection services = new ServiceCollection();
-        services.AddSingleton<IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyCollection<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
-        services.AddSingleton<IReadOnlyDictionary<string, SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(
-            pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase));
-        services.AddPluginRegistrator(pluginList);
-        runtimeServiceProvider.Register(services);
+        runtimeServiceProvider.Register(registrator =>
+        {
+            registrator.RegisterInstance<IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
+            registrator.RegisterInstance<IReadOnlyCollection<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
+            registrator.RegisterInstance<IReadOnlyDictionary<string, SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(
+                pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase));
+            registrator.AddPluginRegistrator(pluginList);
+        });
         fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
     }
 
