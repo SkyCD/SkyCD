@@ -13,7 +13,7 @@
         Title="About SkyCD">
 
     <Design.DataContext>
-        <vm:AboutDialogViewModel ProductName="SkyCD" Version="3.0.0" Website="https://github.com/SkyCD/SkyCD"/>
+        <vm:AboutDialogViewModel />
     </Design.DataContext>
 
     <Window.Styles>

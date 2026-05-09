@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using SkyCD.Formatting;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
@@ -9,13 +10,21 @@ namespace SkyCD.App.Tests;
 public class AboutDialogViewModelTests
 {
     [Fact]
-    public void Constructor_InitializesWithDefaultValues()
+    public void CreateFromMainAssembly_InitializesFromAssemblyMetadata()
     {
-        var vm = new AboutDialogViewModel();
+        var assembly = typeof(AboutDialogViewModelTests).Assembly;
+        var expectedProduct = assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
+                              ?? assembly.GetName().Name
+                              ?? "SkyCD";
+        var expectedVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                              ?? assembly.GetName().Version?.ToString(3)
+                              ?? "0.0.0";
 
-        Assert.Equal("SkyCD", vm.ProductName);
-        Assert.Equal("3.0.0", vm.Version);
-        Assert.Equal("https://github.com/SkyCD/SkyCD", vm.Website);
+        var vm = AboutDialogViewModel.CreateFromMainAssembly(assembly);
+
+        Assert.Equal(expectedProduct, vm.ProductName);
+        Assert.Equal(expectedVersion, vm.Version);
+        Assert.NotNull(vm.Website);
     }
 
     [Fact]

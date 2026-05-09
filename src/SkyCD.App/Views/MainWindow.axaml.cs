@@ -508,8 +508,7 @@ public partial class MainWindow : Window
 
     private async void OnAboutRequested(object? sender, EventArgs e)
     {
-        var version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "3.0.0";
-        var dialogVm = new AboutDialogViewModel("SkyCD", version, "https://github.com/SkyCD/SkyCD");
+        var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(typeof(App).Assembly);
         var dialog = new AboutWindow
         {
             DataContext = dialogVm

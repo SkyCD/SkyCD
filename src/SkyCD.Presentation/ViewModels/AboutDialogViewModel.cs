@@ -14,6 +14,9 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AboutDialogViewModel : ObservableObject
 {
+    private const string FallbackProductName = "SkyCD";
+    private const string FallbackVersion = "0.0.0";
+    private const string FallbackWebsite = "";
     private readonly Process currentProcess;
     private readonly TimeProvider timeProvider;
     private TimeSpan lastTotalProcessorTime;
@@ -21,14 +24,33 @@ public partial class AboutDialogViewModel : ObservableObject
 
     public AboutDialogViewModel()
         : this(
-            "SkyCD",
-            "3.0.0",
-            "https://github.com/SkyCD/SkyCD",
+            ResolveProductName(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()),
+            ResolveVersion(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()),
+            ResolveWebsite(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()),
             AppDomain.CurrentDomain.GetAssemblies(),
             AppContext.BaseDirectory,
             Process.GetCurrentProcess(),
             TimeProvider.System)
     {
+    }
+
+    public static AboutDialogViewModel CreateFromMainAssembly(
+        Assembly mainAssembly,
+        IEnumerable<Assembly>? loadedAssemblies = null,
+        string? baseDirectory = null,
+        Process? process = null,
+        TimeProvider? timeProvider = null)
+    {
+        ArgumentNullException.ThrowIfNull(mainAssembly);
+
+        return new AboutDialogViewModel(
+            ResolveProductName(mainAssembly),
+            ResolveVersion(mainAssembly),
+            ResolveWebsite(mainAssembly),
+            loadedAssemblies,
+            baseDirectory,
+            process,
+            timeProvider);
     }
 
     public AboutDialogViewModel(
@@ -215,5 +237,34 @@ public partial class AboutDialogViewModel : ObservableObject
             assemblyName.Version?.ToString() ?? "Unknown",
             copyright,
             repositoryUrl);
+    }
+
+    private static string ResolveProductName(Assembly assembly)
+    {
+        return assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
+            ?? assembly.GetName().Name
+            ?? FallbackProductName;
+    }
+
+    private static string ResolveVersion(Assembly assembly)
+    {
+        return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString(3)
+            ?? FallbackVersion;
+    }
+
+    private static string ResolveWebsite(Assembly assembly)
+    {
+        var metadataAttributes = assembly.GetCustomAttributes<AssemblyMetadataAttribute>();
+        foreach (var metadata in metadataAttributes)
+        {
+            if (metadata.Key.Equals("RepositoryUrl", StringComparison.OrdinalIgnoreCase) ||
+                metadata.Key.Equals("Repository", StringComparison.OrdinalIgnoreCase))
+            {
+                return metadata.Value ?? FallbackWebsite;
+            }
+        }
+
+        return FallbackWebsite;
     }
 }
