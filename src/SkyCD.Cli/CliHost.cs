@@ -68,7 +68,17 @@ public sealed class CliHost(
         if (ShouldHandleWithSystemRunner(routedTokens) && CanRunWithoutPluginRuntime(routedTokens))
         {
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
-            using var lightweightServiceProvider = BuildCliRuntimeServiceProvider([]);
+            SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
+            var lightweightServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
+            lightweightServiceProvider.Register(registrator =>
+            {
+                registrator.Register<CliContributionRegistry>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+                registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([], ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+                registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>([], ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+                registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
+                    new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase),
+                    ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+            });
             var lightweightFileFormatManager = lightweightServiceProvider.GetRequiredService<FileFormatManager>();
             var lightweightRegistry = lightweightServiceProvider.GetRequiredService<CliContributionRegistry>();
             lightweightRegistry.Register([]);
@@ -86,7 +96,18 @@ public sealed class CliHost(
         var pluginDirectories = GetPluginDirectories();
         var discoveredPlugins = await pluginLoaderFactory(new Version(3, 0, 0), cancellationToken);
 
-        using var runtimeServiceProvider = BuildCliRuntimeServiceProvider(discoveredPlugins);
+        SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
+        var runtimeServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
+        var pluginList = discoveredPlugins.ToList();
+        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
+        runtimeServiceProvider.Register(registrator =>
+        {
+            registrator.Register<CliContributionRegistry>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>(pluginList, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(pluginList, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+            registrator.AddPluginRegistrator(pluginList);
+        });
         var fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
         var registry = runtimeServiceProvider.GetRequiredService<CliContributionRegistry>();
         registry.Register(discoveredPlugins);
@@ -388,7 +409,7 @@ public sealed class CliHost(
             return CliExitCodes.InvalidArguments;
         }
 
-        var resolvedFormat = ResolveFormatId(formatId, fullPath, fileFormatManager.GetOpenFormats(), "read");
+        var resolvedFormat = fileFormatManager.ResolveFormatId(formatId, fullPath, forWrite: false);
         await using var source = File.OpenRead(fullPath);
         var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
         {
@@ -439,8 +460,8 @@ public sealed class CliHost(
             return CliExitCodes.InvalidArguments;
         }
 
-        var resolvedInputFormat = ResolveFormatId(inputFormat, fullInputPath, fileFormatManager.GetOpenFormats(), "read");
-        var resolvedOutputFormat = ResolveFormatId(outputFormat, fullOutputPath, fileFormatManager.GetSaveFormats(), "write");
+        var resolvedInputFormat = fileFormatManager.ResolveFormatId(inputFormat, fullInputPath, forWrite: false);
+        var resolvedOutputFormat = fileFormatManager.ResolveFormatId(outputFormat, fullOutputPath, forWrite: true);
 
         await using var source = File.OpenRead(fullInputPath);
         var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
@@ -675,54 +696,6 @@ public sealed class CliHost(
         }
 
         return commandPaths.ToArray();
-    }
-
-    private static string ResolveFormatId(
-        string? explicitFormatId,
-        string path,
-        IReadOnlyList<FileFormatDescriptor> formats,
-        string operation)
-    {
-        if (!string.IsNullOrWhiteSpace(explicitFormatId))
-        {
-            if (formats.Any(format => format.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase)))
-            {
-                return explicitFormatId;
-            }
-
-            throw new CliFormatOperationNotSupportedException(explicitFormatId, operation);
-        }
-
-        var extension = Path.GetExtension(path);
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            throw new CliFormatInferenceFailedException(path);
-        }
-
-        var byExtension = formats.FirstOrDefault(format =>
-            format.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
-        if (byExtension is null)
-        {
-            throw new CliFormatHandlerMissingException(extension, operation);
-        }
-
-        return byExtension.FormatId;
-    }
-
-    private static SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider BuildCliRuntimeServiceProvider(
-        IReadOnlyList<DiscoveredPlugin> plugins)
-    {
-        var pluginList = plugins.ToList();
-        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        return new SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider(registrator =>
-        {
-            registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
-            registrator.Register<CliContributionRegistry>(Reuse.Singleton);
-            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-            registrator.AddPluginRegistrator(pluginList);
-        });
     }
 
     private static Task<IReadOnlyList<DiscoveredPlugin>> LoadDiscoveredPluginsAsync(

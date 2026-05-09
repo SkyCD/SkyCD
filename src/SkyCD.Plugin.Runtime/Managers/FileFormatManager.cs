@@ -77,6 +77,27 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return GetSaveFormats();
     }
 
+    public string ResolveFormatId(string? explicitFormatId, string path, bool forWrite)
+    {
+        var formats = forWrite ? GetSaveFormats() : GetOpenFormats();
+
+        if (!string.IsNullOrWhiteSpace(explicitFormatId))
+        {
+            return formats.Any(format => format.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase)) ? explicitFormatId : throw new FileFormatHandlerResolutionException();
+        }
+
+        var extension = Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            throw new FileFormatHandlerResolutionException();
+        }
+
+        var byExtension = formats.FirstOrDefault(format =>
+            format.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
+        
+        return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
+    }
+
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);

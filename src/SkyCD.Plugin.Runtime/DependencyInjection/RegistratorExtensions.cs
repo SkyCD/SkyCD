@@ -14,7 +14,7 @@ public static class RegistratorExtensions
         where TServiceType : class
         where TServiceClass : class, TServiceType
     {
-        registrator.Register<TServiceType, TServiceClass>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<TServiceType, TServiceClass>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.AppendNewImplementation);
         registrator.Register<TServiceType, TServiceClass>(Reuse.Singleton, serviceKey: typeof(TServiceType), ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         return registrator;
@@ -22,7 +22,7 @@ public static class RegistratorExtensions
 
     public static IRegistrator AddPluginService(this IRegistrator registrator, Type serviceType, object serviceInstance)
     {
-        registrator.RegisterInstance(serviceType, serviceInstance, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterInstance(serviceType, serviceInstance, ifAlreadyRegistered: IfAlreadyRegistered.AppendNewImplementation);
         registrator.RegisterInstance(serviceType, serviceInstance, serviceKey: serviceType, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         return registrator;
