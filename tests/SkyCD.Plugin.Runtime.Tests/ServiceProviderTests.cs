@@ -57,13 +57,13 @@ public sealed class ServiceProviderTests
         var list = provider.GetService(typeof(IReadOnlyList<DiscoveredPlugin>));
         var byId = provider.GetService(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>));
         var capability = provider.GetService(typeof(SampleCapability));
-        var keyedPlugin = provider.GetKeyedService(typeof(DiscoveredPlugin), plugin.Id);
+        var keyedCapability = provider.GetKeyedService(typeof(SampleCapability), typeof(SampleCapability));
 
         Assert.NotNull(list);
         Assert.NotNull(byId);
         Assert.NotNull(capability);
-        Assert.NotNull(keyedPlugin);
-        Assert.IsType<DiscoveredPlugin>(keyedPlugin);
+        Assert.NotNull(keyedCapability);
+        Assert.IsType<SampleCapability>(keyedCapability);
     }
 
     private sealed class SampleService;

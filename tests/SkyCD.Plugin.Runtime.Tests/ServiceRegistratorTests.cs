@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
@@ -31,6 +33,15 @@ public sealed class ServiceRegistratorTests
 
         var services = new ServiceCollection()
             .AddRegistrator<CommonRuntimeServiceRegistrator>();
+        var databasePath = Path.Combine(Path.GetTempPath(), "skycd-runtime-registrator-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(databasePath);
+        services.AddSingleton<DatabaseManager>(_ =>
+        {
+            var manager = new DatabaseManager();
+            manager.Connect("default", databasePath);
+            return manager;
+        });
+        services.AddSingleton<RepositoryManager>();
 
         var pluginById = new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase)
         {
@@ -40,7 +51,7 @@ public sealed class ServiceRegistratorTests
         services.AddSingleton<IReadOnlyList<DiscoveredPlugin>>([plugin]);
         services.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
         services.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        services.AddRegistrator<PluginServiceRegistrator>();
+        services.AddPluginRegistrator(plugin);
 
         using var provider = services.BuildServiceProvider();
 
