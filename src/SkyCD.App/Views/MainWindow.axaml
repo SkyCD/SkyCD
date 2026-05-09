@@ -3,6 +3,7 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI"
         xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
+        xmlns:cs="clr-namespace:SkyCD.UI.Controls.StatusBar;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -171,24 +172,12 @@
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>
 
-        <Border DockPanel.Dock="Bottom"
-                IsVisible="{Binding IsStatusBarVisible}"
-                BorderBrush="#D4D4D4"
-                BorderThickness="1,1,0,0"
-                Padding="8,4">
-            <Grid ColumnDefinitions="*,Auto,120" ColumnSpacing="10">
-                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1"
-                           Text="{Binding ProgressText}"
-                           VerticalAlignment="Center"
-                           IsVisible="{Binding IsProgressVisible}"/>
-                <ProgressBar Grid.Column="2"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="{Binding ProgressValue}"
-                             IsVisible="{Binding IsProgressVisible}"/>
-            </Grid>
-        </Border>
+        <cs:StatusBar DockPanel.Dock="Bottom"
+                      IsVisible="{Binding IsStatusBarVisible}"
+                      StatusText="{Binding StatusText}"
+                      ProgressText="{Binding ProgressText}"
+                      IsProgressVisible="{Binding IsProgressVisible}"
+                      ProgressValue="{Binding ProgressValue}"/>
 
         <Grid x:Name="MainLayoutGrid" RowDefinitions="*">
             <Grid.ColumnDefinitions>

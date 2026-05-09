@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.UI.Controls.Properties;
+using SkyCD.UI.Controls.StatusBar;
 using SkyCD.UI.Controls.Toolbars;
 using Xunit;
 
@@ -51,5 +52,26 @@ public class ControlsContractTests
         Assert.Equal(source, view.ItemsSource);
         Assert.Equal(selected, view.SelectedItem);
         Assert.Equal(240, view.ListMinWidth);
+    }
+
+    [Fact]
+    public void StatusBar_ExposesBindableStatusAndProgressProperties()
+    {
+        var statusBar = new StatusBar
+        {
+            StatusText = "Ready",
+            ProgressText = "50%",
+            IsProgressVisible = true,
+            ProgressValue = 50,
+            ProgressMin = 10,
+            ProgressMax = 90
+        };
+
+        Assert.Equal("Ready", statusBar.StatusText);
+        Assert.Equal("50%", statusBar.ProgressText);
+        Assert.True(statusBar.IsProgressVisible);
+        Assert.Equal(50, statusBar.ProgressValue);
+        Assert.Equal(10, statusBar.ProgressMin);
+        Assert.Equal(90, statusBar.ProgressMax);
     }
 }
