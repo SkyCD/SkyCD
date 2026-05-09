@@ -153,24 +153,21 @@
 
         <ct:ClassicToolbar DockPanel.Dock="Top">
             <ct:ClassicToolbar.Items>
-                <ct:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding NewCatalogCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                        <Image Width="16" Height="16" Source="/Assets/add-from-media.png"/>
-                        <TextBlock Text="_New"/>
-                    </StackPanel>
-                </ct:ClassicToolbarButton>
-                <ct:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding OpenCatalogCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                        <Image Width="16" Height="16" Source="/Assets/add-from-folder.png"/>
-                        <TextBlock Text="_Open"/>
-                    </StackPanel>
-                </ct:ClassicToolbarButton>
-                <ct:ClassicToolbarButton MinWidth="68" Padding="8,3" Command="{Binding SaveCatalogCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                        <Image Width="16" Height="16" Source="/Assets/add-from-internet.png"/>
-                        <TextBlock Text="_Save"/>
-                    </StackPanel>
-                </ct:ClassicToolbarButton>
+                <ct:ClassicToolbarButton MinWidth="68"
+                                         Padding="8,3"
+                                         Command="{Binding NewCatalogCommand}"
+                                         ImageSrc="/Assets/add-from-media.png"
+                                         Text="_New"/>
+                <ct:ClassicToolbarButton MinWidth="68"
+                                         Padding="8,3"
+                                         Command="{Binding OpenCatalogCommand}"
+                                         ImageSrc="/Assets/add-from-folder.png"
+                                         Text="_Open"/>
+                <ct:ClassicToolbarButton MinWidth="68"
+                                         Padding="8,3"
+                                         Command="{Binding SaveCatalogCommand}"
+                                         ImageSrc="/Assets/add-from-internet.png"
+                                         Text="_Save"/>
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>
 

@@ -4,6 +4,16 @@
     <Style Selector="ct|ClassicToolbarButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Padding" Value="2,1"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Image Width="16"
+                           Height="16"
+                           Source="{TemplateBinding ImageSrc}"/>
+                    <TextBlock Text="{TemplateBinding Text}"/>
+                </StackPanel>
+            </ControlTemplate>
+        </Setter>
     </Style>
     <Style Selector="ct|ClassicToolbarButton:pointerover">
         <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}"/>
