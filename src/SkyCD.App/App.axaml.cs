@@ -55,9 +55,7 @@ public partial class App : Avalonia.Application
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
         var options = repositoryManager.For<AppOptionsDocument>()
             .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
-        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
-            ? ResolveDefaultPluginPath()
-            : options.PluginPath;
+        var pluginPath = ResolvePluginPathOrDefault(options.PluginPath);
         Action<IContainer> registrations = registrator => registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         var runtimeProvider = PluginServiceProvider.Instance;
@@ -96,6 +94,16 @@ public partial class App : Avalonia.Application
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private static string ResolvePluginPathOrDefault(string? configuredPath)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        return ResolveDefaultPluginPath();
     }
 
     private sealed record PluginUiServices(

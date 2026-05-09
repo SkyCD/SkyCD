@@ -38,7 +38,7 @@ public sealed class PluginRepository : RepositoryBase
             discoveredIds.Add(document.Id);
             if (existingById.TryGetValue(document.Id, out var existing))
             {
-                document.IsEnabled = existing.IsEnabled;
+                document.IsEnabled = (!existing.IsEnabled && !existing.IsAvailable) ? true : existing.IsEnabled;
             }
 
             Save(document.Id, document);

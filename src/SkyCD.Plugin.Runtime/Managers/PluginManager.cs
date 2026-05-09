@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
+using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Exceptions;
@@ -21,7 +22,6 @@ public sealed class PluginManager(
     ILogger<PluginManager> logger,
     AssembliesListFactory assembliesListFactory,
     DiscoveredPluginFactory discoveredPluginFactory,
-    PluginDocumentFactory pluginDocumentFactory,
     RepositoryManager repositoryManager)
 {
     private readonly DiscoveredPluginCollection plugins = [];
@@ -50,7 +50,7 @@ public sealed class PluginManager(
         var repository = GetPluginRepository();
         repository.UpsertPluginDocuments(MapToPluginDocuments(discovered));
         var descriptors = GetPluginDescriptors();
-        plugins.Import(discovered.Select(static snapshot => snapshot.Plugin).ToArray(), descriptors);
+        plugins.Import(discovered, descriptors);
     }
 
     public IReadOnlyList<PluginDocument> GetPluginDescriptors()
@@ -93,16 +93,14 @@ public sealed class PluginManager(
         }
     }
 
-    private IReadOnlyCollection<PluginDocument> MapToPluginDocuments(IReadOnlyCollection<DiscoveredPluginSnapshot> discovered)
+    private IReadOnlyCollection<PluginDocument> MapToPluginDocuments(IReadOnlyCollection<DiscoveredPlugin> discovered)
     {
         var now = DateTimeOffset.UtcNow;
         var documents = new List<PluginDocument>(discovered.Count);
 
-        foreach (var snapshot in discovered)
+        foreach (var plugin in discovered)
         {
-            documents.Add(
-                pluginDocumentFactory.Create(snapshot.Plugin, snapshot.AssemblyPath, now)
-            );
+            documents.Add(plugin.ToDocument(now));
         }
 
         return documents;
@@ -123,11 +121,11 @@ public sealed class PluginManager(
         }
     }
 
-    private IReadOnlyCollection<DiscoveredPluginSnapshot> DiscoverByAssemblyScan(
+    private DiscoveredPluginCollection DiscoverByAssemblyScan(
         IEnumerable<string> directories,
         Version hostVersion)
     {
-        var discovered = new List<DiscoveredPluginSnapshot>();
+        var discovered = new DiscoveredPluginCollection();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var assemblies = assembliesListFactory.BuildFromPaths(directories);
 
@@ -144,7 +142,7 @@ public sealed class PluginManager(
                 continue;
             }
 
-            discovered.Add(new DiscoveredPluginSnapshot(plugin, assembly.Location));
+            discovered.Add(plugin);
         }
 
         return discovered;
@@ -160,6 +158,4 @@ public sealed class PluginManager(
 
         throw new PluginDocumentRepositoryTypeMismatchException();
     }
-
-    private sealed record DiscoveredPluginSnapshot(DiscoveredPlugin Plugin, string AssemblyPath);
 }

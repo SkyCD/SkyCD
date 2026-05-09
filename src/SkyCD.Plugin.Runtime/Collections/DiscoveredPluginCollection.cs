@@ -4,7 +4,7 @@ using System.Linq;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 
-namespace SkyCD.Plugin.Runtime.Managers;
+namespace SkyCD.Plugin.Runtime.Collections;
 
 public sealed class DiscoveredPluginCollection : List<DiscoveredPlugin>
 {
@@ -18,7 +18,7 @@ public sealed class DiscoveredPluginCollection : List<DiscoveredPlugin>
         Clear();
         var discoveredById = discovered.ToDictionary(static item => item.Id, static item => item, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var descriptor in descriptors.Where(static descriptor => descriptor.IsEnabled && descriptor.IsAvailable))
+        foreach (var descriptor in descriptors.Where(static descriptor => descriptor.IsEnabled))
         {
             if (!discoveredById.TryGetValue(descriptor.Id, out var plugin))
             {

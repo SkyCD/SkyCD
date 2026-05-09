@@ -96,7 +96,7 @@ public sealed class RuntimeCoverageTests
     }
 
     [Fact]
-    public void PluginDocumentFactory_MapsDiscoveredPluginToDocument()
+    public void DiscoveredPlugin_ToDocument_MapsPluginToDocument()
     {
         var discovered = new DiscoveredPlugin
         {
@@ -112,9 +112,8 @@ public sealed class RuntimeCoverageTests
             Capabilities = []
         };
 
-        var factory = new PluginDocumentFactory();
         var discoveredAt = DateTimeOffset.UtcNow;
-        var document = factory.Create(discovered, @"C:\plugins\plugin.dll", discoveredAt);
+        var document = discovered.ToDocument(discoveredAt);
 
         Assert.Equal("plugin.id", document.Id);
         Assert.Equal("Plugin", document.Name);
@@ -139,17 +138,19 @@ public sealed class RuntimeCoverageTests
 
         repository.Save("a", new PluginDocument { Id = "a", Name = "A", IsEnabled = false, Constraints = null! });
         repository.Save("b", new PluginDocument { Id = "b", Name = "B" });
+        repository.Save("c", new PluginDocument { Id = "c", Name = "C", IsEnabled = false, IsAvailable = false, Constraints = null! });
 
         repository.UpsertPluginDocuments(
         [
             new PluginDocument { Id = "a", Name = "A updated" },
-            new PluginDocument { Id = "c", Name = "C" }
+            new PluginDocument { Id = "c", Name = "C updated" }
         ]);
 
         var all = repository.GetAll().OrderBy(x => x.Id, StringComparer.Ordinal).ToArray();
 
         Assert.Equal(3, all.Length);
         Assert.False(all.Single(x => x.Id == "a").IsEnabled);
+        Assert.True(all.Single(x => x.Id == "c").IsEnabled);
         Assert.True(all.Single(x => x.Id == "b").IsAvailable == false);
         Assert.NotNull(all.Single(x => x.Id == "a").Constraints);
     }

@@ -777,9 +777,7 @@ public partial class MainWindow : Window
 
     private void SyncPluginRuntimeState(string? pluginPath)
     {
-        var resolvedPluginPath = string.IsNullOrWhiteSpace(pluginPath)
-            ? ResolveDefaultPluginPath()
-            : pluginPath;
+        var resolvedPluginPath = ResolvePluginPathOrDefault(pluginPath);
 
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
 
@@ -806,6 +804,16 @@ public partial class MainWindow : Window
         };
 
         return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+    }
+
+    private static string ResolvePluginPathOrDefault(string? configuredPath)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        return ResolveDefaultPluginPath();
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)

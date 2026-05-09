@@ -45,7 +45,6 @@ public class PluginManagerTests
                 NullLogger<PluginManager>.Instance,
                 new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
                 new DiscoveredPluginFactory(),
-                new PluginDocumentFactory(),
                 CreateRepositoryManager());
             discovery.Discover(root, new Version(2, 9, 0));
 

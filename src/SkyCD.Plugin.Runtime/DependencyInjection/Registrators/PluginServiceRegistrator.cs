@@ -13,7 +13,6 @@ public sealed class PluginServiceRegistrator
     {
         registrator.Register<AssembliesListFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<DiscoveredPluginFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-        registrator.Register<PluginDocumentFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 

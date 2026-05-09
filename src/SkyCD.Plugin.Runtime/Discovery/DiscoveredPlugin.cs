@@ -29,4 +29,26 @@ public sealed class DiscoveredPlugin
     public required string FileName { get; init; }
 
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
+
+    public PluginDocument ToDocument(DateTimeOffset discoveredAt)
+    {
+        return new PluginDocument
+        {
+            Id = Id,
+            Name = Name,
+            Author = Author,
+            ProjectUrl = ProjectUrl,
+            Version = Version.ToString(),
+            Constraints = new PluginConstraintsDocument
+            {
+                MinHostVersion = MinHostVersion.ToString(),
+                MaxHostVersion = MaxHostVersion?.ToString()
+            },
+            Description = Description,
+            AssemblyPath = FileName,
+            IsEnabled = true,
+            IsAvailable = true,
+            LastDiscoveredAt = discoveredAt
+        };
+    }
 }
