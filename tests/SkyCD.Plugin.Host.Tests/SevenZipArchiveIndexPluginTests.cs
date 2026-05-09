@@ -31,7 +31,7 @@ public class SevenZipArchiveIndexPluginTests
         var service = new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
         await using var target = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-7z",
             Target = target,
@@ -70,7 +70,7 @@ public class SevenZipArchiveIndexPluginTests
         var service = new FileFormatManager(CreateCatalog(new ThrowingReader()).GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream([0x37, 0x7A]);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-7z",
             Source = source

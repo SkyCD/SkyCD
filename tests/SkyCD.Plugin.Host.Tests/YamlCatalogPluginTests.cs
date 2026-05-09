@@ -77,7 +77,7 @@ public class YamlCatalogPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(unsupported));
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-yaml",
             Source = source

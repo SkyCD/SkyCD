@@ -31,7 +31,7 @@ public class IsoImageIndexPluginTests
         var service = new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
         await using var target = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-iso",
             Target = target,

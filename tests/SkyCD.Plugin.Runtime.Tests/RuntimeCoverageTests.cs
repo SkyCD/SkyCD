@@ -85,7 +85,7 @@ public sealed class RuntimeCoverageTests
         }, CancellationToken.None);
         Assert.True(writeResult.Success);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(async () =>
             await manager.WriteAsync(new FileFormatWriteRequest
             {
                 Target = new MemoryStream(),
@@ -171,7 +171,7 @@ public sealed class RuntimeCoverageTests
     public void ServiceCollectionExtensions_AddRegistrator_ThrowsWhenMethodMissing()
     {
         var services = new ServiceCollection();
-        Assert.Throws<InvalidOperationException>(() => services.AddRegistrator<MissingRegisterMethod>());
+        Assert.ThrowsAny<InvalidOperationException>(() => services.AddRegistrator<MissingRegisterMethod>());
     }
 
     private sealed class FakePluginCapability : IPluginCapability

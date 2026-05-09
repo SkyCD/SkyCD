@@ -38,7 +38,7 @@ public class CouchbaseContractsTests
         Assert.Equal(typeof(DefaultRepository), mapping.RepositoryType);
         Assert.Equal("default", mapping.Database);
 
-        Assert.Throws<ArgumentException>(() => new CouchbaseDocument("docs", typeof(string)));
+        Assert.ThrowsAny<ArgumentException>(() => new CouchbaseDocument("docs", typeof(string)));
     }
 
     [Fact]

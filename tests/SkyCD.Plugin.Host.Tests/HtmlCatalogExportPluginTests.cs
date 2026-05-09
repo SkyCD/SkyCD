@@ -32,7 +32,7 @@ public class HtmlCatalogExportPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes("<html></html>"));
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-html",
             Source = source

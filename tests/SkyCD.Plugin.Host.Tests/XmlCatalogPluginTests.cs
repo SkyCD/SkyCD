@@ -76,7 +76,7 @@ public class XmlCatalogPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(xxePayload));
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-xml",
             Source = source

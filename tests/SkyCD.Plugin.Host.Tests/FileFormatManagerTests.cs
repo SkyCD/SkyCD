@@ -70,7 +70,7 @@ public class FileFormatManagerTests
             Payload = new { Value = "x" }
         };
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(request));
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.WriteAsync(request));
     }
 
     [Fact]

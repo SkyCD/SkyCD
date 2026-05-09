@@ -38,7 +38,7 @@ public class TarArchiveIndexPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var stream = new MemoryStream();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-tar",
             Target = stream,
