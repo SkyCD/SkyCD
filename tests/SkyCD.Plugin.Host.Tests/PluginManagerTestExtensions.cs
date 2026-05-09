@@ -10,7 +10,8 @@ internal static class PluginManagerTestExtensions
 {
     private static readonly FieldInfo PluginsField =
         typeof(PluginManager).GetField("_plugins", BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("PluginManager._plugins field was not found.");
+        ?? typeof(PluginManager).GetField("plugins", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("PluginManager plugin collection field was not found.");
 
     public static void SetPlugins(this PluginManager pluginManager, IEnumerable<DiscoveredPlugin> discovered)
     {

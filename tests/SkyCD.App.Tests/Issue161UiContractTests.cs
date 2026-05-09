@@ -13,7 +13,7 @@ public class Issue161UiContractTests
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
 
         Assert.Contains("<ct:ClassicToolbar", xaml, StringComparison.Ordinal);
-        Assert.Contains("<cl:DetailsListView", xaml, StringComparison.Ordinal);
+        Assert.Contains("<cl:BrowserItemsView", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class Issue161UiContractTests
     {
         var controlXaml = ReadRepoFile("src", "SkyCD.UI", "Controls", "Lists", "DetailsListView.axaml");
         var controlCode = ReadRepoFile("src", "SkyCD.UI", "Controls", "Lists", "DetailsListView.axaml.cs");
-        var appXaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
+        var browserItemsViewXaml = ReadRepoFile("src", "SkyCD.UI", "Controls", "Lists", "BrowserItemsView.axaml");
 
         Assert.Contains("HeaderContent", controlXaml, StringComparison.Ordinal);
         Assert.Contains("RowTemplate", controlXaml, StringComparison.Ordinal);
@@ -93,8 +93,9 @@ public class Issue161UiContractTests
         Assert.DoesNotContain("Text=\"Name\"", controlXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Type\"", controlXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Size\"", controlXaml, StringComparison.Ordinal);
-        Assert.Contains("<cl:DetailsListView.HeaderContent>", appXaml, StringComparison.Ordinal);
-        Assert.Contains("<cl:DetailsListView.RowTemplate>", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<cl:DetailsListView", browserItemsViewXaml, StringComparison.Ordinal);
+        Assert.Contains("HeaderContent=\"{Binding HeaderContent, ElementName=Root}\"", browserItemsViewXaml, StringComparison.Ordinal);
+        Assert.Contains("RowTemplate=\"{Binding DetailsRowTemplate, ElementName=Root}\"", browserItemsViewXaml, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] parts)
