@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CommandDotNet;
+using SkyCD.Cli.Command;
 using SkyCD.Cli.Execution;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
@@ -14,7 +15,8 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
     {
         var context = CliCommandExecutionContextScope.Current
                       ?? throw new InvalidOperationException("CLI command context is missing.");
-        return (int)await context.Host.ExecutePluginsListAsync(
+        return (int)await PluginsCommandExecutor.ExecutePluginsListAsync(
+            System.Console.Out,
             context.JsonOutput,
             context.Registry,
             context.FileFormatManager,

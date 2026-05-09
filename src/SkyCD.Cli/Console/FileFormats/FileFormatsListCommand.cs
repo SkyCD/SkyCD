@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CommandDotNet;
+using SkyCD.Cli.Command;
 using SkyCD.Cli.Execution;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
@@ -14,7 +15,8 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
     {
         var context = CliCommandExecutionContextScope.Current
                       ?? throw new InvalidOperationException("CLI command context is missing.");
-        return (int)await context.Host.ExecuteListFormatsAsync(
+        return (int)await FileFormatsCommandExecutor.ExecuteListFormatsAsync(
+            System.Console.Out,
             context.JsonOutput,
             context.FileFormatManager,
             context.PluginDirectories);
