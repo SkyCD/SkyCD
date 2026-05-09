@@ -16,16 +16,22 @@ public sealed class DiscoveredPluginCollection : List<DiscoveredPlugin>
         ArgumentNullException.ThrowIfNull(descriptors);
 
         Clear();
-        var discoveredById = discovered.ToDictionary(static item => item.Id, static item => item, StringComparer.OrdinalIgnoreCase);
+        var descriptorsById = descriptors
+            .Where(static descriptor => !string.IsNullOrWhiteSpace(descriptor.Id))
+            .ToDictionary(static descriptor => descriptor.Id, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var descriptor in descriptors.Where(static descriptor => descriptor.IsEnabled))
+        foreach (var plugin in discovered)
         {
-            if (!discoveredById.TryGetValue(descriptor.Id, out var plugin))
+            if (!descriptorsById.TryGetValue(plugin.Id, out var descriptor))
             {
+                Add(plugin);
                 continue;
             }
 
-            Add(plugin);
+            if (descriptor.IsEnabled && descriptor.IsAvailable)
+            {
+                Add(plugin);
+            }
         }
     }
 }

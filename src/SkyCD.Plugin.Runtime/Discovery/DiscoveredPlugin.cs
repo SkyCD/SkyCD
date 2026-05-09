@@ -30,7 +30,7 @@ public sealed class DiscoveredPlugin
 
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
 
-    public PluginDocument ToDocument(DateTimeOffset discoveredAt)
+    public PluginDocument ToDocument()
     {
         return new PluginDocument
         {
@@ -48,7 +48,7 @@ public sealed class DiscoveredPlugin
             AssemblyPath = FileName,
             IsEnabled = true,
             IsAvailable = true,
-            LastDiscoveredAt = discoveredAt
+            LastDiscoveredAt = DateTimeOffset.UtcNow
         };
     }
 }

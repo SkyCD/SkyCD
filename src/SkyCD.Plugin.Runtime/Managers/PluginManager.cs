@@ -95,15 +95,9 @@ public sealed class PluginManager(
 
     private IReadOnlyCollection<PluginDocument> MapToPluginDocuments(IReadOnlyCollection<DiscoveredPlugin> discovered)
     {
-        var now = DateTimeOffset.UtcNow;
-        var documents = new List<PluginDocument>(discovered.Count);
-
-        foreach (var plugin in discovered)
-        {
-            documents.Add(plugin.ToDocument(now));
-        }
-
-        return documents;
+        return new List<PluginDocument>(
+            discovered.Select(plugin => plugin.ToDocument())
+        );
     }
 
     private DiscoveredPlugin? DiscoverFromAssembly(Assembly assembly, Version hostVersion)
