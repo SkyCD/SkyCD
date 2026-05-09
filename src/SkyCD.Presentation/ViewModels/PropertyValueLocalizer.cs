@@ -24,6 +24,8 @@ public sealed class PropertyValueLocalizer : IStringLocalizer
         yield return this["Unknown"];
         yield return this["Yes"];
         yield return this["No"];
+        yield return this["AllSupportedFiles"];
+        yield return this["AllFiles"];
     }
 
     public IStringLocalizer WithCulture(CultureInfo culture)
@@ -40,6 +42,8 @@ public sealed class PropertyValueLocalizer : IStringLocalizer
             "Unknown" => isLithuanian ? "Nežinoma" : "Unknown",
             "Yes" => isLithuanian ? "Taip" : "Yes",
             "No" => isLithuanian ? "Ne" : "No",
+            "AllSupportedFiles" => isLithuanian ? "Visi palaikomi failai" : "All supported files",
+            "AllFiles" => isLithuanian ? "Visi failai" : "All files",
             _ => key
         };
     }

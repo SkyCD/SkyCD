@@ -11,21 +11,18 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App.Views;
 
 public partial class MainWindow : Window
 {
+    private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
     private readonly RepositoryManager repositoryManager;
     private readonly PluginManager pluginManager;
     private FileFormatManager fileFormatManager;
@@ -303,12 +300,9 @@ public partial class MainWindow : Window
         }
 
         var fileTypeChoices = fileFormatManager.GetOpenFilters()
-            .ToFilePickerTypes()
-            .ToList();
-        fileTypeChoices.Add(new FilePickerFileType("All files")
-        {
-            Patterns = ["*.*"]
-        });
+            .ToFilePickerTypes(
+                allSupportedFilesLabel: PickerLocalizer["AllSupportedFiles"].Value,
+                allFilesLabel: PickerLocalizer["AllFiles"].Value);
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -358,13 +352,9 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(targetPath))
         {
             var fileTypeChoices = fileFormatManager.GetSaveFilters()
-                .ToFilePickerTypes()
-                .ToList();
-
-            fileTypeChoices.Add(new FilePickerFileType("All files")
-            {
-                Patterns = ["*.*"]
-            });
+                .ToFilePickerTypes(
+                    allSupportedFilesLabel: PickerLocalizer["AllSupportedFiles"].Value,
+                    allFilesLabel: PickerLocalizer["AllFiles"].Value);
 
             var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
 
@@ -413,13 +403,9 @@ public partial class MainWindow : Window
         }
 
         var fileTypeChoices = fileFormatManager.GetSaveFilters()
-            .ToFilePickerTypes()
-            .ToList();
-
-        fileTypeChoices.Add(new FilePickerFileType("All files")
-        {
-            Patterns = ["*.*"]
-        });
+            .ToFilePickerTypes(
+                allSupportedFilesLabel: PickerLocalizer["AllSupportedFiles"].Value,
+                allFilesLabel: PickerLocalizer["AllFiles"].Value);
 
         var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
 
@@ -506,7 +492,7 @@ public partial class MainWindow : Window
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
             pluginManager.SavePluginEnabledStates(pluginStates);
-            RebuildPluginRuntimeServices(options.PluginPath);
+            SyncPluginRuntimeState(options.PluginPath);
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -737,7 +723,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        RebuildPluginRuntimeServices(dialogVm.PluginPath);
         RefreshPlugins(dialogVm);
     }
 
@@ -782,29 +767,14 @@ public partial class MainWindow : Window
         dialogVm.SetPlugins(plugins);
     }
 
-    private void RebuildPluginRuntimeServices(string? pluginPath)
+    private void SyncPluginRuntimeState(string? pluginPath)
     {
         var resolvedPluginPath = string.IsNullOrWhiteSpace(pluginPath)
             ? ResolveDefaultPluginPath()
             : pluginPath;
 
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
-
-        var discoveredPlugins = pluginManager.Plugins.ToList();
-        var pluginById = discoveredPlugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-
-        IServiceCollection mergedServices = new ServiceCollection()
-            .AddRegistrator<CommonRuntimeServiceRegistrator>();
-
-        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(discoveredPlugins);
-        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(discoveredPlugins);
-        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        mergedServices.AddPluginRegistrator(discoveredPlugins);
-
-        PluginServiceProvider.RebuildGlobal();
-        var runtimeProvider = PluginServiceProvider.Instance;
-        runtimeProvider.Register(mergedServices);
-        fileFormatManager = runtimeProvider.GetRequiredService<FileFormatManager>();
+        fileFormatManager = new FileFormatManager(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
     }
 
     private static string ResolveDefaultPluginPath()
