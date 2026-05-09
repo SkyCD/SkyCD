@@ -571,7 +571,7 @@ public sealed class CliHostTests
 
     private sealed class TestReadFormatCapability : IFileFormatPluginCapability
     {
-        public FileFormatDescriptor SupportedFormat => new("tests-read", "Tests Read", [".src"], CanRead: true, CanWrite: false);
+        public FileFormatDescriptor SupportedFormat => new("tests-read", "Tests Read", [".src"], ["application/x-tests-read"], CanRead: true, CanWrite: false);
 
         public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
         {
@@ -589,7 +589,7 @@ public sealed class CliHostTests
 
     private sealed class TestWriteFormatCapability : IFileFormatPluginCapability
     {
-        public FileFormatDescriptor SupportedFormat => new("tests-write", "Tests Write", [".dst"], CanRead: false, CanWrite: true);
+        public FileFormatDescriptor SupportedFormat => new("tests-write", "Tests Write", [".dst"], ["application/x-tests-write"], CanRead: false, CanWrite: true);
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new FileFormatReadResult { Success = false, Error = "write only" });

@@ -12,12 +12,12 @@ public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-zip",
-            "ZIP Archive Index",
-            [".zip"],
+            FormatId: "skycd-zip",
+            DisplayName: "ZIP Archive Index",
+            Extensions: [".zip"],
+            MimeTypes: ["application/zip"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/zip");
+            CanWrite: false);
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

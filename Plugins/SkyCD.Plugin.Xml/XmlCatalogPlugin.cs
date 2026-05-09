@@ -17,12 +17,12 @@ public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-xml",
-            "SkyCD XML",
-            [".xml"],
+            FormatId: "skycd-xml",
+            DisplayName: "SkyCD XML",
+            Extensions: [".xml"],
+            MimeTypes: ["application/xml", "text/xml"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/xml");
+            CanWrite: true);
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

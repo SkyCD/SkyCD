@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Exceptions;
 
@@ -146,12 +147,16 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
     private static FileFormatFilterCollection BuildFilters(IReadOnlyList<FileFormatDescriptor> formats)
     {
         var filters = formats
-            .Select(format => new FileFormatFilterDescriptor(
-                format.DisplayName,
-                format.Extensions
+            .Select(format => new FilePickerFileType(format.DisplayName)
+            {
+                Patterns = format.Extensions
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Select(static extension => NormalizePattern(extension))
-                    .ToArray()))
+                    .ToArray(),
+                MimeTypes = format.MimeTypes
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+            })
             .ToArray();
         
         return new FileFormatFilterCollection(filters);

@@ -24,12 +24,12 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-iso",
-            "ISO Image Index",
-            [".iso"],
+            FormatId: "skycd-iso",
+            DisplayName: "ISO Image Index",
+            Extensions: [".iso"],
+            MimeTypes: ["application/x-iso9660-image"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-iso9660-image");
+            CanWrite: false);
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

@@ -9,6 +9,6 @@ public sealed record FileFormatDescriptor(
     string FormatId,
     string DisplayName,
     IReadOnlyCollection<string> Extensions,
+    IReadOnlyCollection<string> MimeTypes,
     bool CanRead,
-    bool CanWrite,
-    string? MimeType = null);
+    bool CanWrite);

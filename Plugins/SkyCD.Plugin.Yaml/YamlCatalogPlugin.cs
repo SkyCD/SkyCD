@@ -21,12 +21,12 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-yaml",
-            "SkyCD YAML",
-            [".yaml", ".yml"],
+            FormatId: "skycd-yaml",
+            DisplayName: "SkyCD YAML",
+            Extensions: [".yaml", ".yml"],
+            MimeTypes: ["application/yaml", "text/yaml"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/yaml");
+            CanWrite: true);
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

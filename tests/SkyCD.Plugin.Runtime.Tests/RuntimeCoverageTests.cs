@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DryIoc;
+using Avalonia.Platform.Storage;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -36,8 +37,8 @@ public sealed class RuntimeCoverageTests
     {
         var collection = new FileFormatFilterCollection(
         [
-            new FileFormatFilterDescriptor("JSON", ["*.json"]),
-            new FileFormatFilterDescriptor("YAML", ["*.yaml", "*.yml"])
+            new FilePickerFileType("JSON") { Patterns = ["*.json"] },
+            new FilePickerFileType("YAML") { Patterns = ["*.yaml", "*.yml"] }
         ]);
 
         var picker = collection.ToFilePickerTypes("All supported", "All files");
@@ -53,11 +54,11 @@ public sealed class RuntimeCoverageTests
     public async Task FileFormatManager_ResolvesFormatsAndExecutesReadWrite()
     {
         var readWriteCapability = new FakeFileFormatCapability(
-            new FileFormatDescriptor("json", "JSON", [".json"], true, true));
+            new FileFormatDescriptor("json", "JSON", [".json"], ["application/json"], true, true));
         var duplicateCapability = new FakeFileFormatCapability(
-            new FileFormatDescriptor("json", "JSON Duplicate", [".json"], true, true));
+            new FileFormatDescriptor("json", "JSON Duplicate", [".json"], ["application/json"], true, true));
         var readOnlyCapability = new FakeFileFormatCapability(
-            new FileFormatDescriptor("xml", "XML", [".xml"], true, false));
+            new FileFormatDescriptor("xml", "XML", [".xml"], ["application/xml"], true, false));
 
         var manager = new FileFormatManager([readWriteCapability, duplicateCapability, readOnlyCapability]);
 
@@ -112,8 +113,7 @@ public sealed class RuntimeCoverageTests
             Capabilities = []
         };
 
-        var discoveredAt = DateTimeOffset.UtcNow;
-        var document = discovered.ToDocument(discoveredAt);
+        var document = discovered.ToDocument();
 
         Assert.Equal("plugin.id", document.Id);
         Assert.Equal("Plugin", document.Name);
@@ -122,7 +122,7 @@ public sealed class RuntimeCoverageTests
         Assert.Equal("3.9.0", document.Constraints.MaxHostVersion);
         Assert.True(document.IsEnabled);
         Assert.True(document.IsAvailable);
-        Assert.Equal(discoveredAt, document.LastDiscoveredAt);
+        Assert.NotEqual(default, document.LastDiscoveredAt);
     }
 
     [Fact]

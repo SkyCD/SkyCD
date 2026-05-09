@@ -16,12 +16,12 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-csv",
-            "SkyCD CSV",
-            [".csv"],
+            FormatId: "skycd-csv",
+            DisplayName: "SkyCD CSV",
+            Extensions: [".csv"],
+            MimeTypes: ["text/csv"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "text/csv");
+            CanWrite: true);
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

@@ -15,12 +15,12 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-json",
-            "SkyCD JSON",
-            [".json"],
+            FormatId: "skycd-json",
+            DisplayName: "SkyCD JSON",
+            Extensions: [".json"],
+            MimeTypes: ["application/json"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/json");
+            CanWrite: true);
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

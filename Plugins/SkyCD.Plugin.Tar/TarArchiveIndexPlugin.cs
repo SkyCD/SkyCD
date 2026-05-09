@@ -14,12 +14,12 @@ public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-tar",
-            "TAR Archive Index",
-            [".tar", ".tar.gz", ".tgz"],
+            FormatId: "skycd-tar",
+            DisplayName: "TAR Archive Index",
+            Extensions: [".tar", ".tar.gz", ".tgz"],
+            MimeTypes: ["application/x-tar", "application/gzip"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-tar");
+            CanWrite: false);
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

@@ -13,12 +13,12 @@ public sealed class MarkdownCatalogExportPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-md",
-            "SkyCD Markdown Export",
-            [".md"],
+            FormatId: "skycd-md",
+            DisplayName: "SkyCD Markdown Export",
+            Extensions: [".md"],
+            MimeTypes: ["text/markdown"],
             CanRead: false,
-            CanWrite: true,
-            MimeType: "text/markdown");
+            CanWrite: true);
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

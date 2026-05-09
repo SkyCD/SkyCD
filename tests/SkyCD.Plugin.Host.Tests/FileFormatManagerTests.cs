@@ -119,7 +119,7 @@ public class FileFormatManagerTests
     private sealed class TestReadOnlyPlugin : IFileFormatPluginCapability
     {
         public FileFormatDescriptor SupportedFormat =>
-            new("readonly-json", "Read Only JSON", [".json"], CanRead: true, CanWrite: false);
+            new("readonly-json", "Read Only JSON", [".json"], ["application/json"], CanRead: true, CanWrite: false);
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new FileFormatReadResult { Success = true, Payload = "readonly" });
@@ -131,7 +131,7 @@ public class FileFormatManagerTests
     private sealed class TestReadWritePlugin : IFileFormatPluginCapability
     {
         public FileFormatDescriptor SupportedFormat =>
-            new("rw-json", "Read/Write JSON", [".json"], CanRead: true, CanWrite: true);
+            new("rw-json", "Read/Write JSON", [".json"], ["application/json"], CanRead: true, CanWrite: true);
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
         {

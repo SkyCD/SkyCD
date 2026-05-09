@@ -83,7 +83,7 @@ public class PluginManagerTests
 public sealed class PluginDiscoveryCapabilityPlugin : IMenuPluginCapability, IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new("test", "Test", [".test"], true, false);
+        new("test", "Test", [".test"], ["application/x-test"], true, false);
 
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
@@ -103,7 +103,7 @@ public sealed class PluginDiscoveryCapabilityPlugin : IMenuPluginCapability, IFi
 public sealed class StandaloneFileFormatCapability : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new("standalone", "Standalone", [".stand"], CanRead: true, CanWrite: false);
+        new("standalone", "Standalone", [".stand"], ["application/x-standalone"], CanRead: true, CanWrite: false);
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatReadResult { Success = true, Payload = "standalone" });

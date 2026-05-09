@@ -24,12 +24,12 @@ public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-7z",
-            "7z Archive Index",
-            [".7z"],
+            FormatId: "skycd-7z",
+            DisplayName: "7z Archive Index",
+            Extensions: [".7z"],
+            MimeTypes: ["application/x-7z-compressed", "application/x-7z", "application/7z"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-7z-compressed");
+            CanWrite: false);
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {

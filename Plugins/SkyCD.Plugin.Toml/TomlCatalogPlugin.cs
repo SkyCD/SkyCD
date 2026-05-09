@@ -18,12 +18,12 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
 
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-toml",
-            "SkyCD TOML",
-            [".toml"],
+            FormatId: "skycd-toml",
+            DisplayName: "SkyCD TOML",
+            Extensions: [".toml"],
+            MimeTypes: ["application/toml"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/toml");
+            CanWrite: true);
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

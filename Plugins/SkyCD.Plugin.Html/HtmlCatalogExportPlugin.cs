@@ -14,12 +14,12 @@ public sealed class HtmlCatalogExportPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new FileFormatDescriptor(
-            "skycd-html",
-            "SkyCD HTML Export",
-            [".html"],
+            FormatId: "skycd-html",
+            DisplayName: "SkyCD HTML Export",
+            Extensions: [".html"],
+            MimeTypes: ["text/html"],
             CanRead: false,
-            CanWrite: true,
-            MimeType: "text/html");
+            CanWrite: true);
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {

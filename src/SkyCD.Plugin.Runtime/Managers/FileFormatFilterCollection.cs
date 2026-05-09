@@ -6,24 +6,19 @@ using Avalonia.Platform.Storage;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 
-public sealed class FileFormatFilterCollection(IReadOnlyList<FileFormatFilterDescriptor> items)
-    : ReadOnlyCollection<FileFormatFilterDescriptor>(PrepareItems(items))
+public sealed class FileFormatFilterCollection(IReadOnlyList<FilePickerFileType> items)
+    : ReadOnlyCollection<FilePickerFileType>(PrepareItems(items))
 {
     public List<FilePickerFileType> ToFilePickerTypes(
         string? allSupportedFilesLabel = null,
         string? allFilesLabel = null)
     {
-        var pickerTypes = this
-            .Select(filter => new FilePickerFileType(filter.DisplayName)
-            {
-                Patterns = filter.Patterns.ToArray()
-            })
-            .ToList();
+        var pickerTypes = this.ToList();
 
         if (!string.IsNullOrWhiteSpace(allSupportedFilesLabel))
         {
             var supportedPatterns = this
-                .SelectMany(static filter => filter.Patterns)
+                .SelectMany(static filter => filter.Patterns ?? [])
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
@@ -47,9 +42,9 @@ public sealed class FileFormatFilterCollection(IReadOnlyList<FileFormatFilterDes
         return pickerTypes;
     }
 
-    private static IList<FileFormatFilterDescriptor> PrepareItems(IReadOnlyList<FileFormatFilterDescriptor> items)
+    private static IList<FilePickerFileType> PrepareItems(IReadOnlyList<FilePickerFileType> items)
     {
         ArgumentNullException.ThrowIfNull(items);
-        return items as IList<FileFormatFilterDescriptor> ?? items.ToList();
+        return items as IList<FilePickerFileType> ?? items.ToList();
     }
 }
