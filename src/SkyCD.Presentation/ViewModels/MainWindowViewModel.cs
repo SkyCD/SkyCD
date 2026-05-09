@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
@@ -28,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
+    private readonly IReadOnlyList<MainMenuItemViewModel> topMenuItems;
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
@@ -59,8 +61,10 @@ public partial class MainWindowViewModel : ObservableObject
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
         treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
+        topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
+        RefreshTopMenuState();
     }
 
     public MainWindowViewModel(
@@ -74,8 +78,10 @@ public partial class MainWindowViewModel : ObservableObject
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
         treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
+        topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
+        RefreshTopMenuState();
     }
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
@@ -153,6 +159,17 @@ public partial class MainWindowViewModel : ObservableObject
     public IReadOnlyList<string> StatusTransitions => statusTransitions;
 
     public IReadOnlyList<int> ProgressTransitions => progressTransitions;
+
+    public IReadOnlyList<MainMenuItemViewModel> TopMenuItems => topMenuItems;
+    public IReadOnlyList<MainMenuItemViewModel> FileMenuItems => topMenuItems[0].Items;
+    public IReadOnlyList<MainMenuItemViewModel> EditMenuItems => topMenuItems[1].Items;
+    public IReadOnlyList<MainMenuItemViewModel> ViewMenuItems => topMenuItems[2].Items;
+    public IReadOnlyList<MainMenuItemViewModel> ToolsMenuItems => topMenuItems[3].Items;
+    public IReadOnlyList<MainMenuItemViewModel> HelpMenuItems => topMenuItems[4].Items;
+
+    public IReadOnlyList<MainMenuItemViewModel> BrowserContextMenuItems => BuildBrowserContextMenuItems();
+
+    public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => BuildTreeContextMenuItems();
 
     [ObservableProperty]
     private IReadOnlyList<CatalogDocument> browserItems = [];
@@ -926,6 +943,9 @@ public partial class MainWindowViewModel : ObservableObject
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     partial void OnCurrentViewModeChanged(BrowserViewMode value)
@@ -946,6 +966,9 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(BrowserGridItemWidth));
         OnPropertyChanged(nameof(BrowserGridItemHeight));
         OnPropertyChanged(nameof(ShowDetailsColumns));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     partial void OnCurrentSortModeChanged(string value)
@@ -954,6 +977,9 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
         OnPropertyChanged(nameof(IsSortBySizeChecked));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     private bool IsSortMode(string expected)
@@ -975,6 +1001,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsSaveEnabled));
         SaveCatalogCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     partial void OnProgressValueChanged(int value)
@@ -986,6 +1015,243 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+    }
+
+    partial void OnIsStatusBarVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildTopMenuItems()
+    {
+        return
+        [
+            new MainMenuItemViewModel
+            {
+                Header = "_File",
+                Items =
+                [
+                    new MainMenuItemViewModel { Header = "_New", HotKey = "Ctrl+N", Command = NewCatalogCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_Open...", HotKey = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel { Header = "_Save", HotKey = "Ctrl+S", Command = SaveCatalogCommand },
+                    new MainMenuItemViewModel { Header = "Save _As...", HotKey = "F12", Command = SaveCatalogAsCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "E_xit", Command = ExitApplicationCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_Edit",
+                Items =
+                [
+                    new MainMenuItemViewModel { Header = "_Add...", HotKey = "F2", Command = AddItemCommand },
+                    new MainMenuItemViewModel { Header = "_Delete", HotKey = "Delete", Command = DeleteItemCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_View",
+                Items =
+                [
+                    CheckedMenuItem(IsStatusBarVisible, "_StatusBar", ToggleStatusBarCommand, key: "statusbar"),
+                    Separator(),
+                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles", "view_tiles"),
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons", "view_small"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons", "view_large"),
+                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List", "view_list"),
+                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details", "view_details"),
+                    Separator(),
+                    new MainMenuItemViewModel
+                    {
+                        Header = "Arrange Icons By",
+                        Items =
+                        [
+                            CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name", "sort_name"),
+                            CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type", "sort_type"),
+                            CheckedMenuItem(IsSortBySizeChecked, "_Size", SetSortModeCommand, "Size", "sort_size")
+                        ]
+                    },
+                    new MainMenuItemViewModel { Header = "_Refresh", HotKey = "F5", Command = RefreshCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_Tools",
+                Items =
+                [
+                    new MainMenuItemViewModel { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_Help",
+                Items =
+                [
+                    new MainMenuItemViewModel { Header = "Project website in _SourceForge.NET", Command = OpenProjectWebsiteCommand },
+                    new MainMenuItemViewModel { Header = "Project area in _GitHub", Command = OpenGithubAreaCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_About...", Command = OpenAboutCommand }
+                ]
+            }
+        ];
+    }
+
+    private static MainMenuItemViewModel Separator()
+    {
+        return new MainMenuItemViewModel { Header = "-" };
+    }
+
+    private void RefreshTopMenuState()
+    {
+        var byKey = FlattenMenuItems(topMenuItems)
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .ToDictionary(item => item.Key!, StringComparer.Ordinal);
+
+        SetMenuHeader(byKey, "statusbar", CheckedHeader(IsStatusBarVisible, "_StatusBar"));
+        SetMenuHeader(byKey, "view_tiles", CheckedHeader(IsTilesViewChecked, "_Tiles"));
+        SetMenuHeader(byKey, "view_small", CheckedHeader(IsSmallIconsViewChecked, "Small _Icons"));
+        SetMenuHeader(byKey, "view_large", CheckedHeader(IsLargeIconsViewChecked, "L_arge Icons"));
+        SetMenuHeader(byKey, "view_list", CheckedHeader(IsListViewChecked, "_List"));
+        SetMenuHeader(byKey, "view_details", CheckedHeader(IsDetailsViewChecked, "_Details"));
+        SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, "_Name"));
+        SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, "_Type"));
+        SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, "_Size"));
+    }
+
+    private static IEnumerable<MainMenuItemViewModel> FlattenMenuItems(IEnumerable<MainMenuItemViewModel> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+            foreach (var child in FlattenMenuItems(item.Items))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static void SetMenuHeader(
+        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
+        string key,
+        string header)
+    {
+        if (byKey.TryGetValue(key, out var item))
+        {
+            item.Header = header;
+        }
+    }
+
+    private static string CheckedHeader(bool isChecked, string title)
+    {
+        return title;
+    }
+
+    private static MainMenuItemViewModel CheckedMenuItem(
+        bool isChecked,
+        string title,
+        IRelayCommand command,
+        object? commandParameter = null,
+        string? key = null)
+    {
+        return new MainMenuItemViewModel
+        {
+            Key = key,
+            Header = CheckedHeader(isChecked, title),
+            Icon = isChecked ? "✓" : "\u00A0",
+            Command = command,
+            CommandParameter = commandParameter
+        };
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
+    {
+        return
+        [
+            new MainMenuItemViewModel { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
+            new MainMenuItemViewModel { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "_View",
+                Items =
+                [
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons"),
+                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List"),
+                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details"),
+                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles")
+                ]
+            },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "Arrange Icons By",
+                Items =
+                [
+                    CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name"),
+                    CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type")
+                ]
+            },
+            new MainMenuItemViewModel { Header = "_Refresh", Command = RefreshCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Add...", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = "_Delete", Command = DeleteItemCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
+        ];
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildTreeContextMenuItems()
+    {
+        return
+        [
+            new MainMenuItemViewModel { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "tree" },
+            new MainMenuItemViewModel { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "tree" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "_View",
+                Items =
+                [
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons"),
+                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List"),
+                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details"),
+                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles")
+                ]
+            },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "Arrange Icons By",
+                Items =
+                [
+                    CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name"),
+                    CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type"),
+                    CheckedMenuItem(IsSortBySizeChecked, "_Size", SetSortModeCommand, "Size")
+                ]
+            },
+            new MainMenuItemViewModel { Header = "_Refresh", Command = RefreshCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Add...", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = "_Delete", Command = DeleteItemCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Copy", HotKey = "Ctrl+C", Command = CopyCommand },
+            new MainMenuItemViewModel { Header = "_Paste", HotKey = "Ctrl+V", Command = PasteCommand },
+            new MainMenuItemViewModel { Header = "Cu_t", HotKey = "Ctrl+X", Command = CutCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
+        ];
     }
     
     private void EnsureSeedData()
