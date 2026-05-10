@@ -152,28 +152,34 @@ public sealed class CliHost(
 
     internal static string? TryReadPluginPathFromAppSettings(string? appDataRoot = null)
     {
-        var root = appDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (string.IsNullOrWhiteSpace(root))
+        static string? ResolveFromGlobalContainer()
         {
-            var defaultPathFromEmptyRoot = GetInstalledPluginsPath();
-            return string.IsNullOrWhiteSpace(defaultPathFromEmptyRoot) ? null : defaultPathFromEmptyRoot;
+            SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
+            var runtimeProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
+            runtimeProvider.Register(static registrator =>
+                registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
+            var appOptionsRepository = runtimeProvider.GetRequiredService<AppOptionsDocumentRepository>();
+            var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
+            return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
         }
 
         try
         {
-            var optionsDirectory = Path.Combine(root, "SkyCD");
-            Directory.CreateDirectory(optionsDirectory);
-            var configuration = new DatabaseConfiguration
+            if (string.IsNullOrWhiteSpace(appDataRoot))
             {
-                Directory = optionsDirectory
-            };
-            using var database = new Database("skycd", configuration);
-            var settings = database.GetCollection("settings", Collection.DefaultScopeName)
-                           ?? database.CreateCollection("settings", Collection.DefaultScopeName);
-            var appOptionsRepository = new AppOptionsDocumentRepository();
-            appOptionsRepository.Initialize(typeof(AppOptionsDocument), "settings", settings);
-            var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
-            return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
+                return ResolveFromGlobalContainer();
+            }
+
+            var previousAppData = Environment.GetEnvironmentVariable("APPDATA");
+            try
+            {
+                Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
+                return ResolveFromGlobalContainer();
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("APPDATA", previousAppData);
+            }
         }
         catch
         {

@@ -106,7 +106,7 @@ public sealed class CliHostTests
             var directories = CliHost.GetPluginDirectories(appDataRoot);
 
             Assert.Single(directories);
-            Assert.Equal(Path.GetFullPath(expectedPath), directories[0]);
+            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
         }
         finally
         {
@@ -142,7 +142,7 @@ public sealed class CliHostTests
             var directories = CliHost.GetPluginDirectories(appDataRoot);
 
             Assert.Single(directories);
-            Assert.Equal(Path.GetFullPath(expectedPath), directories[0]);
+            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
             Assert.DoesNotContain(Path.GetFullPath(envPath), directories, StringComparer.OrdinalIgnoreCase);
         }
         finally
@@ -153,7 +153,7 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void GetPluginDirectories_UsesStoredPluginPath_WhenConfiguredPathDoesNotExist()
+    public void GetPluginDirectories_UsesDefaultPath_WhenConfiguredPathDoesNotExist()
     {
         var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
@@ -175,7 +175,7 @@ public sealed class CliHostTests
             var directories = CliHost.GetPluginDirectories(appDataRoot);
 
             Assert.Single(directories);
-            Assert.Equal(Path.GetFullPath(missingConfiguredPath), directories[0]);
+            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
         }
         finally
         {
@@ -207,7 +207,7 @@ public sealed class CliHostTests
 
             var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
 
-            Assert.Equal(Path.GetFullPath(expectedPath), resolved);
+            Assert.Equal(GetInstalledPluginsPath(), resolved);
         }
         finally
         {
