@@ -95,7 +95,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
         var byExtension = formats.FirstOrDefault(format =>
             format.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
-        
+
         return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
     }
 
@@ -125,7 +125,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         }
 
         var result = await formatHandler.WriteAsync(request, cancellationToken);
-        
+
         return !result.Success ? throw new FileFormatWriteFailedException(result.Error) : result;
     }
 
@@ -158,7 +158,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
                     .ToArray(),
             })
             .ToArray();
-        
+
         return new FileFormatFilterCollection(filters);
     }
 

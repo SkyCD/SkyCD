@@ -1253,7 +1253,7 @@ public partial class MainWindowViewModel : ObservableObject
             new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
         ];
     }
-    
+
     private void EnsureSeedData()
     {
         if (catalogRepository is null || catalogRepository.GetAll().Count > 0)

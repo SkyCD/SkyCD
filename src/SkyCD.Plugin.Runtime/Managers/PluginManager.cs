@@ -110,7 +110,7 @@ public sealed class PluginManager(
         try
         {
             var plugin = discoveredPluginFactory.BuildFromAssembly(assembly);
-            
+
             return !PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion) ? null : plugin;
         }
         catch (InvalidOperationException exception)

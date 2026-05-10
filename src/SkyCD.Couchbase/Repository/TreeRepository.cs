@@ -18,7 +18,7 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
     public override void Initialize(Type documentType, string collectionName, Collection collection)
     {
         base.Initialize(documentType, collectionName, collection);
-        
+
         ParentIdProperty = AttributeHelper.ResolveStringPropertyWithAttributeOrDefault(
             documentType: documentType,
             attributeType: typeof(ParentId),
