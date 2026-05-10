@@ -33,7 +33,8 @@ public sealed class ServiceRegistratorTests
 
         using var provider = new DryIoc.Container();
         new CommonRuntimeServiceRegistrator().RegisterServices(provider);
-        var databasePath = Path.Combine(Path.GetTempPath(), "skycd-runtime-registrator-tests", Guid.NewGuid().ToString("N"));
+        var databasePath = Path.Combine(Path.GetTempPath(), "skycd-runtime-registrator-tests",
+            Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(databasePath);
         provider.RegisterDelegate<DatabaseManager>(_ =>
         {
@@ -56,7 +57,8 @@ public sealed class ServiceRegistratorTests
         var discovered = provider.Resolve<IReadOnlyList<DiscoveredPlugin>>();
         var byId = provider.Resolve<IReadOnlyDictionary<string, DiscoveredPlugin>>();
         var formatCapabilities = provider.ResolveMany<IFileFormatPluginCapability>().ToList();
-        var keyedFormatCapability = provider.Resolve<IFileFormatPluginCapability>(serviceKey: typeof(IFileFormatPluginCapability));
+        var keyedFormatCapability =
+            provider.Resolve<IFileFormatPluginCapability>(serviceKey: typeof(IFileFormatPluginCapability));
 
         Assert.Single(discovered);
         Assert.Same(plugin, discovered[0]);

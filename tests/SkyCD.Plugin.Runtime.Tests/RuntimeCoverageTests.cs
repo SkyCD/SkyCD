@@ -139,7 +139,8 @@ public sealed class RuntimeCoverageTests
 
         repository.Save("a", new PluginDocument { Id = "a", Name = "A", IsEnabled = false, Constraints = null! });
         repository.Save("b", new PluginDocument { Id = "b", Name = "B" });
-        repository.Save("c", new PluginDocument { Id = "c", Name = "C", IsEnabled = false, IsAvailable = false, Constraints = null! });
+        repository.Save("c",
+            new PluginDocument { Id = "c", Name = "C", IsEnabled = false, IsAvailable = false, Constraints = null! });
 
         repository.UpsertPluginDocuments(
         [
@@ -173,7 +174,8 @@ public sealed class RuntimeCoverageTests
         PluginServiceRegistrator.RegisterServices(services, plugin);
 
         Assert.NotNull(services.Resolve<IFakePluginCapability>(ifUnresolved: IfUnresolved.ReturnDefault));
-        Assert.NotNull(services.Resolve<IFakePluginCapability>(serviceKey: typeof(IFakePluginCapability), ifUnresolved: IfUnresolved.ReturnDefault));
+        Assert.NotNull(services.Resolve<IFakePluginCapability>(serviceKey: typeof(IFakePluginCapability),
+            ifUnresolved: IfUnresolved.ReturnDefault));
     }
 
     private interface IFakePluginCapability : IPluginCapability
@@ -188,12 +190,14 @@ public sealed class RuntimeCoverageTests
     {
         public FileFormatDescriptor SupportedFormat { get; } = descriptor;
 
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new FileFormatReadResult { Success = true, Payload = new object() });
         }
 
-        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new FileFormatWriteResult { Success = true });
         }

@@ -50,7 +50,8 @@ public sealed class ServiceProviderTests
         });
         provider.Register(registrator => PluginServiceRegistrator.RegisterServices(registrator, plugin));
         var list = provider.Resolve(typeof(IReadOnlyList<DiscoveredPlugin>), ifUnresolved: IfUnresolved.ReturnDefault);
-        var byId = provider.Resolve(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>), ifUnresolved: IfUnresolved.ReturnDefault);
+        var byId = provider.Resolve(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>),
+            ifUnresolved: IfUnresolved.ReturnDefault);
         var capability = provider.Resolve(typeof(SampleCapability), ifUnresolved: IfUnresolved.ReturnDefault);
         var keyedCapability = provider.Resolve(
             typeof(SampleCapability),
@@ -65,5 +66,6 @@ public sealed class ServiceProviderTests
     }
 
     private sealed class SampleService;
+
     private sealed class SampleCapability : IPluginCapability;
 }
