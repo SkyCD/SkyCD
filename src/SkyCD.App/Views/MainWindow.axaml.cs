@@ -19,11 +19,12 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
+using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.Container;
 
 namespace SkyCD.App.Views;
 
@@ -32,7 +33,8 @@ public partial class MainWindow : Window
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly PluginManager pluginManager;
-    private readonly PluginServiceProvider runtimeServiceProvider;
+    private readonly PluginContainer runtimeContainer;
+    private DryIoc.IContainer pluginServiceProvider;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -42,12 +44,14 @@ public partial class MainWindow : Window
     public MainWindow(
         AppOptionsDocumentRepository appOptionsRepository,
         PluginManager pluginManager,
-        PluginServiceProvider runtimeServiceProvider,
+        PluginContainer runtimeContainer,
+        DryIoc.IContainer pluginServiceProvider,
         FileFormatManager fileFormatManager)
     {
         this.appOptionsRepository = appOptionsRepository;
         this.pluginManager = pluginManager;
-        this.runtimeServiceProvider = runtimeServiceProvider;
+        this.runtimeContainer = runtimeContainer;
+        this.pluginServiceProvider = pluginServiceProvider;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -780,15 +784,10 @@ public partial class MainWindow : Window
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
 
         var pluginList = pluginManager.Plugins.ToList();
-        runtimeServiceProvider.Register(registrator =>
-        {
-            registrator.RegisterInstance<IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
-            registrator.RegisterInstance<IReadOnlyCollection<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(pluginList);
-            registrator.RegisterInstance<IReadOnlyDictionary<string, SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin>>(
-                pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase));
-            registrator.AddPluginRegistrator(pluginList);
-        });
-        fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
+        var nextPluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(runtimeContainer, pluginList);
+        pluginServiceProvider.Dispose();
+        pluginServiceProvider = nextPluginServiceProvider;
+        fileFormatManager = nextPluginServiceProvider.Resolve<FileFormatManager>();
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)

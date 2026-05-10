@@ -7,13 +7,13 @@ using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 namespace SkyCD.Plugin.Runtime.DependencyInjection;
 
 /// <summary>
-/// Wrapper around DryIoc container used by plugin runtime.
+/// Runtime container with global registration replay support.
 /// </summary>
-public sealed class ServiceProvider : IDisposable
+public sealed class Container : DryIoc.Container
 {
-    private static ServiceProvider? _instance;
+    private static Container? _instance;
 
-    public static ServiceProvider Instance
+    public static Container Instance
     {
         get
         {
@@ -28,90 +28,41 @@ public sealed class ServiceProvider : IDisposable
 
     public static void RebuildGlobal()
     {
-        _instance = new ServiceProvider(registrator =>
-        {
-            registrator
-                .AddRegistrator<CommonRuntimeServiceRegistrator>()
-                .AddRegistrator<CouchbaseServiceRegistrator>()
-                .AddRegistrator<PluginServiceRegistrator>();
-        });
+        _instance = new Container(static _ => { })
+            .AddRegistrator<CommonRuntimeServiceRegistrator>()
+            .AddRegistrator<CouchbaseServiceRegistrator>()
+            .AddRegistrator<PluginServiceRegistrator>();
     }
 
     private readonly List<Action<IContainer>> registrations = [];
-    private IContainer container;
 
-    public ServiceProvider(Action<IContainer> register)
+    public Container(Action<IContainer> register)
     {
         ArgumentNullException.ThrowIfNull(register);
-        container = new Container();
         Register(register);
     }
 
-    public object? GetService(Type serviceType)
+    public Container AddRegistrator<TRegistrator>()
+        where TRegistrator : IServiceRegistrator, new()
     {
-        ArgumentNullException.ThrowIfNull(serviceType);
-        return container.Resolve(serviceType, ifUnresolved: IfUnresolved.ReturnDefault);
-    }
-
-    public object? GetKeyedService(Type serviceType, object? serviceKey)
-    {
-        ArgumentNullException.ThrowIfNull(serviceType);
-        return container.Resolve(serviceType, serviceKey: serviceKey, ifUnresolved: IfUnresolved.ReturnDefault);
-    }
-
-    public object GetRequiredKeyedService(Type serviceType, object? serviceKey)
-    {
-        ArgumentNullException.ThrowIfNull(serviceType);
-        return container.Resolve(serviceType, serviceKey: serviceKey, ifUnresolved: IfUnresolved.Throw);
-    }
-
-    public T GetRequiredService<T>() where T : notnull
-    {
-        return container.Resolve<T>();
-    }
-
-    public object GetRequiredService(Type serviceType)
-    {
-        ArgumentNullException.ThrowIfNull(serviceType);
-        return container.Resolve(serviceType);
+        var registrator = new TRegistrator();
+        registrator.RegisterServices(this);
+        registrations.Add(static container => new TRegistrator().RegisterServices(container));
+        return this;
     }
 
     public void Register(Action<IContainer> register)
     {
         ArgumentNullException.ThrowIfNull(register);
+        register(this);
         registrations.Add(register);
-        RebuildContainer();
     }
 
-    public ServiceProvider CreateSubcontainer(Action<IContainer> register)
+    public IContainer CreateSubcontainer(Action<IContainer> register)
     {
         ArgumentNullException.ThrowIfNull(register);
-        var snapshot = registrations.ToArray();
-        return new ServiceProvider(container =>
-        {
-            foreach (var registration in snapshot)
-            {
-                registration(container);
-            }
-
-            register(container);
-        });
-    }
-
-    public void Dispose()
-    {
-        container.Dispose();
-    }
-
-    private void RebuildContainer()
-    {
-        var next = new Container();
-        foreach (var registration in registrations)
-        {
-            registration(next);
-        }
-        var previous = container;
-        container = next;
-        previous.Dispose();
+        var child = With(Rules, ScopeContext, RegistrySharing.CloneAndDropCache, SingletonScope);
+        register(child);
+        return child;
     }
 }

@@ -31,8 +31,8 @@ public sealed class ServiceRegistratorTests
             ]
         };
 
-        using var provider = new Container();
-        provider.AddRegistrator<CommonRuntimeServiceRegistrator>();
+        using var provider = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(provider);
         var databasePath = Path.Combine(Path.GetTempPath(), "skycd-runtime-registrator-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(databasePath);
         provider.RegisterDelegate<DatabaseManager>(_ =>
@@ -51,7 +51,7 @@ public sealed class ServiceRegistratorTests
         provider.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([plugin]);
         provider.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
         provider.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        provider.AddPluginRegistrator(plugin);
+        PluginServiceRegistrator.RegisterServices(provider, plugin);
 
         var discovered = provider.Resolve<IReadOnlyList<DiscoveredPlugin>>();
         var byId = provider.Resolve<IReadOnlyDictionary<string, DiscoveredPlugin>>();
@@ -68,8 +68,8 @@ public sealed class ServiceRegistratorTests
     [Fact]
     public void CommonRuntimeServiceRegistrator_RegistersLoggerFactory()
     {
-        using var provider = new Container();
-        provider.AddRegistrator<CommonRuntimeServiceRegistrator>();
+        using var provider = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(provider);
         Assert.NotNull(provider.Resolve<ILoggerFactory>());
     }
 }

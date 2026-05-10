@@ -16,13 +16,13 @@ using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
+using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.Container;
 
 namespace SkyCD.App;
 
 public partial class App : Avalonia.Application
 {
-    private PluginServiceProvider? appServiceProvider;
+    private PluginContainer? appServiceProvider;
 
     public override void Initialize()
     {
@@ -34,9 +34,9 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             appServiceProvider = BuildAppServiceProvider();
-            var pluginServices = appServiceProvider.GetRequiredService<PluginUiServices>();
-            var mainWindowViewModel = appServiceProvider.GetRequiredService<MainWindowViewModel>();
-            var mainWindow = appServiceProvider.GetRequiredService<MainWindow>();
+            var pluginServices = appServiceProvider.Resolve<PluginUiServices>();
+            var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
+            var mainWindow = appServiceProvider.Resolve<MainWindow>();
             mainWindow.DataContext = mainWindowViewModel;
 
             desktop.Exit += (_, _) =>
@@ -55,11 +55,8 @@ public partial class App : Avalonia.Application
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
         var options = appOptionsRepository.GetOrCreateAppOptions();
         var pluginPath = options.PluginPath;
-        Action<IContainer> registrations = registrator => registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
-
-        var runtimeProvider = PluginServiceProvider.Instance;
-        runtimeProvider.Register(registrations);
-        var pluginManager = runtimeProvider.GetRequiredService<PluginManager>();
+        var runtimeProvider = PluginContainer.Instance;
+        var pluginManager = runtimeProvider.Resolve<PluginManager>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
@@ -69,27 +66,20 @@ public partial class App : Avalonia.Application
         }
 
         var pluginList = discoveredPlugins.ToList();
-        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-
-        runtimeProvider.Register(registrator =>
-        {
-            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-            registrator.AddPluginRegistrator(discoveredPlugins);
-        });
-        var fileFormatManager = runtimeProvider.GetRequiredService<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager, pluginManager, runtimeProvider);
+        var pluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(runtimeProvider, pluginList);
+        var fileFormatManager = pluginServiceProvider.Resolve<FileFormatManager>();
+        return new PluginUiServices(fileFormatManager, pluginManager, runtimeProvider, pluginServiceProvider);
     }
 
     private sealed record PluginUiServices(
         FileFormatManager FileFormatManager,
         PluginManager PluginManager,
-        PluginServiceProvider ServiceProvider);
+        PluginContainer RuntimeContainer,
+        DryIoc.IContainer ServiceProvider);
 
-    private static PluginServiceProvider BuildAppServiceProvider()
+    private static PluginContainer BuildAppServiceProvider()
     {
-        return new PluginServiceProvider(registrator =>
+        return new PluginContainer(registrator =>
         {
             new CouchbaseServiceRegistrator().RegisterServices(registrator);
             registrator.RegisterDelegate<AppOptionsDocumentRepository>(static resolver =>
@@ -113,6 +103,7 @@ public partial class App : Avalonia.Application
                 var appOptionsRepository = resolver.Resolve<AppOptionsDocumentRepository>();
                 return CreatePluginServices(appOptionsRepository);
             }, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().RuntimeContainer, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager, Reuse.Singleton);
@@ -120,7 +111,8 @@ public partial class App : Avalonia.Application
                 new MainWindow(
                     resolver.Resolve<AppOptionsDocumentRepository>(),
                     resolver.Resolve<PluginManager>(),
-                    resolver.Resolve<PluginServiceProvider>(),
+                    resolver.Resolve<PluginContainer>(),
+                    resolver.Resolve<DryIoc.IContainer>(),
                     resolver.Resolve<FileFormatManager>()),
                 Reuse.Singleton);
         });

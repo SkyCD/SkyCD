@@ -4,9 +4,10 @@ using DryIoc;
 using Microsoft.Extensions.Logging;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using Xunit;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
+using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.Container;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
@@ -15,11 +16,11 @@ public sealed class ServiceProviderTests
     [Fact]
     public void Constructor_RegistersCommonAndHostServices()
     {
-        var provider = PluginServiceProvider.Instance;
+        var provider = PluginContainer.Instance;
         provider.Register(registrator => registrator.Register<SampleService>(Reuse.Singleton));
 
-        var loggerFactory = provider.GetService(typeof(ILoggerFactory));
-        var sample = provider.GetService(typeof(SampleService));
+        var loggerFactory = provider.Resolve(typeof(ILoggerFactory), ifUnresolved: IfUnresolved.ReturnDefault);
+        var sample = provider.Resolve(typeof(SampleService), ifUnresolved: IfUnresolved.ReturnDefault);
 
         Assert.NotNull(loggerFactory);
         Assert.NotNull(sample);
@@ -39,7 +40,7 @@ public sealed class ServiceProviderTests
             Capabilities = [new SampleCapability()]
         };
 
-        var provider = PluginServiceProvider.Instance;
+        var provider = PluginContainer.Instance;
         provider.Register(registrator =>
         {
             registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([plugin]);
@@ -47,11 +48,14 @@ public sealed class ServiceProviderTests
             registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
                 new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase) { [plugin.Id] = plugin });
         });
-        provider.Register(registrator => registrator.AddPluginRegistrator(plugin));
-        var list = provider.GetService(typeof(IReadOnlyList<DiscoveredPlugin>));
-        var byId = provider.GetService(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>));
-        var capability = provider.GetService(typeof(SampleCapability));
-        var keyedCapability = provider.GetKeyedService(typeof(SampleCapability), typeof(SampleCapability));
+        provider.Register(registrator => PluginServiceRegistrator.RegisterServices(registrator, plugin));
+        var list = provider.Resolve(typeof(IReadOnlyList<DiscoveredPlugin>), ifUnresolved: IfUnresolved.ReturnDefault);
+        var byId = provider.Resolve(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>), ifUnresolved: IfUnresolved.ReturnDefault);
+        var capability = provider.Resolve(typeof(SampleCapability), ifUnresolved: IfUnresolved.ReturnDefault);
+        var keyedCapability = provider.Resolve(
+            typeof(SampleCapability),
+            serviceKey: typeof(SampleCapability),
+            ifUnresolved: IfUnresolved.ReturnDefault);
 
         Assert.NotNull(list);
         Assert.NotNull(byId);

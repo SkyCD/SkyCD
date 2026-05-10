@@ -10,6 +10,7 @@ using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
@@ -156,18 +157,30 @@ public sealed class RuntimeCoverageTests
     }
 
     [Fact]
-    public void RegistratorExtensions_RegistersGenericAndInstancePluginServices()
+    public void PluginServiceRegistrator_RegistersCapabilityTypesForPlugin()
     {
-        using var services = new Container();
-        services.AddPluginService<IPluginCapability, FakePluginCapability>();
+        using var services = new DryIoc.Container();
         var instance = new FakePluginCapability();
-        services.AddPluginService(typeof(IPluginCapability), instance);
+        var plugin = new DiscoveredPlugin
+        {
+            Id = "test.plugin",
+            Name = "Test Plugin",
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = "test.plugin.dll",
+            Capabilities = [instance]
+        };
+        PluginServiceRegistrator.RegisterServices(services, plugin);
 
-        Assert.NotNull(services.Resolve<IPluginCapability>(ifUnresolved: IfUnresolved.ReturnDefault));
-        Assert.NotNull(services.Resolve<IPluginCapability>(serviceKey: typeof(IPluginCapability), ifUnresolved: IfUnresolved.ReturnDefault));
+        Assert.NotNull(services.Resolve<IFakePluginCapability>(ifUnresolved: IfUnresolved.ReturnDefault));
+        Assert.NotNull(services.Resolve<IFakePluginCapability>(serviceKey: typeof(IFakePluginCapability), ifUnresolved: IfUnresolved.ReturnDefault));
     }
 
-    private sealed class FakePluginCapability : IPluginCapability
+    private interface IFakePluginCapability : IPluginCapability
+    {
+    }
+
+    private sealed class FakePluginCapability : IFakePluginCapability
     {
     }
 

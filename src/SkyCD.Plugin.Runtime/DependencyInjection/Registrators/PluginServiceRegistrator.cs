@@ -14,6 +14,14 @@ namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 
 public sealed class PluginServiceRegistrator : IServiceRegistrator
 {
+    private static IRegistrator AddPluginService(IRegistrator registrator, Type serviceType, object serviceInstance)
+    {
+        registrator.RegisterInstance(serviceType, serviceInstance, ifAlreadyRegistered: IfAlreadyRegistered.AppendNewImplementation);
+        registrator.RegisterInstance(serviceType, serviceInstance, serviceKey: serviceType, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        return registrator;
+    }
+
     public void RegisterServices(IRegistrator registrator)
     {
         registrator.Register<AssembliesListFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
@@ -30,14 +38,14 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
     {
         foreach (var capability in plugin.Capabilities)
         {
-            registrator.AddPluginService(capability.GetType(), capability);
+            AddPluginService(registrator, capability.GetType(), capability);
 
             foreach (var interfaceType in capability.GetType()
                          .GetInterfaces()
                          .Where(static type => type != typeof(IPluginCapability))
                          .Where(static type => typeof(IPluginCapability).IsAssignableFrom(type)))
             {
-                registrator.AddPluginService(interfaceType, capability);
+                AddPluginService(registrator, interfaceType, capability);
             }
         }
     }
@@ -48,7 +56,22 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
         registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
             plugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-        registrator.AddPluginRegistrator(plugins);
+
+        foreach (var plugin in plugins)
+        {
+            RegisterServices(registrator, plugin);
+        }
+    }
+
+    public static IContainer CreatePluginSubcontainer(
+        DependencyInjection.Container runtimeServiceProvider,
+        IReadOnlyList<DiscoveredPlugin> plugins)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeServiceProvider);
+        ArgumentNullException.ThrowIfNull(plugins);
+
+        return runtimeServiceProvider.CreateSubcontainer(
+            registrator => RegisterServices(registrator, plugins));
     }
 
 }
