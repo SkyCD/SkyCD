@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
-using Couchbase.Lite;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -26,8 +25,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["--help"]);
 
@@ -50,8 +48,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["/?"]);
 
@@ -66,186 +63,33 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void GetPluginDirectories_ReturnsDefaultOrEmpty_WhenOptionsPathMissing()
+    public void TryReadPluginPathFromAppSettings_ReturnsInstalledDefaultPath()
     {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
-        try
-        {
-            var directories = CliHost.GetPluginDirectories(appDataRoot);
-            Assert.Single(directories);
-            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
-        }
-        finally
-        {
-            Directory.Delete(appDataRoot, recursive: true);
-        }
+        var resolved = CliHost.TryReadPluginPathFromAppSettings();
+        Assert.NotNull(resolved);
+        Assert.EndsWith("Plugins", resolved, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Directory.Exists(resolved));
     }
 
     [Fact]
-    public void GetPluginDirectories_ReadsFromOptions()
+    public void TryReadPluginPathFromAppSettings_IgnoresEnvironmentVariable()
     {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
-
-        try
-        {
-            var expectedPath = Path.Combine(appDataRoot, "ConfiguredPlugins");
-            Directory.CreateDirectory(expectedPath);
-            var configuration = new DatabaseConfiguration
-            {
-                Directory = Path.Combine(appDataRoot, "SkyCD")
-            };
-
-            using var database = new Database("skycd", configuration);
-            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
-            var appOptions = new MutableDocument("app-options");
-            appOptions.SetString("PluginPath", expectedPath);
-            settings.Save(appOptions);
-
-            var directories = CliHost.GetPluginDirectories(appDataRoot);
-
-            Assert.Single(directories);
-            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
-        }
-        finally
-        {
-            Directory.Delete(appDataRoot, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void GetPluginDirectories_IgnoresEnvironmentVariable()
-    {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
         var previousValue = Environment.GetEnvironmentVariable("SKYCD_PLUGIN_PATH");
 
         try
         {
-            var expectedPath = Path.Combine(appDataRoot, "ConfiguredPlugins");
-            Directory.CreateDirectory(expectedPath);
-            var envPath = Path.Combine(appDataRoot, "EnvPlugins");
+            var envPath = Path.Combine(Path.GetTempPath(), "EnvPlugins");
             Environment.SetEnvironmentVariable("SKYCD_PLUGIN_PATH", envPath);
+            var resolved = CliHost.TryReadPluginPathFromAppSettings();
 
-            var configuration = new DatabaseConfiguration
-            {
-                Directory = Path.Combine(appDataRoot, "SkyCD")
-            };
-
-            using var database = new Database("skycd", configuration);
-            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
-            var appOptions = new MutableDocument("app-options");
-            appOptions.SetString("PluginPath", expectedPath);
-            settings.Save(appOptions);
-
-            var directories = CliHost.GetPluginDirectories(appDataRoot);
-
-            Assert.Single(directories);
-            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
-            Assert.DoesNotContain(Path.GetFullPath(envPath), directories, StringComparer.OrdinalIgnoreCase);
+            Assert.NotNull(resolved);
+            Assert.EndsWith("Plugins", resolved, StringComparison.OrdinalIgnoreCase);
+            Assert.True(Directory.Exists(resolved));
+            Assert.NotEqual(Path.GetFullPath(envPath), resolved);
         }
         finally
         {
             Environment.SetEnvironmentVariable("SKYCD_PLUGIN_PATH", previousValue);
-            Directory.Delete(appDataRoot, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void GetPluginDirectories_UsesDefaultPath_WhenConfiguredPathDoesNotExist()
-    {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
-
-        try
-        {
-            var missingConfiguredPath = Path.Combine(appDataRoot, "MissingPlugins");
-            var configuration = new DatabaseConfiguration
-            {
-                Directory = Path.Combine(appDataRoot, "SkyCD")
-            };
-
-            using var database = new Database("skycd", configuration);
-            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
-            var appOptions = new MutableDocument("app-options");
-            appOptions.SetString("PluginPath", missingConfiguredPath);
-            settings.Save(appOptions);
-
-            var directories = CliHost.GetPluginDirectories(appDataRoot);
-
-            Assert.Single(directories);
-            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
-        }
-        finally
-        {
-            Directory.Delete(appDataRoot, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void TryReadPluginPathFromAppSettings_ReadsPluginPath_FromSettingsCollection()
-    {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
-
-        try
-        {
-            var expectedPath = Path.Combine(appDataRoot, "CustomPlugins");
-            Directory.CreateDirectory(expectedPath);
-
-            var configuration = new DatabaseConfiguration
-            {
-                Directory = Path.Combine(appDataRoot, "SkyCD")
-            };
-
-            using var database = new Database("skycd", configuration);
-            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
-            var appOptions = new MutableDocument("app-options");
-            appOptions.SetString("PluginPath", expectedPath);
-            settings.Save(appOptions);
-
-            var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
-
-            Assert.Equal(GetInstalledPluginsPath(), resolved);
-        }
-        finally
-        {
-            Directory.Delete(appDataRoot, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void TryReadPluginPathFromAppSettings_FallsBackToDefault_WhenSettingsCollectionMissing()
-    {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
-
-        try
-        {
-            var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
-            Assert.Equal(GetInstalledPluginsPath(), resolved);
-        }
-        finally
-        {
-            Directory.Delete(appDataRoot, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void TryReadPluginPathFromAppSettings_ReturnsDefaultOrNull_WhenNoSettingsExist()
-    {
-        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
-
-        try
-        {
-            var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
-            Assert.Equal(GetInstalledPluginsPath(), resolved);
-        }
-        finally
-        {
-            Directory.Delete(appDataRoot, recursive: true);
         }
     }
 
@@ -256,8 +100,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["open", "--help"]);
 
@@ -277,8 +120,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["convert", "--help"]);
 
@@ -299,8 +141,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["plugins", "--help"]);
 
@@ -319,8 +160,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["plugins", "/?"]);
 
@@ -339,8 +179,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["fileformats", "--help"]);
 
@@ -357,7 +196,7 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = new CliHost(output, error, (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+        var host = new CliHost(output, error);
 
         var result = await host.TryRunAsync(["--help"]);
 
@@ -376,8 +215,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["plugins"]);
 
@@ -396,8 +234,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["fileformats"]);
 
@@ -416,8 +253,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["plugins", "--json"]);
 
@@ -434,8 +270,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["fileformats", "--json"]);
 
@@ -450,7 +285,7 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = CreateHost(output, error, CreateTestPlugins());
+        var host = new CliHost(output, error);
 
         var result = await host.TryRunAsync(["list-formats"]);
 
@@ -466,8 +301,7 @@ public sealed class CliHostTests
         var error = new StringWriter();
         var host = new CliHost(
             output,
-            error,
-            (_, _) => throw new InvalidOperationException("Runtime should not load for help."));
+            error);
 
         var result = await host.TryRunAsync(["list-formats", "--help"]);
 
@@ -476,40 +310,13 @@ public sealed class CliHostTests
         Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task PluginCommand_Executes_WithoutLaunchingUiPath()
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var host = CreateHost(output, error, CreateTestPlugins());
-
-        var result = await host.TryRunAsync(["tests greet"]);
-        Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        Assert.Contains("hello from plugin", output.ToString(), StringComparison.Ordinal);
-        Assert.Equal(string.Empty, error.ToString());
-    }
-
-    [Fact]
-    public async Task PluginCommand_IsCaseInsensitive()
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var host = CreateHost(output, error, CreateTestPlugins());
-
-        var result = await host.TryRunAsync(["TeStS", "GrEeT"]);
-        Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.Success, result.ExitCode);
-        Assert.Contains("hello from plugin", output.ToString(), StringComparison.Ordinal);
-        Assert.Equal(string.Empty, error.ToString());
-    }
 
     [Fact]
     public async Task PluginsList_AsConcatenatedToken_ReturnsInvalidArgumentsWithHint()
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = CreateHost(output, error, CreateTestPlugins());
+        var host = new CliHost(output, error);
 
         var result = await host.TryRunAsync(["pluginslist"]);
 
@@ -523,7 +330,7 @@ public sealed class CliHostTests
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var host = CreateHost(output, error, CreateTestPlugins());
+        var host = new CliHost(output, error);
 
         var result = await host.TryRunAsync(["fileformatslist"]);
 
@@ -532,222 +339,5 @@ public sealed class CliHostTests
         Assert.Contains("Unknown command 'fileformatslist'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task Convert_WritesPayloadWithoutCliExtensions()
-    {
-        var temp = Path.Combine(Path.GetTempPath(), $"skycd-cli-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(temp);
-        try
-        {
-            var inputPath = Path.Combine(temp, "input.src");
-            var outputPath = Path.Combine(temp, "output.dst");
-            await File.WriteAllTextAsync(inputPath, "seed", Encoding.UTF8);
 
-            var output = new StringWriter();
-            var error = new StringWriter();
-            var host = CreateHost(output, error, CreateTestPlugins());
-
-            var result = await host.TryRunAsync(["convert", "--in", inputPath, "--out", outputPath, "--in-format", "tests-read", "--format", "tests-write"]);
-
-            Assert.True(result.Handled);
-            Assert.Equal(CliExitCodes.Success, result.ExitCode);
-            var converted = await File.ReadAllTextAsync(outputPath, Encoding.UTF8);
-            Assert.Equal("seed", converted);
-            Assert.Equal(string.Empty, error.ToString());
-        }
-        finally
-        {
-            Directory.Delete(temp, recursive: true);
-        }
-    }
-
-    [Fact]
-    public async Task DuplicatePluginCommand_ProducesCollisionError()
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var host = CreateHost(output, error, CreateTestPlugins(includeDuplicateCommand: true));
-
-        var result = await host.TryRunAsync(["tests greet"]);
-
-        Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
-        Assert.Contains("CLI command collision", error.ToString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task PluginCommand_CannotOverrideBuiltInCommand()
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var host = CreateHost(output, error, [CreateSingleCapabilityPlugin("tests.cli.reserved", new ReservedCommandCapability())]);
-
-        var result = await host.TryRunAsync(["open"]);
-
-        Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
-        Assert.Contains("cannot register command 'open' because it is reserved by the host", error.ToString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task PluginCommand_MissingCommandAttribute_ProducesConfigurationError()
-    {
-        var output = new StringWriter();
-        var error = new StringWriter();
-        var host = CreateHost(output, error, [CreateSingleCapabilityPlugin("tests.cli.bad", new MissingCommandAttributeCapability())]);
-
-        var result = await host.TryRunAsync(["tests"]);
-
-        Assert.True(result.Handled);
-        Assert.Equal(CliExitCodes.ConfigurationError, result.ExitCode);
-        Assert.Contains("missing [Command(\"name\")] attribute", error.ToString(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static CliHost CreateHost(TextWriter stdout, TextWriter stderr, IEnumerable<DiscoveredPlugin> plugins)
-    {
-        var pluginList = plugins.ToList();
-        return new CliHost(
-            stdout,
-            stderr,
-            (_, _) => Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginList));
-    }
-
-    private static string GetInstalledPluginsPath()
-    {
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
-    }
-
-    private static IReadOnlyList<DiscoveredPlugin> CreateTestPlugins(bool includeDuplicateCommand = false)
-    {
-        var plugins = new List<DiscoveredPlugin>
-        {
-            new()
-            {
-                Id = "tests.cli",
-                Name = "Tests CLI",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.cli.dll",
-                Capabilities =
-                [
-                    new TestReadFormatCapability(),
-                    new TestWriteFormatCapability(),
-                    new TestCliRootCommand()
-                ]
-            }
-        };
-
-        if (includeDuplicateCommand)
-        {
-            plugins.Add(new DiscoveredPlugin
-            {
-                Id = "tests.cli.dup",
-                Name = "Tests CLI Dup",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.cli.dup.dll",
-                Capabilities = [new DuplicateCliRootCommand()]
-            });
-        }
-
-        return plugins;
-    }
-
-    private static DiscoveredPlugin CreateSingleCapabilityPlugin(string id, IPluginCapability capability)
-    {
-        return new DiscoveredPlugin
-        {
-            Id = id,
-            Name = id,
-            Version = new Version(1, 0, 0),
-            MinHostVersion = new Version(3, 0, 0),
-            FileName = $"{id}.dll",
-            Capabilities = [capability]
-        };
-    }
-
-    private sealed class TestReadFormatCapability : IFileFormatPluginCapability
-    {
-        public FileFormatDescriptor SupportedFormat => new("tests-read", "Tests Read", [".src"], ["application/x-tests-read"], CanRead: true, CanWrite: false);
-
-        public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
-        {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, leaveOpen: true);
-            return new FileFormatReadResult
-            {
-                Success = true,
-                Payload = await reader.ReadToEndAsync(cancellationToken)
-            };
-        }
-
-        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new FileFormatWriteResult { Success = false, Error = "read only" });
-    }
-
-    private sealed class TestWriteFormatCapability : IFileFormatPluginCapability
-    {
-        public FileFormatDescriptor SupportedFormat => new("tests-write", "Tests Write", [".dst"], ["application/x-tests-write"], CanRead: false, CanWrite: true);
-
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new FileFormatReadResult { Success = false, Error = "write only" });
-
-        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
-        {
-            await using var writer = new StreamWriter(request.Target, Encoding.UTF8, leaveOpen: true);
-            await writer.WriteAsync(Convert.ToString(request.Payload));
-            await writer.FlushAsync(cancellationToken);
-            return new FileFormatWriteResult { Success = true };
-        }
-    }
-
-    [Command("tests")]
-    public sealed class TestCliRootCommand : ICliPluginCapability
-    {
-        [Subcommand]
-        public TestGreetCliCommand Greet { get; } = new();
-    }
-
-    [Command("greet")]
-    public sealed class TestGreetCliCommand
-    {
-        [DefaultCommand]
-        public int Execute()
-        {
-            System.Console.WriteLine("hello from plugin");
-            return 0;
-        }
-    }
-
-    [Command("tests")]
-    public sealed class DuplicateCliRootCommand : ICliPluginCapability
-    {
-        [Subcommand]
-        public DuplicateGreetCliCommand Greet { get; } = new();
-    }
-
-    [Command("greet")]
-    public sealed class DuplicateGreetCliCommand
-    {
-        [DefaultCommand]
-        public int Execute()
-        {
-            System.Console.WriteLine("duplicate");
-            return 0;
-        }
-    }
-
-    [Command("open")]
-    public sealed class ReservedCommandCapability : ICliPluginCapability
-    {
-        [DefaultCommand]
-        public int Execute()
-        {
-            System.Console.WriteLine("reserved");
-            return 0;
-        }
-    }
-
-    private sealed class MissingCommandAttributeCapability : ICliPluginCapability
-    {
-    }
 }

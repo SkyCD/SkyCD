@@ -13,6 +13,7 @@ using SkyCD.Cli.Console;
 using SkyCD.Cli.DependencyInjection;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
+using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -24,8 +25,7 @@ namespace SkyCD.Cli;
 
 public sealed class CliHost(
     TextWriter stdout,
-    TextWriter stderr,
-    Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>>? pluginLoader = null)
+    TextWriter stderr)
 {
     private sealed record SystemCommandNamespace(
         string BasePath,
@@ -39,8 +39,6 @@ public sealed class CliHost(
     {
         WriteIndented = true
     };
-    private readonly Func<Version, CancellationToken, Task<IReadOnlyList<DiscoveredPlugin>>> pluginLoaderFactory =
-        pluginLoader ?? LoadDiscoveredPluginsAsync;
 
     public async Task<CliRunResult> TryRunAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -86,11 +84,17 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
 
-        var pluginDirectories = GetPluginDirectories();
-        var discoveredPlugins = await pluginLoaderFactory(new Version(3, 0, 0), cancellationToken);
+        var pluginPath = TryReadPluginPathFromAppSettings();
+        var pluginDirectories = string.IsNullOrWhiteSpace(pluginPath)
+            ? []
+            : new[] { pluginPath };
 
         SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
         var runtimeServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
+        var pluginManager = runtimeServiceProvider.GetRequiredService<PluginManager>();
+        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), new Version(3, 0, 0));
+        IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
+
         var pluginList = discoveredPlugins.ToList();
         runtimeServiceProvider.Register(static registrator =>
             registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
@@ -142,55 +146,23 @@ public sealed class CliHost(
         return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
     }
 
-    internal static IReadOnlyList<string> GetPluginDirectories(string? appDataRoot = null)
+    internal static string? TryReadPluginPathFromAppSettings()
     {
-        var pluginPath = TryReadPluginPathFromAppSettings(appDataRoot);
-        return string.IsNullOrWhiteSpace(pluginPath)
-            ? []
-            : [pluginPath];
-    }
-
-    internal static string? TryReadPluginPathFromAppSettings(string? appDataRoot = null)
-    {
-        static string? ResolveFromGlobalContainer()
+        try
         {
             SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
             var runtimeProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
             runtimeProvider.Register(static registrator =>
                 registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
-            var appOptionsRepository = runtimeProvider.GetRequiredService<AppOptionsDocumentRepository>();
+            var repositoryManager = runtimeProvider.GetRequiredService<RepositoryManager>();
+            var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
             var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
             return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
         }
-
-        try
-        {
-            if (string.IsNullOrWhiteSpace(appDataRoot))
-            {
-                return ResolveFromGlobalContainer();
-            }
-
-            var previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-            try
-            {
-                Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-                return ResolveFromGlobalContainer();
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-            }
-        }
         catch
         {
-            var fallback = GetInstalledPluginsPath();
-            return string.IsNullOrWhiteSpace(fallback) ? null : fallback;
+            return null;
         }
-    }
-
-    private static string GetInstalledPluginsPath()
-    {
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
     }
 
     private async Task<CliExitCodes> ExecuteSystemCommandAsync(
@@ -625,18 +597,6 @@ public sealed class CliHost(
         }
 
         return commandPaths.ToArray();
-    }
-
-    private static Task<IReadOnlyList<DiscoveredPlugin>> LoadDiscoveredPluginsAsync(
-        Version hostVersion,
-        CancellationToken cancellationToken = default)
-    {
-        var pluginDirectories = GetPluginDirectories();
-        SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
-        var serviceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
-        var pluginManager = serviceProvider.GetRequiredService<PluginManager>();
-        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
-        return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());
     }
 
     private static string GetVersionText()
