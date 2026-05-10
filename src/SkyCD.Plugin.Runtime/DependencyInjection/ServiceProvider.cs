@@ -83,6 +83,21 @@ public sealed class ServiceProvider : IDisposable
         RebuildContainer();
     }
 
+    public ServiceProvider CreateSubcontainer(Action<IContainer> register)
+    {
+        ArgumentNullException.ThrowIfNull(register);
+        var snapshot = registrations.ToArray();
+        return new ServiceProvider(container =>
+        {
+            foreach (var registration in snapshot)
+            {
+                registration(container);
+            }
+
+            register(container);
+        });
+    }
+
     public void Dispose()
     {
         container.Dispose();

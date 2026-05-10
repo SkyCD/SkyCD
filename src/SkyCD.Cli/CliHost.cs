@@ -21,6 +21,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -104,9 +105,10 @@ public sealed class CliHost(
         var pluginList = discoveredPlugins.ToList();
         runtimeServiceProvider.Register(static registrator =>
             registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
-        runtimeServiceProvider.Register(registrator => CliRuntimeServiceRegistrator.RegisterPluginServices(registrator, pluginList));
-        var fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
-        var registry = runtimeServiceProvider.GetRequiredService<CliContributionRegistry>();
+        using var pluginServiceProvider = runtimeServiceProvider.CreateSubcontainer(
+            registrator => PluginServiceRegistrator.RegisterServices(registrator, pluginList));
+        var fileFormatManager = pluginServiceProvider.GetRequiredService<FileFormatManager>();
+        var registry = pluginServiceProvider.GetRequiredService<CliContributionRegistry>();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
             .OfType<ICliPluginCapability>();

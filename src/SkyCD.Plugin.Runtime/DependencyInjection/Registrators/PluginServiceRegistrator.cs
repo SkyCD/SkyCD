@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Collections.Generic;
 using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
@@ -38,6 +40,15 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
                 registrator.AddPluginService(interfaceType, capability);
             }
         }
+    }
+
+    public static void RegisterServices(IRegistrator registrator, IReadOnlyList<DiscoveredPlugin> plugins)
+    {
+        registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(plugins, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
+            plugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.AddPluginRegistrator(plugins);
     }
 
 }
