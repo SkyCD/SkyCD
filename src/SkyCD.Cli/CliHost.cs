@@ -8,11 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
-using SkyCD.Cli.Command;
 using SkyCD.Cli.Console;
 using SkyCD.Cli.Console.FileFormats;
 using SkyCD.Cli.Console.Plugins;
 using SkyCD.Cli.DependencyInjection;
+using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
 using SkyCD.Couchbase;
@@ -137,7 +137,7 @@ public sealed class CliHost(
             try
             {
                 CliCommandExecutionContextScope.Current = context;
-                var exitCode = await PluginCommandExecutor.ExecutePluginCommandAsync(
+                var exitCode = await ExecuteContributionCommandAsync(
                     ConsoleRedirectLock,
                     stdout,
                     stderr,
@@ -198,28 +198,19 @@ public sealed class CliHost(
         try
         {
             CliCommandExecutionContextScope.Current = context;
-            var appRunner = new AppRunner<RootCommand>().UseDefaultMiddleware();
-            int exitCode;
-            lock (ConsoleRedirectLock)
-            {
-                var previousOut = System.Console.Out;
-                var previousError = System.Console.Error;
-                try
-                {
-                    System.Console.SetOut(TextWriter.Synchronized(stdout));
-                    System.Console.SetError(TextWriter.Synchronized(stderr));
-                    exitCode = appRunner.Run(runnerArgs);
-                }
-                finally
-                {
-                    System.Console.SetOut(previousOut);
-                    System.Console.SetError(previousError);
-                }
-            }
-
-            return System.Enum.IsDefined(typeof(CliExitCodes), exitCode)
-                ? (CliExitCodes)exitCode
-                : CliExitCodes.InvalidArguments;
+            var systemContribution = new RegisteredCliContribution(
+                OwnerId: "skycd-host",
+                CommandPath: "skycd",
+                CommandInstance: new RootCommand());
+            return await ExecuteContributionCommandAsync(
+                ConsoleRedirectLock,
+                stdout,
+                stderr,
+                jsonOptions,
+                systemContribution,
+                runnerArgs,
+                jsonOutput,
+                cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -507,4 +498,169 @@ public sealed class CliHost(
                       ?? "unknown";
         return $"SkyCD {version}";
     }
+
+    private static async Task<CliExitCodes> ExecuteContributionCommandAsync(
+        Lock consoleRedirectLock,
+        TextWriter stdout,
+        TextWriter stderr,
+        JsonSerializerOptions jsonOptions,
+        RegisteredCliContribution command,
+        IReadOnlyList<string> pluginArgs,
+        bool jsonOutput,
+        CancellationToken cancellationToken)
+    {
+        var executionResult = await ExecuteWithTimeoutAsync(
+            token => InvokeContributionCommandAsync(consoleRedirectLock, stdout, stderr, command, pluginArgs, token),
+            cancellationToken);
+
+        if (!executionResult.Success)
+        {
+            await stderr.WriteLineAsync(executionResult.Error ?? "Plugin command failed.");
+            return CliExitCodes.CommandFailed;
+        }
+
+        if (!string.IsNullOrWhiteSpace(executionResult.Output))
+        {
+            await stdout.WriteLineAsync(executionResult.Output);
+        }
+        else if (jsonOutput)
+        {
+            await stdout.WriteJsonAsync(new
+            {
+                success = true,
+                command = command.CommandPath
+            }, jsonOptions);
+        }
+
+        return executionResult.ExitCode;
+    }
+
+    private static async Task<ContributionCommandExecutionResult> InvokeContributionCommandAsync(
+        Lock consoleRedirectLock,
+        TextWriter stdout,
+        TextWriter stderr,
+        RegisteredCliContribution command,
+        IReadOnlyList<string> pluginArgs,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var runnerType = typeof(AppRunner<>).MakeGenericType(command.CommandInstance.GetType());
+            var runner = Activator.CreateInstance(runnerType, new AppSettings(), new Resources())
+                         ?? throw new CliRunnerCreationException(command.CommandPath);
+
+            var runMethod = runner.GetType().GetMethod("Run", [typeof(string[])])
+                           ?? throw new CliRunnerMethodResolutionException(command.CommandPath);
+
+            var canonicalPluginArgs = CanonicalizeCommandTokens(command.CommandInstance.GetType(), pluginArgs);
+            var normalizedArgs = NormalizeSystemRunnerArgs(canonicalPluginArgs);
+            var exitCode = await Task.Run(() =>
+            {
+                lock (consoleRedirectLock)
+                {
+                    var previousOut = System.Console.Out;
+                    var previousError = System.Console.Error;
+                    try
+                    {
+                        System.Console.SetOut(TextWriter.Synchronized(stdout));
+                        System.Console.SetError(TextWriter.Synchronized(stderr));
+                        return (int)(runMethod.Invoke(runner, [normalizedArgs]) ?? (int)CliExitCodes.Success);
+                    }
+                    finally
+                    {
+                        System.Console.SetOut(previousOut);
+                        System.Console.SetError(previousError);
+                    }
+                }
+            }, cancellationToken);
+
+            var mappedExitCode = System.Enum.IsDefined(typeof(CliExitCodes), exitCode)
+                ? (CliExitCodes)exitCode
+                : CliExitCodes.InvalidArguments;
+            return mappedExitCode == CliExitCodes.Success
+                ? new ContributionCommandExecutionResult(true, null, null, mappedExitCode)
+                : new ContributionCommandExecutionResult(false, null, $"Plugin command returned {mappedExitCode}.", mappedExitCode);
+        }
+        catch (TargetInvocationException exception)
+        {
+            return new ContributionCommandExecutionResult(false, null, exception.InnerException?.Message ?? exception.Message, CliExitCodes.CommandFailed);
+        }
+        catch (Exception exception)
+        {
+            return new ContributionCommandExecutionResult(false, null, exception.Message, CliExitCodes.CommandFailed);
+        }
+    }
+
+    private static async Task<ContributionCommandExecutionResult> ExecuteWithTimeoutAsync(
+        Func<CancellationToken, Task<ContributionCommandExecutionResult>> executor,
+        CancellationToken cancellationToken)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            return await executor(timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new ContributionCommandExecutionResult(false, null, "Plugin CLI handler timed out after 5 seconds.", CliExitCodes.CommandFailed);
+        }
+        catch (Exception exception)
+        {
+            return new ContributionCommandExecutionResult(false, null, exception.Message, CliExitCodes.CommandFailed);
+        }
+    }
+
+    private static IReadOnlyList<string> CanonicalizeCommandTokens(Type rootCommandType, IReadOnlyList<string> args)
+    {
+        if (args.Count == 0)
+        {
+            return args;
+        }
+
+        var canonical = args.ToArray();
+        var currentType = rootCommandType;
+
+        for (var index = 0; index < canonical.Length; index++)
+        {
+            var token = canonical[index];
+            if (token.StartsWith("-", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            var subcommands = GetSubcommandTypes(currentType)
+                .Select(subcommandType => new
+                {
+                    Name = GetDeclaredCommandName(subcommandType),
+                    Type = subcommandType
+                })
+                .Where(static item => !string.IsNullOrWhiteSpace(item.Name))
+                .ToList();
+
+            if (subcommands.Count == 0)
+            {
+                break;
+            }
+
+            var match = subcommands.FirstOrDefault(item =>
+                item.Name.Equals(token, StringComparison.OrdinalIgnoreCase));
+            if (match is null)
+            {
+                break;
+            }
+
+            canonical[index] = match.Name;
+            currentType = match.Type;
+        }
+
+        return canonical;
+    }
+
+    private sealed record ContributionCommandExecutionResult(
+        bool Success,
+        string? Output,
+        string? Error,
+        CliExitCodes ExitCode);
 }
