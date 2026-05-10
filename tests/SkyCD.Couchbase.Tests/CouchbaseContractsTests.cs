@@ -180,7 +180,7 @@ public class CouchbaseContractsTests
     public void CouchbaseServiceRegistrator_RegistersManagers()
     {
         using var provider = new Container();
-        CouchbaseServiceRegistrator.RegisterServices(provider);
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
 
         var databaseManager = provider.Resolve<DatabaseManager>(ifUnresolved: IfUnresolved.ReturnDefault);
         var repositoryManager = provider.Resolve<RepositoryManager>(ifUnresolved: IfUnresolved.ReturnDefault);

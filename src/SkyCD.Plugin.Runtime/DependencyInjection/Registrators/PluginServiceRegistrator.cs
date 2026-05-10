@@ -7,9 +7,9 @@ using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 
-public sealed class PluginServiceRegistrator
+public sealed class PluginServiceRegistrator : IServiceRegistrator
 {
-    public static void RegisterServices(IRegistrator registrator)
+    public void RegisterServices(IRegistrator registrator)
     {
         registrator.Register<AssembliesListFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<DiscoveredPluginFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);

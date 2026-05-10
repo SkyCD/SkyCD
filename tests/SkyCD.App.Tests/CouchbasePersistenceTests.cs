@@ -34,7 +34,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     public void MainWindowViewModel_LoadsSeededCatalogDataFromRepository()
     {
         using var provider = new Container();
-        CouchbaseServiceRegistrator.RegisterServices(provider);
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
         var repositoryManager = provider.Resolve<RepositoryManager>();
         var catalogRepository = repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository;
         Assert.NotNull(catalogRepository);

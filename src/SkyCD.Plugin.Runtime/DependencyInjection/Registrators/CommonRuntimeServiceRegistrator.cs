@@ -7,9 +7,9 @@ using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 
-public sealed class CommonRuntimeServiceRegistrator
+public sealed class CommonRuntimeServiceRegistrator : IServiceRegistrator
 {
-    public static void RegisterServices(IRegistrator registrator)
+    public void RegisterServices(IRegistrator registrator)
     {
         registrator.Register<ILoggerFactory, PlatformLoggerFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register(typeof(ILogger<>), typeof(Logger<>), reuse: Reuse.Transient, ifAlreadyRegistered: IfAlreadyRegistered.Replace);

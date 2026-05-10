@@ -115,7 +115,7 @@ public partial class App : Avalonia.Application
     {
         return new PluginServiceProvider(registrator =>
         {
-            CouchbaseServiceRegistrator.RegisterServices(registrator);
+            new CouchbaseServiceRegistrator().RegisterServices(registrator);
             registrator.RegisterDelegate(static resolver =>
             {
                 var repositoryManager = resolver.Resolve<RepositoryManager>();

@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using DryIoc;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Exceptions;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection;
 
@@ -29,20 +27,11 @@ public static class RegistratorExtensions
     }
 
     public static IRegistrator AddRegistrator<TRegistrator>(this IRegistrator registrator)
+        where TRegistrator : IServiceRegistrator, new()
     {
         ArgumentNullException.ThrowIfNull(registrator);
-
-        var registerMethod = typeof(TRegistrator).GetMethod(
-            "RegisterServices",
-            BindingFlags.Public | BindingFlags.Static,
-            [typeof(IRegistrator)]);
-
-        if (registerMethod is null)
-        {
-            throw new RegistratorMethodMissingException(typeof(TRegistrator));
-        }
-
-        registerMethod.Invoke(null, [registrator]);
+        var serviceRegistrator = new TRegistrator();
+        serviceRegistrator.RegisterServices(registrator);
         return registrator;
     }
 

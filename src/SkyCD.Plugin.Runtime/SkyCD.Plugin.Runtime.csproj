@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="DependencyInjection\IServiceRegistrator.cs" />
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>SkyCD.Plugin.Runtime.Tests</_Parameter1>
     </AssemblyAttribute>

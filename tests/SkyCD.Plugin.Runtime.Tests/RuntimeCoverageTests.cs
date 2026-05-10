@@ -167,18 +167,7 @@ public sealed class RuntimeCoverageTests
         Assert.NotNull(services.Resolve<IPluginCapability>(serviceKey: typeof(IPluginCapability), ifUnresolved: IfUnresolved.ReturnDefault));
     }
 
-    [Fact]
-    public void RegistratorExtensions_AddRegistrator_ThrowsWhenMethodMissing()
-    {
-        using var services = new Container();
-        Assert.ThrowsAny<InvalidOperationException>(() => services.AddRegistrator<MissingRegisterMethod>());
-    }
-
     private sealed class FakePluginCapability : IPluginCapability
-    {
-    }
-
-    private sealed class MissingRegisterMethod
     {
     }
 
