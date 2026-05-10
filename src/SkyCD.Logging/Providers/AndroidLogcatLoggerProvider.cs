@@ -11,7 +11,8 @@ internal sealed class AndroidLogcatLoggerProvider(string fallbackTag) : ILoggerP
     public ILogger CreateLogger(string categoryName)
     {
         var logCategory = ResolveLogCategory(categoryName);
-        return LoggerCategoryTypeHelper.CreateGenericLogger<AndroidLogcatLogger<object>>(categoryName, logCategory, categoryName);
+        return LoggerCategoryTypeHelper.CreateGenericLogger<AndroidLogcatLogger<object>>(categoryName, logCategory,
+            categoryName);
     }
 
     public void Dispose()

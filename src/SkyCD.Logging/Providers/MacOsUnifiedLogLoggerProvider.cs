@@ -20,7 +20,8 @@ internal sealed class MacOsUnifiedLogLoggerProvider(string subsystem) : ILoggerP
         var logHandle = logHandles.GetOrAdd(categoryName, static (category, subsystemName) =>
             AppleInteropHelper.CreateAppleLogHandle(subsystemName, category), subsystem);
 
-        return LoggerCategoryTypeHelper.CreateGenericLogger<MacOsLogLogger<object>>(categoryName, logHandle, categoryName);
+        return LoggerCategoryTypeHelper.CreateGenericLogger<MacOsLogLogger<object>>(categoryName, logHandle,
+            categoryName);
     }
 
     public void Dispose()

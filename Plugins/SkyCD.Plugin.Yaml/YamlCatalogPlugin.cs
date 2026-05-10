@@ -28,11 +28,13 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
             CanRead: true,
             CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
             var yaml = await reader.ReadToEndAsync(cancellationToken);
 
             if (yaml.Contains("<<:", StringComparison.Ordinal) || yaml.Contains('*'))
@@ -77,12 +79,13 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("YAML payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException("YAML payload must be a list of row dictionaries.");
 
             var orderedRows = rows
                 .Select(row => new SortedDictionary<string, string?>(StringComparer.Ordinal)

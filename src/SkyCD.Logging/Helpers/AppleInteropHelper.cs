@@ -13,6 +13,7 @@ internal static class AppleInteropHelper
     [DllImport("/usr/lib/libSystem.dylib", EntryPoint = "os_log_create")]
     public static extern IntPtr CreateAppleLogHandle(string subsystem, string category);
 
-    [DllImport("/usr/lib/libSystem.dylib", EntryPoint = "os_log_with_type", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("/usr/lib/libSystem.dylib", EntryPoint = "os_log_with_type",
+        CallingConvention = CallingConvention.Cdecl)]
     public static extern void WriteAppleLogMessage(IntPtr osLog, byte type, string format, __arglist);
 }

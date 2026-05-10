@@ -39,6 +39,5 @@ public sealed partial class OptionsPluginItem : ObservableObject
 
     public bool SupportsConfiguration { get; }
 
-    [ObservableProperty]
-    private bool isEnabled;
+    [ObservableProperty] private bool isEnabled;
 }

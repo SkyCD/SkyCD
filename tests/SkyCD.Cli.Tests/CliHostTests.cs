@@ -291,7 +291,8 @@ public sealed class CliHostTests
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
-        Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -307,7 +308,8 @@ public sealed class CliHostTests
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
-        Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unknown command 'list-formats'. Did you mean 'fileformats list'?", error.ToString(),
+            StringComparison.Ordinal);
     }
 
 
@@ -322,7 +324,8 @@ public sealed class CliHostTests
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
-        Assert.Contains("Unknown command 'pluginslist'. Did you mean 'plugins list'?", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unknown command 'pluginslist'. Did you mean 'plugins list'?", error.ToString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -336,7 +339,8 @@ public sealed class CliHostTests
 
         Assert.True(result.Handled);
         Assert.Equal(CliExitCodes.InvalidArguments, result.ExitCode);
-        Assert.Contains("Unknown command 'fileformatslist'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unknown command 'fileformatslist'. Did you mean 'fileformats list'?", error.ToString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -405,7 +409,9 @@ public sealed class CliHostTests
             var error = new StringWriter();
             var host = new CliHost(output, error);
 
-            var result = await host.TryRunAsync(["convert", "--in", inputPath, "--out", outputPath, "--in-format", "skycd-json", "--format", "skycd-csv"]);
+            var result = await host.TryRunAsync([
+                "convert", "--in", inputPath, "--out", outputPath, "--in-format", "skycd-json", "--format", "skycd-csv"
+            ]);
 
             Assert.True(result.Handled);
             Assert.Equal(CliExitCodes.Success, result.ExitCode);
@@ -449,6 +455,4 @@ public sealed class CliHostTests
         Assert.Contains("skycd-json", output.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, error.ToString());
     }
-
-
 }

@@ -9,14 +9,11 @@ public partial class LoginDialogViewModel : ObservableObject
         !string.IsNullOrWhiteSpace(Username) &&
         !string.IsNullOrWhiteSpace(Password);
 
-    [ObservableProperty]
-    private string username = string.Empty;
+    [ObservableProperty] private string username = string.Empty;
 
-    [ObservableProperty]
-    private string password = string.Empty;
+    [ObservableProperty] private string password = string.Empty;
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()

@@ -24,7 +24,8 @@ public partial class BrowserItemsView : UserControl
         AvaloniaProperty.Register<BrowserItemsView, IEnumerable?>(nameof(ItemsSource));
 
     public static readonly StyledProperty<object?> SelectedItemProperty =
-        AvaloniaProperty.Register<BrowserItemsView, object?>(nameof(SelectedItem), defaultBindingMode: BindingMode.TwoWay);
+        AvaloniaProperty.Register<BrowserItemsView, object?>(nameof(SelectedItem),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<BrowserViewMode> ViewModeProperty =
         AvaloniaProperty.Register<BrowserItemsView, BrowserViewMode>(nameof(ViewMode), BrowserViewMode.Details);
@@ -168,7 +169,8 @@ public partial class BrowserItemsView : UserControl
 
         detailsListView.IsVisible = ViewMode == BrowserViewMode.Details;
         listModeListBox.IsVisible = ViewMode == BrowserViewMode.List;
-        iconGridListBox.IsVisible = ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
+        iconGridListBox.IsVisible =
+            ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
         IsTilesMode = ViewMode == BrowserViewMode.Tiles;
     }
 

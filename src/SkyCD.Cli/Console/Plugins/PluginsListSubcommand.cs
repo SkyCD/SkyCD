@@ -70,7 +70,8 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
             {
                 PluginId = plugin.Id,
                 DisplayName = plugin.Name,
-                Capabilities = plugin.Capabilities.Select(static capability => capability.GetType().Name).OrderBy(static name => name).ToArray(),
+                Capabilities = plugin.Capabilities.Select(static capability => capability.GetType().Name)
+                    .OrderBy(static name => name).ToArray(),
                 Formats = formatsByPlugin.TryGetValue(plugin.Id, out var formats)
                     ? formats
                     : Array.Empty<string>()
@@ -83,7 +84,8 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
             await stdout.WriteJsonAsync(new
             {
                 plugins = pluginInfo,
-                cliCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
+                cliCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
                 pluginDirectories = pluginDirectories
             }, jsonOptions);
             return CliExitCodes.Success;
@@ -104,7 +106,8 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
             }
         }
 
-        var pluginCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+        var pluginCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         if (pluginCommands.Length > 0)
         {
             await stdout.WriteLineAsync("Plugin CLI commands:");

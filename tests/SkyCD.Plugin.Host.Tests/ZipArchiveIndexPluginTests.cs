@@ -33,12 +33,13 @@ public class ZipArchiveIndexPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var stream = new MemoryStream();
 
-        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-zip",
-            Target = stream,
-            Payload = new { }
-        }));
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-zip",
+                Target = stream,
+                Payload = new { }
+            }));
 
         Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

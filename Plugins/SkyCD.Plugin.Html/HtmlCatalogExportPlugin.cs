@@ -21,7 +21,8 @@ public sealed class HtmlCatalogExportPlugin : IFileFormatPluginCapability
             CanRead: false,
             CanWrite: true);
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatReadResult
         {
@@ -30,15 +31,18 @@ public sealed class HtmlCatalogExportPlugin : IFileFormatPluginCapability
         });
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("HTML export payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException(
+                           "HTML export payload must be a list of row dictionaries.");
 
             var orderedRows = rows
-                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null, StringComparer.Ordinal)
+                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null,
+                    StringComparer.Ordinal)
                 .ToList();
 
             var builder = new StringBuilder();

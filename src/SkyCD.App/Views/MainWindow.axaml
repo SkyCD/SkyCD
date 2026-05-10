@@ -17,25 +17,32 @@
         Title="SkyCD">
 
     <Window.Resources>
-        <converters:IconGlyphConverter x:Key="IconConverter"/>
+        <converters:IconGlyphConverter x:Key="IconConverter" />
         <ControlTheme x:Key="DynamicMenuItemTheme"
                       TargetType="MenuItem"
                       BasedOn="{StaticResource {x:Type MenuItem}}">
-            <Setter Property="Padding" Value="6,1"/>
-            <Setter Property="MinHeight" Value="20"/>
-            <Setter Property="Header" Value="{ReflectionBinding DataContext.Header, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="HotKey" Value="{ReflectionBinding DataContext.HotKey, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="Icon" Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="Command" Value="{ReflectionBinding DataContext.Command, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="CommandParameter" Value="{ReflectionBinding DataContext.CommandParameter, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="ToggleType" Value="{ReflectionBinding DataContext.ToggleType, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="IsChecked" Value="{ReflectionBinding DataContext.IsChecked, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="ItemsSource" Value="{ReflectionBinding DataContext.Items, RelativeSource={RelativeSource Self}}"/>
-            <Setter Property="ItemContainerTheme" Value="{DynamicResource DynamicMenuItemTheme}"/>
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="MinHeight" Value="20" />
+            <Setter Property="Header"
+                    Value="{ReflectionBinding DataContext.Header, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="HotKey"
+                    Value="{ReflectionBinding DataContext.HotKey, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="Icon" Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="Command"
+                    Value="{ReflectionBinding DataContext.Command, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="CommandParameter"
+                    Value="{ReflectionBinding DataContext.CommandParameter, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="ToggleType"
+                    Value="{ReflectionBinding DataContext.ToggleType, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="IsChecked"
+                    Value="{ReflectionBinding DataContext.IsChecked, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="ItemsSource"
+                    Value="{ReflectionBinding DataContext.Items, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="ItemContainerTheme" Value="{DynamicResource DynamicMenuItemTheme}" />
         </ControlTheme>
         <ContextMenu x:Key="BrowserContextMenu" ItemsSource="{Binding BrowserContextMenuItems}">
             <ContextMenu.ItemContainerTheme>
-                <StaticResource ResourceKey="DynamicMenuItemTheme"/>
+                <StaticResource ResourceKey="DynamicMenuItemTheme" />
             </ContextMenu.ItemContainerTheme>
         </ContextMenu>
     </Window.Resources>
@@ -44,19 +51,19 @@
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File"
                       ItemsSource="{Binding FileMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}"/>
+                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
             <MenuItem Header="_Edit"
                       ItemsSource="{Binding EditMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}"/>
+                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
             <MenuItem Header="_View"
                       ItemsSource="{Binding ViewMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}"/>
+                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
             <MenuItem Header="_Tools"
                       ItemsSource="{Binding ToolsMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}"/>
+                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
             <MenuItem Header="_Help"
                       ItemsSource="{Binding HelpMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}"/>
+                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
         </Menu>
 
         <ct:ClassicToolbar DockPanel.Dock="Top">
@@ -65,17 +72,17 @@
                                          Padding="8,3"
                                          Command="{Binding NewCatalogCommand}"
                                          ImageSrc="/Assets/add-from-media.png"
-                                         Text="_New"/>
+                                         Text="_New" />
                 <ct:ClassicToolbarButton MinWidth="68"
                                          Padding="8,3"
                                          Command="{Binding OpenCatalogCommand}"
                                          ImageSrc="/Assets/add-from-folder.png"
-                                         Text="_Open"/>
+                                         Text="_Open" />
                 <ct:ClassicToolbarButton MinWidth="68"
                                          Padding="8,3"
                                          Command="{Binding SaveCatalogCommand}"
                                          ImageSrc="/Assets/add-from-internet.png"
-                                         Text="_Save"/>
+                                         Text="_Save" />
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>
 
@@ -84,13 +91,13 @@
                       StatusText="{Binding StatusText}"
                       ProgressText="{Binding ProgressText}"
                       IsProgressVisible="{Binding IsProgressVisible}"
-                      ProgressValue="{Binding ProgressValue}"/>
+                      ProgressValue="{Binding ProgressValue}" />
 
         <Grid x:Name="MainLayoutGrid" RowDefinitions="*">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" MinWidth="160"/>
-                <ColumnDefinition Width="4"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220" MinWidth="160" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TreeView Grid.Column="0"
                       MinWidth="160"
@@ -99,21 +106,22 @@
                       ContextRequested="OnTreeContextRequested">
                 <TreeView.Styles>
                     <Style Selector="TreeViewItem" x:DataType="vm:BrowserTreeNode">
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
                 </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Width="16" Height="16" Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}"/>
-                            <TextBlock Text="{Binding Title}"/>
+                            <Image Width="16" Height="16"
+                                   Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
+                            <TextBlock Text="{Binding Title}" />
                         </StackPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
                 <TreeView.ContextMenu>
                     <ContextMenu ItemsSource="{Binding TreeContextMenuItems}">
                         <ContextMenu.ItemContainerTheme>
-                            <StaticResource ResourceKey="DynamicMenuItemTheme"/>
+                            <StaticResource ResourceKey="DynamicMenuItemTheme" />
                         </ContextMenu.ItemContainerTheme>
                     </ContextMenu>
                 </TreeView.ContextMenu>
@@ -123,7 +131,7 @@
                           Width="4"
                           ResizeDirection="Columns"
                           Background="#CFCFCF"
-                          ShowsPreview="True"/>
+                          ShowsPreview="True" />
 
             <cl:BrowserItemsView Grid.Column="2"
                                  ListMinWidth="240"

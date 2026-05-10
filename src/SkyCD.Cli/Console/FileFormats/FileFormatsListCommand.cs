@@ -58,7 +58,8 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
 
         foreach (var format in formats)
         {
-            await stdout.WriteLineAsync($"{format.FormatId,-16} {format.DisplayName} [{string.Join(", ", format.Extensions)}]");
+            await stdout.WriteLineAsync(
+                $"{format.FormatId,-16} {format.DisplayName} [{string.Join(", ", format.Extensions)}]");
         }
 
         return CliExitCodes.Success;

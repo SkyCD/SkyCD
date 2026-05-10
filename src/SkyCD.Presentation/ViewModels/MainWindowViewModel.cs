@@ -24,9 +24,16 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private readonly IReadOnlyList<MainMenuItemViewModel> topMenuItems;
@@ -54,7 +61,8 @@ public partial class MainWindowViewModel : ObservableObject
         IStringLocalizer propertyValueLocalizer)
     {
         this.catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
-        this.propertyValueLocalizer = propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
+        this.propertyValueLocalizer =
+            propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         EnsureSeedData();
         TreeNodes = GetTreeNodes();
 
@@ -85,11 +93,26 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
+
     public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns { get; } =
     [
-        new() { Header = "Name", ValuePath = "Name", Width = new Avalonia.Controls.GridLength(1, Avalonia.Controls.GridUnitType.Star) },
-        new() { Header = "Type", ValuePath = "DisplayType", Width = new Avalonia.Controls.GridLength(150, Avalonia.Controls.GridUnitType.Pixel) },
-        new() { Header = "Size", ValuePath = "DisplaySize", Width = new Avalonia.Controls.GridLength(120, Avalonia.Controls.GridUnitType.Pixel), HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right, ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right }
+        new()
+        {
+            Header = "Name", ValuePath = "Name",
+            Width = new Avalonia.Controls.GridLength(1, Avalonia.Controls.GridUnitType.Star)
+        },
+        new()
+        {
+            Header = "Type", ValuePath = "DisplayType",
+            Width = new Avalonia.Controls.GridLength(150, Avalonia.Controls.GridUnitType.Pixel)
+        },
+        new()
+        {
+            Header = "Size", ValuePath = "DisplaySize",
+            Width = new Avalonia.Controls.GridLength(120, Avalonia.Controls.GridUnitType.Pixel),
+            HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        }
     ];
 
     public bool IsSaveEnabled => IsDirtyDocument;
@@ -171,14 +194,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => BuildTreeContextMenuItems();
 
-    [ObservableProperty]
-    private IReadOnlyList<CatalogDocument> browserItems = [];
+    [ObservableProperty] private IReadOnlyList<CatalogDocument> browserItems = [];
 
-    [ObservableProperty]
-    private BrowserTreeNode? selectedTreeNode;
+    [ObservableProperty] private BrowserTreeNode? selectedTreeNode;
 
-    [ObservableProperty]
-    private CatalogDocument? selectedBrowserItem;
+    [ObservableProperty] private CatalogDocument? selectedBrowserItem;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
@@ -205,26 +225,19 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
     private string currentSortMode = "Name";
 
-    [ObservableProperty]
-    private bool isStatusBarVisible = true;
+    [ObservableProperty] private bool isStatusBarVisible = true;
 
-    [ObservableProperty]
-    private bool isDirtyDocument;
+    [ObservableProperty] private bool isDirtyDocument;
 
-    [ObservableProperty]
-    private string statusText = DefaultStatusText;
+    [ObservableProperty] private string statusText = DefaultStatusText;
 
-    [ObservableProperty]
-    private bool isProgressVisible;
+    [ObservableProperty] private bool isProgressVisible;
 
-    [ObservableProperty]
-    private int progressValue;
+    [ObservableProperty] private int progressValue;
 
-    [ObservableProperty]
-    private CatalogDocument? clipboardItem;
+    [ObservableProperty] private CatalogDocument? clipboardItem;
 
-    [ObservableProperty]
-    private string? currentCatalogPath;
+    [ObservableProperty] private string? currentCatalogPath;
 
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
@@ -830,8 +843,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         BrowserItems = refreshedItems;
         SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
-                                 item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
-                             ?? refreshedItems.FirstOrDefault();
+                                  item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
+                              ?? refreshedItems.FirstOrDefault();
     }
 
     private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
@@ -1040,7 +1053,8 @@ public partial class MainWindowViewModel : ObservableObject
                     Separator(),
                     new MainMenuItemViewModel { Header = "_Open...", HotKey = "Ctrl+O", Command = OpenCatalogCommand },
                     new MainMenuItemViewModel { Header = "_Save", HotKey = "Ctrl+S", Command = SaveCatalogCommand },
-                    new MainMenuItemViewModel { Header = "Save _As...", HotKey = "F12", Command = SaveCatalogAsCommand },
+                    new MainMenuItemViewModel
+                        { Header = "Save _As...", HotKey = "F12", Command = SaveCatalogAsCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand },
                     Separator(),
@@ -1055,7 +1069,8 @@ public partial class MainWindowViewModel : ObservableObject
                     new MainMenuItemViewModel { Header = "_Add...", HotKey = "F2", Command = AddItemCommand },
                     new MainMenuItemViewModel { Header = "_Delete", HotKey = "Delete", Command = DeleteItemCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
+                    new MainMenuItemViewModel
+                        { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
                 ]
             },
             new MainMenuItemViewModel
@@ -1066,8 +1081,10 @@ public partial class MainWindowViewModel : ObservableObject
                     CheckedMenuItem(IsStatusBarVisible, "_StatusBar", ToggleStatusBarCommand, key: "statusbar"),
                     Separator(),
                     CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles", "view_tiles"),
-                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons", "view_small"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons", "view_large"),
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons",
+                        "view_small"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons",
+                        "view_large"),
                     CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List", "view_list"),
                     CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details", "view_details"),
                     Separator(),
@@ -1089,7 +1106,8 @@ public partial class MainWindowViewModel : ObservableObject
                 Header = "_Tools",
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+                    new MainMenuItemViewModel
+                        { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
                 ]
             },
             new MainMenuItemViewModel
@@ -1097,7 +1115,8 @@ public partial class MainWindowViewModel : ObservableObject
                 Header = "_Help",
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = "Project website in _SourceForge.NET", Command = OpenProjectWebsiteCommand },
+                    new MainMenuItemViewModel
+                        { Header = "Project website in _SourceForge.NET", Command = OpenProjectWebsiteCommand },
                     new MainMenuItemViewModel { Header = "Project area in _GitHub", Command = OpenGithubAreaCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = "_About...", Command = OpenAboutCommand }
@@ -1177,8 +1196,10 @@ public partial class MainWindowViewModel : ObservableObject
     {
         return
         [
-            new MainMenuItemViewModel { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
-            new MainMenuItemViewModel { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
+            new MainMenuItemViewModel
+                { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
+            new MainMenuItemViewModel
+                { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
             Separator(),
             new MainMenuItemViewModel
             {
@@ -1215,8 +1236,10 @@ public partial class MainWindowViewModel : ObservableObject
     {
         return
         [
-            new MainMenuItemViewModel { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "tree" },
-            new MainMenuItemViewModel { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "tree" },
+            new MainMenuItemViewModel
+                { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "tree" },
+            new MainMenuItemViewModel
+                { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "tree" },
             Separator(),
             new MainMenuItemViewModel
             {
@@ -1398,4 +1421,3 @@ public partial class MainWindowViewModel : ObservableObject
             isExpanded);
     }
 }
-

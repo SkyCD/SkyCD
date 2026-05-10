@@ -12,7 +12,8 @@ internal sealed class UnixDomainSocketSyslogLoggerProvider(string appName) : ILo
 {
     public ILogger CreateLogger(string categoryName)
     {
-        return LoggerCategoryTypeHelper.CreateGenericLogger<UnixDomainSocketSyslogLogger<object>>(categoryName, appName, categoryName, SocketPath);
+        return LoggerCategoryTypeHelper.CreateGenericLogger<UnixDomainSocketSyslogLogger<object>>(categoryName, appName,
+            categoryName, SocketPath);
     }
 
     public void Dispose()

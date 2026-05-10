@@ -5,7 +5,8 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class BrowserTreeNode : ObservableObject
 {
-    public BrowserTreeNode(string key, string title, string iconGlyph, IReadOnlyList<BrowserTreeNode> children, bool isExpanded = false)
+    public BrowserTreeNode(string key, string title, string iconGlyph, IReadOnlyList<BrowserTreeNode> children,
+        bool isExpanded = false)
     {
         Key = key;
         Title = title;
@@ -27,6 +28,5 @@ public partial class BrowserTreeNode : ObservableObject
 
     public IReadOnlyList<BrowserTreeNode> Children { get; }
 
-    [ObservableProperty]
-    private bool isExpanded;
+    [ObservableProperty] private bool isExpanded;
 }

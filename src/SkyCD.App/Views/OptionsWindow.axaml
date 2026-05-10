@@ -14,7 +14,7 @@
         Title="Options">
 
     <Design.DataContext>
-        <vm:OptionsDialogViewModel/>
+        <vm:OptionsDialogViewModel />
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -23,7 +23,7 @@
                 Padding="14,10,14,8">
             <TextBlock Text="Settings"
                        FontSize="18"
-                       FontWeight="SemiBold"/>
+                       FontWeight="SemiBold" />
         </Border>
 
         <Grid Grid.Row="1"
@@ -37,14 +37,14 @@
                     Grid.RowSpan="2">
                 <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
                     <TextBox PlaceholderText="Search"
-                             Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                             Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding FilteredSettingCategories}"
                              SelectedItem="{Binding SelectedSettingCategory}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" Margin="8,5"/>
+                                <TextBlock Text="{Binding}" Margin="8,5" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -52,7 +52,7 @@
                     <TextBlock Grid.Row="2"
                                Foreground="#8C8C8C"
                                FontSize="11"
-                               Text="Use arrows to navigate categories"/>
+                               Text="Use arrows to navigate categories" />
                 </Grid>
             </Border>
 
@@ -64,25 +64,25 @@
                 <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
                       RowSpacing="10">
                     <TextBlock FontSize="16" FontWeight="SemiBold">
-                        <Run Text="Tools"/>
-                        <Run Text="  >  "/>
-                        <Run Text="{Binding CurrentCategoryName}"/>
+                        <Run Text="Tools" />
+                        <Run Text="  >  " />
+                        <Run Text="{Binding CurrentCategoryName}" />
                     </TextBlock>
 
                     <StackPanel Grid.Row="1"
                                 IsVisible="{Binding ShowPluginPathSection}"
                                 Spacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="Project Settings" FontSize="15"/>
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                            <TextBlock Text="Project Settings" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
                         <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
-                            <TextBlock Text="Plug-in path:" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding PluginPath}"/>
+                            <TextBlock Text="Plug-in path:" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1" Text="{Binding PluginPath}" />
                             <Button Grid.Column="2"
                                     Content="Browse..."
                                     MinWidth="90"
-                                    Command="{Binding BrowsePluginPathCommand}"/>
+                                    Command="{Binding BrowsePluginPathCommand}" />
                         </Grid>
                     </StackPanel>
 
@@ -91,16 +91,16 @@
                           RowDefinitions="Auto,Auto,*"
                           RowSpacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="Plug-ins" FontSize="15"/>
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                            <TextBlock Text="Plug-ins" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
                         <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
                             <TextBox Width="260"
-                                     PlaceholderText="Type to filter installed plugins"/>
+                                     PlaceholderText="Type to filter installed plugins" />
                             <TextBlock Grid.Column="1"
                                        VerticalAlignment="Center"
                                        Foreground="#8C8C8C"
-                                       Text="{Binding InfoMessage}"/>
+                                       Text="{Binding InfoMessage}" />
                         </Grid>
                         <Border Grid.Row="2"
                                 BorderBrush="#2E2E2E"
@@ -110,8 +110,8 @@
                                     <Grid RowDefinitions="Auto,*">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                <TextBlock Text="On" FontWeight="SemiBold"/>
-                                                <TextBlock Grid.Column="1" Text="Installed" FontWeight="SemiBold"/>
+                                                <TextBlock Text="On" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="Installed" FontWeight="SemiBold" />
                                             </Grid>
                                         </Border>
                                         <ListBox Grid.Row="1"
@@ -119,12 +119,17 @@
                                                  SelectedItem="{Binding SelectedPlugin}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:OptionsPluginItem">
-                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
+                                                            Padding="8,6">
                                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                                            <CheckBox
+                                                                IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                VerticalAlignment="Top" Margin="0,2,0,0" />
                                                             <StackPanel Grid.Column="1" Spacing="2">
-                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Text="{Binding Type}" Foreground="#9CA3AF" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Type}" Foreground="#9CA3AF"
+                                                                           TextTrimming="CharacterEllipsis" />
                                                             </StackPanel>
                                                         </Grid>
                                                     </Border>
@@ -136,23 +141,25 @@
 
                                 <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="12">
                                     <StackPanel Spacing="3">
-                                        <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="18"
+                                                   FontWeight="SemiBold" />
                                         <Button Content="{Binding SelectedPlugin.Type}"
                                                 Foreground="#9CA3AF"
                                                 Background="Transparent"
                                                 BorderThickness="0"
                                                 Padding="0"
                                                 HorizontalAlignment="Left"
-                                                Command="{Binding OpenSelectedPluginAuthorUrlCommand}"/>
-                                        <TextBlock Text="{Binding SelectedPlugin.ExtendedInfo}" Foreground="#8C8C8C" TextWrapping="Wrap"/>
+                                                Command="{Binding OpenSelectedPluginAuthorUrlCommand}" />
+                                        <TextBlock Text="{Binding SelectedPlugin.ExtendedInfo}" Foreground="#8C8C8C"
+                                                   TextWrapping="Wrap" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
                                         <Button Content="Refresh"
                                                 MinWidth="90"
-                                                Command="{Binding RefreshPluginsCommand}"/>
+                                                Command="{Binding RefreshPluginsCommand}" />
                                         <Button Content="Configure"
                                                 MinWidth="90"
-                                                Command="{Binding ConfigurePluginCommand}"/>
+                                                Command="{Binding ConfigurePluginCommand}" />
                                     </StackPanel>
                                     <Border Grid.Row="2"
                                             BorderBrush="#2E2E2E"
@@ -161,7 +168,7 @@
                                             Padding="10">
                                         <TextBlock Text="{Binding InfoMessage}"
                                                    TextWrapping="Wrap"
-                                                   Foreground="#CFCFCF"/>
+                                                   Foreground="#CFCFCF" />
                                     </Border>
                                 </Grid>
                             </Grid>
@@ -172,37 +179,37 @@
                                 IsVisible="False"
                                 Spacing="6">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="Actions" FontSize="15"/>
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                            <TextBlock Text="Actions" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Content="Refresh"
                                     MinWidth="90"
-                                    Command="{Binding RefreshPluginsCommand}"/>
+                                    Command="{Binding RefreshPluginsCommand}" />
                             <Button Content="Configure"
                                     MinWidth="90"
-                                    Command="{Binding ConfigurePluginCommand}"/>
+                                    Command="{Binding ConfigurePluginCommand}" />
                         </StackPanel>
                         <TextBlock IsVisible="{Binding ShowPluginInfoSection}"
                                    Text="{Binding InfoMessage}"
-                                   TextWrapping="Wrap"/>
+                                   TextWrapping="Wrap" />
                     </StackPanel>
 
                     <StackPanel Grid.Row="2"
                                 IsVisible="{Binding ShowLanguageSection}"
                                 Spacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="Application Settings" FontSize="15"/>
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center"/>
+                            <TextBlock Text="Application Settings" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
                         <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
-                            <TextBlock Text="Language:" VerticalAlignment="Top"/>
+                            <TextBlock Text="Language:" VerticalAlignment="Top" />
                             <ListBox Grid.Column="1"
                                      ItemsSource="{Binding Languages}"
                                      SelectedItem="{Binding SelectedLanguage}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:LanguageItem">
-                                        <TextBlock Text="{Binding DisplayText}"/>
+                                        <TextBlock Text="{Binding DisplayText}" />
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
@@ -216,7 +223,7 @@
                             CornerRadius="4"
                             Padding="10">
                         <TextBlock Text="No settings match the current search."
-                                   TextWrapping="Wrap"/>
+                                   TextWrapping="Wrap" />
                     </Border>
                 </Grid>
             </Border>
@@ -229,13 +236,12 @@
                 <Button Content="Save"
                         MinWidth="90"
                         IsDefault="True"
-                        Command="{Binding ConfirmCommand}"/>
+                        Command="{Binding ConfirmCommand}" />
                 <Button Content="Cancel"
                         MinWidth="90"
                         IsCancel="True"
-                        Click="OnCancelClicked"/>
+                        Click="OnCancelClicked" />
             </StackPanel>
         </Border>
     </Grid>
 </Window>
-

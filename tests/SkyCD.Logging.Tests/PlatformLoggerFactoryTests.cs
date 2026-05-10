@@ -36,7 +36,8 @@ public sealed class PlatformLoggerFactoryTests
     [Fact]
     public void PlatformDriver_ResolvesExpectedDriverForCurrentPlatform()
     {
-        var property = typeof(PlatformLoggerFactory).GetProperty("PlatformDriver", BindingFlags.Static | BindingFlags.NonPublic);
+        var property =
+            typeof(PlatformLoggerFactory).GetProperty("PlatformDriver", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(property);
 
         var driver = property!.GetValue(null);
@@ -49,7 +50,9 @@ public sealed class PlatformLoggerFactoryTests
     [Fact]
     public void ResolveSubsystemName_UsesProvidedSubsystem()
     {
-        var method = typeof(PlatformLoggerFactory).GetMethod("ResolveSubsystemName", BindingFlags.Static | BindingFlags.NonPublic);
+        var method =
+            typeof(PlatformLoggerFactory).GetMethod("ResolveSubsystemName",
+                BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
         var result = method!.Invoke(null, ["custom.subsystem"]) as string;
@@ -60,7 +63,9 @@ public sealed class PlatformLoggerFactoryTests
     [Fact]
     public void ResolveSubsystemName_ReturnsNonEmptyForNull()
     {
-        var method = typeof(PlatformLoggerFactory).GetMethod("ResolveSubsystemName", BindingFlags.Static | BindingFlags.NonPublic);
+        var method =
+            typeof(PlatformLoggerFactory).GetMethod("ResolveSubsystemName",
+                BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
         var result = method!.Invoke(null, [null]) as string;

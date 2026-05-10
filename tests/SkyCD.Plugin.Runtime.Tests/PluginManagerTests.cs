@@ -93,13 +93,16 @@ public sealed class PluginDiscoveryCapabilityPlugin : IMenuPluginCapability, IFi
         new MenuContribution("tests.command", "Tests", "Tools")
     ];
 
-    public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default) =>
+    public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+        CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatReadResult { Success = true, Payload = new object() });
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatWriteResult { Success = false, Error = "Read-only test format." });
 }
 
@@ -108,9 +111,11 @@ public sealed class StandaloneFileFormatCapability : IFileFormatPluginCapability
     public FileFormatDescriptor SupportedFormat =>
         new("standalone", "Standalone", [".stand"], ["application/x-standalone"], CanRead: true, CanWrite: false);
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatReadResult { Success = true, Payload = "standalone" });
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatWriteResult { Success = false, Error = "Read-only." });
 }

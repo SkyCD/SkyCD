@@ -12,9 +12,11 @@ namespace SkyCD.Plugin.Host.Menu;
 /// </summary>
 public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menuCapabilities)
 {
-    private readonly IReadOnlyList<(IMenuPluginCapability Capability, IReadOnlyCollection<MenuContribution> Contributions)> _bindings = menuCapabilities
-        .Select(static capability => (capability, capability.GetMenuContributions()))
-        .ToList();
+    private readonly
+        IReadOnlyList<(IMenuPluginCapability Capability, IReadOnlyCollection<MenuContribution> Contributions)>
+        _bindings = menuCapabilities
+            .Select(static capability => (capability, capability.GetMenuContributions()))
+            .ToList();
 
     public IReadOnlyList<MenuContribution> GetMenuContributions(string? location = null)
     {

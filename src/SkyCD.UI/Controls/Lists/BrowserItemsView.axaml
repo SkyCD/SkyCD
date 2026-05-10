@@ -11,7 +11,7 @@
                             SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
                             ListContextMenu="{Binding ListContextMenu, ElementName=Root}"
                             HeaderContent="{Binding HeaderContent, ElementName=Root}"
-                            RowTemplate="{Binding DetailsRowTemplate, ElementName=Root}"/>
+                            RowTemplate="{Binding DetailsRowTemplate, ElementName=Root}" />
 
         <ListBox x:Name="ListModeListBox"
                  MinWidth="{Binding ListMinWidth, ElementName=Root}"
@@ -21,7 +21,7 @@
                  ContextMenu="{Binding ListContextMenu, ElementName=Root}">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal"/>
+                    <WrapPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
         </ListBox>
@@ -34,7 +34,7 @@
                  ContextMenu="{Binding ListContextMenu, ElementName=Root}">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal"/>
+                    <WrapPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
         </ListBox>

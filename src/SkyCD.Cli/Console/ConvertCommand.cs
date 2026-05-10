@@ -103,7 +103,8 @@ internal sealed class ConvertCommand : ICliPluginCapability
         }
         else
         {
-            await stdout.WriteLineAsync($"Converted '{fullInputPath}' ({resolvedInputFormat}) -> '{fullOutputPath}' ({resolvedOutputFormat}).");
+            await stdout.WriteLineAsync(
+                $"Converted '{fullInputPath}' ({resolvedInputFormat}) -> '{fullOutputPath}' ({resolvedOutputFormat}).");
         }
 
         return CliExitCodes.Success;

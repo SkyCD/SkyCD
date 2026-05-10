@@ -84,7 +84,9 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
         if (!string.IsNullOrWhiteSpace(explicitFormatId))
         {
-            return formats.Any(format => format.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase)) ? explicitFormatId : throw new FileFormatHandlerResolutionException();
+            return formats.Any(format => format.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase))
+                ? explicitFormatId
+                : throw new FileFormatHandlerResolutionException();
         }
 
         var extension = Path.GetExtension(path);
@@ -99,7 +101,8 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
     }
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);
         if (!formatHandler.SupportedFormat.CanRead)
@@ -116,7 +119,8 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return result;
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);
         if (!formatHandler.SupportedFormat.CanWrite)
@@ -141,7 +145,9 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             }
         }
 
-        return !string.IsNullOrWhiteSpace(fileName) ? GetInstanceFor(fileName) : throw new FileFormatHandlerResolutionException();
+        return !string.IsNullOrWhiteSpace(fileName)
+            ? GetInstanceFor(fileName)
+            : throw new FileFormatHandlerResolutionException();
     }
 
     private static FileFormatFilterCollection BuildFilters(IReadOnlyList<FileFormatDescriptor> formats)

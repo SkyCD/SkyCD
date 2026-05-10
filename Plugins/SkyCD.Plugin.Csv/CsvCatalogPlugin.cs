@@ -23,11 +23,13 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
             CanRead: true,
             CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
             var headerLine = await reader.ReadLineAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(headerLine))
             {
@@ -89,12 +91,14 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = ResolveRows(request.Payload);
-            using var writer = new StreamWriter(request.Target, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
+            using var writer = new StreamWriter(request.Target,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
             await writer.WriteLineAsync(string.Join(",", HeaderColumns));
 
             foreach (var row in rows)

@@ -15,7 +15,8 @@ public partial class DetailsListView : UserControl
         AvaloniaProperty.Register<DetailsListView, IEnumerable?>(nameof(ItemsSource));
 
     public static readonly StyledProperty<object?> SelectedItemProperty =
-        AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem), defaultBindingMode: BindingMode.TwoWay);
+        AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<object?> HeaderContentProperty =
         AvaloniaProperty.Register<DetailsListView, object?>(nameof(HeaderContent));

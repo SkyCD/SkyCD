@@ -38,10 +38,11 @@ internal static class CliStdIo
         {
             var safeHandle = new SafeFileHandle(stdHandle, ownsHandle: false);
             var stream = new FileStream(safeHandle, FileAccess.Write);
-            return TextWriter.Synchronized(new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
-            {
-                AutoFlush = true
-            });
+            return TextWriter.Synchronized(
+                new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+                {
+                    AutoFlush = true
+                });
         }
         catch
         {

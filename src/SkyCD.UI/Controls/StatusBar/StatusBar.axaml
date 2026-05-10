@@ -6,16 +6,16 @@
             BorderThickness="1,1,0,0"
             Padding="8,4">
         <Grid ColumnDefinitions="*,Auto,120" ColumnSpacing="10">
-            <TextBlock Text="{Binding StatusText, ElementName=Root}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding StatusText, ElementName=Root}" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProgressText, ElementName=Root}"
                        VerticalAlignment="Center"
-                       IsVisible="{Binding IsProgressVisible, ElementName=Root}"/>
+                       IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
             <ProgressBar Grid.Column="2"
                          Minimum="{Binding ProgressMin, ElementName=Root}"
                          Maximum="{Binding ProgressMax, ElementName=Root}"
                          Value="{Binding ProgressValue, ElementName=Root}"
-                         IsVisible="{Binding IsProgressVisible, ElementName=Root}"/>
+                         IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
         </Grid>
     </Border>
 </UserControl>

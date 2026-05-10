@@ -158,4 +158,3 @@ public class UISmokeTests
         return new MainWindowViewModel(TestCatalogEntries.Default());
     }
 }
-

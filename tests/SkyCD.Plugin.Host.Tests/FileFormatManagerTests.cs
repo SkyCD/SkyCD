@@ -121,10 +121,12 @@ public class FileFormatManagerTests
         public FileFormatDescriptor SupportedFormat =>
             new("readonly-json", "Read Only JSON", [".json"], ["application/json"], CanRead: true, CanWrite: false);
 
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(new FileFormatReadResult { Success = true, Payload = "readonly" });
 
-        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
+        public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(new FileFormatWriteResult { Success = false, Error = "not allowed" });
     }
 
@@ -133,7 +135,8 @@ public class FileFormatManagerTests
         public FileFormatDescriptor SupportedFormat =>
             new("rw-json", "Read/Write JSON", [".json"], ["application/json"], CanRead: true, CanWrite: true);
 
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+            CancellationToken cancellationToken = default)
         {
             request.Source.Position = 0;
             using var reader = new StreamReader(request.Source, leaveOpen: true);
@@ -141,7 +144,8 @@ public class FileFormatManagerTests
             return Task.FromResult(new FileFormatReadResult { Success = true, Payload = text });
         }
 
-        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+            CancellationToken cancellationToken = default)
         {
             using var writer = new StreamWriter(request.Target, leaveOpen: true);
             await writer.WriteAsync("ok");
@@ -157,7 +161,8 @@ public class FileFormatManagerTests
             new MenuContribution("tests.menu.throw", "Throw", "Tools")
         ];
 
-        public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)
+        public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+            CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("expected test failure");
         }

@@ -59,7 +59,7 @@ public class DatabaseManager : IDisposable
         ArgumentNullException.ThrowIfNull(documentType);
 
         var mapping = documentType.GetCustomAttribute<CouchbaseDocument>()
-            ?? throw new CouchbaseDocumentAttributeMissingException(documentType);
+                      ?? throw new CouchbaseDocumentAttributeMissingException(documentType);
 
         var connectionKey = string.IsNullOrWhiteSpace(mapping.Database) ? "default" : mapping.Database;
         return GetDatabase(connectionKey);

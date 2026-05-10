@@ -76,11 +76,12 @@ public class JsonCatalogPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("{\"payload\":{\"title\":\"x\"}}"));
 
-        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-json",
-            Source = stream
-        }));
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            service.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "skycd-json",
+                Source = stream
+            }));
 
         Assert.Contains("schemaVersion", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

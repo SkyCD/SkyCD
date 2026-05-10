@@ -11,8 +11,10 @@ public sealed class CommonRuntimeServiceRegistrator : IServiceRegistrator
 {
     public void RegisterServices(IRegistrator registrator)
     {
-        registrator.Register<ILoggerFactory, PlatformLoggerFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-        registrator.Register(typeof(ILogger<>), typeof(Logger<>), reuse: Reuse.Transient, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<ILoggerFactory, PlatformLoggerFactory>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register(typeof(ILogger<>), typeof(Logger<>), reuse: Reuse.Transient,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<FileFormatManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<MenuExtensionManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<ModalExtensionManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);

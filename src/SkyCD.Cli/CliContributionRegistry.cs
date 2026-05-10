@@ -64,7 +64,8 @@ internal sealed class CliContributionRegistry : IDisposable
         var commandPath = GetDeclaredCommandName(capability.GetType());
         if (string.IsNullOrWhiteSpace(commandPath))
         {
-            errors.Add($"Plugin '{ownerId}' CLI capability '{capability.GetType().FullName}' is missing [Command(\"name\")] attribute.");
+            errors.Add(
+                $"Plugin '{ownerId}' CLI capability '{capability.GetType().FullName}' is missing [Command(\"name\")] attribute.");
             return;
         }
 
@@ -83,7 +84,9 @@ internal sealed class CliContributionRegistry : IDisposable
 
     private static string GetDeclaredCommandName(Type commandType)
     {
-        var commandAttributeData = commandType.CustomAttributes.FirstOrDefault(attribute => attribute.AttributeType.Name == "CommandAttribute");
+        var commandAttributeData =
+            commandType.CustomAttributes.FirstOrDefault(attribute =>
+                attribute.AttributeType.Name == "CommandAttribute");
         if (commandAttributeData is null)
         {
             return string.Empty;

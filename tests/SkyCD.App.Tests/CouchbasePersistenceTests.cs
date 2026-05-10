@@ -192,7 +192,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
         var result = doc.FromDocument<DateContainerDocument>();
 
         Assert.NotNull(result);
-        Assert.Equal(DateTimeOffset.Parse(isoValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), result!.Timestamp);
+        Assert.Equal(DateTimeOffset.Parse(isoValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+            result!.Timestamp);
     }
 
     public void Dispose()

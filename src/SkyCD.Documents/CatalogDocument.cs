@@ -10,13 +10,11 @@ namespace SkyCD.Documents;
 [CouchbaseDocument("catalog", repositoryType: typeof(CatalogDocumentRepository))]
 public sealed class CatalogDocument
 {
-    [Id]
-    public string Id { get; init; } = string.Empty;
+    [Id] public string Id { get; init; } = string.Empty;
 
     public string Name { get; init; } = string.Empty;
 
-    [ParentId]
-    public string? ParentId { get; init; }
+    [ParentId] public string? ParentId { get; init; }
 
     public CatalogDocumentType Type { get; init; } = CatalogDocumentType.File;
 

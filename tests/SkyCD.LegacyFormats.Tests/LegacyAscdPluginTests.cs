@@ -59,6 +59,7 @@ public class LegacyAscdPluginTests
         {
             return; // Skip if fixture is not available (e.g., in CI without legacy folder)
         }
+
         var bytes = await File.ReadAllBytesAsync(fixturePath);
         await using var source = new MemoryStream(bytes);
 
@@ -102,7 +103,8 @@ public class LegacyAscdPluginTests
     public async Task ReadAsync_RejectsInvalidHeader()
     {
         var plugin = new LegacyAscdPlugin();
-        var invalidText = "INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>')";
+        var invalidText =
+            "INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>')";
         var compressed = CompressText(invalidText);
         await using var source = new MemoryStream(compressed);
 

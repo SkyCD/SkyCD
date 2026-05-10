@@ -20,10 +20,10 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
             Extensions: [".scd"],
             MimeTypes: ["application/vnd.skycd.scd"],
             CanRead: true,
-            CanWrite: true)
-    ;
+            CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -70,7 +70,8 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.Payload is not LegacyScdCatalog catalog)
         {

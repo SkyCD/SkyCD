@@ -9,8 +9,7 @@ public sealed partial class MainMenuItemViewModel : ObservableObject
 {
     public string? Key { get; init; }
 
-    [ObservableProperty]
-    private string header = string.Empty;
+    [ObservableProperty] private string header = string.Empty;
 
     public string? HotKey { get; init; }
 
@@ -22,8 +21,7 @@ public sealed partial class MainMenuItemViewModel : ObservableObject
 
     public MenuItemToggleType ToggleType { get; init; }
 
-    [ObservableProperty]
-    private bool isChecked;
+    [ObservableProperty] private bool isChecked;
 
     public IReadOnlyList<MainMenuItemViewModel> Items { get; init; } = [];
 }

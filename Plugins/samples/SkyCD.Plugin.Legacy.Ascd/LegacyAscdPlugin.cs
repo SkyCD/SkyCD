@@ -21,10 +21,10 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             Extensions: [".ascd"],
             MimeTypes: ["application/vnd.skycd.ascd"],
             CanRead: true,
-            CanWrite: true)
-    ;
+            CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -99,7 +99,8 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.Payload is not LegacyAscdCatalog catalog)
         {
@@ -192,6 +193,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
                 // Simple quote tracking (it's actually '' for escaped quotes in SQL, but this is simple enough)
                 inQuotes = !inQuotes;
             }
+
             if (!inQuotes && line[i] == ')')
             {
                 closeParen = i;
@@ -239,7 +241,8 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         return true;
     }
 
-    private static bool TryParseQuotedValues(string text, int startIndex, int endIndex, out List<string> values, out string error)
+    private static bool TryParseQuotedValues(string text, int startIndex, int endIndex, out List<string> values,
+        out string error)
     {
         values = [];
         var index = startIndex;
@@ -312,7 +315,8 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
 
     private static string BuildInsertStatement(LegacyAscdEntry entry)
     {
-        return $"INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('{EscapeSqlLiteral(entry.Id)}', '{EscapeSqlLiteral(entry.Name)}', '{EscapeSqlLiteral(entry.ParentId)}', '{EscapeSqlLiteral(entry.Type)}', '{EscapeSqlLiteral(entry.PropertiesXml)}', '{entry.SizeBytes}', '{EscapeSqlLiteral(entry.ApplicationId)}')";
+        return
+            $"INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('{EscapeSqlLiteral(entry.Id)}', '{EscapeSqlLiteral(entry.Name)}', '{EscapeSqlLiteral(entry.ParentId)}', '{EscapeSqlLiteral(entry.Type)}', '{EscapeSqlLiteral(entry.PropertiesXml)}', '{entry.SizeBytes}', '{EscapeSqlLiteral(entry.ApplicationId)}')";
     }
 
     private static string EscapeSqlLiteral(string value) => value.Replace("'", "''", StringComparison.Ordinal);

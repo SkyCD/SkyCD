@@ -25,11 +25,13 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
             CanRead: true,
             CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
             var text = await reader.ReadToEndAsync(cancellationToken);
             var model = TomlSerializer.Deserialize<TomlTable>(text);
             if (model is null)
@@ -82,12 +84,13 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("TOML payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException("TOML payload must be a list of row dictionaries.");
 
             var table = new TomlTable
             {
@@ -99,15 +102,19 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
             };
 
             var array = new TomlTableArray();
-            foreach (var row in rows.OrderBy(row => row.TryGetValue("nodeId", out var id) ? id?.ToString() : null, StringComparer.Ordinal))
+            foreach (var row in rows.OrderBy(row => row.TryGetValue("nodeId", out var id) ? id?.ToString() : null,
+                         StringComparer.Ordinal))
             {
                 var nodeTable = new TomlTable();
 
-                if (row.TryGetValue("nodeId", out var nodeId) && nodeId is not null) nodeTable["nodeId"] = nodeId.ToString()!;
-                if (row.TryGetValue("parentId", out var parentId) && parentId is not null) nodeTable["parentId"] = parentId.ToString()!;
+                if (row.TryGetValue("nodeId", out var nodeId) && nodeId is not null)
+                    nodeTable["nodeId"] = nodeId.ToString()!;
+                if (row.TryGetValue("parentId", out var parentId) && parentId is not null)
+                    nodeTable["parentId"] = parentId.ToString()!;
                 if (row.TryGetValue("kind", out var kind) && kind is not null) nodeTable["kind"] = kind.ToString()!;
                 if (row.TryGetValue("name", out var name) && name is not null) nodeTable["name"] = name.ToString()!;
-                if (row.TryGetValue("sizeBytes", out var sizeBytes) && sizeBytes is not null) nodeTable["sizeBytes"] = sizeBytes.ToString()!;
+                if (row.TryGetValue("sizeBytes", out var sizeBytes) && sizeBytes is not null)
+                    nodeTable["sizeBytes"] = sizeBytes.ToString()!;
 
                 array.Add(nodeTable);
             }

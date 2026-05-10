@@ -13,7 +13,8 @@ public sealed class SampleMenuPlugin : IMenuPluginCapability
         new MenuContribution("sample.menu.notify", "Notification", "Tools", Order: 100)
     ];
 
-    public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)
+    public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+        CancellationToken cancellationToken = default)
     {
         if (!commandId.Equals("sample.menu.notify", StringComparison.OrdinalIgnoreCase))
         {

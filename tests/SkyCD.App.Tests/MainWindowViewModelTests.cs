@@ -184,7 +184,11 @@ public class MainWindowViewModelTests
         foreach (var mode in modes)
         {
             vm.SetViewModeCommand.Execute(mode);
-            var checkedCount = new[] { vm.IsDetailsViewChecked, vm.IsListViewChecked, vm.IsSmallIconsViewChecked, vm.IsLargeIconsViewChecked, vm.IsTilesViewChecked }
+            var checkedCount = new[]
+                {
+                    vm.IsDetailsViewChecked, vm.IsListViewChecked, vm.IsSmallIconsViewChecked,
+                    vm.IsLargeIconsViewChecked, vm.IsTilesViewChecked
+                }
                 .Count(c => c);
             Assert.Equal(1, checkedCount);
         }
@@ -336,7 +340,8 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel();
 
         Assert.All(vm.TreeNodes, node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
-        Assert.All(vm.TreeNodes.SelectMany(node => node.Children), node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
+        Assert.All(vm.TreeNodes.SelectMany(node => node.Children),
+            node => Assert.False(string.IsNullOrWhiteSpace(node.IconGlyph)));
         Assert.All(vm.BrowserItems, item => Assert.False(string.IsNullOrWhiteSpace(item.IconGlyph)));
     }
 
@@ -350,7 +355,8 @@ public class MainWindowViewModelTests
         Assert.False(vm.IsProgressVisible);
         Assert.Equal(0, vm.ProgressValue);
         Assert.Equal("Done.", vm.StatusText);
-        Assert.Equal(["Loading catalog...", "Parsing catalog...", "Updating browser...", "Done."], vm.StatusTransitions);
+        Assert.Equal(["Loading catalog...", "Parsing catalog...", "Updating browser...", "Done."],
+            vm.StatusTransitions);
         Assert.Equal([0, 35, 80, 100, 0], vm.ProgressTransitions);
     }
 
@@ -511,7 +517,8 @@ public class MainWindowViewModelTests
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
-        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type != SkyCD.Documents.Enum.CatalogDocumentType.Folder);
+        vm.SelectedBrowserItem =
+            vm.BrowserItems.First(item => item.Type != SkyCD.Documents.Enum.CatalogDocumentType.Folder);
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -529,7 +536,8 @@ public class MainWindowViewModelTests
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0];
-        vm.SelectedBrowserItem = vm.BrowserItems.First(item => item.Type == SkyCD.Documents.Enum.CatalogDocumentType.Folder);
+        vm.SelectedBrowserItem =
+            vm.BrowserItems.First(item => item.Type == SkyCD.Documents.Enum.CatalogDocumentType.Folder);
         PropertiesDialogRequestedEventArgs? request = null;
         vm.PropertiesRequested += (_, args) => request = args;
 
@@ -685,4 +693,3 @@ public class MainWindowViewModelTests
         return new MainWindowViewModel(TestCatalogEntries.Default());
     }
 }
-

@@ -21,10 +21,10 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
             Extensions: [".cscd"],
             MimeTypes: ["application/vnd.skycd.cscd"],
             CanRead: true,
-            CanWrite: true)
-    ;
+            CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -72,7 +72,8 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.Payload is not LegacyCscdCatalog catalog)
         {

@@ -64,6 +64,7 @@ public sealed class PlatformLoggerFactory : ILoggerFactory
         var entryName = Assembly.GetEntryAssembly()?.GetName().Name;
         return !string.IsNullOrWhiteSpace(entryName) ? entryName : AppDomain.CurrentDomain.FriendlyName;
     }
+
     public ILogger CreateLogger(string categoryName)
     {
         return inner.CreateLogger(categoryName);

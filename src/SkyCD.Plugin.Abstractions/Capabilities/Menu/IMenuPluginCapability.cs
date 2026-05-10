@@ -17,5 +17,6 @@ public interface IMenuPluginCapability : IPluginCapability
     /// <summary>
     /// Executes a contributed command.
     /// </summary>
-    Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default);
+    Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+        CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using SkyCD.UI.Controls.Lists;
+
 namespace SkyCD.Documents;
 
 public sealed class BrowserOptionsDocument

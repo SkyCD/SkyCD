@@ -8,7 +8,8 @@ namespace SkyCD.Logging.Logger;
 
 [SupportedOSPlatform(SupportedOsPlatforms.Linux)]
 [SupportedOSPlatform(SupportedOsPlatforms.FreeBsd)]
-internal sealed class UnixDomainSocketSyslogLogger<TCategoryName>(string appName, string category, string? socketPath) : ILogger<TCategoryName>
+internal sealed class UnixDomainSocketSyslogLogger<TCategoryName>(string appName, string category, string? socketPath)
+    : ILogger<TCategoryName>
 {
     private readonly int processId = Environment.ProcessId;
 

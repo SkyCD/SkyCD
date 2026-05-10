@@ -111,11 +111,15 @@ public sealed class PluginManager(
         {
             var plugin = discoveredPluginFactory.BuildFromAssembly(assembly);
 
-            return !PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion) ? null : plugin;
+            return !PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion)
+                ? null
+                : plugin;
         }
         catch (InvalidOperationException exception)
         {
-            logger.LogWarning(exception, "Skipped assembly '{AssemblyName}' because it does not expose a compatible plugin type.", assembly.FullName);
+            logger.LogWarning(exception,
+                "Skipped assembly '{AssemblyName}' because it does not expose a compatible plugin type.",
+                assembly.FullName);
             return null;
         }
     }
@@ -179,5 +183,4 @@ public sealed class PluginManager(
             pluginRepository.Save(existing.Id, existing);
         }
     }
-
 }

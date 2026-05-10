@@ -59,7 +59,8 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
                 }
                 catch (Exception exception)
                 {
-                    logger.LogWarning(exception, "Skipped '{AssemblyPath}' while scanning plugin assemblies.", fullPath);
+                    logger.LogWarning(exception, "Skipped '{AssemblyPath}' while scanning plugin assemblies.",
+                        fullPath);
                 }
             }
         }
@@ -88,8 +89,10 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
     private static int GetPriority(string fullPath)
     {
         var normalized = fullPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        var releaseSegment = $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}";
-        var debugSegment = $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}Debug{Path.DirectorySeparatorChar}";
+        var releaseSegment =
+            $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}";
+        var debugSegment =
+            $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}Debug{Path.DirectorySeparatorChar}";
 
         if (normalized.Contains(releaseSegment, StringComparison.OrdinalIgnoreCase))
         {

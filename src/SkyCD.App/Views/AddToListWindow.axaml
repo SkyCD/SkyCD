@@ -17,33 +17,33 @@
         Title="Add To List">
 
     <Design.DataContext>
-        <vm:AddToListDialogViewModel/>
+        <vm:AddToListDialogViewModel />
     </Design.DataContext>
 
     <Window.Styles>
         <Style Selector="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="Button">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="CheckBox">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="RadioButton">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="TextBox">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="TabItem">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
     </Window.Styles>
 
@@ -66,8 +66,8 @@
                         <Image Width="48"
                                Height="48"
                                Stretch="Uniform"
-                               Source="/Assets/add-from-media.png"/>
-                        <TextBlock Text="From Media" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                               Source="/Assets/add-from-media.png" />
+                        <TextBlock Text="From Media" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
                 <Button Height="70"
@@ -80,8 +80,8 @@
                         <Image Width="48"
                                Height="48"
                                Stretch="Uniform"
-                               Source="/Assets/add-from-folder.png"/>
-                        <TextBlock Text="From Folder" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                               Source="/Assets/add-from-folder.png" />
+                        <TextBlock Text="From Folder" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
                 <Button Height="70"
@@ -94,8 +94,8 @@
                         <Image Width="48"
                                Height="48"
                                Stretch="Uniform"
-                               Source="/Assets/add-from-internet.png"/>
-                        <TextBlock Text="From Internet" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                               Source="/Assets/add-from-internet.png" />
+                        <TextBlock Text="From Internet" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -104,34 +104,34 @@
         <StackPanel Grid.Column="1"
                     Grid.ColumnSpan="2"
                     Spacing="4">
-            <TextBlock Text="Select full name for selected media:"/>
-            <TextBox Text="{Binding MediaName}"/>
+            <TextBlock Text="Select full name for selected media:" />
+            <TextBox Text="{Binding MediaName}" />
         </StackPanel>
 
         <Grid Grid.Row="1"
               Grid.Column="1"
               Grid.ColumnSpan="2">
             <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="4">
-                <TextBlock Text="Select drive:"/>
+                <TextBlock Text="Select drive:" />
                 <CheckBox Content="Include Media Info"
-                          IsChecked="{Binding IncludeMediaInfo}"/>
+                          IsChecked="{Binding IncludeMediaInfo}" />
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="4">
-                <TextBlock Text="Select Folder:"/>
+                <TextBlock Text="Select Folder:" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding SourceValue}"/>
+                    <TextBox Text="{Binding SourceValue}" />
                     <Button Grid.Column="1"
                             Content="..."
-                            Width="28"/>
+                            Width="28" />
                 </Grid>
                 <CheckBox Content="Include Subfolders"
-                          IsChecked="{Binding IncludeSubfolders}"/>
+                          IsChecked="{Binding IncludeSubfolders}" />
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="4">
-                <TextBlock Text="Enter Internet address:"/>
-                <TextBox Text="{Binding SourceValue}"/>
+                <TextBlock Text="Enter Internet address:" />
+                <TextBox Text="{Binding SourceValue}" />
             </StackPanel>
         </Grid>
 
@@ -144,17 +144,17 @@
                     <RadioButton Content="As new Media"
                                  IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
-                                 CommandParameter="NewMedia"/>
+                                 CommandParameter="NewMedia" />
                     <RadioButton Content="To selected Media/Folder"
                                  IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
-                                 CommandParameter="SelectedFolder"/>
+                                 CommandParameter="SelectedFolder" />
                 </StackPanel>
             </TabItem>
             <TabItem Header="Misc">
                 <StackPanel Margin="10" Spacing="6">
                     <CheckBox Content="Include Extended Info"
-                              IsChecked="{Binding IncludeExtendedInfo}"/>
+                              IsChecked="{Binding IncludeExtendedInfo}" />
                 </StackPanel>
             </TabItem>
         </TabControl>
@@ -164,7 +164,7 @@
                    Foreground="#B00000"
                    Text="{Binding ValidationMessage}"
                    VerticalAlignment="Center"
-                   TextTrimming="CharacterEllipsis"/>
+                   TextTrimming="CharacterEllipsis" />
 
         <Grid Grid.Row="3"
               Grid.Column="2"
@@ -176,12 +176,12 @@
                     Content="OK"
                     Width="72"
                     Height="25"
-                    Command="{Binding ConfirmCommand}"/>
+                    Command="{Binding ConfirmCommand}" />
             <Button Grid.Column="1"
                     Content="Cancel"
                     Width="72"
                     Height="25"
-                    Click="OnCancelClicked"/>
+                    Click="OnCancelClicked" />
         </Grid>
     </Grid>
 </Window>

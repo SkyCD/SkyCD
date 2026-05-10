@@ -16,5 +16,4 @@ public sealed class AppOptionsDocumentRepository : RepositoryBase<AppOptionsDocu
             created.PluginPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
         });
     }
-
 }

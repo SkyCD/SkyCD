@@ -11,7 +11,6 @@ namespace SkyCD.Couchbase.Mapping;
 
 public static class DocumentMappingExtensions
 {
-
     public static MutableDocument ToMutableDocument<T>(this T source, string id)
         where T : class
     {
@@ -97,10 +96,13 @@ public static class DocumentMappingExtensions
             {
                 DateTimeOffset dateTimeOffset => dateTimeOffset,
                 DateTime dateTime => new DateTimeOffset(dateTime),
-                string stringValue when DateTimeOffset.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedOffset) => parsedOffset,
-                string stringValue when DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime) => new DateTimeOffset(parsedDateTime),
+                string stringValue when DateTimeOffset.TryParse(stringValue, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out var parsedOffset) => parsedOffset,
+                string stringValue when DateTime.TryParse(stringValue, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out var parsedDateTime) => new DateTimeOffset(parsedDateTime),
                 long unixMilliseconds => DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds),
-                double unixMillisecondsDouble => DateTimeOffset.FromUnixTimeMilliseconds(Convert.ToInt64(unixMillisecondsDouble, CultureInfo.InvariantCulture)),
+                double unixMillisecondsDouble => DateTimeOffset.FromUnixTimeMilliseconds(
+                    Convert.ToInt64(unixMillisecondsDouble, CultureInfo.InvariantCulture)),
                 _ => null
             };
         }
@@ -111,8 +113,10 @@ public static class DocumentMappingExtensions
             {
                 DateTime dateTime => dateTime,
                 DateTimeOffset dateTimeOffset => dateTimeOffset.UtcDateTime,
-                string stringValue when DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime) => parsedDateTime,
-                string stringValue when DateTimeOffset.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedOffset) => parsedOffset.UtcDateTime,
+                string stringValue when DateTime.TryParse(stringValue, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out var parsedDateTime) => parsedDateTime,
+                string stringValue when DateTimeOffset.TryParse(stringValue, CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out var parsedOffset) => parsedOffset.UtcDateTime,
                 _ => null
             };
         }
@@ -131,7 +135,8 @@ public static class DocumentMappingExtensions
                 var value = dictionaryObject.GetValue(key);
                 mapped[key] = value switch
                 {
-                    IDictionaryObject nestedDictionary => ConvertToTargetType(nestedDictionary, typeof(Dictionary<string, object?>)),
+                    IDictionaryObject nestedDictionary => ConvertToTargetType(nestedDictionary,
+                        typeof(Dictionary<string, object?>)),
                     ArrayObject nestedArray => ConvertArray(nestedArray, typeof(List<object?>)),
                     _ => value
                 };
@@ -231,5 +236,4 @@ public static class DocumentMappingExtensions
 
         return list;
     }
-
 }

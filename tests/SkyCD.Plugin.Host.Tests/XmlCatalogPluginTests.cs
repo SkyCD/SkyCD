@@ -76,11 +76,12 @@ public class XmlCatalogPluginTests
         var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(xxePayload));
 
-        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-xml",
-            Source = source
-        }));
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            service.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "skycd-xml",
+                Source = source
+            }));
 
         Assert.Contains("DTD", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

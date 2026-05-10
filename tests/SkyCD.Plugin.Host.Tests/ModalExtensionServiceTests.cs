@@ -136,7 +136,8 @@ public class ModalExtensionServiceTests
         Assert.True(modal.IsBlocking);
     }
 
-    private static IReadOnlyCollection<IModalPluginCapability> CreateCatalog(params IModalPluginCapability[] capabilities)
+    private static IReadOnlyCollection<IModalPluginCapability> CreateCatalog(
+        params IModalPluginCapability[] capabilities)
     {
         return capabilities.ToList();
     }
@@ -155,7 +156,8 @@ public class ModalExtensionServiceTests
                 IsBlocking: true,
                 AllowReentry: false);
 
-        public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
+        public Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request,
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new ModalOpenResult
             {
@@ -169,7 +171,8 @@ public class ModalExtensionServiceTests
     {
         public ModalDescriptor Modal => new("sample.modal.slow", "Slow", 400, 260);
 
-        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
+        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request,
+            CancellationToken cancellationToken = default)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
             return new ModalOpenResult { Success = true };
@@ -178,8 +181,11 @@ public class ModalExtensionServiceTests
 
     private sealed class NonReentrantControlledModalPlugin : IModalPluginCapability
     {
-        private readonly TaskCompletionSource _firstOpenStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource _allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _firstOpenStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private readonly TaskCompletionSource
+            _allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task FirstOpenStarted => _firstOpenStarted.Task;
 
@@ -187,7 +193,8 @@ public class ModalExtensionServiceTests
 
         public ModalDescriptor Modal => new("sample.modal.locked", "Locked", 420, 300, AllowReentry: false);
 
-        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request, CancellationToken cancellationToken = default)
+        public async Task<ModalOpenResult> OpenModalAsync(ModalOpenRequest request,
+            CancellationToken cancellationToken = default)
         {
             _firstOpenStarted.TrySetResult();
             await _allowCompletion.Task.WaitAsync(cancellationToken);

@@ -31,7 +31,8 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
             CanRead: true,
             CanWrite: false);
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -40,7 +41,8 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -50,7 +52,8 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
                 {
                     ["kind"] = entry.IsDirectory ? "folder" : "file",
                     ["fullPath"] = entry.Path.Replace('\\', '/'),
-                    ["name"] = entry.Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty,
+                    ["name"] = entry.Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ??
+                               string.Empty,
                     ["sizeBytes"] = entry.SizeBytes.ToString(),
                     ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
                 })
@@ -85,4 +88,3 @@ public sealed record IsoEntryInfo(
     bool IsDirectory,
     long SizeBytes,
     DateTime? ModifiedUtc);
-

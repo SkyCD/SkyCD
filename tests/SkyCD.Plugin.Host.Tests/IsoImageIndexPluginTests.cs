@@ -16,7 +16,8 @@ public class IsoImageIndexPluginTests
     [Fact]
     public void OpenFormats_IncludeIso_ButSaveFormatsDoNot()
     {
-        var service = new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
+        var service =
+            new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -28,15 +29,17 @@ public class IsoImageIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnlyIsoFormat()
     {
-        var service = new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
+        var service =
+            new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
         await using var target = new MemoryStream();
 
-        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => service.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-iso",
-            Target = target,
-            Payload = new { }
-        }));
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+            service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-iso",
+                Target = target,
+                Payload = new { }
+            }));
 
         Assert.Contains("read-only", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -48,7 +51,8 @@ public class IsoImageIndexPluginTests
         [
             new IsoEntryInfo("ROOT", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
             new IsoEntryInfo("ROOT/DEEP", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
-            new IsoEntryInfo("ROOT/DEEP/MOVIE.MKV", IsDirectory: false, SizeBytes: 8589934592L, ModifiedUtc: new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
+            new IsoEntryInfo("ROOT/DEEP/MOVIE.MKV", IsDirectory: false, SizeBytes: 8589934592L,
+                ModifiedUtc: new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
         ]);
         var service = new FileFormatManager(CreateCatalog(reader).GetCapabilities<IFileFormatPluginCapability>());
         await using var source = new MemoryStream([0x43, 0x44]); // fake stream for fixture reader

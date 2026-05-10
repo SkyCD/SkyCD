@@ -144,7 +144,8 @@ public class AboutDialogViewModelTests
     [InlineData(2, 7, 30, 12, "2 days 7 hours 30 minutes")]
     public void FormatFriendlyTime_ReturnsExpectedText(int days, int hours, int minutes, int seconds, string expected)
     {
-        var duration = TimeSpan.FromDays(days) + TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes) + TimeSpan.FromSeconds(seconds);
+        var duration = TimeSpan.FromDays(days) + TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes) +
+                       TimeSpan.FromSeconds(seconds);
 
         Assert.Equal(expected, TimeFormatting.FormatAboutDialogDuration(duration));
     }

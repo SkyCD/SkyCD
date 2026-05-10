@@ -70,7 +70,8 @@ public partial class AboutDialogViewModel : ObservableObject
             ? AppContext.BaseDirectory
             : baseDirectory;
 
-        LicensePath = ResolveLicensePath(normalizedBaseDirectory) ?? Path.Combine(normalizedBaseDirectory, "LICENSE.md");
+        LicensePath = ResolveLicensePath(normalizedBaseDirectory) ??
+                      Path.Combine(normalizedBaseDirectory, "LICENSE.md");
         LicenseText = LoadLicenseText(normalizedBaseDirectory);
 
         LoadedAssemblies = new ObservableCollection<LoadedAssemblyEntry>(
@@ -95,32 +96,23 @@ public partial class AboutDialogViewModel : ObservableObject
 
     public ObservableCollection<LoadedAssemblyEntry> LoadedAssemblies { get; }
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
-    [ObservableProperty]
-    private string cpuUsage = "0.0 %";
+    [ObservableProperty] private string cpuUsage = "0.0 %";
 
-    [ObservableProperty]
-    private double cpuPercent;
+    [ObservableProperty] private double cpuPercent;
 
-    [ObservableProperty]
-    private string workingSet = "0 B";
+    [ObservableProperty] private string workingSet = "0 B";
 
-    [ObservableProperty]
-    private string managedHeap = "0 B";
+    [ObservableProperty] private string managedHeap = "0 B";
 
-    [ObservableProperty]
-    private double memoryPercent;
+    [ObservableProperty] private double memoryPercent;
 
-    [ObservableProperty]
-    private string threadInfo = "0 threads";
+    [ObservableProperty] private string threadInfo = "0 threads";
 
-    [ObservableProperty]
-    private string uptimeFriendly = "0s";
+    [ObservableProperty] private string uptimeFriendly = "0s";
 
-    [ObservableProperty]
-    private string startTime = string.Empty;
+    [ObservableProperty] private string startTime = string.Empty;
 
     [RelayCommand]
     private void Confirm()
@@ -242,15 +234,15 @@ public partial class AboutDialogViewModel : ObservableObject
     private static string ResolveProductName(Assembly assembly)
     {
         return assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
-            ?? assembly.GetName().Name
-            ?? FallbackProductName;
+               ?? assembly.GetName().Name
+               ?? FallbackProductName;
     }
 
     private static string ResolveVersion(Assembly assembly)
     {
         return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? assembly.GetName().Version?.ToString(3)
-            ?? FallbackVersion;
+               ?? assembly.GetName().Version?.ToString(3)
+               ?? FallbackVersion;
     }
 
     private static string ResolveWebsite(Assembly assembly)

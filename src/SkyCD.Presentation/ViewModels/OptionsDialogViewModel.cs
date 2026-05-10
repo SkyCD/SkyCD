@@ -40,33 +40,26 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<string> FilteredSettingCategories { get; } = [];
 
-    [ObservableProperty]
-    private string pluginPath = string.Empty;
+    [ObservableProperty] private string pluginPath = string.Empty;
 
-    [ObservableProperty]
-    private OptionsPluginItem? selectedPlugin;
+    [ObservableProperty] private OptionsPluginItem? selectedPlugin;
 
-    [ObservableProperty]
-    private LanguageItem selectedLanguage;
+    [ObservableProperty] private LanguageItem selectedLanguage;
 
-    [ObservableProperty]
-    private string infoMessage = string.Empty;
+    [ObservableProperty] private string infoMessage = string.Empty;
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
-    [ObservableProperty]
-    private int selectedTabIndex;
+    [ObservableProperty] private int selectedTabIndex;
 
-    [ObservableProperty]
-    private string settingsSearchText = string.Empty;
+    [ObservableProperty] private string settingsSearchText = string.Empty;
 
-    [ObservableProperty]
-    private string? selectedSettingCategory;
+    [ObservableProperty] private string? selectedSettingCategory;
 
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
 
-    public string CurrentCategoryName => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
+    public string CurrentCategoryName =>
+        SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
 
     public bool IsCurrentCategoryVisibleInSearch =>
         string.IsNullOrWhiteSpace(SettingsSearchText) ||
@@ -173,6 +166,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             {
                 plugin.IsEnabled = false;
             }
+
             Plugins.Add(plugin);
         }
 

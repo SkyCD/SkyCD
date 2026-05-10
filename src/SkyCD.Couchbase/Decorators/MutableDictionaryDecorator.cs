@@ -40,7 +40,8 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
             case null:
                 dictionary.SetValue(key, null);
                 return;
-            case string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
+            case string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double
+                or decimal:
                 dictionary.SetValue(key, value);
                 return;
             case Enum enumValue:
@@ -53,16 +54,16 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
                 dictionary.SetDate(key, dateTimeOffset);
                 return;
             case IEnumerable enumerable and not string:
+            {
+                var array = new MutableArrayObject();
+                foreach (var item in enumerable)
                 {
-                    var array = new MutableArrayObject();
-                    foreach (var item in enumerable)
-                    {
-                        array.AddValue(ToMutableValue(item));
-                    }
-
-                    dictionary.SetArray(key, array);
-                    return;
+                    array.AddValue(ToMutableValue(item));
                 }
+
+                dictionary.SetArray(key, array);
+                return;
+            }
         }
 
         var nestedDictionary = new MutableDictionaryObject();
@@ -76,7 +77,8 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
         {
             case null:
                 return null;
-            case string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
+            case string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double
+                or decimal:
                 return value;
             case Enum enumValue:
                 return enumValue.ToString();
@@ -85,15 +87,15 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
             case DateTimeOffset dateTimeOffset:
                 return dateTimeOffset;
             case IEnumerable enumerable and not string:
+            {
+                var array = new MutableArrayObject();
+                foreach (var item in enumerable)
                 {
-                    var array = new MutableArrayObject();
-                    foreach (var item in enumerable)
-                    {
-                        array.AddValue(ToMutableValue(item));
-                    }
-
-                    return array;
+                    array.AddValue(ToMutableValue(item));
                 }
+
+                return array;
+            }
         }
 
         var nestedDictionary = new MutableDictionaryObject();

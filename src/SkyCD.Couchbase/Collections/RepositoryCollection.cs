@@ -63,7 +63,7 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
     {
         var repositoryInterfaceType = GetRepositoryInterfaceType(documentType);
         var initialize = repositoryInterfaceType.GetMethod(nameof(IRepository<object>.Initialize))
-            ?? throw new RepositoryConstructorInvalidException(repository.GetType());
+                         ?? throw new RepositoryConstructorInvalidException(repository.GetType());
 
         initialize.Invoke(repository, [documentType, collectionName, collection]);
     }

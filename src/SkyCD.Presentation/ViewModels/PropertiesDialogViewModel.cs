@@ -28,8 +28,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string ObjectKey { get; }
 
-    [ObservableProperty]
-    private string name;
+    [ObservableProperty] private string name;
 
     public string IconGlyph { get; }
 
@@ -37,11 +36,9 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 
-    [ObservableProperty]
-    private string comments;
+    [ObservableProperty] private string comments;
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
     [RelayCommand]
     private void Confirm()
@@ -98,5 +95,4 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
         return text;
     }
-
 }

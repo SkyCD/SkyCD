@@ -83,7 +83,8 @@ public class CouchbaseContractsTests
         Assert.Equal("Root", mutable.GetString(nameof(MappedPayload.Name)));
         Assert.Equal(2, mutable.GetInt(nameof(MappedPayload.Count)));
         Assert.NotNull(mutable.GetArray(nameof(MappedPayload.Tags)));
-        Assert.Equal("Nested", mutable.GetDictionary(nameof(MappedPayload.Child))?.GetString(nameof(ChildPayload.Name)));
+        Assert.Equal("Nested",
+            mutable.GetDictionary(nameof(MappedPayload.Child))?.GetString(nameof(ChildPayload.Name)));
     }
 
     [Fact]
@@ -205,11 +206,9 @@ public class CouchbaseContractsTests
     [CouchbaseDocument("annotated", typeof(TestTreeRepository))]
     private sealed class AnnotatedDocument
     {
-        [Id]
-        public string Id { get; set; } = string.Empty;
+        [Id] public string Id { get; set; } = string.Empty;
 
-        [ParentId]
-        public string? ParentId { get; set; }
+        [ParentId] public string? ParentId { get; set; }
 
         public string Name { get; set; } = string.Empty;
     }
