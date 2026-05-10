@@ -339,5 +339,116 @@ public sealed class CliHostTests
         Assert.Contains("Unknown command 'fileformatslist'. Did you mean 'fileformats list'?", error.ToString(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Open_ValidJsonFile_ReturnsSuccess()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"skycd-cli-open-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+        try
+        {
+            var inputPath = Path.Combine(tempDirectory, "catalog.json");
+            await File.WriteAllTextAsync(
+                inputPath,
+                """
+                {
+                  "schemaVersion": "skycd.catalog.v1",
+                  "payload": []
+                }
+                """,
+                Encoding.UTF8);
+
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var host = new CliHost(output, error);
+
+            var result = await host.TryRunAsync(["open", inputPath, "--format", "skycd-json"]);
+
+            Assert.True(result.Handled);
+            Assert.Equal(CliExitCodes.Success, result.ExitCode);
+            Assert.Contains("Opened", output.ToString(), StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Convert_JsonToCsv_ReturnsSuccess()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"skycd-cli-convert-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+        try
+        {
+            var inputPath = Path.Combine(tempDirectory, "catalog.json");
+            var outputPath = Path.Combine(tempDirectory, "catalog.csv");
+            await File.WriteAllTextAsync(
+                inputPath,
+                """
+                {
+                  "schemaVersion": "skycd.catalog.v1",
+                  "payload": [
+                    {
+                      "nodeId": "library",
+                      "parentId": "",
+                      "kind": "Folder",
+                      "name": "Library",
+                      "sizeBytes": "0"
+                    }
+                  ]
+                }
+                """,
+                Encoding.UTF8);
+
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var host = new CliHost(output, error);
+
+            var result = await host.TryRunAsync(["convert", "--in", inputPath, "--out", outputPath, "--in-format", "skycd-json", "--format", "skycd-csv"]);
+
+            Assert.True(result.Handled);
+            Assert.Equal(CliExitCodes.Success, result.ExitCode);
+            Assert.True(File.Exists(outputPath));
+            var converted = await File.ReadAllTextAsync(outputPath, Encoding.UTF8);
+            Assert.Contains("NodeId,ParentId,Kind,Name,SizeBytes", converted, StringComparison.Ordinal);
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PluginsList_ReturnsSuccess()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(output, error);
+
+        var result = await host.TryRunAsync(["plugins", "list"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        Assert.Contains("Plugin directories checked:", output.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task FileFormatsList_ReturnsSuccess()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var host = new CliHost(output, error);
+
+        var result = await host.TryRunAsync(["fileformats", "list"]);
+
+        Assert.True(result.Handled);
+        Assert.Equal(CliExitCodes.Success, result.ExitCode);
+        Assert.Contains("skycd-json", output.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
 
 }

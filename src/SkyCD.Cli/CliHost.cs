@@ -10,12 +10,15 @@ using CommandDotNet;
 using Couchbase.Lite;
 using SkyCD.Cli.Command;
 using SkyCD.Cli.Console;
+using SkyCD.Cli.Console.FileFormats;
+using SkyCD.Cli.Console.Plugins;
 using SkyCD.Cli.DependencyInjection;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -39,6 +42,9 @@ public sealed class CliHost(
     {
         WriteIndented = true
     };
+    internal TextWriter Stdout => stdout;
+    internal TextWriter Stderr => stderr;
+    internal JsonSerializerOptions JsonOptions => jsonOptions;
 
     public async Task<CliRunResult> TryRunAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -72,7 +78,7 @@ public sealed class CliHost(
                 registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
             var lightweightFileFormatManager = lightweightServiceProvider.GetRequiredService<FileFormatManager>();
             var lightweightRegistry = lightweightServiceProvider.GetRequiredService<CliContributionRegistry>();
-            lightweightRegistry.Register([]);
+            lightweightRegistry.Register(GetSystemCapabilities());
             var exitCode = await ExecuteSystemCommandAsync(
                 systemRunnerTokens,
                 jsonOutput,
@@ -101,7 +107,10 @@ public sealed class CliHost(
         runtimeServiceProvider.Register(registrator => CliRuntimeServiceRegistrator.RegisterPluginServices(registrator, pluginList));
         var fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
         var registry = runtimeServiceProvider.GetRequiredService<CliContributionRegistry>();
-        registry.Register(discoveredPlugins);
+        var pluginCapabilities = discoveredPlugins
+            .SelectMany(static plugin => plugin.Capabilities)
+            .OfType<ICliPluginCapability>();
+        registry.Register(GetSystemCapabilities().Concat(pluginCapabilities));
 
         if (registry.Errors.Count > 0)
         {
@@ -113,34 +122,36 @@ public sealed class CliHost(
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.ConfigurationError };
         }
 
-        if (ShouldHandleWithSystemRunner(routedTokens))
+        var pluginCommand = registry.ResolveCommand(routedTokens, out var consumedTokens);
+        if (pluginCommand is not null)
         {
-            var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
-            var exitCode = await ExecuteSystemCommandAsync(
-                systemRunnerTokens,
+            var pluginArgs = routedTokens.Skip(consumedTokens).ToArray();
+            var context = new CliCommandExecutionContext(
+                this,
                 jsonOutput,
                 fileFormatManager,
                 registry,
                 discoveredPlugins,
                 pluginDirectories,
                 cancellationToken);
-            return new CliRunResult { Handled = true, ExitCode = exitCode };
-        }
-
-        var pluginCommand = registry.ResolveCommand(routedTokens, out var consumedTokens);
-        if (pluginCommand is not null)
-        {
-            var pluginArgs = routedTokens.Skip(consumedTokens).ToArray();
-            var exitCode = await PluginCommandExecutor.ExecutePluginCommandAsync(
-                ConsoleRedirectLock,
-                stdout,
-                stderr,
-                jsonOptions,
-                pluginCommand,
-                pluginArgs,
-                jsonOutput,
-                cancellationToken);
-            return new CliRunResult { Handled = true, ExitCode = exitCode };
+            try
+            {
+                CliCommandExecutionContextScope.Current = context;
+                var exitCode = await PluginCommandExecutor.ExecutePluginCommandAsync(
+                    ConsoleRedirectLock,
+                    stdout,
+                    stderr,
+                    jsonOptions,
+                    pluginCommand,
+                    pluginArgs,
+                    jsonOutput,
+                    cancellationToken);
+                return new CliRunResult { Handled = true, ExitCode = exitCode };
+            }
+            finally
+            {
+                CliCommandExecutionContextScope.Current = null;
+            }
         }
 
         return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
@@ -290,119 +301,9 @@ public sealed class CliHost(
         return false;
     }
 
-    internal async Task<CliExitCodes> ExecuteOpenAsync(
-        string? file,
-        string? formatId,
-        bool jsonOutput,
-        FileFormatManager fileFormatManager,
-        CancellationToken cancellationToken)
+    private static IReadOnlyList<ICliPluginCapability> GetSystemCapabilities()
     {
-        if (string.IsNullOrWhiteSpace(file))
-        {
-            await stderr.WriteLineAsync("Missing required argument: <file>");
-            return CliExitCodes.InvalidArguments;
-        }
-
-        var fullPath = Path.GetFullPath(file);
-        if (!File.Exists(fullPath))
-        {
-            await stderr.WriteLineAsync($"File not found: {fullPath}");
-            return CliExitCodes.InvalidArguments;
-        }
-
-        var resolvedFormat = fileFormatManager.ResolveFormatId(formatId, fullPath, forWrite: false);
-        await using var source = File.OpenRead(fullPath);
-        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = resolvedFormat,
-            Source = source,
-            FileName = Path.GetFileName(fullPath)
-        }, cancellationToken);
-
-        if (jsonOutput)
-        {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
-            {
-                success = true,
-                command = "open",
-                file = fullPath,
-                formatId = resolvedFormat
-            }, jsonOptions));
-        }
-        else
-        {
-            await stdout.WriteLineAsync($"Opened '{fullPath}' as {resolvedFormat}.");
-        }
-
-        return CliExitCodes.Success;
-    }
-
-    internal async Task<CliExitCodes> ExecuteConvertAsync(
-        string? inputPath,
-        string? outputPath,
-        string? inputFormat,
-        string? outputFormat,
-        bool jsonOutput,
-        FileFormatManager fileFormatManager,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(inputPath) || string.IsNullOrWhiteSpace(outputPath))
-        {
-            await stderr.WriteLineAsync("Missing required options: --in <file> --out <file>");
-            return CliExitCodes.InvalidArguments;
-        }
-
-        var fullInputPath = Path.GetFullPath(inputPath);
-        var fullOutputPath = Path.GetFullPath(outputPath);
-
-        if (!File.Exists(fullInputPath))
-        {
-            await stderr.WriteLineAsync($"Input file not found: {fullInputPath}");
-            return CliExitCodes.InvalidArguments;
-        }
-
-        var resolvedInputFormat = fileFormatManager.ResolveFormatId(inputFormat, fullInputPath, forWrite: false);
-        var resolvedOutputFormat = fileFormatManager.ResolveFormatId(outputFormat, fullOutputPath, forWrite: true);
-
-        await using var source = File.OpenRead(fullInputPath);
-        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = resolvedInputFormat,
-            Source = source,
-            FileName = Path.GetFileName(fullInputPath)
-        }, cancellationToken);
-
-        var payload = readResult.Payload
-            ?? throw new CliSourcePayloadMissingException();
-        Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath) ?? Directory.GetCurrentDirectory());
-
-        await using var target = File.Create(fullOutputPath);
-        await fileFormatManager.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = resolvedOutputFormat,
-            Target = target,
-            FileName = Path.GetFileName(fullOutputPath),
-            Payload = payload
-        }, cancellationToken);
-
-        if (jsonOutput)
-        {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
-            {
-                success = true,
-                command = "convert",
-                inputPath = fullInputPath,
-                outputPath = fullOutputPath,
-                inputFormatId = resolvedInputFormat,
-                outputFormatId = resolvedOutputFormat
-            }, jsonOptions));
-        }
-        else
-        {
-            await stdout.WriteLineAsync($"Converted '{fullInputPath}' ({resolvedInputFormat}) -> '{fullOutputPath}' ({resolvedOutputFormat}).");
-        }
-
-        return CliExitCodes.Success;
+        return [new OpenCommand(), new ConvertCommand(), new FileFormatsCommand(), new PluginsCommand()];
     }
 
     private static bool TryGetConcatenatedSubcommandHint(
