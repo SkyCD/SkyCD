@@ -8,9 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
-using DryIoc;
 using SkyCD.Cli.Command;
 using SkyCD.Cli.Console;
+using SkyCD.Cli.DependencyInjection;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
 using SkyCD.Couchbase.DependencyInjection;
@@ -70,15 +70,8 @@ public sealed class CliHost(
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
             SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
             var lightweightServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
-            lightweightServiceProvider.Register(registrator =>
-            {
-                registrator.Register<CliContributionRegistry>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-                registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([], ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-                registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>([], ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-                registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
-                    new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase),
-                    ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-            });
+            lightweightServiceProvider.Register(static registrator =>
+                registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
             var lightweightFileFormatManager = lightweightServiceProvider.GetRequiredService<FileFormatManager>();
             var lightweightRegistry = lightweightServiceProvider.GetRequiredService<CliContributionRegistry>();
             lightweightRegistry.Register([]);
@@ -99,15 +92,9 @@ public sealed class CliHost(
         SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
         var runtimeServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
         var pluginList = discoveredPlugins.ToList();
-        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        runtimeServiceProvider.Register(registrator =>
-        {
-            registrator.Register<CliContributionRegistry>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>(pluginList, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(pluginList, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-            registrator.AddPluginRegistrator(pluginList);
-        });
+        runtimeServiceProvider.Register(static registrator =>
+            registrator.AddRegistrator<CliRuntimeServiceRegistrator>());
+        runtimeServiceProvider.Register(registrator => CliRuntimeServiceRegistrator.RegisterPluginServices(registrator, pluginList));
         var fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
         var registry = runtimeServiceProvider.GetRequiredService<CliContributionRegistry>();
         registry.Register(discoveredPlugins);
@@ -708,7 +695,8 @@ public sealed class CliHost(
             registrator
                 .AddRegistrator<CommonRuntimeServiceRegistrator>()
                 .AddRegistrator<CouchbaseServiceRegistrator>()
-                .AddRegistrator<PluginServiceRegistrator>();
+                .AddRegistrator<PluginServiceRegistrator>()
+                .AddRegistrator<CliRuntimeServiceRegistrator>();
         });
         var pluginManager = serviceProvider.GetRequiredService<PluginManager>();
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
