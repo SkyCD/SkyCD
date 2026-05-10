@@ -55,6 +55,23 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
         return created;
     }
 
+    protected TDocument GetOrCreate(string id, Action<TDocument> configureCreated)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(configureCreated);
+
+        var existing = Get(id);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var created = new TDocument();
+        TryAssignId(created, id);
+        configureCreated(created);
+        return created;
+    }
+
     public void Save(string id, TDocument value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);

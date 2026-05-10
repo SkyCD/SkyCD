@@ -1,8 +1,9 @@
 using SkyCD.Couchbase.Attributes;
+using SkyCD.Documents.Repository;
 
 namespace SkyCD.Documents;
 
-[CouchbaseDocument("settings")]
+[CouchbaseDocument("settings", typeof(AppOptionsDocumentRepository))]
 public sealed class AppOptionsDocument
 {
     public const string DocumentId = "app-options";

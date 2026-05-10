@@ -13,10 +13,10 @@ using SkyCD.Cli.Console;
 using SkyCD.Cli.DependencyInjection;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
-using SkyCD.Couchbase.DependencyInjection;
+using SkyCD.Documents;
+using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -142,34 +142,12 @@ public sealed class CliHost(
         return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
     }
 
-    internal static IReadOnlyList<string> GetPluginDirectories()
+    internal static IReadOnlyList<string> GetPluginDirectories(string? appDataRoot = null)
     {
-        var configured = Environment.GetEnvironmentVariable("SKYCD_PLUGIN_PATH");
-        var fromAppSettings = TryReadPluginPathFromAppSettings();
-        return BuildPluginDirectories(configured, fromAppSettings);
-    }
-
-    internal static IReadOnlyList<string> BuildPluginDirectories(string? configuredPluginPaths, string? appSettingsPluginPath)
-    {
-        var candidates = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(configuredPluginPaths))
-        {
-            foreach (var segment in configuredPluginPaths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                candidates.Add(Path.GetFullPath(segment));
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(appSettingsPluginPath))
-        {
-            candidates.Add(Path.GetFullPath(appSettingsPluginPath));
-        }
-
-        return candidates
-            .Where(directory => !string.IsNullOrWhiteSpace(directory))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var pluginPath = TryReadPluginPathFromAppSettings(appDataRoot);
+        return string.IsNullOrWhiteSpace(pluginPath)
+            ? []
+            : [pluginPath];
     }
 
     internal static string? TryReadPluginPathFromAppSettings(string? appDataRoot = null)
@@ -177,78 +155,36 @@ public sealed class CliHost(
         var root = appDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         if (string.IsNullOrWhiteSpace(root))
         {
-            return null;
-        }
-
-        var optionsDirectory = Path.Combine(root, "SkyCD");
-        var pluginPathFromDb = TryReadPluginPathFromSettingsCollection(optionsDirectory);
-        if (!string.IsNullOrWhiteSpace(pluginPathFromDb))
-        {
-            return pluginPathFromDb;
-        }
-
-        return TryReadLegacyPluginPathFromJson(optionsDirectory);
-    }
-
-    private static string? TryReadPluginPathFromSettingsCollection(string optionsDirectory)
-    {
-        if (!Directory.Exists(optionsDirectory))
-        {
-            return null;
+            var defaultPathFromEmptyRoot = GetInstalledPluginsPath();
+            return string.IsNullOrWhiteSpace(defaultPathFromEmptyRoot) ? null : defaultPathFromEmptyRoot;
         }
 
         try
         {
+            var optionsDirectory = Path.Combine(root, "SkyCD");
+            Directory.CreateDirectory(optionsDirectory);
             var configuration = new DatabaseConfiguration
             {
                 Directory = optionsDirectory
             };
-
             using var database = new Database("skycd", configuration);
-            var settings = database.GetCollection("settings", Collection.DefaultScopeName);
-            if (settings is null)
-            {
-                return null;
-            }
-
-            var appOptions = settings.GetDocument("app-options");
-            var pluginPath = appOptions?.GetString("pluginPath");
-            return string.IsNullOrWhiteSpace(pluginPath) ? null : pluginPath.Trim();
+            var settings = database.GetCollection("settings", Collection.DefaultScopeName)
+                           ?? database.CreateCollection("settings", Collection.DefaultScopeName);
+            var appOptionsRepository = new AppOptionsDocumentRepository();
+            appOptionsRepository.Initialize(typeof(AppOptionsDocument), "settings", settings);
+            var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
+            return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
         }
         catch
         {
-            return null;
+            var fallback = GetInstalledPluginsPath();
+            return string.IsNullOrWhiteSpace(fallback) ? null : fallback;
         }
     }
 
-    private static string? TryReadLegacyPluginPathFromJson(string optionsDirectory)
+    private static string GetInstalledPluginsPath()
     {
-        if (!Directory.Exists(optionsDirectory))
-        {
-            return null;
-        }
-
-        var optionsPath = Path.Combine(optionsDirectory, "options.json");
-        if (!File.Exists(optionsPath))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(File.ReadAllText(optionsPath));
-            if (!document.RootElement.TryGetProperty("PluginPath", out var pluginPathElement))
-            {
-                return null;
-            }
-
-            var pluginPath = pluginPathElement.GetString();
-            return string.IsNullOrWhiteSpace(pluginPath) ? null : pluginPath.Trim();
-        }
-        catch
-        {
-            return null;
-        }
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
     }
 
     private async Task<CliExitCodes> ExecuteSystemCommandAsync(
@@ -690,14 +626,8 @@ public sealed class CliHost(
         CancellationToken cancellationToken = default)
     {
         var pluginDirectories = GetPluginDirectories();
-        using var serviceProvider = new SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider(registrator =>
-        {
-            registrator
-                .AddRegistrator<CommonRuntimeServiceRegistrator>()
-                .AddRegistrator<CouchbaseServiceRegistrator>()
-                .AddRegistrator<PluginServiceRegistrator>()
-                .AddRegistrator<CliRuntimeServiceRegistrator>();
-        });
+        SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
+        var serviceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Instance;
         var pluginManager = serviceProvider.GetRequiredService<PluginManager>();
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersion);
         return Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginManager.Plugins.ToList());

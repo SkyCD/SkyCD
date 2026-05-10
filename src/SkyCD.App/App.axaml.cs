@@ -9,7 +9,6 @@ using SkyCD.App.Exceptions;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
-using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Runtime.DependencyInjection;
@@ -51,11 +50,11 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static PluginUiServices CreatePluginServices(IRepository<AppOptionsDocument> appOptionsRepository)
+    private static PluginUiServices CreatePluginServices(AppOptionsDocumentRepository appOptionsRepository)
     {
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
-        var options = appOptionsRepository.GetOrCreate(AppOptionsDocument.DocumentId);
-        var pluginPath = ResolvePluginPathOrDefault(options.PluginPath);
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        var pluginPath = options.PluginPath;
         Action<IContainer> registrations = registrator => registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
 
         var runtimeProvider = PluginServiceProvider.Instance;
@@ -83,29 +82,6 @@ public partial class App : Avalonia.Application
         return new PluginUiServices(fileFormatManager, pluginManager, runtimeProvider);
     }
 
-    private static string ResolveDefaultPluginPath()
-    {
-        var candidates = new[]
-        {
-            Path.Combine(Environment.CurrentDirectory, "Plugins"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins")),
-            Path.Combine(Environment.CurrentDirectory, "Plugins", "samples"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins", "samples"))
-        };
-
-        return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
-    }
-
-    private static string ResolvePluginPathOrDefault(string? configuredPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
-        {
-            return configuredPath;
-        }
-
-        return ResolveDefaultPluginPath();
-    }
-
     private sealed record PluginUiServices(
         FileFormatManager FileFormatManager,
         PluginManager PluginManager,
@@ -116,10 +92,10 @@ public partial class App : Avalonia.Application
         return new PluginServiceProvider(registrator =>
         {
             new CouchbaseServiceRegistrator().RegisterServices(registrator);
-            registrator.RegisterDelegate<IRepository<AppOptionsDocument>>(static resolver =>
+            registrator.RegisterDelegate<AppOptionsDocumentRepository>(static resolver =>
             {
                 var repositoryManager = resolver.Resolve<RepositoryManager>();
-                return (IRepository<AppOptionsDocument>)repositoryManager.For<AppOptionsDocument>();
+                return (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
             }, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver =>
             {
@@ -134,7 +110,7 @@ public partial class App : Avalonia.Application
             }, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver =>
             {
-                var appOptionsRepository = resolver.Resolve<IRepository<AppOptionsDocument>>();
+                var appOptionsRepository = resolver.Resolve<AppOptionsDocumentRepository>();
                 return CreatePluginServices(appOptionsRepository);
             }, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider, Reuse.Singleton);
@@ -142,7 +118,7 @@ public partial class App : Avalonia.Application
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver =>
                 new MainWindow(
-                    resolver.Resolve<IRepository<AppOptionsDocument>>(),
+                    resolver.Resolve<AppOptionsDocumentRepository>(),
                     resolver.Resolve<PluginManager>(),
                     resolver.Resolve<PluginServiceProvider>(),
                     resolver.Resolve<FileFormatManager>()),

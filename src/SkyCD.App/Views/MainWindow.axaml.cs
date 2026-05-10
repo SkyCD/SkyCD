@@ -14,9 +14,9 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
-using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
+using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Exceptions;
@@ -30,7 +30,7 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
-    private readonly IRepository<AppOptionsDocument> appOptionsRepository;
+    private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly PluginManager pluginManager;
     private readonly PluginServiceProvider runtimeServiceProvider;
     private FileFormatManager fileFormatManager;
@@ -40,7 +40,7 @@ public partial class MainWindow : Window
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
-        IRepository<AppOptionsDocument> appOptionsRepository,
+        AppOptionsDocumentRepository appOptionsRepository,
         PluginManager pluginManager,
         PluginServiceProvider runtimeServiceProvider,
         FileFormatManager fileFormatManager)
@@ -468,9 +468,7 @@ public partial class MainWindow : Window
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
     {
         var options = LoadAppOptions();
-        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
-            ? ResolveDefaultPluginPath()
-            : options.PluginPath;
+        var pluginPath = options.PluginPath;
 
         e.Dialog.PluginPath = pluginPath;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
@@ -502,7 +500,7 @@ public partial class MainWindow : Window
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
             pluginManager.SavePluginEnabledStates(pluginStates);
-            SyncPluginRuntimeState(options.PluginPath);
+            SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -613,7 +611,7 @@ public partial class MainWindow : Window
 
     private AppOptionsDocument LoadAppOptions()
     {
-        return appOptionsRepository.GetOrCreate(AppOptionsDocument.DocumentId);
+        return appOptionsRepository.GetOrCreateAppOptions();
     }
 
     private void SaveAppOptions(AppOptionsDocument options)
@@ -774,9 +772,10 @@ public partial class MainWindow : Window
         dialogVm.SetPlugins(plugins);
     }
 
-    private void SyncPluginRuntimeState(string? pluginPath)
+    private void SyncPluginRuntimeState()
     {
-        var resolvedPluginPath = ResolvePluginPathOrDefault(pluginPath);
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        var resolvedPluginPath = options.PluginPath;
 
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
 
@@ -790,29 +789,6 @@ public partial class MainWindow : Window
             registrator.AddPluginRegistrator(pluginList);
         });
         fileFormatManager = runtimeServiceProvider.GetRequiredService<FileFormatManager>();
-    }
-
-    private static string ResolveDefaultPluginPath()
-    {
-        var candidates = new[]
-        {
-            Path.Combine(Environment.CurrentDirectory, "Plugins"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins")),
-            Path.Combine(Environment.CurrentDirectory, "Plugins", "samples"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins", "samples"))
-        };
-
-        return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
-    }
-
-    private static string ResolvePluginPathOrDefault(string? configuredPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
-        {
-            return configuredPath;
-        }
-
-        return ResolveDefaultPluginPath();
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)

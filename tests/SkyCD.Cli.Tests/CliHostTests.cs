@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
@@ -67,25 +66,121 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void BuildPluginDirectories_UsesConfiguredAndAppSettingsPaths_AndDeduplicates()
+    public void GetPluginDirectories_ReturnsDefaultOrEmpty_WhenOptionsPathMissing()
     {
-        var first = Path.Combine(Path.GetTempPath(), "skycd-cli-runtime-first");
-        var second = Path.Combine(Path.GetTempPath(), "skycd-cli-runtime-second");
-        var configured = string.Join(Path.PathSeparator, [first, second, first]);
-
-        var directories = CliHost.BuildPluginDirectories(configured, second);
-
-        Assert.Equal(2, directories.Count);
-        Assert.Contains(Path.GetFullPath(first), directories, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(Path.GetFullPath(second), directories, StringComparer.OrdinalIgnoreCase);
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
+        try
+        {
+            var directories = CliHost.GetPluginDirectories(appDataRoot);
+            Assert.Single(directories);
+            Assert.Equal(GetInstalledPluginsPath(), directories[0]);
+        }
+        finally
+        {
+            Directory.Delete(appDataRoot, recursive: true);
+        }
     }
 
     [Fact]
-    public void BuildPluginDirectories_DoesNotAddLocalFallbackDirectories()
+    public void GetPluginDirectories_ReadsFromOptions()
     {
-        var directories = CliHost.BuildPluginDirectories(null, null);
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
 
-        Assert.Empty(directories);
+        try
+        {
+            var expectedPath = Path.Combine(appDataRoot, "ConfiguredPlugins");
+            Directory.CreateDirectory(expectedPath);
+            var configuration = new DatabaseConfiguration
+            {
+                Directory = Path.Combine(appDataRoot, "SkyCD")
+            };
+
+            using var database = new Database("skycd", configuration);
+            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
+            var appOptions = new MutableDocument("app-options");
+            appOptions.SetString("PluginPath", expectedPath);
+            settings.Save(appOptions);
+
+            var directories = CliHost.GetPluginDirectories(appDataRoot);
+
+            Assert.Single(directories);
+            Assert.Equal(Path.GetFullPath(expectedPath), directories[0]);
+        }
+        finally
+        {
+            Directory.Delete(appDataRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetPluginDirectories_IgnoresEnvironmentVariable()
+    {
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
+        var previousValue = Environment.GetEnvironmentVariable("SKYCD_PLUGIN_PATH");
+
+        try
+        {
+            var expectedPath = Path.Combine(appDataRoot, "ConfiguredPlugins");
+            Directory.CreateDirectory(expectedPath);
+            var envPath = Path.Combine(appDataRoot, "EnvPlugins");
+            Environment.SetEnvironmentVariable("SKYCD_PLUGIN_PATH", envPath);
+
+            var configuration = new DatabaseConfiguration
+            {
+                Directory = Path.Combine(appDataRoot, "SkyCD")
+            };
+
+            using var database = new Database("skycd", configuration);
+            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
+            var appOptions = new MutableDocument("app-options");
+            appOptions.SetString("PluginPath", expectedPath);
+            settings.Save(appOptions);
+
+            var directories = CliHost.GetPluginDirectories(appDataRoot);
+
+            Assert.Single(directories);
+            Assert.Equal(Path.GetFullPath(expectedPath), directories[0]);
+            Assert.DoesNotContain(Path.GetFullPath(envPath), directories, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SKYCD_PLUGIN_PATH", previousValue);
+            Directory.Delete(appDataRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetPluginDirectories_UsesStoredPluginPath_WhenConfiguredPathDoesNotExist()
+    {
+        var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
+
+        try
+        {
+            var missingConfiguredPath = Path.Combine(appDataRoot, "MissingPlugins");
+            var configuration = new DatabaseConfiguration
+            {
+                Directory = Path.Combine(appDataRoot, "SkyCD")
+            };
+
+            using var database = new Database("skycd", configuration);
+            var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
+            var appOptions = new MutableDocument("app-options");
+            appOptions.SetString("PluginPath", missingConfiguredPath);
+            settings.Save(appOptions);
+
+            var directories = CliHost.GetPluginDirectories(appDataRoot);
+
+            Assert.Single(directories);
+            Assert.Equal(Path.GetFullPath(missingConfiguredPath), directories[0]);
+        }
+        finally
+        {
+            Directory.Delete(appDataRoot, recursive: true);
+        }
     }
 
     [Fact]
@@ -97,6 +192,7 @@ public sealed class CliHostTests
         try
         {
             var expectedPath = Path.Combine(appDataRoot, "CustomPlugins");
+            Directory.CreateDirectory(expectedPath);
 
             var configuration = new DatabaseConfiguration
             {
@@ -106,12 +202,12 @@ public sealed class CliHostTests
             using var database = new Database("skycd", configuration);
             var settings = database.CreateCollection("settings", Collection.DefaultScopeName);
             var appOptions = new MutableDocument("app-options");
-            appOptions.SetString("pluginPath", expectedPath);
+            appOptions.SetString("PluginPath", expectedPath);
             settings.Save(appOptions);
 
             var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
 
-            Assert.Equal(expectedPath, resolved);
+            Assert.Equal(Path.GetFullPath(expectedPath), resolved);
         }
         finally
         {
@@ -120,20 +216,15 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void TryReadPluginPathFromAppSettings_FallsBackToLegacyJson_WhenSettingsCollectionMissing()
+    public void TryReadPluginPathFromAppSettings_FallsBackToDefault_WhenSettingsCollectionMissing()
     {
         var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
 
         try
         {
-            var expectedPath = Path.Combine(appDataRoot, "LegacyPlugins");
-            var optionsPath = Path.Combine(appDataRoot, "SkyCD", "options.json");
-            File.WriteAllText(optionsPath, JsonSerializer.Serialize(new { PluginPath = expectedPath }));
-
             var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
-
-            Assert.Equal(expectedPath, resolved);
+            Assert.Equal(GetInstalledPluginsPath(), resolved);
         }
         finally
         {
@@ -142,14 +233,15 @@ public sealed class CliHostTests
     }
 
     [Fact]
-    public void TryReadPluginPathFromAppSettings_ReturnsNull_WhenNoSettingsExist()
+    public void TryReadPluginPathFromAppSettings_ReturnsDefaultOrNull_WhenNoSettingsExist()
     {
         var appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-appdata-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(appDataRoot, "SkyCD"));
 
         try
         {
-            Assert.Null(CliHost.TryReadPluginPathFromAppSettings(appDataRoot));
+            var resolved = CliHost.TryReadPluginPathFromAppSettings(appDataRoot);
+            Assert.Equal(GetInstalledPluginsPath(), resolved);
         }
         finally
         {
@@ -518,6 +610,11 @@ public sealed class CliHostTests
             stdout,
             stderr,
             (_, _) => Task.FromResult<IReadOnlyList<DiscoveredPlugin>>(pluginList));
+    }
+
+    private static string GetInstalledPluginsPath()
+    {
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
     }
 
     private static IReadOnlyList<DiscoveredPlugin> CreateTestPlugins(bool includeDuplicateCommand = false)
