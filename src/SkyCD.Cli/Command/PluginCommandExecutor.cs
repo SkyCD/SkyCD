@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
+using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
 
@@ -40,11 +41,11 @@ internal static class PluginCommandExecutor
         }
         else if (jsonOutput)
         {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
+            await stdout.WriteJsonAsync(new
             {
                 success = true,
                 command = command.CommandPath
-            }, jsonOptions));
+            }, jsonOptions);
         }
 
         return executionResult.ExitCode;

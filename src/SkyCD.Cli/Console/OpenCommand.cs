@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
@@ -67,13 +68,13 @@ internal sealed class OpenCommand : ICliPluginCapability
 
         if (jsonOutput)
         {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
+            await stdout.WriteJsonAsync(new
             {
                 success = true,
                 command = "open",
                 file = fullPath,
                 formatId = resolvedFormat
-            }, jsonOptions));
+            }, jsonOptions);
         }
         else
         {

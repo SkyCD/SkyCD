@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.Cli.Execution;
+using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
@@ -23,6 +24,7 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
         return (int)await ExecuteListFormatsAsync(
             System.Console.Out,
             context.JsonOutput,
+            context.Host.JsonOptions,
             context.FileFormatManager,
             context.PluginDirectories);
     }
@@ -30,6 +32,7 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
     private static async Task<CliExitCodes> ExecuteListFormatsAsync(
         TextWriter stdout,
         bool jsonOutput,
+        JsonSerializerOptions jsonOptions,
         FileFormatManager fileFormatManager,
         IReadOnlyList<string> pluginDirectories)
     {
@@ -42,10 +45,7 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
 
         if (jsonOutput)
         {
-            await stdout.WriteLineAsync(JsonSerializer.Serialize(formats, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            }));
+            await stdout.WriteJsonAsync(formats, jsonOptions);
             return CliExitCodes.Success;
         }
 
