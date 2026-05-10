@@ -38,12 +38,17 @@ public sealed class CliHost(
 
     private static readonly SystemCommandNamespace[] SystemCommandNamespaces = DiscoverSystemCommandNamespaces();
     private static readonly string[] SystemCommandPaths = BuildSystemCommandPaths();
-    private static readonly HashSet<string> SystemCommandPathSet = SystemCommandPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> SystemCommandPathSet =
+        SystemCommandPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     private static readonly Lock ConsoleRedirectLock = new();
+
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         WriteIndented = true
     };
+
     internal TextWriter Stdout => stdout;
     internal TextWriter Stderr => stderr;
     internal JsonSerializerOptions JsonOptions => jsonOptions;
@@ -67,7 +72,8 @@ public sealed class CliHost(
 
         if (TryGetConcatenatedSubcommandHint(routedTokens, out var invalidCommandEarly, out var suggestedCommandEarly))
         {
-            await stderr.WriteLineAsync($"Unknown command '{invalidCommandEarly}'. Did you mean '{suggestedCommandEarly}'?");
+            await stderr.WriteLineAsync(
+                $"Unknown command '{invalidCommandEarly}'. Did you mean '{suggestedCommandEarly}'?");
             return new CliRunResult { Handled = true, ExitCode = CliExitCodes.InvalidArguments };
         }
 
@@ -104,7 +110,8 @@ public sealed class CliHost(
 
         var pluginList = discoveredPlugins.ToList();
         runtimeServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
-        using var pluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(runtimeServiceProvider, pluginList);
+        using var pluginServiceProvider =
+            PluginServiceRegistrator.CreatePluginSubcontainer(runtimeServiceProvider, pluginList);
         var fileFormatManager = pluginServiceProvider.Resolve<FileFormatManager>();
         var registry = pluginServiceProvider.Resolve<CliContributionRegistry>();
         var pluginCapabilities = discoveredPlugins
@@ -492,7 +499,8 @@ public sealed class CliHost(
 
     private static string GetVersionText()
     {
-        var version = typeof(CliHost).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        var version = typeof(CliHost).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                          ?.InformationalVersion
                       ?? typeof(CliHost).Assembly.GetName().Version?.ToString()
                       ?? "unknown";
         return $"SkyCD {version}";
@@ -549,7 +557,7 @@ public sealed class CliHost(
                          ?? throw new CliRunnerCreationException(command.CommandPath);
 
             var runMethod = runner.GetType().GetMethod("Run", [typeof(string[])])
-                           ?? throw new CliRunnerMethodResolutionException(command.CommandPath);
+                            ?? throw new CliRunnerMethodResolutionException(command.CommandPath);
 
             var canonicalPluginArgs = CanonicalizeCommandTokens(command.CommandInstance.GetType(), pluginArgs);
             var normalizedArgs = NormalizeSystemRunnerArgs(canonicalPluginArgs);
@@ -578,11 +586,13 @@ public sealed class CliHost(
                 : CliExitCodes.InvalidArguments;
             return mappedExitCode == CliExitCodes.Success
                 ? new ContributionCommandExecutionResult(true, null, null, mappedExitCode)
-                : new ContributionCommandExecutionResult(false, null, $"Plugin command returned {mappedExitCode}.", mappedExitCode);
+                : new ContributionCommandExecutionResult(false, null, $"Plugin command returned {mappedExitCode}.",
+                    mappedExitCode);
         }
         catch (TargetInvocationException exception)
         {
-            return new ContributionCommandExecutionResult(false, null, exception.InnerException?.Message ?? exception.Message, CliExitCodes.CommandFailed);
+            return new ContributionCommandExecutionResult(false, null,
+                exception.InnerException?.Message ?? exception.Message, CliExitCodes.CommandFailed);
         }
         catch (Exception exception)
         {
@@ -603,7 +613,8 @@ public sealed class CliHost(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new ContributionCommandExecutionResult(false, null, "Plugin CLI handler timed out after 5 seconds.", CliExitCodes.CommandFailed);
+            return new ContributionCommandExecutionResult(false, null, "Plugin CLI handler timed out after 5 seconds.",
+                CliExitCodes.CommandFailed);
         }
         catch (Exception exception)
         {

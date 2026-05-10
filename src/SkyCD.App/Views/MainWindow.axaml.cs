@@ -397,9 +397,9 @@ public partial class MainWindow : Window
             }
 
             var content = """
-                # SkyCD catalog placeholder
-                # TODO: replace with full catalog serialization pipeline
-                """;
+                          # SkyCD catalog placeholder
+                          # TODO: replace with full catalog serialization pipeline
+                          """;
             File.WriteAllText(targetPath, content);
             vm.CompleteSaveCatalog(targetPath);
         }
@@ -446,9 +446,9 @@ public partial class MainWindow : Window
             }
 
             var content = """
-                # SkyCD catalog placeholder
-                # TODO: replace with full catalog serialization pipeline
-                """;
+                          # SkyCD catalog placeholder
+                          # TODO: replace with full catalog serialization pipeline
+                          """;
             File.WriteAllText(localPath, content);
             vm.CompleteSaveCatalogAs(localPath);
         }
@@ -652,7 +652,8 @@ public partial class MainWindow : Window
         WindowState = options.Window.State;
     }
 
-    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth, double requestedHeight)
+    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth,
+        double requestedHeight)
     {
         var windowWidth = Math.Max(1, (int)Math.Round(requestedWidth));
         var windowHeight = Math.Max(1, (int)Math.Round(requestedHeight));
@@ -837,5 +838,4 @@ public partial class MainWindow : Window
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
     }
-
 }

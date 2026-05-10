@@ -103,17 +103,21 @@ public partial class App : Avalonia.Application
                 var appOptionsRepository = resolver.Resolve<AppOptionsDocumentRepository>();
                 return CreatePluginServices(appOptionsRepository);
             }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().RuntimeContainer, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager, Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().RuntimeContainer,
+                Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider,
+                Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager,
+                Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager,
+                Reuse.Singleton);
             registrator.RegisterDelegate(static resolver =>
-                new MainWindow(
-                    resolver.Resolve<AppOptionsDocumentRepository>(),
-                    resolver.Resolve<PluginManager>(),
-                    resolver.Resolve<PluginContainer>(),
-                    resolver.Resolve<DryIoc.IContainer>(),
-                    resolver.Resolve<FileFormatManager>()),
+                    new MainWindow(
+                        resolver.Resolve<AppOptionsDocumentRepository>(),
+                        resolver.Resolve<PluginManager>(),
+                        resolver.Resolve<PluginContainer>(),
+                        resolver.Resolve<DryIoc.IContainer>(),
+                        resolver.Resolve<FileFormatManager>()),
                 Reuse.Singleton);
         });
     }
