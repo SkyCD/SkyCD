@@ -10,14 +10,15 @@ using SkyCD.Couchbase.Models;
 
 namespace SkyCD.Couchbase.Repository;
 
-public abstract class RepositoryBase
+public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
+    where TDocument : class, new()
 {
     public Type DocumentType { get; private set; } = null!;
     public string CollectionName { get; private set; } = string.Empty;
-    public DocumentPropertyBinding IdProperty { get; internal set; } = new("Id", null);
-    public Collection Collection { get; internal set; } = null!;
+    public DocumentPropertyBinding IdProperty { get; private set; } = new("Id", null);
+    public Collection Collection { get; private set; } = null!;
 
-    internal virtual void Initialize(Type documentType, string collectionName, Collection collection)
+    public virtual void Initialize(Type documentType, string collectionName, Collection collection)
     {
         ArgumentNullException.ThrowIfNull(documentType);
         ArgumentException.ThrowIfNullOrWhiteSpace(collectionName);
@@ -32,8 +33,7 @@ public abstract class RepositoryBase
             defaultPropertyName: "Id");
     }
 
-    public TDocument? Get<TDocument>(string id)
-        where TDocument : class, new()
+    public TDocument? Get(string id)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
@@ -41,11 +41,10 @@ public abstract class RepositoryBase
         return document.FromDocument<TDocument>();
     }
 
-    public TDocument GetOrCreate<TDocument>(string id)
-        where TDocument : class, new()
+    public TDocument GetOrCreate(string id)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        var existing = Get<TDocument>(id);
+        var existing = Get(id);
         if (existing is not null)
         {
             return existing;
@@ -56,8 +55,7 @@ public abstract class RepositoryBase
         return created;
     }
 
-    public void Save<TDocument>(string id, TDocument value)
-        where TDocument : class
+    public void Save(string id, TDocument value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(value);
@@ -66,8 +64,7 @@ public abstract class RepositoryBase
         Collection.Save(document);
     }
 
-    public IReadOnlyList<TDocument> GetAll<TDocument>()
-        where TDocument : class, new()
+    public virtual IReadOnlyList<TDocument> GetAll()
     {
         using var query = QueryBuilder
             .Select(SelectResult.All())
@@ -97,8 +94,7 @@ public abstract class RepositoryBase
         return items;
     }
 
-    private void TryAssignId<TDocument>(TDocument document, string id)
-        where TDocument : class
+    private void TryAssignId(TDocument document, string id)
     {
         if (IdProperty.Property is null)
         {

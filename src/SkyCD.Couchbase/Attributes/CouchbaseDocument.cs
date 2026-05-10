@@ -14,8 +14,8 @@ public sealed class CouchbaseDocument : Attribute
             throw new CouchbaseCollectionNameInvalidException();
         }
 
-        repositoryType ??= typeof(DefaultRepository);
-        if (!typeof(RepositoryBase).IsAssignableFrom(repositoryType))
+        repositoryType ??= typeof(DefaultRepository<>);
+        if (!IsValidRepositoryType(repositoryType))
         {
             throw new CouchbaseRepositoryTypeInvalidException();
         }
@@ -28,4 +28,51 @@ public sealed class CouchbaseDocument : Attribute
     public string CollectionName { get; }
     public Type RepositoryType { get; }
     public string Database { get; }
+
+    private static bool IsValidRepositoryType(Type repositoryType)
+    {
+        if (ImplementsRepositoryInterface(repositoryType))
+        {
+            return true;
+        }
+
+        if (!repositoryType.IsGenericTypeDefinition)
+        {
+            return false;
+        }
+
+        var genericArguments = repositoryType.GetGenericArguments();
+        if (genericArguments.Length != 1)
+        {
+            return false;
+        }
+
+        try
+        {
+            var closed = repositoryType.MakeGenericType(typeof(object));
+            return ImplementsRepositoryInterface(closed);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static bool ImplementsRepositoryInterface(Type repositoryType)
+    {
+        foreach (var implemented in repositoryType.GetInterfaces())
+        {
+            if (!implemented.IsGenericType)
+            {
+                continue;
+            }
+
+            if (implemented.GetGenericTypeDefinition() == typeof(IRepository<>))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

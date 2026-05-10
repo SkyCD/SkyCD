@@ -1,7 +1,10 @@
 using System.Linq;
 using DryIoc;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -13,6 +16,11 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
     {
         registrator.Register<AssembliesListFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<DiscoveredPluginFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterDelegate<IRepository<PluginDocument>>(static resolver =>
+        {
+            var repositoryManager = resolver.Resolve<RepositoryManager>();
+            return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();
+        }, Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 

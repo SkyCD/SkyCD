@@ -4,7 +4,7 @@ using SkyCD.Documents.Enum;
 
 namespace SkyCD.Documents.Repository;
 
-public sealed class CatalogDocumentRepository : TreeRepository
+public sealed class CatalogDocumentRepository : TreeRepository<CatalogDocument>
 {
     public IReadOnlyList<CatalogDocument> CreateDefaultEntries()
     {

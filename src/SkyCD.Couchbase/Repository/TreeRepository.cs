@@ -10,11 +10,12 @@ namespace SkyCD.Couchbase.Repository;
 /// <summary>
 /// Tree-aware repository helpers for documents that expose string id properties configured at repository creation.
 /// </summary>
-public class TreeRepository : RepositoryBase
+public class TreeRepository<TDocument> : RepositoryBase<TDocument>
+    where TDocument : class, new()
 {
     public DocumentPropertyBinding ParentIdProperty { get; internal set; } = new("ParentId", null);
 
-    internal override void Initialize(Type documentType, string collectionName, Collection collection)
+    public override void Initialize(Type documentType, string collectionName, Collection collection)
     {
         base.Initialize(documentType, collectionName, collection);
         
@@ -24,11 +25,10 @@ public class TreeRepository : RepositoryBase
             defaultPropertyName: "ParentId");
     }
 
-    public IReadOnlyList<TDocument> GetRoots<TDocument>()
-        where TDocument : class, new()
+    public IReadOnlyList<TDocument> GetRoots()
     {
         var roots = new List<TDocument>();
-        foreach (var item in GetAll<TDocument>())
+        foreach (var item in GetAll())
         {
             if (string.IsNullOrWhiteSpace(GetParentId(item)))
             {
@@ -39,13 +39,12 @@ public class TreeRepository : RepositoryBase
         return roots;
     }
 
-    public IReadOnlyList<TDocument> GetChildrenOf<TDocument>(string parentId)
-        where TDocument : class, new()
+    public IReadOnlyList<TDocument> GetChildrenOf(string parentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parentId);
 
         var children = new List<TDocument>();
-        foreach (var item in GetAll<TDocument>())
+        foreach (var item in GetAll())
         {
             if (string.Equals(GetParentId(item), parentId, StringComparison.Ordinal))
             {
@@ -56,12 +55,11 @@ public class TreeRepository : RepositoryBase
         return children;
     }
 
-    public IReadOnlyList<TDocument> GetDescendantsOf<TDocument>(string parentId)
-        where TDocument : class, new()
+    public IReadOnlyList<TDocument> GetDescendantsOf(string parentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parentId);
 
-        var items = GetAll<TDocument>();
+        var items = GetAll();
         var childrenByParent = new Dictionary<string, List<TDocument>>(StringComparer.Ordinal);
         foreach (var item in items)
         {
@@ -106,8 +104,7 @@ public class TreeRepository : RepositoryBase
         return descendants;
     }
 
-    private string? GetId<TDocument>(TDocument document)
-        where TDocument : class
+    private string? GetId(TDocument document)
     {
         if (IdProperty.Property is null)
         {
@@ -117,8 +114,7 @@ public class TreeRepository : RepositoryBase
         return ReadStringProperty(document, IdProperty.Property);
     }
 
-    private string? GetParentId<TDocument>(TDocument document)
-        where TDocument : class
+    private string? GetParentId(TDocument document)
     {
         if (ParentIdProperty.Property is null)
         {
@@ -128,8 +124,7 @@ public class TreeRepository : RepositoryBase
         return ReadStringProperty(document, ParentIdProperty.Property);
     }
 
-    private static string? ReadStringProperty<TDocument>(TDocument document, System.Reflection.PropertyInfo? property)
-        where TDocument : class
+    private static string? ReadStringProperty(TDocument document, System.Reflection.PropertyInfo? property)
     {
         if (property is null || property.PropertyType != typeof(string))
         {

@@ -14,6 +14,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -29,7 +30,7 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
-    private readonly RepositoryManager repositoryManager;
+    private readonly IRepository<AppOptionsDocument> appOptionsRepository;
     private readonly PluginManager pluginManager;
     private readonly PluginServiceProvider runtimeServiceProvider;
     private FileFormatManager fileFormatManager;
@@ -39,12 +40,12 @@ public partial class MainWindow : Window
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
-        RepositoryManager repositoryManager,
+        IRepository<AppOptionsDocument> appOptionsRepository,
         PluginManager pluginManager,
         PluginServiceProvider runtimeServiceProvider,
         FileFormatManager fileFormatManager)
     {
-        this.repositoryManager = repositoryManager;
+        this.appOptionsRepository = appOptionsRepository;
         this.pluginManager = pluginManager;
         this.runtimeServiceProvider = runtimeServiceProvider;
         this.fileFormatManager = fileFormatManager;
@@ -612,14 +613,12 @@ public partial class MainWindow : Window
 
     private AppOptionsDocument LoadAppOptions()
     {
-        return repositoryManager.For<AppOptionsDocument>()
-            .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
+        return appOptionsRepository.GetOrCreate(AppOptionsDocument.DocumentId);
     }
 
     private void SaveAppOptions(AppOptionsDocument options)
     {
-        repositoryManager.For<AppOptionsDocument>()
-            .Save(AppOptionsDocument.DocumentId, options);
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
     }
 
     private void ApplyWindowBounds(AppOptionsDocument options)

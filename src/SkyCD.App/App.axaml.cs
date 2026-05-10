@@ -9,6 +9,7 @@ using SkyCD.App.Exceptions;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
+using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Runtime.DependencyInjection;
@@ -50,11 +51,10 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static PluginUiServices CreatePluginServices(DatabaseManager databaseManager, RepositoryManager repositoryManager)
+    private static PluginUiServices CreatePluginServices(IRepository<AppOptionsDocument> appOptionsRepository)
     {
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
-        var options = repositoryManager.For<AppOptionsDocument>()
-            .GetOrCreate<AppOptionsDocument>(AppOptionsDocument.DocumentId);
+        var options = appOptionsRepository.GetOrCreate(AppOptionsDocument.DocumentId);
         var pluginPath = ResolvePluginPathOrDefault(options.PluginPath);
         Action<IContainer> registrations = registrator => registrator.AddRegistrator<CommonRuntimeServiceRegistrator>();
 
@@ -116,6 +116,11 @@ public partial class App : Avalonia.Application
         return new PluginServiceProvider(registrator =>
         {
             new CouchbaseServiceRegistrator().RegisterServices(registrator);
+            registrator.RegisterDelegate<IRepository<AppOptionsDocument>>(static resolver =>
+            {
+                var repositoryManager = resolver.Resolve<RepositoryManager>();
+                return (IRepository<AppOptionsDocument>)repositoryManager.For<AppOptionsDocument>();
+            }, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver =>
             {
                 var repositoryManager = resolver.Resolve<RepositoryManager>();
@@ -129,14 +134,19 @@ public partial class App : Avalonia.Application
             }, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver =>
             {
-                var databaseManager = resolver.Resolve<DatabaseManager>();
-                var repositoryManager = resolver.Resolve<RepositoryManager>();
-                return CreatePluginServices(databaseManager, repositoryManager);
+                var appOptionsRepository = resolver.Resolve<IRepository<AppOptionsDocument>>();
+                return CreatePluginServices(appOptionsRepository);
             }, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager, Reuse.Singleton);
             registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager, Reuse.Singleton);
-            registrator.Register<MainWindow>(Reuse.Singleton);
+            registrator.RegisterDelegate(static resolver =>
+                new MainWindow(
+                    resolver.Resolve<IRepository<AppOptionsDocument>>(),
+                    resolver.Resolve<PluginManager>(),
+                    resolver.Resolve<PluginServiceProvider>(),
+                    resolver.Resolve<FileFormatManager>()),
+                Reuse.Singleton);
         });
     }
 }

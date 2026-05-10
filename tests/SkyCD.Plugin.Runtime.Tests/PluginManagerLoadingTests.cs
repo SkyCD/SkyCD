@@ -4,6 +4,8 @@ using System.IO;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
+using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
@@ -30,7 +32,7 @@ public sealed class PluginManagerLoadingTests : IDisposable
 
         var logger = new TestLogger<PluginManager>();
         var assembliesLogger = new TestLogger<AssembliesListFactory>();
-        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreateRepositoryManager());
+        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreatePluginRepository());
         pluginManager.Discover(_root, new Version(3, 0, 0));
 
         Assert.Contains(pluginManager.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
@@ -46,7 +48,7 @@ public sealed class PluginManagerLoadingTests : IDisposable
 
         var logger = new TestLogger<PluginManager>();
         var assembliesLogger = new TestLogger<AssembliesListFactory>();
-        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreateRepositoryManager());
+        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreatePluginRepository());
         pluginManager.Discover(_root, new Version(3, 0, 0));
 
         Assert.Empty(pluginManager.Plugins);
@@ -62,7 +64,7 @@ public sealed class PluginManagerLoadingTests : IDisposable
         var missingDirectory = Path.Combine(_root, "missing");
         var logger = new TestLogger<PluginManager>();
         var assembliesLogger = new TestLogger<AssembliesListFactory>();
-        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreateRepositoryManager());
+        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreatePluginRepository());
 
         pluginManager.Discover(missingDirectory, new Version(3, 0, 0));
 
@@ -90,7 +92,7 @@ public sealed class PluginManagerLoadingTests : IDisposable
 
         var logger = new TestLogger<PluginManager>();
         var assembliesLogger = new TestLogger<AssembliesListFactory>();
-        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreateRepositoryManager());
+        var pluginManager = new PluginManager(logger, new AssembliesListFactory(assembliesLogger), new DiscoveredPluginFactory(), CreatePluginRepository());
         var combinedPaths = string.Join(Path.PathSeparator, pluginA, pluginB);
 
         pluginManager.Discover(combinedPaths, new Version(3, 0, 0));
@@ -116,13 +118,14 @@ public sealed class PluginManagerLoadingTests : IDisposable
         }
     }
 
-    private static RepositoryManager CreateRepositoryManager()
+    private static IRepository<PluginDocument> CreatePluginRepository()
     {
         var databaseManager = new DatabaseManager();
         var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginRuntimeLoadingTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         databaseManager.Connect("default", directory);
-        return new RepositoryManager(databaseManager);
+        var repositoryManager = new RepositoryManager(databaseManager);
+        return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();
     }
 
 }

@@ -5,13 +5,12 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.Plugin.Runtime.Repositories;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 
@@ -22,7 +21,7 @@ public sealed class PluginManager(
     ILogger<PluginManager> logger,
     AssembliesListFactory assembliesListFactory,
     DiscoveredPluginFactory discoveredPluginFactory,
-    RepositoryManager repositoryManager)
+    IRepository<PluginDocument> pluginRepository)
 {
     private readonly DiscoveredPluginCollection plugins = [];
 
@@ -47,15 +46,22 @@ public sealed class PluginManager(
 
         var discovered = DiscoverByAssemblyScan(normalizedDirectories, hostVersion);
 
-        var repository = GetPluginRepository();
-        repository.UpsertPluginDocuments(MapToPluginDocuments(discovered));
+        UpsertPluginDocuments(MapToPluginDocuments(discovered));
         var descriptors = GetPluginDescriptors();
         plugins.Import(discovered, descriptors);
     }
 
     public IReadOnlyList<PluginDocument> GetPluginDescriptors()
     {
-        return GetPluginRepository().GetAll();
+        return pluginRepository
+            .GetAll()
+            .Where(static mapped => !string.IsNullOrWhiteSpace(mapped.Id))
+            .Select(static mapped =>
+            {
+                mapped.Constraints ??= new PluginConstraintsDocument();
+                return mapped;
+            })
+            .ToList();
     }
 
     public void SavePluginEnabledStates(IEnumerable<(string PluginId, bool IsEnabled)> states)
@@ -86,10 +92,9 @@ public sealed class PluginManager(
             };
         }
 
-        var repository = GetPluginRepository();
         foreach (var descriptor in byId.Values)
         {
-            repository.Save(descriptor.Id, descriptor);
+            pluginRepository.Save(descriptor.Id, descriptor);
         }
     }
 
@@ -142,14 +147,37 @@ public sealed class PluginManager(
         return discovered;
     }
 
-    private PluginRepository GetPluginRepository()
+    private void UpsertPluginDocuments(IReadOnlyCollection<PluginDocument> discovered)
     {
-        var repository = repositoryManager.For<PluginDocument>();
-        if (repository is PluginRepository typed)
+        ArgumentNullException.ThrowIfNull(discovered);
+
+        var existingById = pluginRepository.GetAll()
+            .Where(static descriptor => !string.IsNullOrWhiteSpace(descriptor.Id))
+            .ToDictionary(static descriptor => descriptor.Id, StringComparer.OrdinalIgnoreCase);
+
+        var discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var document in discovered)
         {
-            return typed;
+            if (string.IsNullOrWhiteSpace(document.Id))
+            {
+                continue;
+            }
+
+            discoveredIds.Add(document.Id);
+            if (existingById.TryGetValue(document.Id, out var existing))
+            {
+                document.IsEnabled = (!existing.IsEnabled && !existing.IsAvailable) ? true : existing.IsEnabled;
+            }
+
+            pluginRepository.Save(document.Id, document);
+            existingById[document.Id] = document;
         }
 
-        throw new PluginDocumentRepositoryTypeMismatchException();
+        foreach (var existing in existingById.Values.Where(existing => !discoveredIds.Contains(existing.Id)))
+        {
+            existing.IsAvailable = false;
+            pluginRepository.Save(existing.Id, existing);
+        }
     }
+
 }

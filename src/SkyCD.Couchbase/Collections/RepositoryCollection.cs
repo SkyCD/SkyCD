@@ -9,9 +9,9 @@ using CblCollection = Couchbase.Lite.Collection;
 
 namespace SkyCD.Couchbase.Collections;
 
-internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDictionary<Type, RepositoryBase>
+internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDictionary<Type, object>
 {
-    private readonly ConcurrentDictionary<Type, RepositoryBase> inner = new();
+    private readonly ConcurrentDictionary<Type, object> inner = new();
 
     private CouchbaseDocument GetDocumentMapping(Type type)
     {
@@ -24,16 +24,27 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         return documentMapping;
     }
 
-    private RepositoryBase CreateInstanceForRepository(Type type)
+    private static Type GetRepositoryInterfaceType(Type documentType)
     {
-        var instance = Activator.CreateInstance(type);
+        return typeof(IRepository<>).MakeGenericType(documentType);
+    }
 
-        if (instance is not RepositoryBase @base)
+    private object CreateInstanceForRepository(Type repositoryType, Type documentType)
+    {
+        var concreteRepositoryType = repositoryType.IsGenericTypeDefinition
+            ? repositoryType.MakeGenericType(documentType)
+            : repositoryType;
+
+        var instance = Activator.CreateInstance(concreteRepositoryType)
+                       ?? throw new RepositoryConstructorInvalidException(concreteRepositoryType);
+        var repositoryInterfaceType = GetRepositoryInterfaceType(documentType);
+
+        if (!repositoryInterfaceType.IsInstanceOfType(instance))
         {
-            throw new RepositoryConstructorInvalidException(type);
+            throw new RepositoryConstructorInvalidException(concreteRepositoryType);
         }
 
-        return @base;
+        return instance;
     }
 
     private CblCollection GetOrCreate(string databaseName, string collectionName)
@@ -44,14 +55,28 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
                ?? database.CreateCollection(collectionName, CblCollection.DefaultScopeName);
     }
 
-    public RepositoryBase GetOrAdd(Type key)
+    private static void InitializeRepository(
+        object repository,
+        Type documentType,
+        string collectionName,
+        CblCollection collection)
+    {
+        var repositoryInterfaceType = GetRepositoryInterfaceType(documentType);
+        var initialize = repositoryInterfaceType.GetMethod(nameof(IRepository<object>.Initialize))
+            ?? throw new RepositoryConstructorInvalidException(repository.GetType());
+
+        initialize.Invoke(repository, [documentType, collectionName, collection]);
+    }
+
+    public object GetOrAdd(Type key)
     {
         return inner.GetOrAdd(key, type =>
         {
             var documentMapping = GetDocumentMapping(type);
-            var repository = CreateInstanceForRepository(documentMapping.RepositoryType);
+            var repository = CreateInstanceForRepository(documentMapping.RepositoryType, type);
             var collection = GetOrCreate(documentMapping.Database, documentMapping.CollectionName);
-            repository.Initialize(
+            InitializeRepository(
+                repository: repository,
                 documentType: type,
                 collectionName: documentMapping.CollectionName,
                 collection: collection);
@@ -60,18 +85,18 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         });
     }
 
-    public RepositoryBase this[Type key]
+    public object this[Type key]
     {
         get => inner[key];
         set => inner[key] = value;
     }
 
     public ICollection<Type> Keys => inner.Keys;
-    public ICollection<RepositoryBase> Values => inner.Values;
+    public ICollection<object> Values => inner.Values;
     public int Count => inner.Count;
     public bool IsReadOnly => false;
 
-    public void Add(Type key, RepositoryBase value)
+    public void Add(Type key, object value)
     {
         if (!inner.TryAdd(key, value))
         {
@@ -89,14 +114,14 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         return inner.TryRemove(key, out _);
     }
 
-    public bool TryGetValue(Type key, out RepositoryBase value)
+    public bool TryGetValue(Type key, out object value)
     {
         var found = inner.TryGetValue(key, out var repository);
         value = repository!;
         return found;
     }
 
-    public void Add(KeyValuePair<Type, RepositoryBase> item)
+    public void Add(KeyValuePair<Type, object> item)
     {
         Add(item.Key, item.Value);
     }
@@ -106,22 +131,22 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         inner.Clear();
     }
 
-    public bool Contains(KeyValuePair<Type, RepositoryBase> item)
+    public bool Contains(KeyValuePair<Type, object> item)
     {
-        return ((ICollection<KeyValuePair<Type, RepositoryBase>>)inner).Contains(item);
+        return ((ICollection<KeyValuePair<Type, object>>)inner).Contains(item);
     }
 
-    public void CopyTo(KeyValuePair<Type, RepositoryBase>[] array, int arrayIndex)
+    public void CopyTo(KeyValuePair<Type, object>[] array, int arrayIndex)
     {
-        ((ICollection<KeyValuePair<Type, RepositoryBase>>)inner).CopyTo(array, arrayIndex);
+        ((ICollection<KeyValuePair<Type, object>>)inner).CopyTo(array, arrayIndex);
     }
 
-    public bool Remove(KeyValuePair<Type, RepositoryBase> item)
+    public bool Remove(KeyValuePair<Type, object> item)
     {
-        return ((ICollection<KeyValuePair<Type, RepositoryBase>>)inner).Remove(item);
+        return ((ICollection<KeyValuePair<Type, object>>)inner).Remove(item);
     }
 
-    public IEnumerator<KeyValuePair<Type, RepositoryBase>> GetEnumerator()
+    public IEnumerator<KeyValuePair<Type, object>> GetEnumerator()
     {
         return inner.GetEnumerator();
     }

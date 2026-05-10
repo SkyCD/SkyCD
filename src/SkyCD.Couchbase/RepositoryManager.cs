@@ -1,5 +1,5 @@
 using System;
-using RepoBase = SkyCD.Couchbase.Repository.RepositoryBase;
+using SkyCD.Couchbase.Repository;
 using RepoCollection = SkyCD.Couchbase.Collections.RepositoryCollection;
 
 namespace SkyCD.Couchbase;
@@ -8,13 +8,13 @@ public class RepositoryManager(DatabaseManager databaseManager)
 {
     private readonly RepoCollection repositories = new(databaseManager.DatabasesCollection);
 
-    public RepoBase For<TDocument>()
-        where TDocument : class
+    public IRepository<TDocument> For<TDocument>()
+        where TDocument : class, new()
     {
-        return For(typeof(TDocument));
+        return (IRepository<TDocument>)For(typeof(TDocument));
     }
 
-    public RepoBase For(Type documentType)
+    internal object For(Type documentType)
     {
         return repositories.GetOrAdd(documentType);
     }

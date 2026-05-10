@@ -1256,7 +1256,7 @@ public partial class MainWindowViewModel : ObservableObject
     
     private void EnsureSeedData()
     {
-        if (catalogRepository is null || catalogRepository.GetAll<CatalogDocument>().Count > 0)
+        if (catalogRepository is null || catalogRepository.GetAll().Count > 0)
         {
             return;
         }
@@ -1272,7 +1272,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (catalogRepository is not null)
         {
             var roots = catalogRepository
-                .GetRoots<CatalogDocument>()
+                .GetRoots()
                 .Where(entry => entry.Type != CatalogDocumentType.File)
                 .ToArray();
 
@@ -1280,7 +1280,7 @@ public partial class MainWindowViewModel : ObservableObject
                 .Select(root =>
                 {
                     var descendants = catalogRepository
-                        .GetDescendantsOf<CatalogDocument>(root.Id)
+                        .GetDescendantsOf(root.Id)
                         .Where(entry => entry.Type != CatalogDocumentType.File)
                         .ToList();
                     descendants.Add(root);
@@ -1313,7 +1313,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (catalogRepository is not null)
         {
-            var entries = catalogRepository.GetChildrenOf<CatalogDocument>(nodeKey);
+            var entries = catalogRepository.GetChildrenOf(nodeKey);
             if (entries.Count > 0)
             {
                 return entries;
@@ -1340,7 +1340,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (catalogRepository is not null)
         {
-            return catalogRepository.Get<CatalogDocument>(itemId)?.Properties ?? new PropertiesCollection();
+            return catalogRepository.Get(itemId)?.Properties ?? new PropertiesCollection();
         }
 
         return (inMemoryCatalogEntries ?? [])

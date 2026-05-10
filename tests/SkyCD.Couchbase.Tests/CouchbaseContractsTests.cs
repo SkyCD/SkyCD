@@ -35,7 +35,7 @@ public class CouchbaseContractsTests
     {
         var mapping = new CouchbaseDocument("docs");
         Assert.Equal("docs", mapping.CollectionName);
-        Assert.Equal(typeof(DefaultRepository), mapping.RepositoryType);
+        Assert.Equal(typeof(DefaultRepository<>), mapping.RepositoryType);
         Assert.Equal("default", mapping.Database);
 
         Assert.ThrowsAny<ArgumentException>(() => new CouchbaseDocument("docs", typeof(string)));
@@ -125,9 +125,8 @@ public class CouchbaseContractsTests
         databases.Add("default", database);
         var repositories = new RepositoryCollection(databases);
 
-        var repository = repositories.GetOrAdd(typeof(AnnotatedDocument));
+        var repository = Assert.IsType<TestTreeRepository>(repositories.GetOrAdd(typeof(AnnotatedDocument)));
 
-        Assert.IsType<TestTreeRepository>(repository);
         Assert.Equal("annotated", repository.CollectionName);
     }
 
@@ -162,11 +161,11 @@ public class CouchbaseContractsTests
         typedRepository.Save("root", new AnnotatedDocument { Id = "root", Name = "Root" });
         typedRepository.Save("child", new AnnotatedDocument { Id = "child", ParentId = "root", Name = "Child" });
 
-        var loaded = typedRepository.Get<AnnotatedDocument>("root");
-        var created = typedRepository.GetOrCreate<AnnotatedDocument>("new-id");
-        var roots = typedRepository.GetRoots<AnnotatedDocument>();
-        var children = typedRepository.GetChildrenOf<AnnotatedDocument>("root");
-        var descendants = typedRepository.GetDescendantsOf<AnnotatedDocument>("root");
+        var loaded = typedRepository.Get("root");
+        var created = typedRepository.GetOrCreate("new-id");
+        var roots = typedRepository.GetRoots();
+        var children = typedRepository.GetChildrenOf("root");
+        var descendants = typedRepository.GetDescendantsOf("root");
 
         Assert.NotNull(loaded);
         Assert.Equal("root", loaded!.Id);
@@ -215,7 +214,7 @@ public class CouchbaseContractsTests
         public string Name { get; set; } = string.Empty;
     }
 
-    private sealed class TestTreeRepository : TreeRepository
+    private sealed class TestTreeRepository : TreeRepository<AnnotatedDocument>
     {
     }
 

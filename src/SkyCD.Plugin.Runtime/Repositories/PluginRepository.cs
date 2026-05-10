@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Documents;
 
 namespace SkyCD.Plugin.Runtime.Repositories;
 
-public sealed class PluginRepository : RepositoryBase
+public sealed class PluginRepository : RepositoryBase<PluginDocument>
 {
-    public IReadOnlyList<PluginDocument> GetAll()
+    public new IReadOnlyList<PluginDocument> GetAll()
     {
-        return GetAll<PluginDocument>()
+        return base.GetAll()
             .Where(static mapped => !string.IsNullOrWhiteSpace(mapped.Id))
             .Select(static mapped =>
             {
@@ -24,7 +25,7 @@ public sealed class PluginRepository : RepositoryBase
     {
         ArgumentNullException.ThrowIfNull(discovered);
 
-        var existingById = GetAll<PluginDocument>()
+        var existingById = base.GetAll()
             .ToDictionary(static descriptor => descriptor.Id, StringComparer.OrdinalIgnoreCase);
 
         var discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
