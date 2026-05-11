@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
+using SkyCD.Cli.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;

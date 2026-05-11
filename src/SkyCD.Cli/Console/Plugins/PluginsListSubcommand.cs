@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CommandDotNet;
+using SkyCD.Cli.Enum;
 using SkyCD.Cli.Execution;
 using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;

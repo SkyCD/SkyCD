@@ -13,6 +13,7 @@ using SkyCD.Cli.Console;
 using SkyCD.Cli.Console.FileFormats;
 using SkyCD.Cli.Console.Plugins;
 using SkyCD.Cli.DependencyInjection;
+using SkyCD.Cli.Enum;
 using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Cli.Execution;
