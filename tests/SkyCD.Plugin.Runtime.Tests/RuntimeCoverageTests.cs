@@ -171,7 +171,7 @@ public sealed class RuntimeCoverageTests
             FileName = "test.plugin.dll",
             Capabilities = [instance]
         };
-        PluginServiceRegistrator.RegisterServices(services, plugin);
+        plugin.RegisterPluginServices(services);
 
         Assert.NotNull(services.Resolve<IFakePluginCapability>(ifUnresolved: IfUnresolved.ReturnDefault));
         Assert.NotNull(services.Resolve<IFakePluginCapability>(serviceKey: typeof(IFakePluginCapability),

@@ -32,7 +32,6 @@ public partial class MainWindow : Window
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly PluginManager pluginManager;
-    private DryIoc.IContainer pluginServiceProvider;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -42,12 +41,10 @@ public partial class MainWindow : Window
     public MainWindow(
         AppOptionsDocumentRepository appOptionsRepository,
         PluginManager pluginManager,
-        DryIoc.IContainer pluginServiceProvider,
         FileFormatManager fileFormatManager)
     {
         this.appOptionsRepository = appOptionsRepository;
         this.pluginManager = pluginManager;
-        this.pluginServiceProvider = pluginServiceProvider;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -780,11 +777,8 @@ public partial class MainWindow : Window
 
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
 
-        var pluginList = pluginManager.Plugins.ToList();
-        var nextPluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(pluginList);
-        pluginServiceProvider.Dispose();
-        pluginServiceProvider = nextPluginServiceProvider;
-        fileFormatManager = nextPluginServiceProvider.Resolve<FileFormatManager>();
+        ServiceProvider.ReregisterPluginsService();
+        fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)

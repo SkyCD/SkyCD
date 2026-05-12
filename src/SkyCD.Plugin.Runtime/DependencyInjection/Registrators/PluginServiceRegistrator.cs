@@ -3,9 +3,9 @@ using System.Linq;
 using System.Collections.Generic;
 using DryIoc;
 using SkyCD.Couchbase;
-using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
@@ -28,22 +28,6 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 
-    public static void RegisterServices(IRegistrator registrator, DiscoveredPlugin plugin)
-    {
-        foreach (var capability in plugin.Capabilities)
-        {
-            AddPluginService(registrator, capability.GetType(), capability);
-
-            foreach (var interfaceType in capability.GetType()
-                         .GetInterfaces()
-                         .Where(static type => type != typeof(IPluginCapability))
-                         .Where(static type => typeof(IPluginCapability).IsAssignableFrom(type)))
-            {
-                AddPluginService(registrator, interfaceType, capability);
-            }
-        }
-    }
-
     public static void RegisterServices(IRegistrator registrator, IReadOnlyList<DiscoveredPlugin> plugins)
     {
         registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(plugins,
@@ -52,31 +36,8 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
             plugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
-        foreach (var plugin in plugins)
-        {
-            RegisterServices(registrator, plugin);
-        }
-    }
-
-    public static IContainer CreatePluginSubcontainer(
-        IReadOnlyList<DiscoveredPlugin> plugins)
-    {
-        ArgumentNullException.ThrowIfNull(plugins);
-
-        var container = new DryIoc.Container();
-        new CommonRuntimeServiceRegistrator().RegisterServices(container);
-        new CouchbaseServiceRegistrator().RegisterServices(container);
-        RegisterServices(container, plugins);
-        return container;
-    }
-
-    private static IRegistrator AddPluginService(IRegistrator registrator, Type serviceType, object serviceInstance)
-    {
-        registrator.RegisterInstance(serviceType, serviceInstance,
-            ifAlreadyRegistered: IfAlreadyRegistered.AppendNewImplementation);
-        registrator.RegisterInstance(serviceType, serviceInstance, serviceKey: serviceType,
-            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-
-        return registrator;
+        var discoveredPlugins = new DiscoveredPluginCollection();
+        discoveredPlugins.AddRange(plugins);
+        discoveredPlugins.RegisterPluginServices(registrator);
     }
 }

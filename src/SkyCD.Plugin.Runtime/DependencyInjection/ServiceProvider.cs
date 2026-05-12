@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using DryIoc;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.DependencyInjection;
 
@@ -10,42 +14,64 @@ namespace SkyCD.Plugin.Runtime.DependencyInjection;
 /// </summary>
 public static class ServiceProvider
 {
-    private static IContainer _instance;
+    private static readonly IContainer MainContainer;
+    private static IContainer _pluginServiceProvider;
 
     static ServiceProvider()
     {
-        _instance = BuildGlobalContainer();
+        var mainContainer = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(mainContainer);
+        new CouchbaseServiceRegistrator().RegisterServices(mainContainer);
+        new PluginServiceRegistrator().RegisterServices(mainContainer);
+        
+        MainContainer = mainContainer;
+        _pluginServiceProvider = CreatePluginsChildContainer();
     }
 
-    public static void RebuildGlobal()
+    public static void ReregisterPluginsService()
     {
-        _instance = BuildGlobalContainer();
+        _pluginServiceProvider.Dispose();
+        _pluginServiceProvider = CreatePluginsChildContainer();
+    }
+
+    private static IContainer CreatePluginsChildContainer()
+    {
+        var pluginManager = Resolve<PluginManager>();
+        var plugins = pluginManager.Plugins.ToList();
+        
+        var child = MainContainer.CreateChild();
+        PluginServiceRegistrator.RegisterServices(child, plugins);
+        
+        return child;
     }
 
     public static void AddRegistrator<TRegistrator>()
         where TRegistrator : IServiceRegistrator, new()
     {
-        new TRegistrator().RegisterServices(_instance);
+        new TRegistrator().RegisterServices(MainContainer);
     }
 
     public static T Resolve<T>()
         where T : notnull
     {
-        return _instance.Resolve<T>();
+        return MainContainer.Resolve<T>();
     }
 
     public static object Resolve(Type serviceType, object? serviceKey = null)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
-        return _instance.Resolve(serviceType, serviceKey: serviceKey);
+        return MainContainer.Resolve(serviceType, serviceKey: serviceKey);
     }
 
-    private static IContainer BuildGlobalContainer()
+    public static T ResolvePlugin<T>()
+        where T : notnull
     {
-        var container = new DryIoc.Container();
-        new CommonRuntimeServiceRegistrator().RegisterServices(container);
-        new CouchbaseServiceRegistrator().RegisterServices(container);
-        new PluginServiceRegistrator().RegisterServices(container);
-        return container;
+        return _pluginServiceProvider.Resolve<T>();
+    }
+
+    public static object ResolvePlugin(Type serviceType, object? serviceKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        return _pluginServiceProvider.Resolve(serviceType, serviceKey: serviceKey);
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DryIoc;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 
@@ -8,6 +9,16 @@ namespace SkyCD.Plugin.Runtime.Collections;
 
 public sealed class DiscoveredPluginCollection : List<DiscoveredPlugin>
 {
+    public void RegisterPluginServices(IRegistrator registrator)
+    {
+        ArgumentNullException.ThrowIfNull(registrator);
+
+        foreach (var plugin in this)
+        {
+            plugin.RegisterPluginServices(registrator);
+        }
+    }
+
     public void Import(
         IReadOnlyCollection<DiscoveredPlugin> discovered,
         IReadOnlyList<PluginDocument> descriptors)

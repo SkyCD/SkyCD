@@ -41,7 +41,6 @@ public partial class App : Avalonia.Application
             desktop.Exit += (_, _) =>
             {
                 appServiceProvider.Dispose();
-                pluginServices.ServiceProvider.Dispose();
             };
             desktop.MainWindow = mainWindow;
         }
@@ -63,16 +62,14 @@ public partial class App : Avalonia.Application
             discoveredPlugins = pluginManager.Plugins;
         }
 
-        var pluginList = discoveredPlugins.ToList();
-        var pluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(pluginList);
-        var fileFormatManager = pluginServiceProvider.Resolve<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager, pluginManager, pluginServiceProvider);
+        ServiceProvider.ReregisterPluginsService();
+        var fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
+        return new PluginUiServices(fileFormatManager, pluginManager);
     }
 
     private sealed record PluginUiServices(
         FileFormatManager FileFormatManager,
-        PluginManager PluginManager,
-        DryIoc.IContainer ServiceProvider);
+        PluginManager PluginManager);
 
     private static IContainer BuildAppServiceProvider()
     {
@@ -99,8 +96,6 @@ public partial class App : Avalonia.Application
             var appOptionsRepository = resolver.Resolve<AppOptionsDocumentRepository>();
             return CreatePluginServices(appOptionsRepository);
         }, Reuse.Singleton);
-        container.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider,
-            Reuse.Singleton);
         container.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager,
             Reuse.Singleton);
         container.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager,
@@ -109,7 +104,6 @@ public partial class App : Avalonia.Application
                 new MainWindow(
                     resolver.Resolve<AppOptionsDocumentRepository>(),
                     resolver.Resolve<PluginManager>(),
-                    resolver.Resolve<DryIoc.IContainer>(),
                     resolver.Resolve<FileFormatManager>()),
             Reuse.Singleton);
 

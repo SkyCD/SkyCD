@@ -52,7 +52,7 @@ public sealed class ServiceRegistratorTests
         provider.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([plugin]);
         provider.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
         provider.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-        PluginServiceRegistrator.RegisterServices(provider, plugin);
+        plugin.RegisterPluginServices(provider);
 
         var discovered = provider.Resolve<IReadOnlyList<DiscoveredPlugin>>();
         var byId = provider.Resolve<IReadOnlyDictionary<string, DiscoveredPlugin>>();

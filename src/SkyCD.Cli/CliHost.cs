@@ -81,7 +81,6 @@ public sealed class CliHost(
         if (ShouldHandleWithSystemRunner(routedTokens) && CanRunWithoutPluginRuntime(routedTokens))
         {
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
-            SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
             SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
             var lightweightFileFormatManager =
                 SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<FileFormatManager>();
@@ -104,16 +103,14 @@ public sealed class CliHost(
             ? []
             : new[] { pluginPath };
 
-        SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
         var pluginManager = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<PluginManager>();
         pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), new Version(3, 0, 0));
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
 
-        var pluginList = discoveredPlugins.ToList();
+        ServiceProvider.ReregisterPluginsService();
         SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
-        using var pluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(pluginList);
-        var fileFormatManager = pluginServiceProvider.Resolve<FileFormatManager>();
-        var registry = pluginServiceProvider.Resolve<CliContributionRegistry>();
+        var fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
+        var registry = ServiceProvider.ResolvePlugin<CliContributionRegistry>();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
             .OfType<ICliPluginCapability>();
@@ -168,7 +165,6 @@ public sealed class CliHost(
     {
         try
         {
-            SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.RebuildGlobal();
             SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
             var repositoryManager = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<RepositoryManager>();
             var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();

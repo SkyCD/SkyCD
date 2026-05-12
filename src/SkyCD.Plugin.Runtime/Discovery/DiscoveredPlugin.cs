@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using DryIoc;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Documents;
 
@@ -30,6 +32,24 @@ public sealed class DiscoveredPlugin
 
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
 
+    public void RegisterPluginServices(IRegistrator registrator)
+    {
+        ArgumentNullException.ThrowIfNull(registrator);
+
+        foreach (var capability in Capabilities)
+        {
+            RegisterPluginService(registrator, capability.GetType(), capability);
+
+            foreach (var interfaceType in capability.GetType()
+                         .GetInterfaces()
+                         .Where(static type => type != typeof(IPluginCapability))
+                         .Where(static type => typeof(IPluginCapability).IsAssignableFrom(type)))
+            {
+                RegisterPluginService(registrator, interfaceType, capability);
+            }
+        }
+    }
+
     public PluginDocument ToDocument()
     {
         return new PluginDocument
@@ -50,5 +70,13 @@ public sealed class DiscoveredPlugin
             IsAvailable = true,
             LastDiscoveredAt = DateTimeOffset.UtcNow
         };
+    }
+
+    private static void RegisterPluginService(IRegistrator registrator, Type serviceType, IPluginCapability capability)
+    {
+        registrator.RegisterInstance(serviceType, capability,
+            ifAlreadyRegistered: IfAlreadyRegistered.AppendNewImplementation);
+        registrator.RegisterInstance(serviceType, capability, serviceKey: serviceType,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 }
