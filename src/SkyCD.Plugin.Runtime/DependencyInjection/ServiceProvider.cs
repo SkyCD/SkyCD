@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using DryIoc;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
@@ -9,11 +8,11 @@ namespace SkyCD.Plugin.Runtime.DependencyInjection;
 /// <summary>
 /// Runtime container with global registration replay support.
 /// </summary>
-public sealed class Container : DryIoc.Container
+public sealed class ServiceProvider : DryIoc.Container
 {
-    private static Container? _instance;
+    private static ServiceProvider? _instance;
 
-    public static Container Instance
+    public static ServiceProvider Instance
     {
         get
         {
@@ -28,26 +27,23 @@ public sealed class Container : DryIoc.Container
 
     public static void RebuildGlobal()
     {
-        _instance = new Container(static _ => { })
+        _instance = new ServiceProvider(static _ => { })
             .AddRegistrator<CommonRuntimeServiceRegistrator>()
             .AddRegistrator<CouchbaseServiceRegistrator>()
             .AddRegistrator<PluginServiceRegistrator>();
     }
 
-    private readonly List<Action<IContainer>> registrations = [];
-
-    public Container(Action<IContainer> register)
+    public ServiceProvider(Action<IContainer> register)
     {
         ArgumentNullException.ThrowIfNull(register);
         Register(register);
     }
 
-    public Container AddRegistrator<TRegistrator>()
+    public ServiceProvider AddRegistrator<TRegistrator>()
         where TRegistrator : IServiceRegistrator, new()
     {
         var registrator = new TRegistrator();
         registrator.RegisterServices(this);
-        registrations.Add(static container => new TRegistrator().RegisterServices(container));
         return this;
     }
 
@@ -55,7 +51,6 @@ public sealed class Container : DryIoc.Container
     {
         ArgumentNullException.ThrowIfNull(register);
         register(this);
-        registrations.Add(register);
     }
 
     public IContainer CreateSubcontainer(Action<IContainer> register)

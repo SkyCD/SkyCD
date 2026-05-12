@@ -16,7 +16,7 @@ using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
-using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.Container;
+using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App;
 

@@ -24,7 +24,7 @@ using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
-using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.Container;
+using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App.Views;
 

@@ -58,7 +58,7 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
     }
 
     public static IContainer CreatePluginSubcontainer(
-        DependencyInjection.Container runtimeServiceProvider,
+        DependencyInjection.ServiceProvider runtimeServiceProvider,
         IReadOnlyList<DiscoveredPlugin> plugins)
     {
         ArgumentNullException.ThrowIfNull(runtimeServiceProvider);

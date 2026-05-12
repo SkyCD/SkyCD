@@ -7,7 +7,7 @@ using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using Xunit;
-using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.Container;
+using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
