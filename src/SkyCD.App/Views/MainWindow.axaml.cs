@@ -24,7 +24,6 @@ using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
-using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App.Views;
 
@@ -33,7 +32,6 @@ public partial class MainWindow : Window
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly PluginManager pluginManager;
-    private readonly PluginContainer runtimeContainer;
     private DryIoc.IContainer pluginServiceProvider;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
@@ -44,13 +42,11 @@ public partial class MainWindow : Window
     public MainWindow(
         AppOptionsDocumentRepository appOptionsRepository,
         PluginManager pluginManager,
-        PluginContainer runtimeContainer,
         DryIoc.IContainer pluginServiceProvider,
         FileFormatManager fileFormatManager)
     {
         this.appOptionsRepository = appOptionsRepository;
         this.pluginManager = pluginManager;
-        this.runtimeContainer = runtimeContainer;
         this.pluginServiceProvider = pluginServiceProvider;
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
@@ -785,7 +781,7 @@ public partial class MainWindow : Window
         pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
 
         var pluginList = pluginManager.Plugins.ToList();
-        var nextPluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(runtimeContainer, pluginList);
+        var nextPluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(pluginList);
         pluginServiceProvider.Dispose();
         pluginServiceProvider = nextPluginServiceProvider;
         fileFormatManager = nextPluginServiceProvider.Resolve<FileFormatManager>();

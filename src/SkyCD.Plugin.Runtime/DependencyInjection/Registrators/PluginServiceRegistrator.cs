@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using DryIoc;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -58,13 +59,15 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
     }
 
     public static IContainer CreatePluginSubcontainer(
-        DependencyInjection.ServiceProvider runtimeServiceProvider,
         IReadOnlyList<DiscoveredPlugin> plugins)
     {
-        ArgumentNullException.ThrowIfNull(runtimeServiceProvider);
         ArgumentNullException.ThrowIfNull(plugins);
 
-        return runtimeServiceProvider.CreateSubcontainer(registrator => RegisterServices(registrator, plugins));
+        var container = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(container);
+        new CouchbaseServiceRegistrator().RegisterServices(container);
+        RegisterServices(container, plugins);
+        return container;
     }
 
     private static IRegistrator AddPluginService(IRegistrator registrator, Type serviceType, object serviceInstance)

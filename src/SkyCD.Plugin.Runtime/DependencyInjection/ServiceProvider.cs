@@ -6,58 +6,46 @@ using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 namespace SkyCD.Plugin.Runtime.DependencyInjection;
 
 /// <summary>
-/// Runtime container with global registration replay support.
+/// Runtime container facade with global registration support.
 /// </summary>
-public sealed class ServiceProvider : DryIoc.Container
+public static class ServiceProvider
 {
-    private static ServiceProvider? _instance;
+    private static IContainer _instance;
 
-    public static ServiceProvider Instance
+    static ServiceProvider()
     {
-        get
-        {
-            if (_instance is null)
-            {
-                RebuildGlobal();
-            }
-
-            return _instance!;
-        }
+        _instance = BuildGlobalContainer();
     }
 
     public static void RebuildGlobal()
     {
-        _instance = new ServiceProvider(static _ => { })
-            .AddRegistrator<CommonRuntimeServiceRegistrator>()
-            .AddRegistrator<CouchbaseServiceRegistrator>()
-            .AddRegistrator<PluginServiceRegistrator>();
+        _instance = BuildGlobalContainer();
     }
 
-    public ServiceProvider(Action<IContainer> register)
-    {
-        ArgumentNullException.ThrowIfNull(register);
-        Register(register);
-    }
-
-    public ServiceProvider AddRegistrator<TRegistrator>()
+    public static void AddRegistrator<TRegistrator>()
         where TRegistrator : IServiceRegistrator, new()
     {
-        var registrator = new TRegistrator();
-        registrator.RegisterServices(this);
-        return this;
+        new TRegistrator().RegisterServices(_instance);
     }
 
-    public void Register(Action<IContainer> register)
+    public static T Resolve<T>()
+        where T : notnull
     {
-        ArgumentNullException.ThrowIfNull(register);
-        register(this);
+        return _instance.Resolve<T>();
     }
 
-    public IContainer CreateSubcontainer(Action<IContainer> register)
+    public static object Resolve(Type serviceType, object? serviceKey = null)
     {
-        ArgumentNullException.ThrowIfNull(register);
-        var child = With(Rules, ScopeContext, RegistrySharing.CloneAndDropCache, SingletonScope);
-        register(child);
-        return child;
+        ArgumentNullException.ThrowIfNull(serviceType);
+        return _instance.Resolve(serviceType, serviceKey: serviceKey);
+    }
+
+    private static IContainer BuildGlobalContainer()
+    {
+        var container = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(container);
+        new CouchbaseServiceRegistrator().RegisterServices(container);
+        new PluginServiceRegistrator().RegisterServices(container);
+        return container;
     }
 }

@@ -16,13 +16,12 @@ using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
-using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.App;
 
 public partial class App : Avalonia.Application
 {
-    private PluginContainer? appServiceProvider;
+    private IContainer? appServiceProvider;
 
     public override void Initialize()
     {
@@ -55,8 +54,7 @@ public partial class App : Avalonia.Application
         IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
         var options = appOptionsRepository.GetOrCreateAppOptions();
         var pluginPath = options.PluginPath;
-        var runtimeProvider = PluginContainer.Instance;
-        var pluginManager = runtimeProvider.Resolve<PluginManager>();
+        var pluginManager = ServiceProvider.Resolve<PluginManager>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
@@ -66,59 +64,55 @@ public partial class App : Avalonia.Application
         }
 
         var pluginList = discoveredPlugins.ToList();
-        var pluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(runtimeProvider, pluginList);
+        var pluginServiceProvider = PluginServiceRegistrator.CreatePluginSubcontainer(pluginList);
         var fileFormatManager = pluginServiceProvider.Resolve<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager, pluginManager, runtimeProvider, pluginServiceProvider);
+        return new PluginUiServices(fileFormatManager, pluginManager, pluginServiceProvider);
     }
 
     private sealed record PluginUiServices(
         FileFormatManager FileFormatManager,
         PluginManager PluginManager,
-        PluginContainer RuntimeContainer,
         DryIoc.IContainer ServiceProvider);
 
-    private static PluginContainer BuildAppServiceProvider()
+    private static IContainer BuildAppServiceProvider()
     {
-        return new PluginContainer(registrator =>
+        var container = new DryIoc.Container();
+        new CouchbaseServiceRegistrator().RegisterServices(container);
+        container.RegisterDelegate<AppOptionsDocumentRepository>(static resolver =>
         {
-            new CouchbaseServiceRegistrator().RegisterServices(registrator);
-            registrator.RegisterDelegate<AppOptionsDocumentRepository>(static resolver =>
-            {
-                var repositoryManager = resolver.Resolve<RepositoryManager>();
-                return (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
-            }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver =>
-            {
-                var repositoryManager = resolver.Resolve<RepositoryManager>();
-                return repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository
-                       ?? throw new CatalogRepositoryTypeMismatchException();
-            }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver =>
-            {
-                var catalogRepository = resolver.Resolve<CatalogDocumentRepository>();
-                return new MainWindowViewModel(catalogRepository);
-            }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver =>
-            {
-                var appOptionsRepository = resolver.Resolve<AppOptionsDocumentRepository>();
-                return CreatePluginServices(appOptionsRepository);
-            }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().RuntimeContainer,
-                Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider,
-                Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager,
-                Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager,
-                Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver =>
-                    new MainWindow(
-                        resolver.Resolve<AppOptionsDocumentRepository>(),
-                        resolver.Resolve<PluginManager>(),
-                        resolver.Resolve<PluginContainer>(),
-                        resolver.Resolve<DryIoc.IContainer>(),
-                        resolver.Resolve<FileFormatManager>()),
-                Reuse.Singleton);
-        });
+            var repositoryManager = resolver.Resolve<RepositoryManager>();
+            return (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        }, Reuse.Singleton);
+        container.RegisterDelegate(static resolver =>
+        {
+            var repositoryManager = resolver.Resolve<RepositoryManager>();
+            return repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository
+                   ?? throw new CatalogRepositoryTypeMismatchException();
+        }, Reuse.Singleton);
+        container.RegisterDelegate(static resolver =>
+        {
+            var catalogRepository = resolver.Resolve<CatalogDocumentRepository>();
+            return new MainWindowViewModel(catalogRepository);
+        }, Reuse.Singleton);
+        container.RegisterDelegate(static resolver =>
+        {
+            var appOptionsRepository = resolver.Resolve<AppOptionsDocumentRepository>();
+            return CreatePluginServices(appOptionsRepository);
+        }, Reuse.Singleton);
+        container.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().ServiceProvider,
+            Reuse.Singleton);
+        container.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().PluginManager,
+            Reuse.Singleton);
+        container.RegisterDelegate(static resolver => resolver.Resolve<PluginUiServices>().FileFormatManager,
+            Reuse.Singleton);
+        container.RegisterDelegate(static resolver =>
+                new MainWindow(
+                    resolver.Resolve<AppOptionsDocumentRepository>(),
+                    resolver.Resolve<PluginManager>(),
+                    resolver.Resolve<DryIoc.IContainer>(),
+                    resolver.Resolve<FileFormatManager>()),
+            Reuse.Singleton);
+
+        return container;
     }
 }

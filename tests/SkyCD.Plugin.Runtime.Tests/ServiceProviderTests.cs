@@ -7,28 +7,23 @@ using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using Xunit;
-using PluginContainer = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
 public sealed class ServiceProviderTests
 {
     [Fact]
-    public void Constructor_RegistersCommonAndHostServices()
+    public void RebuildGlobal_RegistersCommonAndHostServices()
     {
-        var provider = PluginContainer.Instance;
-        provider.Register(registrator => registrator.Register<SampleService>(Reuse.Singleton));
+        ServiceProvider.RebuildGlobal();
 
-        var loggerFactory = provider.Resolve(typeof(ILoggerFactory), ifUnresolved: IfUnresolved.ReturnDefault);
-        var sample = provider.Resolve(typeof(SampleService), ifUnresolved: IfUnresolved.ReturnDefault);
+        var loggerFactory = ServiceProvider.Resolve(typeof(ILoggerFactory));
 
         Assert.NotNull(loggerFactory);
-        Assert.NotNull(sample);
-        Assert.IsType<SampleService>(sample);
     }
 
     [Fact]
-    public void Constructor_RegistersPluginMetadataAndCapabilities()
+    public void CreateSubcontainer_RegistersPluginMetadataAndCapabilities()
     {
         var plugin = new DiscoveredPlugin
         {
@@ -40,16 +35,9 @@ public sealed class ServiceProviderTests
             Capabilities = [new SampleCapability()]
         };
 
-        var provider = PluginContainer.Instance;
-        provider.Register(registrator =>
-        {
-            registrator.RegisterInstance<IReadOnlyList<DiscoveredPlugin>>([plugin]);
-            registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>([plugin]);
-            registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
-                new Dictionary<string, DiscoveredPlugin>(StringComparer.OrdinalIgnoreCase) { [plugin.Id] = plugin });
-        });
-        provider.Register(registrator => PluginServiceRegistrator.RegisterServices(registrator, plugin));
-        var list = provider.Resolve(typeof(IReadOnlyList<DiscoveredPlugin>), ifUnresolved: IfUnresolved.ReturnDefault);
+        ServiceProvider.RebuildGlobal();
+        var provider = PluginServiceRegistrator.CreatePluginSubcontainer([plugin]);
+        var list = provider.Resolve(typeof(IReadOnlyCollection<DiscoveredPlugin>), ifUnresolved: IfUnresolved.ReturnDefault);
         var byId = provider.Resolve(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>),
             ifUnresolved: IfUnresolved.ReturnDefault);
         var capability = provider.Resolve(typeof(SampleCapability), ifUnresolved: IfUnresolved.ReturnDefault);
@@ -64,8 +52,6 @@ public sealed class ServiceProviderTests
         Assert.NotNull(keyedCapability);
         Assert.IsType<SampleCapability>(keyedCapability);
     }
-
-    private sealed class SampleService;
 
     private sealed class SampleCapability : IPluginCapability;
 }
