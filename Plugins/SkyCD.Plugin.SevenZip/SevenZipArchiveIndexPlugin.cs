@@ -23,7 +23,7 @@ public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
     }
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             FormatId: "skycd-7z",
             DisplayName: "7z Archive Index",
             Extensions: [".7z"],

@@ -13,7 +13,7 @@ namespace SkyCD.Plugin.Tar;
 public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             FormatId: "skycd-tar",
             DisplayName: "TAR Archive Index",
             Extensions: [".tar", ".tar.gz", ".tgz"],

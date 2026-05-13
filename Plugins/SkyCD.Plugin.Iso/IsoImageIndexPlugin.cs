@@ -23,7 +23,7 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
     }
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             FormatId: "skycd-iso",
             DisplayName: "ISO Image Index",
             Extensions: [".iso"],

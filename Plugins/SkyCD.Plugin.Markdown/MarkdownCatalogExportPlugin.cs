@@ -12,7 +12,7 @@ namespace SkyCD.Plugin.Markdown;
 public sealed class MarkdownCatalogExportPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             FormatId: "skycd-md",
             DisplayName: "SkyCD Markdown Export",
             Extensions: [".md"],

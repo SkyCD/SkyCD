@@ -17,7 +17,7 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
     private const string HierarchyStrategy = "adjacency-list";
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             FormatId: "skycd-toml",
             DisplayName: "SkyCD TOML",
             Extensions: [".toml"],

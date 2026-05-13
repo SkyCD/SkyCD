@@ -11,7 +11,7 @@ namespace SkyCD.Plugin.Zip;
 public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             FormatId: "skycd-zip",
             DisplayName: "ZIP Archive Index",
             Extensions: [".zip"],

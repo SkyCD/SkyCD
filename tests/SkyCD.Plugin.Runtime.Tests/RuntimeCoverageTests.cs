@@ -55,11 +55,11 @@ public sealed class RuntimeCoverageTests
     public async Task FileFormatManager_ResolvesFormatsAndExecutesReadWrite()
     {
         var readWriteCapability = new FakeFileFormatCapability(
-            new FileFormatDescriptor("json", "JSON", [".json"], ["application/json"], true, true));
+            new("json", "JSON", [".json"], ["application/json"], true, true));
         var duplicateCapability = new FakeFileFormatCapability(
-            new FileFormatDescriptor("json", "JSON Duplicate", [".json"], ["application/json"], true, true));
+            new("json", "JSON Duplicate", [".json"], ["application/json"], true, true));
         var readOnlyCapability = new FakeFileFormatCapability(
-            new FileFormatDescriptor("xml", "XML", [".xml"], ["application/xml"], true, false));
+            new("xml", "XML", [".xml"], ["application/xml"], true, false));
 
         var manager = new FileFormatManager([readWriteCapability, duplicateCapability, readOnlyCapability]);
 
