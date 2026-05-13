@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -38,13 +39,13 @@ public class LegacyAscdPluginTests
             });
 
             Assert.True(result.Success, result.Error);
-            var payload = Assert.IsType<LegacyAscdCatalog>(result.Payload);
-            Assert.NotEmpty(payload.Entries);
-            Assert.All(payload.Entries, entry =>
+            var payload = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+            Assert.NotEmpty(payload);
+            Assert.All(payload, row =>
             {
-                Assert.False(string.IsNullOrWhiteSpace(entry.Id));
-                Assert.False(string.IsNullOrWhiteSpace(entry.Name));
-                Assert.False(string.IsNullOrWhiteSpace(entry.Type));
+                Assert.False(string.IsNullOrWhiteSpace(row["id"]?.ToString()));
+                Assert.False(string.IsNullOrWhiteSpace(row["name"]?.ToString()));
+                Assert.False(string.IsNullOrWhiteSpace(row["type"]?.ToString()));
             });
         }
     }
@@ -71,7 +72,7 @@ public class LegacyAscdPluginTests
         });
 
         Assert.True(firstRead.Success, firstRead.Error);
-        var payload = Assert.IsType<LegacyAscdCatalog>(firstRead.Payload);
+        var payload = Assert.IsType<List<Dictionary<string, object?>>>(firstRead.Payload);
 
         await using var target = new MemoryStream();
         var write = await plugin.WriteAsync(new FileFormatWriteRequest
@@ -93,10 +94,10 @@ public class LegacyAscdPluginTests
         });
 
         Assert.True(secondRead.Success, secondRead.Error);
-        var reparsed = Assert.IsType<LegacyAscdCatalog>(secondRead.Payload);
-        Assert.Equal(payload.Entries.Count, reparsed.Entries.Count);
-        Assert.Equal(payload.Entries[0].Name, reparsed.Entries[0].Name);
-        Assert.Equal(payload.Entries[0].SizeBytes, reparsed.Entries[0].SizeBytes);
+        var reparsed = Assert.IsType<List<Dictionary<string, object?>>>(secondRead.Payload);
+        Assert.Equal(payload.Count, reparsed.Count);
+        Assert.Equal(payload[0]["name"]?.ToString(), reparsed[0]["name"]?.ToString());
+        Assert.Equal(payload[0]["size"]?.ToString(), reparsed[0]["size"]?.ToString());
     }
 
     [Fact]
@@ -138,9 +139,47 @@ public class LegacyAscdPluginTests
         });
 
         Assert.True(result.Success, result.Error);
-        var catalog = Assert.IsType<LegacyAscdCatalog>(result.Payload);
-        var entry = Assert.Single(catalog.Entries);
-        Assert.Equal(Guid.Empty.ToString(), entry.ApplicationId);
+        var documents = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+        var entry = Assert.Single(documents);
+        Assert.Equal(Guid.Empty.ToString(), entry["applicationId"]?.ToString());
+    }
+
+    [Fact]
+    public async Task WriteAsync_EmitsJsonDocumentLines()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var payload = new List<Dictionary<string, object?>>
+        {
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["id"] = "1",
+                ["name"] = "Root",
+                ["parentId"] = null,
+                ["type"] = "Folder",
+                ["size"] = 0L,
+                ["childrenCount"] = 0L,
+                ["properties"] = ""
+            }
+        };
+
+        await using var target = new MemoryStream();
+        var write = await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "legacy-ascd",
+            Target = target,
+            Payload = payload,
+            FileName = "doc.ascd"
+        });
+
+        Assert.True(write.Success, write.Error);
+        target.Position = 0;
+        using var decompressed = new DeflateStream(target, CompressionMode.Decompress, leaveOpen: true);
+        using var reader = new StreamReader(decompressed);
+        var content = await reader.ReadToEndAsync();
+
+        Assert.Contains("# format: skycd-nf", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"id\":\"1\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("INSERT INTO", content, StringComparison.OrdinalIgnoreCase);
     }
 
     private static byte[] CompressText(string text)

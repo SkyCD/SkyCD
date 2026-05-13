@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -12,7 +14,7 @@ namespace SkyCD.Plugin.Legacy.Ascd;
 public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
 {
     private const string FormatHeaderPrefix = "# format: skycd-nf";
-    private const string InsertPrefix = "INSERT INTO list";
+    private static readonly StringComparer KeyComparer = StringComparer.OrdinalIgnoreCase;
 
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -51,7 +53,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
                 };
             }
 
-            var catalog = new LegacyAscdCatalog { HeaderVersion = version };
+            var documents = new List<Dictionary<string, object?>>();
             string? line;
             var processed = 0;
             while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
@@ -63,21 +65,29 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
                 }
 
                 var trimmedLine = line.Trim();
-                if (!trimmedLine.StartsWith(InsertPrefix, StringComparison.OrdinalIgnoreCase))
+                if (TryParseDocumentRecord(trimmedLine, out var document))
+                {
+                    documents.Add(document);
+                    processed++;
+                    request.Progress?.Report(Math.Min(99, processed % 100));
+                    continue;
+                }
+
+                if (!LooksLikeLegacyRecord(trimmedLine))
                 {
                     continue;
                 }
 
-                if (!TryParseInsertStatement(trimmedLine, out var entry, out var error))
+                if (!TryParseLegacyRecord(trimmedLine, out var entry, out var legacyError))
                 {
                     return new FileFormatReadResult
                     {
                         Success = false,
-                        Error = $"Line {lineNumber}: {error}"
+                        Error = $"Line {lineNumber}: {legacyError}"
                     };
                 }
 
-                catalog.Entries.Add(entry);
+                documents.Add(ToDocument(entry));
                 processed++;
                 request.Progress?.Report(Math.Min(99, processed % 100));
             }
@@ -86,7 +96,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             return new FileFormatReadResult
             {
                 Success = true,
-                Payload = catalog
+                Payload = documents
             };
         }
         catch (Exception exception)
@@ -102,30 +112,21 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.Payload is not LegacyAscdCatalog catalog)
-        {
-            return new FileFormatWriteResult
-            {
-                Success = false,
-                Error = "Payload must be LegacyAscdCatalog."
-            };
-        }
-
         try
         {
+            var entries = ResolveEntries(request.Payload, out var versionHint);
             using var compressed = new DeflateStream(request.Target, CompressionMode.Compress, leaveOpen: true);
             using var writer = new StreamWriter(compressed, Encoding.UTF8, leaveOpen: true);
 
-            var version = string.IsNullOrWhiteSpace(catalog.HeaderVersion) ? "1.0" : catalog.HeaderVersion.Trim();
+            var version = string.IsNullOrWhiteSpace(versionHint) ? "1.0" : versionHint.Trim();
             await writer.WriteLineAsync($"{FormatHeaderPrefix} {version}");
 
-            for (var index = 0; index < catalog.Entries.Count; index++)
+            for (var index = 0; index < entries.Count; index++)
             {
-                var entry = catalog.Entries[index];
-                var line = BuildInsertStatement(entry);
+                var line = BuildDocumentRecordLine(entries[index]);
                 await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
 
-                request.Progress?.Report((int)((index + 1d) / Math.Max(1, catalog.Entries.Count) * 100d));
+                request.Progress?.Report((int)((index + 1d) / Math.Max(1, entries.Count) * 100d));
             }
 
             await writer.FlushAsync(cancellationToken);
@@ -162,12 +163,12 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         return true;
     }
 
-    private static bool TryParseInsertStatement(string line, out LegacyAscdEntry entry, out string error)
+    private static bool TryParseLegacyRecord(string line, out LegacyAscdEntry entry, out string error)
     {
-        if (!line.StartsWith(InsertPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!LooksLikeLegacyRecord(line))
         {
-            entry = default!;
-            error = "Unsupported statement. Only INSERT INTO list is accepted.";
+            entry = null!;
+            error = "Unsupported record line format.";
             return false;
         }
 
@@ -176,7 +177,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         var valuesTokenIndex = line.IndexOf("VALUES", StringComparison.OrdinalIgnoreCase);
         if (valuesTokenIndex < 0)
         {
-            entry = default!;
+            entry = null!;
             error = "Missing VALUES clause.";
             return false;
         }
@@ -190,7 +191,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         {
             if (line[i] == '\'' && (i == 0 || line[i - 1] != '\\'))
             {
-                // Simple quote tracking (it's actually '' for escaped quotes in SQL, but this is simple enough)
+                // Quote tracking for legacy escaped quotes ('')
                 inQuotes = !inQuotes;
             }
 
@@ -203,20 +204,20 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
 
         if (closeParen <= openParen)
         {
-            entry = default!;
+            entry = null!;
             error = "Only a single VALUES(...) statement is supported.";
             return false;
         }
 
-        if (!TryParseQuotedValues(line, openParen + 1, closeParen - 1, out var values, out error))
+        if (!TryParseQuotedFields(line, openParen + 1, closeParen - 1, out var values, out error))
         {
-            entry = default!;
+            entry = null!;
             return false;
         }
 
         if (values.Count != 7)
         {
-            entry = default!;
+            entry = null!;
             error = $"Expected 7 values but found {values.Count}.";
             return false;
         }
@@ -241,7 +242,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         return true;
     }
 
-    private static bool TryParseQuotedValues(string text, int startIndex, int endIndex, out List<string> values,
+    private static bool TryParseQuotedFields(string text, int startIndex, int endIndex, out List<string> values,
         out string error)
     {
         values = [];
@@ -256,7 +257,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
 
             if (index > endIndex || text[index] != '\'')
             {
-                error = "Expected quoted SQL literal.";
+                error = "Expected quoted value.";
                 return false;
             }
 
@@ -286,7 +287,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
 
             if (!closed)
             {
-                error = "Unterminated quoted SQL literal.";
+                error = "Unterminated quoted value.";
                 return false;
             }
 
@@ -301,7 +302,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             {
                 if (text[index] != ',')
                 {
-                    error = "Expected comma delimiter between SQL values.";
+                    error = "Expected comma delimiter between values.";
                     return false;
                 }
 
@@ -313,14 +314,218 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         return true;
     }
 
-    private static string BuildInsertStatement(LegacyAscdEntry entry)
-    {
-        return
-            $"INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('{EscapeSqlLiteral(entry.Id)}', '{EscapeSqlLiteral(entry.Name)}', '{EscapeSqlLiteral(entry.ParentId)}', '{EscapeSqlLiteral(entry.Type)}', '{EscapeSqlLiteral(entry.PropertiesXml)}', '{entry.SizeBytes}', '{EscapeSqlLiteral(entry.ApplicationId)}')";
-    }
-
-    private static string EscapeSqlLiteral(string value) => value.Replace("'", "''", StringComparison.Ordinal);
-
     private static long TryParseSize(string raw) =>
         long.TryParse(raw, out var parsed) ? parsed : 0L;
+
+    private static Dictionary<string, object?> ToDocument(LegacyAscdEntry entry)
+    {
+        var normalizedType = NormalizeLegacyType(entry.Type);
+        var parentId = entry.ParentId is "-1" or "" ? null : entry.ParentId;
+
+        return new Dictionary<string, object?>(KeyComparer)
+        {
+            ["id"] = entry.Id,
+            ["name"] = entry.Name,
+            ["parentId"] = parentId,
+            ["type"] = normalizedType,
+            ["size"] = entry.SizeBytes,
+            ["childrenCount"] = 0L,
+            ["properties"] = entry.PropertiesXml,
+            // Compatibility
+            ["legacyType"] = entry.Type,
+            ["applicationId"] = string.IsNullOrWhiteSpace(entry.ApplicationId) ? Guid.Empty.ToString() : entry.ApplicationId
+        };
+    }
+
+    private static bool TryParseDocumentRecord(string line, out Dictionary<string, object?> document)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            document = null!;
+            return false;
+        }
+
+        try
+        {
+            using var parsed = JsonDocument.Parse(line);
+            if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                document = default!;
+                return false;
+            }
+
+            document = new Dictionary<string, object?>(KeyComparer);
+            foreach (var property in parsed.RootElement.EnumerateObject())
+            {
+                document[property.Name] = property.Value.ValueKind switch
+                {
+                    JsonValueKind.Null => null,
+                    JsonValueKind.Number when property.Value.TryGetInt64(out var number) => number,
+                    _ => property.Value.ToString()
+                };
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            document = null!;
+            return false;
+        }
+    }
+
+    private static string BuildDocumentRecordLine(LegacyAscdEntry entry)
+    {
+        var document = ToDocument(entry);
+        return JsonSerializer.Serialize(document);
+    }
+
+    private static bool LooksLikeLegacyRecord(string line)
+    {
+        var valuesTokenIndex = line.IndexOf("VALUES", StringComparison.OrdinalIgnoreCase);
+        if (valuesTokenIndex < 0)
+        {
+            return false;
+        }
+
+        var openParen = line.IndexOf('(', valuesTokenIndex);
+        return openParen >= 0;
+    }
+
+    private static List<LegacyAscdEntry> ResolveEntries(object? payload, out string? headerVersion)
+    {
+        headerVersion = "1.0";
+
+        if (payload is LegacyAscdCatalog catalog)
+        {
+            headerVersion = catalog.HeaderVersion;
+            return catalog.Entries;
+        }
+
+        if (payload is IEnumerable<Dictionary<string, object?>> rows)
+        {
+            return rows.Select(FromDocument).ToList();
+        }
+
+        if (payload is JsonElement { ValueKind: JsonValueKind.Array } arrayElement)
+        {
+            return arrayElement.EnumerateArray()
+                .Where(static element => element.ValueKind == JsonValueKind.Object)
+                .Select(FromJsonDocument)
+                .ToList();
+        }
+
+        throw new InvalidOperationException("Payload must be document rows or LegacyAscdCatalog.");
+    }
+
+    private static LegacyAscdEntry FromDocument(Dictionary<string, object?> row)
+    {
+        var normalizedType = GetString(row, "type", defaultValue: "File");
+
+        return new LegacyAscdEntry
+        {
+            Id = GetString(row, "id", defaultValue: Guid.NewGuid().ToString()),
+            Name = GetString(row, "name"),
+            ParentId = GetString(row, "parentId", defaultValue: "-1"),
+            Type = GetString(row, "legacyType", defaultValue: DenormalizeLegacyType(normalizedType)),
+            PropertiesXml = GetString(row, "properties", defaultValue: GetString(row, "propertiesXml")),
+            SizeBytes = GetLong(row, "size", "sizeBytes"),
+            ApplicationId = GetString(row, "applicationId", defaultValue: Guid.Empty.ToString())
+        };
+    }
+
+    private static LegacyAscdEntry FromJsonDocument(JsonElement element)
+    {
+        var normalizedType = ReadJsonString(element, "type") ?? "File";
+
+        return new LegacyAscdEntry
+        {
+            Id = ReadJsonString(element, "id") ?? Guid.NewGuid().ToString(),
+            Name = ReadJsonString(element, "name") ?? string.Empty,
+            ParentId = ReadJsonString(element, "parentId") ?? "-1",
+            Type = ReadJsonString(element, "legacyType") ?? DenormalizeLegacyType(normalizedType),
+            PropertiesXml = ReadJsonString(element, "properties") ?? ReadJsonString(element, "propertiesXml") ?? string.Empty,
+            SizeBytes = ReadJsonLong(element, "size") ?? ReadJsonLong(element, "sizeBytes") ?? 0L,
+            ApplicationId = ReadJsonString(element, "applicationId") ?? Guid.Empty.ToString()
+        };
+    }
+
+    private static string GetString(Dictionary<string, object?> row, string key, string defaultValue = "")
+    {
+        if (row.TryGetValue(key, out var value) && value is not null)
+        {
+            var raw = value.ToString();
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                return raw;
+            }
+        }
+
+        return defaultValue;
+    }
+
+    private static long GetLong(Dictionary<string, object?> row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!row.TryGetValue(key, out var value) || value is null)
+            {
+                continue;
+            }
+
+            if (value is long directLong)
+            {
+                return directLong;
+            }
+
+            if (long.TryParse(value.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return 0L;
+    }
+
+    private static string? ReadJsonString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) ? property.ToString() : null;
+    }
+
+    private static long? ReadJsonLong(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            return null;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.Number when property.TryGetInt64(out var number) => number,
+            _ when long.TryParse(property.ToString(), out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static string NormalizeLegacyType(string legacyType)
+    {
+        return legacyType.Trim().ToLowerInvariant() switch
+        {
+            "scdfolder" => "Folder",
+            "scdmedia" => "Media",
+            "scdnetworkresource" => "NetworkResource",
+            _ => "File"
+        };
+    }
+
+    private static string DenormalizeLegacyType(string normalizedType)
+    {
+        return normalizedType.Trim().ToLowerInvariant() switch
+        {
+            "folder" => "scdFolder",
+            "media" => "scdMedia",
+            "networkresource" => "scdNetworkResource",
+            _ => "scdFile"
+        };
+    }
 }
