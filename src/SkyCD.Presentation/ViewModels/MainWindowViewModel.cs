@@ -1172,7 +1172,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (menuContributions.Any())
             {
                 toolsMenuItems.Add(Separator());
-                
+
                 foreach (var contribution in menuContributions)
                 {
                     toolsMenuItems.Add(new MainMenuItemViewModel

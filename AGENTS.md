@@ -8,11 +8,12 @@
 5. If a PR targets a feature branch: also create an additional PR from that feature branch into `main`.
 6. Do not include temporary/debug scripts in commits or PRs.
 7. Each commit message must begin with `[XXX]` where `XXX` is the issue number solved by that commit.
-8. PR descriptions must clearly state what issue they solve, using format "Solves #XXX: [issue title]" at the beginning.
-9. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
-10. After each code change, if the build fails, do not commit the changes.
-11. If possible, everytime write integration tests for new functionality
-12. Prefer custom exception types over generic exceptions where practical. Custom exceptions must keep predefined message templates, allow only parameter differences, and be defined one class per file.
+8. Before each commit, verify `dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal` passes. If it fails, fix the formatting issues before committing.
+9. PR descriptions must clearly state what issue they solve, using format "Solves #XXX: [issue title]" at the beginning.
+10. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
+11. After each code change, if the build fails, do not commit the changes.
+12. If possible, everytime write integration tests for new functionality
+13. Prefer custom exception types over generic exceptions where practical. Custom exceptions must keep predefined message templates, allow only parameter differences, and be defined one class per file.
 
 ## Project Structure (SkyCD)
 - `src/`: active v3 application code.
