@@ -9,7 +9,7 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
     private const string SchemaVersion = "skycd.catalog.v1";
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             "skycd-json",
             "SkyCD JSON",
             [".json"],

@@ -138,7 +138,7 @@ public class ModalExtensionServiceTests
     private sealed class EchoModalPlugin : IModalPluginCapability
     {
         public ModalDescriptor Modal =>
-            new ModalDescriptor(
+            new(
                 "sample.modal.echo",
                 "Echo",
                 Width: 600,

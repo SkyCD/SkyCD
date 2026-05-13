@@ -9,7 +9,7 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
     private static readonly string[] HeaderColumns = ["NodeId", "ParentId", "Kind", "Name", "SizeBytes"];
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             "skycd-csv",
             "SkyCD CSV",
             [".csv"],

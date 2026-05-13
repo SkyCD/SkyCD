@@ -71,7 +71,7 @@ public sealed class PluginDiscoveryCapabilityPlugin : IMenuPluginCapability, IFi
 
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
-        new MenuContribution("tests.command", "Tests", "Tools")
+        new("tests.command", "Tests", "Tools")
     ];
 
     public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default) =>

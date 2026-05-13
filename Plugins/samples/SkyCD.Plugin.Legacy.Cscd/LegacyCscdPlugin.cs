@@ -10,7 +10,7 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
     private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor("legacy-cscd", "SkyCD Compressed Text Format", [".cscd"], CanRead: true, CanWrite: true, "application/octet-stream")
+        new("legacy-cscd", "SkyCD Compressed Text Format", [".cscd"], CanRead: true, CanWrite: true, "application/octet-stream")
     ;
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)

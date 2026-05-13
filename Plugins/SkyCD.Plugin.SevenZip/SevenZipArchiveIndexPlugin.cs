@@ -17,7 +17,7 @@ public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
     }
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             "skycd-7z",
             "7z Archive Index",
             [".7z"],

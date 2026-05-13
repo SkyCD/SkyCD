@@ -14,7 +14,7 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
         .Build();
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             "skycd-yaml",
             "SkyCD YAML",
             [".yaml", ".yml"],

@@ -5,7 +5,7 @@ namespace SkyCD.Plugin.Sample.Modal;
 public sealed class SampleModalPlugin : IModalPluginCapability
 {
     public ModalDescriptor Modal =>
-        new ModalDescriptor(
+        new(
             "sample.modal.confirm-export",
             "Confirm Export",
             Width: 480,

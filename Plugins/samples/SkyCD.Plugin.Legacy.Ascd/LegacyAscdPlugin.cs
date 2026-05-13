@@ -10,7 +10,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
     private const string InsertPrefix = "INSERT INTO list";
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor("legacy-ascd", "SkyCD Advanced Format", [".ascd"], CanRead: true, CanWrite: true, "application/octet-stream")
+        new("legacy-ascd", "SkyCD Advanced Format", [".ascd"], CanRead: true, CanWrite: true, "application/octet-stream")
     ;
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)

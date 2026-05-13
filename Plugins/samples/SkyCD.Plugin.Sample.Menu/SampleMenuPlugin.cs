@@ -6,7 +6,7 @@ public sealed class SampleMenuPlugin : IMenuPluginCapability
 {
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
-        new MenuContribution("sample.menu.notify", "Notification", "Tools", Order: 100)
+        new("sample.menu.notify", "Notification", "Tools", Order: 100)
     ];
 
     public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)

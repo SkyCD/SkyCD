@@ -7,7 +7,7 @@ namespace SkyCD.Plugin.Html;
 public sealed class HtmlCatalogExportPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             "skycd-html",
             "SkyCD HTML Export",
             [".html"],

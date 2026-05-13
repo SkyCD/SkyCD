@@ -148,7 +148,7 @@ public class FileFormatManagerTests
     {
         public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
         [
-            new MenuContribution("tests.menu.throw", "Throw", "Tools")
+            new("tests.menu.throw", "Throw", "Tools")
         ];
 
         public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)

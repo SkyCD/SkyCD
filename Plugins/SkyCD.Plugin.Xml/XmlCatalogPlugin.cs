@@ -11,7 +11,7 @@ public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
     private const string SchemaVersion = "1.0";
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
+        new(
             "skycd-xml",
             "SkyCD XML",
             [".xml"],
