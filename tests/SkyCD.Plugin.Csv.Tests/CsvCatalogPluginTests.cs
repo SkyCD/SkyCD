@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Csv;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -18,7 +17,7 @@ public class CsvCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesCsvPluginMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -30,7 +29,7 @@ public class CsvCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_PreservesHierarchyAndSizeFields()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Csv", "catalog-hierarchy.csv");
 
         await using var source = File.OpenRead(fixturePath);
@@ -77,7 +76,7 @@ public class CsvCatalogPluginTests
     [Fact]
     public async Task WriteAsync_AcceptsJsonArrayPayload()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         var payload = JsonSerializer.Deserialize<JsonElement>(
             """
             [
@@ -100,22 +99,8 @@ public class CsvCatalogPluginTests
         Assert.Contains("11,10,file,readme.txt,15", text);
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var plugin = new CsvCatalogPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.csv",
-                Name = "CsvCatalogPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new CsvCatalogPlugin()]);
     }
 }

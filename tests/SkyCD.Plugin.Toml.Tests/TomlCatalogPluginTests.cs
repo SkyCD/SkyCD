@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Toml;
 using Xunit;
@@ -17,7 +16,7 @@ public class TomlCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesTomlMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -29,7 +28,7 @@ public class TomlCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsFixtureHierarchyAndMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Toml", "catalog-v1.toml");
 
         await using var source = File.OpenRead(fixturePath);
@@ -112,22 +111,8 @@ sizeBytes = 123
         Assert.Equal("123", rows[0]["sizeBytes"]);
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var plugin = new TomlCatalogPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.toml",
-                Name = "TomlCatalogPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new TomlCatalogPlugin()]);
     }
 }

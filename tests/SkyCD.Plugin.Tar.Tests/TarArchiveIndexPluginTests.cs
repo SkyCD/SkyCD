@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Tar;
 using Xunit;
@@ -19,7 +18,7 @@ public class TarArchiveIndexPluginTests
     [Fact]
     public void OpenFormats_IncludeTarVariants_ButSaveFormatsDoNot()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -35,7 +34,7 @@ public class TarArchiveIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnlyTarFormat()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         await using var stream = new MemoryStream();
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -52,7 +51,7 @@ public class TarArchiveIndexPluginTests
     [Fact]
     public async Task ReadAsync_IndexesTarAndGzipTar_WithPathNormalizationAndMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         await using var tarStream = CreateTarFixture(gzip: false);
         var tarResult = await service.ReadAsync(new FileFormatReadRequest
@@ -111,22 +110,8 @@ public class TarArchiveIndexPluginTests
         return output;
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var plugin = new TarArchiveIndexPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.tar",
-                Name = "TarArchiveIndexPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new TarArchiveIndexPlugin()]);
     }
 }

@@ -12,17 +12,10 @@
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5"/>
     </ItemGroup>
     <ItemGroup>
-    </ItemGroup>
-    <ItemGroup>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Ascd\SkyCD.Plugin.Legacy.Ascd.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Cscd\SkyCD.Plugin.Legacy.Cscd.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Scd\SkyCD.Plugin.Legacy.Scd.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <None Include="..\..\legacy\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd" Condition="Exists('..\..\legacy\SkyCD\Samples\gamez.scd')">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
         <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd" Condition="Exists('..\..\legacy\SkyCD\Samples\My Documents.ascd')">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

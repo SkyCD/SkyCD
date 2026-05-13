@@ -40,10 +40,24 @@
         <Project Path="tests/SkyCD.Couchbase.Tests/SkyCD.Couchbase.Tests.csproj"/>
         <Project Path="tests/SkyCD.Formatting.Tests/SkyCD.Formatting.Tests.csproj"/>
         <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj"/>
-        <Project Path="tests/SkyCD.LegacyFormats.Tests/SkyCD.LegacyFormats.Tests.csproj"/>
         <Project Path="tests/SkyCD.Logging.Tests/SkyCD.Logging.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Csv.Tests/SkyCD.Plugin.Csv.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Html.Tests/SkyCD.Plugin.Html.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Iso.Tests/SkyCD.Plugin.Iso.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Json.Tests/SkyCD.Plugin.Json.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Legacy.Ascd.Tests/SkyCD.Plugin.Legacy.Ascd.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Legacy.Cscd.Tests/SkyCD.Plugin.Legacy.Cscd.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Legacy.Scd.Tests/SkyCD.Plugin.Legacy.Scd.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Markdown.Tests/SkyCD.Plugin.Markdown.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Sample.Menu.Tests/SkyCD.Plugin.Sample.Menu.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Sample.Modal.Tests/SkyCD.Plugin.Sample.Modal.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.SevenZip.Tests/SkyCD.Plugin.SevenZip.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Tar.Tests/SkyCD.Plugin.Tar.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Toml.Tests/SkyCD.Plugin.Toml.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Xml.Tests/SkyCD.Plugin.Xml.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Yaml.Tests/SkyCD.Plugin.Yaml.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Zip.Tests/SkyCD.Plugin.Zip.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>

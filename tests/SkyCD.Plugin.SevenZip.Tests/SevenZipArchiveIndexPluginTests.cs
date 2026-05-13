@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.SevenZip;
 using Xunit;
@@ -16,8 +15,7 @@ public class SevenZipArchiveIndexPluginTests
     [Fact]
     public void OpenFormats_Include7z_ButSaveFormatsDoNot()
     {
-        var service =
-            new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService(new FakeReader([]));
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -29,8 +27,7 @@ public class SevenZipArchiveIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnly7zFormat()
     {
-        var service =
-            new FileFormatManager(CreateCatalog(new FakeReader([])).GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService(new FakeReader([]));
         await using var target = new MemoryStream();
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -53,7 +50,7 @@ public class SevenZipArchiveIndexPluginTests
                 ModifiedUtc: new DateTime(2026, 01, 01, 0, 0, 0, DateTimeKind.Utc)),
             new SevenZipEntryInfo("root/docs/", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null)
         ]);
-        var service = new FileFormatManager(CreateCatalog(reader).GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService(reader);
         await using var source = new MemoryStream([0x37, 0x7A]); // test stream ignored by fake reader
 
         var result = await service.ReadAsync(new FileFormatReadRequest
@@ -71,8 +68,7 @@ public class SevenZipArchiveIndexPluginTests
     [Fact]
     public async Task ReadAsync_ReturnsTypedError_WhenCompressionMethodUnsupported()
     {
-        var service =
-            new FileFormatManager(CreateCatalog(new ThrowingReader()).GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService(new ThrowingReader());
         await using var source = new MemoryStream([0x37, 0x7A]);
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -85,23 +81,9 @@ public class SevenZipArchiveIndexPluginTests
         Assert.Contains("SEVENZIP_UNSUPPORTED_METHOD", exception.Message);
     }
 
-    private static PluginManager CreateCatalog(ISevenZipEntryReader reader)
+    private static FileFormatManager CreateService(ISevenZipEntryReader reader)
     {
-        var plugin = new SevenZipArchiveIndexPlugin(reader);
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.7z",
-                Name = "SevenZipArchiveIndexPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new SevenZipArchiveIndexPlugin(reader)]);
     }
 
     private sealed class FakeReader(IReadOnlyCollection<SevenZipEntryInfo> entries) : ISevenZipEntryReader

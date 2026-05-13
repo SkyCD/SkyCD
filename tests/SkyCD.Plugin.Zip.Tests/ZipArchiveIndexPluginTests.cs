@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Zip;
 using Xunit;
@@ -18,7 +17,7 @@ public class ZipArchiveIndexPluginTests
     [Fact]
     public void OpenFormats_IncludeZip_ButSaveFormatsDoNot()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -30,7 +29,7 @@ public class ZipArchiveIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnlyZipFormat()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         await using var stream = new MemoryStream();
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -47,7 +46,7 @@ public class ZipArchiveIndexPluginTests
     [Fact]
     public async Task ReadAsync_IndexesDeepAndUnicodeEntries_WithMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         await using var zipStream = CreateFixtureZip();
 
         var result = await service.ReadAsync(new FileFormatReadRequest
@@ -85,22 +84,8 @@ public class ZipArchiveIndexPluginTests
         return stream;
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var plugin = new ZipArchiveIndexPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.zip",
-                Name = "ZipArchiveIndexPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new ZipArchiveIndexPlugin()]);
     }
 }

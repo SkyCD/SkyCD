@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Xml;
 using Xunit;
@@ -17,7 +16,7 @@ public class XmlCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesXmlPluginMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -29,7 +28,7 @@ public class XmlCatalogPluginTests
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsFixturePayload_WithStableOrdering()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Xml", "catalog-v1.xml");
 
         await using var source = File.OpenRead(fixturePath);
@@ -73,7 +72,7 @@ public class XmlCatalogPluginTests
                                     <skycd:node nodeId="1" parentId="" kind="file" name="&xxe;" sizeBytes="1" />
                                   </skycd:catalog>
                                   """;
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes(xxePayload));
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -86,22 +85,8 @@ public class XmlCatalogPluginTests
         Assert.Contains("DTD", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var plugin = new XmlCatalogPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.xml",
-                Name = "XmlCatalogPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new XmlCatalogPlugin()]);
     }
 }

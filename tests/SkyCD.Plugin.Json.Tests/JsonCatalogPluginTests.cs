@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Json;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -17,7 +16,7 @@ public class JsonCatalogPluginTests
     [Fact]
     public void GetOpenAndSaveFormats_ExposesJsonPluginMetadata()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -29,7 +28,7 @@ public class JsonCatalogPluginTests
     [Fact]
     public async Task WriteAndReadAsync_RoundTripsFixturePayload_WithSchemaEnvelope()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Json", "catalog-v1.json");
 
         await using var fixtureStream = File.OpenRead(fixturePath);
@@ -73,7 +72,7 @@ public class JsonCatalogPluginTests
     [Fact]
     public async Task ReadAsync_ReturnsFailure_WhenSchemaVersionMissingOrUnknown()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("{\"payload\":{\"title\":\"x\"}}"));
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -86,22 +85,8 @@ public class JsonCatalogPluginTests
         Assert.Contains("schemaVersion", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var capability = new JsonCatalogPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.json",
-                Name = "JsonCatalogPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [capability]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new JsonCatalogPlugin()]);
     }
 }

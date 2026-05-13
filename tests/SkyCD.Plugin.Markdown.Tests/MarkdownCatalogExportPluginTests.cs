@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Markdown;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -17,7 +16,7 @@ public class MarkdownCatalogExportPluginTests
     [Fact]
     public void SaveFormats_IncludeMarkdown_ButOpenFormatsDoNot()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -29,7 +28,7 @@ public class MarkdownCatalogExportPluginTests
     [Fact]
     public async Task ReadAsync_IsBlocked_ForWriteOnlyMarkdownFormat()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes("# export"));
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -45,7 +44,7 @@ public class MarkdownCatalogExportPluginTests
     [Fact]
     public async Task WriteAsync_ExportsDeterministicHierarchy_WithEscaping()
     {
-        var service = new FileFormatManager(CreateCatalog().GetCapabilities<IFileFormatPluginCapability>());
+        var service = CreateService();
         var payload = new List<Dictionary<string, object?>>
         {
             new(StringComparer.OrdinalIgnoreCase)
@@ -81,22 +80,8 @@ public class MarkdownCatalogExportPluginTests
         Assert.Contains("- `file` track\\*\\(demo\\).mp3 (`nodeId=2`)", markdown);
     }
 
-    private static PluginManager CreateCatalog()
+    private static FileFormatManager CreateService()
     {
-        var plugin = new MarkdownCatalogExportPlugin();
-        var catalog = PluginManagerTestFactory.Create();
-        catalog.SetPlugins(
-        [
-            new DiscoveredPlugin
-            {
-                Id = "tests.markdown",
-                Name = "MarkdownCatalogExportPluginTests",
-                Version = new Version(1, 0, 0),
-                MinHostVersion = new Version(3, 0, 0),
-                FileName = "tests.dll",
-                Capabilities = [plugin]
-            }
-        ]);
-        return catalog;
+        return new FileFormatManager([new MarkdownCatalogExportPlugin()]);
     }
 }
