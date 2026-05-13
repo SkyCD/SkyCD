@@ -53,21 +53,25 @@ public class TarArchiveIndexPluginTests
     {
         var service = CreateService();
 
-        await using var tarStream = CreateTarFixture(gzip: false);
+        // Read from physical tar file
+        var tarPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Tar", "sample.tar");
+        await using var tarFileStream = new FileStream(tarPath, FileMode.Open);
         var tarResult = await service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-tar",
-            Source = tarStream
+            Source = tarFileStream
         });
         Assert.True(tarResult.Success);
         var tarRows = Assert.IsType<List<Dictionary<string, object?>>>(tarResult.Payload);
         Assert.Contains(tarRows, row => Equals(row["fullPath"], "root/deep/įrašas.txt"));
 
-        await using var tarGzStream = CreateTarFixture(gzip: true);
+        // Read from physical tar.gz file
+        var tarGzPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Tar", "sample.tar.gz");
+        await using var tarGzFileStream = new FileStream(tarGzPath, FileMode.Open);
         var tarGzResult = await service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-tar",
-            Source = tarGzStream
+            Source = tarGzFileStream
         });
         Assert.True(tarGzResult.Success);
         var tarGzRows = Assert.IsType<List<Dictionary<string, object?>>>(tarGzResult.Payload);

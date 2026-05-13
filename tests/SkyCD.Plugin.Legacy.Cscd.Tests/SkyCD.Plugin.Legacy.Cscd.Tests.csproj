@@ -15,4 +15,9 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Cscd\SkyCD.Plugin.Legacy.Cscd.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <None Update="Fixtures\Cscd\catalog-sample.cscd">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

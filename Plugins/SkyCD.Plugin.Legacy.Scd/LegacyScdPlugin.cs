@@ -11,7 +11,7 @@ namespace SkyCD.Plugin.Legacy.Scd;
 
 public sealed class LegacyScdPlugin : IFileFormatPluginCapability
 {
-    private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.+)$", RegexOptions.Compiled);
+    private static readonly Regex SizePrefix = new(@"^\[(?<size>[^\]]+)\]\s*(?<path>.*)$", RegexOptions.Compiled);
 
     public FileFormatDescriptor SupportedFormat =>
         new(

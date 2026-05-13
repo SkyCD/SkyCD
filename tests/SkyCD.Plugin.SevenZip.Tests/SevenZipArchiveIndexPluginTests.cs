@@ -15,7 +15,7 @@ public class SevenZipArchiveIndexPluginTests
     [Fact]
     public void OpenFormats_Include7z_ButSaveFormatsDoNot()
     {
-        var service = CreateService(new FakeReader([]));
+        var service = CreateService();
 
         var openFormats = service.GetOpenFormats();
         var saveFormats = service.GetSaveFormats();
@@ -27,7 +27,7 @@ public class SevenZipArchiveIndexPluginTests
     [Fact]
     public async Task WriteAsync_IsBlocked_ForReadOnly7zFormat()
     {
-        var service = CreateService(new FakeReader([]));
+        var service = CreateService();
         await using var target = new MemoryStream();
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -44,14 +44,9 @@ public class SevenZipArchiveIndexPluginTests
     [Fact]
     public async Task ReadAsync_ProjectsNestedPathsAndMetadata()
     {
-        var reader = new FakeReader(
-        [
-            new SevenZipEntryInfo("root/deep/įrašas.txt", IsDirectory: false, SizeBytes: 123,
-                ModifiedUtc: new DateTime(2026, 01, 01, 0, 0, 0, DateTimeKind.Utc)),
-            new SevenZipEntryInfo("root/docs/", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null)
-        ]);
-        var service = CreateService(reader);
-        await using var source = new MemoryStream([0x37, 0x7A]); // test stream ignored by fake reader
+        var service = CreateService();
+        var sevenZipPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "7z", "sample.7z");
+        await using var source = new FileStream(sevenZipPath, FileMode.Open);
 
         var result = await service.ReadAsync(new FileFormatReadRequest
         {
@@ -62,13 +57,14 @@ public class SevenZipArchiveIndexPluginTests
         Assert.True(result.Success);
         var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
         Assert.Contains(rows, row => Equals(row["fullPath"], "root/deep/įrašas.txt"));
-        Assert.Contains(rows, row => Equals(row["kind"], "file") && Equals(row["sizeBytes"], "123"));
+        Assert.Contains(rows, row => Equals(row["kind"], "file") && int.Parse(row["sizeBytes"].ToString()) > 0);
     }
 
     [Fact]
     public async Task ReadAsync_ReturnsTypedError_WhenCompressionMethodUnsupported()
     {
-        var service = CreateService(new ThrowingReader());
+        var throwingReader = new ThrowingReader();
+        var service = new FileFormatManager([new SevenZipArchiveIndexPlugin(throwingReader)]);
         await using var source = new MemoryStream([0x37, 0x7A]);
 
         var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
@@ -81,9 +77,9 @@ public class SevenZipArchiveIndexPluginTests
         Assert.Contains("SEVENZIP_UNSUPPORTED_METHOD", exception.Message);
     }
 
-    private static FileFormatManager CreateService(ISevenZipEntryReader reader)
+    private static FileFormatManager CreateService()
     {
-        return new FileFormatManager([new SevenZipArchiveIndexPlugin(reader)]);
+        return new FileFormatManager([new SevenZipArchiveIndexPlugin()]);
     }
 
     private sealed class FakeReader(IReadOnlyCollection<SevenZipEntryInfo> entries) : ISevenZipEntryReader

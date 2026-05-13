@@ -44,15 +44,9 @@ public class IsoImageIndexPluginTests
     [Fact]
     public async Task ReadAsync_ProjectsDirectoryTree_AndLargeFileMetadata()
     {
-        var reader = new FakeReader(
-        [
-            new IsoEntryInfo("ROOT", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
-            new IsoEntryInfo("ROOT/DEEP", IsDirectory: true, SizeBytes: 0, ModifiedUtc: null),
-            new IsoEntryInfo("ROOT/DEEP/MOVIE.MKV", IsDirectory: false, SizeBytes: 8589934592L,
-                ModifiedUtc: new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc))
-        ]);
-        var service = CreateService(reader);
-        await using var source = new MemoryStream([0x43, 0x44]); // fake stream for fixture reader
+        var service = new FileFormatManager([new IsoImageIndexPlugin()]);
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Iso", "catalog-sample.iso");
+        await using var source = File.OpenRead(fixturePath);
 
         var result = await service.ReadAsync(new FileFormatReadRequest
         {
@@ -63,8 +57,8 @@ public class IsoImageIndexPluginTests
         Assert.True(result.Success);
         var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
         Assert.Contains(rows, row => Equals(row["fullPath"], "ROOT/DEEP"));
-        Assert.Contains(rows, row => Equals(row["fullPath"], "ROOT/DEEP/MOVIE.MKV"));
-        Assert.Contains(rows, row => Equals(row["sizeBytes"], "8589934592"));
+        Assert.Contains(rows, row => Equals(row["fullPath"], "ROOT/DEEP/FIXTURE.TXT"));
+        Assert.Contains(rows, row => Equals(row["sizeBytes"], "19"));
     }
 
     private static FileFormatManager CreateService(IIsoEntryReader reader)

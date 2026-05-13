@@ -13,6 +13,27 @@ namespace SkyCD.LegacyFormats.Tests;
 public class LegacyAscdPluginTests
 {
     [Fact]
+    public async Task ReadAsync_ParsesOwnedAscdFixture()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ascd", "catalog-sample.ascd");
+
+        await using var source = File.OpenRead(fixturePath);
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-ascd",
+            Source = source,
+            FileName = "catalog-sample.ascd"
+        });
+
+        Assert.True(result.Success, result.Error);
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(rows, row => Equals(row["id"]?.ToString(), "1") && Equals(row["type"]?.ToString(), "Folder"));
+        Assert.Contains(rows, row => Equals(row["id"]?.ToString(), "2") && Equals(row["size"]?.ToString(), "6"));
+    }
+
+    [Fact]
     public async Task ReadAsync_ParsesLegacyFixtures()
     {
         var plugin = new LegacyAscdPlugin();

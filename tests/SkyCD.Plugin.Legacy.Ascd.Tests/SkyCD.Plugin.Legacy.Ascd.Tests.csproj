@@ -16,6 +16,9 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <None Update="Fixtures\Ascd\catalog-sample.ascd">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="fixtures\my-documents.ascd" Condition="Exists('..\..\legacy\SkyCD\Samples\My Documents.ascd')">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

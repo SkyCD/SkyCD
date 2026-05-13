@@ -19,5 +19,8 @@
         <None Include="..\..\legacy\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd" Condition="Exists('..\..\legacy\SkyCD\Samples\gamez.scd')">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="Fixtures\Scd\catalog-sample.scd">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 </Project>

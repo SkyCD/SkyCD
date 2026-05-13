@@ -18,4 +18,9 @@
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Iso\SkyCD.Plugin.Iso.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <None Update="Fixtures\Iso\catalog-sample.iso">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>
