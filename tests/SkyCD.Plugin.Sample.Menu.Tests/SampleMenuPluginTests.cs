@@ -1,21 +1,65 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using DryIoc;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Sample.Menu;
 using Xunit;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.Sample.Menu.Tests;
 
-public class SampleMenuPluginTests
+public sealed class SampleMenuPluginTests
 {
     [Fact]
-    public void GetMenuContributions_ReturnsExpectedContribution()
+    public void PluginCapabilityServiceRegistrator_RegistersMenuCapability()
     {
-        var service = new MenuExtensionManager([new SampleMenuPlugin()]);
+        using var container = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(container);
 
-        var contributions = service.GetMenuContributions("Tools");
-        var contribution = Assert.Single(contributions);
+        var plugin = new DiscoveredPlugin
+        {
+            Id = "SkyCD.Plugin.Sample.Menu",
+            Name = "Sample Menu Plugin",
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = "SkyCD.Plugin.Sample.Menu.dll",
+            Capabilities = [new SampleMenuPlugin()]
+        };
+
+        plugin.RegisterPluginServices(container);
+
+        var menuCapabilities = container.Resolve<IEnumerable<IMenuPluginCapability>>().ToList();
+
+        Assert.Contains(menuCapabilities, c => c is SampleMenuPlugin);
+    }
+
+    [Fact]
+    public void MenuExtensionManager_ResolvesContributionsFromContainer()
+    {
+        using var container = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(container);
+
+        var plugin = new DiscoveredPlugin
+        {
+            Id = "SkyCD.Plugin.Sample.Menu",
+            Name = "Sample Menu Plugin",
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = "SkyCD.Plugin.Sample.Menu.dll",
+            Capabilities = [new SampleMenuPlugin()]
+        };
+
+        plugin.RegisterPluginServices(container);
+
+        container.Register<MenuExtensionManager>(Reuse.Singleton);
+        var manager = container.Resolve<MenuExtensionManager>();
+
+        var toolsContributions = manager.GetMenuContributions("Tools");
+        var contribution = Assert.Single(toolsContributions);
 
         Assert.Equal("sample.menu.example", contribution.CommandId);
         Assert.Equal("Example", contribution.Title);
@@ -23,15 +67,30 @@ public class SampleMenuPluginTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnregisteredCommandId_ReturnsFailure()
+    public async Task MenuExtensionManager_ExecuteAsync_UnknownCommand_ReturnsFailure()
     {
-        var service = new MenuExtensionManager([new SampleMenuPlugin()]);
-        var context = new MenuCommandContext();
+        using var container = new DryIoc.Container();
+        new CommonRuntimeServiceRegistrator().RegisterServices(container);
 
-        var result = await service.ExecuteAsync(
+        var plugin = new DiscoveredPlugin
+        {
+            Id = "SkyCD.Plugin.Sample.Menu",
+            Name = "Sample Menu Plugin",
+            Version = new Version(1, 0, 0),
+            MinHostVersion = new Version(3, 0, 0),
+            FileName = "SkyCD.Plugin.Sample.Menu.dll",
+            Capabilities = [new SampleMenuPlugin()]
+        };
+
+        plugin.RegisterPluginServices(container);
+
+        container.Register<MenuExtensionManager>(Reuse.Singleton);
+        var manager = container.Resolve<MenuExtensionManager>();
+
+        var result = await manager.ExecuteAsync(
             "unknown.command",
-            context,
-            timeout: TimeSpan.FromSeconds(1));
+            new MenuCommandContext(),
+            TimeSpan.FromSeconds(1));
 
         Assert.False(result.Success);
     }
