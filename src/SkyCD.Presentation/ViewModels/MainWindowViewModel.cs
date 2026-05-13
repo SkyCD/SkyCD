@@ -52,7 +52,6 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
-    public event EventHandler<PluginNotificationEventArgs>? PluginNotificationRequested;
 
     private MenuExtensionManager? menuExtensionManager;
 
@@ -1239,15 +1238,8 @@ public partial class MainWindowViewModel : ObservableObject
         public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
         {
             viewModel.StatusText = message;
-            viewModel.PluginNotificationRequested?.Invoke(viewModel,
-                new PluginNotificationEventArgs(message));
             return Task.CompletedTask;
         }
-    }
-
-    public sealed class PluginNotificationEventArgs(string message) : EventArgs
-    {
-        public string Message { get; } = message;
     }
 
     private static MainMenuItemViewModel Separator()

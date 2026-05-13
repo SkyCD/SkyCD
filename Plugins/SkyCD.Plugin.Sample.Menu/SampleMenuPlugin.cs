@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Plugin.Sample.Menu;
@@ -13,21 +16,26 @@ public sealed class SampleMenuPlugin : IMenuPluginCapability
         new("sample.menu.example", "Example", "Tools", Order: 100)
     ];
 
-    public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+    public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
         CancellationToken cancellationToken = default)
     {
         if (!commandId.Equals("sample.menu.example", StringComparison.OrdinalIgnoreCase))
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        if (context.HostApi is null)
+        var lifetime = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+        var dialog = new NotificationWindow(
+            "did you thought that this sample plugin can do something useful? \U0001F609");
+        if (lifetime?.MainWindow is not null)
         {
-            throw new InvalidOperationException("Host API is required.");
+            dialog.ShowDialog(lifetime.MainWindow);
+        }
+        else
+        {
+            dialog.Show();
         }
 
-        await context.HostApi.NotifyAsync(
-            "did you thought that this sample plugin can do something useful? \U0001F609",
-            cancellationToken);
+        return Task.CompletedTask;
     }
 }

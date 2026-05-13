@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Host.Menu;
@@ -25,38 +23,16 @@ public class SampleMenuPluginTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_InvokesHostNotification()
+    public async Task ExecuteAsync_UnregisteredCommandId_ReturnsFailure()
     {
         var service = new MenuExtensionManager([new SampleMenuPlugin()]);
-        var hostApi = new RecordingHostCommandApi();
-        var context = new MenuCommandContext
-        {
-            HostApi = hostApi
-        };
+        var context = new MenuCommandContext();
 
         var result = await service.ExecuteAsync(
-            "sample.menu.example",
+            "unknown.command",
             context,
             timeout: TimeSpan.FromSeconds(1));
 
-        Assert.True(result.Success, result.Error);
-        Assert.Single(hostApi.Notifications);
-        Assert.Equal("did you thought that this sample plugin can do something useful? \U0001F609", hostApi.Notifications[0]);
-    }
-
-    private sealed class RecordingHostCommandApi : IHostCommandApi
-    {
-        public List<string> Notifications { get; } = [];
-
-        public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
-        {
-            Notifications.Add(message);
-            return Task.CompletedTask;
-        }
+        Assert.False(result.Success);
     }
 }
