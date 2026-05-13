@@ -34,14 +34,14 @@ public class LegacyScdPluginTests
     public async Task ReadAsync_ParsesPathWithSquareBrackets()
     {
         var plugin = new LegacyScdPlugin();
-        
+
         // Create test content with a path that contains square brackets
         var testContent = @"[1MB] [Disk]\Games\Doom.exe
 [512KB] [Disk]\Music\Song [Remix].mp3
 [Disk]\Software [2023]
 [2GB] [Disk]\Backup\Archive [2022-12-31].zip
 ";
-        
+
         // Read the test content
         await using var memoryStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testContent));
         var readResult = await plugin.ReadAsync(new FileFormatReadRequest
@@ -50,11 +50,11 @@ public class LegacyScdPluginTests
             Source = memoryStream,
             FileName = "test.scd"
         });
-        
+
         Assert.True(readResult.Success, readResult.Error);
         var catalog = Assert.IsType<LegacyScdCatalog>(readResult.Payload);
         Assert.Equal(4, catalog.Entries.Count);
-        
+
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Games\Doom.exe" && entry.SizeBytes == 1048576);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Music\Song [Remix].mp3" && entry.SizeBytes == 524288);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"\Software [2023]" && entry.SizeBytes == null);

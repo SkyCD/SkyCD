@@ -35,14 +35,14 @@ public class LegacyCscdPluginTests
     public async Task ReadAsync_ParsesPathWithSquareBrackets()
     {
         var plugin = new LegacyCscdPlugin();
-        
+
         // Create test content with a path that contains square brackets
         var testContent = @"[1MB] [Disk]\Games\Doom.exe
 [512KB] [Disk]\Music\Song [Remix].mp3
 [Disk]\Software [2023]
 [2GB] [Disk]\Backup\Archive [2022-12-31].zip
 ";
-        
+
         // Compress the content
         byte[] compressedBytes;
         using (var memoryStream = new MemoryStream())
@@ -54,7 +54,7 @@ public class LegacyCscdPluginTests
             }
             compressedBytes = memoryStream.ToArray();
         }
-        
+
         // Read the compressed content with the plugin
         await using var compressedStream = new MemoryStream(compressedBytes);
         var readResult = await plugin.ReadAsync(new FileFormatReadRequest
@@ -63,11 +63,11 @@ public class LegacyCscdPluginTests
             Source = compressedStream,
             FileName = "test.cscd"
         });
-        
+
         Assert.True(readResult.Success, readResult.Error);
         var catalog = Assert.IsType<LegacyCscdCatalog>(readResult.Payload);
         Assert.Equal(4, catalog.Entries.Count);
-        
+
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Games\Doom.exe" && entry.SizeBytes == 1048576);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Music\Song [Remix].mp3" && entry.SizeBytes == 524288);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"\Software [2023]" && entry.SizeBytes == null);

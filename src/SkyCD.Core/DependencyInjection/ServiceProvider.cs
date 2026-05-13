@@ -40,10 +40,10 @@ public static class ServiceProvider
     {
         var pluginManager = Resolve<PluginManager>();
         var plugins = pluginManager.Plugins.ToList();
-        
+
         var child = MainContainer.CreateChild();
         PluginServiceRegistrator.RegisterServices(child, plugins);
-        
+
         return child;
     }
 
