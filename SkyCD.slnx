@@ -1,9 +1,9 @@
 <Solution>
     <Folder Name="/Plugins/"/>
     <Folder Name="/Plugins/functional/">
-        <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Ascd/SkyCD.Plugin.Legacy.Ascd.csproj"/>
-        <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Cscd/SkyCD.Plugin.Legacy.Cscd.csproj"/>
-        <Project Path="Plugins/samples/SkyCD.Plugin.Legacy.Scd/SkyCD.Plugin.Legacy.Scd.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Legacy.Ascd/SkyCD.Plugin.Legacy.Ascd.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Legacy.Cscd/SkyCD.Plugin.Legacy.Cscd.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Legacy.Scd/SkyCD.Plugin.Legacy.Scd.csproj"/>
     </Folder>
     <Folder Name="/Plugins/samples/">
         <Project Path="Plugins/SkyCD.Plugin.Csv/SkyCD.Plugin.Csv.csproj"/>
@@ -11,13 +11,13 @@
         <Project Path="Plugins/SkyCD.Plugin.Iso/SkyCD.Plugin.Iso.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Markdown/SkyCD.Plugin.Markdown.csproj"/>
-        <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Zip/SkyCD.Plugin.Zip.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.SevenZip/SkyCD.Plugin.SevenZip.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Toml/SkyCD.Plugin.Toml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Tar/SkyCD.Plugin.Tar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Xml/SkyCD.Plugin.Xml.csproj"/>
-        <Project Path="Plugins/samples/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Yaml/SkyCD.Plugin.Yaml.csproj"/>
     </Folder>
     <Folder Name="/src/">
