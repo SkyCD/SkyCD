@@ -12,7 +12,6 @@ using DryIoc;
 using SkyCD.Cli.Console;
 using SkyCD.Cli.Console.FileFormats;
 using SkyCD.Cli.Console.Plugins;
-using SkyCD.Cli.DependencyInjection;
 using SkyCD.Cli.Enum;
 using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
@@ -81,11 +80,9 @@ public sealed class CliHost(
         if (ShouldHandleWithSystemRunner(routedTokens) && CanRunWithoutPluginRuntime(routedTokens))
         {
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
-            SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
             var lightweightFileFormatManager =
                 SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<FileFormatManager>();
-            var lightweightRegistry =
-                SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<CliContributionRegistry>();
+            using var lightweightRegistry = new CliContributionRegistry();
             lightweightRegistry.Register(GetSystemCapabilities());
             var exitCode = await ExecuteSystemCommandAsync(
                 systemRunnerTokens,
@@ -108,9 +105,8 @@ public sealed class CliHost(
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
 
         ServiceProvider.ReregisterPluginsService();
-        SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
         var fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
-        var registry = ServiceProvider.ResolvePlugin<CliContributionRegistry>();
+        using var registry = new CliContributionRegistry();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
             .OfType<ICliPluginCapability>();
@@ -165,7 +161,6 @@ public sealed class CliHost(
     {
         try
         {
-            SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.AddRegistrator<CliRuntimeServiceRegistrator>();
             var repositoryManager = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<RepositoryManager>();
             var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
             var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;

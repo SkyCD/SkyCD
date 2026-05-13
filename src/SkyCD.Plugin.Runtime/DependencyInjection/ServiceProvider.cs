@@ -20,11 +20,12 @@ public static class ServiceProvider
     static ServiceProvider()
     {
         var mainContainer = new DryIoc.Container();
-        new CommonRuntimeServiceRegistrator().RegisterServices(mainContainer);
-        new CouchbaseServiceRegistrator().RegisterServices(mainContainer);
-        new PluginServiceRegistrator().RegisterServices(mainContainer);
-        
         MainContainer = mainContainer;
+
+        AddRegistrator<CommonRuntimeServiceRegistrator>();
+        AddRegistrator<CouchbaseServiceRegistrator>();
+        AddRegistrator<PluginServiceRegistrator>();
+
         _pluginServiceProvider = CreatePluginsChildContainer();
     }
 
@@ -45,7 +46,7 @@ public static class ServiceProvider
         return child;
     }
 
-    public static void AddRegistrator<TRegistrator>()
+    private static void AddRegistrator<TRegistrator>()
         where TRegistrator : IServiceRegistrator, new()
     {
         new TRegistrator().RegisterServices(MainContainer);
