@@ -10,13 +10,13 @@ public sealed class SampleMenuPlugin : IMenuPluginCapability
 {
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
-        new("sample.menu.notify", "Notification", "Tools", Order: 100)
+        new("sample.menu.example", "Example", "Tools", Order: 100)
     ];
 
     public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
         CancellationToken cancellationToken = default)
     {
-        if (!commandId.Equals("sample.menu.notify", StringComparison.OrdinalIgnoreCase))
+        if (!commandId.Equals("sample.menu.example", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -26,6 +26,8 @@ public sealed class SampleMenuPlugin : IMenuPluginCapability
             throw new InvalidOperationException("Host API is required.");
         }
 
-        await context.HostApi.NotifyAsync("menu command executed.", cancellationToken);
+        await context.HostApi.NotifyAsync(
+            "did you thought that this sample plugin can do something useful? \U0001F609",
+            cancellationToken);
     }
 }

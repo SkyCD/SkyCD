@@ -20,6 +20,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
@@ -75,6 +76,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
+            subscribedViewModel.PluginNotificationRequested -= OnPluginNotificationRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
@@ -90,6 +92,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
+            subscribedViewModel.PluginNotificationRequested += OnPluginNotificationRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             UpdateWindowTitle();
         }
@@ -98,6 +101,12 @@ public partial class MainWindow : Window
     private void OnExitRequested(object? sender, EventArgs e)
     {
         Close();
+    }
+
+    private async void OnPluginNotificationRequested(object? sender, MainWindowViewModel.PluginNotificationEventArgs e)
+    {
+        var dialog = new NotificationWindow(e.Message);
+        await dialog.ShowDialog(this);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -789,6 +798,11 @@ public partial class MainWindow : Window
 
         ServiceProvider.ReregisterPluginsService();
         fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.RefreshPluginMenuServices(ServiceProvider.ResolvePlugin<MenuExtensionManager>());
+        }
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)

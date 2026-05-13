@@ -5,6 +5,7 @@ using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
@@ -39,6 +40,9 @@ public sealed class PluginServiceRegistrator
         var discoveredPlugins = new DiscoveredPluginCollection();
         discoveredPlugins.AddRange(plugins);
         discoveredPlugins.RegisterPluginServices(registrator);
+
+        registrator.Register<MenuExtensionManager>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 }
 

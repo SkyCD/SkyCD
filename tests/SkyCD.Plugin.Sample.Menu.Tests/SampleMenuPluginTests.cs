@@ -19,8 +19,8 @@ public class SampleMenuPluginTests
         var contributions = service.GetMenuContributions("Tools");
         var contribution = Assert.Single(contributions);
 
-        Assert.Equal("sample.menu.notify", contribution.CommandId);
-        Assert.Equal("Notification", contribution.Title);
+        Assert.Equal("sample.menu.example", contribution.CommandId);
+        Assert.Equal("Example", contribution.Title);
         Assert.Equal("Tools", contribution.Location);
     }
 
@@ -35,13 +35,13 @@ public class SampleMenuPluginTests
         };
 
         var result = await service.ExecuteAsync(
-            "sample.menu.notify",
+            "sample.menu.example",
             context,
             timeout: TimeSpan.FromSeconds(1));
 
         Assert.True(result.Success, result.Error);
         Assert.Single(hostApi.Notifications);
-        Assert.Equal("menu command executed.", hostApi.Notifications[0]);
+        Assert.Equal("did you thought that this sample plugin can do something useful? \U0001F609", hostApi.Notifications[0]);
     }
 
     private sealed class RecordingHostCommandApi : IHostCommandApi

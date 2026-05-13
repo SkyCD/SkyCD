@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,6 +15,8 @@ using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
+using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -36,7 +40,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
-    private readonly IReadOnlyList<MainMenuItemViewModel> topMenuItems;
+    private IReadOnlyList<MainMenuItemViewModel> topMenuItems;
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
@@ -48,21 +52,50 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
+    public event EventHandler<PluginNotificationEventArgs>? PluginNotificationRequested;
+
+    private MenuExtensionManager? menuExtensionManager;
+
+    public void RefreshPluginMenuServices(MenuExtensionManager? updatedManager)
+    {
+        menuExtensionManager = updatedManager;
+        topMenuItems = BuildTopMenuItems();
+        OnPropertyChanged(nameof(TopMenuItems));
+        OnPropertyChanged(nameof(FileMenuItems));
+        OnPropertyChanged(nameof(EditMenuItems));
+        OnPropertyChanged(nameof(ViewMenuItems));
+        OnPropertyChanged(nameof(ToolsMenuItems));
+        OnPropertyChanged(nameof(HelpMenuItems));
+    }
 
     public MainWindowViewModel(CatalogDocumentRepository catalogRepository)
         : this(
             catalogRepository,
-            new PropertyValueLocalizer())
+            new PropertyValueLocalizer(),
+            null)
     {
     }
 
     public MainWindowViewModel(
         CatalogDocumentRepository catalogRepository,
         IStringLocalizer propertyValueLocalizer)
+        : this(
+            catalogRepository,
+            propertyValueLocalizer,
+            null)
+    {
+    }
+
+    public MainWindowViewModel(
+        CatalogDocumentRepository catalogRepository,
+        IStringLocalizer propertyValueLocalizer,
+        MenuExtensionManager? menuExtensionManager)
     {
         this.catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
+        this.menuExtensionManager = menuExtensionManager;
+
         EnsureSeedData();
         TreeNodes = GetTreeNodes();
 
@@ -77,10 +110,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel(
         IReadOnlyList<CatalogDocument> catalogEntries,
-        IStringLocalizer? propertyValueLocalizer = null)
+        IStringLocalizer? propertyValueLocalizer = null,
+        MenuExtensionManager? menuExtensionManager = null)
     {
         inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
+        this.menuExtensionManager = menuExtensionManager;
         TreeNodes = BuildTreeNodesFromEntries(inMemoryCatalogEntries);
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
@@ -1042,8 +1077,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     private IReadOnlyList<MainMenuItemViewModel> BuildTopMenuItems()
     {
-        return
-        [
+        var menuItems = new List<MainMenuItemViewModel>
+        {
             new MainMenuItemViewModel
             {
                 Header = "_File",
@@ -1104,11 +1139,7 @@ public partial class MainWindowViewModel : ObservableObject
             new MainMenuItemViewModel
             {
                 Header = "_Tools",
-                Items =
-                [
-                    new MainMenuItemViewModel
-                        { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
-                ]
+                Items = GetToolsMenuItems()
             },
             new MainMenuItemViewModel
             {
@@ -1122,7 +1153,101 @@ public partial class MainWindowViewModel : ObservableObject
                     new MainMenuItemViewModel { Header = "_About...", Command = OpenAboutCommand }
                 ]
             }
-        ];
+        };
+
+        return menuItems;
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> GetToolsMenuItems()
+    {
+        var toolsMenuItems = new List<MainMenuItemViewModel>
+        {
+            new MainMenuItemViewModel
+                { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+        };
+
+        // Add plugin menu contributions to Tools menu
+        if (menuExtensionManager != null)
+        {
+            var menuContributions = menuExtensionManager.GetMenuContributions("Tools");
+            if (menuContributions.Any())
+            {
+                toolsMenuItems.Add(Separator());
+                
+                foreach (var contribution in menuContributions)
+                {
+                    toolsMenuItems.Add(new MainMenuItemViewModel
+                    {
+                        Header = contribution.Title,
+                        Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
+                    });
+                }
+            }
+        }
+
+        return toolsMenuItems;
+    }
+
+    private async void ExecutePluginMenuCommand(string commandId)
+    {
+        try
+        {
+            if (menuExtensionManager == null)
+            {
+                StatusText = "Plugin services not available.";
+                return;
+            }
+
+            StatusText = $"Executing plugin command '{commandId}'...";
+
+            var context = new MenuCommandContext
+            {
+                ActiveCatalogId = null,
+                SelectedNodeId = null,
+                Properties = null,
+                HostApi = new ViewModelHostCommandApi(this)
+            };
+
+            var result = await menuExtensionManager.ExecuteAsync(commandId, context,
+                TimeSpan.FromSeconds(30));
+
+            if (result.TimedOut)
+            {
+                StatusText = $"Plugin command '{commandId}' timed out.";
+            }
+            else if (!result.Success)
+            {
+                StatusText = string.IsNullOrWhiteSpace(result.Error)
+                    ? $"Plugin command '{commandId}' failed."
+                    : $"Plugin command failed: {result.Error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Plugin command error: {ex.Message}";
+        }
+    }
+
+    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : IHostCommandApi
+    {
+        public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
+        {
+            viewModel.StatusText = $"Navigated to node {nodeId}.";
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
+        {
+            viewModel.StatusText = message;
+            viewModel.PluginNotificationRequested?.Invoke(viewModel,
+                new PluginNotificationEventArgs(message));
+            return Task.CompletedTask;
+        }
+    }
+
+    public sealed class PluginNotificationEventArgs(string message) : EventArgs
+    {
+        public string Message { get; } = message;
     }
 
     private static MainMenuItemViewModel Separator()

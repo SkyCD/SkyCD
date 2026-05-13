@@ -31,6 +31,7 @@ public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menu
         }
 
         return contributions
+            .DistinctBy(static contribution => contribution.CommandId)
             .OrderBy(contribution => contribution.Order)
             .ThenBy(contribution => contribution.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();

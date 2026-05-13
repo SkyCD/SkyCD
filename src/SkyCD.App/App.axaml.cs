@@ -17,6 +17,7 @@ using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Host.Menu;
 
 namespace SkyCD.App;
 
@@ -91,7 +92,8 @@ public partial class App : Avalonia.Application
         container.RegisterDelegate(static resolver =>
         {
             var catalogRepository = resolver.Resolve<CatalogDocumentRepository>();
-            return new MainWindowViewModel(catalogRepository);
+            var menuExtensionManager = ServiceProvider.ResolvePlugin<MenuExtensionManager>();
+            return new MainWindowViewModel(catalogRepository, new PropertyValueLocalizer(), menuExtensionManager);
         }, Reuse.Singleton);
         container.RegisterDelegate(static resolver =>
         {

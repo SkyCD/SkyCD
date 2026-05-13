@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.App.Views.NotificationWindow"
+        Width="380"
+        Height="140"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
+        Title="SkyCD">
+    <StackPanel Margin="16" VerticalAlignment="Center" Spacing="16">
+        <TextBlock x:Name="MessageText"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center"
+                   FontSize="13" />
+        <Button Content="_OK"
+                HorizontalAlignment="Center"
+                MinWidth="75"
+                Click="OnOkClicked" />
+    </StackPanel>
+</Window>
