@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using DryIoc;
 using SkyCD.Couchbase.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 
-namespace SkyCD.Plugin.Runtime.DependencyInjection;
+namespace SkyCD.Core.DependencyInjection;
 
 /// <summary>
 /// Runtime container facade with global registration support.
@@ -47,9 +48,20 @@ public static class ServiceProvider
     }
 
     private static void AddRegistrator<TRegistrator>()
-        where TRegistrator : IServiceRegistrator, new()
+        where TRegistrator : new()
     {
-        new TRegistrator().RegisterServices(MainContainer);
+        var registrator = new TRegistrator();
+        var registerMethod = typeof(TRegistrator).GetMethod(
+            "RegisterServices",
+            BindingFlags.Instance | BindingFlags.Public,
+            [typeof(IRegistrator)]);
+        if (registerMethod is null)
+        {
+            throw new InvalidOperationException(
+                $"Registrator {typeof(TRegistrator).FullName} must expose RegisterServices(IRegistrator).");
+        }
+
+        registerMethod.Invoke(registrator, [MainContainer]);
     }
 
     public static T Resolve<T>()
@@ -76,3 +88,4 @@ public static class ServiceProvider
         return _pluginServiceProvider.Resolve(serviceType, serviceKey: serviceKey);
     }
 }
+

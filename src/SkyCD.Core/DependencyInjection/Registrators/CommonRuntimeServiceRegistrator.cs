@@ -4,10 +4,11 @@ using SkyCD.Logging;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
 
-namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+namespace SkyCD.Core.DependencyInjection.Registrators;
 
-public sealed class CommonRuntimeServiceRegistrator : IServiceRegistrator
+public sealed class CommonRuntimeServiceRegistrator
 {
     public void RegisterServices(IRegistrator registrator)
     {
@@ -18,5 +19,9 @@ public sealed class CommonRuntimeServiceRegistrator : IServiceRegistrator
         registrator.Register<FileFormatManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<MenuExtensionManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<ModalExtensionManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<HostVersionProvider>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 }
+
+

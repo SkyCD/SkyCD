@@ -11,9 +11,9 @@ using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 
-namespace SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+namespace SkyCD.Core.DependencyInjection.Registrators;
 
-public sealed class PluginServiceRegistrator : IServiceRegistrator
+public sealed class PluginServiceRegistrator
 {
     public void RegisterServices(IRegistrator registrator)
     {
@@ -41,3 +41,5 @@ public sealed class PluginServiceRegistrator : IServiceRegistrator
         discoveredPlugins.RegisterPluginServices(registrator);
     }
 }
+
+

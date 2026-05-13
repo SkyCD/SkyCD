@@ -9,8 +9,8 @@ using Avalonia.Platform.Storage;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
@@ -203,3 +203,4 @@ public sealed class RuntimeCoverageTests
         }
     }
 }
+

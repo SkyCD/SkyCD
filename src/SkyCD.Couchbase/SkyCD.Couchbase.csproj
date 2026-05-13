@@ -9,9 +9,6 @@
         <PackageReference Include="DryIoc.dll" Version="5.4.3"/>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="..\SkyCD.Plugin.Runtime\DependencyInjection\IServiceRegistrator.cs" Link="DependencyInjection\IServiceRegistrator.cs"/>
-    </ItemGroup>
-    <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>SkyCD.Couchbase.Tests</_Parameter1>
         </AssemblyAttribute>

@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
 using DryIoc;
-using SkyCD.Plugin.Runtime.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Cli.DependencyInjection;
 
-public sealed class CliRuntimeServiceRegistrator : IServiceRegistrator
+public sealed class CliRuntimeServiceRegistrator
 {
     public void RegisterServices(IRegistrator registrator)
     {
@@ -21,3 +20,4 @@ public sealed class CliRuntimeServiceRegistrator : IServiceRegistrator
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 }
+

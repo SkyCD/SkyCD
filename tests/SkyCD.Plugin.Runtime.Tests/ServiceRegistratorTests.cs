@@ -6,8 +6,8 @@ using DryIoc;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using Xunit;
 
@@ -75,3 +75,4 @@ public sealed class ServiceRegistratorTests
         Assert.NotNull(provider.Resolve<ILoggerFactory>());
     }
 }
+

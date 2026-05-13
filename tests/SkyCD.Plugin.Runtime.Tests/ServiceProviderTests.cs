@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using SkyCD.Plugin.Runtime.DependencyInjection;
+using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Discovery;
 using Xunit;
 
@@ -28,3 +28,4 @@ public sealed class ServiceProviderTests
         Assert.NotNull(byId);
     }
 }
+

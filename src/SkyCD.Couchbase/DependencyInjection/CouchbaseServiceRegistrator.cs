@@ -1,11 +1,10 @@
 using System;
 using System.IO;
 using DryIoc;
-using SkyCD.Plugin.Runtime.DependencyInjection;
 
 namespace SkyCD.Couchbase.DependencyInjection;
 
-public sealed class CouchbaseServiceRegistrator : IServiceRegistrator
+public sealed class CouchbaseServiceRegistrator
 {
     private const string AppDirectoryName = "SkyCD";
     private const string DefaultDatabaseName = "default";
@@ -27,3 +26,4 @@ public sealed class CouchbaseServiceRegistrator : IServiceRegistrator
         registrator.Register<RepositoryManager>(Reuse.Singleton);
     }
 }
+

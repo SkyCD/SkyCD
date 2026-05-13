@@ -11,10 +11,11 @@ using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
 using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App;
@@ -54,10 +55,11 @@ public partial class App : Avalonia.Application
         var options = appOptionsRepository.GetOrCreateAppOptions();
         var pluginPath = options.PluginPath;
         var pluginManager = ServiceProvider.Resolve<PluginManager>();
+        var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
-            pluginManager.Discover(pluginPath, new Version(3, 0, 0));
+            pluginManager.Discover(pluginPath, hostVersionProvider.Current);
 
             discoveredPlugins = pluginManager.Plugins;
         }
@@ -110,3 +112,4 @@ public partial class App : Avalonia.Application
         return container;
     }
 }
+

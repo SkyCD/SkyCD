@@ -21,10 +21,11 @@ using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
 
 namespace SkyCD.Cli;
 
@@ -81,7 +82,7 @@ public sealed class CliHost(
         {
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
             var lightweightFileFormatManager =
-                SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<FileFormatManager>();
+                SkyCD.Core.DependencyInjection.ServiceProvider.Resolve<FileFormatManager>();
             using var lightweightRegistry = new CliContributionRegistry();
             lightweightRegistry.Register(GetSystemCapabilities());
             var exitCode = await ExecuteSystemCommandAsync(
@@ -100,8 +101,9 @@ public sealed class CliHost(
             ? []
             : new[] { pluginPath };
 
-        var pluginManager = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<PluginManager>();
-        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), new Version(3, 0, 0));
+        var pluginManager = SkyCD.Core.DependencyInjection.ServiceProvider.Resolve<PluginManager>();
+        var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
+        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersionProvider.Current);
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
 
         ServiceProvider.ReregisterPluginsService();
@@ -161,7 +163,7 @@ public sealed class CliHost(
     {
         try
         {
-            var repositoryManager = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider.Resolve<RepositoryManager>();
+            var repositoryManager = SkyCD.Core.DependencyInjection.ServiceProvider.Resolve<RepositoryManager>();
             var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
             var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
             return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
@@ -664,3 +666,4 @@ public sealed class CliHost(
         string? Error,
         CliExitCodes ExitCode);
 }
+

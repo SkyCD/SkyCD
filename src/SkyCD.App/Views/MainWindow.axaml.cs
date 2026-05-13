@@ -18,10 +18,11 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.DependencyInjection.Registrators;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
 
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly PluginManager pluginManager;
+    private readonly HostVersionProvider hostVersionProvider;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -45,6 +47,7 @@ public partial class MainWindow : Window
     {
         this.appOptionsRepository = appOptionsRepository;
         this.pluginManager = pluginManager;
+        hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -732,7 +735,7 @@ public partial class MainWindow : Window
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
     {
         dialogVm.CapturePluginStates();
-        pluginManager.Discover(dialogVm.PluginPath, new Version(3, 0, 0));
+        pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
         var descriptors = pluginManager.GetPluginDescriptors();
         var loadedById = pluginManager.Plugins
             .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
@@ -775,7 +778,7 @@ public partial class MainWindow : Window
         var options = appOptionsRepository.GetOrCreateAppOptions();
         var resolvedPluginPath = options.PluginPath;
 
-        pluginManager.Discover(resolvedPluginPath, new Version(3, 0, 0));
+        pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
 
         ServiceProvider.ReregisterPluginsService();
         fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
@@ -829,3 +832,4 @@ public partial class MainWindow : Window
         Thread.CurrentThread.CurrentUICulture = culture;
     }
 }
+
