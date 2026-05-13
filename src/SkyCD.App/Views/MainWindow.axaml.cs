@@ -40,6 +40,13 @@ public partial class MainWindow : Window
     private bool isSessionStateLoaded;
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
+    public MainWindow() : this(
+        ServiceProvider.Resolve<AppOptionsDocumentRepository>(),
+        ServiceProvider.Resolve<PluginManager>(),
+        ServiceProvider.ResolvePlugin<FileFormatManager>())
+    {
+    }
+
     public MainWindow(
         AppOptionsDocumentRepository appOptionsRepository,
         PluginManager pluginManager,
