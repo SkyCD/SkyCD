@@ -70,6 +70,14 @@ public static class ServiceProvider
         return MainContainer.Resolve<T>();
     }
 
+    public static IContainer RegisterChildContainer(Action<IRegistrator> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var child = MainContainer.CreateChild();
+        configure(child);
+        return child;
+    }
+
     public static object Resolve(Type serviceType, object? serviceKey = null)
     {
         ArgumentNullException.ThrowIfNull(serviceType);

@@ -27,7 +27,7 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
             context.JsonOutput,
             context.Host.JsonOptions,
             context.FileFormatManager,
-            context.PluginDirectories);
+            context.PluginDirectory);
     }
 
     private static async Task<CliExitCodes> ExecuteListFormatsAsync(
@@ -35,7 +35,7 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
         bool jsonOutput,
         JsonSerializerOptions jsonOptions,
         FileFormatManager fileFormatManager,
-        IReadOnlyList<string> pluginDirectories)
+        string? pluginDirectory)
     {
         var formats = fileFormatManager.GetOpenFormats()
             .Concat(fileFormatManager.GetSaveFormats())
@@ -53,7 +53,7 @@ internal sealed class FileFormatsListCommand : ICliPluginCapability
         if (formats.Count == 0)
         {
             await stdout.WriteLineAsync("No file format plugins were found.");
-            await stdout.WriteLineAsync($"Plugin directories checked: {string.Join(", ", pluginDirectories)}");
+            await stdout.WriteLineAsync($"Plugin directory checked: {pluginDirectory ?? "(not configured)"}");
             return CliExitCodes.Success;
         }
 

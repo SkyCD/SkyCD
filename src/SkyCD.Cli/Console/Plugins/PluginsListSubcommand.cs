@@ -31,7 +31,7 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
             context.Registry,
             context.FileFormatManager,
             context.DiscoveredPlugins,
-            context.PluginDirectories);
+            context.PluginDirectory);
     }
 
     private static async Task<CliExitCodes> ExecutePluginsListAsync(
@@ -41,7 +41,7 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
         CliContributionRegistry registry,
         FileFormatManager fileFormatManager,
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins,
-        IReadOnlyList<string> pluginDirectories)
+        string? pluginDirectory)
     {
         var availableFormatIds = fileFormatManager.GetOpenFormats()
             .Concat(fileFormatManager.GetSaveFormats())
@@ -87,7 +87,7 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
                 plugins = pluginInfo,
                 cliCommands = registry.CommandPaths.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
                     .ToArray(),
-                pluginDirectories = pluginDirectories
+                pluginDirectory
             }, jsonOptions);
             return CliExitCodes.Success;
         }
@@ -118,7 +118,7 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
             }
         }
 
-        await stdout.WriteLineAsync($"Plugin directories checked: {string.Join(", ", pluginDirectories)}");
+        await stdout.WriteLineAsync($"Plugin directory checked: {pluginDirectory ?? "(not configured)"}");
 
         return CliExitCodes.Success;
     }

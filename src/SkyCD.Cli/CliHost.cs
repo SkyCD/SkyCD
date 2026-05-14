@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using CommandDotNet;
 using Couchbase.Lite;
 using DryIoc;
+using SkyCD.Cli.DependencyInjection;
 using SkyCD.Cli.Console;
 using SkyCD.Cli.Console.FileFormats;
 using SkyCD.Cli.Console.Plugins;
@@ -56,6 +57,8 @@ public sealed class CliHost(
 
     public async Task<CliRunResult> TryRunAsync(string[] args, CancellationToken cancellationToken = default)
     {
+        using var cliServiceProvider = CreateCliExecutionServiceProvider();
+
         if (args.Length == 0)
         {
             return new CliRunResult { Handled = false, ExitCode = CliExitCodes.Success };
@@ -81,8 +84,7 @@ public sealed class CliHost(
         if (ShouldHandleWithSystemRunner(routedTokens) && CanRunWithoutPluginRuntime(routedTokens))
         {
             var systemRunnerTokens = NormalizeImplicitNamespaceHelp(routedTokens);
-            var lightweightFileFormatManager =
-                SkyCD.Core.DependencyInjection.ServiceProvider.Resolve<FileFormatManager>();
+            var lightweightFileFormatManager = cliServiceProvider.Resolve<FileFormatManager>();
             using var lightweightRegistry = new CliContributionRegistry();
             lightweightRegistry.Register(GetSystemCapabilities());
             var exitCode = await ExecuteSystemCommandAsync(
@@ -91,19 +93,15 @@ public sealed class CliHost(
                 lightweightFileFormatManager,
                 lightweightRegistry,
                 [],
-                [],
+                null,
                 cancellationToken);
             return new CliRunResult { Handled = true, ExitCode = exitCode };
         }
 
-        var pluginPath = TryReadPluginPathFromAppSettings();
-        var pluginDirectories = string.IsNullOrWhiteSpace(pluginPath)
-            ? []
-            : new[] { pluginPath };
-
-        var pluginManager = SkyCD.Core.DependencyInjection.ServiceProvider.Resolve<PluginManager>();
+        var pluginPath = TryReadPluginPathFromAppSettings(cliServiceProvider);
+        var pluginManager = cliServiceProvider.Resolve<PluginManager>();
         var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
-        pluginManager.Discover(string.Join(Path.PathSeparator, pluginDirectories), hostVersionProvider.Current);
+        pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
 
         ServiceProvider.ReregisterPluginsService();
@@ -134,7 +132,7 @@ public sealed class CliHost(
                 fileFormatManager,
                 registry,
                 discoveredPlugins,
-                pluginDirectories,
+                pluginPath,
                 cancellationToken);
             try
             {
@@ -161,9 +159,15 @@ public sealed class CliHost(
 
     internal static string? TryReadPluginPathFromAppSettings()
     {
+        using var cliServiceProvider = CreateCliExecutionServiceProvider();
+        return TryReadPluginPathFromAppSettings(cliServiceProvider);
+    }
+
+    internal static string? TryReadPluginPathFromAppSettings(IResolverContext resolver)
+    {
         try
         {
-            var repositoryManager = SkyCD.Core.DependencyInjection.ServiceProvider.Resolve<RepositoryManager>();
+            var repositoryManager = resolver.Resolve<RepositoryManager>();
             var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
             var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
             return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
@@ -174,13 +178,22 @@ public sealed class CliHost(
         }
     }
 
+    private static IContainer CreateCliExecutionServiceProvider()
+    {
+        return ServiceProvider.RegisterChildContainer(static registrator =>
+        {
+            new CliRuntimeServiceRegistrator().RegisterServices(registrator);
+            registrator.RegisterDelegate(static _ => ServiceProvider.ResolvePlugin<FileFormatManager>(), Reuse.Singleton);
+        });
+    }
+
     private async Task<CliExitCodes> ExecuteSystemCommandAsync(
         IReadOnlyList<string> args,
         bool jsonOutput,
         FileFormatManager fileFormatManager,
         CliContributionRegistry registry,
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins,
-        IReadOnlyList<string> pluginDirectories,
+        string? pluginDirectory,
         CancellationToken cancellationToken)
     {
         var runnerArgs = NormalizeSystemRunnerArgs(args);
@@ -190,7 +203,7 @@ public sealed class CliHost(
             fileFormatManager,
             registry,
             discoveredPlugins,
-            pluginDirectories,
+            pluginDirectory,
             cancellationToken);
 
         try

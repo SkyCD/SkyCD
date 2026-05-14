@@ -11,5 +11,5 @@ internal sealed record CliCommandExecutionContext(
     FileFormatManager FileFormatManager,
     CliContributionRegistry Registry,
     IReadOnlyList<DiscoveredPlugin> DiscoveredPlugins,
-    IReadOnlyList<string> PluginDirectories,
+    string? PluginDirectory,
     CancellationToken CancellationToken);
