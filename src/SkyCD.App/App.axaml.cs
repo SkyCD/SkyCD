@@ -80,7 +80,6 @@ public partial class App : Avalonia.Application
                 var menuExtensionManager = ServiceProvider.ResolvePlugin<MenuExtensionManager>();
                 return new MainWindowViewModel(catalogRepository, new PropertyValueLocalizer(), menuExtensionManager);
             }, Reuse.Singleton);
-            registrator.RegisterDelegate(static _ => ServiceProvider.ResolvePlugin<FileFormatManager>(), Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });
     }
