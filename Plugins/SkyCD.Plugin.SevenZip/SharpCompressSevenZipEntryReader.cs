@@ -10,7 +10,7 @@ public sealed class SharpCompressSevenZipEntryReader : ISevenZipEntryReader
 {
     public IReadOnlyCollection<SevenZipEntryInfo> ReadEntries(Stream source)
     {
-        using var archive = SevenZipArchive.Open(source);
+        using var archive = SevenZipArchive.OpenArchive(source);
         return archive.Entries
             .Where(entry => !entry.IsEncrypted)
             .Select(entry => new SevenZipEntryInfo(

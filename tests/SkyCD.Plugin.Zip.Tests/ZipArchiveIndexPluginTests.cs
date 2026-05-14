@@ -61,7 +61,12 @@ public class ZipArchiveIndexPluginTests
 
         Assert.Contains(rows, row => Equals(row["fullPath"], "root/deep"));
         Assert.Contains(rows, row => Equals(row["fullPath"], "root/deep/įrašas.txt"));
-        Assert.Contains(rows, row => Equals(row["kind"], "file") && int.Parse(row["sizeBytes"].ToString()) > 0);
+        Assert.Contains(rows, row =>
+            Equals(row["kind"], "file")
+            && row.TryGetValue("sizeBytes", out var sizeValue)
+            && sizeValue is not null
+            && int.TryParse(sizeValue.ToString(), out var sizeBytes)
+            && sizeBytes > 0);
         Assert.Contains(rows, row => row.ContainsKey("modifiedUtc"));
     }
 
