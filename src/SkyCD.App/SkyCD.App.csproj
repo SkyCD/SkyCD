@@ -8,6 +8,7 @@
         <Product>SkyCD</Product>
         <RepositoryUrl>https://github.com/SkyCD/SkyCD</RepositoryUrl>
         <Version>3.0.0</Version>
+        <NoWarn>$(NoWarn);AVLN3001</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
