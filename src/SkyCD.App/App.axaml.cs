@@ -5,7 +5,6 @@ using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DryIoc;
-using SkyCD.App.Exceptions;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
@@ -32,7 +31,7 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             appServiceProvider = CreateAppServiceProvider();
-            InitializePlugins(appServiceProvider.Resolve<AppOptionsDocumentRepository>());
+            InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
             var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
             var mainWindow = appServiceProvider.Resolve<MainWindow>();
             mainWindow.DataContext = mainWindowViewModel;
@@ -44,8 +43,9 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static void InitializePlugins(AppOptionsDocumentRepository appOptionsRepository)
+    private static void InitializePlugins(RepositoryManager repositoryManager)
     {
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         var options = appOptionsRepository.GetOrCreateAppOptions();
         var pluginPath = options.PluginPath;
         var pluginManager = ServiceProvider.Resolve<PluginManager>();
@@ -63,25 +63,14 @@ public partial class App : Avalonia.Application
     {
         return ServiceProvider.RegisterChildContainer(static registrator =>
         {
-            registrator.RegisterDelegate<AppOptionsDocumentRepository>(static resolver =>
-            {
-                var repositoryManager = resolver.Resolve<RepositoryManager>();
-                return (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
-            }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver =>
-            {
-                var repositoryManager = resolver.Resolve<RepositoryManager>();
-                return repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository
-                       ?? throw new CatalogRepositoryTypeMismatchException();
-            }, Reuse.Singleton);
-            registrator.RegisterDelegate(static resolver =>
-            {
-                var catalogRepository = resolver.Resolve<CatalogDocumentRepository>();
-                var menuExtensionManager = ServiceProvider.ResolvePlugin<MenuExtensionManager>();
-                return new MainWindowViewModel(catalogRepository, new PropertyValueLocalizer(), menuExtensionManager);
-            }, Reuse.Singleton);
+            registrator.RegisterDelegate(static _ => ServiceProvider.Resolve<MenuExtensionManager>(),
+                Reuse.Singleton);
+            registrator.Register<MainWindowViewModel>(
+                reuse: Reuse.Singleton,
+                made: Made.Of(() => new MainWindowViewModel(
+                    Arg.Of<RepositoryManager>(),
+                    Arg.Of<MenuExtensionManager>())));
             registrator.Register<MainWindow>(Reuse.Singleton);
         });
     }
 }
-

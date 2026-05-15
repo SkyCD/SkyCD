@@ -42,11 +42,11 @@ public partial class MainWindow : Window
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
-        AppOptionsDocumentRepository appOptionsRepository,
+        RepositoryManager repositoryManager,
         PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
-        this.appOptionsRepository = appOptionsRepository;
+        appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -782,11 +782,11 @@ public partial class MainWindow : Window
         pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
 
         ServiceProvider.ReregisterPluginsService();
-        fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
+        fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
 
         if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.RefreshPluginMenuServices(ServiceProvider.ResolvePlugin<MenuExtensionManager>());
+            viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
         }
     }
 
@@ -837,5 +837,6 @@ public partial class MainWindow : Window
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
     }
+
 }
 

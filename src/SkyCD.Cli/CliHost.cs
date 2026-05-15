@@ -105,7 +105,7 @@ public sealed class CliHost(
         IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
 
         ServiceProvider.ReregisterPluginsService();
-        var fileFormatManager = ServiceProvider.ResolvePlugin<FileFormatManager>();
+        var fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
         using var registry = new CliContributionRegistry();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
@@ -183,7 +183,7 @@ public sealed class CliHost(
         return ServiceProvider.RegisterChildContainer(static registrator =>
         {
             new CliRuntimeServiceRegistrator().RegisterServices(registrator);
-            registrator.RegisterDelegate(static _ => ServiceProvider.ResolvePlugin<FileFormatManager>(), Reuse.Singleton);
+            registrator.RegisterDelegate(static _ => ServiceProvider.Resolve<FileFormatManager>(), Reuse.Singleton);
         });
     }
 

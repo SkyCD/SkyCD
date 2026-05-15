@@ -21,8 +21,8 @@ public sealed class ServiceProviderTests
     public void ReregisterPluginsService_RegistersPluginMetadata()
     {
         ServiceProvider.ReregisterPluginsService();
-        var list = ServiceProvider.ResolvePlugin(typeof(IReadOnlyCollection<DiscoveredPlugin>));
-        var byId = ServiceProvider.ResolvePlugin(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>));
+        var list = ServiceProvider.Resolve(typeof(IReadOnlyCollection<DiscoveredPlugin>));
+        var byId = ServiceProvider.Resolve(typeof(IReadOnlyDictionary<string, DiscoveredPlugin>));
 
         Assert.NotNull(list);
         Assert.NotNull(byId);

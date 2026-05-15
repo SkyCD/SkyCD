@@ -32,8 +32,9 @@ public static class ServiceProvider
 
     public static void ReregisterPluginsService()
     {
-        _pluginServiceProvider.Dispose();
+        var oldPluginServiceProvider = _pluginServiceProvider;
         _pluginServiceProvider = CreatePluginsChildContainer();
+        oldPluginServiceProvider.Dispose();
     }
 
     private static IContainer CreatePluginsChildContainer()
@@ -67,6 +68,15 @@ public static class ServiceProvider
     public static T Resolve<T>()
         where T : notnull
     {
+        if (_pluginServiceProvider is not null)
+        {
+            var pluginService = _pluginServiceProvider.Resolve<T>(IfUnresolved.ReturnDefault);
+            if (pluginService is not null)
+            {
+                return pluginService;
+            }
+        }
+
         return MainContainer.Resolve<T>();
     }
 
@@ -81,19 +91,16 @@ public static class ServiceProvider
     public static object Resolve(Type serviceType, object? serviceKey = null)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
+        if (_pluginServiceProvider is not null)
+        {
+            var pluginService = _pluginServiceProvider.Resolve(serviceType, serviceKey: serviceKey, ifUnresolved: IfUnresolved.ReturnDefault);
+            if (pluginService is not null)
+            {
+                return pluginService;
+            }
+        }
+
         return MainContainer.Resolve(serviceType, serviceKey: serviceKey);
-    }
-
-    public static T ResolvePlugin<T>()
-        where T : notnull
-    {
-        return _pluginServiceProvider.Resolve<T>();
-    }
-
-    public static object ResolvePlugin(Type serviceType, object? serviceKey = null)
-    {
-        ArgumentNullException.ThrowIfNull(serviceType);
-        return _pluginServiceProvider.Resolve(serviceType, serviceKey: serviceKey);
     }
 }
 

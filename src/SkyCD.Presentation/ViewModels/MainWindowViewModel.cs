@@ -10,6 +10,8 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
@@ -67,7 +69,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HelpMenuItems));
     }
 
-    public MainWindowViewModel(CatalogDocumentRepository catalogRepository)
+    public MainWindowViewModel(IRepository<CatalogDocument> catalogRepository)
         : this(
             catalogRepository,
             new PropertyValueLocalizer(),
@@ -76,7 +78,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public MainWindowViewModel(
-        CatalogDocumentRepository catalogRepository,
+        IRepository<CatalogDocument> catalogRepository,
         IStringLocalizer propertyValueLocalizer)
         : this(
             catalogRepository,
@@ -86,11 +88,13 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public MainWindowViewModel(
-        CatalogDocumentRepository catalogRepository,
+        IRepository<CatalogDocument> catalogRepository,
         IStringLocalizer propertyValueLocalizer,
         MenuExtensionManager? menuExtensionManager)
     {
-        this.catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
+        this.catalogRepository = catalogRepository as CatalogDocumentRepository
+                                 ?? throw new InvalidOperationException(
+                                     "Catalog repository must be CatalogDocumentRepository.");
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager;
@@ -105,6 +109,16 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
+    }
+
+    public MainWindowViewModel(
+        RepositoryManager repositoryManager,
+        MenuExtensionManager? menuExtensionManager = null)
+        : this(
+            repositoryManager.For<CatalogDocument>(),
+            new PropertyValueLocalizer(),
+            menuExtensionManager)
+    {
     }
 
     public MainWindowViewModel(
