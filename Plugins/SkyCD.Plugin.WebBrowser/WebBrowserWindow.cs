@@ -1,8 +1,9 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Media;
 
 namespace SkyCD.Plugin.WebBrowser;
 
@@ -63,14 +64,14 @@ internal sealed class WebBrowserWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Text = initialUrl.ToString()
         };
-        _locationBox.KeyDown += (_, e) =>
+        _locationBox.AddHandler(InputElement.KeyDownEvent, (_, e) =>
         {
-            if (e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
+            if (e.Key is Key.Enter or Key.Return)
             {
                 e.Handled = true;
                 NavigateFromLocationBox();
             }
-        };
+        }, RoutingStrategies.Tunnel);
 
         var goButton = new Button
         {
@@ -106,7 +107,7 @@ internal sealed class WebBrowserWindow : Window
 
     private void NavigateFromLocationBox()
     {
-        if (!Uri.TryCreate(_locationBox.Text, UriKind.Absolute, out var url))
+        if (!TryResolveUri(_locationBox.Text, out var url))
         {
             return;
         }
@@ -126,5 +127,29 @@ internal sealed class WebBrowserWindow : Window
         }
 
         _webView.Source = url;
+    }
+
+    private static bool TryResolveUri(string? rawInput, out Uri uri)
+    {
+        uri = default!;
+        var input = rawInput?.Trim();
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(input, UriKind.Absolute, out var absolute))
+        {
+            uri = absolute;
+            return true;
+        }
+
+        if (Uri.TryCreate($"https://{input}", UriKind.Absolute, out var withHttps))
+        {
+            uri = withHttps;
+            return true;
+        }
+
+        return false;
     }
 }
