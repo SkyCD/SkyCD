@@ -100,7 +100,7 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
     private static XElement BuildTrackElement(XspfPlaylistEntry entry)
     {
         var track = new XElement(XspfNamespace + "track");
-        track.Add(new XElement(XspfNamespace + "location", entry.Location));
+        track.Add(new XElement(XspfNamespace + "location", entry.Path));
         if (!string.IsNullOrWhiteSpace(entry.Title))
         {
             track.Add(new XElement(XspfNamespace + "title", entry.Title));
@@ -153,4 +153,7 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
 
 public sealed record XspfPlaylistDocument(IReadOnlyList<XspfPlaylistEntry> Entries);
 
-public sealed record XspfPlaylistEntry(string Location, string? Title, string? Creator, int? DurationMilliseconds);
+public sealed record XspfPlaylistEntry(string Path, string? Title, string? Creator, int? DurationMilliseconds)
+{
+    public string Location => Path;
+}

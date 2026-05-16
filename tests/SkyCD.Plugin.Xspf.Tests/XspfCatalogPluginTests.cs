@@ -40,6 +40,7 @@ public class XspfCatalogPluginTests
         Assert.True(readResult.Success);
         var document = Assert.IsType<XspfPlaylistDocument>(readResult.Payload);
         Assert.Equal(3, document.Entries.Count);
+        Assert.Contains(document.Entries, entry => entry.Path == "../shared/song3.ogg");
         Assert.Contains(document.Entries,
             entry => entry.Location == "https://radio.example.com/live.mp3" &&
                      entry.Title == "Example Radio" &&
