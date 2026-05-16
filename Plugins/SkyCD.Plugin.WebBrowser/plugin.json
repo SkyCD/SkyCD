@@ -1,0 +1,8 @@
+{
+  "id": "SkyCD.Plugin.WebBrowser",
+  "name": "Web Browser",
+  "version": "1.0.0",
+  "capabilities": [
+    "menu"
+  ]
+}

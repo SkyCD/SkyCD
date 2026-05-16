@@ -21,6 +21,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Xml/SkyCD.Plugin.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Yaml/SkyCD.Plugin.Yaml.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.WebBrowser/SkyCD.Plugin.WebBrowser.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -62,6 +63,7 @@
         <Project Path="tests/SkyCD.Plugin.Xml.Tests/SkyCD.Plugin.Xml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Yaml.Tests/SkyCD.Plugin.Yaml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Zip.Tests/SkyCD.Plugin.Zip.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.WebBrowser.Tests/SkyCD.Plugin.WebBrowser.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>
