@@ -65,8 +65,9 @@ internal sealed class WebBrowserWindow : Window
         };
         _locationBox.KeyDown += (_, e) =>
         {
-            if (e.Key == Avalonia.Input.Key.Enter)
+            if (e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
             {
+                e.Handled = true;
                 NavigateFromLocationBox();
             }
         };
