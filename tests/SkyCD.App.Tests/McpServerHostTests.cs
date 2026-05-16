@@ -32,7 +32,7 @@ public sealed class McpServerHostTests
     }
 
     [Fact]
-    public async Task Configure_Enabled_McpRootEndpointReturnsHelpfulMetadata()
+    public async Task Configure_Enabled_McpRootEndpoint_IsReachableForMcpTransport()
     {
         using var host = new McpServerHost();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
@@ -42,13 +42,8 @@ public sealed class McpServerHostTests
         var baseUrl = host.BaseUrl;
         Assert.NotNull(baseUrl);
 
-        var body = await RetryGetStringAsync(client, baseUrl!);
-        var payload = JsonNode.Parse(body)?.AsObject();
-
-        Assert.Equal("SkyCD MCP Server", payload?["name"]?.GetValue<string>());
-        Assert.Equal("ok", payload?["status"]?.GetValue<string>());
-        Assert.Equal($"{baseUrl}/tools", payload?["endpoints"]?["tools"]?.GetValue<string>());
-        Assert.Equal($"{baseUrl}/tools/{{toolPath}}", payload?["endpoints"]?["invoke"]?.GetValue<string>());
+        var response = await client.GetAsync(baseUrl!);
+        Assert.NotEqual(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

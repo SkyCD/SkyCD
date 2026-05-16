@@ -11,41 +11,42 @@
         <NoWarn>$(NoWarn);AVLN3001</NoWarn>
     </PropertyGroup>
     <ItemGroup>
-        <AvaloniaResource Include="Assets\**"/>
-        <AvaloniaResource Include="Styles\**"/>
+        <AvaloniaResource Include="Assets\**" />
+        <AvaloniaResource Include="Styles\**" />
     </ItemGroup>
     <ItemGroup>
         <!-- Legacy icons linked from legacy Resources folder -->
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder closed.png" Link="Assets\legacy\icon-folder.png"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd-rom with hardware.png" Link="Assets\legacy\icon-cd.png"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\around the world.png" Link="Assets\legacy\icon-network.png"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\users.png" Link="Assets\legacy\icon-users.png"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\save.ICO" Link="Assets\legacy\icon-save.ico"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder-closed.ICO" Link="Assets\legacy\icon-folder-closed.ico"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd.ICO" Link="Assets\legacy\icon-cd-disk.ico"/>
-        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico"/>
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder closed.png" Link="Assets\legacy\icon-folder.png" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd-rom with hardware.png" Link="Assets\legacy\icon-cd.png" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\around the world.png" Link="Assets\legacy\icon-network.png" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\users.png" Link="Assets\legacy\icon-users.png" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\save.ICO" Link="Assets\legacy\icon-save.ico" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\folder-closed.ICO" Link="Assets\legacy\icon-folder-closed.ico" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\cd.ICO" Link="Assets\legacy\icon-cd-disk.ico" />
+        <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.0.1"/>
-        <PackageReference Include="Avalonia.Desktop" Version="12.0.1"/>
-        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1"/>
-        <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1"/>
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1"/>
+        <PackageReference Include="Avalonia" Version="12.0.1" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
+        <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Couchbase.Lite" Version="4.0.3"/>
-        <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.6"/>
+        <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
+        <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.6" />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
-        <ProjectReference Include="..\SkyCD.Documents\SkyCD.Documents.csproj"/>
-        <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj"/>
-        <ProjectReference Include="..\SkyCD.Cli\SkyCD.Cli.csproj"/>
-        <ProjectReference Include="..\SkyCD.Core\SkyCD.Core.csproj"/>
-        <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
-        <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
-        <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj"/>
+        <ProjectReference Include="..\SkyCD.Presentation\SkyCD.Presentation.csproj" />
+        <ProjectReference Include="..\SkyCD.Documents\SkyCD.Documents.csproj" />
+        <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj" />
+        <ProjectReference Include="..\SkyCD.Cli\SkyCD.Cli.csproj" />
+        <ProjectReference Include="..\SkyCD.Core\SkyCD.Core.csproj" />
+        <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
+        <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
+        <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj" />
     </ItemGroup>
 </Project>

@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using SkyCD.Cli.Mcp;
 
 namespace SkyCD.App.Mcp;
@@ -18,9 +23,8 @@ public sealed class McpServerHost : IDisposable
     };
 
     private readonly Lock sync = new();
-    private HttpListener? listener;
-    private CancellationTokenSource? cancellationTokenSource;
-    private Task? listenerTask;
+    private WebApplication? webApp;
+    private Task? webAppTask;
     private string? baseUrl;
 
     public bool IsRunning
@@ -29,7 +33,7 @@ public sealed class McpServerHost : IDisposable
         {
             lock (sync)
             {
-                return listener is { IsListening: true };
+                return webAppTask is { IsCompleted: false };
             }
         }
     }
@@ -58,7 +62,7 @@ public sealed class McpServerHost : IDisposable
                 return;
             }
 
-            if (listener is { IsListening: true } && string.Equals(baseUrl, desiredBaseUrl, StringComparison.Ordinal))
+            if (webAppTask is { IsCompleted: false } && string.Equals(baseUrl, desiredBaseUrl, StringComparison.Ordinal))
             {
                 return;
             }
@@ -66,7 +70,7 @@ public sealed class McpServerHost : IDisposable
             StopInternal();
             try
             {
-                StartInternal(desiredBaseUrl);
+                StartInternal(normalizedPort, desiredBaseUrl);
             }
             catch
             {
@@ -83,164 +87,129 @@ public sealed class McpServerHost : IDisposable
         }
     }
 
-    private void StartInternal(string desiredBaseUrl)
+    private void StartInternal(int port, string desiredBaseUrl)
     {
-        var httpListener = new HttpListener();
-        httpListener.Prefixes.Add($"{desiredBaseUrl.TrimEnd('/')}/");
-        httpListener.Start();
+        var rootUrl = $"http://127.0.0.1:{port}";
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseSetting(WebHostDefaults.ServerUrlsKey, rootUrl);
 
-        listener = httpListener;
+        var bridge = new CliMcpBridge(desiredBaseUrl);
+        var descriptors = bridge.ListToolsAsync().GetAwaiter().GetResult();
+        var serverTools = descriptors.Select(descriptor => CreateTool(bridge, descriptor))
+            .ToArray();
+
+        builder.Services.AddMcpServer()
+            .WithHttpTransport(options =>
+            {
+                options.Stateless = false;
+#pragma warning disable MCP9004
+                options.EnableLegacySse = true;
+#pragma warning restore MCP9004
+            })
+            .WithTools(serverTools);
+
+        var app = builder.Build();
+        app.MapMcp("/mcp");
+
+        // Keep legacy helper endpoints for manual diagnostics and backwards compatibility.
+        app.MapGet("/mcp/tools", async (CancellationToken cancellationToken) =>
+        {
+            var tools = await bridge.ListToolsAsync(cancellationToken);
+            return Results.Json(new { tools }, JsonOptions);
+        });
+        app.MapMethods("/mcp/tools/{**toolPath}", ["GET", "POST"], async (HttpContext context,
+            string toolPath, CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(toolPath))
+            {
+                return Results.BadRequest(new { error = "Tool path is required." });
+            }
+
+            JsonObject? payload = null;
+            if (HttpMethods.IsPost(context.Request.Method))
+            {
+                payload = await JsonSerializer.DeserializeAsync<JsonObject>(context.Request.Body, cancellationToken: cancellationToken);
+            }
+
+            IReadOnlyDictionary<string, JsonNode?>? input = null;
+            if (payload?["input"] is JsonObject inputObject)
+            {
+                var map = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+                foreach (var item in inputObject)
+                {
+                    map[item.Key] = item.Value;
+                }
+
+                input = map;
+            }
+
+            var result = await bridge.InvokeToolAsync($"skycd.{toolPath.Replace('/', '.')}", input, cancellationToken);
+            return result.Success
+                ? Results.Json(result, JsonOptions)
+                : Results.BadRequest(result);
+        });
+
+        webApp = app;
+        webAppTask = app.RunAsync();
         baseUrl = desiredBaseUrl;
-        cancellationTokenSource = new CancellationTokenSource();
-        listenerTask = Task.Run(() => RunListenerLoopAsync(httpListener, desiredBaseUrl, cancellationTokenSource.Token));
     }
 
     private void StopInternal()
     {
-        cancellationTokenSource?.Cancel();
-        try
+        if (webApp is not null)
         {
-            listener?.Stop();
-            listener?.Close();
-        }
-        catch
-        {
-            // Ignore listener shutdown errors.
+            try
+            {
+                webApp.StopAsync().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Ignore stop errors.
+            }
+
+            webApp.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
-        listener = null;
-        cancellationTokenSource?.Dispose();
-        cancellationTokenSource = null;
-        listenerTask = null;
+        webApp = null;
+        webAppTask = null;
         baseUrl = null;
     }
 
-    private static async Task RunListenerLoopAsync(HttpListener httpListener, string desiredBaseUrl,
-        CancellationToken cancellationToken)
+    private static McpServerTool CreateTool(CliMcpBridge bridge, CliMcpToolDescriptor descriptor)
     {
-        var bridge = new CliMcpBridge(desiredBaseUrl);
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            HttpListenerContext context;
-            try
-            {
-                context = await httpListener.GetContextAsync();
-            }
-            catch (ObjectDisposedException)
-            {
-                break;
-            }
-            catch (HttpListenerException)
-            {
-                break;
-            }
+        Func<RequestContext<CallToolRequestParams>, CancellationToken, Task<object?>> del =
+            (request, cancellationToken) => InvokeBridgeToolAsync(bridge, descriptor.Name, request, cancellationToken);
 
-            _ = Task.Run(() => HandleRequestAsync(context, bridge, desiredBaseUrl, cancellationToken), cancellationToken);
-        }
+        return McpServerTool.Create(del, new McpServerToolCreateOptions
+        {
+            Name = descriptor.Name,
+            Description = descriptor.CommandPath,
+            ReadOnly = false
+        });
     }
 
-    private static async Task HandleRequestAsync(HttpListenerContext context, CliMcpBridge bridge,
-        string baseUrl, CancellationToken cancellationToken)
+    private static async Task<object?> InvokeBridgeToolAsync(CliMcpBridge bridge, string toolName,
+        RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken)
     {
-        try
+        var arguments = request.Params?.Arguments;
+        IReadOnlyDictionary<string, JsonNode?>? input = null;
+        if (arguments is not null)
         {
-            var request = context.Request;
-            var path = request.Url?.AbsolutePath ?? "/";
-            if (request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase)
-                && (path.Equals("/mcp", StringComparison.OrdinalIgnoreCase)
-                    || path.Equals("/mcp/", StringComparison.OrdinalIgnoreCase)))
+            var map = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var argument in arguments)
             {
-                var toolsPath = $"{baseUrl.TrimEnd('/')}/tools";
-                await WriteJsonAsync(context.Response, HttpStatusCode.OK, new
-                {
-                    name = "SkyCD MCP Server",
-                    status = "ok",
-                    endpoints = new
-                    {
-                        tools = toolsPath,
-                        invoke = $"{toolsPath}/{{toolPath}}"
-                    },
-                    hint = "GET tools endpoint to list tools; POST invoke endpoint with { input: {...} }."
-                });
-                return;
+                map[argument.Key] = JsonSerializer.SerializeToNode(argument.Value, JsonOptions);
             }
 
-            if (request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase)
-                && path.Equals("/mcp/tools", StringComparison.OrdinalIgnoreCase))
-            {
-                var tools = await bridge.ListToolsAsync(cancellationToken);
-                await WriteJsonAsync(context.Response, HttpStatusCode.OK, new { tools });
-                return;
-            }
-
-            if ((request.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase)
-                 || request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
-                && path.StartsWith("/mcp/tools/", StringComparison.OrdinalIgnoreCase))
-            {
-                var toolPath = path["/mcp/tools/".Length..].Trim('/');
-                if (string.IsNullOrWhiteSpace(toolPath))
-                {
-                    await WriteJsonAsync(context.Response, HttpStatusCode.BadRequest, new { error = "Tool path is required." });
-                    return;
-                }
-
-                var toolName = $"skycd.{toolPath.Replace('/', '.')}";
-                JsonObject? payload = null;
-                if (request.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase))
-                {
-                    payload = await ReadBodyAsJsonAsync(request);
-                }
-
-                IReadOnlyDictionary<string, JsonNode?>? input = null;
-                if (payload?["input"] is JsonObject inputObject)
-                {
-                    var map = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var item in inputObject)
-                    {
-                        map[item.Key] = item.Value;
-                    }
-
-                    input = map;
-                }
-
-                var result = await bridge.InvokeToolAsync(toolName, input, cancellationToken);
-                await WriteJsonAsync(context.Response, result.Success ? HttpStatusCode.OK : HttpStatusCode.BadRequest, result);
-                return;
-            }
-
-            await WriteJsonAsync(context.Response, HttpStatusCode.NotFound, new { error = "Not found." });
+            input = map;
         }
-        catch (Exception ex)
+
+        var result = await bridge.InvokeToolAsync(toolName, input, cancellationToken);
+        if (!result.Success)
         {
-            await WriteJsonAsync(context.Response, HttpStatusCode.InternalServerError, new { error = ex.Message });
-        }
-    }
-
-    private static async Task<JsonObject?> ReadBodyAsJsonAsync(HttpListenerRequest request)
-    {
-        if (!request.HasEntityBody)
-        {
-            return null;
+            throw new InvalidOperationException(result.Error ?? $"Tool failed: {toolName}");
         }
 
-        using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
-        var json = await reader.ReadToEndAsync();
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<JsonObject>(json);
-    }
-
-    private static async Task WriteJsonAsync(HttpListenerResponse response, HttpStatusCode statusCode, object payload)
-    {
-        response.StatusCode = (int)statusCode;
-        response.ContentType = "application/json; charset=utf-8";
-        var json = JsonSerializer.Serialize(payload, JsonOptions);
-        using var writer = new StreamWriter(response.OutputStream);
-        await writer.WriteAsync(json);
-        await writer.FlushAsync();
-        response.Close();
+        return result.Data;
     }
 }
