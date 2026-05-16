@@ -1137,7 +1137,7 @@ public partial class MainWindow : Window
                     Id = id,
                     Name = name,
                     ParentId = currentParentId,
-                    Type = isFile ? CatalogDocumentType.Media : CatalogDocumentType.Folder,
+                    Type = isFile ? CatalogDocumentType.File : CatalogDocumentType.Folder,
                     Size = isFile ? pathEntry.Size : 0L,
                     ChildrenCount = 0L
                 };
