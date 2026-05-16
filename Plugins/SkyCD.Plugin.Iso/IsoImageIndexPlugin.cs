@@ -48,14 +48,20 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
         {
             var entries = _entryReader.ReadEntries(request.Source);
             var rows = entries
-                .Select(entry => new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                .Select(entry =>
                 {
-                    ["kind"] = entry.IsDirectory ? "folder" : "file",
-                    ["fullPath"] = entry.Path.Replace('\\', '/'),
-                    ["name"] = entry.Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ??
-                               string.Empty,
-                    ["sizeBytes"] = entry.SizeBytes.ToString(),
-                    ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
+                    var normalizedPath = NormalizePath(entry.Path);
+                    var name = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()
+                               ?? string.Empty;
+
+                    return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["kind"] = entry.IsDirectory ? "folder" : "file",
+                        ["fullPath"] = normalizedPath,
+                        ["name"] = name,
+                        ["sizeBytes"] = entry.SizeBytes.ToString(),
+                        ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
+                    };
                 })
                 .OrderBy(row => row["fullPath"]?.ToString(), StringComparer.Ordinal)
                 .ThenBy(row => row["kind"]?.ToString(), StringComparer.Ordinal)
@@ -75,6 +81,19 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
                 Error = exception.Message
             });
         }
+    }
+
+    private static string NormalizePath(string path)
+    {
+        var normalized = path.Replace('\\', '/').TrimStart('/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(static segment =>
+            {
+                var versionSeparator = segment.IndexOf(';');
+                var withoutVersion = versionSeparator >= 0 ? segment[..versionSeparator] : segment;
+                return withoutVersion.ToUpperInvariant();
+            });
+        return string.Join('/', segments);
     }
 }
 

@@ -118,7 +118,7 @@ internal sealed class PluginsListSubcommand : ICliPluginCapability
             }
         }
 
-        await stdout.WriteLineAsync($"Plugin directory checked: {pluginDirectory ?? "(not configured)"}");
+        await stdout.WriteLineAsync($"Plugin directories checked: {pluginDirectory ?? "(not configured)"}");
 
         return CliExitCodes.Success;
     }

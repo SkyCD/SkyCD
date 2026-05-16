@@ -41,6 +41,8 @@ public sealed class PluginServiceRegistrator
         discoveredPlugins.AddRange(plugins);
         discoveredPlugins.RegisterPluginServices(registrator);
 
+        registrator.Register<FileFormatManager>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<MenuExtensionManager>(Reuse.Singleton,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }

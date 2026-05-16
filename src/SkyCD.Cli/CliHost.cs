@@ -170,12 +170,17 @@ public sealed class CliHost(
             var repositoryManager = resolver.Resolve<RepositoryManager>();
             var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
             var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
-            return string.IsNullOrWhiteSpace(resolvedPath) ? null : resolvedPath;
+            if (!string.IsNullOrWhiteSpace(resolvedPath))
+            {
+                return resolvedPath;
+            }
         }
         catch
         {
-            return null;
+            // Fall back to installed defaults when app settings are unavailable.
         }
+
+        return ResolveInstalledPluginPath();
     }
 
     private static IContainer CreateCliExecutionServiceProvider()
@@ -183,7 +188,6 @@ public sealed class CliHost(
         return ServiceProvider.RegisterChildContainer(static registrator =>
         {
             new CliRuntimeServiceRegistrator().RegisterServices(registrator);
-            registrator.RegisterDelegate(static _ => ServiceProvider.Resolve<FileFormatManager>(), Reuse.Singleton);
         });
     }
 
@@ -509,6 +513,23 @@ public sealed class CliHost(
                       ?? typeof(CliHost).Assembly.GetName().Version?.ToString()
                       ?? "unknown";
         return $"SkyCD {version}";
+    }
+
+    private static string? ResolveInstalledPluginPath()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            var candidate = Path.Combine(current.FullName, "Plugins");
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
     }
 
     private static async Task<CliExitCodes> ExecuteContributionCommandAsync(

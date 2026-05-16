@@ -16,21 +16,28 @@ public sealed class DiscUtilsIsoEntryReader : IIsoEntryReader
 
     private static void TraverseDirectory(CDReader reader, string path, List<IsoEntryInfo> entries)
     {
-        foreach (var directory in reader.GetDirectories(path))
+        var lookupPath = NormalizeLookupPath(path);
+
+        foreach (var directory in reader.GetDirectories(lookupPath))
         {
             var normalized = directory.Replace('\\', '/');
             entries.Add(new IsoEntryInfo(normalized, IsDirectory: true, SizeBytes: 0, ModifiedUtc: null));
             TraverseDirectory(reader, normalized, entries);
         }
 
-        foreach (var file in reader.GetFiles(path))
+        foreach (var file in reader.GetFiles(lookupPath))
         {
             var normalized = file.Replace('\\', '/');
             entries.Add(new IsoEntryInfo(
                 normalized,
                 IsDirectory: false,
-                SizeBytes: reader.GetFileLength(normalized),
-                ModifiedUtc: reader.GetLastWriteTimeUtc(normalized)));
+                SizeBytes: reader.GetFileLength(file),
+                ModifiedUtc: reader.GetLastWriteTimeUtc(file)));
         }
+    }
+
+    private static string NormalizeLookupPath(string path)
+    {
+        return path.TrimStart('/', '\\');
     }
 }
