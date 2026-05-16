@@ -36,7 +36,12 @@ public sealed class CouchbaseServiceRegistrator
 
         if (IsTestHostProcess())
         {
-            return Path.Combine(Path.GetTempPath(), AppDirectoryName, "tests", Process.GetCurrentProcess().Id.ToString());
+            return Path.Combine(
+                Path.GetTempPath(),
+                AppDirectoryName,
+                "tests",
+                Process.GetCurrentProcess().Id.ToString(),
+                Guid.NewGuid().ToString("N"));
         }
 
         return Path.Combine(

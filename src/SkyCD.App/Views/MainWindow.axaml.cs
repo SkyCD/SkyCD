@@ -1125,6 +1125,10 @@ public partial class MainWindow : Window
             {
                 var name = parts[i];
                 var isFile = i == parts.Length - 1;
+                var isDriveRoot = i == 0 &&
+                                  name.Length == 2 &&
+                                  char.IsLetter(name[0]) &&
+                                  name[1] == ':';
                 var id = $"{currentParentId}/{name}".ToLowerInvariant();
                 if (entries.ContainsKey(id))
                 {
@@ -1137,7 +1141,11 @@ public partial class MainWindow : Window
                     Id = id,
                     Name = name,
                     ParentId = currentParentId,
-                    Type = isFile ? CatalogDocumentType.File : CatalogDocumentType.Folder,
+                    Type = isFile
+                        ? CatalogDocumentType.File
+                        : isDriveRoot
+                            ? CatalogDocumentType.Media
+                            : CatalogDocumentType.Folder,
                     Size = isFile ? pathEntry.Size : 0L,
                     ChildrenCount = 0L
                 };

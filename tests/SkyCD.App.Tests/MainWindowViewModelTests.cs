@@ -237,6 +237,20 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void NavigateToFolderCommand_WithMediaSelection_SelectsMatchingTreeNode()
+    {
+        var vm = CreateViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
+        var mediaItem = vm.BrowserItems.Single(item => item.Name == "Interstellar.mkv");
+
+        vm.SelectedBrowserItem = mediaItem;
+        vm.NavigateToFolderCommand.Execute(null);
+
+        Assert.Equal("interstellar", vm.SelectedTreeNode?.Key);
+        Assert.Equal("Navigated to Interstellar.mkv.", vm.StatusText);
+    }
+
+    [Fact]
     public void OpenCatalogCommand_DoesNotMarkDocumentDirty()
     {
         var vm = CreateViewModel();

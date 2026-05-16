@@ -19,6 +19,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Toml/SkyCD.Plugin.Toml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Tar/SkyCD.Plugin.Tar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Xml/SkyCD.Plugin.Xml.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Xspf/SkyCD.Plugin.Xspf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Yaml/SkyCD.Plugin.Yaml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WebBrowser/SkyCD.Plugin.WebBrowser.csproj"/>
@@ -61,6 +62,7 @@
         <Project Path="tests/SkyCD.Plugin.Tar.Tests/SkyCD.Plugin.Tar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Toml.Tests/SkyCD.Plugin.Toml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Xml.Tests/SkyCD.Plugin.Xml.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Xspf.Tests/SkyCD.Plugin.Xspf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Yaml.Tests/SkyCD.Plugin.Yaml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Zip.Tests/SkyCD.Plugin.Zip.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WebBrowser.Tests/SkyCD.Plugin.WebBrowser.Tests.csproj"/>
