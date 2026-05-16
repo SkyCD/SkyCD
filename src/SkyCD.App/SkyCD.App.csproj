@@ -26,10 +26,10 @@
         <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico"/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.0.1"/>
+        <PackageReference Include="Avalonia" Version="12.0.3"/>
         <PackageReference Include="Avalonia.Desktop" Version="12.0.1"/>
         <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.1"/>
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.3"/>
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
