@@ -12,4 +12,7 @@
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
     </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1"/>
+    </ItemGroup>
 </Project>

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Plugin.WebBrowser;
@@ -101,12 +101,14 @@ public sealed class WebBrowserMenuPlugin : IMenuPluginCapability
 
         try
         {
-            var process = Process.Start(new ProcessStartInfo
+            var dialog = new NativeWebDialog
             {
-                FileName = targetUrl.ToString(),
-                UseShellExecute = true
-            });
-            return process is not null;
+                Title = "Web Browser",
+                Source = targetUrl
+            };
+
+            dialog.Show();
+            return true;
         }
         catch
         {
