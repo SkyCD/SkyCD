@@ -1,5 +1,7 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 
 namespace SkyCD.UI.Controls.StatusBar;
@@ -40,6 +42,8 @@ public partial class StatusBar : UserControl
     {
         AvaloniaXamlLoader.Load(this);
     }
+
+    public event EventHandler? McpStatusClicked;
 
     public string? StatusText
     {
@@ -99,5 +103,10 @@ public partial class StatusBar : UserControl
     {
         get => GetValue(IsMcpStatusVisibleProperty);
         set => SetValue(IsMcpStatusVisibleProperty, value);
+    }
+
+    private void OnMcpStatusButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        McpStatusClicked?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -16,14 +16,21 @@
                          Maximum="{Binding ProgressMax, ElementName=Root}"
                          Value="{Binding ProgressValue, ElementName=Root}"
                          IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
-            <TextBlock Grid.Column="3"
-                       Text="{Binding McpStatusGlyph, ElementName=Root}"
-                       Foreground="{Binding McpStatusColor, ElementName=Root}"
-                       VerticalAlignment="Center"
-                       FontSize="14"
-                       Margin="4,0,0,0"
-                       ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
-                       IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}" />
+            <Button Grid.Column="3"
+                    Padding="8,2"
+                    MinHeight="22"
+                    MinWidth="52"
+                    BorderThickness="1"
+                    BorderBrush="{Binding McpStatusColor, ElementName=Root}"
+                    Background="Transparent"
+                    Foreground="{Binding McpStatusColor, ElementName=Root}"
+                    Content="{Binding McpStatusGlyph, ElementName=Root}"
+                    FontWeight="SemiBold"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
+                    IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}"
+                    Click="OnMcpStatusButtonClicked" />
         </Grid>
     </Border>
 </UserControl>
