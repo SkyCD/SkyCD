@@ -79,10 +79,7 @@ public sealed class CliMcpBridge
         }
 
         var outputText = stdout.ToString();
-        var data = TryParseJson(outputText) ?? new JsonObject
-        {
-            ["rawOutput"] = outputText.Trim()
-        };
+        var data = NormalizeToolOutput(commandPath, outputText);
         return new CliMcpToolExecutionResult(
             Success: true,
             ExitCode: (int)result.ExitCode,
@@ -342,6 +339,32 @@ public sealed class CliMcpBridge
         {
             return null;
         }
+    }
+
+    private static JsonObject NormalizeToolOutput(string commandPath, string output)
+    {
+        var parsed = TryParseJson(output);
+        if (parsed is not null)
+        {
+            return parsed;
+        }
+
+        var trimmed = output.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return new JsonObject
+            {
+                ["success"] = true,
+                ["command"] = commandPath
+            };
+        }
+
+        return new JsonObject
+        {
+            ["success"] = true,
+            ["command"] = commandPath,
+            ["output"] = trimmed
+        };
     }
 
     private static bool TryToolNameToCommandPath(string toolName, out string commandPath)

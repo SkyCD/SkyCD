@@ -100,4 +100,5 @@ public sealed class CliMcpBridgeTests
         Assert.NotNull(result.Data["plugins"]);
         Assert.NotNull(result.Data["cliCommands"]);
     }
+
 }
