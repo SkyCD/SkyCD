@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -129,7 +130,7 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
 
         if (Uri.TryCreate(location, UriKind.Absolute, out var locationUri) && locationUri.IsFile)
         {
-            location = Uri.UnescapeDataString(locationUri.LocalPath);
+            location = NormalizeFilePath(locationUri);
         }
 
         var title = track.Element(XspfNamespace + "title")?.Value?.Trim();
@@ -143,6 +144,32 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
     private static string? EmptyAsNull(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string NormalizeFilePath(Uri fileUri)
+    {
+        var localPath = Uri.UnescapeDataString(fileUri.LocalPath);
+
+        // On Unix-based systems, Windows drive-letter file URIs decode as "/C:/...".
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+            localPath.Length >= 4 &&
+            localPath[0] == '/' &&
+            char.IsLetter(localPath[1]) &&
+            localPath[2] == ':' &&
+            localPath[3] == '/')
+        {
+            localPath = localPath[1..];
+        }
+
+        if (localPath.Length >= 3 &&
+            char.IsLetter(localPath[0]) &&
+            localPath[1] == ':' &&
+            localPath[2] == '/')
+        {
+            localPath = localPath.Replace('/', '\\');
+        }
+
+        return localPath;
     }
 
     private static IReadOnlyList<XspfPlaylistEntry> ResolveEntries(object? payload)
