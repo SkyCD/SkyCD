@@ -11,6 +11,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Iso/SkyCD.Plugin.Iso.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Markdown/SkyCD.Plugin.Markdown.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Pls/SkyCD.Plugin.Pls.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Zip/SkyCD.Plugin.Zip.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.SevenZip/SkyCD.Plugin.SevenZip.csproj"/>
@@ -50,6 +51,7 @@
         <Project Path="tests/SkyCD.Plugin.Legacy.Cscd.Tests/SkyCD.Plugin.Legacy.Cscd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Legacy.Scd.Tests/SkyCD.Plugin.Legacy.Scd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Markdown.Tests/SkyCD.Plugin.Markdown.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Pls.Tests/SkyCD.Plugin.Pls.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Menu.Tests/SkyCD.Plugin.Sample.Menu.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Modal.Tests/SkyCD.Plugin.Sample.Modal.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.SevenZip.Tests/SkyCD.Plugin.SevenZip.Tests.csproj"/>
