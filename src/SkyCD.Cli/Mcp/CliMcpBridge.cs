@@ -98,7 +98,7 @@ public sealed class CliMcpBridge
                 toolUrl,
                 commandPath,
                 CreateGenericInputSchema(),
-                CreateOutputSchema());
+                CreateGenericOutputSchema());
         }
 
         return new CliMcpToolDescriptor(
@@ -106,18 +106,105 @@ public sealed class CliMcpBridge
             toolUrl,
             commandPath,
             CreateInputSchemaFromCommandType(commandType),
-            CreateOutputSchema());
+            CreateOutputSchema(commandPath));
     }
 
-    private static JsonObject CreateOutputSchema()
+    private static JsonObject CreateOutputSchema(string commandPath)
+    {
+        return commandPath.ToLowerInvariant() switch
+        {
+            "open" => CreateOpenOutputSchema(),
+            "convert" => CreateConvertOutputSchema(),
+            "fileformats list" => CreateFileFormatsListOutputSchema(),
+            "plugins list" => CreatePluginsListOutputSchema(),
+            _ => CreateGenericOutputSchema()
+        };
+    }
+
+    private static JsonObject CreateGenericOutputSchema()
     {
         return new JsonObject
         {
             ["type"] = "object",
+            ["description"] = "Normalized MCP command result.",
             ["properties"] = new JsonObject
             {
                 ["success"] = new JsonObject { ["type"] = "boolean" },
-                ["data"] = new JsonObject(),
+                ["command"] = new JsonObject { ["type"] = "string" },
+                ["data"] = new JsonObject { ["description"] = "Parsed JSON output when command returns JSON." },
+                ["output"] = new JsonObject { ["type"] = "string", ["description"] = "Plain text output when JSON is not returned." },
+                ["error"] = new JsonObject { ["type"] = "string" }
+            }
+        };
+    }
+
+    private static JsonObject CreateOpenOutputSchema()
+    {
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["description"] = "Open command result.",
+            ["properties"] = new JsonObject
+            {
+                ["success"] = new JsonObject { ["type"] = "boolean" },
+                ["command"] = new JsonObject { ["type"] = "string", ["const"] = "open" },
+                ["file"] = new JsonObject { ["type"] = "string" },
+                ["formatId"] = new JsonObject { ["type"] = "string" },
+                ["error"] = new JsonObject { ["type"] = "string" }
+            }
+        };
+    }
+
+    private static JsonObject CreateConvertOutputSchema()
+    {
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["description"] = "Convert command result.",
+            ["properties"] = new JsonObject
+            {
+                ["success"] = new JsonObject { ["type"] = "boolean" },
+                ["command"] = new JsonObject { ["type"] = "string", ["const"] = "convert" },
+                ["input"] = new JsonObject { ["type"] = "string" },
+                ["output"] = new JsonObject { ["type"] = "string" },
+                ["inputFormat"] = new JsonObject { ["type"] = "string" },
+                ["outputFormat"] = new JsonObject { ["type"] = "string" },
+                ["error"] = new JsonObject { ["type"] = "string" }
+            }
+        };
+    }
+
+    private static JsonObject CreateFileFormatsListOutputSchema()
+    {
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["description"] = "List of supported file formats.",
+            ["properties"] = new JsonObject
+            {
+                ["success"] = new JsonObject { ["type"] = "boolean" },
+                ["command"] = new JsonObject { ["type"] = "string", ["const"] = "fileformats list" },
+                ["data"] = new JsonObject
+                {
+                    ["type"] = "array",
+                    ["description"] = "Array of format descriptors."
+                },
+                ["error"] = new JsonObject { ["type"] = "string" }
+            }
+        };
+    }
+
+    private static JsonObject CreatePluginsListOutputSchema()
+    {
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["description"] = "Installed plugins and available CLI command paths.",
+            ["properties"] = new JsonObject
+            {
+                ["plugins"] = new JsonObject { ["type"] = "array" },
+                ["cliCommands"] = new JsonObject { ["type"] = "array" },
+                ["pluginDirectory"] = new JsonObject { ["type"] = "string" },
                 ["error"] = new JsonObject { ["type"] = "string" }
             }
         };

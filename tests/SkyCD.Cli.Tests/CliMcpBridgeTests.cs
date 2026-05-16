@@ -24,6 +24,10 @@ public sealed class CliMcpBridgeTests
         Assert.Contains(tools, tool => tool.Name.Equals("skycd.fileformats.list", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(tools, tool => tool.Name.Equals("skycd.plugins.list", StringComparison.OrdinalIgnoreCase));
         Assert.All(tools, tool => Assert.StartsWith("http://127.0.0.1:", tool.Url, StringComparison.OrdinalIgnoreCase));
+
+        var openTool = Assert.Single(tools, tool => tool.Name.Equals("skycd.open", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("Open command result.", openTool.OutputSchema["description"]?.GetValue<string>());
+        Assert.NotNull(openTool.OutputSchema["properties"]?["file"]);
     }
 
     [Fact]
