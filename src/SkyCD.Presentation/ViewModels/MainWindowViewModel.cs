@@ -762,7 +762,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool TryResolveNodeFromBrowserSelection([NotNullWhen(true)] out BrowserTreeNode? targetNode)
     {
         if (SelectedBrowserItem is not null &&
-            SelectedBrowserItem.Type == CatalogDocumentType.Folder)
+            SelectedBrowserItem.Type is CatalogDocumentType.Folder or CatalogDocumentType.NetworkFolder)
         {
             if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
             {
