@@ -403,6 +403,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        EnsureFileFormatProvidersLoaded();
+
         var targetPath = vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
@@ -456,6 +458,8 @@ public partial class MainWindow : Window
         {
             return;
         }
+
+        EnsureFileFormatProvidersLoaded();
 
         var fileTypeChoices = fileFormatManager.GetSaveFilters()
             .ToFilePickerTypes(
