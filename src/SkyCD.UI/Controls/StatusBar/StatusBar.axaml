@@ -5,7 +5,7 @@
     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
             BorderThickness="1,1,0,0"
             Padding="8,4">
-        <Grid ColumnDefinitions="*,Auto,120" ColumnSpacing="10">
+        <Grid ColumnDefinitions="*,Auto,120,Auto" ColumnSpacing="10">
             <TextBlock Text="{Binding StatusText, ElementName=Root}" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProgressText, ElementName=Root}"
@@ -16,6 +16,14 @@
                          Maximum="{Binding ProgressMax, ElementName=Root}"
                          Value="{Binding ProgressValue, ElementName=Root}"
                          IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
+            <TextBlock Grid.Column="3"
+                       Text="{Binding McpStatusGlyph, ElementName=Root}"
+                       Foreground="{Binding McpStatusColor, ElementName=Root}"
+                       VerticalAlignment="Center"
+                       FontSize="14"
+                       Margin="4,0,0,0"
+                       ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
+                       IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}" />
         </Grid>
     </Border>
 </UserControl>

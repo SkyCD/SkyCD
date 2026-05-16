@@ -202,6 +202,8 @@ public partial class MainWindow : Window
             _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
         }
 
+        RefreshMcpStatusIndicator();
+
         isSessionStateLoaded = true;
     }
 
@@ -543,6 +545,7 @@ public partial class MainWindow : Window
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
             (Application.Current as App)?.ApplyMcpSettings();
+            RefreshMcpStatusIndicator();
 
             // Trigger UI refresh to apply new language
             InvalidateVisual();
@@ -1229,6 +1232,24 @@ public partial class MainWindow : Window
     }
 
     private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain);
+
+    private void RefreshMcpStatusIndicator()
+    {
+        if (Application.Current is not App app)
+        {
+            MainStatusBar.McpStatusGlyph = "○";
+            MainStatusBar.McpStatusColor = "#9CA3AF";
+            MainStatusBar.McpStatusTooltip = "MCP server unavailable";
+            return;
+        }
+
+        var (isRunning, baseUrl) = app.GetMcpStatus();
+        MainStatusBar.McpStatusGlyph = "●";
+        MainStatusBar.McpStatusColor = isRunning ? "#22C55E" : "#9CA3AF";
+        MainStatusBar.McpStatusTooltip = isRunning
+            ? $"MCP server running at {baseUrl}"
+            : "MCP server stopped";
+    }
 
 }
 

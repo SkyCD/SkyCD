@@ -90,4 +90,14 @@ public partial class App : Avalonia.Application
         var options = appOptionsRepository.GetOrCreateAppOptions();
         mcpServerHost.Configure(options.IsMcpServerEnabled, options.McpPort);
     }
+
+    public (bool IsRunning, string? BaseUrl) GetMcpStatus()
+    {
+        if (mcpServerHost is null)
+        {
+            return (false, null);
+        }
+
+        return (mcpServerHost.IsRunning, mcpServerHost.BaseUrl);
+    }
 }

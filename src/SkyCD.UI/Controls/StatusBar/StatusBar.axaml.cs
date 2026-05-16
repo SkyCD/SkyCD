@@ -24,6 +24,18 @@ public partial class StatusBar : UserControl
     public static readonly StyledProperty<double> ProgressMaxProperty =
         AvaloniaProperty.Register<StatusBar, double>(nameof(ProgressMax), 100);
 
+    public static readonly StyledProperty<string?> McpStatusGlyphProperty =
+        AvaloniaProperty.Register<StatusBar, string?>(nameof(McpStatusGlyph), "○");
+
+    public static readonly StyledProperty<string?> McpStatusTooltipProperty =
+        AvaloniaProperty.Register<StatusBar, string?>(nameof(McpStatusTooltip));
+
+    public static readonly StyledProperty<string?> McpStatusColorProperty =
+        AvaloniaProperty.Register<StatusBar, string?>(nameof(McpStatusColor), "#9CA3AF");
+
+    public static readonly StyledProperty<bool> IsMcpStatusVisibleProperty =
+        AvaloniaProperty.Register<StatusBar, bool>(nameof(IsMcpStatusVisible), true);
+
     public StatusBar()
     {
         AvaloniaXamlLoader.Load(this);
@@ -63,5 +75,29 @@ public partial class StatusBar : UserControl
     {
         get => GetValue(ProgressMaxProperty);
         set => SetValue(ProgressMaxProperty, value);
+    }
+
+    public string? McpStatusGlyph
+    {
+        get => GetValue(McpStatusGlyphProperty);
+        set => SetValue(McpStatusGlyphProperty, value);
+    }
+
+    public string? McpStatusTooltip
+    {
+        get => GetValue(McpStatusTooltipProperty);
+        set => SetValue(McpStatusTooltipProperty, value);
+    }
+
+    public string? McpStatusColor
+    {
+        get => GetValue(McpStatusColorProperty);
+        set => SetValue(McpStatusColorProperty, value);
+    }
+
+    public bool IsMcpStatusVisible
+    {
+        get => GetValue(IsMcpStatusVisibleProperty);
+        set => SetValue(IsMcpStatusVisibleProperty, value);
     }
 }
