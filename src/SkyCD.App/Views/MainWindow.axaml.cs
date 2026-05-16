@@ -1239,14 +1239,14 @@ public partial class MainWindow : Window
     {
         if (Application.Current is not App app)
         {
-            MainStatusBar.McpStatusGlyph = "⛔";
+            MainStatusBar.McpStatusGlyph = "◎";
             MainStatusBar.McpStatusColor = "#9CA3AF";
             MainStatusBar.McpStatusTooltip = "MCP server unavailable";
             return;
         }
 
         var (isRunning, baseUrl) = app.GetMcpStatus();
-        MainStatusBar.McpStatusGlyph = isRunning ? "🔗" : "⛔";
+        MainStatusBar.McpStatusGlyph = isRunning ? "◉" : "◎";
         MainStatusBar.McpStatusColor = isRunning ? "#22C55E" : "#9CA3AF";
         MainStatusBar.McpStatusTooltip = isRunning
             ? $"MCP server running at {baseUrl}. Click to copy URL."
