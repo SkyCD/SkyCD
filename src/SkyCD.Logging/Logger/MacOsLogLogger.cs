@@ -40,7 +40,14 @@ internal sealed class MacOsLogLogger<TCategoryName>(IntPtr log, string category)
         }
 
         var composed = $"{category} [{eventId.Id}] {message}";
-        AppleInteropHelper.WriteAppleLogMessage(log, Map(logLevel), "%{public}s", __arglist(composed));
+        try
+        {
+            AppleInteropHelper.WriteAppleLogMessage(log, Map(logLevel), "%{public}s", __arglist(composed));
+        }
+        catch (InvalidProgramException)
+        {
+            Console.Error.WriteLine(composed);
+        }
     }
 
     private static byte Map(LogLevel level)
