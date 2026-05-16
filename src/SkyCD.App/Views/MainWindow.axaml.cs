@@ -1003,7 +1003,7 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private static bool TryExtractPathEntries(object? payload, out IReadOnlyList<(string Path, long Size)> entries)
+    private static bool TryExtractPathEntries(object? payload, out IReadOnlyList<PathEntry> entries)
     {
         entries = [];
         if (payload is null)
@@ -1017,7 +1017,7 @@ public partial class MainWindow : Window
             return false;
         }
 
-        var result = new List<(string Path, long Size)>();
+        var result = new List<PathEntry>();
         foreach (var raw in rawEntries)
         {
             if (raw is null)
@@ -1036,7 +1036,12 @@ public partial class MainWindow : Window
                 ?.GetValue(raw);
             var size = sizeValue is null ? 0L : Convert.ToInt64(sizeValue, CultureInfo.InvariantCulture);
 
-            result.Add((path.Trim(), size));
+            var normalizedPath = path.Trim();
+            var isHttps = Uri.TryCreate(normalizedPath, UriKind.Absolute, out var uri) &&
+                          uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            var domain = isHttps ? uri!.Host : null;
+
+            result.Add(new PathEntry(normalizedPath, size, isHttps, domain));
         }
 
         entries = result;
@@ -1083,8 +1088,7 @@ public partial class MainWindow : Window
         return results;
     }
 
-    private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(
-        IReadOnlyList<(string Path, long Size)> pathEntries)
+    private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(IReadOnlyList<PathEntry> pathEntries)
     {
         var entries = new Dictionary<string, CatalogDocument>(StringComparer.Ordinal);
         var rootId = "library";
@@ -1098,9 +1102,18 @@ public partial class MainWindow : Window
             ChildrenCount = 0
         };
 
-        foreach (var (path, size) in pathEntries)
+        foreach (var pathEntry in pathEntries
+                     .OrderBy(static entry => entry.IsHttps ? 0 : 1)
+                     .ThenBy(static entry => entry.Domain, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(static entry => entry.Path, StringComparer.OrdinalIgnoreCase))
         {
-            var parts = path.Replace('\\', '/')
+            if (pathEntry.IsHttps)
+            {
+                BuildHttpsEntry(entries, rootId, pathEntry);
+                continue;
+            }
+
+            var parts = pathEntry.Path.Replace('\\', '/')
                 .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (parts.Length == 0)
             {
@@ -1125,7 +1138,7 @@ public partial class MainWindow : Window
                     Name = name,
                     ParentId = currentParentId,
                     Type = isFile ? CatalogDocumentType.Media : CatalogDocumentType.Folder,
-                    Size = isFile ? size : 0L,
+                    Size = isFile ? pathEntry.Size : 0L,
                     ChildrenCount = 0L
                 };
 
@@ -1134,6 +1147,56 @@ public partial class MainWindow : Window
         }
 
         return entries.Values.ToArray();
+    }
+
+    private static void BuildHttpsEntry(IDictionary<string, CatalogDocument> entries, string rootId, PathEntry pathEntry)
+    {
+        if (string.IsNullOrWhiteSpace(pathEntry.Domain))
+        {
+            return;
+        }
+
+        const string internetNodeId = "library/internet";
+        if (!entries.ContainsKey(internetNodeId))
+        {
+            entries[internetNodeId] = new CatalogDocument
+            {
+                Id = internetNodeId,
+                Name = "Internet",
+                ParentId = rootId,
+                Type = CatalogDocumentType.Folder,
+                Size = 0L,
+                ChildrenCount = 0L
+            };
+        }
+
+        var domainNodeId = $"{internetNodeId}/{pathEntry.Domain.ToLowerInvariant()}";
+        if (!entries.ContainsKey(domainNodeId))
+        {
+            entries[domainNodeId] = new CatalogDocument
+            {
+                Id = domainNodeId,
+                Name = pathEntry.Domain,
+                ParentId = internetNodeId,
+                Type = CatalogDocumentType.NetworkResource,
+                Size = 0L,
+                ChildrenCount = 0L
+            };
+        }
+
+        var resourceNodeId = $"{domainNodeId}/{pathEntry.Path.ToLowerInvariant()}";
+        if (!entries.ContainsKey(resourceNodeId))
+        {
+            entries[resourceNodeId] = new CatalogDocument
+            {
+                Id = resourceNodeId,
+                Name = pathEntry.Path,
+                ParentId = domainNodeId,
+                Type = CatalogDocumentType.HttpsResource,
+                Size = pathEntry.Size,
+                ChildrenCount = 0L
+            };
+        }
     }
 
     private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
@@ -1165,6 +1228,8 @@ public partial class MainWindow : Window
 
         return 0L;
     }
+
+    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain);
 
 }
 
