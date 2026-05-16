@@ -52,6 +52,25 @@ public sealed class McpServerHostTests
     }
 
     [Fact]
+    public async Task Configure_Enabled_GetToolEndpoint_ReturnsPluginsListResult()
+    {
+        using var host = new McpServerHost();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        var port = GetFreeTcpPort();
+
+        host.Configure(enabled: true, port);
+        var baseUrl = host.BaseUrl;
+        Assert.NotNull(baseUrl);
+
+        var body = await RetryGetStringAsync(client, $"{baseUrl}/tools/plugins/list");
+        var payload = JsonNode.Parse(body)?.AsObject();
+
+        Assert.True(payload?["success"]?.GetValue<bool>());
+        Assert.Equal(0, payload?["exitCode"]?.GetValue<int>());
+        Assert.NotNull(payload?["data"]);
+    }
+
+    [Fact]
     public async Task Configure_PortChange_RestartsServerOnNewUrl()
     {
         using var host = new McpServerHost();

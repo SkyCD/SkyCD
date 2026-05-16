@@ -173,7 +173,8 @@ public sealed class McpServerHost : IDisposable
                 return;
             }
 
-            if (request.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase)
+            if ((request.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase)
+                 || request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
                 && path.StartsWith("/mcp/tools/", StringComparison.OrdinalIgnoreCase))
             {
                 var toolPath = path["/mcp/tools/".Length..].Trim('/');
@@ -184,7 +185,12 @@ public sealed class McpServerHost : IDisposable
                 }
 
                 var toolName = $"skycd.{toolPath.Replace('/', '.')}";
-                var payload = await ReadBodyAsJsonAsync(request);
+                JsonObject? payload = null;
+                if (request.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase))
+                {
+                    payload = await ReadBodyAsJsonAsync(request);
+                }
+
                 IReadOnlyDictionary<string, JsonNode?>? input = null;
                 if (payload?["input"] is JsonObject inputObject)
                 {
