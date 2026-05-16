@@ -25,6 +25,7 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly CatalogDocumentRepository? catalogRepository;
+    private readonly bool shouldSeedDefaultCatalog;
     private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
@@ -72,7 +73,8 @@ public partial class MainWindowViewModel : ObservableObject
     private MainWindowViewModel(
         IRepository<CatalogDocument> catalogRepository,
         IStringLocalizer propertyValueLocalizer,
-        MenuExtensionManager menuExtensionManager)
+        MenuExtensionManager menuExtensionManager,
+        bool shouldSeedDefaultCatalog)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
@@ -80,6 +82,7 @@ public partial class MainWindowViewModel : ObservableObject
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
+        this.shouldSeedDefaultCatalog = shouldSeedDefaultCatalog;
 
         EnsureSeedData();
         TreeNodes = GetTreeNodes();
@@ -98,7 +101,8 @@ public partial class MainWindowViewModel : ObservableObject
         : this(
             repositoryManager.For<CatalogDocument>(),
             new PropertyValueLocalizer(),
-            CreateEmptyMenuExtensionManager())
+            CreateEmptyMenuExtensionManager(),
+            RegisterAppStart(repositoryManager))
     {
     }
 
@@ -110,6 +114,7 @@ public partial class MainWindowViewModel : ObservableObject
         inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
         this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
+        shouldSeedDefaultCatalog = false;
         TreeNodes = BuildTreeNodesFromEntries(inMemoryCatalogEntries);
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
@@ -132,6 +137,15 @@ public partial class MainWindowViewModel : ObservableObject
     private static MenuExtensionManager CreateEmptyMenuExtensionManager()
     {
         return new MenuExtensionManager(Array.Empty<IMenuPluginCapability>());
+    }
+
+    private static bool RegisterAppStart(RepositoryManager repositoryManager)
+    {
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount++;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+        return options.AppStartCount <= 1;
     }
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
@@ -474,6 +488,16 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (SelectedBrowserItem is null)
         {
+            return;
+        }
+
+        if (catalogRepository is not null)
+        {
+            DeleteCatalogEntryFromRepository(SelectedBrowserItem);
+            var deletedNameFromRepository = SelectedBrowserItem.Name;
+            RefreshBrowserItemsForSelection();
+            IsDirtyDocument = true;
+            StatusText = $"Deleted {deletedNameFromRepository}.";
             return;
         }
 
@@ -1395,7 +1419,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void EnsureSeedData()
     {
-        if (catalogRepository is null || catalogRepository.GetAll().Count > 0)
+        if (!shouldSeedDefaultCatalog || catalogRepository is null || catalogRepository.GetAll().Count > 0)
         {
             return;
         }
@@ -1437,7 +1461,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return treeNodes;
             }
 
-            return BuildTreeNodesFromEntries(catalogRepository.CreateDefaultEntries());
+            return [];
         }
 
         return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
@@ -1453,21 +1477,43 @@ public partial class MainWindowViewModel : ObservableObject
         if (catalogRepository is not null)
         {
             var entries = catalogRepository.GetChildrenOf(nodeKey);
-            if (entries.Count > 0)
-            {
-                return entries;
-            }
-
-            var defaults = catalogRepository.CreateDefaultEntries()
-                .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
-                .ToArray();
-            return defaults;
+            return entries;
         }
 
         var inMemoryEntries = (inMemoryCatalogEntries ?? [])
             .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
             .ToArray();
         return inMemoryEntries;
+    }
+
+    private void DeleteCatalogEntryFromRepository(CatalogDocument item)
+    {
+        if (catalogRepository is null)
+        {
+            return;
+        }
+
+        var descendantIds = catalogRepository
+            .GetDescendantsOf(item.Id)
+            .Select(static entry => entry.Id)
+            .Where(static id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var descendantId in descendantIds)
+        {
+            using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
+            if (descendantDocument is not null)
+            {
+                catalogRepository.Collection.Delete(descendantDocument);
+            }
+        }
+
+        using var targetDocument = catalogRepository.Collection.GetDocument(item.Id);
+        if (targetDocument is not null)
+        {
+            catalogRepository.Collection.Delete(targetDocument);
+        }
     }
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)

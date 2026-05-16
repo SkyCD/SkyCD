@@ -19,4 +19,6 @@ public sealed class AppOptionsDocument
     public string Language { get; set; } = "English";
 
     public int OptionsTabIndex { get; set; }
+
+    public int AppStartCount { get; set; }
 }

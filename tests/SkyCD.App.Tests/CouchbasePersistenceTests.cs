@@ -36,6 +36,17 @@ public sealed class CouchbasePersistenceTests : IDisposable
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
         var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
         var viewModel = new MainWindowViewModel(repositoryManager);
 
         var roots = viewModel.TreeNodes;
@@ -45,6 +56,60 @@ public sealed class CouchbasePersistenceTests : IDisposable
         viewModel.SelectedTreeNode = roots[0].Children.Single(child => child.Key == "movies");
         Assert.Equal(2, viewModel.BrowserItems.Count);
         Assert.Contains(viewModel.BrowserItems, static item => item.Name == "Interstellar.mkv");
+    }
+
+    [Fact]
+    public void MainWindowViewModel_DoesNotReseedCatalogAfterFirstAppStart()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 1;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var secondStartViewModel = new MainWindowViewModel(repositoryManager);
+
+        Assert.Empty(secondStartViewModel.TreeNodes);
+
+        options = appOptionsRepository.GetOrCreateAppOptions();
+        Assert.Equal(2, options.AppStartCount);
+    }
+
+    [Fact]
+    public void MainWindowViewModel_DeleteItem_SyncsWithRepositoryState()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var viewModel = new MainWindowViewModel(repositoryManager);
+        var libraryNode = viewModel.TreeNodes.Single();
+        var moviesNode = libraryNode.Children.Single(child => child.Key == "movies");
+        viewModel.SelectedTreeNode = moviesNode;
+        viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "arrival");
+
+        viewModel.DeleteItemCommand.Execute(null);
+
+        var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+        var reloadedMoviesNode = reloadedViewModel.TreeNodes.Single().Children.Single(child => child.Key == "movies");
+        reloadedViewModel.SelectedTreeNode = reloadedMoviesNode;
+
+        Assert.DoesNotContain(reloadedViewModel.BrowserItems, static item => item.Id == "arrival");
+        Assert.Single(reloadedViewModel.BrowserItems);
     }
 
     [Fact]
@@ -69,7 +134,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
             },
             PluginPath = @"C:\plugins\custom",
             Language = "Lithuanian",
-            OptionsTabIndex = 2
+            OptionsTabIndex = 2,
+            AppStartCount = 7
         };
 
         var databaseDirectory = Path.Combine(appDataRoot, "SkyCD");
@@ -108,6 +174,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.Equal(expected.PluginPath, actual.PluginPath);
         Assert.Equal(expected.Language, actual.Language);
         Assert.Equal(expected.OptionsTabIndex, actual.OptionsTabIndex);
+        Assert.Equal(expected.AppStartCount, actual.AppStartCount);
     }
 
     [Fact]
@@ -140,7 +207,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
             },
             PluginPath = "vfs://plugins",
             Language = "English",
-            OptionsTabIndex = 1
+            OptionsTabIndex = 1,
+            AppStartCount = 3
         };
 
         using var optionsDoc = options.ToMutableDocument("app-options");
@@ -149,6 +217,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.NotNull(restoredOptions);
         Assert.Equal(options.PluginPath, restoredOptions!.PluginPath);
         Assert.Equal(options.Browser.ViewMode, restoredOptions.Browser.ViewMode);
+        Assert.Equal(options.AppStartCount, restoredOptions.AppStartCount);
     }
 
     [Fact]
@@ -173,11 +242,13 @@ public sealed class CouchbasePersistenceTests : IDisposable
         doc.SetString("PluginPath", @"C:\plugins\legacy");
         doc.SetString("Language", "English");
         doc.SetInt("OptionsTabIndex", 1);
+        doc.SetInt("AppStartCount", 5);
 
         var result = doc.FromDocument<AppOptionsDocument>();
 
         Assert.NotNull(result);
         Assert.Equal(@"C:\plugins\legacy", result!.PluginPath);
+        Assert.Equal(5, result.AppStartCount);
     }
 
     [Fact]
@@ -215,5 +286,17 @@ public sealed class CouchbasePersistenceTests : IDisposable
     private sealed class DateContainerDocument
     {
         public DateTimeOffset Timestamp { get; set; }
+    }
+
+    private static void ClearCatalog(CatalogDocumentRepository catalogRepository)
+    {
+        foreach (var entry in catalogRepository.GetAll())
+        {
+            using var document = catalogRepository.Collection.GetDocument(entry.Id);
+            if (document is not null)
+            {
+                catalogRepository.Collection.Delete(document);
+            }
+        }
     }
 }
