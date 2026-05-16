@@ -16,9 +16,5 @@ public enum CatalogDocumentType
 
     [DisplayName("Network Resource")]
     [CatalogDocumentTypeIconGlyph("network")]
-    NetworkResource = 3,
-
-    [DisplayName("HTTPS Resource")]
-    [CatalogDocumentTypeIconGlyph("https")]
-    HttpsResource = 4
+    NetworkResource = 3
 }

@@ -1192,7 +1192,7 @@ public partial class MainWindow : Window
                 Id = resourceNodeId,
                 Name = pathEntry.Path,
                 ParentId = domainNodeId,
-                Type = CatalogDocumentType.HttpsResource,
+                Type = CatalogDocumentType.NetworkResource,
                 Size = pathEntry.Size,
                 ChildrenCount = 0L
             };
