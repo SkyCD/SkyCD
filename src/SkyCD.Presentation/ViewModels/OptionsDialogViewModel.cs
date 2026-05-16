@@ -56,6 +56,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private string? selectedSettingCategory;
 
+    [ObservableProperty] private int mcpPort = 8765;
+
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
 
     public string CurrentCategoryName =>
@@ -69,9 +71,16 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool IsLanguageCategorySelected => SelectedTabIndex == 1;
 
-    public bool ShowPluginPathSection =>
+    public bool ShowProjectSettingsSection =>
         IsPluginsCategorySelected &&
-        IsCurrentCategoryVisibleInSearch;
+        (IsCurrentCategoryVisibleInSearch || MatchesSearch("mcp", "port", "url", "endpoint"));
+
+    public bool ShowPluginPathSection =>
+        ShowProjectSettingsSection;
+
+    public bool ShowMcpSection =>
+        IsPluginsCategorySelected &&
+        (IsCurrentCategoryVisibleInSearch || MatchesSearch("mcp", "port", "url", "endpoint"));
 
     public bool ShowPluginListSection =>
         IsPluginsCategorySelected &&
@@ -91,10 +100,13 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool HasVisibleCategoryContent =>
         ShowPluginPathSection ||
+        ShowMcpSection ||
         ShowPluginListSection ||
         ShowPluginActionsSection ||
         ShowPluginInfoSection ||
         ShowLanguageSection;
+
+    public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
     public bool ShowNoSearchResults => !HasVisibleCategoryContent;
 
@@ -241,6 +253,23 @@ public partial class OptionsDialogViewModel : ObservableObject
         NotifySettingsVisibilityChanged();
     }
 
+    partial void OnMcpPortChanged(int value)
+    {
+        if (value < 1)
+        {
+            McpPort = 1;
+            return;
+        }
+
+        if (value > 65535)
+        {
+            McpPort = 65535;
+            return;
+        }
+
+        OnPropertyChanged(nameof(McpBaseUrl));
+    }
+
     private bool MatchesSearch(params string[] terms)
     {
         if (string.IsNullOrWhiteSpace(SettingsSearchText))
@@ -298,7 +327,9 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(IsCurrentCategoryVisibleInSearch));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));
+        OnPropertyChanged(nameof(ShowProjectSettingsSection));
         OnPropertyChanged(nameof(ShowPluginPathSection));
+        OnPropertyChanged(nameof(ShowMcpSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));

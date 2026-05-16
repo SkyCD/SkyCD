@@ -23,4 +23,6 @@ public sealed class AppOptionsDocument
     public int AppStartCount { get; set; }
 
     public string LastOpenedCatalogPath { get; set; } = string.Empty;
+
+    public int McpPort { get; set; } = 8765;
 }

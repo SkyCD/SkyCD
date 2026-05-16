@@ -22,6 +22,12 @@ public sealed class CliMcpBridge
     {
         PropertyNameCaseInsensitive = true
     };
+    private readonly string mcpBaseUrl;
+
+    public CliMcpBridge(string? mcpBaseUrl = null)
+    {
+        this.mcpBaseUrl = ResolveMcpBaseUrl(mcpBaseUrl);
+    }
 
     public async Task<IReadOnlyList<CliMcpToolDescriptor>> ListToolsAsync(CancellationToken cancellationToken = default)
     {
@@ -46,8 +52,8 @@ public sealed class CliMcpBridge
                 Error: $"Unknown tool '{toolName}'.");
         }
 
-        var knownCommands = await DiscoverCommandPathsAsync(cancellationToken);
-        if (!knownCommands.Contains(commandPath, StringComparer.OrdinalIgnoreCase))
+        if (!BuiltInCommandTypeMap.ContainsKey(commandPath) &&
+            !CliHost.GetSystemCommandPaths().Contains(commandPath))
         {
             return new CliMcpToolExecutionResult(
                 Success: false,
@@ -84,13 +90,15 @@ public sealed class CliMcpBridge
             Error: null);
     }
 
-    private static CliMcpToolDescriptor BuildDescriptor(string commandPath)
+    private CliMcpToolDescriptor BuildDescriptor(string commandPath)
     {
         var toolName = CommandPathToToolName(commandPath);
+        var toolUrl = BuildToolUrl(commandPath);
         if (!BuiltInCommandTypeMap.TryGetValue(commandPath, out var commandType))
         {
             return new CliMcpToolDescriptor(
                 toolName,
+                toolUrl,
                 commandPath,
                 CreateGenericInputSchema(),
                 CreateOutputSchema());
@@ -98,6 +106,7 @@ public sealed class CliMcpBridge
 
         return new CliMcpToolDescriptor(
             toolName,
+            toolUrl,
             commandPath,
             CreateInputSchemaFromCommandType(commandType),
             CreateOutputSchema());
@@ -356,6 +365,34 @@ public sealed class CliMcpBridge
     private static string CommandPathToToolName(string commandPath)
     {
         return $"skycd.{commandPath.Replace(' ', '.')}";
+    }
+
+    private string BuildToolUrl(string commandPath)
+    {
+        var path = commandPath.Replace(' ', '/');
+        return $"{mcpBaseUrl.TrimEnd('/')}/tools/{path}";
+    }
+
+    private static string ResolveMcpBaseUrl(string? overrideBaseUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(overrideBaseUrl))
+        {
+            return overrideBaseUrl.Trim();
+        }
+
+        var envBaseUrl = Environment.GetEnvironmentVariable("SKYCD_MCP_BASE_URL");
+        if (!string.IsNullOrWhiteSpace(envBaseUrl))
+        {
+            return envBaseUrl.Trim();
+        }
+
+        var envPort = Environment.GetEnvironmentVariable("SKYCD_MCP_PORT");
+        if (int.TryParse(envPort, out var parsedPort) && parsedPort is >= 1 and <= 65535)
+        {
+            return $"http://127.0.0.1:{parsedPort}/mcp";
+        }
+
+        return "http://127.0.0.1:8765/mcp";
     }
 
     private static IReadOnlyDictionary<string, Type> BuildBuiltInCommandTypeMap()

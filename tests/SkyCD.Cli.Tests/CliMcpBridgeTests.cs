@@ -23,6 +23,7 @@ public sealed class CliMcpBridgeTests
         Assert.Contains(tools, tool => tool.Name.Equals("skycd.convert", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(tools, tool => tool.Name.Equals("skycd.fileformats.list", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(tools, tool => tool.Name.Equals("skycd.plugins.list", StringComparison.OrdinalIgnoreCase));
+        Assert.All(tools, tool => Assert.StartsWith("http://127.0.0.1:", tool.Url, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

@@ -84,6 +84,15 @@
                                     MinWidth="90"
                                     Command="{Binding BrowsePluginPathCommand}" />
                         </Grid>
+                        <Grid IsVisible="{Binding ShowMcpSection}" ColumnDefinitions="140,120,*" ColumnSpacing="10">
+                            <TextBlock Text="MCP port:" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Column="2"
+                                       VerticalAlignment="Center"
+                                       Foreground="#8C8C8C"
+                                       Text="{Binding McpBaseUrl}" />
+                        </Grid>
                     </StackPanel>
 
                     <Grid Grid.Row="2"

@@ -180,4 +180,19 @@ public class OptionsDialogViewModelTests
         Assert.Equal(2, vm.Plugins.Count);
         Assert.Equal(2, vm.Languages.Count);
     }
+
+    [Fact]
+    public void McpPort_IsClampedAndBuildsUrl()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.McpPort = 0;
+        Assert.Equal(1, vm.McpPort);
+
+        vm.McpPort = 70000;
+        Assert.Equal(65535, vm.McpPort);
+
+        vm.McpPort = 8787;
+        Assert.Equal("http://127.0.0.1:8787/mcp", vm.McpBaseUrl);
+    }
 }

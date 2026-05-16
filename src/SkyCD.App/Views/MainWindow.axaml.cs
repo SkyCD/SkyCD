@@ -507,6 +507,7 @@ public partial class MainWindow : Window
         var pluginPath = options.PluginPath;
 
         e.Dialog.PluginPath = pluginPath;
+        e.Dialog.McpPort = options.McpPort;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -532,6 +533,7 @@ public partial class MainWindow : Window
                 .ToArray();
 
             options.PluginPath = e.Dialog.PluginPath;
+            options.McpPort = e.Dialog.McpPort;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
