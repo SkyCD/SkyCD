@@ -33,6 +33,7 @@ public partial class App : Avalonia.Application
             appServiceProvider = CreateAppServiceProvider();
             InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
             var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
+            mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             var mainWindow = appServiceProvider.Resolve<MainWindow>();
             mainWindow.DataContext = mainWindowViewModel;
 
@@ -63,13 +64,7 @@ public partial class App : Avalonia.Application
     {
         return ServiceProvider.RegisterChildContainer(static registrator =>
         {
-            registrator.RegisterDelegate(static _ => ServiceProvider.Resolve<MenuExtensionManager>(),
-                Reuse.Singleton);
-            registrator.Register<MainWindowViewModel>(
-                reuse: Reuse.Singleton,
-                made: Made.Of(() => new MainWindowViewModel(
-                    Arg.Of<RepositoryManager>(),
-                    Arg.Of<MenuExtensionManager>())));
+            registrator.Register<MainWindowViewModel>(Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });
     }

@@ -155,6 +155,6 @@ public class UISmokeTests
 
     private static MainWindowViewModel CreateViewModel()
     {
-        return new MainWindowViewModel(TestCatalogEntries.Default());
+        return MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
     }
 }

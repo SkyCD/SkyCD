@@ -55,11 +55,11 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
 
-    private MenuExtensionManager? menuExtensionManager;
+    private MenuExtensionManager menuExtensionManager;
 
-    public void RefreshPluginMenuServices(MenuExtensionManager? updatedManager)
+    public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
-        menuExtensionManager = updatedManager;
+        menuExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
         topMenuItems = BuildTopMenuItems();
         OnPropertyChanged(nameof(TopMenuItems));
         OnPropertyChanged(nameof(FileMenuItems));
@@ -69,35 +69,17 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HelpMenuItems));
     }
 
-    public MainWindowViewModel(IRepository<CatalogDocument> catalogRepository)
-        : this(
-            catalogRepository,
-            new PropertyValueLocalizer(),
-            null)
-    {
-    }
-
-    public MainWindowViewModel(
-        IRepository<CatalogDocument> catalogRepository,
-        IStringLocalizer propertyValueLocalizer)
-        : this(
-            catalogRepository,
-            propertyValueLocalizer,
-            null)
-    {
-    }
-
-    public MainWindowViewModel(
+    private MainWindowViewModel(
         IRepository<CatalogDocument> catalogRepository,
         IStringLocalizer propertyValueLocalizer,
-        MenuExtensionManager? menuExtensionManager)
+        MenuExtensionManager menuExtensionManager)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
-        this.menuExtensionManager = menuExtensionManager;
+        this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
 
         EnsureSeedData();
         TreeNodes = GetTreeNodes();
@@ -112,23 +94,22 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public MainWindowViewModel(
-        RepositoryManager repositoryManager,
-        MenuExtensionManager? menuExtensionManager = null)
+        RepositoryManager repositoryManager)
         : this(
             repositoryManager.For<CatalogDocument>(),
             new PropertyValueLocalizer(),
-            menuExtensionManager)
+            CreateEmptyMenuExtensionManager())
     {
     }
 
-    public MainWindowViewModel(
+    private MainWindowViewModel(
         IReadOnlyList<CatalogDocument> catalogEntries,
         IStringLocalizer? propertyValueLocalizer = null,
         MenuExtensionManager? menuExtensionManager = null)
     {
         inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
-        this.menuExtensionManager = menuExtensionManager;
+        this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
         TreeNodes = BuildTreeNodesFromEntries(inMemoryCatalogEntries);
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
@@ -138,6 +119,19 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
+    }
+
+    public static MainWindowViewModel CreateForInMemoryCatalog(
+        IReadOnlyList<CatalogDocument> catalogEntries,
+        IStringLocalizer? propertyValueLocalizer = null,
+        MenuExtensionManager? menuExtensionManager = null)
+    {
+        return new MainWindowViewModel(catalogEntries, propertyValueLocalizer, menuExtensionManager);
+    }
+
+    private static MenuExtensionManager CreateEmptyMenuExtensionManager()
+    {
+        return new MenuExtensionManager(Array.Empty<IMenuPluginCapability>());
     }
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
@@ -1180,21 +1174,18 @@ public partial class MainWindowViewModel : ObservableObject
         };
 
         // Add plugin menu contributions to Tools menu
-        if (menuExtensionManager != null)
+        var menuContributions = menuExtensionManager.GetMenuContributions("Tools");
+        if (menuContributions.Any())
         {
-            var menuContributions = menuExtensionManager.GetMenuContributions("Tools");
-            if (menuContributions.Any())
-            {
-                toolsMenuItems.Add(Separator());
+            toolsMenuItems.Add(Separator());
 
-                foreach (var contribution in menuContributions)
+            foreach (var contribution in menuContributions)
+            {
+                toolsMenuItems.Add(new MainMenuItemViewModel
                 {
-                    toolsMenuItems.Add(new MainMenuItemViewModel
-                    {
-                        Header = contribution.Title,
-                        Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
-                    });
-                }
+                    Header = contribution.Title,
+                    Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
+                });
             }
         }
 
@@ -1205,12 +1196,6 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            if (menuExtensionManager == null)
-            {
-                StatusText = "Plugin services not available.";
-                return;
-            }
-
             StatusText = $"Executing plugin command '{commandId}'...";
 
             var context = new MenuCommandContext

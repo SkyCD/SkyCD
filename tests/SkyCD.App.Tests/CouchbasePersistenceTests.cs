@@ -36,9 +36,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
         var repositoryManager = provider.Resolve<RepositoryManager>();
-        var catalogRepository = repositoryManager.For<CatalogDocument>() as CatalogDocumentRepository;
-        Assert.NotNull(catalogRepository);
-        var viewModel = new MainWindowViewModel(catalogRepository!);
+        var viewModel = new MainWindowViewModel(repositoryManager);
 
         var roots = viewModel.TreeNodes;
         Assert.Single(roots);

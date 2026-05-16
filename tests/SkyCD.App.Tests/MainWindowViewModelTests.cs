@@ -661,7 +661,7 @@ public class MainWindowViewModelTests
     [Fact]
     public void Constructor_UsesInjectedDataStoreForTreeAndList()
     {
-        var vm = new MainWindowViewModel(
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog(
         [
             new CatalogDocument
             {
@@ -690,6 +690,6 @@ public class MainWindowViewModelTests
 
     private static MainWindowViewModel CreateViewModel()
     {
-        return new MainWindowViewModel(TestCatalogEntries.Default());
+        return MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
     }
 }
