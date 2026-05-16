@@ -251,11 +251,21 @@
                                      Text="{Binding McpBaseUrl}"
                                      DoubleTapped="OnMcpUrlDoubleTapped" />
                             <Button Grid.Column="2"
-                                    Content="{Binding McpCopyButtonText}"
-                                    MinWidth="80"
+                                    Content="⧉"
+                                    FontSize="14"
+                                    MinWidth="34"
                                     ToolTip.Tip="{Binding McpCopyTooltip}"
                                     Click="OnCopyMcpUrlClicked" />
                         </Grid>
+                        <Border IsVisible="{Binding ShowMcpAlert}"
+                                BorderBrush="#2E7D32"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4">
+                            <TextBlock Text="{Binding McpAlertMessage}"
+                                       Foreground="#2E7D32"
+                                       TextWrapping="Wrap" />
+                        </Border>
                     </StackPanel>
 
                     <Border Grid.Row="4"

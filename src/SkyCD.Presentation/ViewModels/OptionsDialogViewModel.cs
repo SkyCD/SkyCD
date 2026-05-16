@@ -64,7 +64,9 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private string mcpCopyTooltip = "Copy URL";
 
-    [ObservableProperty] private string mcpCopyButtonText = "Copy";
+    [ObservableProperty] private string mcpAlertMessage = string.Empty;
+
+    public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
 
@@ -278,6 +280,11 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(McpBaseUrl));
+    }
+
+    partial void OnMcpAlertMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowMcpAlert));
     }
 
     private bool MatchesSearch(params string[] terms)

@@ -95,20 +95,19 @@ public partial class OptionsWindow : Window
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is null)
         {
-            vm.InfoMessage = "Clipboard is unavailable.";
+            vm.McpAlertMessage = "Clipboard is unavailable.";
             return;
         }
 
         vm.McpCopyTooltip = "Copied";
-        vm.McpCopyButtonText = "Copied";
         await clipboard.SetTextAsync(vm.McpBaseUrl);
-        vm.InfoMessage = $"Copied MCP URL: {vm.McpBaseUrl}";
+        vm.McpAlertMessage = $"Copied MCP URL: {vm.McpBaseUrl}";
 
-        await Task.Delay(1500);
+        await Task.Delay(2000);
         if (DataContext is OptionsDialogViewModel currentVm)
         {
             currentVm.McpCopyTooltip = "Copy URL";
-            currentVm.McpCopyButtonText = "Copy";
+            currentVm.McpAlertMessage = string.Empty;
         }
     }
 }
