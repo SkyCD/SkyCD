@@ -32,6 +32,26 @@ public sealed class McpServerHostTests
     }
 
     [Fact]
+    public async Task Configure_Enabled_McpRootEndpointReturnsHelpfulMetadata()
+    {
+        using var host = new McpServerHost();
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        var port = GetFreeTcpPort();
+
+        host.Configure(enabled: true, port);
+        var baseUrl = host.BaseUrl;
+        Assert.NotNull(baseUrl);
+
+        var body = await RetryGetStringAsync(client, baseUrl!);
+        var payload = JsonNode.Parse(body)?.AsObject();
+
+        Assert.Equal("SkyCD MCP Server", payload?["name"]?.GetValue<string>());
+        Assert.Equal("ok", payload?["status"]?.GetValue<string>());
+        Assert.Equal($"{baseUrl}/tools", payload?["endpoints"]?["tools"]?.GetValue<string>());
+        Assert.Equal($"{baseUrl}/tools/{{toolPath}}", payload?["endpoints"]?["invoke"]?.GetValue<string>());
+    }
+
+    [Fact]
     public async Task Configure_PortChange_RestartsServerOnNewUrl()
     {
         using var host = new McpServerHost();

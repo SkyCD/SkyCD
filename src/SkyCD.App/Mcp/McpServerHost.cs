@@ -135,17 +135,36 @@ public sealed class McpServerHost : IDisposable
                 break;
             }
 
-            _ = Task.Run(() => HandleRequestAsync(context, bridge, cancellationToken), cancellationToken);
+            _ = Task.Run(() => HandleRequestAsync(context, bridge, desiredBaseUrl, cancellationToken), cancellationToken);
         }
     }
 
     private static async Task HandleRequestAsync(HttpListenerContext context, CliMcpBridge bridge,
-        CancellationToken cancellationToken)
+        string baseUrl, CancellationToken cancellationToken)
     {
         try
         {
             var request = context.Request;
             var path = request.Url?.AbsolutePath ?? "/";
+            if (request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase)
+                && (path.Equals("/mcp", StringComparison.OrdinalIgnoreCase)
+                    || path.Equals("/mcp/", StringComparison.OrdinalIgnoreCase)))
+            {
+                var toolsPath = $"{baseUrl.TrimEnd('/')}/tools";
+                await WriteJsonAsync(context.Response, HttpStatusCode.OK, new
+                {
+                    name = "SkyCD MCP Server",
+                    status = "ok",
+                    endpoints = new
+                    {
+                        tools = toolsPath,
+                        invoke = $"{toolsPath}/{{toolPath}}"
+                    },
+                    hint = "GET tools endpoint to list tools; POST invoke endpoint with { input: {...} }."
+                });
+                return;
+            }
+
             if (request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase)
                 && path.Equals("/mcp/tools", StringComparison.OrdinalIgnoreCase))
             {
