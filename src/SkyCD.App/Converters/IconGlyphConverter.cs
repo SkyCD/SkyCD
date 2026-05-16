@@ -23,6 +23,7 @@ public sealed class IconGlyphConverter : IValueConverter
 
         // Browser item icons
         ["folder"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["network-folder"] = "avares://SkyCD.App/Assets/add-from-internet.png",
         ["video"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
         ["audio"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
         ["cd"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",

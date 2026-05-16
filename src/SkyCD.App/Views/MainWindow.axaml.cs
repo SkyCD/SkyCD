@@ -1164,7 +1164,7 @@ public partial class MainWindow : Window
                 Id = internetNodeId,
                 Name = "Internet",
                 ParentId = rootId,
-                Type = CatalogDocumentType.Folder,
+                Type = CatalogDocumentType.NetworkFolder,
                 Size = 0L,
                 ChildrenCount = 0L
             };
@@ -1178,7 +1178,7 @@ public partial class MainWindow : Window
                 Id = domainNodeId,
                 Name = pathEntry.Domain,
                 ParentId = internetNodeId,
-                Type = CatalogDocumentType.NetworkResource,
+                Type = CatalogDocumentType.NetworkFolder,
                 Size = 0L,
                 ChildrenCount = 0L
             };
