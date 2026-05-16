@@ -1156,28 +1156,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        const string internetNodeId = "library/internet";
-        if (!entries.ContainsKey(internetNodeId))
-        {
-            entries[internetNodeId] = new CatalogDocument
-            {
-                Id = internetNodeId,
-                Name = "Internet",
-                ParentId = rootId,
-                Type = CatalogDocumentType.NetworkFolder,
-                Size = 0L,
-                ChildrenCount = 0L
-            };
-        }
-
-        var domainNodeId = $"{internetNodeId}/{pathEntry.Domain.ToLowerInvariant()}";
+        var domainNodeId = $"{rootId}/{pathEntry.Domain.ToLowerInvariant()}";
         if (!entries.ContainsKey(domainNodeId))
         {
             entries[domainNodeId] = new CatalogDocument
             {
                 Id = domainNodeId,
                 Name = pathEntry.Domain,
-                ParentId = internetNodeId,
+                ParentId = rootId,
                 Type = CatalogDocumentType.NetworkFolder,
                 Size = 0L,
                 ChildrenCount = 0L
