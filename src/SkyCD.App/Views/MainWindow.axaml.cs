@@ -408,8 +408,8 @@ public partial class MainWindow : Window
         {
             var fileTypeChoices = fileFormatManager.GetSaveFilters()
                 .ToFilePickerTypes(
-                    allSupportedFilesLabel: PickerLocalizer["AllSupportedFiles"].Value,
-                    allFilesLabel: PickerLocalizer["AllFiles"].Value);
+                    allSupportedFilesLabel: null,
+                    allFilesLabel: null);
 
             var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
 
@@ -459,7 +459,7 @@ public partial class MainWindow : Window
 
         var fileTypeChoices = fileFormatManager.GetSaveFilters()
             .ToFilePickerTypes(
-                allSupportedFilesLabel: PickerLocalizer["AllSupportedFiles"].Value,
+                allSupportedFilesLabel: null,
                 allFilesLabel: PickerLocalizer["AllFiles"].Value);
 
         var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
