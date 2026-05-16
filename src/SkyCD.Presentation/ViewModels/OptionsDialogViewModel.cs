@@ -62,6 +62,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private bool isMcpStatusIconVisible = true;
 
+    [ObservableProperty] private string mcpCopyTooltip = "Copy URL";
+
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
 
     public string CurrentCategoryName =>

@@ -242,15 +242,17 @@
                             <TextBox Grid.Column="1"
                                      IsEnabled="{Binding IsMcpServerEnabled}"
                                      Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
-                            <Button Grid.Column="2"
-                                    HorizontalAlignment="Left"
-                                    VerticalAlignment="Center"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="0"
-                                    Foreground="#8C8C8C"
-                                    Content="{Binding McpBaseUrl}"
-                                    Click="OnCopyMcpUrlClicked" />
+                            <Grid Grid.Column="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBox x:Name="McpUrlTextBox"
+                                         IsReadOnly="True"
+                                         Text="{Binding McpBaseUrl}"
+                                         DoubleTapped="OnMcpUrlDoubleTapped" />
+                                <Button Grid.Column="1"
+                                        Content="Copy"
+                                        MinWidth="70"
+                                        ToolTip.Tip="{Binding McpCopyTooltip}"
+                                        Click="OnCopyMcpUrlClicked" />
+                            </Grid>
                         </Grid>
                     </StackPanel>
 
