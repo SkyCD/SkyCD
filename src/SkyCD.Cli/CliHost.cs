@@ -26,6 +26,7 @@ using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Core.Versioning;
 
 namespace SkyCD.Cli;
@@ -99,13 +100,18 @@ public sealed class CliHost(
         }
 
         var pluginPath = TryReadPluginPathFromAppSettings(cliServiceProvider);
-        var pluginManager = cliServiceProvider.Resolve<PluginManager>();
+        var pluginManager = ServiceProvider.Resolve<PluginManager>();
         var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
-        IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
-
-        ServiceProvider.ReregisterPluginsService();
-        var fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
+        IReadOnlyList<DiscoveredPlugin> discoveredPlugins = DiscoverPluginsForCli(
+            cliServiceProvider,
+            pluginPath,
+            hostVersionProvider.Current);
+        var fileFormatManager = new FileFormatManager(
+            discoveredPlugins
+                .SelectMany(static plugin => plugin.Capabilities)
+                .OfType<IFileFormatPluginCapability>()
+                .ToArray());
         using var registry = new CliContributionRegistry();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
@@ -165,21 +171,6 @@ public sealed class CliHost(
 
     internal static string? TryReadPluginPathFromAppSettings(IResolverContext resolver)
     {
-        try
-        {
-            var repositoryManager = resolver.Resolve<RepositoryManager>();
-            var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
-            var resolvedPath = appOptionsRepository.GetOrCreateAppOptions().PluginPath;
-            if (!string.IsNullOrWhiteSpace(resolvedPath))
-            {
-                return resolvedPath;
-            }
-        }
-        catch
-        {
-            // Fall back to installed defaults when app settings are unavailable.
-        }
-
         return ResolveInstalledPluginPath();
     }
 
@@ -530,6 +521,40 @@ public sealed class CliHost(
         }
 
         return null;
+    }
+
+    private static IReadOnlyList<DiscoveredPlugin> DiscoverPluginsForCli(
+        IResolverContext resolver,
+        string? pluginPath,
+        Version hostVersion)
+    {
+        var assembliesListFactory = resolver.Resolve<AssembliesListFactory>();
+        var discoveredPluginFactory = resolver.Resolve<DiscoveredPluginFactory>();
+        var normalizedDirectories = (pluginPath ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(static path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        return assembliesListFactory
+            .BuildFromPaths(normalizedDirectories)
+            .Select(assembly =>
+            {
+                try
+                {
+                    return discoveredPluginFactory.BuildFromAssembly(assembly);
+                }
+                catch (InvalidOperationException)
+                {
+                    return null;
+                }
+            })
+            .Where(static plugin => plugin is not null)
+            .Select(static plugin => plugin!)
+            .Where(plugin =>
+                PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion))
+            .GroupBy(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .ToList();
     }
 
     private static async Task<CliExitCodes> ExecuteContributionCommandAsync(
