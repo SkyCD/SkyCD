@@ -84,15 +84,6 @@
                                     MinWidth="90"
                                     Command="{Binding BrowsePluginPathCommand}" />
                         </Grid>
-                        <Grid IsVisible="{Binding ShowMcpSection}" ColumnDefinitions="140,120,*" ColumnSpacing="10">
-                            <TextBlock Text="MCP port:" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Grid.Column="2"
-                                       VerticalAlignment="Center"
-                                       Foreground="#8C8C8C"
-                                       Text="{Binding McpBaseUrl}" />
-                        </Grid>
                     </StackPanel>
 
                     <Grid Grid.Row="2"
@@ -222,6 +213,32 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2"
+                                IsVisible="{Binding ShowMcpSection}"
+                                Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="MCP Server" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                            <TextBlock Text="Enabled:" VerticalAlignment="Center" />
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding IsMcpServerEnabled}"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left" />
+                        </Grid>
+                        <Grid ColumnDefinitions="140,120,*" ColumnSpacing="10">
+                            <TextBlock Text="Port:" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     IsEnabled="{Binding IsMcpServerEnabled}"
+                                     Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Column="2"
+                                       VerticalAlignment="Center"
+                                       Foreground="#8C8C8C"
+                                       Text="{Binding McpBaseUrl}" />
                         </Grid>
                     </StackPanel>
 

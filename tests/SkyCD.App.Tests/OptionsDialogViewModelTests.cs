@@ -103,9 +103,9 @@ public class OptionsDialogViewModelTests
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SelectedTabIndex = 1;
+        vm.SelectedTabIndex = 2;
 
-        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.Equal(2, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class OptionsDialogViewModelTests
         Assert.Equal(0, vm.SelectedTabIndex);
 
         vm.SelectedTabIndex = 99;
-        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.Equal(2, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -165,6 +165,19 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void SearchText_FiltersMcpCategory()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "mcp";
+
+        Assert.Equal(["MCP"], vm.FilteredSettingCategories);
+        Assert.Equal("MCP", vm.SelectedSettingCategory);
+        Assert.Equal(2, vm.SelectedTabIndex);
+        Assert.True(vm.ShowMcpSection);
+    }
+
+    [Fact]
     public void SearchText_DoesNotFilterRightPanelItemCollections()
     {
         var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
@@ -194,5 +207,15 @@ public class OptionsDialogViewModelTests
 
         vm.McpPort = 8787;
         Assert.Equal("http://127.0.0.1:8787/mcp", vm.McpBaseUrl);
+    }
+
+    [Fact]
+    public void McpServer_CanBeDisabled()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.IsMcpServerEnabled = false;
+
+        Assert.False(vm.IsMcpServerEnabled);
     }
 }

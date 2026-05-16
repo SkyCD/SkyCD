@@ -58,7 +58,9 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private int mcpPort = 8765;
 
-    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
+    [ObservableProperty] private bool isMcpServerEnabled = true;
+
+    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -73,14 +75,10 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowProjectSettingsSection =>
         IsPluginsCategorySelected &&
-        (IsCurrentCategoryVisibleInSearch || MatchesSearch("mcp", "port", "url", "endpoint"));
+        IsCurrentCategoryVisibleInSearch;
 
     public bool ShowPluginPathSection =>
         ShowProjectSettingsSection;
-
-    public bool ShowMcpSection =>
-        IsPluginsCategorySelected &&
-        (IsCurrentCategoryVisibleInSearch || MatchesSearch("mcp", "port", "url", "endpoint"));
 
     public bool ShowPluginListSection =>
         IsPluginsCategorySelected &&
@@ -98,13 +96,19 @@ public partial class OptionsDialogViewModel : ObservableObject
         IsLanguageCategorySelected &&
         IsCurrentCategoryVisibleInSearch;
 
+    public bool IsMcpCategorySelected => SelectedTabIndex == 2;
+
+    public bool ShowMcpSection =>
+        IsMcpCategorySelected &&
+        IsCurrentCategoryVisibleInSearch;
+
     public bool HasVisibleCategoryContent =>
         ShowPluginPathSection ||
-        ShowMcpSection ||
         ShowPluginListSection ||
         ShowPluginActionsSection ||
         ShowPluginInfoSection ||
-        ShowLanguageSection;
+        ShowLanguageSection ||
+        ShowMcpSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -327,6 +331,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(IsCurrentCategoryVisibleInSearch));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));
+        OnPropertyChanged(nameof(IsMcpCategorySelected));
         OnPropertyChanged(nameof(ShowProjectSettingsSection));
         OnPropertyChanged(nameof(ShowPluginPathSection));
         OnPropertyChanged(nameof(ShowMcpSection));
