@@ -30,7 +30,7 @@
                     HorizontalAlignment="Right"
                     ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
                     IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}"
-                    Click="OnMcpStatusButtonClicked" />
+                    IsHitTestVisible="False" />
         </Grid>
     </Border>
 </UserControl>

@@ -92,8 +92,7 @@
                       StatusText="{Binding StatusText}"
                       ProgressText="{Binding ProgressText}"
                       IsProgressVisible="{Binding IsProgressVisible}"
-                      ProgressValue="{Binding ProgressValue}"
-                      McpStatusClicked="OnMcpStatusClicked" />
+                      ProgressValue="{Binding ProgressValue}" />
 
         <Grid x:Name="MainLayoutGrid" RowDefinitions="*">
             <Grid.ColumnDefinitions>

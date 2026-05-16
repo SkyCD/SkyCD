@@ -11,7 +11,6 @@ using Avalonia;
 using Avalonia.Controls;
 using DryIoc;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
@@ -28,7 +27,6 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
-using SkyCD.UI.Controls.StatusBar;
 
 namespace SkyCD.App.Views;
 
@@ -1249,35 +1247,8 @@ public partial class MainWindow : Window
         MainStatusBar.McpStatusGlyph = isRunning ? "◉" : "◎";
         MainStatusBar.McpStatusColor = isRunning ? "#22C55E" : "#9CA3AF";
         MainStatusBar.McpStatusTooltip = isRunning
-            ? $"MCP server running at {baseUrl}. Click to copy URL."
-            : "MCP server stopped. Click to copy configured URL.";
-    }
-
-    private async void OnMcpStatusClicked(object? sender, EventArgs e)
-    {
-        if (sender is not StatusBar)
-        {
-            return;
-        }
-
-        var options = LoadAppOptions();
-        var url = $"http://127.0.0.1:{Math.Clamp(options.McpPort, 1, 65535)}/mcp";
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.Clipboard is null)
-        {
-            if (DataContext is MainWindowViewModel vmClipboardUnavailable)
-            {
-                vmClipboardUnavailable.StatusText = "Clipboard is unavailable.";
-            }
-
-            return;
-        }
-
-        await topLevel.Clipboard.SetTextAsync(url);
-        if (DataContext is MainWindowViewModel vm)
-        {
-            vm.StatusText = $"Copied MCP URL: {url}";
-        }
+            ? $"MCP server running at {baseUrl}"
+            : "MCP server stopped";
     }
 
 }

@@ -235,10 +235,15 @@
                             <TextBox Grid.Column="1"
                                      IsEnabled="{Binding IsMcpServerEnabled}"
                                      Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Grid.Column="2"
-                                       VerticalAlignment="Center"
-                                       Foreground="#8C8C8C"
-                                       Text="{Binding McpBaseUrl}" />
+                            <Button Grid.Column="2"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0"
+                                    Foreground="#8C8C8C"
+                                    Content="{Binding McpBaseUrl}"
+                                    Click="OnCopyMcpUrlClicked" />
                         </Grid>
                     </StackPanel>
 

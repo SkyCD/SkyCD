@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input.Platform;
 using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Views;
@@ -65,5 +66,23 @@ public partial class OptionsWindow : Window
 
         Width = Math.Min(TargetWidth, maxWidth);
         Height = Math.Min(TargetHeight, maxHeight);
+    }
+
+    private async void OnCopyMcpUrlClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not OptionsDialogViewModel vm)
+        {
+            return;
+        }
+
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+        {
+            vm.InfoMessage = "Clipboard is unavailable.";
+            return;
+        }
+
+        await clipboard.SetTextAsync(vm.McpBaseUrl);
+        vm.InfoMessage = $"Copied MCP URL: {vm.McpBaseUrl}";
     }
 }
