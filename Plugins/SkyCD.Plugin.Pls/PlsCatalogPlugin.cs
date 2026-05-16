@@ -17,7 +17,7 @@ public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
             FormatId: "skycd-pls",
             DisplayName: "PLS Playlist",
             Extensions: [".pls"],
-            MimeTypes: ["audio/x-scpls", "application/pls+xml", "application/pls"],
+            MimeTypes: ["audio/x-scpls", "audio/scpls"],
             CanRead: true,
             CanWrite: true);
 
