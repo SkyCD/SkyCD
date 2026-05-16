@@ -98,6 +98,22 @@ public sealed class RuntimeCoverageTests
     }
 
     [Fact]
+    public void FileFormatManager_MatchesExtensions_WithOrWithoutDotOrWildcard()
+    {
+        var wildcardCapability = new FakeFileFormatCapability(
+            new("legacy-scd", "SkyCD Text Format", ["*.scd"], ["application/vnd.skycd.scd"], true, true));
+        var noDotCapability = new FakeFileFormatCapability(
+            new("legacy-ascd", "SkyCD Advanced Format", ["ascd"], ["application/vnd.skycd.ascd"], true, true));
+
+        var manager = new FileFormatManager([wildcardCapability, noDotCapability]);
+
+        Assert.Same(wildcardCapability, manager.GetInstanceFor("example.scd"));
+        Assert.Same(noDotCapability, manager.GetInstanceFor("example.ASCD"));
+        Assert.Equal("legacy-scd", manager.ResolveFormatId(null, "example.scd", forWrite: false));
+        Assert.Equal("legacy-ascd", manager.ResolveFormatId(null, "example.ascd", forWrite: false));
+    }
+
+    [Fact]
     public void DiscoveredPlugin_ToDocument_MapsPluginToDocument()
     {
         var discovered = new DiscoveredPlugin

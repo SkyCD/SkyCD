@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -32,7 +33,9 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
+    private readonly RepositoryManager repositoryManager;
     private readonly AppOptionsDocumentRepository appOptionsRepository;
+    private readonly CatalogDocumentRepository catalogRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private FileFormatManager fileFormatManager;
@@ -46,7 +49,9 @@ public partial class MainWindow : Window
         PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
+        this.repositoryManager = repositoryManager;
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -296,6 +301,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        EnsureFileFormatProvidersLoaded();
+
         if (vm.IsDirtyDocument)
         {
             var decision = await ShowUnsavedChangesPromptAsync();
@@ -337,14 +344,51 @@ public partial class MainWindow : Window
             }
 
             await using var source = File.OpenRead(localPath);
-            await fileFormatManager.ReadAsync(new FileFormatReadRequest
+            var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
             {
                 FormatId = capability.SupportedFormat.FormatId,
                 Source = source,
                 FileName = Path.GetFileName(localPath)
             });
 
-            vm.CompleteOpenCatalog();
+            ReplaceCatalogContent(ExtractCatalogEntries(readResult.Payload));
+            var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+            reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            var options = LoadAppOptions();
+            reloadedViewModel.ApplySessionState(
+                options.Browser.ViewMode,
+                options.Browser.SortMode,
+                options.IsStatusBarVisible);
+            DataContext = reloadedViewModel;
+            reloadedViewModel.CompleteOpenCatalog();
+        }
+        catch (UnsupportedFileFormatException)
+        {
+            var extension = Path.GetExtension(localPath);
+            var readableExtensions = fileFormatManager.GetReadableFormats()
+                .SelectMany(static format => format.Extensions)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static value => value, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var supportedText = readableExtensions.Length == 0
+                ? "none"
+                : string.Join(", ", readableExtensions);
+
+            vm.StatusText = string.IsNullOrWhiteSpace(extension)
+                ? $"Failed to open catalog: unsupported file format. Readable extensions: {supportedText}."
+                : $"Failed to open catalog: no readable handler mapped for '{extension}'. Readable extensions: {supportedText}.";
+        }
+        catch (FileFormatHandlerResolutionException)
+        {
+            vm.StatusText = "Failed to open catalog: file format handler is unavailable. Check plugin settings.";
+        }
+        catch (FileFormatNotReadableException ex)
+        {
+            vm.StatusText = $"Failed to open catalog: plugin cannot read this format ({ex.Message}).";
+        }
+        catch (FileFormatReadFailedException ex)
+        {
+            vm.StatusText = $"Failed to open catalog: plugin read error ({ex.Message}).";
         }
         catch (Exception ex)
         {
@@ -777,7 +821,9 @@ public partial class MainWindow : Window
     private void SyncPluginRuntimeState()
     {
         var options = appOptionsRepository.GetOrCreateAppOptions();
-        var resolvedPluginPath = options.PluginPath;
+        var resolvedPluginPath = ResolvePluginDiscoveryPath(options.PluginPath);
+        options.PluginPath = resolvedPluginPath;
+        SaveAppOptions(options);
 
         pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
 
@@ -788,6 +834,55 @@ public partial class MainWindow : Window
         {
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
         }
+    }
+
+    private void EnsureFileFormatProvidersLoaded()
+    {
+        if (fileFormatManager.GetReadableFormats().Count > 0)
+        {
+            return;
+        }
+
+        SyncPluginRuntimeState();
+        if (fileFormatManager.GetReadableFormats().Count > 0)
+        {
+            return;
+        }
+
+        var availableDescriptors = pluginManager.GetPluginDescriptors()
+            .Where(static descriptor => descriptor.IsAvailable)
+            .Select(static descriptor => (descriptor.Id, IsEnabled: true))
+            .ToArray();
+        if (availableDescriptors.Length == 0)
+        {
+            return;
+        }
+
+        pluginManager.SavePluginEnabledStates(availableDescriptors);
+        SyncPluginRuntimeState();
+    }
+
+    private static string ResolvePluginDiscoveryPath(string? configuredPath)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        var baseDirPlugins = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
+        if (Directory.Exists(baseDirPlugins))
+        {
+            return baseDirPlugins;
+        }
+
+        var current = Directory.GetCurrentDirectory();
+        var repoPlugins = Path.GetFullPath(Path.Combine(current, "Plugins"));
+        if (Directory.Exists(repoPlugins))
+        {
+            return repoPlugins;
+        }
+
+        return configuredPath ?? string.Empty;
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)
@@ -836,6 +931,213 @@ public partial class MainWindow : Window
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
+    }
+
+    private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries)
+    {
+        foreach (var existing in catalogRepository.GetAll())
+        {
+            using var document = catalogRepository.Collection.GetDocument(existing.Id);
+            if (document is not null)
+            {
+                catalogRepository.Collection.Delete(document);
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+    }
+
+    private static IReadOnlyList<CatalogDocument> ExtractCatalogEntries(object? payload)
+    {
+        if (TryExtractRows(payload, out var rows))
+        {
+            return BuildEntriesFromRows(rows);
+        }
+
+        if (TryExtractPathEntries(payload, out var pathEntries))
+        {
+            return BuildEntriesFromPaths(pathEntries);
+        }
+
+        return [];
+    }
+
+    private static bool TryExtractRows(object? payload, out IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        if (payload is IEnumerable<Dictionary<string, object?>> typedRows)
+        {
+            rows = typedRows.ToArray();
+            return true;
+        }
+
+        rows = [];
+        return false;
+    }
+
+    private static bool TryExtractPathEntries(object? payload, out IReadOnlyList<(string Path, long Size)> entries)
+    {
+        entries = [];
+        if (payload is null)
+        {
+            return false;
+        }
+
+        var entriesProperty = payload.GetType().GetProperty("Entries", BindingFlags.Instance | BindingFlags.Public);
+        if (entriesProperty?.GetValue(payload) is not System.Collections.IEnumerable rawEntries)
+        {
+            return false;
+        }
+
+        var result = new List<(string Path, long Size)>();
+        foreach (var raw in rawEntries)
+        {
+            if (raw is null)
+            {
+                continue;
+            }
+
+            var path = raw.GetType().GetProperty("Path", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw) as string;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            var sizeValue = raw.GetType().GetProperty("SizeBytes", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw);
+            var size = sizeValue is null ? 0L : Convert.ToInt64(sizeValue, CultureInfo.InvariantCulture);
+
+            result.Add((path.Trim(), size));
+        }
+
+        entries = result;
+        return result.Count > 0;
+    }
+
+    private static IReadOnlyList<CatalogDocument> BuildEntriesFromRows(IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        var results = new List<CatalogDocument>();
+        foreach (var row in rows)
+        {
+            var id = ReadString(row, "id");
+            var name = ReadString(row, "name");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            var parentId = ReadString(row, "parentId");
+            if (string.Equals(parentId, "-1", StringComparison.Ordinal))
+            {
+                parentId = null;
+            }
+
+            var normalizedType = ReadString(row, "type").ToLowerInvariant();
+            var documentType = normalizedType switch
+            {
+                "folder" => CatalogDocumentType.Folder,
+                "media" => CatalogDocumentType.Media,
+                _ => CatalogDocumentType.Media
+            };
+
+            results.Add(new CatalogDocument
+            {
+                Id = string.IsNullOrWhiteSpace(id) ? $"doc-{Guid.NewGuid():N}" : id,
+                Name = name,
+                ParentId = parentId,
+                Type = documentType,
+                Size = ReadLong(row, "size", "sizeBytes"),
+                ChildrenCount = ReadLong(row, "childrenCount")
+            });
+        }
+
+        return results;
+    }
+
+    private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(
+        IReadOnlyList<(string Path, long Size)> pathEntries)
+    {
+        var entries = new Dictionary<string, CatalogDocument>(StringComparer.Ordinal);
+        var rootId = "library";
+        entries[rootId] = new CatalogDocument
+        {
+            Id = rootId,
+            Name = "Library",
+            ParentId = null,
+            Type = CatalogDocumentType.Folder,
+            Size = 0,
+            ChildrenCount = 0
+        };
+
+        foreach (var (path, size) in pathEntries)
+        {
+            var parts = path.Replace('\\', '/')
+                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 0)
+            {
+                continue;
+            }
+
+            var currentParentId = rootId;
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var name = parts[i];
+                var isFile = i == parts.Length - 1;
+                var id = $"{currentParentId}/{name}".ToLowerInvariant();
+                if (entries.ContainsKey(id))
+                {
+                    currentParentId = id;
+                    continue;
+                }
+
+                entries[id] = new CatalogDocument
+                {
+                    Id = id,
+                    Name = name,
+                    ParentId = currentParentId,
+                    Type = isFile ? CatalogDocumentType.Media : CatalogDocumentType.Folder,
+                    Size = isFile ? size : 0L,
+                    ChildrenCount = 0L
+                };
+
+                currentParentId = id;
+            }
+        }
+
+        return entries.Values.ToArray();
+    }
+
+    private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
+    {
+        return row.TryGetValue(key, out var value) && value is not null
+            ? value.ToString() ?? string.Empty
+            : string.Empty;
+    }
+
+    private static long ReadLong(IReadOnlyDictionary<string, object?> row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!row.TryGetValue(key, out var value) || value is null)
+            {
+                continue;
+            }
+
+            if (value is long direct)
+            {
+                return direct;
+            }
+
+            if (long.TryParse(value.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return 0L;
     }
 
 }

@@ -47,10 +47,12 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
     public IFileFormatPluginCapability GetInstanceFor(string fileName)
     {
-        var extension = Path.GetExtension(fileName);
+        var extension = NormalizeExtension(Path.GetExtension(fileName));
         foreach (var capability in fileFormatProviders)
         {
-            if (capability.SupportedFormat.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            if (capability.SupportedFormat.Extensions
+                .Select(static value => NormalizeExtension(value))
+                .Contains(extension, StringComparer.OrdinalIgnoreCase))
             {
                 return capability;
             }
@@ -95,8 +97,11 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             throw new FileFormatHandlerResolutionException();
         }
 
+        var normalizedExtension = NormalizeExtension(extension);
+
         var byExtension = formats.FirstOrDefault(format =>
-            format.Extensions.Any(candidate => candidate.Equals(extension, StringComparison.OrdinalIgnoreCase)));
+            format.Extensions.Any(candidate =>
+                NormalizeExtension(candidate).Equals(normalizedExtension, StringComparison.OrdinalIgnoreCase)));
 
         return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
     }
@@ -178,5 +183,25 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
         var normalized = trimmed.StartsWith('.') ? trimmed : $".{trimmed}";
         return $"*{normalized}";
+    }
+
+    private static string NormalizeExtension(string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = extension.Trim();
+        if (trimmed.StartsWith("*.", StringComparison.Ordinal))
+        {
+            trimmed = trimmed[1..];
+        }
+        else if (trimmed.StartsWith("*", StringComparison.Ordinal))
+        {
+            trimmed = trimmed[1..];
+        }
+
+        return trimmed.StartsWith(".", StringComparison.Ordinal) ? trimmed : $".{trimmed}";
     }
 }
