@@ -542,6 +542,7 @@ public partial class MainWindow : Window
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
+            (Application.Current as App)?.ApplyMcpSettings();
 
             // Trigger UI refresh to apply new language
             InvalidateVisual();
