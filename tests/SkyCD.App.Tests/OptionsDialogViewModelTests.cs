@@ -218,4 +218,14 @@ public class OptionsDialogViewModelTests
 
         Assert.False(vm.IsMcpServerEnabled);
     }
+
+    [Fact]
+    public void McpStatusIconVisibility_DefaultsToTrueAndCanBeDisabled()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        Assert.True(vm.IsMcpStatusIconVisible);
+        vm.IsMcpStatusIconVisible = false;
+        Assert.False(vm.IsMcpStatusIconVisible);
+    }
 }

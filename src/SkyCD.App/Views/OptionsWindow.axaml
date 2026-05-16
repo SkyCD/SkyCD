@@ -230,6 +230,13 @@
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Left" />
                         </Grid>
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                            <TextBlock Text="Show status icon:" VerticalAlignment="Center" />
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding IsMcpStatusIconVisible}"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left" />
+                        </Grid>
                         <Grid ColumnDefinitions="140,120,*" ColumnSpacing="10">
                             <TextBlock Text="Port:" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1"

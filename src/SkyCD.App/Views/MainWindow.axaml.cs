@@ -511,6 +511,7 @@ public partial class MainWindow : Window
         e.Dialog.PluginPath = pluginPath;
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
+        e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -538,6 +539,7 @@ public partial class MainWindow : Window
             options.PluginPath = e.Dialog.PluginPath;
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;
+            options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
@@ -1237,11 +1239,15 @@ public partial class MainWindow : Window
     {
         if (Application.Current is not App app)
         {
+            MainStatusBar.IsMcpStatusVisible = true;
             MainStatusBar.McpStatusGlyph = "◎";
             MainStatusBar.McpStatusColor = "#9CA3AF";
             MainStatusBar.McpStatusTooltip = "MCP server unavailable";
             return;
         }
+
+        var options = LoadAppOptions();
+        MainStatusBar.IsMcpStatusVisible = options.IsMcpStatusIconVisible;
 
         var (isRunning, baseUrl) = app.GetMcpStatus();
         MainStatusBar.McpStatusGlyph = isRunning ? "◉" : "◎";

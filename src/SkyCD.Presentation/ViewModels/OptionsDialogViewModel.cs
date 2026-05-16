@@ -60,6 +60,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private bool isMcpServerEnabled = true;
 
+    [ObservableProperty] private bool isMcpStatusIconVisible = true;
+
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
 
     public string CurrentCategoryName =>
