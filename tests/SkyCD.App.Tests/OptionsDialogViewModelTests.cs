@@ -226,6 +226,7 @@ public class OptionsDialogViewModelTests
 
         Assert.True(vm.IsMcpStatusIconVisible);
         Assert.Equal("Copy URL", vm.McpCopyTooltip);
+        Assert.Equal("Copy", vm.McpCopyButtonText);
         vm.IsMcpStatusIconVisible = false;
         Assert.False(vm.IsMcpStatusIconVisible);
     }

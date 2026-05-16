@@ -64,6 +64,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private string mcpCopyTooltip = "Copy URL";
 
+    [ObservableProperty] private string mcpCopyButtonText = "Copy";
+
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
 
     public string CurrentCategoryName =>

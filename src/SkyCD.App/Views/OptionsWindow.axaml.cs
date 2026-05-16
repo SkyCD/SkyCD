@@ -100,6 +100,7 @@ public partial class OptionsWindow : Window
         }
 
         vm.McpCopyTooltip = "Copied";
+        vm.McpCopyButtonText = "Copied";
         await clipboard.SetTextAsync(vm.McpBaseUrl);
         vm.InfoMessage = $"Copied MCP URL: {vm.McpBaseUrl}";
 
@@ -107,6 +108,7 @@ public partial class OptionsWindow : Window
         if (DataContext is OptionsDialogViewModel currentVm)
         {
             currentVm.McpCopyTooltip = "Copy URL";
+            currentVm.McpCopyButtonText = "Copy";
         }
     }
 }
