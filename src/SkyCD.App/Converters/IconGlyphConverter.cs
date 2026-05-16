@@ -22,11 +22,13 @@ public sealed class IconGlyphConverter : IValueConverter
         ["projects"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
 
         // Browser item icons
+        ["file"] = "avares://SkyCD.App/Assets/add-from-media.png",
         ["folder"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["network-folder"] = "avares://SkyCD.App/Assets/network-folder.ico",
         ["video"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
         ["audio"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
         ["cd"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
-        ["network"] = "avares://SkyCD.App/Assets/legacy/icon-network.png",
+        ["network"] = "avares://SkyCD.App/Assets/add-from-internet.png",
 
         // Toolbar icons
         ["toolbar-new"] = "avares://SkyCD.App/Assets/add-from-media.png",

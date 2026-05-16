@@ -762,7 +762,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool TryResolveNodeFromBrowserSelection([NotNullWhen(true)] out BrowserTreeNode? targetNode)
     {
         if (SelectedBrowserItem is not null &&
-            SelectedBrowserItem.Type == CatalogDocumentType.Folder)
+            SelectedBrowserItem.Type is CatalogDocumentType.Folder or CatalogDocumentType.NetworkFolder)
         {
             if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
             {
@@ -1436,7 +1436,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var roots = catalogRepository
                 .GetRoots()
-                .Where(entry => entry.Type != CatalogDocumentType.File)
+                .Where(IsTreeVisibleType)
                 .ToArray();
 
             var treeNodes = roots
@@ -1444,7 +1444,7 @@ public partial class MainWindowViewModel : ObservableObject
                 {
                     var descendants = catalogRepository
                         .GetDescendantsOf(root.Id)
-                        .Where(entry => entry.Type != CatalogDocumentType.File)
+                        .Where(IsTreeVisibleType)
                         .ToList();
                     descendants.Add(root);
 
@@ -1555,7 +1555,7 @@ public partial class MainWindowViewModel : ObservableObject
     private static IReadOnlyList<BrowserTreeNode> BuildTreeNodesFromEntries(IReadOnlyList<CatalogDocument> entries)
     {
         var filteredEntries = entries
-            .Where(entry => entry.Type != CatalogDocumentType.File)
+            .Where(IsTreeVisibleType)
             .ToList();
         var byId = filteredEntries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
 
@@ -1581,5 +1581,12 @@ public partial class MainWindowViewModel : ObservableObject
             entry.Type.ResolveIconGlyph(),
             children,
             isExpanded);
+    }
+
+    private static bool IsTreeVisibleType(CatalogDocument entry)
+    {
+        return entry.Type is CatalogDocumentType.Folder
+            or CatalogDocumentType.NetworkFolder
+            or CatalogDocumentType.Media;
     }
 }
