@@ -101,7 +101,7 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindowViewModel.IsDirtyDocument))
+        if (e.PropertyName is nameof(MainWindowViewModel.IsDirtyDocument) or nameof(MainWindowViewModel.CurrentCatalogPath))
         {
             UpdateWindowTitle();
         }
@@ -167,13 +167,18 @@ public partial class MainWindow : Window
 
     private void UpdateWindowTitle()
     {
+        var currentPath = subscribedViewModel?.CurrentCatalogPath;
+        var baseTitle = string.IsNullOrWhiteSpace(currentPath)
+            ? "SkyCD"
+            : $"SkyCD - {Path.GetFileName(currentPath)}";
+
         if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)
         {
-            Title = "* SkyCD";
+            Title = $"* {baseTitle}";
         }
         else
         {
-            Title = "SkyCD";
+            Title = baseTitle;
         }
     }
 
@@ -191,6 +196,11 @@ public partial class MainWindow : Window
             options.Browser.SortMode,
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
+        if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
+        {
+            EnsureFileFormatProvidersLoaded();
+            _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
+        }
 
         isSessionStateLoaded = true;
     }
@@ -337,30 +347,7 @@ public partial class MainWindow : Window
 
         try
         {
-            var capability = fileFormatManager.GetInstanceFor(localPath);
-            if (!capability.SupportedFormat.CanRead)
-            {
-                throw new FileFormatNotReadableException(capability.SupportedFormat.FormatId);
-            }
-
-            await using var source = File.OpenRead(localPath);
-            var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = capability.SupportedFormat.FormatId,
-                Source = source,
-                FileName = Path.GetFileName(localPath)
-            });
-
-            ReplaceCatalogContent(ExtractCatalogEntries(readResult.Payload));
-            var reloadedViewModel = new MainWindowViewModel(repositoryManager);
-            reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-            var options = LoadAppOptions();
-            reloadedViewModel.ApplySessionState(
-                options.Browser.ViewMode,
-                options.Browser.SortMode,
-                options.IsStatusBarVisible);
-            DataContext = reloadedViewModel;
-            reloadedViewModel.CompleteOpenCatalog();
+            await TryLoadCatalogIntoViewModelAsync(localPath);
         }
         catch (UnsupportedFileFormatException)
         {
@@ -655,7 +642,42 @@ public partial class MainWindow : Window
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
         options.Browser.ViewMode = vm.CurrentViewMode;
         options.Browser.SortMode = vm.CurrentSortMode;
+        if (!string.IsNullOrWhiteSpace(vm.CurrentCatalogPath))
+        {
+            options.LastOpenedCatalogPath = vm.CurrentCatalogPath;
+        }
         SaveAppOptions(options);
+    }
+
+    private async Task TryLoadCatalogIntoViewModelAsync(string localPath)
+    {
+        var capability = fileFormatManager.GetInstanceFor(localPath);
+        if (!capability.SupportedFormat.CanRead)
+        {
+            throw new FileFormatNotReadableException(capability.SupportedFormat.FormatId);
+        }
+
+        await using var source = File.OpenRead(localPath);
+        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = capability.SupportedFormat.FormatId,
+            Source = source,
+            FileName = Path.GetFileName(localPath)
+        });
+
+        ReplaceCatalogContent(ExtractCatalogEntries(readResult.Payload));
+        var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+        reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+        var options = LoadAppOptions();
+        reloadedViewModel.ApplySessionState(
+            options.Browser.ViewMode,
+            options.Browser.SortMode,
+            options.IsStatusBarVisible);
+        reloadedViewModel.CurrentCatalogPath = localPath;
+        options.LastOpenedCatalogPath = localPath;
+        SaveAppOptions(options);
+        DataContext = reloadedViewModel;
+        reloadedViewModel.CompleteOpenCatalog();
     }
 
     private AppOptionsDocument LoadAppOptions()

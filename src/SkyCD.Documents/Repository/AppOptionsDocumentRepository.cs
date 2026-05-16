@@ -15,6 +15,7 @@ public sealed class AppOptionsDocumentRepository : RepositoryBase<AppOptionsDocu
             created.Language = "English";
             created.PluginPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
             created.AppStartCount = 0;
+            created.LastOpenedCatalogPath = string.Empty;
         });
     }
 }
