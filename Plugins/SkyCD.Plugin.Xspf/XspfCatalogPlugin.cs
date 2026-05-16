@@ -127,6 +127,11 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
             return null;
         }
 
+        if (Uri.TryCreate(location, UriKind.Absolute, out var locationUri) && locationUri.IsFile)
+        {
+            location = Uri.UnescapeDataString(locationUri.LocalPath);
+        }
+
         var title = track.Element(XspfNamespace + "title")?.Value?.Trim();
         var creator = track.Element(XspfNamespace + "creator")?.Value?.Trim();
         var durationValue = track.Element(XspfNamespace + "duration")?.Value?.Trim();
