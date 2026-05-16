@@ -258,12 +258,13 @@
                                     Click="OnCopyMcpUrlClicked" />
                         </Grid>
                         <Border IsVisible="{Binding ShowMcpAlert}"
+                                Background="#1B5E20"
                                 BorderBrush="#2E7D32"
                                 BorderThickness="1"
                                 CornerRadius="4"
                                 Padding="8,4">
                             <TextBlock Text="{Binding McpAlertMessage}"
-                                       Foreground="#2E7D32"
+                                       Foreground="#FFFFFF"
                                        TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
