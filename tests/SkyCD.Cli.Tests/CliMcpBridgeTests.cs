@@ -85,4 +85,19 @@ public sealed class CliMcpBridgeTests
         Assert.Equal((int)CliExitCodes.InvalidArguments, result.ExitCode);
         Assert.Contains("Unknown tool", result.Error, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task InvokeTool_PluginsList_ReturnsStructuredJsonWithoutRawOutput()
+    {
+        var bridge = new CliMcpBridge();
+
+        var result = await bridge.InvokeToolAsync("skycd.plugins.list");
+
+        Assert.True(result.Success);
+        Assert.Equal((int)CliExitCodes.Success, result.ExitCode);
+        Assert.NotNull(result.Data);
+        Assert.Null(result.Data!["rawOutput"]);
+        Assert.NotNull(result.Data["plugins"]);
+        Assert.NotNull(result.Data["cliCommands"]);
+    }
 }

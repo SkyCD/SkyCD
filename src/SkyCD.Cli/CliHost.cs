@@ -539,7 +539,7 @@ public sealed class CliHost(
         {
             await stdout.WriteLineAsync(executionResult.Output);
         }
-        else if (jsonOutput)
+        else if (jsonOutput && !HasBufferedOutput(stdout))
         {
             await stdout.WriteJsonAsync(new
             {
@@ -675,6 +675,12 @@ public sealed class CliHost(
         }
 
         return canonical;
+    }
+
+    private static bool HasBufferedOutput(TextWriter writer)
+    {
+        return writer is StringWriter stringWriter
+               && stringWriter.GetStringBuilder().Length > 0;
     }
 
     private sealed record ContributionCommandExecutionResult(
