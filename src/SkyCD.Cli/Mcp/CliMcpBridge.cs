@@ -324,7 +324,7 @@ public sealed class CliMcpBridge
         return commands.OrderBy(static command => command, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private static JsonObject? TryParseJson(string output)
+    private static JsonNode? TryParseJson(string output)
     {
         if (string.IsNullOrWhiteSpace(output))
         {
@@ -333,7 +333,7 @@ public sealed class CliMcpBridge
 
         try
         {
-            return JsonSerializer.Deserialize<JsonObject>(output, JsonOptions);
+            return JsonSerializer.Deserialize<JsonNode>(output, JsonOptions);
         }
         catch
         {
@@ -344,9 +344,19 @@ public sealed class CliMcpBridge
     private static JsonObject NormalizeToolOutput(string commandPath, string output)
     {
         var parsed = TryParseJson(output);
+        if (parsed is JsonObject objectPayload)
+        {
+            return objectPayload;
+        }
+
         if (parsed is not null)
         {
-            return parsed;
+            return new JsonObject
+            {
+                ["success"] = true,
+                ["command"] = commandPath,
+                ["data"] = parsed
+            };
         }
 
         var trimmed = output.Trim();

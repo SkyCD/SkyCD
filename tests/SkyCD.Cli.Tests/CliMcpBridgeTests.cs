@@ -55,18 +55,9 @@ public sealed class CliMcpBridgeTests
             Assert.Equal((int)CliExitCodes.Success, result.ExitCode);
             Assert.NotNull(result.Data);
             var successNode = result.Data!["success"];
-            if (successNode is not null)
-            {
-                Assert.True(successNode.GetValue<bool>());
-                Assert.Equal("open", result.Data["command"]?.GetValue<string>());
-            }
-            else
-            {
-                var rawOutput = result.Data["rawOutput"]?.GetValue<string>() ?? string.Empty;
-                Assert.True(
-                    rawOutput.Contains("Opened", StringComparison.OrdinalIgnoreCase)
-                    || rawOutput.Contains("\"success\": true", StringComparison.OrdinalIgnoreCase));
-            }
+            Assert.NotNull(successNode);
+            Assert.True(successNode!.GetValue<bool>());
+            Assert.Equal("open", result.Data["command"]?.GetValue<string>());
         }
         finally
         {
@@ -99,6 +90,21 @@ public sealed class CliMcpBridgeTests
         Assert.Null(result.Data!["rawOutput"]);
         Assert.NotNull(result.Data["plugins"]);
         Assert.NotNull(result.Data["cliCommands"]);
+    }
+
+    [Fact]
+    public async Task InvokeTool_FileFormatsList_ReturnsParsedJsonArrayNotStringOutput()
+    {
+        var bridge = new CliMcpBridge();
+
+        var result = await bridge.InvokeToolAsync("skycd.fileformats.list");
+
+        Assert.True(result.Success);
+        Assert.Equal((int)CliExitCodes.Success, result.ExitCode);
+        Assert.NotNull(result.Data);
+        Assert.Null(result.Data!["rawOutput"]);
+        Assert.Null(result.Data["output"]);
+        Assert.NotNull(result.Data["data"]);
     }
 
 }
