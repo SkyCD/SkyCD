@@ -12,12 +12,29 @@ internal sealed class WebBrowserWindow : Window
                                            <html>
                                            <head>
                                              <meta charset="utf-8" />
+                                             <meta name="color-scheme" content="light dark" />
                                              <title>SkyCD Web Browser</title>
                                              <style>
-                                               body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #1f2937; }
+                                               :root { color-scheme: light dark; }
+                                               body {
+                                                 font-family: Segoe UI, Arial, sans-serif;
+                                                 margin: 24px;
+                                                 color: #1f2937;
+                                                 background: #ffffff;
+                                               }
                                                h1 { margin: 0 0 12px 0; font-size: 24px; }
                                                p { margin: 8px 0; line-height: 1.4; }
-                                               code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+                                               code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; color: #111827; }
+                                               @media (prefers-color-scheme: dark) {
+                                                 body {
+                                                   color: #e5e7eb;
+                                                   background: #111827;
+                                                 }
+                                                 code {
+                                                   background: #1f2937;
+                                                   color: #f9fafb;
+                                                 }
+                                               }
                                              </style>
                                            </head>
                                            <body>
