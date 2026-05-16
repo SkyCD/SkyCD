@@ -94,7 +94,7 @@ public sealed class McpServerHost : IDisposable
         builder.WebHost.UseSetting(WebHostDefaults.ServerUrlsKey, rootUrl);
 
         var bridge = new CliMcpBridge(desiredBaseUrl);
-        var descriptors = bridge.ListToolsAsync().GetAwaiter().GetResult();
+        var descriptors = Task.Run(() => bridge.ListToolsAsync()).GetAwaiter().GetResult();
         var serverTools = descriptors.Select(descriptor => CreateTool(bridge, descriptor))
             .ToArray();
 
