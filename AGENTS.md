@@ -25,7 +25,7 @@
 - `src/SkyCD.Plugin.Abstractions`: plugin capability contracts (file formats, menu, modal, lifecycle).
 - `src/SkyCD.Plugin.Runtime`: plugin discovery/loading and compatibility checks.
 - `src/SkyCD.Plugin.Host`: host-side plugin routing/execution services.
-- `Plugins/`: functional plugin implementations with `plugin.json` manifests.
+- `Plugins/`: functional plugin implementations discovered from assembly metadata and capabilities.
 - `Plugins/samples/`: legacy-format plugins and sample menu/modal plugins.
 - `tests/`: xUnit test projects organized per module (`SkyCD.App.Tests`, `SkyCD.Infrastructure.Tests`, etc.).
 - `tools/`: CI/publishing scripts and migration CLI.
@@ -49,3 +49,7 @@
 
 ## Commit Guidelines
 AI-generated commits should not include the 'Co-Authored-By' line unless explicitly instructed by the user.
+
+## Plugin Discovery Rule
+- Do not add or rely on `plugin.json` for plugin discovery.
+- Plugin identity, metadata, and capabilities must be resolved from assembly data and implemented capability types.
