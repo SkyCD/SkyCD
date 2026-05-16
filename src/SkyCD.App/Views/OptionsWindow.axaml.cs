@@ -103,7 +103,7 @@ public partial class OptionsWindow : Window
         await clipboard.SetTextAsync(vm.McpBaseUrl);
         vm.McpAlertMessage = $"Copied MCP URL: {vm.McpBaseUrl}";
 
-        await Task.Delay(2000);
+        await Task.Delay(4000);
         if (DataContext is OptionsDialogViewModel currentVm)
         {
             currentVm.McpCopyTooltip = "Copy URL";
