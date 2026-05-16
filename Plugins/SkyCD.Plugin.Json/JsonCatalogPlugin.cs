@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Json;
@@ -9,15 +14,16 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
     private const string SchemaVersion = "skycd.catalog.v1";
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-json",
-            "SkyCD JSON",
-            [".json"],
+        new(
+            FormatId: "skycd-json",
+            DisplayName: "SkyCD JSON",
+            Extensions: [".json"],
+            MimeTypes: ["application/json"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/json");
+            CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -71,7 +77,8 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -105,5 +112,4 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
             };
         }
     }
-
 }

@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
@@ -11,15 +16,16 @@ public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
     private const string SchemaVersion = "1.0";
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-xml",
-            "SkyCD XML",
-            [".xml"],
+        new(
+            FormatId: "skycd-xml",
+            DisplayName: "SkyCD XML",
+            Extensions: [".xml"],
+            MimeTypes: ["application/xml", "text/xml"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/xml");
+            CanWrite: true);
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -85,7 +91,8 @@ public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {

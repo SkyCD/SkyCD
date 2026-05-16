@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 /// <summary>

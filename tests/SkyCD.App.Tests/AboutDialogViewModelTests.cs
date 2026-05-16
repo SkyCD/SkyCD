@@ -1,17 +1,30 @@
+using System;
+using System.IO;
+using System.Reflection;
+using SkyCD.Formatting;
 using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public class AboutDialogViewModelTests
 {
     [Fact]
-    public void Constructor_InitializesWithDefaultValues()
+    public void CreateFromMainAssembly_InitializesFromAssemblyMetadata()
     {
-        var vm = new AboutDialogViewModel();
+        var assembly = typeof(AboutDialogViewModelTests).Assembly;
+        var expectedProduct = assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
+                              ?? assembly.GetName().Name
+                              ?? "SkyCD";
+        var expectedVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                              ?? assembly.GetName().Version?.ToString(3)
+                              ?? "0.0.0";
 
-        Assert.Equal("SkyCD", vm.ProductName);
-        Assert.Equal("3.0.0", vm.Version);
-        Assert.Equal("https://github.com/SkyCD/SkyCD", vm.Website);
+        var vm = AboutDialogViewModel.CreateFromMainAssembly(assembly);
+
+        Assert.Equal(expectedProduct, vm.ProductName);
+        Assert.Equal(expectedVersion, vm.Version);
+        Assert.NotNull(vm.Website);
     }
 
     [Fact]
@@ -121,18 +134,19 @@ public class AboutDialogViewModelTests
     [InlineData(1048576, "1.0 MB")]
     public void FormatBytes_ReturnsExpectedText(long bytes, string expected)
     {
-        Assert.Equal(expected, AboutDialogFormatting.FormatBytes(bytes));
+        Assert.Equal(expected, SizeFormatting.FormatAboutDialogBytes(bytes));
     }
 
     [Theory]
-    [InlineData(0, 0, 0, 3, "03s")]
-    [InlineData(0, 0, 2, 5, "02m 05s")]
-    [InlineData(0, 1, 4, 9, "01h 04m 09s")]
-    [InlineData(2, 7, 30, 12, "2d 07h 30m")]
+    [InlineData(0, 0, 0, 3, "3 seconds")]
+    [InlineData(0, 0, 2, 5, "2 minutes 5 seconds")]
+    [InlineData(0, 1, 4, 9, "1 hour 4 minutes 9 seconds")]
+    [InlineData(2, 7, 30, 12, "2 days 7 hours 30 minutes")]
     public void FormatFriendlyTime_ReturnsExpectedText(int days, int hours, int minutes, int seconds, string expected)
     {
-        var duration = TimeSpan.FromDays(days) + TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes) + TimeSpan.FromSeconds(seconds);
+        var duration = TimeSpan.FromDays(days) + TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes) +
+                       TimeSpan.FromSeconds(seconds);
 
-        Assert.Equal(expected, AboutDialogFormatting.FormatFriendlyTime(duration));
+        Assert.Equal(expected, TimeFormatting.FormatAboutDialogDuration(duration));
     }
 }

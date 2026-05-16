@@ -1,5 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.Formats.Tar;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Tar;
@@ -7,15 +13,16 @@ namespace SkyCD.Plugin.Tar;
 public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-tar",
-            "TAR Archive Index",
-            [".tar", ".tar.gz", ".tgz"],
+        new(
+            FormatId: "skycd-tar",
+            DisplayName: "TAR Archive Index",
+            Extensions: [".tar", ".tar.gz", ".tgz"],
+            MimeTypes: ["application/x-tar", "application/gzip"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-tar");
+            CanWrite: false);
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -24,7 +31,8 @@ public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {

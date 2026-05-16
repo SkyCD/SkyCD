@@ -2,7 +2,7 @@ namespace SkyCD.Presentation.ViewModels;
 
 public enum AddToListSourceMode
 {
-    Media,
-    Folder,
-    Internet
+    Media = 0,
+    Folder = 1,
+    Internet = 2
 }

@@ -1,0 +1,25 @@
+using DryIoc;
+using Microsoft.Extensions.Logging;
+using SkyCD.Logging;
+using SkyCD.Plugin.Host.Modal;
+using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
+
+namespace SkyCD.Core.DependencyInjection.Registrators;
+
+public sealed class CommonRuntimeServiceRegistrator
+{
+    public void RegisterServices(IRegistrator registrator)
+    {
+        registrator.Register<ILoggerFactory, PlatformLoggerFactory>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register(typeof(ILogger<>), typeof(Logger<>), reuse: Reuse.Transient,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<FileFormatManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<ModalExtensionManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<HostVersionProvider>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    }
+}
+
+

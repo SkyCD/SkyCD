@@ -1,6 +1,7 @@
-using System.Reflection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
-using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Cli;
 
@@ -15,21 +16,17 @@ internal sealed class CliContributionRegistry : IDisposable
 
     public IReadOnlyCollection<string> CommandPaths => commandPaths.ToArray();
 
-    public void Register(IEnumerable<DiscoveredPlugin> plugins)
+    public void Register(IEnumerable<ICliPluginCapability> capabilities)
     {
         commandPaths.Clear();
         commandOwners.Clear();
         commandHandlers.Clear();
 
         var errors = new List<string>();
-        var reservedCommands = CliHost.GetSystemCommandPaths();
-
-        foreach (var plugin in plugins)
+        foreach (var capability in capabilities)
         {
-            foreach (var capability in plugin.Capabilities.OfType<ICliPluginCapability>())
-            {
-                RegisterContribution(plugin, capability, reservedCommands, errors);
-            }
+            var ownerId = capability.GetType().Assembly.GetName().Name ?? capability.GetType().FullName ?? "unknown";
+            RegisterContribution(ownerId, capability, errors);
         }
 
         Errors = errors;
@@ -60,41 +57,36 @@ internal sealed class CliContributionRegistry : IDisposable
     }
 
     private void RegisterContribution(
-        DiscoveredPlugin plugin,
+        string ownerId,
         ICliPluginCapability capability,
-        IReadOnlySet<string> reservedCommands,
         ICollection<string> errors)
     {
         var commandPath = GetDeclaredCommandName(capability.GetType());
         if (string.IsNullOrWhiteSpace(commandPath))
         {
-            errors.Add($"Plugin '{plugin.Id}' CLI capability '{capability.GetType().FullName}' is missing [Command(\"name\")] attribute.");
+            errors.Add(
+                $"Plugin '{ownerId}' CLI capability '{capability.GetType().FullName}' is missing [Command(\"name\")] attribute.");
             return;
         }
 
         var normalizedPath = NormalizePath(commandPath);
-        if (reservedCommands.Contains(normalizedPath))
-        {
-            errors.Add(
-                $"Plugin '{plugin.Id}' cannot register command '{normalizedPath}' because it is reserved by the host.");
-            return;
-        }
-
         if (!commandPaths.Add(normalizedPath))
         {
             var existingOwner = commandOwners.TryGetValue(normalizedPath, out var owner) ? owner : "unknown";
             errors.Add(
-                $"CLI command collision on '{normalizedPath}' between '{existingOwner}' and '{plugin.Id}'.");
+                $"CLI command collision on '{normalizedPath}' between '{existingOwner}' and '{ownerId}'.");
             return;
         }
 
-        commandOwners[normalizedPath] = plugin.Id;
-        commandHandlers[normalizedPath] = new RegisteredCliContribution(plugin, normalizedPath, capability);
+        commandOwners[normalizedPath] = ownerId;
+        commandHandlers[normalizedPath] = new RegisteredCliContribution(ownerId, normalizedPath, capability);
     }
 
     private static string GetDeclaredCommandName(Type commandType)
     {
-        var commandAttributeData = commandType.CustomAttributes.FirstOrDefault(attribute => attribute.AttributeType.Name == "CommandAttribute");
+        var commandAttributeData =
+            commandType.CustomAttributes.FirstOrDefault(attribute =>
+                attribute.AttributeType.Name == "CommandAttribute");
         if (commandAttributeData is null)
         {
             return string.Empty;
@@ -125,6 +117,6 @@ internal sealed class CliContributionRegistry : IDisposable
 }
 
 internal sealed record RegisteredCliContribution(
-    DiscoveredPlugin Plugin,
+    string OwnerId,
     string CommandPath,
     ICliPluginCapability CommandInstance);

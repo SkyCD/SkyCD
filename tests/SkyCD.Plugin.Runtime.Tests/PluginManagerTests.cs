@@ -1,10 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
+using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
@@ -37,8 +45,9 @@ public class PluginManagerTests
 
             var discovery = new PluginManager(
                 NullLogger<PluginManager>.Instance,
-                new AssembliesListFactory(NullLogger.Instance),
-                new DiscoveredPluginFactory());
+                new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+                new DiscoveredPluginFactory(),
+                CreatePluginRepository());
             discovery.Discover(root, new Version(2, 9, 0));
 
             Assert.Empty(discovery.Plugins);
@@ -62,36 +71,51 @@ public class PluginManagerTests
         Assert.Equal("SkyCD.Plugin.Runtime.Tests", target.Name);
         Assert.Equal(Assembly.GetExecutingAssembly().GetName().Version, target.Version);
     }
+
+    private static IRepository<PluginDocument> CreatePluginRepository()
+    {
+        var databaseManager = new DatabaseManager();
+        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginRuntimeTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        databaseManager.Connect("default", directory);
+        var repositoryManager = new RepositoryManager(databaseManager);
+        return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();
+    }
 }
 
 public sealed class PluginDiscoveryCapabilityPlugin : IMenuPluginCapability, IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new("test", "Test", [".test"], true, false);
+        new("test", "Test", [".test"], ["application/x-test"], true, false);
 
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
     [
-        new MenuContribution("tests.command", "Tests", "Tools")
+        new("tests.command", "Tests", "Tools")
     ];
 
-    public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default) =>
+    public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+        CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatReadResult { Success = true, Payload = new object() });
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatWriteResult { Success = false, Error = "Read-only test format." });
 }
 
 public sealed class StandaloneFileFormatCapability : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new("standalone", "Standalone", [".stand"], CanRead: true, CanWrite: false);
+        new("standalone", "Standalone", [".stand"], ["application/x-standalone"], CanRead: true, CanWrite: false);
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatReadResult { Success = true, Payload = "standalone" });
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatWriteResult { Success = false, Error = "Read-only." });
 }

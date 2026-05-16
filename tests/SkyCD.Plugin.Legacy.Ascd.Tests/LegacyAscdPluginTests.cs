@@ -1,0 +1,217 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Legacy.Ascd;
+using Xunit;
+
+namespace SkyCD.LegacyFormats.Tests;
+
+public class LegacyAscdPluginTests
+{
+    [Fact]
+    public async Task ReadAsync_ParsesOwnedAscdFixture()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ascd", "catalog-sample.ascd");
+
+        await using var source = File.OpenRead(fixturePath);
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-ascd",
+            Source = source,
+            FileName = "catalog-sample.ascd"
+        });
+
+        Assert.True(result.Success, result.Error);
+        var rows = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(rows, row => Equals(row["id"]?.ToString(), "1") && Equals(row["type"]?.ToString(), "Folder"));
+        Assert.Contains(rows, row => Equals(row["id"]?.ToString(), "2") && Equals(row["size"]?.ToString(), "6"));
+    }
+
+    [Fact]
+    public async Task ReadAsync_ParsesLegacyFixtures()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var fixtures = new[] { "my-documents.ascd", "ftpz.ascd" };
+        var fixtureDir = Path.Combine(AppContext.BaseDirectory, "fixtures");
+        if (!Directory.Exists(fixtureDir) || fixtures.All(f => !File.Exists(Path.Combine(fixtureDir, f))))
+        {
+            return; // Skip if fixtures are not available (e.g., in CI without legacy folder)
+        }
+
+        foreach (var fixture in fixtures)
+        {
+            var fixturePath = Path.Combine(fixtureDir, fixture);
+            if (!File.Exists(fixturePath))
+                continue; // Skip missing fixtures
+            var bytes = await File.ReadAllBytesAsync(fixturePath);
+            await using var source = new MemoryStream(bytes);
+
+            var result = await plugin.ReadAsync(new FileFormatReadRequest
+            {
+                FormatId = "legacy-ascd",
+                Source = source,
+                FileName = fixture
+            });
+
+            Assert.True(result.Success, result.Error);
+            var payload = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+            Assert.NotEmpty(payload);
+            Assert.All(payload, row =>
+            {
+                Assert.False(string.IsNullOrWhiteSpace(row["id"]?.ToString()));
+                Assert.False(string.IsNullOrWhiteSpace(row["name"]?.ToString()));
+                Assert.False(string.IsNullOrWhiteSpace(row["type"]?.ToString()));
+            });
+        }
+    }
+
+    [Fact]
+    public async Task ReadThenWriteThenReadAsync_RoundTripsEntries()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "fixtures", "my-documents.ascd");
+
+        if (!File.Exists(fixturePath))
+        {
+            return; // Skip if fixture is not available (e.g., in CI without legacy folder)
+        }
+
+        var bytes = await File.ReadAllBytesAsync(fixturePath);
+        await using var source = new MemoryStream(bytes);
+
+        var firstRead = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-ascd",
+            Source = source,
+            FileName = "my-documents.ascd"
+        });
+
+        Assert.True(firstRead.Success, firstRead.Error);
+        var payload = Assert.IsType<List<Dictionary<string, object?>>>(firstRead.Payload);
+
+        await using var target = new MemoryStream();
+        var write = await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "legacy-ascd",
+            Target = target,
+            Payload = payload,
+            FileName = "my-documents.ascd"
+        });
+
+        Assert.True(write.Success, write.Error);
+
+        target.Position = 0;
+        var secondRead = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-ascd",
+            Source = target,
+            FileName = "my-documents.ascd"
+        });
+
+        Assert.True(secondRead.Success, secondRead.Error);
+        var reparsed = Assert.IsType<List<Dictionary<string, object?>>>(secondRead.Payload);
+        Assert.Equal(payload.Count, reparsed.Count);
+        Assert.Equal(payload[0]["name"]?.ToString(), reparsed[0]["name"]?.ToString());
+        Assert.Equal(payload[0]["size"]?.ToString(), reparsed[0]["size"]?.ToString());
+    }
+
+    [Fact]
+    public async Task ReadAsync_RejectsInvalidHeader()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var invalidText =
+            "INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>')";
+        var compressed = CompressText(invalidText);
+        await using var source = new MemoryStream(compressed);
+
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-ascd",
+            Source = source
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("header", result.Error ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ToleratesTrailingJunkAndSubstitutesAppId()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var payload =
+            """
+            # format: skycd-nf 1.0
+            SOME RANDOM TEXT
+            INSERT INTO list (`ID`, `Name`, `ParentID`, `Type`, `Properties`,`Size`, `AID`) VALUES ('0', 'Root', '-1', 'scdFolder', '', '0', '<?Application_ID?>'); DROP TABLE list;
+            """;
+        var compressed = CompressText(payload);
+        await using var source = new MemoryStream(compressed);
+
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "legacy-ascd",
+            Source = source
+        });
+
+        Assert.True(result.Success, result.Error);
+        var documents = Assert.IsType<List<Dictionary<string, object?>>>(result.Payload);
+        var entry = Assert.Single(documents);
+        Assert.Equal(Guid.Empty.ToString(), entry["applicationId"]?.ToString());
+    }
+
+    [Fact]
+    public async Task WriteAsync_EmitsJsonDocumentLines()
+    {
+        var plugin = new LegacyAscdPlugin();
+        var payload = new List<Dictionary<string, object?>>
+        {
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["id"] = "1",
+                ["name"] = "Root",
+                ["parentId"] = null,
+                ["type"] = "Folder",
+                ["size"] = 0L,
+                ["childrenCount"] = 0L,
+                ["properties"] = ""
+            }
+        };
+
+        await using var target = new MemoryStream();
+        var write = await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "legacy-ascd",
+            Target = target,
+            Payload = payload,
+            FileName = "doc.ascd"
+        });
+
+        Assert.True(write.Success, write.Error);
+        target.Position = 0;
+        using var decompressed = new DeflateStream(target, CompressionMode.Decompress, leaveOpen: true);
+        using var reader = new StreamReader(decompressed);
+        var content = await reader.ReadToEndAsync();
+
+        Assert.Contains("# format: skycd-nf", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"id\":\"1\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("INSERT INTO", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static byte[] CompressText(string text)
+    {
+        using var output = new MemoryStream();
+        using (var compressed = new DeflateStream(output, CompressionMode.Compress, leaveOpen: true))
+        using (var writer = new StreamWriter(compressed))
+        {
+            writer.Write(text);
+        }
+
+        return output.ToArray();
+    }
+}

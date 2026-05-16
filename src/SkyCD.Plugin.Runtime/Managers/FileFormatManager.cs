@@ -1,4 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.Exceptions;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 
@@ -7,6 +15,16 @@ namespace SkyCD.Plugin.Runtime.Managers;
 /// </summary>
 public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> fileFormatProviders)
 {
+    public FileFormatFilterCollection GetOpenFilters()
+    {
+        return BuildFilters(GetOpenFormats());
+    }
+
+    public FileFormatFilterCollection GetSaveFilters()
+    {
+        return BuildFilters(GetSaveFormats());
+    }
+
     public IReadOnlyList<FileFormatDescriptor> GetOpenFormats()
     {
         return fileFormatProviders
@@ -29,16 +47,18 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
     public IFileFormatPluginCapability GetInstanceFor(string fileName)
     {
-        var extension = Path.GetExtension(fileName);
+        var extension = NormalizeExtension(Path.GetExtension(fileName));
         foreach (var capability in fileFormatProviders)
         {
-            if (capability.SupportedFormat.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            if (capability.SupportedFormat.Extensions
+                .Select(static value => NormalizeExtension(value))
+                .Contains(extension, StringComparer.OrdinalIgnoreCase))
             {
                 return capability;
             }
         }
 
-        throw new InvalidOperationException("Unsupported file format");
+        throw new UnsupportedFileFormatException(fileName);
     }
 
     public string GetPreferredSaveExtension(string fallback = "scd")
@@ -60,38 +80,62 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return GetSaveFormats();
     }
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public string ResolveFormatId(string? explicitFormatId, string path, bool forWrite)
+    {
+        var formats = forWrite ? GetSaveFormats() : GetOpenFormats();
+
+        if (!string.IsNullOrWhiteSpace(explicitFormatId))
+        {
+            return formats.Any(format => format.FormatId.Equals(explicitFormatId, StringComparison.OrdinalIgnoreCase))
+                ? explicitFormatId
+                : throw new FileFormatHandlerResolutionException();
+        }
+
+        var extension = Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            throw new FileFormatHandlerResolutionException();
+        }
+
+        var normalizedExtension = NormalizeExtension(extension);
+
+        var byExtension = formats.FirstOrDefault(format =>
+            format.Extensions.Any(candidate =>
+                NormalizeExtension(candidate).Equals(normalizedExtension, StringComparison.OrdinalIgnoreCase)));
+
+        return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
+    }
+
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);
         if (!formatHandler.SupportedFormat.CanRead)
         {
-            throw new InvalidOperationException($"Format '{formatHandler.SupportedFormat.FormatId}' is not readable.");
+            throw new FileFormatNotReadableException(formatHandler.SupportedFormat.FormatId);
         }
 
         var result = await formatHandler.ReadAsync(request, cancellationToken);
         if (!result.Success)
         {
-            throw new InvalidOperationException(result.Error ?? "Read operation failed.");
+            throw new FileFormatReadFailedException(result.Error);
         }
 
         return result;
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         var formatHandler = ResolveHandler(request.FormatId, request.FileName);
         if (!formatHandler.SupportedFormat.CanWrite)
         {
-            throw new InvalidOperationException($"Format '{formatHandler.SupportedFormat.FormatId}' is read-only.");
+            throw new FileFormatReadOnlyException(formatHandler.SupportedFormat.FormatId);
         }
 
         var result = await formatHandler.WriteAsync(request, cancellationToken);
-        if (!result.Success)
-        {
-            throw new InvalidOperationException(result.Error ?? "Write operation failed.");
-        }
 
-        return result;
+        return !result.Success ? throw new FileFormatWriteFailedException(result.Error) : result;
     }
 
     private IFileFormatPluginCapability ResolveHandler(string? formatId, string? fileName)
@@ -106,11 +150,58 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(fileName))
+        return !string.IsNullOrWhiteSpace(fileName)
+            ? GetInstanceFor(fileName)
+            : throw new FileFormatHandlerResolutionException();
+    }
+
+    private static FileFormatFilterCollection BuildFilters(IReadOnlyList<FileFormatDescriptor> formats)
+    {
+        var filters = formats
+            .Select(format => new FilePickerFileType(format.DisplayName)
+            {
+                Patterns = format.Extensions
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Select(static extension => NormalizePattern(extension))
+                    .ToArray(),
+                MimeTypes = format.MimeTypes
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+            })
+            .ToArray();
+
+        return new FileFormatFilterCollection(filters);
+    }
+
+    private static string NormalizePattern(string extension)
+    {
+        var trimmed = extension.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
         {
-            return GetInstanceFor(fileName);
+            return "*.*";
         }
 
-        throw new InvalidOperationException("Unable to resolve file format handler.");
+        var normalized = trimmed.StartsWith('.') ? trimmed : $".{trimmed}";
+        return $"*{normalized}";
+    }
+
+    private static string NormalizeExtension(string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = extension.Trim();
+        if (trimmed.StartsWith("*.", StringComparison.Ordinal))
+        {
+            trimmed = trimmed[1..];
+        }
+        else if (trimmed.StartsWith("*", StringComparison.Ordinal))
+        {
+            trimmed = trimmed[1..];
+        }
+
+        return trimmed.StartsWith(".", StringComparison.Ordinal) ? trimmed : $".{trimmed}";
     }
 }

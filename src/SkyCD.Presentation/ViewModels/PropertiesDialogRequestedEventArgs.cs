@@ -1,3 +1,5 @@
+using System;
+
 namespace SkyCD.Presentation.ViewModels;
 
 public sealed class PropertiesDialogRequestedEventArgs : EventArgs

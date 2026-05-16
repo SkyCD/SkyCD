@@ -1,52 +1,59 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Platform.Storage;
-using Avalonia.VisualTree;
-using SkyCD.App.Models;
-using SkyCD.App.Services;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Presentation.ViewModels;
-using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using DryIoc;
+using Avalonia.Input;
+using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
+using Microsoft.Extensions.Localization;
+using SkyCD.Couchbase;
+using SkyCD.Documents;
+using SkyCD.Documents.Enum;
+using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Runtime.Exceptions;
+using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
+using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Controls.Lists;
 
 namespace SkyCD.App.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly AppOptionsStore appOptionsStore;
+    private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
+    private readonly RepositoryManager repositoryManager;
+    private readonly AppOptionsDocumentRepository appOptionsRepository;
+    private readonly CatalogDocumentRepository catalogRepository;
     private readonly PluginManager pluginManager;
-    private readonly FileFormatManager fileFormatManager;
+    private readonly HostVersionProvider hostVersionProvider;
+    private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
-    public MainWindow()
-        : this(
-            new AppOptionsStore(),
-            new PluginManager(
-                NullLogger<PluginManager>.Instance,
-                new SkyCD.Plugin.Runtime.Factories.AssembliesListFactory(NullLogger.Instance),
-                new SkyCD.Plugin.Runtime.Factories.DiscoveredPluginFactory()),
-            new FileFormatManager([]))
-    {
-    }
-
     public MainWindow(
-        AppOptionsStore appOptionsStore,
+        RepositoryManager repositoryManager,
         PluginManager pluginManager,
         FileFormatManager fileFormatManager)
     {
-        this.appOptionsStore = appOptionsStore;
+        this.repositoryManager = repositoryManager;
+        appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
         this.pluginManager = pluginManager;
+        hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -92,9 +99,9 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindowViewModel.IsDirtyDocument))
+        if (e.PropertyName is nameof(MainWindowViewModel.IsDirtyDocument) or nameof(MainWindowViewModel.CurrentCatalogPath))
         {
             UpdateWindowTitle();
         }
@@ -139,7 +146,7 @@ public partial class MainWindow : Window
 
         var hit = listBox.InputHitTest(point) as Visual;
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
-        if (listBoxItem?.DataContext is BrowserItem item)
+        if (listBoxItem?.DataContext is CatalogDocument item)
         {
             subscribedViewModel.SelectedBrowserItem = item;
             return;
@@ -160,13 +167,18 @@ public partial class MainWindow : Window
 
     private void UpdateWindowTitle()
     {
+        var currentPath = subscribedViewModel?.CurrentCatalogPath;
+        var baseTitle = string.IsNullOrWhiteSpace(currentPath)
+            ? "SkyCD"
+            : $"SkyCD - {Path.GetFileName(currentPath)}";
+
         if (subscribedViewModel is not null && subscribedViewModel.IsDirtyDocument)
         {
-            Title = "* SkyCD";
+            Title = $"* {baseTitle}";
         }
         else
         {
-            Title = "SkyCD";
+            Title = baseTitle;
         }
     }
 
@@ -177,13 +189,18 @@ public partial class MainWindow : Window
             return;
         }
 
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
         ApplyWindowBounds(options);
         vm.ApplySessionState(
-            ParseBrowserViewMode(options.BrowserViewMode),
-            ParseBrowserSortMode(options.BrowserSortMode),
+            options.Browser.ViewMode,
+            options.Browser.SortMode,
             options.IsStatusBarVisible);
         ApplyLanguage(options.Language);
+        if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
+        {
+            EnsureFileFormatProvidersLoaded();
+            _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
+        }
 
         isSessionStateLoaded = true;
     }
@@ -294,6 +311,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        EnsureFileFormatProvidersLoaded();
+
         if (vm.IsDirtyDocument)
         {
             var decision = await ShowUnsavedChangesPromptAsync();
@@ -308,11 +327,10 @@ public partial class MainWindow : Window
             }
         }
 
-        var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetOpenFormats()).ToList();
-        fileTypeChoices.Add(new FilePickerFileType("All files")
-        {
-            Patterns = ["*.*"]
-        });
+        var fileTypeChoices = fileFormatManager.GetOpenFilters()
+            .ToFilePickerTypes(
+                allSupportedFilesLabel: PickerLocalizer["AllSupportedFiles"].Value,
+                allFilesLabel: PickerLocalizer["AllFiles"].Value);
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -329,21 +347,35 @@ public partial class MainWindow : Window
 
         try
         {
-            var capability = fileFormatManager.GetInstanceFor(localPath);
-            if (!capability.SupportedFormat.CanRead)
-            {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is not readable.");
-            }
+            await TryLoadCatalogIntoViewModelAsync(localPath);
+        }
+        catch (UnsupportedFileFormatException)
+        {
+            var extension = Path.GetExtension(localPath);
+            var readableExtensions = fileFormatManager.GetReadableFormats()
+                .SelectMany(static format => format.Extensions)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static value => value, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var supportedText = readableExtensions.Length == 0
+                ? "none"
+                : string.Join(", ", readableExtensions);
 
-            await using var source = File.OpenRead(localPath);
-            await fileFormatManager.ReadAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
-            {
-                FormatId = capability.SupportedFormat.FormatId,
-                Source = source,
-                FileName = Path.GetFileName(localPath)
-            });
-
-            vm.CompleteOpenCatalog();
+            vm.StatusText = string.IsNullOrWhiteSpace(extension)
+                ? $"Failed to open catalog: unsupported file format. Readable extensions: {supportedText}."
+                : $"Failed to open catalog: no readable handler mapped for '{extension}'. Readable extensions: {supportedText}.";
+        }
+        catch (FileFormatHandlerResolutionException)
+        {
+            vm.StatusText = "Failed to open catalog: file format handler is unavailable. Check plugin settings.";
+        }
+        catch (FileFormatNotReadableException ex)
+        {
+            vm.StatusText = $"Failed to open catalog: plugin cannot read this format ({ex.Message}).";
+        }
+        catch (FileFormatReadFailedException ex)
+        {
+            vm.StatusText = $"Failed to open catalog: plugin read error ({ex.Message}).";
         }
         catch (Exception ex)
         {
@@ -358,15 +390,15 @@ public partial class MainWindow : Window
             return;
         }
 
+        EnsureFileFormatProvidersLoaded();
+
         var targetPath = vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetSaveFormats()).ToList();
-
-            fileTypeChoices.Add(new FilePickerFileType("All files")
-            {
-                Patterns = ["*.*"]
-            });
+            var fileTypeChoices = fileFormatManager.GetSaveFilters()
+                .ToFilePickerTypes(
+                    allSupportedFilesLabel: null,
+                    allFilesLabel: null);
 
             var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
 
@@ -391,13 +423,13 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(targetPath);
             if (!capability.SupportedFormat.CanWrite)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is read-only.");
+                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
             }
 
             var content = """
-                # SkyCD catalog placeholder
-                # TODO: replace with full catalog serialization pipeline
-                """;
+                          # SkyCD catalog placeholder
+                          # TODO: replace with full catalog serialization pipeline
+                          """;
             File.WriteAllText(targetPath, content);
             vm.CompleteSaveCatalog(targetPath);
         }
@@ -414,12 +446,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        var fileTypeChoices = BuildDialogFilters(fileFormatManager.GetSaveFormats()).ToList();
+        EnsureFileFormatProvidersLoaded();
 
-        fileTypeChoices.Add(new FilePickerFileType("All files")
-        {
-            Patterns = ["*.*"]
-        });
+        var fileTypeChoices = fileFormatManager.GetSaveFilters()
+            .ToFilePickerTypes(
+                allSupportedFilesLabel: null,
+                allFilesLabel: PickerLocalizer["AllFiles"].Value);
 
         var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
 
@@ -442,13 +474,13 @@ public partial class MainWindow : Window
             var capability = fileFormatManager.GetInstanceFor(localPath);
             if (!capability.SupportedFormat.CanWrite)
             {
-                throw new InvalidOperationException($"Format '{capability.SupportedFormat.FormatId}' is read-only.");
+                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
             }
 
             var content = """
-                # SkyCD catalog placeholder
-                # TODO: replace with full catalog serialization pipeline
-                """;
+                          # SkyCD catalog placeholder
+                          # TODO: replace with full catalog serialization pipeline
+                          """;
             File.WriteAllText(localPath, content);
             vm.CompleteSaveCatalogAs(localPath);
         }
@@ -471,10 +503,8 @@ public partial class MainWindow : Window
 
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
     {
-        var options = appOptionsStore.Load();
-        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
-            ? ResolveDefaultPluginPath()
-            : options.PluginPath;
+        var options = LoadAppOptions();
+        var pluginPath = options.PluginPath;
 
         e.Dialog.PluginPath = pluginPath;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
@@ -484,7 +514,6 @@ public partial class MainWindow : Window
             e.Dialog.SelectedLanguage = language;
         }
 
-        e.Dialog.SetDisabledPluginIds(options.DisabledPluginIds);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
@@ -498,11 +527,16 @@ public partial class MainWindow : Window
         var accepted = await dialog.ShowDialog<bool?>(this);
         if (accepted == true)
         {
+            var pluginStates = e.Dialog.Plugins
+                .Select(static plugin => (plugin.Id, plugin.IsEnabled))
+                .ToArray();
+
             options.PluginPath = e.Dialog.PluginPath;
             options.Language = e.Dialog.SelectedLanguage.Name;
-            options.DisabledPluginIds = e.Dialog.GetDisabledPluginIds().ToList();
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
-            appOptionsStore.Save(options);
+            SaveAppOptions(options);
+            pluginManager.SavePluginEnabledStates(pluginStates);
+            SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
 
             // Trigger UI refresh to apply new language
@@ -517,8 +551,7 @@ public partial class MainWindow : Window
 
     private async void OnAboutRequested(object? sender, EventArgs e)
     {
-        var version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "3.0.0";
-        var dialogVm = new AboutDialogViewModel("SkyCD", version, "https://github.com/SkyCD/SkyCD");
+        var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(typeof(App).Assembly);
         var dialog = new AboutWindow
         {
             DataContext = dialogVm
@@ -585,66 +618,109 @@ public partial class MainWindow : Window
 
     private void SaveUiState(MainWindowViewModel vm)
     {
-        var options = appOptionsStore.Load();
+        var options = LoadAppOptions();
 
         // Don't save window position if window is minimized
         if (WindowState == WindowState.Normal)
         {
-            options.WindowLeft = Position.X;
-            options.WindowTop = Position.Y;
-            options.WindowWidth = Width;
-            options.WindowHeight = Height;
-            options.WindowState = "Normal";
+            options.Window.Left = Position.X;
+            options.Window.Top = Position.Y;
+            options.Window.Width = Width;
+            options.Window.Height = Height;
+            options.Window.State = WindowState.Normal;
         }
         else if (WindowState == WindowState.Maximized)
         {
-            options.WindowState = "Maximized";
+            options.Window.State = WindowState.Maximized;
         }
 
         if (TreePaneColumn.Width.IsAbsolute)
         {
-            options.TreePaneWidth = TreePaneColumn.Width.Value;
+            options.Window.TreePaneWidth = TreePaneColumn.Width.Value;
         }
 
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
-        options.BrowserViewMode = vm.CurrentViewMode.ToString();
-        options.BrowserSortMode = vm.CurrentSortMode.ToString();
-        appOptionsStore.Save(options);
+        options.Browser.ViewMode = vm.CurrentViewMode;
+        options.Browser.SortMode = vm.CurrentSortMode;
+        if (!string.IsNullOrWhiteSpace(vm.CurrentCatalogPath))
+        {
+            options.LastOpenedCatalogPath = vm.CurrentCatalogPath;
+        }
+        SaveAppOptions(options);
     }
 
-    private void ApplyWindowBounds(AppOptions options)
+    private async Task TryLoadCatalogIntoViewModelAsync(string localPath)
     {
-        if (options.WindowWidth is > 0)
+        var capability = fileFormatManager.GetInstanceFor(localPath);
+        if (!capability.SupportedFormat.CanRead)
         {
-            Width = options.WindowWidth.Value;
+            throw new FileFormatNotReadableException(capability.SupportedFormat.FormatId);
         }
 
-        if (options.WindowHeight is > 0)
+        await using var source = File.OpenRead(localPath);
+        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
         {
-            Height = options.WindowHeight.Value;
+            FormatId = capability.SupportedFormat.FormatId,
+            Source = source,
+            FileName = Path.GetFileName(localPath)
+        });
+
+        ReplaceCatalogContent(ExtractCatalogEntries(readResult.Payload));
+        var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+        reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+        var options = LoadAppOptions();
+        reloadedViewModel.ApplySessionState(
+            options.Browser.ViewMode,
+            options.Browser.SortMode,
+            options.IsStatusBarVisible);
+        reloadedViewModel.CurrentCatalogPath = localPath;
+        options.LastOpenedCatalogPath = localPath;
+        SaveAppOptions(options);
+        DataContext = reloadedViewModel;
+        reloadedViewModel.CompleteOpenCatalog();
+    }
+
+    private AppOptionsDocument LoadAppOptions()
+    {
+        return appOptionsRepository.GetOrCreateAppOptions();
+    }
+
+    private void SaveAppOptions(AppOptionsDocument options)
+    {
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+    }
+
+    private void ApplyWindowBounds(AppOptionsDocument options)
+    {
+        if (options.Window.Width is > 0)
+        {
+            Width = options.Window.Width.Value;
         }
 
-        if (options.WindowLeft.HasValue && options.WindowTop.HasValue)
+        if (options.Window.Height is > 0)
+        {
+            Height = options.Window.Height.Value;
+        }
+
+        if (options.Window.Left.HasValue && options.Window.Top.HasValue)
         {
             Position = ClampPositionToVisibleBounds(
-                new PixelPoint(options.WindowLeft.Value, options.WindowTop.Value),
+                new PixelPoint(options.Window.Left.Value, options.Window.Top.Value),
                 Width,
                 Height);
         }
 
-        if (options.TreePaneWidth is >= 160)
+        if (options.Window.TreePaneWidth is >= 160)
         {
-            TreePaneColumn.Width = new GridLength(options.TreePaneWidth.Value, GridUnitType.Pixel);
+            TreePaneColumn.Width = new GridLength(options.Window.TreePaneWidth.Value, GridUnitType.Pixel);
         }
 
         // Restore window state
-        if (string.Equals(options.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase))
-        {
-            WindowState = WindowState.Maximized;
-        }
+        WindowState = options.Window.State;
     }
 
-    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth, double requestedHeight)
+    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth,
+        double requestedHeight)
     {
         var windowWidth = Math.Max(1, (int)Math.Round(requestedWidth));
         var windowHeight = Math.Max(1, (int)Math.Round(requestedHeight));
@@ -689,13 +765,6 @@ public partial class MainWindow : Window
             : BrowserViewMode.Details;
     }
 
-    private static BrowserSortMode ParseBrowserSortMode(string? value)
-    {
-        return Enum.TryParse<BrowserSortMode>(value, true, out var mode)
-            ? mode
-            : BrowserSortMode.Name;
-    }
-
     private async void OnBrowsePluginPathRequested(object? sender, EventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
@@ -737,23 +806,37 @@ public partial class MainWindow : Window
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
     {
         dialogVm.CapturePluginStates();
-        pluginManager.Discover(dialogVm.PluginPath, new Version(3, 0, 0));
+        pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
+        var descriptors = pluginManager.GetPluginDescriptors();
+        var loadedById = pluginManager.Plugins
+            .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
 
-        var plugins = pluginManager.Plugins
-            .Select(static plugin =>
+        var plugins = descriptors
+            .Select(descriptor =>
             {
-                var capabilitySummary = plugin.Capabilities.Count == 0
-                    ? "Generic"
-                    : string.Join(", ", plugin.Capabilities
-                        .Select(static capability => capability.GetType().Name)
-                        .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
+                if (loadedById.TryGetValue(descriptor.Id, out var loaded))
+                {
+                    return new OptionsPluginItem(
+                        loaded.Name,
+                        string.IsNullOrWhiteSpace(loaded.Author?.Name) ? "Unknown author" : loaded.Author.Name,
+                        $"{loaded.Id} v{loaded.Version}",
+                        isEnabled: descriptor.IsEnabled,
+                        id: loaded.Id,
+                        authorUrl: loaded.Author?.Url);
+                }
 
-                var extendedInfo = $"{plugin.Id} v{plugin.Version}";
+                var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
+                    ? "Unknown author"
+                    : descriptor.Author.Name;
+                var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
+
                 return new OptionsPluginItem(
-                    plugin.Name,
-                    capabilitySummary,
+                    descriptor.Name,
+                    authorSummary,
                     extendedInfo,
-                    id: plugin.Id);
+                    isEnabled: descriptor.IsEnabled,
+                    id: descriptor.Id,
+                    authorUrl: descriptor.Author?.Url);
             })
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -761,17 +844,71 @@ public partial class MainWindow : Window
         dialogVm.SetPlugins(plugins);
     }
 
-    private static string ResolveDefaultPluginPath()
+    private void SyncPluginRuntimeState()
     {
-        var candidates = new[]
-        {
-            Path.Combine(Environment.CurrentDirectory, "Plugins"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins")),
-            Path.Combine(Environment.CurrentDirectory, "Plugins", "samples"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins", "samples"))
-        };
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        var resolvedPluginPath = ResolvePluginDiscoveryPath(options.PluginPath);
+        options.PluginPath = resolvedPluginPath;
+        SaveAppOptions(options);
 
-        return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+        pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
+
+        ServiceProvider.ReregisterPluginsService();
+        fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+        }
+    }
+
+    private void EnsureFileFormatProvidersLoaded()
+    {
+        if (fileFormatManager.GetReadableFormats().Count > 0)
+        {
+            return;
+        }
+
+        SyncPluginRuntimeState();
+        if (fileFormatManager.GetReadableFormats().Count > 0)
+        {
+            return;
+        }
+
+        var availableDescriptors = pluginManager.GetPluginDescriptors()
+            .Where(static descriptor => descriptor.IsAvailable)
+            .Select(static descriptor => (descriptor.Id, IsEnabled: true))
+            .ToArray();
+        if (availableDescriptors.Length == 0)
+        {
+            return;
+        }
+
+        pluginManager.SavePluginEnabledStates(availableDescriptors);
+        SyncPluginRuntimeState();
+    }
+
+    private static string ResolvePluginDiscoveryPath(string? configuredPath)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        var baseDirPlugins = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
+        if (Directory.Exists(baseDirPlugins))
+        {
+            return baseDirPlugins;
+        }
+
+        var current = Directory.GetCurrentDirectory();
+        var repoPlugins = Path.GetFullPath(Path.Combine(current, "Plugins"));
+        if (Directory.Exists(repoPlugins))
+        {
+            return repoPlugins;
+        }
+
+        return configuredPath ?? string.Empty;
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)
@@ -793,19 +930,6 @@ public partial class MainWindow : Window
         }
 
         return null;
-    }
-
-    private static IReadOnlyList<FilePickerFileType> BuildDialogFilters(IReadOnlyList<FileFormatDescriptor> formats)
-    {
-        return formats
-            .Select(format => new FilePickerFileType(format.DisplayName)
-            {
-                Patterns = format.Extensions
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Select(static extension => $"*{extension}")
-                    .ToArray()
-            })
-            .ToArray();
     }
 
     private static T? FindAncestor<T>(Visual? visual) where T : class
@@ -835,4 +959,212 @@ public partial class MainWindow : Window
         Thread.CurrentThread.CurrentUICulture = culture;
     }
 
+    private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries)
+    {
+        foreach (var existing in catalogRepository.GetAll())
+        {
+            using var document = catalogRepository.Collection.GetDocument(existing.Id);
+            if (document is not null)
+            {
+                catalogRepository.Collection.Delete(document);
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+    }
+
+    private static IReadOnlyList<CatalogDocument> ExtractCatalogEntries(object? payload)
+    {
+        if (TryExtractRows(payload, out var rows))
+        {
+            return BuildEntriesFromRows(rows);
+        }
+
+        if (TryExtractPathEntries(payload, out var pathEntries))
+        {
+            return BuildEntriesFromPaths(pathEntries);
+        }
+
+        return [];
+    }
+
+    private static bool TryExtractRows(object? payload, out IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        if (payload is IEnumerable<Dictionary<string, object?>> typedRows)
+        {
+            rows = typedRows.ToArray();
+            return true;
+        }
+
+        rows = [];
+        return false;
+    }
+
+    private static bool TryExtractPathEntries(object? payload, out IReadOnlyList<(string Path, long Size)> entries)
+    {
+        entries = [];
+        if (payload is null)
+        {
+            return false;
+        }
+
+        var entriesProperty = payload.GetType().GetProperty("Entries", BindingFlags.Instance | BindingFlags.Public);
+        if (entriesProperty?.GetValue(payload) is not System.Collections.IEnumerable rawEntries)
+        {
+            return false;
+        }
+
+        var result = new List<(string Path, long Size)>();
+        foreach (var raw in rawEntries)
+        {
+            if (raw is null)
+            {
+                continue;
+            }
+
+            var path = raw.GetType().GetProperty("Path", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw) as string;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            var sizeValue = raw.GetType().GetProperty("SizeBytes", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw);
+            var size = sizeValue is null ? 0L : Convert.ToInt64(sizeValue, CultureInfo.InvariantCulture);
+
+            result.Add((path.Trim(), size));
+        }
+
+        entries = result;
+        return result.Count > 0;
+    }
+
+    private static IReadOnlyList<CatalogDocument> BuildEntriesFromRows(IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        var results = new List<CatalogDocument>();
+        foreach (var row in rows)
+        {
+            var id = ReadString(row, "id");
+            var name = ReadString(row, "name");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            var parentId = ReadString(row, "parentId");
+            if (string.Equals(parentId, "-1", StringComparison.Ordinal))
+            {
+                parentId = null;
+            }
+
+            var normalizedType = ReadString(row, "type").ToLowerInvariant();
+            var documentType = normalizedType switch
+            {
+                "folder" => CatalogDocumentType.Folder,
+                "media" => CatalogDocumentType.Media,
+                _ => CatalogDocumentType.Media
+            };
+
+            results.Add(new CatalogDocument
+            {
+                Id = string.IsNullOrWhiteSpace(id) ? $"doc-{Guid.NewGuid():N}" : id,
+                Name = name,
+                ParentId = parentId,
+                Type = documentType,
+                Size = ReadLong(row, "size", "sizeBytes"),
+                ChildrenCount = ReadLong(row, "childrenCount")
+            });
+        }
+
+        return results;
+    }
+
+    private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(
+        IReadOnlyList<(string Path, long Size)> pathEntries)
+    {
+        var entries = new Dictionary<string, CatalogDocument>(StringComparer.Ordinal);
+        var rootId = "library";
+        entries[rootId] = new CatalogDocument
+        {
+            Id = rootId,
+            Name = "Library",
+            ParentId = null,
+            Type = CatalogDocumentType.Folder,
+            Size = 0,
+            ChildrenCount = 0
+        };
+
+        foreach (var (path, size) in pathEntries)
+        {
+            var parts = path.Replace('\\', '/')
+                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 0)
+            {
+                continue;
+            }
+
+            var currentParentId = rootId;
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var name = parts[i];
+                var isFile = i == parts.Length - 1;
+                var id = $"{currentParentId}/{name}".ToLowerInvariant();
+                if (entries.ContainsKey(id))
+                {
+                    currentParentId = id;
+                    continue;
+                }
+
+                entries[id] = new CatalogDocument
+                {
+                    Id = id,
+                    Name = name,
+                    ParentId = currentParentId,
+                    Type = isFile ? CatalogDocumentType.Media : CatalogDocumentType.Folder,
+                    Size = isFile ? size : 0L,
+                    ChildrenCount = 0L
+                };
+
+                currentParentId = id;
+            }
+        }
+
+        return entries.Values.ToArray();
+    }
+
+    private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
+    {
+        return row.TryGetValue(key, out var value) && value is not null
+            ? value.ToString() ?? string.Empty
+            : string.Empty;
+    }
+
+    private static long ReadLong(IReadOnlyDictionary<string, object?> row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!row.TryGetValue(key, out var value) || value is null)
+            {
+                continue;
+            }
+
+            if (value is long direct)
+            {
+                return direct;
+            }
+
+            if (long.TryParse(value.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return 0L;
+    }
+
 }
+

@@ -1,5 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Csv;
@@ -9,19 +15,21 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
     private static readonly string[] HeaderColumns = ["NodeId", "ParentId", "Kind", "Name", "SizeBytes"];
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-csv",
-            "SkyCD CSV",
-            [".csv"],
+        new(
+            FormatId: "skycd-csv",
+            DisplayName: "SkyCD CSV",
+            Extensions: [".csv"],
+            MimeTypes: ["text/csv"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "text/csv");
+            CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
             var headerLine = await reader.ReadLineAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(headerLine))
             {
@@ -83,12 +91,14 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = ResolveRows(request.Payload);
-            using var writer = new StreamWriter(request.Target, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
+            using var writer = new StreamWriter(request.Target,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
             await writer.WriteLineAsync(string.Join(",", HeaderColumns));
 
             foreach (var row in rows)

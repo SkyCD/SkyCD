@@ -13,10 +13,12 @@ public sealed partial class OptionsPluginItem : ObservableObject
         string extendedInfo,
         bool supportsConfiguration = false,
         bool isEnabled = true,
-        string? id = null)
+        string? id = null,
+        string? authorUrl = null)
     {
         Name = name;
         Type = type;
+        AuthorUrl = authorUrl;
         ExtendedInfo = extendedInfo;
         SupportsConfiguration = supportsConfiguration;
         this.isEnabled = isEnabled;
@@ -29,10 +31,13 @@ public sealed partial class OptionsPluginItem : ObservableObject
 
     public string Type { get; }
 
+    public string? AuthorUrl { get; }
+
+    public bool HasAuthorUrl => !string.IsNullOrWhiteSpace(AuthorUrl);
+
     public string ExtendedInfo { get; }
 
     public bool SupportsConfiguration { get; }
 
-    [ObservableProperty]
-    private bool isEnabled;
+    [ObservableProperty] private bool isEnabled;
 }

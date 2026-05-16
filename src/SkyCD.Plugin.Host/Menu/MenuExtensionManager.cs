@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Plugin.Host.Menu;
@@ -7,9 +12,11 @@ namespace SkyCD.Plugin.Host.Menu;
 /// </summary>
 public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menuCapabilities)
 {
-    private readonly IReadOnlyList<(IMenuPluginCapability Capability, IReadOnlyCollection<MenuContribution> Contributions)> _bindings = menuCapabilities
-        .Select(static capability => (capability, capability.GetMenuContributions()))
-        .ToList();
+    private readonly
+        IReadOnlyList<(IMenuPluginCapability Capability, IReadOnlyCollection<MenuContribution> Contributions)>
+        _bindings = menuCapabilities
+            .Select(static capability => (capability, capability.GetMenuContributions()))
+            .ToList();
 
     public IReadOnlyList<MenuContribution> GetMenuContributions(string? location = null)
     {
@@ -24,6 +31,7 @@ public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menu
         }
 
         return contributions
+            .DistinctBy(static contribution => contribution.CommandId)
             .OrderBy(contribution => contribution.Order)
             .ThenBy(contribution => contribution.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();

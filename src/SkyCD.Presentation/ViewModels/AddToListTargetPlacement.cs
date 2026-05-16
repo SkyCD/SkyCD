@@ -2,6 +2,6 @@ namespace SkyCD.Presentation.ViewModels;
 
 public enum AddToListTargetPlacement
 {
-    SelectedFolder,
-    NewMedia
+    SelectedFolder = 0,
+    NewMedia = 1
 }

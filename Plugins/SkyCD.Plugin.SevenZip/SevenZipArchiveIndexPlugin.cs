@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SharpCompress.Archives.SevenZip;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
@@ -17,15 +23,16 @@ public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
     }
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-7z",
-            "7z Archive Index",
-            [".7z"],
+        new(
+            FormatId: "skycd-7z",
+            DisplayName: "7z Archive Index",
+            Extensions: [".7z"],
+            MimeTypes: ["application/x-7z-compressed", "application/x-7z", "application/7z"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-7z-compressed");
+            CanWrite: false);
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -34,7 +41,8 @@ public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -142,21 +150,3 @@ public sealed record SevenZipEntryInfo(
     bool IsDirectory,
     long SizeBytes,
     DateTime? ModifiedUtc);
-
-public sealed class SharpCompressSevenZipEntryReader : ISevenZipEntryReader
-{
-    public IReadOnlyCollection<SevenZipEntryInfo> ReadEntries(Stream source)
-    {
-        using var archive = SevenZipArchive.Open(source);
-        return archive.Entries
-            .Where(entry => !entry.IsEncrypted)
-            .Select(entry => new SevenZipEntryInfo(
-                entry.Key ?? string.Empty,
-                entry.IsDirectory,
-                entry.Size,
-                entry.LastModifiedTime is DateTime value
-                    ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
-                    : null))
-            .ToList();
-    }
-}

@@ -1,3 +1,5 @@
+using SkyCD.Cli.Enum;
+
 namespace SkyCD.Cli;
 
 public sealed class CliRunResult

@@ -1,13 +1,22 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Reflection;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using SkyCD.Formatting;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class AboutDialogViewModel : ObservableObject
 {
+    private const string FallbackProductName = "SkyCD";
+    private const string FallbackVersion = "0.0.0";
+    private const string FallbackWebsite = "";
     private readonly Process currentProcess;
     private readonly TimeProvider timeProvider;
     private TimeSpan lastTotalProcessorTime;
@@ -15,14 +24,33 @@ public partial class AboutDialogViewModel : ObservableObject
 
     public AboutDialogViewModel()
         : this(
-            "SkyCD",
-            "3.0.0",
-            "https://github.com/SkyCD/SkyCD",
+            ResolveProductName(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()),
+            ResolveVersion(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()),
+            ResolveWebsite(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()),
             AppDomain.CurrentDomain.GetAssemblies(),
             AppContext.BaseDirectory,
             Process.GetCurrentProcess(),
             TimeProvider.System)
     {
+    }
+
+    public static AboutDialogViewModel CreateFromMainAssembly(
+        Assembly mainAssembly,
+        IEnumerable<Assembly>? loadedAssemblies = null,
+        string? baseDirectory = null,
+        Process? process = null,
+        TimeProvider? timeProvider = null)
+    {
+        ArgumentNullException.ThrowIfNull(mainAssembly);
+
+        return new AboutDialogViewModel(
+            ResolveProductName(mainAssembly),
+            ResolveVersion(mainAssembly),
+            ResolveWebsite(mainAssembly),
+            loadedAssemblies,
+            baseDirectory,
+            process,
+            timeProvider);
     }
 
     public AboutDialogViewModel(
@@ -42,7 +70,8 @@ public partial class AboutDialogViewModel : ObservableObject
             ? AppContext.BaseDirectory
             : baseDirectory;
 
-        LicensePath = ResolveLicensePath(normalizedBaseDirectory) ?? Path.Combine(normalizedBaseDirectory, "LICENSE.md");
+        LicensePath = ResolveLicensePath(normalizedBaseDirectory) ??
+                      Path.Combine(normalizedBaseDirectory, "LICENSE.md");
         LicenseText = LoadLicenseText(normalizedBaseDirectory);
 
         LoadedAssemblies = new ObservableCollection<LoadedAssemblyEntry>(
@@ -67,32 +96,23 @@ public partial class AboutDialogViewModel : ObservableObject
 
     public ObservableCollection<LoadedAssemblyEntry> LoadedAssemblies { get; }
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
-    [ObservableProperty]
-    private string cpuUsage = "0.0 %";
+    [ObservableProperty] private string cpuUsage = "0.0 %";
 
-    [ObservableProperty]
-    private double cpuPercent;
+    [ObservableProperty] private double cpuPercent;
 
-    [ObservableProperty]
-    private string workingSet = "0 B";
+    [ObservableProperty] private string workingSet = "0 B";
 
-    [ObservableProperty]
-    private string managedHeap = "0 B";
+    [ObservableProperty] private string managedHeap = "0 B";
 
-    [ObservableProperty]
-    private double memoryPercent;
+    [ObservableProperty] private double memoryPercent;
 
-    [ObservableProperty]
-    private string threadInfo = "0 threads";
+    [ObservableProperty] private string threadInfo = "0 threads";
 
-    [ObservableProperty]
-    private string uptimeFriendly = "0s";
+    [ObservableProperty] private string uptimeFriendly = "0s";
 
-    [ObservableProperty]
-    private string startTime = string.Empty;
+    [ObservableProperty] private string startTime = string.Empty;
 
     [RelayCommand]
     private void Confirm()
@@ -122,8 +142,8 @@ public partial class AboutDialogViewModel : ObservableObject
 
             CpuPercent = Math.Clamp(cpu, 0d, 100d);
             CpuUsage = $"{CpuPercent:0.0} %";
-            WorkingSet = AboutDialogFormatting.FormatBytes(currentProcess.WorkingSet64);
-            ManagedHeap = AboutDialogFormatting.FormatBytes(GC.GetTotalMemory(false));
+            WorkingSet = SizeFormatting.FormatAboutDialogBytes(currentProcess.WorkingSet64);
+            ManagedHeap = SizeFormatting.FormatAboutDialogBytes(GC.GetTotalMemory(false));
 
             var totalAvailableMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             MemoryPercent = totalAvailableMemory > 0
@@ -133,8 +153,8 @@ public partial class AboutDialogViewModel : ObservableObject
             ThreadInfo = $"{currentProcess.Threads.Count} threads";
 
             var uptime = DateTime.Now - currentProcess.StartTime;
-            UptimeFriendly = AboutDialogFormatting.FormatFriendlyTime(uptime);
-            StartTime = AboutDialogFormatting.FormatStartTime(currentProcess.StartTime);
+            UptimeFriendly = TimeFormatting.FormatAboutDialogDuration(uptime);
+            StartTime = currentProcess.StartTime.ToString("f", CultureInfo.CurrentCulture);
         }
         catch
         {
@@ -209,5 +229,34 @@ public partial class AboutDialogViewModel : ObservableObject
             assemblyName.Version?.ToString() ?? "Unknown",
             copyright,
             repositoryUrl);
+    }
+
+    private static string ResolveProductName(Assembly assembly)
+    {
+        return assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product
+               ?? assembly.GetName().Name
+               ?? FallbackProductName;
+    }
+
+    private static string ResolveVersion(Assembly assembly)
+    {
+        return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+               ?? assembly.GetName().Version?.ToString(3)
+               ?? FallbackVersion;
+    }
+
+    private static string ResolveWebsite(Assembly assembly)
+    {
+        var metadataAttributes = assembly.GetCustomAttributes<AssemblyMetadataAttribute>();
+        foreach (var metadata in metadataAttributes)
+        {
+            if (metadata.Key.Equals("RepositoryUrl", StringComparison.OrdinalIgnoreCase) ||
+                metadata.Key.Equals("Repository", StringComparison.OrdinalIgnoreCase))
+            {
+                return metadata.Value ?? FallbackWebsite;
+            }
+        }
+
+        return FallbackWebsite;
     }
 }

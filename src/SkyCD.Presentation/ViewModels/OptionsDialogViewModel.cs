@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -36,33 +40,26 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<string> FilteredSettingCategories { get; } = [];
 
-    [ObservableProperty]
-    private string pluginPath = string.Empty;
+    [ObservableProperty] private string pluginPath = string.Empty;
 
-    [ObservableProperty]
-    private OptionsPluginItem? selectedPlugin;
+    [ObservableProperty] private OptionsPluginItem? selectedPlugin;
 
-    [ObservableProperty]
-    private LanguageItem selectedLanguage;
+    [ObservableProperty] private LanguageItem selectedLanguage;
 
-    [ObservableProperty]
-    private string infoMessage = string.Empty;
+    [ObservableProperty] private string infoMessage = string.Empty;
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
-    [ObservableProperty]
-    private int selectedTabIndex;
+    [ObservableProperty] private int selectedTabIndex;
 
-    [ObservableProperty]
-    private string settingsSearchText = string.Empty;
+    [ObservableProperty] private string settingsSearchText = string.Empty;
 
-    [ObservableProperty]
-    private string? selectedSettingCategory;
+    [ObservableProperty] private string? selectedSettingCategory;
 
     public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
 
-    public string CurrentCategoryName => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
+    public string CurrentCategoryName =>
+        SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
 
     public bool IsCurrentCategoryVisibleInSearch =>
         string.IsNullOrWhiteSpace(SettingsSearchText) ||
@@ -128,6 +125,21 @@ public partial class OptionsDialogViewModel : ObservableObject
         InfoMessage = $"Configure '{SelectedPlugin.Name}' is not implemented yet.";
     }
 
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginAuthorUrl))]
+    private void OpenSelectedPluginAuthorUrl()
+    {
+        if (SelectedPlugin is null || string.IsNullOrWhiteSpace(SelectedPlugin.AuthorUrl))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = SelectedPlugin.AuthorUrl,
+            UseShellExecute = true
+        });
+    }
+
     [RelayCommand]
     private void Confirm()
     {
@@ -139,13 +151,22 @@ public partial class OptionsDialogViewModel : ObservableObject
         return SelectedPlugin is not null && SelectedPlugin.SupportsConfiguration;
     }
 
+    private bool CanOpenSelectedPluginAuthorUrl()
+    {
+        return SelectedPlugin is not null && SelectedPlugin.HasAuthorUrl;
+    }
+
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
     {
         var snapshot = plugins.ToArray();
         Plugins.Clear();
         foreach (var plugin in snapshot)
         {
-            plugin.IsEnabled = !disabledPluginIds.Contains(plugin.Id);
+            if (disabledPluginIds.Contains(plugin.Id))
+            {
+                plugin.IsEnabled = false;
+            }
+
             Plugins.Add(plugin);
         }
 
@@ -193,6 +214,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
         ConfigurePluginCommand.NotifyCanExecuteChanged();
+        OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedTabIndexChanged(int value)

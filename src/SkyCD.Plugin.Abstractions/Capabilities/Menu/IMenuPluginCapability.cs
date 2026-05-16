@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 /// <summary>
@@ -13,5 +17,6 @@ public interface IMenuPluginCapability : IPluginCapability
     /// <summary>
     /// Executes a contributed command.
     /// </summary>
-    Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default);
+    Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+        CancellationToken cancellationToken = default);
 }

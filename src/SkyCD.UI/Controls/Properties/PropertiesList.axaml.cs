@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Avalonia.Collections;
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace SkyCD.UI.Controls;
+namespace SkyCD.UI.Controls.Properties;
 
 public partial class PropertiesList : UserControl
 {

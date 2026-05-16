@@ -1,4 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using DryIoc;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Runtime.Documents;
+
 namespace SkyCD.Plugin.Runtime.Discovery;
 
 /// <summary>
@@ -9,6 +15,10 @@ public sealed class DiscoveredPlugin
     public required string Id { get; init; }
 
     public required string Name { get; init; }
+
+    public PluginAuthorDocument? Author { get; init; }
+
+    public string? ProjectUrl { get; init; }
 
     public required Version Version { get; init; }
 
@@ -21,4 +31,52 @@ public sealed class DiscoveredPlugin
     public required string FileName { get; init; }
 
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
+
+    public void RegisterPluginServices(IRegistrator registrator)
+    {
+        ArgumentNullException.ThrowIfNull(registrator);
+
+        foreach (var capability in Capabilities)
+        {
+            RegisterPluginService(registrator, capability.GetType(), capability);
+
+            foreach (var interfaceType in capability.GetType()
+                         .GetInterfaces()
+                         .Where(static type => type != typeof(IPluginCapability))
+                         .Where(static type => typeof(IPluginCapability).IsAssignableFrom(type)))
+            {
+                RegisterPluginService(registrator, interfaceType, capability);
+            }
+        }
+    }
+
+    public PluginDocument ToDocument()
+    {
+        return new PluginDocument
+        {
+            Id = Id,
+            Name = Name,
+            Author = Author,
+            ProjectUrl = ProjectUrl,
+            Version = Version.ToString(),
+            Constraints = new PluginConstraintsDocument
+            {
+                MinHostVersion = MinHostVersion.ToString(),
+                MaxHostVersion = MaxHostVersion?.ToString()
+            },
+            Description = Description,
+            AssemblyPath = FileName,
+            IsEnabled = true,
+            IsAvailable = true,
+            LastDiscoveredAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static void RegisterPluginService(IRegistrator registrator, Type serviceType, IPluginCapability capability)
+    {
+        registrator.RegisterInstance(serviceType, capability,
+            ifAlreadyRegistered: IfAlreadyRegistered.AppendNewImplementation);
+        registrator.RegisterInstance(serviceType, capability, serviceKey: serviceType,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    }
 }

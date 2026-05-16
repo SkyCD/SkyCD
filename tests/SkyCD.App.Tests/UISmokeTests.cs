@@ -1,4 +1,10 @@
+using System.Collections.Generic;
+using SkyCD.Documents;
+using SkyCD.Documents.Collections;
+using SkyCD.Documents.Enum;
+using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 
@@ -11,10 +17,10 @@ public class UISmokeTests
     [Fact]
     public void MainWindow_ShellInitializesWithDefaultState()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
 
         Assert.Equal(BrowserViewMode.Details, vm.CurrentViewMode);
-        Assert.Equal(BrowserSortMode.Name, vm.CurrentSortMode);
+        Assert.Equal("Name", vm.CurrentSortMode);
         Assert.NotNull(vm.SelectedTreeNode);
         Assert.NotEmpty(vm.BrowserItems);
     }
@@ -22,7 +28,7 @@ public class UISmokeTests
     [Fact]
     public void BrowserViewMode_CanBeSwitched()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var initialMode = vm.CurrentViewMode;
 
         vm.SetViewModeCommand.Execute("LargeIcons");
@@ -35,14 +41,14 @@ public class UISmokeTests
     [Fact]
     public void BrowserSortMode_CanBeSwitched()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var initialMode = vm.CurrentSortMode;
 
         vm.SetSortModeCommand.Execute("Type");
         var newMode = vm.CurrentSortMode;
 
         Assert.NotEqual(initialMode, newMode);
-        Assert.Equal(BrowserSortMode.Type, newMode);
+        Assert.Equal("Type", newMode);
     }
 
     [Fact]
@@ -75,7 +81,7 @@ public class UISmokeTests
             "Test Item",
             "folder",
             "Test comments",
-            new Dictionary<string, object?>());
+            new PropertiesCollection());
 
         Assert.False(vm.DialogAccepted);
         vm.ConfirmCommand.Execute(null);
@@ -139,11 +145,16 @@ public class UISmokeTests
     [Fact]
     public void MainShell_StatusBarToggle_Works()
     {
-        var vm = new MainWindowViewModel();
+        var vm = CreateViewModel();
         var initialState = vm.IsStatusBarVisible;
 
         vm.ToggleStatusBarCommand.Execute(null);
 
         Assert.NotEqual(initialState, vm.IsStatusBarVisible);
+    }
+
+    private static MainWindowViewModel CreateViewModel()
+    {
+        return MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
     }
 }

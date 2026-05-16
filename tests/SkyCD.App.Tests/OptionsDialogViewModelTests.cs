@@ -1,4 +1,6 @@
+using System.Linq;
 using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 
@@ -31,8 +33,10 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         var plugins = new[]
         {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0", supportsConfiguration: true),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0", supportsConfiguration: true)
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0",
+                supportsConfiguration: true),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0",
+                supportsConfiguration: true)
         };
 
         vm.SetPlugins(plugins);
@@ -48,8 +52,10 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         var plugins = new[]
         {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0", supportsConfiguration: false),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0", supportsConfiguration: false)
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0",
+                supportsConfiguration: false),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0",
+                supportsConfiguration: false)
         };
 
         vm.SetPlugins(plugins);

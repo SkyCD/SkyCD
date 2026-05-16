@@ -1,4 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Markdown;
@@ -6,15 +12,16 @@ namespace SkyCD.Plugin.Markdown;
 public sealed class MarkdownCatalogExportPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-md",
-            "SkyCD Markdown Export",
-            [".md"],
+        new(
+            FormatId: "skycd-md",
+            DisplayName: "SkyCD Markdown Export",
+            Extensions: [".md"],
+            MimeTypes: ["text/markdown"],
             CanRead: false,
-            CanWrite: true,
-            MimeType: "text/markdown");
+            CanWrite: true);
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatReadResult
         {
@@ -23,15 +30,18 @@ public sealed class MarkdownCatalogExportPlugin : IFileFormatPluginCapability
         });
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("Markdown export payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException(
+                           "Markdown export payload must be a list of row dictionaries.");
 
             var orderedRows = rows
-                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null, StringComparer.Ordinal)
+                .OrderBy(row => row.TryGetValue("nodeId", out var nodeId) ? nodeId?.ToString() : null,
+                    StringComparer.Ordinal)
                 .ToList();
 
             var byParent = orderedRows

@@ -1,10 +1,10 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using SkyCD.Presentation.ViewModels;
-using System;
-using System.ComponentModel;
-using System.Diagnostics;
 
 namespace SkyCD.App.Views;
 

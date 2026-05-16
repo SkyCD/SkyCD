@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -9,5 +11,5 @@ internal sealed record CliCommandExecutionContext(
     FileFormatManager FileFormatManager,
     CliContributionRegistry Registry,
     IReadOnlyList<DiscoveredPlugin> DiscoveredPlugins,
-    IReadOnlyList<string> PluginDirectories,
+    string? PluginDirectory,
     CancellationToken CancellationToken);

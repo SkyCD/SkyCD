@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
 
 /// <summary>

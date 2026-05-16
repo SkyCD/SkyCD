@@ -1,3 +1,4 @@
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -22,32 +23,23 @@ public partial class AddToListDialogViewModel : ObservableObject
 
     public bool IsTargetNewMedia => TargetPlacement == AddToListTargetPlacement.NewMedia;
 
-    [ObservableProperty]
-    private AddToListSourceMode sourceMode = AddToListSourceMode.Media;
+    [ObservableProperty] private AddToListSourceMode sourceMode = AddToListSourceMode.Media;
 
-    [ObservableProperty]
-    private AddToListTargetPlacement targetPlacement = AddToListTargetPlacement.SelectedFolder;
+    [ObservableProperty] private AddToListTargetPlacement targetPlacement = AddToListTargetPlacement.SelectedFolder;
 
-    [ObservableProperty]
-    private bool includeMediaInfo = true;
+    [ObservableProperty] private bool includeMediaInfo = true;
 
-    [ObservableProperty]
-    private bool includeSubfolders;
+    [ObservableProperty] private bool includeSubfolders;
 
-    [ObservableProperty]
-    private bool includeExtendedInfo;
+    [ObservableProperty] private bool includeExtendedInfo;
 
-    [ObservableProperty]
-    private string mediaName = string.Empty;
+    [ObservableProperty] private string mediaName = string.Empty;
 
-    [ObservableProperty]
-    private string sourceValue = string.Empty;
+    [ObservableProperty] private string sourceValue = string.Empty;
 
-    [ObservableProperty]
-    private bool dialogAccepted;
+    [ObservableProperty] private bool dialogAccepted;
 
-    [ObservableProperty]
-    private string? validationMessage;
+    [ObservableProperty] private string? validationMessage;
 
     public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? "Address" : "Folder";
 

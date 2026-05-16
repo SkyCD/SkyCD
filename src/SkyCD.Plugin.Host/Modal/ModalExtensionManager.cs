@@ -1,5 +1,11 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
+using SkyCD.Plugin.Host.Exceptions;
 
 namespace SkyCD.Plugin.Host.Modal;
 
@@ -15,6 +21,7 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
             return new ModalBinding(pluginId, capability, capability.Modal);
         })
         .ToList();
+
     private readonly SemaphoreSlim _blockingModalGate = new(1, 1);
     private readonly ConcurrentDictionary<string, byte> _activeModalIds = new(StringComparer.OrdinalIgnoreCase);
 
@@ -93,7 +100,8 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
             {
                 result = await resolved.Capability.OpenModalAsync(request, linkedCts.Token);
             }
-            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested ||
+                                                     cancellationToken.IsCancellationRequested)
             {
                 return new ModalOpenResult
                 {
@@ -148,7 +156,7 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
             return (binding.Capability, binding.Modal);
         }
 
-        throw new InvalidOperationException($"No plugin capability found for modal '{modalId}'.");
+        throw new ModalCapabilityNotFoundException(modalId);
     }
 
     private static string? ValidatePermissions(ModalDescriptor modal, IReadOnlyCollection<string> grantedPermissions)

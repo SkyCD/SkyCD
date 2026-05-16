@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.IO.Compression;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Zip;
@@ -6,15 +11,16 @@ namespace SkyCD.Plugin.Zip;
 public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-zip",
-            "ZIP Archive Index",
-            [".zip"],
+        new(
+            FormatId: "skycd-zip",
+            DisplayName: "ZIP Archive Index",
+            Extensions: [".zip"],
+            MimeTypes: ["application/zip"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/zip");
+            CanWrite: false);
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -23,7 +29,8 @@ public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {

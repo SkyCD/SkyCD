@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+
 namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 /// <summary>

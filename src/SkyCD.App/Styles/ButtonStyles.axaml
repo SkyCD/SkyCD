@@ -1,17 +1,27 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:cc="clr-namespace:SkyCD.UI.Controls;assembly=SkyCD.UI">
-    <Style Selector="cc|ClassicToolbarButton">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Padding" Value="2,1"/>
+        xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI">
+    <Style Selector="ct|ClassicToolbarButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="2,1" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Image Width="16"
+                           Height="16"
+                           Source="{TemplateBinding ImageSrc}" />
+                    <TextBlock Text="{TemplateBinding Text}" />
+                </StackPanel>
+            </ControlTemplate>
+        </Setter>
     </Style>
-    <Style Selector="cc|ClassicToolbarButton:pointerover">
-        <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}"/>
+    <Style Selector="ct|ClassicToolbarButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}" />
     </Style>
-    <Style Selector="cc|ClassicToolbarButton:pressed">
-        <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}"/>
+    <Style Selector="ct|ClassicToolbarButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
     </Style>
-    <Style Selector="cc|ClassicToolbarButton:disabled">
-        <Setter Property="Opacity" Value="0.5"/>
+    <Style Selector="ct|ClassicToolbarButton:disabled">
+        <Setter Property="Opacity" Value="0.5" />
     </Style>
 </Styles>

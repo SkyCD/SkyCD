@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using Xunit;
+
 namespace SkyCD.App.Tests;
 
 public class SaveCatalogAsUiContractTests

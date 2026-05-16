@@ -1,4 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -14,19 +20,21 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
         .Build();
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-yaml",
-            "SkyCD YAML",
-            [".yaml", ".yml"],
+        new(
+            FormatId: "skycd-yaml",
+            DisplayName: "SkyCD YAML",
+            Extensions: [".yaml", ".yml"],
+            MimeTypes: ["application/yaml", "text/yaml"],
             CanRead: true,
-            CanWrite: true,
-            MimeType: "application/yaml");
+            CanWrite: true);
 
-    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(request.Source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
             var yaml = await reader.ReadToEndAsync(cancellationToken);
 
             if (yaml.Contains("<<:", StringComparison.Ordinal) || yaml.Contains('*'))
@@ -71,12 +79,13 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
         }
     }
 
-    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var rows = request.Payload as List<Dictionary<string, object?>>
-                ?? throw new InvalidOperationException("YAML payload must be a list of row dictionaries.");
+                       ?? throw new InvalidOperationException("YAML payload must be a list of row dictionaries.");
 
             var orderedRows = rows
                 .Select(row => new SortedDictionary<string, string?>(StringComparer.Ordinal)
@@ -117,11 +126,5 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
                 Error = exception.Message
             };
         }
-    }
-
-    private sealed class YamlCatalogDocument
-    {
-        public string? SchemaVersion { get; set; }
-        public List<Dictionary<string, string?>>? Payload { get; set; }
     }
 }

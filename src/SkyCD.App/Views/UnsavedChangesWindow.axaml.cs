@@ -3,13 +3,6 @@ using Avalonia.Interactivity;
 
 namespace SkyCD.App.Views;
 
-public enum UnsavedChangesDecision
-{
-    Save,
-    Discard,
-    Cancel
-}
-
 public partial class UnsavedChangesWindow : Window
 {
     public UnsavedChangesWindow()

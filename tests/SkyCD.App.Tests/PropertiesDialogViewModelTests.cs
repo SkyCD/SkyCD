@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using System.Globalization;
+using SkyCD.Documents.Collections;
 using SkyCD.Presentation.ViewModels;
+using Xunit;
 
 namespace SkyCD.App.Tests;
 
@@ -8,7 +11,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Constructor_InitializesAllProperties()
     {
-        var infoItems = new Dictionary<string, object?> { ["Size"] = "1024 KB" };
+        var infoItems = new PropertiesCollection(new Dictionary<string, object?> { ["Size"] = "1024 KB" });
         var vm = new PropertiesDialogViewModel(
             objectKey: "file123",
             name: "document.pdf",
@@ -26,7 +29,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void DialogAccepted_DefaultsToFalse()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new Dictionary<string, object?>());
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new PropertiesCollection());
 
         Assert.False(vm.DialogAccepted);
     }
@@ -34,7 +37,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void HasInfoTab_IsTrueWhenInfoPropertiesNotEmpty()
     {
-        var infoItems = new Dictionary<string, object?> { ["Property"] = "Value" };
+        var infoItems = new PropertiesCollection(new Dictionary<string, object?> { ["Property"] = "Value" });
         var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", infoItems);
 
         Assert.True(vm.HasInfoTab);
@@ -43,7 +46,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void HasInfoTab_IsFalseWhenInfoPropertiesEmpty()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new Dictionary<string, object?>());
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new PropertiesCollection());
 
         Assert.False(vm.HasInfoTab);
     }
@@ -51,7 +54,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Comments_CanBeModified()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", new Dictionary<string, object?>());
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", new PropertiesCollection());
 
         vm.Comments = "updated comments";
 
@@ -61,7 +64,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Name_CanBeModified()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", new Dictionary<string, object?>());
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "initial", new PropertiesCollection());
 
         vm.Name = "renamed";
 
@@ -71,7 +74,7 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void ConfirmCommand_SetsDialogAcceptedTrue()
     {
-        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new Dictionary<string, object?>());
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new PropertiesCollection());
 
         vm.ConfirmCommand.Execute(null);
 
@@ -86,7 +89,7 @@ public class PropertiesDialogViewModelTests
             "name",
             "icon",
             "comments",
-            new Dictionary<string, object?> { ["Size"] = string.Empty });
+            new PropertiesCollection(new Dictionary<string, object?> { ["Size"] = string.Empty }));
 
         Assert.Equal("Unknown", vm.InfoProperties["Size"]);
     }
@@ -99,12 +102,12 @@ public class PropertiesDialogViewModelTests
             "name",
             "icon",
             "comments",
-            new Dictionary<string, object?>
+            new PropertiesCollection(new Dictionary<string, object?>
             {
                 ["Zeta"] = "1",
                 ["Alpha"] = "2",
                 ["Middle"] = "3"
-            });
+            }));
 
         Assert.Equal(["Alpha", "Middle", "Zeta"], vm.InfoProperties.Keys);
     }
@@ -121,7 +124,7 @@ public class PropertiesDialogViewModelTests
                 "name",
                 "icon",
                 "comments",
-                new Dictionary<string, object?> { ["Flag"] = true });
+                new PropertiesCollection(new Dictionary<string, object?> { ["Flag"] = true }));
 
             Assert.Equal("Taip", vm.InfoProperties["Flag"]);
         }

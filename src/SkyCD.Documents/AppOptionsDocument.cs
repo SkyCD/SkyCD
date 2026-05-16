@@ -1,0 +1,26 @@
+using SkyCD.Couchbase.Attributes;
+using SkyCD.Documents.Repository;
+
+namespace SkyCD.Documents;
+
+[CouchbaseDocument("settings", typeof(AppOptionsDocumentRepository))]
+public sealed class AppOptionsDocument
+{
+    public const string DocumentId = "app-options";
+
+    public WindowOptionsDocument Window { get; set; } = new();
+
+    public bool IsStatusBarVisible { get; set; } = true;
+
+    public BrowserOptionsDocument Browser { get; set; } = new();
+
+    public string PluginPath { get; set; } = string.Empty;
+
+    public string Language { get; set; } = "English";
+
+    public int OptionsTabIndex { get; set; }
+
+    public int AppStartCount { get; set; }
+
+    public string LastOpenedCatalogPath { get; set; } = string.Empty;
+}

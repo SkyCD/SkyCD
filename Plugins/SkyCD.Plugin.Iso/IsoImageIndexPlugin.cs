@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using DiscUtils.Iso9660;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
@@ -17,15 +23,16 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
     }
 
     public FileFormatDescriptor SupportedFormat =>
-        new FileFormatDescriptor(
-            "skycd-iso",
-            "ISO Image Index",
-            [".iso"],
+        new(
+            FormatId: "skycd-iso",
+            DisplayName: "ISO Image Index",
+            Extensions: [".iso"],
+            MimeTypes: ["application/x-iso9660-image"],
             CanRead: true,
-            CanWrite: false,
-            MimeType: "application/x-iso9660-image");
+            CanWrite: false);
 
-    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new FileFormatWriteResult
         {
@@ -34,19 +41,27 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
         });
     }
 
-    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
+    public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var entries = _entryReader.ReadEntries(request.Source);
             var rows = entries
-                .Select(entry => new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                .Select(entry =>
                 {
-                    ["kind"] = entry.IsDirectory ? "folder" : "file",
-                    ["fullPath"] = entry.Path.Replace('\\', '/'),
-                    ["name"] = entry.Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty,
-                    ["sizeBytes"] = entry.SizeBytes.ToString(),
-                    ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
+                    var normalizedPath = NormalizePath(entry.Path);
+                    var name = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()
+                               ?? string.Empty;
+
+                    return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["kind"] = entry.IsDirectory ? "folder" : "file",
+                        ["fullPath"] = normalizedPath,
+                        ["name"] = name,
+                        ["sizeBytes"] = entry.SizeBytes.ToString(),
+                        ["modifiedUtc"] = entry.ModifiedUtc?.ToString("O")
+                    };
                 })
                 .OrderBy(row => row["fullPath"]?.ToString(), StringComparer.Ordinal)
                 .ThenBy(row => row["kind"]?.ToString(), StringComparer.Ordinal)
@@ -67,6 +82,19 @@ public sealed class IsoImageIndexPlugin : IFileFormatPluginCapability
             });
         }
     }
+
+    private static string NormalizePath(string path)
+    {
+        var normalized = path.Replace('\\', '/').TrimStart('/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(static segment =>
+            {
+                var versionSeparator = segment.IndexOf(';');
+                var withoutVersion = versionSeparator >= 0 ? segment[..versionSeparator] : segment;
+                return withoutVersion.ToUpperInvariant();
+            });
+        return string.Join('/', segments);
+    }
 }
 
 public interface IIsoEntryReader
@@ -79,34 +107,3 @@ public sealed record IsoEntryInfo(
     bool IsDirectory,
     long SizeBytes,
     DateTime? ModifiedUtc);
-
-public sealed class DiscUtilsIsoEntryReader : IIsoEntryReader
-{
-    public IReadOnlyCollection<IsoEntryInfo> ReadEntries(Stream source)
-    {
-        using var reader = new CDReader(source, joliet: true);
-        var entries = new List<IsoEntryInfo>();
-        TraverseDirectory(reader, path: string.Empty, entries);
-        return entries;
-    }
-
-    private static void TraverseDirectory(CDReader reader, string path, List<IsoEntryInfo> entries)
-    {
-        foreach (var directory in reader.GetDirectories(path))
-        {
-            var normalized = directory.Replace('\\', '/');
-            entries.Add(new IsoEntryInfo(normalized, IsDirectory: true, SizeBytes: 0, ModifiedUtc: null));
-            TraverseDirectory(reader, normalized, entries);
-        }
-
-        foreach (var file in reader.GetFiles(path))
-        {
-            var normalized = file.Replace('\\', '/');
-            entries.Add(new IsoEntryInfo(
-                normalized,
-                IsDirectory: false,
-                SizeBytes: reader.GetFileLength(normalized),
-                ModifiedUtc: reader.GetLastWriteTimeUtc(normalized)));
-        }
-    }
-}

@@ -1,26 +1,25 @@
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using SkyCD.App.Services;
-using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Plugin.Runtime.DependencyInjection;
-using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.App.Views;
-using PluginServiceProvider = SkyCD.Plugin.Runtime.DependencyInjection.ServiceProvider;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using DryIoc;
+using SkyCD.App.Views;
+using SkyCD.Couchbase;
+using SkyCD.Documents;
+using SkyCD.Documents.Repository;
+using SkyCD.Core.DependencyInjection;
+using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.Versioning;
+using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Host.Menu;
 
 namespace SkyCD.App;
 
 public partial class App : Avalonia.Application
 {
-    private readonly SqliteBrowserDataStore browserDataStore = new();
+    private IContainer? appServiceProvider;
 
     public override void Initialize()
     {
@@ -31,83 +30,42 @@ public partial class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var appOptionsStore = new AppOptionsStore();
-            var pluginServices = CreatePluginServices(appOptionsStore);
+            appServiceProvider = CreateAppServiceProvider();
+            InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
+            var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
+            mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            var mainWindow = appServiceProvider.Resolve<MainWindow>();
+            mainWindow.DataContext = mainWindowViewModel;
 
-            desktop.Exit += (_, _) =>
-            {
-                browserDataStore.Dispose();
-                pluginServices.ServiceProvider.Dispose();
-            };
-            desktop.MainWindow = new MainWindow(
-                appOptionsStore,
-                pluginServices.PluginManager,
-                pluginServices.FileFormatManager)
-            {
-                DataContext = new MainWindowViewModel(browserDataStore),
-            };
+            desktop.Exit += (_, _) => appServiceProvider.Dispose();
+            desktop.MainWindow = mainWindow;
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static PluginUiServices CreatePluginServices(AppOptionsStore appOptionsStore)
+    private static void InitializePlugins(RepositoryManager repositoryManager)
     {
-        IReadOnlyCollection<DiscoveredPlugin> discoveredPlugins = [];
-        var options = appOptionsStore.Load();
-        var pluginPath = string.IsNullOrWhiteSpace(options.PluginPath)
-            ? ResolveDefaultPluginPath()
-            : options.PluginPath;
-        var pluginManager = new PluginManager(
-            NullLogger<PluginManager>.Instance,
-            new AssembliesListFactory(NullLogger.Instance),
-            new DiscoveredPluginFactory());
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        var pluginPath = options.PluginPath;
+        var pluginManager = ServiceProvider.Resolve<PluginManager>();
+        var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
-            pluginManager.Discover(pluginPath, new Version(3, 0, 0));
-
-            discoveredPlugins = pluginManager.Plugins;
+            pluginManager.Discover(pluginPath, hostVersionProvider.Current);
         }
 
-        var pluginList = discoveredPlugins.ToList();
-        var pluginById = pluginList.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
-        var serviceCollectionFactory = new ServiceCollectionFactory();
-        IServiceCollection mergedServices = serviceCollectionFactory.BuildCommonServiceCollection();
-
-        mergedServices.AddSingleton<IReadOnlyList<DiscoveredPlugin>>(pluginList);
-        mergedServices.AddSingleton<IReadOnlyCollection<DiscoveredPlugin>>(pluginList);
-        mergedServices.AddSingleton<IReadOnlyDictionary<string, DiscoveredPlugin>>(pluginById);
-
-        foreach (var plugin in pluginList)
-        {
-            var pluginDescriptors = serviceCollectionFactory.BuildPluginServiceCollection(plugin);
-            foreach (var descriptor in pluginDescriptors)
-            {
-                mergedServices.Add(descriptor);
-            }
-        }
-
-        PluginServiceProvider.Instance.Import(mergedServices);
-        var fileFormatManager = PluginServiceProvider.Instance.GetRequiredService<FileFormatManager>();
-        return new PluginUiServices(fileFormatManager, pluginManager, PluginServiceProvider.Instance);
+        ServiceProvider.ReregisterPluginsService();
     }
 
-    private static string ResolveDefaultPluginPath()
+    private static IContainer CreateAppServiceProvider()
     {
-        var candidates = new[]
+        return ServiceProvider.RegisterChildContainer(static registrator =>
         {
-            Path.Combine(Environment.CurrentDirectory, "Plugins"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins")),
-            Path.Combine(Environment.CurrentDirectory, "Plugins", "samples"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Plugins", "samples"))
-        };
-
-        return candidates.FirstOrDefault(Directory.Exists) ?? string.Empty;
+            registrator.Register<MainWindowViewModel>(Reuse.Singleton);
+            registrator.Register<MainWindow>(Reuse.Singleton);
+        });
     }
-
-    private sealed record PluginUiServices(
-        FileFormatManager FileFormatManager,
-        PluginManager PluginManager,
-        PluginServiceProvider ServiceProvider);
 }

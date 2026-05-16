@@ -1,3 +1,6 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 /// <summary>
@@ -18,5 +21,6 @@ public interface IFileFormatPluginCapability : IPluginCapability
     /// <summary>
     /// Writes structured payload to target stream.
     /// </summary>
-    Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default);
+    Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
+        CancellationToken cancellationToken = default);
 }

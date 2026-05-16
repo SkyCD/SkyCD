@@ -1,4 +1,4 @@
-namespace SkyCD.Cli;
+namespace SkyCD.Cli.Enum;
 
 public enum CliExitCodes
 {

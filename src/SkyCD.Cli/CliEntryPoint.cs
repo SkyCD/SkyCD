@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using System.Threading;
+
 namespace SkyCD.Cli;
 
 public static class CliEntryPoint
@@ -15,7 +19,9 @@ public static class CliEntryPoint
         System.Console.CancelKeyPress += handler;
         try
         {
-            var host = new CliHost(stdout ?? System.Console.Out, stderr ?? System.Console.Error);
+            var host = new CliHost(
+                stdout ?? System.Console.Out,
+                stderr ?? System.Console.Error);
             return host.TryRunAsync(args, cts.Token).GetAwaiter().GetResult();
         }
         finally

@@ -1,22 +1,49 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Localization;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
+using SkyCD.Documents;
+using SkyCD.Documents.Collections;
+using SkyCD.Documents.Repository;
+using SkyCD.Documents.Enum;
+using SkyCD.UI.Controls.Lists;
+using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IBrowserDataStore browserDataStore;
+    private readonly CatalogDocumentRepository? catalogRepository;
+    private readonly bool shouldSeedDefaultCatalog;
+    private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
+    private readonly IStringLocalizer propertyValueLocalizer;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<BrowserItem>> addedItemsByNodeKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, HashSet<string>> deletedItemNamesByNodeKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, Dictionary<string, string>> renamedBrowserItemNamesByNodeKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
+    private IReadOnlyList<MainMenuItemViewModel> topMenuItems;
     private const string DefaultStatusText = "Done.";
 
     public event EventHandler? AddToListRequested;
@@ -29,24 +56,120 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
 
-    public MainWindowViewModel()
-        : this(new InMemoryBrowserDataStore())
+    private MenuExtensionManager menuExtensionManager;
+
+    public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
+        menuExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
+        topMenuItems = BuildTopMenuItems();
+        OnPropertyChanged(nameof(TopMenuItems));
+        OnPropertyChanged(nameof(FileMenuItems));
+        OnPropertyChanged(nameof(EditMenuItems));
+        OnPropertyChanged(nameof(ViewMenuItems));
+        OnPropertyChanged(nameof(ToolsMenuItems));
+        OnPropertyChanged(nameof(HelpMenuItems));
     }
 
-    public MainWindowViewModel(IBrowserDataStore browserDataStore)
+    private MainWindowViewModel(
+        IRepository<CatalogDocument> catalogRepository,
+        IStringLocalizer propertyValueLocalizer,
+        MenuExtensionManager menuExtensionManager,
+        bool shouldSeedDefaultCatalog)
     {
-        this.browserDataStore = browserDataStore ?? throw new ArgumentNullException(nameof(browserDataStore));
-        TreeNodes = browserDataStore.GetTreeNodes();
+        this.catalogRepository = catalogRepository as CatalogDocumentRepository
+                                 ?? throw new InvalidOperationException(
+                                     "Catalog repository must be CatalogDocumentRepository.");
+        this.propertyValueLocalizer =
+            propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
+        this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
+        this.shouldSeedDefaultCatalog = shouldSeedDefaultCatalog;
+
+        EnsureSeedData();
+        TreeNodes = GetTreeNodes();
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
         treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
+        topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
+        RefreshTopMenuState();
+    }
+
+    public MainWindowViewModel(
+        RepositoryManager repositoryManager)
+        : this(
+            repositoryManager.For<CatalogDocument>(),
+            new PropertyValueLocalizer(),
+            CreateEmptyMenuExtensionManager(),
+            RegisterAppStart(repositoryManager))
+    {
+    }
+
+    private MainWindowViewModel(
+        IReadOnlyList<CatalogDocument> catalogEntries,
+        IStringLocalizer? propertyValueLocalizer = null,
+        MenuExtensionManager? menuExtensionManager = null)
+    {
+        inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
+        this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
+        this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
+        shouldSeedDefaultCatalog = false;
+        TreeNodes = BuildTreeNodesFromEntries(inMemoryCatalogEntries);
+
+        var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
+        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
+        topMenuItems = BuildTopMenuItems();
+        SelectedTreeNode = TreeNodes.FirstOrDefault();
+        RefreshBrowserItemsForSelection();
+        RefreshTopMenuState();
+    }
+
+    public static MainWindowViewModel CreateForInMemoryCatalog(
+        IReadOnlyList<CatalogDocument> catalogEntries,
+        IStringLocalizer? propertyValueLocalizer = null,
+        MenuExtensionManager? menuExtensionManager = null)
+    {
+        return new MainWindowViewModel(catalogEntries, propertyValueLocalizer, menuExtensionManager);
+    }
+
+    private static MenuExtensionManager CreateEmptyMenuExtensionManager()
+    {
+        return new MenuExtensionManager(Array.Empty<IMenuPluginCapability>());
+    }
+
+    private static bool RegisterAppStart(RepositoryManager repositoryManager)
+    {
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount++;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+        return options.AppStartCount <= 1;
     }
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
+
+    public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns { get; } =
+    [
+        new()
+        {
+            Header = "Name", ValuePath = "Name",
+            Width = new Avalonia.Controls.GridLength(1, Avalonia.Controls.GridUnitType.Star)
+        },
+        new()
+        {
+            Header = "Type", ValuePath = "DisplayType",
+            Width = new Avalonia.Controls.GridLength(150, Avalonia.Controls.GridUnitType.Pixel)
+        },
+        new()
+        {
+            Header = "Size", ValuePath = "DisplaySize",
+            Width = new Avalonia.Controls.GridLength(120, Avalonia.Controls.GridUnitType.Pixel),
+            HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        }
+    ];
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
@@ -66,11 +189,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsDetailsViewChecked => CurrentViewMode == BrowserViewMode.Details;
 
-    public bool IsSortByNameChecked => CurrentSortMode == BrowserSortMode.Name;
+    public bool IsSortByNameChecked => IsSortMode("Name");
 
-    public bool IsSortByTypeChecked => CurrentSortMode == BrowserSortMode.Type;
+    public bool IsSortByTypeChecked => IsSortMode("Type");
 
-    public bool IsSortBySizeChecked => CurrentSortMode == BrowserSortMode.Size;
+    public bool IsSortBySizeChecked => IsSortMode("Size");
 
     public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
 
@@ -116,14 +239,22 @@ public partial class MainWindowViewModel : ObservableObject
 
     public IReadOnlyList<int> ProgressTransitions => progressTransitions;
 
-    [ObservableProperty]
-    private IReadOnlyList<BrowserItem> browserItems = [];
+    public IReadOnlyList<MainMenuItemViewModel> TopMenuItems => topMenuItems;
+    public IReadOnlyList<MainMenuItemViewModel> FileMenuItems => topMenuItems[0].Items;
+    public IReadOnlyList<MainMenuItemViewModel> EditMenuItems => topMenuItems[1].Items;
+    public IReadOnlyList<MainMenuItemViewModel> ViewMenuItems => topMenuItems[2].Items;
+    public IReadOnlyList<MainMenuItemViewModel> ToolsMenuItems => topMenuItems[3].Items;
+    public IReadOnlyList<MainMenuItemViewModel> HelpMenuItems => topMenuItems[4].Items;
 
-    [ObservableProperty]
-    private BrowserTreeNode? selectedTreeNode;
+    public IReadOnlyList<MainMenuItemViewModel> BrowserContextMenuItems => BuildBrowserContextMenuItems();
 
-    [ObservableProperty]
-    private BrowserItem? selectedBrowserItem;
+    public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => BuildTreeContextMenuItems();
+
+    [ObservableProperty] private IReadOnlyList<CatalogDocument> browserItems = [];
+
+    [ObservableProperty] private BrowserTreeNode? selectedTreeNode;
+
+    [ObservableProperty] private CatalogDocument? selectedBrowserItem;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
@@ -147,28 +278,22 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSortByNameChecked))]
     [NotifyPropertyChangedFor(nameof(IsSortByTypeChecked))]
-    private BrowserSortMode currentSortMode = BrowserSortMode.Name;
+    [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
+    private string currentSortMode = "Name";
 
-    [ObservableProperty]
-    private bool isStatusBarVisible = true;
+    [ObservableProperty] private bool isStatusBarVisible = true;
 
-    [ObservableProperty]
-    private bool isDirtyDocument;
+    [ObservableProperty] private bool isDirtyDocument;
 
-    [ObservableProperty]
-    private string statusText = DefaultStatusText;
+    [ObservableProperty] private string statusText = DefaultStatusText;
 
-    [ObservableProperty]
-    private bool isProgressVisible;
+    [ObservableProperty] private bool isProgressVisible;
 
-    [ObservableProperty]
-    private int progressValue;
+    [ObservableProperty] private int progressValue;
 
-    [ObservableProperty]
-    private BrowserItem? clipboardItem;
+    [ObservableProperty] private CatalogDocument? clipboardItem;
 
-    [ObservableProperty]
-    private string? currentCatalogPath;
+    [ObservableProperty] private string? currentCatalogPath;
 
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
@@ -341,7 +466,15 @@ public partial class MainWindowViewModel : ObservableObject
             addedItemsByNodeKey[nodeKey] = addedItems;
         }
 
-        var importedItem = new BrowserItem(itemName, "Folder", "1 item", "folder");
+        var importedItem = new CatalogDocument
+        {
+            Id = $"imported-{Guid.NewGuid():N}",
+            Name = itemName,
+            ParentId = nodeKey,
+            Type = CatalogDocumentType.Folder,
+            Size = 0,
+            ChildrenCount = 0
+        };
         addedItems.Add(importedItem);
         RefreshBrowserItemsForSelection();
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
@@ -355,6 +488,16 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (SelectedBrowserItem is null)
         {
+            return;
+        }
+
+        if (catalogRepository is not null)
+        {
+            DeleteCatalogEntryFromRepository(SelectedBrowserItem);
+            var deletedNameFromRepository = SelectedBrowserItem.Name;
+            RefreshBrowserItemsForSelection();
+            IsDirtyDocument = true;
+            StatusText = $"Deleted {deletedNameFromRepository}.";
             return;
         }
 
@@ -485,12 +628,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void SetSortMode(string sortKey)
     {
-        if (Enum.TryParse<BrowserSortMode>(sortKey, true, out var sortMode))
-        {
-            CurrentSortMode = sortMode;
-            RefreshBrowserItemsForSelection();
-            StatusText = $"Arrange icons by: {sortMode}.";
-        }
+        CurrentSortMode = NormalizeSortMode(sortKey);
+        RefreshBrowserItemsForSelection();
+        StatusText = $"Arrange icons by: {CurrentSortMode}.";
     }
 
     [RelayCommand]
@@ -562,10 +702,10 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = $"Cut {SelectedBrowserItem.Name}.";
     }
 
-    public void ApplySessionState(BrowserViewMode viewMode, BrowserSortMode sortMode, bool isStatusBarVisible)
+    public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
-        CurrentSortMode = sortMode;
+        CurrentSortMode = NormalizeSortMode(sortMode);
         IsStatusBarVisible = isStatusBarVisible;
         RefreshBrowserItemsForSelection();
     }
@@ -622,7 +762,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool TryResolveNodeFromBrowserSelection([NotNullWhen(true)] out BrowserTreeNode? targetNode)
     {
         if (SelectedBrowserItem is not null &&
-            SelectedBrowserItem.Type.Equals("Folder", StringComparison.OrdinalIgnoreCase))
+            SelectedBrowserItem.Type == CatalogDocumentType.Folder)
         {
             if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
             {
@@ -647,15 +787,15 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey);
-            var nodeTitle = SelectedTreeNode?.Title ?? "Library";
-            var infoProperties = BuildBrowserItemInfoProperties(SelectedBrowserItem, nodeTitle);
+            var infoProperties = GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
                 SelectedBrowserItem.Name,
                 SelectedBrowserItem.IconGlyph,
                 comments,
-                infoProperties);
+                infoProperties,
+                propertyValueLocalizer);
             return true;
         }
 
@@ -669,32 +809,13 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                new Dictionary<string, object?>());
+                new PropertiesCollection(),
+                propertyValueLocalizer);
             return true;
         }
 
         dialog = null;
         return false;
-    }
-
-    private static IReadOnlyDictionary<string, object?> BuildBrowserItemInfoProperties(BrowserItem item, string nodeTitle)
-    {
-        if (!SupportsInfoTab(item.Type))
-        {
-            return new Dictionary<string, object?>();
-        }
-
-        return new Dictionary<string, object?>(StringComparer.CurrentCultureIgnoreCase)
-        {
-            ["Type"] = item.Type,
-            ["Size"] = item.Size,
-            ["Location"] = nodeTitle
-        };
-    }
-
-    private static bool SupportsInfoTab(string? itemType)
-    {
-        return !string.Equals(itemType, "Folder", StringComparison.OrdinalIgnoreCase);
     }
 
     private string GetObjectComments(string objectKey)
@@ -704,7 +825,7 @@ public partial class MainWindowViewModel : ObservableObject
             : string.Empty;
     }
 
-    private string GetBrowserItemObjectKey(BrowserItem item)
+    private string GetBrowserItemObjectKey(CatalogDocument item)
     {
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var originalName = ResolveOriginalBrowserItemName(nodeKey, item.Name);
@@ -727,7 +848,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var baseItems = browserDataStore.GetBrowserItems(nodeKey);
+        var baseItems = GetBrowserItems(nodeKey);
         if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
         {
             baseItems = baseItems
@@ -749,9 +870,21 @@ public partial class MainWindowViewModel : ObservableObject
             items = items
                 .Select(item =>
                 {
-                    return renamedItems.TryGetValue(item.Name, out var renamedName)
-                        ? item with { Name = renamedName }
-                        : item;
+                    if (!renamedItems.TryGetValue(item.Name, out var renamedName))
+                    {
+                        return item;
+                    }
+
+                    return new CatalogDocument
+                    {
+                        Id = item.Id,
+                        Name = renamedName,
+                        ParentId = item.ParentId,
+                        Type = item.Type,
+                        Size = item.Size,
+                        ChildrenCount = item.ChildrenCount,
+                        Properties = item.Properties
+                    };
                 })
                 .ToArray();
         }
@@ -763,12 +896,12 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var refreshedItems = CurrentSortMode switch
+        var refreshedItems = NormalizeSortMode(CurrentSortMode) switch
         {
-            BrowserSortMode.Type => items.OrderBy(static item => item.Type)
+            "Type" => items.OrderBy(static item => item.DisplayType)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            BrowserSortMode.Size => items.OrderBy(static item => item.Size, StringComparer.OrdinalIgnoreCase)
+            "Size" => items.OrderBy(static item => item.Size)
                 .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
@@ -776,8 +909,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         BrowserItems = refreshedItems;
         SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
-                                 item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
-                             ?? refreshedItems.FirstOrDefault();
+                                  item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
+                              ?? refreshedItems.FirstOrDefault();
     }
 
     private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
@@ -877,7 +1010,7 @@ public partial class MainWindowViewModel : ObservableObject
         progressTransitions.Add(value);
     }
 
-    partial void OnSelectedBrowserItemChanged(BrowserItem? value)
+    partial void OnSelectedBrowserItemChanged(CatalogDocument? value)
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
@@ -889,6 +1022,9 @@ public partial class MainWindowViewModel : ObservableObject
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     partial void OnCurrentViewModeChanged(BrowserViewMode value)
@@ -909,19 +1045,44 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(BrowserGridItemWidth));
         OnPropertyChanged(nameof(BrowserGridItemHeight));
         OnPropertyChanged(nameof(ShowDetailsColumns));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
-    partial void OnCurrentSortModeChanged(BrowserSortMode value)
+    partial void OnCurrentSortModeChanged(string value)
     {
+        CurrentSortMode = NormalizeSortMode(value);
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
         OnPropertyChanged(nameof(IsSortBySizeChecked));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+    }
+
+    private bool IsSortMode(string expected)
+    {
+        return string.Equals(CurrentSortMode, expected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeSortMode(string? sortMode)
+    {
+        return sortMode?.Trim().ToLowerInvariant() switch
+        {
+            "type" => "Type",
+            "size" => "Size",
+            _ => "Name"
+        };
     }
 
     partial void OnIsDirtyDocumentChanged(bool value)
     {
         OnPropertyChanged(nameof(IsSaveEnabled));
         SaveCatalogCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     partial void OnProgressValueChanged(int value)
@@ -929,9 +1090,496 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ProgressText));
     }
 
-    partial void OnClipboardItemChanged(BrowserItem? value)
+    partial void OnClipboardItemChanged(CatalogDocument? value)
     {
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+    }
+
+    partial void OnIsStatusBarVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildTopMenuItems()
+    {
+        var menuItems = new List<MainMenuItemViewModel>
+        {
+            new MainMenuItemViewModel
+            {
+                Header = "_File",
+                Items =
+                [
+                    new MainMenuItemViewModel { Header = "_New", HotKey = "Ctrl+N", Command = NewCatalogCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_Open...", HotKey = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel { Header = "_Save", HotKey = "Ctrl+S", Command = SaveCatalogCommand },
+                    new MainMenuItemViewModel
+                        { Header = "Save _As...", HotKey = "F12", Command = SaveCatalogAsCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "E_xit", Command = ExitApplicationCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_Edit",
+                Items =
+                [
+                    new MainMenuItemViewModel { Header = "_Add...", HotKey = "F2", Command = AddItemCommand },
+                    new MainMenuItemViewModel { Header = "_Delete", HotKey = "Delete", Command = DeleteItemCommand },
+                    Separator(),
+                    new MainMenuItemViewModel
+                        { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_View",
+                Items =
+                [
+                    CheckedMenuItem(IsStatusBarVisible, "_StatusBar", ToggleStatusBarCommand, key: "statusbar"),
+                    Separator(),
+                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles", "view_tiles"),
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons",
+                        "view_small"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons",
+                        "view_large"),
+                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List", "view_list"),
+                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details", "view_details"),
+                    Separator(),
+                    new MainMenuItemViewModel
+                    {
+                        Header = "Arrange Icons By",
+                        Items =
+                        [
+                            CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name", "sort_name"),
+                            CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type", "sort_type"),
+                            CheckedMenuItem(IsSortBySizeChecked, "_Size", SetSortModeCommand, "Size", "sort_size")
+                        ]
+                    },
+                    new MainMenuItemViewModel { Header = "_Refresh", HotKey = "F5", Command = RefreshCommand }
+                ]
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_Tools",
+                Items = GetToolsMenuItems()
+            },
+            new MainMenuItemViewModel
+            {
+                Header = "_Help",
+                Items =
+                [
+                    new MainMenuItemViewModel
+                        { Header = "Project website in _SourceForge.NET", Command = OpenProjectWebsiteCommand },
+                    new MainMenuItemViewModel { Header = "Project area in _GitHub", Command = OpenGithubAreaCommand },
+                    Separator(),
+                    new MainMenuItemViewModel { Header = "_About...", Command = OpenAboutCommand }
+                ]
+            }
+        };
+
+        return menuItems;
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> GetToolsMenuItems()
+    {
+        var toolsMenuItems = new List<MainMenuItemViewModel>
+        {
+            new MainMenuItemViewModel
+                { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+        };
+
+        // Add plugin menu contributions to Tools menu
+        var menuContributions = menuExtensionManager.GetMenuContributions("Tools");
+        if (menuContributions.Any())
+        {
+            toolsMenuItems.Add(Separator());
+
+            foreach (var contribution in menuContributions)
+            {
+                toolsMenuItems.Add(new MainMenuItemViewModel
+                {
+                    Header = contribution.Title,
+                    Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
+                });
+            }
+        }
+
+        return toolsMenuItems;
+    }
+
+    private async void ExecutePluginMenuCommand(string commandId)
+    {
+        try
+        {
+            StatusText = $"Executing plugin command '{commandId}'...";
+
+            var context = new MenuCommandContext
+            {
+                ActiveCatalogId = null,
+                SelectedNodeId = null,
+                Properties = null,
+                HostApi = new ViewModelHostCommandApi(this)
+            };
+
+            var result = await menuExtensionManager.ExecuteAsync(commandId, context,
+                TimeSpan.FromSeconds(30));
+
+            if (result.TimedOut)
+            {
+                StatusText = $"Plugin command '{commandId}' timed out.";
+            }
+            else if (!result.Success)
+            {
+                StatusText = string.IsNullOrWhiteSpace(result.Error)
+                    ? $"Plugin command '{commandId}' failed."
+                    : $"Plugin command failed: {result.Error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Plugin command error: {ex.Message}";
+        }
+    }
+
+    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : IHostCommandApi
+    {
+        public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
+        {
+            viewModel.StatusText = $"Navigated to node {nodeId}.";
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
+        {
+            viewModel.StatusText = message;
+            return Task.CompletedTask;
+        }
+    }
+
+    private static MainMenuItemViewModel Separator()
+    {
+        return new MainMenuItemViewModel { Header = "-" };
+    }
+
+    private void RefreshTopMenuState()
+    {
+        var byKey = FlattenMenuItems(topMenuItems)
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .ToDictionary(item => item.Key!, StringComparer.Ordinal);
+
+        SetMenuHeader(byKey, "statusbar", CheckedHeader(IsStatusBarVisible, "_StatusBar"));
+        SetMenuHeader(byKey, "view_tiles", CheckedHeader(IsTilesViewChecked, "_Tiles"));
+        SetMenuHeader(byKey, "view_small", CheckedHeader(IsSmallIconsViewChecked, "Small _Icons"));
+        SetMenuHeader(byKey, "view_large", CheckedHeader(IsLargeIconsViewChecked, "L_arge Icons"));
+        SetMenuHeader(byKey, "view_list", CheckedHeader(IsListViewChecked, "_List"));
+        SetMenuHeader(byKey, "view_details", CheckedHeader(IsDetailsViewChecked, "_Details"));
+        SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, "_Name"));
+        SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, "_Type"));
+        SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, "_Size"));
+    }
+
+    private static IEnumerable<MainMenuItemViewModel> FlattenMenuItems(IEnumerable<MainMenuItemViewModel> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+            foreach (var child in FlattenMenuItems(item.Items))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static void SetMenuHeader(
+        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
+        string key,
+        string header)
+    {
+        if (byKey.TryGetValue(key, out var item))
+        {
+            item.Header = header;
+        }
+    }
+
+    private static string CheckedHeader(bool isChecked, string title)
+    {
+        return title;
+    }
+
+    private static MainMenuItemViewModel CheckedMenuItem(
+        bool isChecked,
+        string title,
+        IRelayCommand command,
+        object? commandParameter = null,
+        string? key = null)
+    {
+        return new MainMenuItemViewModel
+        {
+            Key = key,
+            Header = CheckedHeader(isChecked, title),
+            Icon = isChecked ? "✓" : "\u00A0",
+            Command = command,
+            CommandParameter = commandParameter
+        };
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
+    {
+        return
+        [
+            new MainMenuItemViewModel
+                { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
+            new MainMenuItemViewModel
+                { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "_View",
+                Items =
+                [
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons"),
+                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List"),
+                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details"),
+                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles")
+                ]
+            },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "Arrange Icons By",
+                Items =
+                [
+                    CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name"),
+                    CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type")
+                ]
+            },
+            new MainMenuItemViewModel { Header = "_Refresh", Command = RefreshCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Add...", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = "_Delete", Command = DeleteItemCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
+        ];
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildTreeContextMenuItems()
+    {
+        return
+        [
+            new MainMenuItemViewModel
+                { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "tree" },
+            new MainMenuItemViewModel
+                { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "tree" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "_View",
+                Items =
+                [
+                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons"),
+                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List"),
+                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details"),
+                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles")
+                ]
+            },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "Arrange Icons By",
+                Items =
+                [
+                    CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name"),
+                    CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type"),
+                    CheckedMenuItem(IsSortBySizeChecked, "_Size", SetSortModeCommand, "Size")
+                ]
+            },
+            new MainMenuItemViewModel { Header = "_Refresh", Command = RefreshCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Add...", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = "_Delete", Command = DeleteItemCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Copy", HotKey = "Ctrl+C", Command = CopyCommand },
+            new MainMenuItemViewModel { Header = "_Paste", HotKey = "Ctrl+V", Command = PasteCommand },
+            new MainMenuItemViewModel { Header = "Cu_t", HotKey = "Ctrl+X", Command = CutCommand },
+            Separator(),
+            new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
+        ];
+    }
+
+    private void EnsureSeedData()
+    {
+        if (!shouldSeedDefaultCatalog || catalogRepository is null || catalogRepository.GetAll().Count > 0)
+        {
+            return;
+        }
+
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+    }
+
+    private IReadOnlyList<BrowserTreeNode> GetTreeNodes()
+    {
+        if (catalogRepository is not null)
+        {
+            var roots = catalogRepository
+                .GetRoots()
+                .Where(entry => entry.Type != CatalogDocumentType.File)
+                .ToArray();
+
+            var treeNodes = roots
+                .Select(root =>
+                {
+                    var descendants = catalogRepository
+                        .GetDescendantsOf(root.Id)
+                        .Where(entry => entry.Type != CatalogDocumentType.File)
+                        .ToList();
+                    descendants.Add(root);
+
+                    var byParent = descendants
+                        .GroupBy(entry => entry.ParentId ?? "__root__", StringComparer.Ordinal)
+                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+                    return BuildTreeNodeFromLookup(root, byParent, isExpanded: true);
+                })
+                .ToArray();
+
+            if (treeNodes.Length > 0)
+            {
+                return treeNodes;
+            }
+
+            return [];
+        }
+
+        return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
+    }
+
+    private IReadOnlyList<CatalogDocument> GetBrowserItems(string nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey))
+        {
+            return [];
+        }
+
+        if (catalogRepository is not null)
+        {
+            var entries = catalogRepository.GetChildrenOf(nodeKey);
+            return entries;
+        }
+
+        var inMemoryEntries = (inMemoryCatalogEntries ?? [])
+            .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
+            .ToArray();
+        return inMemoryEntries;
+    }
+
+    private void DeleteCatalogEntryFromRepository(CatalogDocument item)
+    {
+        if (catalogRepository is null)
+        {
+            return;
+        }
+
+        var descendantIds = catalogRepository
+            .GetDescendantsOf(item.Id)
+            .Select(static entry => entry.Id)
+            .Where(static id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var descendantId in descendantIds)
+        {
+            using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
+            if (descendantDocument is not null)
+            {
+                catalogRepository.Collection.Delete(descendantDocument);
+            }
+        }
+
+        using var targetDocument = catalogRepository.Collection.GetDocument(item.Id);
+        if (targetDocument is not null)
+        {
+            catalogRepository.Collection.Delete(targetDocument);
+        }
+    }
+
+    private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return new PropertiesCollection();
+        }
+
+        if (catalogRepository is not null)
+        {
+            return catalogRepository.Get(itemId)?.Properties ?? new PropertiesCollection();
+        }
+
+        return (inMemoryCatalogEntries ?? [])
+            .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal))
+            ?.Properties ?? new PropertiesCollection();
+    }
+
+    private static BrowserTreeNode BuildTreeNodeFromLookup(
+        CatalogDocument entry,
+        IReadOnlyDictionary<string, List<CatalogDocument>> byParent,
+        bool isExpanded)
+    {
+        byParent.TryGetValue(entry.Id, out var childrenOfCurrent);
+
+        var children = (childrenOfCurrent ?? [])
+            .Select(child => BuildTreeNodeFromLookup(child, byParent, isExpanded: false))
+            .ToArray();
+
+        return new BrowserTreeNode(
+            entry.Id,
+            entry.Name,
+            entry.Type.ResolveIconGlyph(),
+            children,
+            isExpanded);
+    }
+
+    private static IReadOnlyList<BrowserTreeNode> BuildTreeNodesFromEntries(IReadOnlyList<CatalogDocument> entries)
+    {
+        var filteredEntries = entries
+            .Where(entry => entry.Type != CatalogDocumentType.File)
+            .ToList();
+        var byId = filteredEntries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+
+        return filteredEntries
+            .Where(entry => string.IsNullOrWhiteSpace(entry.ParentId))
+            .Select(entry => BuildTreeNode(entry, byId, isExpanded: true))
+            .ToArray();
+    }
+
+    private static BrowserTreeNode BuildTreeNode(
+        CatalogDocument entry,
+        IReadOnlyDictionary<string, CatalogDocument> byId,
+        bool isExpanded)
+    {
+        var children = byId.Values
+            .Where(candidate => string.Equals(candidate.ParentId, entry.Id, StringComparison.Ordinal))
+            .Select(child => BuildTreeNode(child, byId, isExpanded: false))
+            .ToArray();
+
+        return new BrowserTreeNode(
+            entry.Id,
+            entry.Name,
+            entry.Type.ResolveIconGlyph(),
+            children,
+            isExpanded);
     }
 }

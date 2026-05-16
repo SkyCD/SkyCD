@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace SkyCD.Cli.Execution;
 
 internal static class CliCommandExecutionContextScope
