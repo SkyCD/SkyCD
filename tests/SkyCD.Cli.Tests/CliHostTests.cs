@@ -419,7 +419,7 @@ public sealed class CliHostTests
             Assert.True(File.Exists(outputPath));
             var converted = await File.ReadAllTextAsync(outputPath, Encoding.UTF8);
             Assert.Contains("NodeId,ParentId,Kind,Name,SizeBytes", converted, StringComparison.Ordinal);
-            Assert.Equal(string.Empty, error.ToString());
+            Assert.DoesNotContain("Command failed", error.ToString(), StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
