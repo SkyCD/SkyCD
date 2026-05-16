@@ -21,12 +21,10 @@ using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Core.Versioning;
 
 namespace SkyCD.Cli;
@@ -103,15 +101,9 @@ public sealed class CliHost(
         var pluginManager = ServiceProvider.Resolve<PluginManager>();
         var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
-        IReadOnlyList<DiscoveredPlugin> discoveredPlugins = DiscoverPluginsForCli(
-            cliServiceProvider,
-            pluginPath,
-            hostVersionProvider.Current);
-        var fileFormatManager = new FileFormatManager(
-            discoveredPlugins
-                .SelectMany(static plugin => plugin.Capabilities)
-                .OfType<IFileFormatPluginCapability>()
-                .ToArray());
+        IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
+        ServiceProvider.ReregisterPluginsService();
+        var fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
         using var registry = new CliContributionRegistry();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
@@ -521,40 +513,6 @@ public sealed class CliHost(
         }
 
         return null;
-    }
-
-    private static IReadOnlyList<DiscoveredPlugin> DiscoverPluginsForCli(
-        IResolverContext resolver,
-        string? pluginPath,
-        Version hostVersion)
-    {
-        var assembliesListFactory = resolver.Resolve<AssembliesListFactory>();
-        var discoveredPluginFactory = resolver.Resolve<DiscoveredPluginFactory>();
-        var normalizedDirectories = (pluginPath ?? string.Empty)
-            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(static path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        return assembliesListFactory
-            .BuildFromPaths(normalizedDirectories)
-            .Select(assembly =>
-            {
-                try
-                {
-                    return discoveredPluginFactory.BuildFromAssembly(assembly);
-                }
-                catch (InvalidOperationException)
-                {
-                    return null;
-                }
-            })
-            .Where(static plugin => plugin is not null)
-            .Select(static plugin => plugin!)
-            .Where(plugin =>
-                PluginCompatibilityEvaluator.IsCompatible(plugin.MinHostVersion, plugin.MaxHostVersion, hostVersion))
-            .GroupBy(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(static group => group.First())
-            .ToList();
     }
 
     private static async Task<CliExitCodes> ExecuteContributionCommandAsync(
