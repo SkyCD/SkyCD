@@ -16,6 +16,9 @@ namespace SkyCD.UI.Controls.Lists;
 
 public partial class BrowserItemsView : UserControl
 {
+    private static readonly FuncValueConverter<object?, bool> HasNonEmptyValueConverter =
+        new(value => !string.IsNullOrWhiteSpace(value?.ToString()));
+
     private readonly DetailsListView? detailsListView;
     private readonly ListBox? listModeListBox;
     private readonly ListBox? iconGridListBox;
@@ -338,18 +341,27 @@ public partial class BrowserItemsView : UserControl
         icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
         iconContainer.Children.Add(icon);
 
-        iconContainer.Children.Add(new Border
+        var statusIcon = new Image
         {
             Width = indicatorSize,
             Height = indicatorSize,
-            CornerRadius = new CornerRadius(indicatorRadius),
-            Background = new SolidColorBrush(Color.Parse("#3B82F6")),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Bottom
+        };
+        statusIcon.Bind(Image.SourceProperty, new Binding($"Properties[{ItemStatusIconGlyphPropertyKey}]")
+        {
+            Converter = IconConverter
         });
+        statusIcon.Bind(IsVisibleProperty, new Binding($"Properties[{ItemStatusIconGlyphPropertyKey}]")
+        {
+            Converter = HasNonEmptyValueConverter
+        });
+        iconContainer.Children.Add(statusIcon);
 
         return iconContainer;
     }
+
+    private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
     {

@@ -49,6 +49,30 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void BrowserContextMenu_StatusesSubmenu_AssignsAndClearsStatusIconGlyph()
+    {
+        var vm = CreateViewModel();
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Watched", IconGlyph = "check" },
+            new StatusVariantDocument { Name = "Favorite", IconGlyph = "star" }
+        ]);
+
+        var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Statuses");
+        var watched = statusesMenu.Items.Single(item => item.Header == "Watched");
+        watched.Command!.Execute(watched.CommandParameter);
+
+        Assert.Equal("Watched", vm.SelectedBrowserItem!.Properties["StatusName"]?.ToString());
+        Assert.Equal("check", vm.SelectedBrowserItem.Properties["StatusIconGlyph"]?.ToString());
+
+        var none = statusesMenu.Items.Single(item => item.Header == "_None");
+        none.Command!.Execute(none.CommandParameter);
+
+        Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusName"));
+        Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusIconGlyph"));
+    }
+
+    [Fact]
     public void SetSortModeCommand_AppliesRequestedSortMode()
     {
         var vm = CreateViewModel();

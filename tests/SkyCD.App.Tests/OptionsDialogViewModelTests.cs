@@ -1,4 +1,5 @@
 using System.Linq;
+using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -117,7 +118,7 @@ public class OptionsDialogViewModelTests
         Assert.Equal(0, vm.SelectedTabIndex);
 
         vm.SelectedTabIndex = 99;
-        Assert.Equal(2, vm.SelectedTabIndex);
+        Assert.Equal(3, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -178,6 +179,19 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void SearchText_FiltersStatusesCategory()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "status";
+
+        Assert.Equal(["Statuses"], vm.FilteredSettingCategories);
+        Assert.Equal("Statuses", vm.SelectedSettingCategory);
+        Assert.Equal(3, vm.SelectedTabIndex);
+        Assert.True(vm.ShowStatusesSection);
+    }
+
+    [Fact]
     public void SearchText_DoesNotFilterRightPanelItemCollections()
     {
         var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
@@ -229,5 +243,29 @@ public class OptionsDialogViewModelTests
         Assert.False(vm.ShowMcpAlert);
         vm.IsMcpStatusIconVisible = false;
         Assert.False(vm.IsMcpStatusIconVisible);
+    }
+
+    [Fact]
+    public void StatusVariants_CanBeAddedRemovedAndExported()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Watched", IconGlyph = "check" }
+        ]);
+
+        Assert.Single(vm.StatusVariants);
+        Assert.True(vm.RemoveStatusVariantCommand.CanExecute(null));
+
+        vm.AddStatusVariantCommand.Execute(null);
+        Assert.Equal(2, vm.StatusVariants.Count);
+
+        vm.SelectedStatusVariant = vm.StatusVariants[0];
+        vm.RemoveStatusVariantCommand.Execute(null);
+        Assert.Single(vm.StatusVariants);
+
+        var exported = vm.GetStatusVariants();
+        Assert.Single(exported);
+        Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
     }
 }

@@ -43,8 +43,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
+    private readonly List<StatusVariantDocument> statusVariants = [];
     private IReadOnlyList<MainMenuItemViewModel> topMenuItems;
     private const string DefaultStatusText = "Done.";
+    private const string ItemStatusNamePropertyKey = "StatusName";
+    private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
 
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
@@ -702,12 +705,58 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = $"Cut {SelectedBrowserItem.Name}.";
     }
 
+    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
+    private void ApplyBrowserItemStatus(string? statusName)
+    {
+        if (SelectedBrowserItem is null)
+        {
+            return;
+        }
+
+        var status = statusVariants.FirstOrDefault(variant =>
+            string.Equals(variant.Name, statusName, StringComparison.OrdinalIgnoreCase));
+
+        if (status is null)
+        {
+            SelectedBrowserItem.Properties.Remove(ItemStatusNamePropertyKey);
+            SelectedBrowserItem.Properties.Remove(ItemStatusIconGlyphPropertyKey);
+            StatusText = $"Cleared status for {SelectedBrowserItem.Name}.";
+        }
+        else
+        {
+            SelectedBrowserItem.Properties[ItemStatusNamePropertyKey] = status.Name;
+            SelectedBrowserItem.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
+            StatusText = $"Status '{status.Name}' applied to {SelectedBrowserItem.Name}.";
+        }
+
+        IsDirtyDocument = true;
+        RefreshBrowserItemsForSelection();
+    }
+
     public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
         CurrentSortMode = NormalizeSortMode(sortMode);
         IsStatusBarVisible = isStatusBarVisible;
         RefreshBrowserItemsForSelection();
+    }
+
+    public void SetStatusVariants(IEnumerable<StatusVariantDocument>? variants)
+    {
+        statusVariants.Clear();
+        foreach (var variant in (variants ?? [])
+                     .Where(static variant => !string.IsNullOrWhiteSpace(variant.Name))
+                     .Select(static variant => new StatusVariantDocument
+                     {
+                         Name = variant.Name.Trim(),
+                         IconGlyph = variant.IconGlyph.Trim()
+                     }))
+        {
+            statusVariants.Add(variant);
+        }
+
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
     }
 
     private static string GetViewModeDisplayName(BrowserViewMode viewMode)
@@ -1027,6 +1076,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
+        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentViewModeChanged(BrowserViewMode value)
@@ -1336,12 +1386,30 @@ public partial class MainWindowViewModel : ObservableObject
 
     private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
     {
+        var statusItems = new List<MainMenuItemViewModel>
+        {
+            CheckedMenuItem(!HasAssignedStatus(SelectedBrowserItem), "_None", ApplyBrowserItemStatusCommand, null)
+        };
+
+        statusItems.AddRange(statusVariants.Select(variant =>
+            CheckedMenuItem(
+                IsAssignedStatus(SelectedBrowserItem, variant.Name),
+                variant.Name,
+                ApplyBrowserItemStatusCommand,
+                variant.Name)));
+
         return
         [
             new MainMenuItemViewModel
                 { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
             new MainMenuItemViewModel
                 { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "_Statuses",
+                Items = statusItems
+            },
             Separator(),
             new MainMenuItemViewModel
             {
@@ -1590,5 +1658,42 @@ public partial class MainWindowViewModel : ObservableObject
         return entry.Type is CatalogDocumentType.Folder
             or CatalogDocumentType.NetworkFolder
             or CatalogDocumentType.Media;
+    }
+
+    private static bool HasAssignedStatus(CatalogDocument? item)
+    {
+        if (item is null)
+        {
+            return false;
+        }
+
+        return item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value) &&
+               !string.IsNullOrWhiteSpace(value?.ToString());
+    }
+
+    private static bool IsAssignedStatus(CatalogDocument? item, string? expectedStatusName)
+    {
+        if (item is null)
+        {
+            return false;
+        }
+
+        if (!item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value))
+        {
+            return expectedStatusName is null;
+        }
+
+        var assignedStatusName = value?.ToString();
+        if (string.IsNullOrWhiteSpace(assignedStatusName))
+        {
+            return expectedStatusName is null;
+        }
+
+        if (expectedStatusName is null)
+        {
+            return true;
+        }
+
+        return string.Equals(assignedStatusName, expectedStatusName, StringComparison.OrdinalIgnoreCase);
     }
 }

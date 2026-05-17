@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:converters="clr-namespace:SkyCD.App.Converters"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -16,6 +17,10 @@
     <Design.DataContext>
         <vm:OptionsDialogViewModel />
     </Design.DataContext>
+
+    <Window.Resources>
+        <converters:IconGlyphConverter x:Key="IconConverter" />
+    </Window.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
         <Border BorderBrush="#2A2A2A"
@@ -266,6 +271,58 @@
                             <TextBlock Text="{Binding McpAlertMessage}"
                                        Foreground="#FFFFFF"
                                        TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2"
+                                IsVisible="{Binding ShowStatusesSection}"
+                                Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="Item Statuses" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Add status"
+                                    MinWidth="110"
+                                    Command="{Binding AddStatusVariantCommand}" />
+                            <Button Content="Remove status"
+                                    MinWidth="110"
+                                    Command="{Binding RemoveStatusVariantCommand}" />
+                        </StackPanel>
+
+                        <Border BorderBrush="#2E2E2E"
+                                BorderThickness="1">
+                            <Grid RowDefinitions="Auto,*">
+                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                    <Grid ColumnDefinitions="60,2*,2*" ColumnSpacing="10">
+                                        <TextBlock Text="Icon" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="2" Text="Icon Key" FontWeight="SemiBold" />
+                                    </Grid>
+                                </Border>
+                                <ListBox Grid.Row="1"
+                                         ItemsSource="{Binding StatusVariants}"
+                                         SelectedItem="{Binding SelectedStatusVariant}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:StatusVariantItemViewModel">
+                                            <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                                <Grid ColumnDefinitions="60,2*,2*" ColumnSpacing="10">
+                                                    <Image Width="14"
+                                                           Height="14"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <TextBox Grid.Column="2"
+                                                             Text="{Binding IconGlyph, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
                         </Border>
                     </StackPanel>
 

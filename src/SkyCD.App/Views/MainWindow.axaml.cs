@@ -195,6 +195,7 @@ public partial class MainWindow : Window
             options.Browser.ViewMode,
             options.Browser.SortMode,
             options.IsStatusBarVisible);
+        vm.SetStatusVariants(options.StatusVariants);
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
@@ -512,6 +513,7 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
+        e.Dialog.SetStatusVariants(options.StatusVariants);
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -540,6 +542,7 @@ public partial class MainWindow : Window
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
+            options.StatusVariants = e.Dialog.GetStatusVariants().ToList();
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
@@ -548,6 +551,10 @@ public partial class MainWindow : Window
             ApplyLanguage(options.Language);
             (Application.Current as App)?.ApplyMcpSettings();
             RefreshMcpStatusIndicator();
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.SetStatusVariants(options.StatusVariants);
+            }
 
             // Trigger UI refresh to apply new language
             InvalidateVisual();
