@@ -268,4 +268,32 @@ public class OptionsDialogViewModelTests
         Assert.Single(exported);
         Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
     }
+
+    [Fact]
+    public void ConfirmCommand_ShowsStatusAlert_WhenAnyStatusIconIsMissing()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddStatusVariantCommand.Execute(null);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        Assert.True(vm.ShowStatusAlert);
+        Assert.Equal("All status items must have an icon selected.", vm.StatusAlertMessage);
+    }
+
+    [Fact]
+    public void ConfirmCommand_Accepts_WhenAllStatusIconsAreSet()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Watched", IconGlyph = "check" }
+        ]);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.True(vm.DialogAccepted);
+        Assert.False(vm.ShowStatusAlert);
+    }
 }

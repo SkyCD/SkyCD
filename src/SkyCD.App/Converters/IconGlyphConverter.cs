@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -49,6 +50,13 @@ public sealed class IconGlyphConverter : IValueConverter
         var uri = IconMap.GetValueOrDefault(key);
         if (uri is null)
         {
+            if (File.Exists(key))
+            {
+                var bitmap = new Bitmap(key);
+                Cache[key] = bitmap;
+                return bitmap;
+            }
+
             // Try as direct URI
             if (key.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
                 uri = key;

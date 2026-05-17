@@ -1,10 +1,15 @@
 using System;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
+using Avalonia.VisualTree;
 using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Views;
@@ -20,6 +25,9 @@ public partial class OptionsWindow : Window
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
+        AddHandler(DragDrop.DragOverEvent, OnStatusIconSquareDragOver, RoutingStrategies.Bubble, true);
+        AddHandler(DragDrop.DragLeaveEvent, OnStatusIconSquareDragLeave, RoutingStrategies.Bubble, true);
+        AddHandler(DragDrop.DropEvent, OnStatusIconSquareDrop, RoutingStrategies.Bubble, true);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -109,5 +117,86 @@ public partial class OptionsWindow : Window
             currentVm.McpCopyTooltip = "Copy URL";
             currentVm.McpAlertMessage = string.Empty;
         }
+    }
+
+    private async void OnStatusIconSquarePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Border border || border.Tag is not StatusVariantItemViewModel item)
+        {
+            return;
+        }
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select status icon",
+            AllowMultiple = false
+        });
+
+        var localPath = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        item.IconGlyph = localPath;
+        item.IsDropHintVisible = false;
+    }
+
+    private void OnStatusIconSquareDragOver(object? sender, DragEventArgs e)
+    {
+        if (!TryGetStatusIconDropBorder(e.Source, out var border) ||
+            border is null ||
+            border.Tag is not StatusVariantItemViewModel item)
+        {
+            return;
+        }
+
+        e.DragEffects = DragDropEffects.Copy;
+        e.Handled = true;
+        item.IsDropHintVisible = true;
+    }
+
+    private void OnStatusIconSquareDragLeave(object? sender, RoutedEventArgs e)
+    {
+        if (TryGetStatusIconDropBorder(e.Source, out var border) &&
+            border is not null &&
+            border.Tag is StatusVariantItemViewModel item)
+        {
+            item.IsDropHintVisible = false;
+        }
+    }
+
+    private void OnStatusIconSquareDrop(object? sender, DragEventArgs e)
+    {
+        if (!TryGetStatusIconDropBorder(e.Source, out var border) ||
+            border is null ||
+            border.Tag is not StatusVariantItemViewModel item)
+        {
+            return;
+        }
+
+        item.IsDropHintVisible = false;
+        var path = e.DataTransfer.TryGetFiles()?.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        item.IconGlyph = path;
+        e.DragEffects = DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    private static bool TryGetStatusIconDropBorder(object? source, out Border? border)
+    {
+        border = source as Border;
+        while (border is null && source is StyledElement styledElement)
+        {
+            source = styledElement.Parent;
+            border = source as Border;
+        }
+
+        return border is not null && border.Classes.Contains("status-icon-drop");
     }
 }

@@ -9,6 +9,8 @@ public partial class StatusVariantItemViewModel : ObservableObject
 
     [ObservableProperty] private string iconGlyph = string.Empty;
 
+    [ObservableProperty] private bool isDropHintVisible;
+
     public StatusVariantDocument ToDocument()
     {
         return new StatusVariantDocument

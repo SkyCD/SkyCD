@@ -282,12 +282,18 @@
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="Add status"
-                                    MinWidth="110"
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Spacing="8">
+                            <Button Content="+"
+                                    FontSize="16"
+                                    Width="34"
+                                    Height="28"
                                     Command="{Binding AddStatusVariantCommand}" />
-                            <Button Content="Remove status"
-                                    MinWidth="110"
+                            <Button Content="-"
+                                    FontSize="16"
+                                    Width="34"
+                                    Height="28"
                                     Command="{Binding RemoveStatusVariantCommand}" />
                         </StackPanel>
 
@@ -295,7 +301,7 @@
                                 BorderThickness="1">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                    <Grid ColumnDefinitions="60,2*,2*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="84,2*,2*" ColumnSpacing="10">
                                         <TextBlock Text="Icon" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="2" Text="Icon Key" FontWeight="SemiBold" />
@@ -307,22 +313,58 @@
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:StatusVariantItemViewModel">
                                             <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                                <Grid ColumnDefinitions="60,2*,2*" ColumnSpacing="10">
-                                                    <Image Width="14"
-                                                           Height="14"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
+                                                <Grid ColumnDefinitions="84,2*,2*" ColumnSpacing="10">
+                                                    <Border Width="72"
+                                                            Height="40"
+                                                            BorderBrush="#4B5563"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Background="#1F2937"
+                                                            Classes="status-icon-drop"
+                                                            DragDrop.AllowDrop="True"
+                                                            Tag="{Binding}"
+                                                            PointerPressed="OnStatusIconSquarePointerPressed">
+                                                        <Grid>
+                                                            <Image Width="16"
+                                                                   Height="16"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
+                                                            <Border HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Top"
+                                                                    Background="#111827"
+                                                                    CornerRadius="3"
+                                                                    Padding="4,1"
+                                                                    Margin="2"
+                                                                    IsVisible="{Binding IsDropHintVisible}">
+                                                                <TextBlock Text="that droping there is posisble"
+                                                                           FontSize="10"
+                                                                           Foreground="#D1FAE5" />
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
                                                     <TextBox Grid.Column="1"
                                                              Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <TextBox Grid.Column="2"
-                                                             Text="{Binding IconGlyph, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <TextBlock Grid.Column="2"
+                                                               VerticalAlignment="Center"
+                                                               Text="{Binding IconGlyph}" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                             </Grid>
+                        </Border>
+
+                        <Border IsVisible="{Binding ShowStatusAlert}"
+                                Background="#7F1D1D"
+                                BorderBrush="#DC2626"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4">
+                            <TextBlock Text="{Binding StatusAlertMessage}"
+                                       Foreground="#FEE2E2"
+                                       TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
 

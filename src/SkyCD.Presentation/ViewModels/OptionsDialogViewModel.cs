@@ -68,6 +68,9 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private string mcpAlertMessage = string.Empty;
     [ObservableProperty] private StatusVariantItemViewModel? selectedStatusVariant;
+    [ObservableProperty] private string statusAlertMessage = string.Empty;
+
+    public bool ShowStatusAlert => !string.IsNullOrWhiteSpace(StatusAlertMessage);
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
@@ -141,7 +144,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         var candidate = new StatusVariantItemViewModel
         {
             Name = "New Status",
-            IconGlyph = "info"
+            IconGlyph = string.Empty
         };
         StatusVariants.Add(candidate);
         SelectedStatusVariant = candidate;
@@ -200,6 +203,13 @@ public partial class OptionsDialogViewModel : ObservableObject
     [RelayCommand]
     private void Confirm()
     {
+        if (StatusVariants.Any(static status => string.IsNullOrWhiteSpace(status.IconGlyph)))
+        {
+            StatusAlertMessage = "All status items must have an icon selected.";
+            return;
+        }
+
+        StatusAlertMessage = string.Empty;
         DialogAccepted = true;
     }
 
@@ -279,6 +289,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         SelectedStatusVariant = StatusVariants.FirstOrDefault();
+        StatusAlertMessage = string.Empty;
         RemoveStatusVariantCommand.NotifyCanExecuteChanged();
     }
 
@@ -345,6 +356,11 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnMcpAlertMessageChanged(string value)
     {
         OnPropertyChanged(nameof(ShowMcpAlert));
+    }
+
+    partial void OnStatusAlertMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowStatusAlert));
     }
 
     private bool MatchesSearch(params string[] terms)
