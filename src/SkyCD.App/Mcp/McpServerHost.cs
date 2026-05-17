@@ -167,18 +167,18 @@ public sealed class McpServerHost : IDisposable
             return;
         }
 
+        try
+        {
+            using var cts = new CancellationTokenSource(ShutdownTimeout);
+            app.StopAsync(cts.Token).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Ignore stop errors.
+        }
+
         _ = Task.Run(async () =>
         {
-            try
-            {
-                using var cts = new CancellationTokenSource(ShutdownTimeout);
-                await app.StopAsync(cts.Token);
-            }
-            catch
-            {
-                // Ignore stop errors.
-            }
-
             try
             {
                 var disposeTask = app.DisposeAsync().AsTask();
