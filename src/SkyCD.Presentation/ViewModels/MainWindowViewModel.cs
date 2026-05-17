@@ -1146,7 +1146,14 @@ public partial class MainWindowViewModel : ObservableObject
                 Header = "_View",
                 Items =
                 [
-                    CheckedMenuItem(IsStatusBarVisible, "_StatusBar", ToggleStatusBarCommand, key: "statusbar"),
+                    new MainMenuItemViewModel
+                    {
+                        Header = "_Status",
+                        Items =
+                        [
+                            CheckedMenuItem(IsStatusBarVisible, "_StatusBar", ToggleStatusBarCommand, key: "statusbar")
+                        ]
+                    },
                     Separator(),
                     CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles", "view_tiles"),
                     CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons",
