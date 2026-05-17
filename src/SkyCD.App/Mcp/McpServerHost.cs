@@ -17,6 +17,7 @@ namespace SkyCD.App.Mcp;
 
 public sealed class McpServerHost : IDisposable
 {
+    private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(3);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -156,23 +157,38 @@ public sealed class McpServerHost : IDisposable
 
     private void StopInternal()
     {
-        if (webApp is not null)
+        var app = webApp;
+        webApp = null;
+        webAppTask = null;
+        baseUrl = null;
+
+        if (app is null)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
         {
             try
             {
-                webApp.StopAsync().GetAwaiter().GetResult();
+                using var cts = new CancellationTokenSource(ShutdownTimeout);
+                await app.StopAsync(cts.Token);
             }
             catch
             {
                 // Ignore stop errors.
             }
 
-            webApp.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
-
-        webApp = null;
-        webAppTask = null;
-        baseUrl = null;
+            try
+            {
+                var disposeTask = app.DisposeAsync().AsTask();
+                await Task.WhenAny(disposeTask, Task.Delay(ShutdownTimeout));
+            }
+            catch
+            {
+                // Ignore dispose errors.
+            }
+        });
     }
 
     private static McpServerTool CreateTool(CliMcpBridge bridge, CliMcpToolDescriptor descriptor)
