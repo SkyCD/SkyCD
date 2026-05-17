@@ -202,9 +202,7 @@ public partial class BrowserItemsView : UserControl
                 Margin = new Thickness(4, 2)
             };
 
-            var icon = new Image { Width = 14, Height = 14 };
-            icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-            stack.Children.Add(icon);
+            stack.Children.Add(BuildIconWithStatusIndicator(14, 14));
 
             var name = new TextBlock { FontSize = 13 };
             name.Bind(TextBlock.TextProperty, new Binding("Name"));
@@ -237,9 +235,7 @@ public partial class BrowserItemsView : UserControl
             var stack = new StackPanel();
             border.Child = stack;
 
-            var icon = new Image { Width = 32, Height = 32, HorizontalAlignment = HorizontalAlignment.Center };
-            icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-            stack.Children.Add(icon);
+            stack.Children.Add(BuildIconWithStatusIndicator(32, 32, HorizontalAlignment.Center));
 
             var name = new TextBlock { TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
             name.Bind(TextBlock.TextProperty, new Binding("Name"));
@@ -302,10 +298,9 @@ public partial class BrowserItemsView : UserControl
                 ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns)
             };
 
-            var icon = new Image { Width = 16, Height = 16 };
-            icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-            Grid.SetColumn(icon, 0);
-            grid.Children.Add(icon);
+            var iconWithIndicator = BuildIconWithStatusIndicator(16, 16);
+            Grid.SetColumn(iconWithIndicator, 0);
+            grid.Children.Add(iconWithIndicator);
 
             for (var i = 0; i < detailsColumns.Count; i++)
             {
@@ -321,6 +316,35 @@ public partial class BrowserItemsView : UserControl
 
             return grid;
         });
+    }
+
+    private Control BuildIconWithStatusIndicator(
+        double iconWidth,
+        double iconHeight,
+        HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left)
+    {
+        var iconStack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Spacing = 2,
+            HorizontalAlignment = horizontalAlignment,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var icon = new Image { Width = iconWidth, Height = iconHeight, HorizontalAlignment = horizontalAlignment };
+        icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
+        iconStack.Children.Add(icon);
+
+        iconStack.Children.Add(new Border
+        {
+            Width = 6,
+            Height = 6,
+            CornerRadius = new CornerRadius(3),
+            Background = new SolidColorBrush(Color.Parse("#3B82F6")),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+
+        return iconStack;
     }
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
