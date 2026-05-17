@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Couchbase.Repository;
+using SkyCD.Documents.Enum;
 
 namespace SkyCD.Documents.Repository;
 
@@ -15,19 +16,22 @@ public sealed class StatusVariantDocumentRepository : RepositoryBase<StatusVaria
             {
                 Id = "status-watched",
                 Name = "Watched",
-                IconGlyph = "check"
+                IconGlyph = "check",
+                ItemType = CatalogDocumentType.Media
             },
             new StatusVariantDocument
             {
                 Id = "status-favorite",
                 Name = "Favorite",
-                IconGlyph = "star"
+                IconGlyph = "star",
+                ItemType = CatalogDocumentType.Media
             },
             new StatusVariantDocument
             {
                 Id = "status-important",
                 Name = "Important",
-                IconGlyph = "warning"
+                IconGlyph = "warning",
+                ItemType = CatalogDocumentType.Folder
             }
         ];
     }
@@ -75,7 +79,8 @@ public sealed class StatusVariantDocumentRepository : RepositoryBase<StatusVaria
             {
                 Id = string.IsNullOrWhiteSpace(status.Id) ? $"status-{index++:D4}" : status.Id,
                 Name = status.Name.Trim(),
-                IconGlyph = status.IconGlyph.Trim()
+                IconGlyph = status.IconGlyph.Trim(),
+                ItemType = status.ItemType
             };
             Save(normalized.Id, normalized);
         }

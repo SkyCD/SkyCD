@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -16,6 +17,10 @@ public partial class DetailsListView : UserControl
 
     public static readonly StyledProperty<object?> SelectedItemProperty =
         AvaloniaProperty.Register<DetailsListView, object?>(nameof(SelectedItem),
+            defaultBindingMode: BindingMode.TwoWay);
+
+    public static readonly StyledProperty<IList?> SelectedItemsProperty =
+        AvaloniaProperty.Register<DetailsListView, IList?>(nameof(SelectedItems),
             defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<object?> HeaderContentProperty =
@@ -39,6 +44,10 @@ public partial class DetailsListView : UserControl
         if (listBox != null)
         {
             listBox.DoubleTapped += (s, e) => DoubleTapped?.Invoke(this, e);
+            listBox.SelectionChanged += (_, _) =>
+            {
+                SelectedItems = listBox.SelectedItems?.Cast<object>().ToList();
+            };
         }
     }
 
@@ -52,6 +61,12 @@ public partial class DetailsListView : UserControl
     {
         get => GetValue(SelectedItemProperty);
         set => SetValue(SelectedItemProperty, value);
+    }
+
+    public IList? SelectedItems
+    {
+        get => GetValue(SelectedItemsProperty);
+        set => SetValue(SelectedItemsProperty, value);
     }
 
     public object? HeaderContent

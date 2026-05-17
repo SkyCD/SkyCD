@@ -65,11 +65,49 @@ public class MainWindowViewModelTests
         Assert.Equal("Watched", vm.SelectedBrowserItem!.Properties["StatusName"]?.ToString());
         Assert.Equal("check", vm.SelectedBrowserItem.Properties["StatusIconGlyph"]?.ToString());
 
-        var none = statusesMenu.Items.Single(item => item.Header == "_None");
-        none.Command!.Execute(none.CommandParameter);
+        var @default = statusesMenu.Items.Single(item => item.Header == "_Default");
+        @default.Command!.Execute(@default.CommandParameter);
 
         Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusName"));
         Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusIconGlyph"));
+    }
+
+    [Fact]
+    public void StatusMenu_MixedSelection_AppliesOnlyToSupportedItemTypes()
+    {
+        var vm = CreateViewModel();
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument
+            {
+                Name = "Borrowed",
+                IconGlyph = "check",
+                ItemType = CatalogDocumentType.Media
+            },
+            new StatusVariantDocument
+            {
+                Name = "Needs inspection",
+                IconGlyph = "warning",
+                ItemType = CatalogDocumentType.Folder
+            }
+        ]);
+
+        var folderItem = vm.BrowserItems.First(item => item.Type == CatalogDocumentType.Folder);
+        vm.SelectedTreeNode = vm.TreeNodes
+            .SelectMany(root => root.Children)
+            .First(node => node.Title == "Movies");
+        var mediaItem = vm.BrowserItems.First(item => item.Type == CatalogDocumentType.Media);
+        vm.SelectedBrowserItems = new System.Collections.Generic.List<CatalogDocument> { mediaItem, folderItem };
+
+        var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
+        Assert.Contains(statusesMenu.Items, item => item.Header == "Borrowed");
+        Assert.Contains(statusesMenu.Items, item => item.Header == "Needs inspection");
+
+        var borrowed = statusesMenu.Items.Single(item => item.Header == "Borrowed");
+        borrowed.Command!.Execute(borrowed.CommandParameter);
+
+        Assert.Equal("Borrowed", mediaItem.Properties["StatusName"]?.ToString());
+        Assert.False(folderItem.Properties.ContainsKey("StatusName"));
     }
 
     [Fact]

@@ -251,7 +251,12 @@ public class OptionsDialogViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetStatusVariants(
         [
-            new StatusVariantDocument { Name = "Watched", IconGlyph = "check" }
+            new StatusVariantDocument
+            {
+                Name = "Watched",
+                IconGlyph = "check",
+                ItemType = SkyCD.Documents.Enum.CatalogDocumentType.Media
+            }
         ]);
 
         Assert.Single(vm.StatusVariants);
@@ -267,6 +272,7 @@ public class OptionsDialogViewModelTests
         var exported = vm.GetStatusVariants();
         Assert.Single(exported);
         Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
+        Assert.Equal(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported[0].ItemType);
     }
 
     [Fact]

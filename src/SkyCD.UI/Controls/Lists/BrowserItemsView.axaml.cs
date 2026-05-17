@@ -30,6 +30,10 @@ public partial class BrowserItemsView : UserControl
         AvaloniaProperty.Register<BrowserItemsView, object?>(nameof(SelectedItem),
             defaultBindingMode: BindingMode.TwoWay);
 
+    public static readonly StyledProperty<IList?> SelectedItemsProperty =
+        AvaloniaProperty.Register<BrowserItemsView, IList?>(nameof(SelectedItems),
+            defaultBindingMode: BindingMode.TwoWay);
+
     public static readonly StyledProperty<BrowserViewMode> ViewModeProperty =
         AvaloniaProperty.Register<BrowserItemsView, BrowserViewMode>(nameof(ViewMode), BrowserViewMode.Details);
 
@@ -71,12 +75,21 @@ public partial class BrowserItemsView : UserControl
 
         detailsListView.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         detailsListView.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
+        detailsListView.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == DetailsListView.SelectedItemsProperty)
+            {
+                SelectedItems = detailsListView.SelectedItems;
+            }
+        };
 
         listModeListBox.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         listModeListBox.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
+        listModeListBox.SelectionChanged += (_, _) => SelectedItems = listModeListBox.SelectedItems;
 
         iconGridListBox.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         iconGridListBox.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
+        iconGridListBox.SelectionChanged += (_, _) => SelectedItems = iconGridListBox.SelectedItems;
 
         UpdateViewMode();
         UpdateListTemplate();
@@ -94,6 +107,12 @@ public partial class BrowserItemsView : UserControl
     {
         get => GetValue(SelectedItemProperty);
         set => SetValue(SelectedItemProperty, value);
+    }
+
+    public IList? SelectedItems
+    {
+        get => GetValue(SelectedItemsProperty);
+        set => SetValue(SelectedItemsProperty, value);
     }
 
     public BrowserViewMode ViewMode
@@ -175,6 +194,12 @@ public partial class BrowserItemsView : UserControl
         iconGridListBox.IsVisible =
             ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
         IsTilesMode = ViewMode == BrowserViewMode.Tiles;
+        SelectedItems = ViewMode switch
+        {
+            BrowserViewMode.Details => detailsListView.SelectedItems,
+            BrowserViewMode.List => listModeListBox.SelectedItems,
+            _ => iconGridListBox.SelectedItems
+        };
     }
 
     private void UpdateDetailsTemplate()

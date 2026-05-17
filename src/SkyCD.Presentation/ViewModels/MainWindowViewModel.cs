@@ -176,7 +176,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
-    public bool IsDeleteEnabled => SelectedBrowserItem is not null;
+    public bool IsDeleteEnabled => GetSelectedBrowserItems().Count > 0;
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
@@ -258,6 +258,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private BrowserTreeNode? selectedTreeNode;
 
     [ObservableProperty] private CatalogDocument? selectedBrowserItem;
+    [ObservableProperty] private System.Collections.IList selectedBrowserItems = new List<CatalogDocument>();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
@@ -708,7 +709,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
     private void ApplyBrowserItemStatus(string? statusName)
     {
-        if (SelectedBrowserItem is null)
+        var targets = GetSelectedBrowserItems();
+        if (targets.Count == 0)
         {
             return;
         }
@@ -718,15 +720,32 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (status is null)
         {
-            SelectedBrowserItem.Properties.Remove(ItemStatusNamePropertyKey);
-            SelectedBrowserItem.Properties.Remove(ItemStatusIconGlyphPropertyKey);
-            StatusText = $"Cleared status for {SelectedBrowserItem.Name}.";
+            foreach (var target in targets)
+            {
+                target.Properties.Remove(ItemStatusNamePropertyKey);
+                target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
+            }
+
+            StatusText = targets.Count == 1
+                ? $"Cleared status for {targets[0].Name}."
+                : $"Cleared status for {targets.Count} items.";
         }
         else
         {
-            SelectedBrowserItem.Properties[ItemStatusNamePropertyKey] = status.Name;
-            SelectedBrowserItem.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
-            StatusText = $"Status '{status.Name}' applied to {SelectedBrowserItem.Name}.";
+            var applicableTargets = targets
+                .Where(target => IsStatusApplicableToItem(status, target))
+                .ToArray();
+            foreach (var target in applicableTargets)
+            {
+                target.Properties[ItemStatusNamePropertyKey] = status.Name;
+                target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
+            }
+
+            StatusText = applicableTargets.Length == 0
+                ? $"Status '{status.Name}' is not supported for selected item types."
+                : applicableTargets.Length == 1
+                    ? $"Status '{status.Name}' applied to {applicableTargets[0].Name}."
+                    : $"Status '{status.Name}' applied to {applicableTargets.Length} items.";
         }
 
         IsDirtyDocument = true;
@@ -749,7 +768,8 @@ public partial class MainWindowViewModel : ObservableObject
                      .Select(static variant => new StatusVariantDocument
                      {
                          Name = variant.Name.Trim(),
-                         IconGlyph = variant.IconGlyph.Trim()
+                         IconGlyph = variant.IconGlyph.Trim(),
+                         ItemType = variant.ItemType
                      }))
         {
             statusVariants.Add(variant);
@@ -1063,6 +1083,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnSelectedBrowserItemChanged(CatalogDocument? value)
     {
+        if (value is null)
+        {
+            SelectedBrowserItems = new List<CatalogDocument>();
+        }
+
+        if (value is not null &&
+            !selectedBrowserItems
+                .OfType<CatalogDocument>()
+                .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
+        {
+            SelectedBrowserItems = new List<CatalogDocument> { value };
+        }
+
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
         OnPropertyChanged(nameof(IsCopyEnabled));
@@ -1073,6 +1106,20 @@ public partial class MainWindowViewModel : ObservableObject
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
+    {
+        if (value.Count > 0)
+        {
+            SelectedBrowserItem = value[0] as CatalogDocument;
+        }
+
+        OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
@@ -1718,12 +1765,22 @@ public partial class MainWindowViewModel : ObservableObject
 
     private IReadOnlyList<MainMenuItemViewModel> BuildStatusMenuItems()
     {
+        var selectedItems = GetSelectedBrowserItems();
+        var selectedTypes = selectedItems
+            .Select(static item => item.Type)
+            .Distinct()
+            .ToHashSet();
+
         var statusItems = new List<MainMenuItemViewModel>
         {
-            CheckedMenuItem(!HasAssignedStatus(SelectedBrowserItem), "_None", ApplyBrowserItemStatusCommand, null)
+            CheckedMenuItem(!HasAssignedStatus(SelectedBrowserItem), "_Default", ApplyBrowserItemStatusCommand, null)
         };
 
-        statusItems.AddRange(statusVariants.Select(variant =>
+        statusItems.AddRange(statusVariants
+            .Where(variant => selectedTypes.Count == 0 ||
+                              variant.ItemType is null ||
+                              selectedTypes.Contains(variant.ItemType.Value))
+            .Select(variant =>
             CheckedMenuItem(
                 IsAssignedStatus(SelectedBrowserItem, variant.Name),
                 variant.Name,
@@ -1731,5 +1788,20 @@ public partial class MainWindowViewModel : ObservableObject
                 variant.Name)));
 
         return statusItems;
+    }
+
+    private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()
+    {
+        if (SelectedBrowserItems.Count > 0)
+        {
+            return SelectedBrowserItems.OfType<CatalogDocument>().ToArray();
+        }
+
+        return SelectedBrowserItem is null ? [] : [SelectedBrowserItem];
+    }
+
+    private static bool IsStatusApplicableToItem(StatusVariantDocument status, CatalogDocument item)
+    {
+        return status.ItemType is null || status.ItemType == item.Type;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,14 @@ namespace SkyCD.App.Views;
 
 public partial class OptionsWindow : Window
 {
+    private static readonly IReadOnlyList<FilePickerFileType> StatusIconFileTypes =
+    [
+        new FilePickerFileType("Image files")
+        {
+            Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.ico"]
+        }
+    ];
+
     private const double TargetWidth = 1024;
     private const double TargetHeight = 768;
     private const double ScreenUsageFactor = 0.9;
@@ -129,7 +138,8 @@ public partial class OptionsWindow : Window
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Select status icon",
-            AllowMultiple = false
+            AllowMultiple = false,
+            FileTypeFilter = StatusIconFileTypes.ToList()
         });
 
         var localPath = files.Count > 0 ? files[0].TryGetLocalPath() : null;

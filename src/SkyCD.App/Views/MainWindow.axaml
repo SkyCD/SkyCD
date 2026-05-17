@@ -140,6 +140,7 @@
                                  ListMinWidth="240"
                                  ItemsSource="{Binding BrowserItems}"
                                  SelectedItem="{Binding SelectedBrowserItem}"
+                                 SelectedItems="{Binding SelectedBrowserItems}"
                                  ViewMode="{Binding CurrentViewMode}"
                                  DetailsColumns="{Binding BrowserDetailsColumns}"
                                  BrowserGridItemWidth="{Binding BrowserGridItemWidth}"

@@ -6,6 +6,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
+using SkyCD.Documents.Enum;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -146,7 +147,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         var candidate = new StatusVariantItemViewModel
         {
             Name = "New Status",
-            IconGlyph = string.Empty
+            IconGlyph = string.Empty,
+            ItemType = CatalogDocumentType.Media
         };
         StatusVariants.Add(candidate);
         SelectedStatusVariant = candidate;
