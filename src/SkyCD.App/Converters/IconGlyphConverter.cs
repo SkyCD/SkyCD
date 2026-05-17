@@ -35,6 +35,23 @@ public sealed class IconGlyphConverter : IValueConverter
         ["toolbar-new"] = "avares://SkyCD.App/Assets/add-from-media.png",
         ["toolbar-open"] = "avares://SkyCD.App/Assets/add-from-folder.png",
         ["toolbar-save"] = "avares://SkyCD.App/Assets/add-from-internet.png",
+
+        // Status icons
+        ["check"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["check-check"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["clock"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["star"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["list-todo"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["pause"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["x-circle"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["calendar-plus"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["rotate-ccw"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["package-check"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["handshake"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["search"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["warning"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["archive"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["circle"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
     };
 
     private static readonly Dictionary<string, Bitmap?> Cache = [];

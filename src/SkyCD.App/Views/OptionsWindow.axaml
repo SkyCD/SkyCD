@@ -2,6 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
+        xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -20,6 +23,7 @@
 
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
+        <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
     </Window.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -274,15 +278,17 @@
                         </Border>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="2"
-                                IsVisible="{Binding ShowStatusesSection}"
-                                Spacing="8">
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowStatusesSection}"
+                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowSpacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                             <TextBlock Text="Item Statuses" FontSize="15" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
                         <StackPanel Orientation="Horizontal"
+                                    Grid.Row="1"
                                     HorizontalAlignment="Right"
                                     Spacing="8">
                             <Button Content="↺"
@@ -304,61 +310,39 @@
                         </StackPanel>
 
                         <Border BorderBrush="#2E2E2E"
-                                BorderThickness="1">
+                                BorderThickness="1"
+                                Grid.Row="2">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                    <Grid ColumnDefinitions="84,2*,2*,2*" ColumnSpacing="10">
-                                        <TextBlock Text="Icon" FontWeight="SemiBold" />
-                                        <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
+                                    <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="10">
+                                        <TextBlock Text="Status" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="Icon" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" />
-                                        <TextBlock Grid.Column="3" Text="Icon Key" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="3" Text="Color" FontWeight="SemiBold" />
                                     </Grid>
                                 </Border>
                                 <ListBox Grid.Row="1"
                                          ItemsSource="{Binding StatusVariants}"
-                                         SelectedItem="{Binding SelectedStatusVariant}">
+                                         SelectedItem="{Binding SelectedStatusVariant}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:StatusVariantItemViewModel">
                                             <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                                <Grid ColumnDefinitions="84,2*,2*,2*" ColumnSpacing="10">
-                                                    <Border Width="72"
-                                                            Height="40"
-                                                            BorderBrush="#4B5563"
-                                                            BorderThickness="1"
-                                                            CornerRadius="4"
-                                                            Background="#1F2937"
-                                                            Classes="status-icon-drop"
-                                                            DragDrop.AllowDrop="True"
-                                                            Tag="{Binding}"
-                                                            PointerPressed="OnStatusIconSquarePointerPressed">
-                                                        <Grid>
-                                                            <Image Width="16"
-                                                                   Height="16"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"
-                                                                   Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
-                                                            <Border HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Top"
-                                                                    Background="#111827"
-                                                                    CornerRadius="3"
-                                                                    Padding="4,1"
-                                                                    Margin="2"
-                                                                    IsVisible="{Binding IsDropHintVisible}">
-                                                                <TextBlock Text="that droping there is posisble"
-                                                                           FontSize="10"
-                                                                           Foreground="#D1FAE5" />
-                                                            </Border>
-                                                        </Grid>
-                                                    </Border>
-                                                    <TextBox Grid.Column="1"
+                                                <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="10">
+                                                    <TextBox Grid.Column="0"
                                                              Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                    <ComboBox Grid.Column="2"
-                                                              ItemsSource="{Binding AvailableItemTypes}"
-                                                              SelectedItem="{Binding ItemType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                              IsEditable="True" />
-                                                    <TextBlock Grid.Column="3"
-                                                               VerticalAlignment="Center"
-                                                               Text="{Binding IconGlyph}" />
+                                                    <multiSelect:MultiSelectDropdown Grid.Column="1"
+                                                                                     ItemsSource="{Binding IconOptionItems}"
+                                                                                     IsSingleSelect="True"
+                                                                                     ShowIconSymbols="True"
+                                                                                     PlaceholderText="Select icon" />
+                                                    <multiSelect:MultiSelectDropdown Grid.Column="2"
+                                                                                     ItemsSource="{Binding TypeOptions}"
+                                                                                     PlaceholderText="Select item types" />
+                                                    <colorSelect:ColorPaletteDropdown Grid.Column="3"
+                                                                                      SelectedColor="{Binding IconColor, Mode=TwoWay}"
+                                                                                      ItemsSource="{Binding ColorOptions}" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -368,6 +352,7 @@
                         </Border>
 
                         <Border IsVisible="{Binding ShowStatusAlert}"
+                                Grid.Row="3"
                                 Background="#7F1D1D"
                                 BorderBrush="#DC2626"
                                 BorderThickness="1"
@@ -377,7 +362,7 @@
                                        Foreground="#FEE2E2"
                                        TextWrapping="Wrap" />
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
                     <Border Grid.Row="4"
                             IsVisible="{Binding ShowNoSearchResults}"

@@ -92,6 +92,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             UpdateWindowTitle();
         }
     }
@@ -1111,6 +1112,17 @@ public partial class MainWindow : Window
                 "media" => CatalogDocumentType.Media,
                 _ => CatalogDocumentType.Media
             };
+            var status = ReadString(row, "status");
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                status = ReadString(row, "statusName");
+            }
+
+            var properties = new SkyCD.Documents.Collections.PropertiesCollection();
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                properties["StatusName"] = status;
+            }
 
             results.Add(new CatalogDocument
             {
@@ -1119,7 +1131,9 @@ public partial class MainWindow : Window
                 ParentId = parentId,
                 Type = documentType,
                 Size = ReadLong(row, "size", "sizeBytes"),
-                ChildrenCount = ReadLong(row, "childrenCount")
+                ChildrenCount = ReadLong(row, "childrenCount"),
+                Status = string.IsNullOrWhiteSpace(status) ? null : status,
+                Properties = properties
             });
         }
 

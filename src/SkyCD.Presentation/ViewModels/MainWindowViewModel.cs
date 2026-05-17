@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
@@ -48,6 +49,8 @@ public partial class MainWindowViewModel : ObservableObject
     private const string DefaultStatusText = "Done.";
     private const string ItemStatusNamePropertyKey = "StatusName";
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
+    private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
+    private const string ItemStatusIconTextPropertyKey = "StatusIconText";
 
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
@@ -722,8 +725,11 @@ public partial class MainWindowViewModel : ObservableObject
         {
             foreach (var target in targets)
             {
+                target.Status = null;
                 target.Properties.Remove(ItemStatusNamePropertyKey);
                 target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
+                target.Properties.Remove(ItemStatusIconColorPropertyKey);
+                target.Properties.Remove(ItemStatusIconTextPropertyKey);
             }
 
             StatusText = targets.Count == 1
@@ -737,8 +743,12 @@ public partial class MainWindowViewModel : ObservableObject
                 .ToArray();
             foreach (var target in applicableTargets)
             {
+                target.Status = status.Name;
                 target.Properties[ItemStatusNamePropertyKey] = status.Name;
                 target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
+                target.Properties[ItemStatusIconColorPropertyKey] =
+                    string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
+                target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
             }
 
             StatusText = applicableTargets.Length == 0
@@ -769,7 +779,8 @@ public partial class MainWindowViewModel : ObservableObject
                      {
                          Name = variant.Name.Trim(),
                          IconGlyph = variant.IconGlyph.Trim(),
-                         ItemType = variant.ItemType
+                         IconColor = string.IsNullOrWhiteSpace(variant.IconColor) ? "#FFFFFF" : variant.IconColor.Trim(),
+                         ItemTypes = variant.ItemTypes
                      }))
         {
             statusVariants.Add(variant);
@@ -1733,6 +1744,11 @@ public partial class MainWindowViewModel : ObservableObject
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(item.Status))
+        {
+            return true;
+        }
+
         return item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value) &&
                !string.IsNullOrWhiteSpace(value?.ToString());
     }
@@ -1744,12 +1760,12 @@ public partial class MainWindowViewModel : ObservableObject
             return false;
         }
 
-        if (!item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value))
-        {
-            return expectedStatusName is null;
-        }
+        var assignedStatusName = !string.IsNullOrWhiteSpace(item.Status)
+            ? item.Status
+            : item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value)
+                ? value?.ToString()
+                : null;
 
-        var assignedStatusName = value?.ToString();
         if (string.IsNullOrWhiteSpace(assignedStatusName))
         {
             return expectedStatusName is null;
@@ -1765,27 +1781,33 @@ public partial class MainWindowViewModel : ObservableObject
 
     private IReadOnlyList<MainMenuItemViewModel> BuildStatusMenuItems()
     {
-        var selectedItems = GetSelectedBrowserItems();
-        var selectedTypes = selectedItems
-            .Select(static item => item.Type)
-            .Distinct()
-            .ToHashSet();
+        var hasDefaultAssigned = !HasAssignedStatus(SelectedBrowserItem);
 
         var statusItems = new List<MainMenuItemViewModel>
         {
-            CheckedMenuItem(!HasAssignedStatus(SelectedBrowserItem), "_Default", ApplyBrowserItemStatusCommand, null)
+            new()
+            {
+                Header = "_Default",
+                Icon = "○",
+                Command = ApplyBrowserItemStatusCommand,
+                CommandParameter = null,
+                IsEnabled = !hasDefaultAssigned
+            }
         };
 
         statusItems.AddRange(statusVariants
-            .Where(variant => selectedTypes.Count == 0 ||
-                              variant.ItemType is null ||
-                              selectedTypes.Contains(variant.ItemType.Value))
             .Select(variant =>
-            CheckedMenuItem(
-                IsAssignedStatus(SelectedBrowserItem, variant.Name),
-                variant.Name,
-                ApplyBrowserItemStatusCommand,
-                variant.Name)));
+            {
+                var isAssigned = IsAssignedStatus(SelectedBrowserItem, variant.Name);
+                return new MainMenuItemViewModel
+                {
+                    Header = variant.Name,
+                    Icon = new StatusMenuIcon(variant.IconGlyph, variant.IconColor),
+                    Command = ApplyBrowserItemStatusCommand,
+                    CommandParameter = variant.Name,
+                    IsEnabled = !isAssigned
+                };
+            }));
 
         return statusItems;
     }
@@ -1802,6 +1824,18 @@ public partial class MainWindowViewModel : ObservableObject
 
     private static bool IsStatusApplicableToItem(StatusVariantDocument status, CatalogDocument item)
     {
-        return status.ItemType is null || status.ItemType == item.Type;
+        return IsStatusApplicableToType(status, item.Type);
     }
+
+    private static bool IsStatusApplicableToType(StatusVariantDocument status, CatalogDocumentType itemType)
+    {
+        if (status.ItemTypes is { Count: > 0 })
+        {
+            return status.ItemTypes.Contains(itemType);
+        }
+
+        return true;
+    }
+
+    private static string ResolveMenuStatusIconText(string iconGlyphKey) => iconGlyphKey;
 }

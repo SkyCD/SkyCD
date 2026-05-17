@@ -255,7 +255,7 @@ public class OptionsDialogViewModelTests
             {
                 Name = "Watched",
                 IconGlyph = "check",
-                ItemType = SkyCD.Documents.Enum.CatalogDocumentType.Media
+                ItemTypes = [SkyCD.Documents.Enum.CatalogDocumentType.Media]
             }
         ]);
 
@@ -272,7 +272,7 @@ public class OptionsDialogViewModelTests
         var exported = vm.GetStatusVariants();
         Assert.Single(exported);
         Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
-        Assert.Equal(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported[0].ItemType);
+        Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported[0].ItemTypes!);
     }
 
     [Fact]
@@ -313,5 +313,20 @@ public class OptionsDialogViewModelTests
         vm.ResetStatusVariantsCommand.Execute(null);
 
         Assert.True(raised);
+    }
+
+    [Fact]
+    public void StatusVariantItemType_AllowsMultipleSelections()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddStatusVariantCommand.Execute(null);
+
+        var status = vm.StatusVariants.Single();
+        status.SetTypeSelected(SkyCD.Documents.Enum.CatalogDocumentType.Media, true);
+        status.SetTypeSelected(SkyCD.Documents.Enum.CatalogDocumentType.File, true);
+
+        var exported = vm.GetStatusVariants().Single();
+        Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported.ItemTypes!);
+        Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.File, exported.ItemTypes!);
     }
 }

@@ -60,16 +60,24 @@ public class MainWindowViewModelTests
 
         var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
         var watched = statusesMenu.Items.Single(item => item.Header == "Watched");
+        var watchedIcon = Assert.IsType<StatusMenuIcon>(watched.Icon);
+        Assert.Equal("check", watchedIcon.IconGlyph);
         watched.Command!.Execute(watched.CommandParameter);
 
         Assert.Equal("Watched", vm.SelectedBrowserItem!.Properties["StatusName"]?.ToString());
         Assert.Equal("check", vm.SelectedBrowserItem.Properties["StatusIconGlyph"]?.ToString());
+        Assert.Equal("Watched", vm.SelectedBrowserItem.Status);
+
+        statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
+        watched = statusesMenu.Items.Single(item => item.Header == "Watched");
+        Assert.False(watched.IsEnabled);
 
         var @default = statusesMenu.Items.Single(item => item.Header == "_Default");
         @default.Command!.Execute(@default.CommandParameter);
 
         Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusName"));
         Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusIconGlyph"));
+        Assert.Null(vm.SelectedBrowserItem.Status);
     }
 
     [Fact]
@@ -82,13 +90,13 @@ public class MainWindowViewModelTests
             {
                 Name = "Borrowed",
                 IconGlyph = "check",
-                ItemType = CatalogDocumentType.Media
+                ItemTypes = [CatalogDocumentType.Media]
             },
             new StatusVariantDocument
             {
                 Name = "Needs inspection",
                 IconGlyph = "warning",
-                ItemType = CatalogDocumentType.Folder
+                ItemTypes = [CatalogDocumentType.Folder]
             }
         ]);
 

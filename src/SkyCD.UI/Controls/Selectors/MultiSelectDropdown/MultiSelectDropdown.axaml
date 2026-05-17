@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:selectors="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown"
+             x:Class="SkyCD.UI.Controls.Selectors.MultiSelectDropdown.MultiSelectDropdown"
+             x:Name="Root">
+    <UserControl.Resources>
+        <selectors:BooleanToGlyphConverter x:Key="BooleanToGlyphConverter" />
+        <selectors:IconKeyToSymbolConverter x:Key="IconKeyToSymbolConverter" />
+    </UserControl.Resources>
+    <Grid RowDefinitions="Auto">
+        <Border BorderBrush="#3F3F46"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="8,6"
+                Height="32">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox x:Name="InlineSearchTextBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0"
+                         VerticalContentAlignment="Center"
+                         TextChanged="OnInlineSearchTextChanged"
+                         GotFocus="OnInlineSearchTextBoxGotFocus"
+                         LostFocus="OnInlineSearchTextBoxLostFocus" />
+                <TextBlock Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Text="▾"
+                           Foreground="#9CA3AF"
+                           PointerPressed="OnChevronPointerPressed" />
+            </Grid>
+        </Border>
+
+        <Popup x:Name="DropdownPopup"
+               PlacementTarget="{Binding #InlineSearchTextBox}"
+               Placement="BottomEdgeAlignedLeft"
+               IsOpen="False"
+               IsLightDismissEnabled="True"
+               Topmost="False"
+               Width="{Binding Bounds.Width, ElementName=Root}">
+            <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                    BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8">
+                <StackPanel Spacing="8">
+                    <ListBox x:Name="ItemsListBox"
+                             MaxHeight="220"
+                             SelectionMode="Single"
+                             SelectionChanged="OnItemsListSelectionChanged"
+                             PointerPressed="OnItemsListPointerPressed">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                    <TextBlock VerticalAlignment="Center"
+                                               Foreground="{DynamicResource ThemeForegroundBrush}"
+                                               Text="{Binding IsSelected, Converter={StaticResource BooleanToGlyphConverter}}" />
+                                    <TextBlock Grid.Column="1"
+                                               IsVisible="{Binding ShowIconSymbols, ElementName=Root}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource ThemeForegroundBrush}"
+                                               Text="{Binding Label, Converter={StaticResource IconKeyToSymbolConverter}}" />
+                                    <TextBlock Grid.Column="2"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource ThemeForegroundBrush}"
+                                               Text="{Binding Label}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

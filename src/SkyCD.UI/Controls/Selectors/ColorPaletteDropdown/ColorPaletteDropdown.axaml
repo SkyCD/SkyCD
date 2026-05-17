@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SkyCD.UI.Controls.Selectors.ColorPaletteDropdown.ColorPaletteDropdown"
+             x:Name="Root">
+    <Grid>
+        <Button x:Name="ToggleButton"
+                Click="OnToggleButtonClick"
+                HorizontalContentAlignment="Stretch">
+            <Border BorderBrush="#3F3F46"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,6"
+                    Height="32">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Border Width="16"
+                            Height="16"
+                            CornerRadius="2"
+                            BorderBrush="#9CA3AF"
+                            BorderThickness="1"
+                            Background="{Binding SelectedBrush, ElementName=Root}" />
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Text="{Binding SelectedColor, ElementName=Root}" />
+                    <TextBlock Grid.Column="2"
+                               VerticalAlignment="Center"
+                               Text="▾"
+                               Foreground="#9CA3AF" />
+                </Grid>
+            </Border>
+        </Button>
+
+        <Popup x:Name="PalettePopup"
+               PlacementTarget="{Binding #ToggleButton}"
+               Placement="BottomEdgeAlignedLeft"
+               IsOpen="False"
+               IsLightDismissEnabled="True"
+               Topmost="False">
+            <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                    BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8"
+                    Width="240">
+                <StackPanel Spacing="8">
+                    <Border x:Name="SvSurfaceBorder"
+                            Width="200"
+                            Height="140"
+                            BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                            BorderThickness="1">
+                        <Grid x:Name="SvSurface"
+                              PointerPressed="OnSvSurfacePointerPressed"
+                              PointerMoved="OnSvSurfacePointerMoved"
+                              PointerReleased="OnSvSurfacePointerReleased">
+                            <Image x:Name="SvImage"
+                                   Stretch="Fill" />
+                            <Canvas>
+                                <Border x:Name="SvThumb"
+                                        Width="10"
+                                        Height="10"
+                                        BorderBrush="#FFFFFF"
+                                        BorderThickness="1.5"
+                                        CornerRadius="5"
+                                        Background="#00000000" />
+                            </Canvas>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="HueBarBorder"
+                            Width="200"
+                            Height="12"
+                            BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                            BorderThickness="1">
+                        <Grid x:Name="HueBarSurface"
+                              PointerPressed="OnHueBarPointerPressed"
+                              PointerMoved="OnHueBarPointerMoved"
+                              PointerReleased="OnHueBarPointerReleased">
+                            <Image x:Name="HueImage"
+                                   Stretch="Fill" />
+                            <Canvas>
+                                <Border x:Name="HueThumb"
+                                        Width="8"
+                                        Height="12"
+                                        BorderBrush="#FFFFFF"
+                                        BorderThickness="1"
+                                        Background="#00000000" />
+                            </Canvas>
+                        </Grid>
+                    </Border>
+
+                    <TextBox x:Name="HexTextBox"
+                             TextChanged="OnHexTextChanged" />
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

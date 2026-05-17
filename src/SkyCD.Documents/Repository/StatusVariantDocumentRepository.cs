@@ -16,22 +16,113 @@ public sealed class StatusVariantDocumentRepository : RepositoryBase<StatusVaria
             {
                 Id = "status-watched",
                 Name = "Watched",
-                IconGlyph = "check",
-                ItemType = CatalogDocumentType.Media
+                IconGlyph = "Lucide:Check",
+                IconColor = "#22C55E",
+                ItemTypes = [CatalogDocumentType.Media]
             },
             new StatusVariantDocument
             {
-                Id = "status-favorite",
+                Id = "status-in-progress",
+                Name = "In Progress",
+                IconGlyph = "Lucide:Clock3",
+                IconColor = "#F59E0B",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-completed",
+                Name = "Completed",
+                IconGlyph = "Lucide:CheckCheck",
+                IconColor = "#10B981",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-favorites",
                 Name = "Favorite",
-                IconGlyph = "star",
-                ItemType = CatalogDocumentType.Media
+                IconGlyph = "Lucide:Star",
+                IconColor = "#EAB308",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
             },
             new StatusVariantDocument
             {
-                Id = "status-important",
-                Name = "Important",
-                IconGlyph = "warning",
-                ItemType = CatalogDocumentType.Folder
+                Id = "status-backlog",
+                Name = "Backlog",
+                IconGlyph = "Lucide:ListTodo",
+                IconColor = "#38BDF8",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-on-hold",
+                Name = "On Hold",
+                IconGlyph = "Lucide:PauseCircle",
+                IconColor = "#A78BFA",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-dropped",
+                Name = "Dropped",
+                IconGlyph = "Lucide:XCircle",
+                IconColor = "#EF4444",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-plan-to-watch",
+                Name = "Plan to Watch",
+                IconGlyph = "Lucide:CalendarPlus",
+                IconColor = "#60A5FA",
+                ItemTypes = [CatalogDocumentType.Media]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-rewatching",
+                Name = "Rewatching",
+                IconGlyph = "Lucide:RotateCcw",
+                IconColor = "#14B8A6",
+                ItemTypes = [CatalogDocumentType.Media]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-owned",
+                Name = "Owned",
+                IconGlyph = "Lucide:PackageCheck",
+                IconColor = "#84CC16",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-loaned-out",
+                Name = "Loaned Out",
+                IconGlyph = "Lucide:Handshake",
+                IconColor = "#F97316",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-missing",
+                Name = "Missing",
+                IconGlyph = "Lucide:Search",
+                IconColor = "#FB7185",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-needs-repair",
+                Name = "Needs Repair",
+                IconGlyph = "Lucide:TriangleAlert",
+                IconColor = "#F59E0B",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File, CatalogDocumentType.Folder]
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-archived",
+                Name = "Archived",
+                IconGlyph = "Lucide:Archive",
+                IconColor = "#94A3B8",
+                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File, CatalogDocumentType.Folder]
             }
         ];
     }
@@ -80,7 +171,12 @@ public sealed class StatusVariantDocumentRepository : RepositoryBase<StatusVaria
                 Id = string.IsNullOrWhiteSpace(status.Id) ? $"status-{index++:D4}" : status.Id,
                 Name = status.Name.Trim(),
                 IconGlyph = status.IconGlyph.Trim(),
-                ItemType = status.ItemType
+                IconColor = string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor.Trim(),
+                ItemTypes = (status.ItemTypes is { Count: > 0 }
+                    ? status.ItemTypes
+                    : null)?
+                    .Distinct()
+                    .ToArray()
             };
             Save(normalized.Id, normalized);
         }

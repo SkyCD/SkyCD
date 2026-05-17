@@ -1,6 +1,7 @@
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using System.Collections.Generic;
 
 namespace SkyCD.Documents;
 
@@ -13,5 +14,7 @@ public sealed class StatusVariantDocument
 
     public string IconGlyph { get; set; } = string.Empty;
 
-    public CatalogDocumentType? ItemType { get; set; }
+    public string IconColor { get; set; } = "#FFFFFF";
+
+    public IReadOnlyList<CatalogDocumentType>? ItemTypes { get; set; }
 }

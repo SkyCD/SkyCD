@@ -18,6 +18,8 @@ public partial class BrowserItemsView : UserControl
 {
     private static readonly FuncValueConverter<object?, bool> HasNonEmptyValueConverter =
         new(value => !string.IsNullOrWhiteSpace(value?.ToString()));
+    private static readonly FuncValueConverter<object?, IBrush> BrushFromStringConverter =
+        new(value => Color.TryParse(value?.ToString(), out var color) ? new SolidColorBrush(color) : Brushes.White);
 
     private readonly DetailsListView? detailsListView;
     private readonly ListBox? listModeListBox;
@@ -366,18 +368,19 @@ public partial class BrowserItemsView : UserControl
         icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
         iconContainer.Children.Add(icon);
 
-        var statusIcon = new Image
+        var statusIcon = new TextBlock
         {
-            Width = indicatorSize,
-            Height = indicatorSize,
+            FontSize = indicatorSize,
             HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom
+            VerticalAlignment = VerticalAlignment.Bottom,
+            LineHeight = indicatorSize
         };
-        statusIcon.Bind(Image.SourceProperty, new Binding($"Properties[{ItemStatusIconGlyphPropertyKey}]")
+        statusIcon.Bind(TextBlock.TextProperty, new Binding($"Properties[{ItemStatusIconTextPropertyKey}]"));
+        statusIcon.Bind(TextBlock.ForegroundProperty, new Binding($"Properties[{ItemStatusIconColorPropertyKey}]")
         {
-            Converter = IconConverter
+            Converter = BrushFromStringConverter
         });
-        statusIcon.Bind(IsVisibleProperty, new Binding($"Properties[{ItemStatusIconGlyphPropertyKey}]")
+        statusIcon.Bind(IsVisibleProperty, new Binding($"Properties[{ItemStatusIconTextPropertyKey}]")
         {
             Converter = HasNonEmptyValueConverter
         });
@@ -387,6 +390,8 @@ public partial class BrowserItemsView : UserControl
     }
 
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
+    private const string ItemStatusIconTextPropertyKey = "StatusIconText";
+    private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
     {

@@ -148,8 +148,9 @@ public partial class OptionsDialogViewModel : ObservableObject
         {
             Name = "New Status",
             IconGlyph = string.Empty,
-            ItemType = CatalogDocumentType.Media
+            IconColor = "#FFFFFF"
         };
+        candidate.SetTypeSelected(CatalogDocumentType.Media, true);
         StatusVariants.Add(candidate);
         SelectedStatusVariant = candidate;
     }
