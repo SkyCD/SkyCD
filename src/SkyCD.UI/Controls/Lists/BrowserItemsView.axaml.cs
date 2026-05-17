@@ -323,6 +323,9 @@ public partial class BrowserItemsView : UserControl
         double iconHeight,
         HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left)
     {
+        var indicatorSize = Math.Clamp(Math.Min(iconWidth, iconHeight) * 0.35, 4, 12);
+        var indicatorRadius = indicatorSize / 2;
+
         var iconContainer = new Grid
         {
             Width = iconWidth,
@@ -337,9 +340,9 @@ public partial class BrowserItemsView : UserControl
 
         iconContainer.Children.Add(new Border
         {
-            Width = 6,
-            Height = 6,
-            CornerRadius = new CornerRadius(3),
+            Width = indicatorSize,
+            Height = indicatorSize,
+            CornerRadius = new CornerRadius(indicatorRadius),
             Background = new SolidColorBrush(Color.Parse("#3B82F6")),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Bottom
