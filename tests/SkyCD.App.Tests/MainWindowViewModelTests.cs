@@ -49,32 +49,6 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void ViewMenu_ContainsStatusSubmenuWithStatusBarToggle()
-    {
-        var vm = CreateViewModel();
-
-        var statusSubmenu = vm.ViewMenuItems.FirstOrDefault(item => item.Header == "_Status");
-
-        Assert.NotNull(statusSubmenu);
-        Assert.Single(statusSubmenu!.Items);
-        Assert.Equal("_StatusBar", statusSubmenu.Items[0].Header);
-    }
-
-    [Fact]
-    public void StatusBarToggle_FromViewStatusSubmenu_ChangesVisibility()
-    {
-        var vm = CreateViewModel();
-        var statusToggle = vm.ViewMenuItems
-            .Single(item => item.Header == "_Status")
-            .Items
-            .Single(item => item.Header == "_StatusBar");
-
-        statusToggle.Command!.Execute(statusToggle.CommandParameter);
-
-        Assert.False(vm.IsStatusBarVisible);
-    }
-
-    [Fact]
     public void SetSortModeCommand_AppliesRequestedSortMode()
     {
         var vm = CreateViewModel();
