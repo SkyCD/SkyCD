@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using CommandDotNet;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 
 namespace SkyCD.Cli;
@@ -22,11 +24,16 @@ internal sealed class CliContributionRegistry : IDisposable
         commandOwners.Clear();
         commandHandlers.Clear();
 
+        var capabilitySet = capabilities
+            .Where(static capability => capability is not null)
+            .ToArray();
+        var parentMap = BuildParentMap(capabilitySet);
+
         var errors = new List<string>();
-        foreach (var capability in capabilities)
+        foreach (var capability in capabilitySet)
         {
             var ownerId = capability.GetType().Assembly.GetName().Name ?? capability.GetType().FullName ?? "unknown";
-            RegisterContribution(ownerId, capability, errors);
+            RegisterContribution(ownerId, capability, parentMap, errors);
         }
 
         Errors = errors;
@@ -59,9 +66,10 @@ internal sealed class CliContributionRegistry : IDisposable
     private void RegisterContribution(
         string ownerId,
         ICliPluginCapability capability,
+        IReadOnlyDictionary<ICliPluginCapability, ICliPluginCapability> parentMap,
         ICollection<string> errors)
     {
-        var commandPath = GetDeclaredCommandName(capability.GetType());
+        var commandPath = BuildCommandPath(capability, parentMap);
         if (string.IsNullOrWhiteSpace(commandPath))
         {
             errors.Add(
@@ -80,6 +88,64 @@ internal sealed class CliContributionRegistry : IDisposable
 
         commandOwners[normalizedPath] = ownerId;
         commandHandlers[normalizedPath] = new RegisteredCliContribution(ownerId, normalizedPath, capability);
+    }
+
+    private static IReadOnlyDictionary<ICliPluginCapability, ICliPluginCapability> BuildParentMap(
+        IReadOnlyCollection<ICliPluginCapability> capabilities)
+    {
+        var parentByChild = new Dictionary<ICliPluginCapability, ICliPluginCapability>(ReferenceEqualityComparer.Instance);
+        var capabilitySet = capabilities.ToHashSet(ReferenceEqualityComparer.Instance);
+
+        foreach (var parent in capabilities)
+        {
+            foreach (var property in parent.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public |
+                                                                    BindingFlags.NonPublic))
+            {
+                if (property.GetCustomAttribute<SubcommandAttribute>() is null)
+                {
+                    continue;
+                }
+
+                if (property.GetValue(parent) is not ICliPluginCapability child)
+                {
+                    continue;
+                }
+
+                if (!capabilitySet.Contains(child))
+                {
+                    continue;
+                }
+
+                parentByChild.TryAdd(child, parent);
+            }
+        }
+
+        return parentByChild;
+    }
+
+    private static string BuildCommandPath(
+        ICliPluginCapability capability,
+        IReadOnlyDictionary<ICliPluginCapability, ICliPluginCapability> parentMap)
+    {
+        var segments = new Stack<string>();
+        var cursor = capability;
+        while (true)
+        {
+            var segment = GetDeclaredCommandName(cursor.GetType());
+            if (!string.IsNullOrWhiteSpace(segment))
+            {
+                segments.Push(segment.Trim());
+            }
+
+            if (!parentMap.TryGetValue(cursor, out var parent))
+            {
+                break;
+            }
+
+            cursor = parent;
+        }
+
+        return string.Join(' ', segments);
     }
 
     private static string GetDeclaredCommandName(Type commandType)

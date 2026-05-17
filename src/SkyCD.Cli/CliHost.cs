@@ -44,6 +44,7 @@ public sealed class CliHost(
         SystemCommandPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Lock ConsoleRedirectLock = new();
+    private static readonly Lock PluginRuntimeLock = new();
 
     private readonly JsonSerializerOptions jsonOptions = new()
     {
@@ -98,27 +99,25 @@ public sealed class CliHost(
         }
 
         var pluginPath = TryReadPluginPathFromAppSettings(cliServiceProvider);
-        var pluginManager = ServiceProvider.Resolve<PluginManager>();
-        var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
-        pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
-        IReadOnlyList<DiscoveredPlugin> discoveredPlugins = pluginManager.Plugins.ToList();
-        ServiceProvider.ReregisterPluginsService();
-        var fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
+        IReadOnlyList<DiscoveredPlugin> discoveredPlugins;
+        FileFormatManager fileFormatManager;
+        lock (PluginRuntimeLock)
+        {
+            var pluginManager = ServiceProvider.Resolve<PluginManager>();
+            var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
+            pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
+            discoveredPlugins = pluginManager.Plugins.ToArray();
+            ServiceProvider.ReregisterPluginsService();
+            fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
+        }
         using var registry = new CliContributionRegistry();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
             .OfType<ICliPluginCapability>();
         registry.Register(GetSystemCapabilities().Concat(pluginCapabilities));
 
-        if (registry.Errors.Count > 0)
-        {
-            foreach (var error in registry.Errors)
-            {
-                await stderr.WriteLineAsync(error);
-            }
-
-            return new CliRunResult { Handled = true, ExitCode = CliExitCodes.ConfigurationError };
-        }
+        // Do not fail built-in CLI command execution when optional plugin CLI
+        // contributions are invalid. Invalid contributions are skipped by registry.
 
         var pluginCommand = registry.ResolveCommand(routedTokens, out var consumedTokens);
         if (pluginCommand is not null)
