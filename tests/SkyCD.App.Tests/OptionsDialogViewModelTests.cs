@@ -296,4 +296,16 @@ public class OptionsDialogViewModelTests
         Assert.True(vm.DialogAccepted);
         Assert.False(vm.ShowStatusAlert);
     }
+
+    [Fact]
+    public void ResetStatusVariantsCommand_RaisesRequestedEvent()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var raised = false;
+        vm.ResetStatusVariantsRequested += (_, _) => raised = true;
+
+        vm.ResetStatusVariantsCommand.Execute(null);
+
+        Assert.True(raised);
+    }
 }

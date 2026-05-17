@@ -138,6 +138,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public event EventHandler? RefreshPluginsRequested;
 
+    public event EventHandler? ResetStatusVariantsRequested;
+
     [RelayCommand]
     private void AddStatusVariant()
     {
@@ -172,6 +174,12 @@ public partial class OptionsDialogViewModel : ObservableObject
     private void RefreshPlugins()
     {
         RefreshPluginsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void ResetStatusVariants()
+    {
+        ResetStatusVariantsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand(CanExecute = nameof(CanConfigure))]

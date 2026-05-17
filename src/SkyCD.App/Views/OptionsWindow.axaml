@@ -285,6 +285,12 @@
                         <StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Right"
                                     Spacing="8">
+                            <Button Content="↺"
+                                    FontSize="16"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="Reset statuses"
+                                    Command="{Binding ResetStatusVariantsCommand}" />
                             <Button Content="+"
                                     FontSize="16"
                                     Width="34"

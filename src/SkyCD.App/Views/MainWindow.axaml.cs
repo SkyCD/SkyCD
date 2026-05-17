@@ -526,6 +526,7 @@ public partial class MainWindow : Window
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -564,6 +565,7 @@ public partial class MainWindow : Window
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+        e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
@@ -820,6 +822,23 @@ public partial class MainWindow : Window
         }
 
         RefreshPlugins(dialogVm);
+    }
+
+    private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var confirmed = await ShowResetStatusesPromptAsync();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        statusVariantRepository.ReplaceAll(statusVariantRepository.CreateDefaultEntries());
+        dialogVm.SetStatusVariants(statusVariantRepository.GetOrdered());
     }
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
@@ -1264,6 +1283,13 @@ public partial class MainWindow : Window
         MainStatusBar.McpStatusTooltip = isRunning
             ? $"MCP server running at {baseUrl}"
             : "MCP server stopped";
+    }
+
+    private async Task<bool> ShowResetStatusesPromptAsync()
+    {
+        var dialog = new ResetStatusesConfirmWindow();
+        var result = await dialog.ShowDialog<bool?>(this);
+        return result == true;
     }
 
 }

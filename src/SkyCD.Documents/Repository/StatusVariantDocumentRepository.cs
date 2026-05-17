@@ -7,6 +7,41 @@ namespace SkyCD.Documents.Repository;
 
 public sealed class StatusVariantDocumentRepository : RepositoryBase<StatusVariantDocument>
 {
+    public IReadOnlyList<StatusVariantDocument> CreateDefaultEntries()
+    {
+        return
+        [
+            new StatusVariantDocument
+            {
+                Id = "status-watched",
+                Name = "Watched",
+                IconGlyph = "check"
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-favorite",
+                Name = "Favorite",
+                IconGlyph = "star"
+            },
+            new StatusVariantDocument
+            {
+                Id = "status-important",
+                Name = "Important",
+                IconGlyph = "warning"
+            }
+        ];
+    }
+
+    public void EnsureDefaultStatuses()
+    {
+        if (GetAll().Count > 0)
+        {
+            return;
+        }
+
+        ReplaceAll(CreateDefaultEntries());
+    }
+
     public IReadOnlyList<StatusVariantDocument> GetOrdered()
     {
         return GetAll()
