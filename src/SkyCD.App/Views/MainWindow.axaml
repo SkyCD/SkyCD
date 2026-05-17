@@ -36,6 +36,8 @@
                     Value="{ReflectionBinding DataContext.ToggleType, RelativeSource={RelativeSource Self}}" />
             <Setter Property="IsChecked"
                     Value="{ReflectionBinding DataContext.IsChecked, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="IsEnabled"
+                    Value="{ReflectionBinding DataContext.IsEnabled, RelativeSource={RelativeSource Self}}" />
             <Setter Property="ItemsSource"
                     Value="{ReflectionBinding DataContext.Items, RelativeSource={RelativeSource Self}}" />
             <Setter Property="ItemContainerTheme" Value="{DynamicResource DynamicMenuItemTheme}" />

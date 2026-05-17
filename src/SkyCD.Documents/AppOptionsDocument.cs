@@ -1,6 +1,5 @@
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents.Repository;
-using System.Collections.Generic;
 
 namespace SkyCD.Documents;
 
@@ -31,5 +30,4 @@ public sealed class AppOptionsDocument
 
     public bool IsMcpStatusIconVisible { get; set; } = true;
 
-    public List<StatusVariantDocument> StatusVariants { get; set; } = [];
 }

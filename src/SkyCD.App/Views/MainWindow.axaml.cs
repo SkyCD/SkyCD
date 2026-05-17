@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private readonly RepositoryManager repositoryManager;
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly CatalogDocumentRepository catalogRepository;
+    private readonly StatusVariantDocumentRepository statusVariantRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private FileFormatManager fileFormatManager;
@@ -52,6 +53,7 @@ public partial class MainWindow : Window
         this.repositoryManager = repositoryManager;
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -195,7 +197,7 @@ public partial class MainWindow : Window
             options.Browser.ViewMode,
             options.Browser.SortMode,
             options.IsStatusBarVisible);
-        vm.SetStatusVariants(options.StatusVariants);
+        vm.SetStatusVariants(statusVariantRepository.GetOrdered());
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
@@ -513,7 +515,7 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
-        e.Dialog.SetStatusVariants(options.StatusVariants);
+        e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -542,10 +544,10 @@ public partial class MainWindow : Window
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
-            options.StatusVariants = e.Dialog.GetStatusVariants().ToList();
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
+            statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
@@ -553,7 +555,7 @@ public partial class MainWindow : Window
             RefreshMcpStatusIndicator();
             if (DataContext is MainWindowViewModel vm)
             {
-                vm.SetStatusVariants(options.StatusVariants);
+                vm.SetStatusVariants(statusVariantRepository.GetOrdered());
             }
 
             // Trigger UI refresh to apply new language

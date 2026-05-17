@@ -1186,6 +1186,13 @@ public partial class MainWindowViewModel : ObservableObject
                 [
                     new MainMenuItemViewModel { Header = "_Add...", HotKey = "F2", Command = AddItemCommand },
                     new MainMenuItemViewModel { Header = "_Delete", HotKey = "Delete", Command = DeleteItemCommand },
+                    new MainMenuItemViewModel
+                    {
+                        Key = "edit_status",
+                        Header = "_Status",
+                        IsEnabled = IsDeleteEnabled,
+                        Items = BuildStatusMenuItems()
+                    },
                     Separator(),
                     new MainMenuItemViewModel
                         { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
@@ -1337,6 +1344,8 @@ public partial class MainWindowViewModel : ObservableObject
         SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, "_Name"));
         SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, "_Type"));
         SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, "_Size"));
+        SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
+        SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 
     private static IEnumerable<MainMenuItemViewModel> FlattenMenuItems(IEnumerable<MainMenuItemViewModel> items)
@@ -1359,6 +1368,28 @@ public partial class MainWindowViewModel : ObservableObject
         if (byKey.TryGetValue(key, out var item))
         {
             item.Header = header;
+        }
+    }
+
+    private static void SetMenuEnabled(
+        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
+        string key,
+        bool isEnabled)
+    {
+        if (byKey.TryGetValue(key, out var item))
+        {
+            item.IsEnabled = isEnabled;
+        }
+    }
+
+    private static void SetMenuItems(
+        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
+        string key,
+        IReadOnlyList<MainMenuItemViewModel> items)
+    {
+        if (byKey.TryGetValue(key, out var item))
+        {
+            item.Items = items;
         }
     }
 
@@ -1386,18 +1417,6 @@ public partial class MainWindowViewModel : ObservableObject
 
     private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
     {
-        var statusItems = new List<MainMenuItemViewModel>
-        {
-            CheckedMenuItem(!HasAssignedStatus(SelectedBrowserItem), "_None", ApplyBrowserItemStatusCommand, null)
-        };
-
-        statusItems.AddRange(statusVariants.Select(variant =>
-            CheckedMenuItem(
-                IsAssignedStatus(SelectedBrowserItem, variant.Name),
-                variant.Name,
-                ApplyBrowserItemStatusCommand,
-                variant.Name)));
-
         return
         [
             new MainMenuItemViewModel
@@ -1407,8 +1426,8 @@ public partial class MainWindowViewModel : ObservableObject
             Separator(),
             new MainMenuItemViewModel
             {
-                Header = "_Statuses",
-                Items = statusItems
+                Header = "_Status",
+                Items = BuildStatusMenuItems()
             },
             Separator(),
             new MainMenuItemViewModel
@@ -1695,5 +1714,22 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         return string.Equals(assignedStatusName, expectedStatusName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildStatusMenuItems()
+    {
+        var statusItems = new List<MainMenuItemViewModel>
+        {
+            CheckedMenuItem(!HasAssignedStatus(SelectedBrowserItem), "_None", ApplyBrowserItemStatusCommand, null)
+        };
+
+        statusItems.AddRange(statusVariants.Select(variant =>
+            CheckedMenuItem(
+                IsAssignedStatus(SelectedBrowserItem, variant.Name),
+                variant.Name,
+                ApplyBrowserItemStatusCommand,
+                variant.Name)));
+
+        return statusItems;
     }
 }

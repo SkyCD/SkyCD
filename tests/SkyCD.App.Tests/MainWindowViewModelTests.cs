@@ -58,7 +58,7 @@ public class MainWindowViewModelTests
             new StatusVariantDocument { Name = "Favorite", IconGlyph = "star" }
         ]);
 
-        var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Statuses");
+        var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
         var watched = statusesMenu.Items.Single(item => item.Header == "Watched");
         watched.Command!.Execute(watched.CommandParameter);
 
@@ -70,6 +70,19 @@ public class MainWindowViewModelTests
 
         Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusName"));
         Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusIconGlyph"));
+    }
+
+    [Fact]
+    public void EditMenu_StatusSubmenu_IsDisabledWhenNoItemSelected()
+    {
+        var vm = CreateViewModel();
+        vm.SelectedBrowserItem = null;
+
+        var statusMenu = vm.EditMenuItems.Single(item => item.Key == "edit_status");
+
+        Assert.False(statusMenu.IsEnabled);
+        vm.SelectedBrowserItem = vm.BrowserItems.FirstOrDefault();
+        Assert.True(statusMenu.IsEnabled);
     }
 
     [Fact]
