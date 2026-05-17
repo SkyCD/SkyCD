@@ -340,9 +340,9 @@
                                                     <multiSelect:MultiSelectDropdown Grid.Column="2"
                                                                                      ItemsSource="{Binding TypeOptions}"
                                                                                      PlaceholderText="Select item types" />
-                                                    <colorSelect:ColorPaletteDropdown Grid.Column="3"
-                                                                                      SelectedColor="{Binding IconColor, Mode=TwoWay}"
-                                                                                      ItemsSource="{Binding ColorOptions}" />
+                                                    <colorSelect:ColorPaletteDropdownControl Grid.Column="3"
+                                                                                             SelectedColor="{Binding IconColor, Mode=TwoWay}"
+                                                                                             ItemsSource="{Binding ColorOptions}" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

@@ -12,16 +12,16 @@ using Avalonia.Threading;
 
 namespace SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;
 
-public partial class ColorPaletteDropdown : UserControl
+public partial class ColorPaletteDropdownControl : UserControl
 {
     public static readonly StyledProperty<IEnumerable<string>?> ItemsSourceProperty =
-        AvaloniaProperty.Register<ColorPaletteDropdown, IEnumerable<string>?>(nameof(ItemsSource));
+        AvaloniaProperty.Register<ColorPaletteDropdownControl, IEnumerable<string>?>(nameof(ItemsSource));
 
     public static readonly StyledProperty<string> SelectedColorProperty =
-        AvaloniaProperty.Register<ColorPaletteDropdown, string>(nameof(SelectedColor), "#FFFFFF", defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+        AvaloniaProperty.Register<ColorPaletteDropdownControl, string>(nameof(SelectedColor), "#FFFFFF", defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
-    public static readonly DirectProperty<ColorPaletteDropdown, IBrush> SelectedBrushProperty =
-        AvaloniaProperty.RegisterDirect<ColorPaletteDropdown, IBrush>(nameof(SelectedBrush), control => control.SelectedBrush);
+    public static readonly DirectProperty<ColorPaletteDropdownControl, IBrush> SelectedBrushProperty =
+        AvaloniaProperty.RegisterDirect<ColorPaletteDropdownControl, IBrush>(nameof(SelectedBrush), control => control.SelectedBrush);
 
     private IBrush selectedBrush = Brushes.White;
     private bool isPointerDown;
@@ -32,7 +32,7 @@ public partial class ColorPaletteDropdown : UserControl
     private double saturation;
     private double value = 1;
 
-    public ColorPaletteDropdown()
+    public ColorPaletteDropdownControl()
     {
         InitializeComponent();
         SvSurface.SizeChanged += (_, _) => RefreshPickerVisuals();

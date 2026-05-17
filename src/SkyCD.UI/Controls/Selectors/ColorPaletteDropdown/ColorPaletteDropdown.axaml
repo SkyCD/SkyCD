@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="SkyCD.UI.Controls.Selectors.ColorPaletteDropdown.ColorPaletteDropdown"
+             x:Class="SkyCD.UI.Controls.Selectors.ColorPaletteDropdown.ColorPaletteDropdownControl"
              x:Name="Root">
     <Grid>
         <Button x:Name="ToggleButton"
