@@ -323,28 +323,29 @@ public partial class BrowserItemsView : UserControl
         double iconHeight,
         HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left)
     {
-        var iconStack = new StackPanel
+        var iconContainer = new Grid
         {
-            Orientation = Orientation.Vertical,
-            Spacing = 2,
+            Width = iconWidth,
+            Height = iconHeight,
             HorizontalAlignment = horizontalAlignment,
             VerticalAlignment = VerticalAlignment.Center
         };
 
         var icon = new Image { Width = iconWidth, Height = iconHeight, HorizontalAlignment = horizontalAlignment };
         icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-        iconStack.Children.Add(icon);
+        iconContainer.Children.Add(icon);
 
-        iconStack.Children.Add(new Border
+        iconContainer.Children.Add(new Border
         {
             Width = 6,
             Height = 6,
             CornerRadius = new CornerRadius(3),
             Background = new SolidColorBrush(Color.Parse("#3B82F6")),
-            HorizontalAlignment = HorizontalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom
         });
 
-        return iconStack;
+        return iconContainer;
     }
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
