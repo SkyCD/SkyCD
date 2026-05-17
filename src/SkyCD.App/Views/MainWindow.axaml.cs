@@ -202,6 +202,8 @@ public partial class MainWindow : Window
             _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
         }
 
+        RefreshMcpStatusIndicator();
+
         isSessionStateLoaded = true;
     }
 
@@ -507,6 +509,9 @@ public partial class MainWindow : Window
         var pluginPath = options.PluginPath;
 
         e.Dialog.PluginPath = pluginPath;
+        e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
+        e.Dialog.McpPort = options.McpPort;
+        e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -532,12 +537,17 @@ public partial class MainWindow : Window
                 .ToArray();
 
             options.PluginPath = e.Dialog.PluginPath;
+            options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
+            options.McpPort = e.Dialog.McpPort;
+            options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
+            (Application.Current as App)?.ApplyMcpSettings();
+            RefreshMcpStatusIndicator();
 
             // Trigger UI refresh to apply new language
             InvalidateVisual();
@@ -1224,6 +1234,28 @@ public partial class MainWindow : Window
     }
 
     private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain);
+
+    private void RefreshMcpStatusIndicator()
+    {
+        if (Application.Current is not App app)
+        {
+            MainStatusBar.IsMcpStatusVisible = true;
+            MainStatusBar.McpStatusGlyph = "◎";
+            MainStatusBar.McpStatusColor = "#9CA3AF";
+            MainStatusBar.McpStatusTooltip = "MCP server unavailable";
+            return;
+        }
+
+        var options = LoadAppOptions();
+        MainStatusBar.IsMcpStatusVisible = options.IsMcpStatusIconVisible;
+
+        var (isRunning, baseUrl) = app.GetMcpStatus();
+        MainStatusBar.McpStatusGlyph = isRunning ? "◉" : "◎";
+        MainStatusBar.McpStatusColor = isRunning ? "#22C55E" : "#9CA3AF";
+        MainStatusBar.McpStatusTooltip = isRunning
+            ? $"MCP server running at {baseUrl}"
+            : "MCP server stopped";
+    }
 
 }
 

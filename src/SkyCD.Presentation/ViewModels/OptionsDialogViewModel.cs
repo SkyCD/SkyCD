@@ -56,7 +56,19 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private string? selectedSettingCategory;
 
-    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language"];
+    [ObservableProperty] private int mcpPort = 8765;
+
+    [ObservableProperty] private bool isMcpServerEnabled = true;
+
+    [ObservableProperty] private bool isMcpStatusIconVisible = true;
+
+    [ObservableProperty] private string mcpCopyTooltip = "Copy URL";
+
+    [ObservableProperty] private string mcpAlertMessage = string.Empty;
+
+    public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
+
+    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -69,9 +81,12 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool IsLanguageCategorySelected => SelectedTabIndex == 1;
 
-    public bool ShowPluginPathSection =>
+    public bool ShowProjectSettingsSection =>
         IsPluginsCategorySelected &&
         IsCurrentCategoryVisibleInSearch;
+
+    public bool ShowPluginPathSection =>
+        ShowProjectSettingsSection;
 
     public bool ShowPluginListSection =>
         IsPluginsCategorySelected &&
@@ -89,12 +104,21 @@ public partial class OptionsDialogViewModel : ObservableObject
         IsLanguageCategorySelected &&
         IsCurrentCategoryVisibleInSearch;
 
+    public bool IsMcpCategorySelected => SelectedTabIndex == 2;
+
+    public bool ShowMcpSection =>
+        IsMcpCategorySelected &&
+        IsCurrentCategoryVisibleInSearch;
+
     public bool HasVisibleCategoryContent =>
         ShowPluginPathSection ||
         ShowPluginListSection ||
         ShowPluginActionsSection ||
         ShowPluginInfoSection ||
-        ShowLanguageSection;
+        ShowLanguageSection ||
+        ShowMcpSection;
+
+    public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
     public bool ShowNoSearchResults => !HasVisibleCategoryContent;
 
@@ -241,6 +265,28 @@ public partial class OptionsDialogViewModel : ObservableObject
         NotifySettingsVisibilityChanged();
     }
 
+    partial void OnMcpPortChanged(int value)
+    {
+        if (value < 1)
+        {
+            McpPort = 1;
+            return;
+        }
+
+        if (value > 65535)
+        {
+            McpPort = 65535;
+            return;
+        }
+
+        OnPropertyChanged(nameof(McpBaseUrl));
+    }
+
+    partial void OnMcpAlertMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowMcpAlert));
+    }
+
     private bool MatchesSearch(params string[] terms)
     {
         if (string.IsNullOrWhiteSpace(SettingsSearchText))
@@ -298,7 +344,10 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(IsCurrentCategoryVisibleInSearch));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));
+        OnPropertyChanged(nameof(IsMcpCategorySelected));
+        OnPropertyChanged(nameof(ShowProjectSettingsSection));
         OnPropertyChanged(nameof(ShowPluginPathSection));
+        OnPropertyChanged(nameof(ShowMcpSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));

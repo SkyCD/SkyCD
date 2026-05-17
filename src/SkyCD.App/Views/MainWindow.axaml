@@ -86,7 +86,8 @@
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>
 
-        <cs:StatusBar DockPanel.Dock="Bottom"
+        <cs:StatusBar x:Name="MainStatusBar"
+                      DockPanel.Dock="Bottom"
                       IsVisible="{Binding IsStatusBarVisible}"
                       StatusText="{Binding StatusText}"
                       ProgressText="{Binding ProgressText}"

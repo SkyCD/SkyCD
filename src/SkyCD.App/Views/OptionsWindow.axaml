@@ -216,6 +216,59 @@
                         </Grid>
                     </StackPanel>
 
+                    <StackPanel Grid.Row="2"
+                                IsVisible="{Binding ShowMcpSection}"
+                                Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="MCP Server" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                            <TextBlock Text="Enabled:" VerticalAlignment="Center" />
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding IsMcpServerEnabled}"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left" />
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                            <TextBlock Text="Show status icon:" VerticalAlignment="Center" />
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding IsMcpStatusIconVisible}"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left" />
+                        </Grid>
+                        <Grid ColumnDefinitions="140,120,*" ColumnSpacing="10">
+                            <TextBlock Text="Port:" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     IsEnabled="{Binding IsMcpServerEnabled}"
+                                     Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                            <TextBlock Text="Server URI:" VerticalAlignment="Center" />
+                            <TextBox x:Name="McpUrlTextBox"
+                                     Grid.Column="1"
+                                     IsReadOnly="True"
+                                     Text="{Binding McpBaseUrl}"
+                                     DoubleTapped="OnMcpUrlDoubleTapped" />
+                            <Button Grid.Column="2"
+                                    Content="⧉"
+                                    FontSize="14"
+                                    MinWidth="34"
+                                    ToolTip.Tip="{Binding McpCopyTooltip}"
+                                    Click="OnCopyMcpUrlClicked" />
+                        </Grid>
+                        <Border IsVisible="{Binding ShowMcpAlert}"
+                                Background="#1B5E20"
+                                BorderBrush="#2E7D32"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4">
+                            <TextBlock Text="{Binding McpAlertMessage}"
+                                       Foreground="#FFFFFF"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+
                     <Border Grid.Row="4"
                             IsVisible="{Binding ShowNoSearchResults}"
                             BorderBrush="#6A5C2D"

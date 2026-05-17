@@ -103,9 +103,9 @@ public class OptionsDialogViewModelTests
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SelectedTabIndex = 1;
+        vm.SelectedTabIndex = 2;
 
-        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.Equal(2, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class OptionsDialogViewModelTests
         Assert.Equal(0, vm.SelectedTabIndex);
 
         vm.SelectedTabIndex = 99;
-        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.Equal(2, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -165,6 +165,19 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void SearchText_FiltersMcpCategory()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "mcp";
+
+        Assert.Equal(["MCP"], vm.FilteredSettingCategories);
+        Assert.Equal("MCP", vm.SelectedSettingCategory);
+        Assert.Equal(2, vm.SelectedTabIndex);
+        Assert.True(vm.ShowMcpSection);
+    }
+
+    [Fact]
     public void SearchText_DoesNotFilterRightPanelItemCollections()
     {
         var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
@@ -179,5 +192,42 @@ public class OptionsDialogViewModelTests
 
         Assert.Equal(2, vm.Plugins.Count);
         Assert.Equal(2, vm.Languages.Count);
+    }
+
+    [Fact]
+    public void McpPort_IsClampedAndBuildsUrl()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.McpPort = 0;
+        Assert.Equal(1, vm.McpPort);
+
+        vm.McpPort = 70000;
+        Assert.Equal(65535, vm.McpPort);
+
+        vm.McpPort = 8787;
+        Assert.Equal("http://127.0.0.1:8787/mcp", vm.McpBaseUrl);
+    }
+
+    [Fact]
+    public void McpServer_CanBeDisabled()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.IsMcpServerEnabled = false;
+
+        Assert.False(vm.IsMcpServerEnabled);
+    }
+
+    [Fact]
+    public void McpStatusIconVisibility_DefaultsToTrueAndCanBeDisabled()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        Assert.True(vm.IsMcpStatusIconVisible);
+        Assert.Equal("Copy URL", vm.McpCopyTooltip);
+        Assert.False(vm.ShowMcpAlert);
+        vm.IsMcpStatusIconVisible = false;
+        Assert.False(vm.IsMcpStatusIconVisible);
     }
 }

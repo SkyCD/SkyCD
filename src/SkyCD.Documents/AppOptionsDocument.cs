@@ -23,4 +23,10 @@ public sealed class AppOptionsDocument
     public int AppStartCount { get; set; }
 
     public string LastOpenedCatalogPath { get; set; } = string.Empty;
+
+    public bool IsMcpServerEnabled { get; set; } = true;
+
+    public int McpPort { get; set; } = 8765;
+
+    public bool IsMcpStatusIconVisible { get; set; } = true;
 }
