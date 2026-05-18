@@ -83,26 +83,65 @@ public partial class ColorPaletteDropdownControl : UserControl
             return;
         }
 
-        var text = HexTextBox.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(text))
+        var normalized = NormalizeHexInput(HexTextBox.Text);
+        if (!string.Equals(normalized, HexTextBox.Text, StringComparison.Ordinal))
+        {
+            suppressEvents = true;
+            HexTextBox.Text = normalized;
+            HexTextBox.CaretIndex = normalized.Length;
+            suppressEvents = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(normalized) || normalized.Length != 7)
         {
             return;
         }
 
-        if (!text.StartsWith("#", StringComparison.Ordinal))
-        {
-            text = $"#{text}";
-        }
-
-        if (!Color.TryParse(text, out _))
+        if (!Color.TryParse(normalized, out _))
         {
             return;
         }
 
         suppressEvents = true;
-        SelectedColor = text.ToUpperInvariant();
+        SelectedColor = normalized;
         suppressEvents = false;
         RefreshFromSelectedColor();
+    }
+
+    private void OnHexTextBoxTextInput(object? sender, TextInputEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.Text))
+        {
+            return;
+        }
+
+        foreach (var ch in e.Text)
+        {
+            if (!IsHexChar(ch) && ch != '#')
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
+        var current = HexTextBox.Text ?? string.Empty;
+        var caret = HexTextBox.CaretIndex;
+        var selectionStart = HexTextBox.SelectionStart;
+        var selectionEnd = HexTextBox.SelectionEnd;
+        var selectionLength = Math.Max(0, selectionEnd - selectionStart);
+        var replacementLength = e.Text.Length;
+        var nextLength = current.Length - selectionLength + replacementLength;
+
+        if (nextLength > 7)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Text.Contains('#') && caret > 0)
+        {
+            e.Handled = true;
+        }
     }
 
     private void OnSvSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -376,5 +415,47 @@ public partial class ColorPaletteDropdownControl : UserControl
 
         s = max == 0 ? 0 : delta / max;
         v = max;
+    }
+
+    private static string NormalizeHexInput(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "#";
+        }
+
+        var chars = input.Trim().ToUpperInvariant();
+        Span<char> buffer = stackalloc char[7];
+        var index = 0;
+        buffer[index++] = '#';
+
+        foreach (var ch in chars)
+        {
+            if (ch == '#')
+            {
+                continue;
+            }
+
+            if (!IsHexChar(ch))
+            {
+                continue;
+            }
+
+            if (index >= 7)
+            {
+                break;
+            }
+
+            buffer[index++] = ch;
+        }
+
+        return new string(buffer[..index]);
+    }
+
+    private static bool IsHexChar(char ch)
+    {
+        return (ch >= '0' && ch <= '9') ||
+               (ch >= 'A' && ch <= 'F') ||
+               (ch >= 'a' && ch <= 'f');
     }
 }
