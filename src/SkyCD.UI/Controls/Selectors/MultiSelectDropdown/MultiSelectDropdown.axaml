@@ -4,7 +4,6 @@
              x:Class="SkyCD.UI.Controls.Selectors.MultiSelectDropdown.MultiSelectDropdown"
              x:Name="Root">
     <UserControl.Resources>
-        <selectors:BooleanToGlyphConverter x:Key="BooleanToGlyphConverter" />
         <selectors:IconKeyToSymbolConverter x:Key="IconKeyToSymbolConverter" />
     </UserControl.Resources>
     <Grid RowDefinitions="Auto">
@@ -35,39 +34,56 @@
                Placement="BottomEdgeAlignedLeft"
                IsOpen="False"
                IsLightDismissEnabled="True"
-               Topmost="False"
-               Width="{Binding Bounds.Width, ElementName=Root}">
+               Topmost="False">
             <Border Background="{DynamicResource ThemeBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="1"
                     CornerRadius="4"
+                    MinWidth="{Binding Bounds.Width, ElementName=Root}"
                     Padding="8">
-                <StackPanel Spacing="8">
-                    <ListBox x:Name="ItemsListBox"
-                             MaxHeight="220"
-                             SelectionMode="Single"
-                             SelectionChanged="OnItemsListSelectionChanged"
-                             PointerPressed="OnItemsListPointerPressed">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
-                                    <TextBlock VerticalAlignment="Center"
-                                               Foreground="{DynamicResource ThemeForegroundBrush}"
-                                               Text="{Binding IsSelected, Converter={StaticResource BooleanToGlyphConverter}}" />
-                                    <TextBlock Grid.Column="1"
-                                               IsVisible="{Binding ShowIconSymbols, ElementName=Root}"
+                <ListBox x:Name="ItemsListBox"
+                         MaxHeight="220"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0"
+                         SelectionMode="Single"
+                         SelectionChanged="OnItemsListSelectionChanged"
+                         PointerPressed="OnItemsListPointerPressed">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="0" />
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="8,4"
+                                    CornerRadius="2"
+                                    Classes.selected="{Binding IsSelected}">
+                                <Border.Styles>
+                                    <Style Selector="Border:pointerover">
+                                        <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
+                                    </Style>
+                                    <Style Selector="Border.selected">
+                                        <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+                                    </Style>
+                                    <Style Selector="Border.selected:pointerover">
+                                        <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
+                                    </Style>
+                                </Border.Styles>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <TextBlock IsVisible="{Binding ShowIconSymbols, ElementName=Root}"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                                Text="{Binding Label, Converter={StaticResource IconKeyToSymbolConverter}}" />
-                                    <TextBlock Grid.Column="2"
+                                    <TextBlock Grid.Column="1"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                                Text="{Binding Label}" />
                                 </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Border>
         </Popup>
     </Grid>
