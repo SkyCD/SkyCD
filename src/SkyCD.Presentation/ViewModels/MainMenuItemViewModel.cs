@@ -23,5 +23,7 @@ public sealed partial class MainMenuItemViewModel : ObservableObject
 
     [ObservableProperty] private bool isChecked;
 
-    public IReadOnlyList<MainMenuItemViewModel> Items { get; init; } = [];
+    [ObservableProperty] private bool isEnabled = true;
+
+    [ObservableProperty] private IReadOnlyList<MainMenuItemViewModel> items = [];
 }

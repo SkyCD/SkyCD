@@ -16,6 +16,11 @@ namespace SkyCD.UI.Controls.Lists;
 
 public partial class BrowserItemsView : UserControl
 {
+    private static readonly FuncValueConverter<object?, bool> HasNonEmptyValueConverter =
+        new(value => !string.IsNullOrWhiteSpace(value?.ToString()));
+    private static readonly FuncValueConverter<object?, IBrush> BrushFromStringConverter =
+        new(value => Color.TryParse(value?.ToString(), out var color) ? new SolidColorBrush(color) : Brushes.White);
+
     private readonly DetailsListView? detailsListView;
     private readonly ListBox? listModeListBox;
     private readonly ListBox? iconGridListBox;
@@ -25,6 +30,10 @@ public partial class BrowserItemsView : UserControl
 
     public static readonly StyledProperty<object?> SelectedItemProperty =
         AvaloniaProperty.Register<BrowserItemsView, object?>(nameof(SelectedItem),
+            defaultBindingMode: BindingMode.TwoWay);
+
+    public static readonly StyledProperty<IList?> SelectedItemsProperty =
+        AvaloniaProperty.Register<BrowserItemsView, IList?>(nameof(SelectedItems),
             defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly StyledProperty<BrowserViewMode> ViewModeProperty =
@@ -68,12 +77,21 @@ public partial class BrowserItemsView : UserControl
 
         detailsListView.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         detailsListView.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
+        detailsListView.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == DetailsListView.SelectedItemsProperty)
+            {
+                SelectedItems = detailsListView.SelectedItems;
+            }
+        };
 
         listModeListBox.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         listModeListBox.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
+        listModeListBox.SelectionChanged += (_, _) => SelectedItems = listModeListBox.SelectedItems;
 
         iconGridListBox.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         iconGridListBox.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
+        iconGridListBox.SelectionChanged += (_, _) => SelectedItems = iconGridListBox.SelectedItems;
 
         UpdateViewMode();
         UpdateListTemplate();
@@ -91,6 +109,12 @@ public partial class BrowserItemsView : UserControl
     {
         get => GetValue(SelectedItemProperty);
         set => SetValue(SelectedItemProperty, value);
+    }
+
+    public IList? SelectedItems
+    {
+        get => GetValue(SelectedItemsProperty);
+        set => SetValue(SelectedItemsProperty, value);
     }
 
     public BrowserViewMode ViewMode
@@ -172,6 +196,12 @@ public partial class BrowserItemsView : UserControl
         iconGridListBox.IsVisible =
             ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
         IsTilesMode = ViewMode == BrowserViewMode.Tiles;
+        SelectedItems = ViewMode switch
+        {
+            BrowserViewMode.Details => detailsListView.SelectedItems,
+            BrowserViewMode.List => listModeListBox.SelectedItems,
+            _ => iconGridListBox.SelectedItems
+        };
     }
 
     private void UpdateDetailsTemplate()
@@ -202,9 +232,7 @@ public partial class BrowserItemsView : UserControl
                 Margin = new Thickness(4, 2)
             };
 
-            var icon = new Image { Width = 14, Height = 14 };
-            icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-            stack.Children.Add(icon);
+            stack.Children.Add(BuildIconWithStatusIndicator(14, 14));
 
             var name = new TextBlock { FontSize = 13 };
             name.Bind(TextBlock.TextProperty, new Binding("Name"));
@@ -237,9 +265,7 @@ public partial class BrowserItemsView : UserControl
             var stack = new StackPanel();
             border.Child = stack;
 
-            var icon = new Image { Width = 32, Height = 32, HorizontalAlignment = HorizontalAlignment.Center };
-            icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-            stack.Children.Add(icon);
+            stack.Children.Add(BuildIconWithStatusIndicator(32, 32, HorizontalAlignment.Center));
 
             var name = new TextBlock { TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
             name.Bind(TextBlock.TextProperty, new Binding("Name"));
@@ -302,10 +328,9 @@ public partial class BrowserItemsView : UserControl
                 ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns)
             };
 
-            var icon = new Image { Width = 16, Height = 16 };
-            icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
-            Grid.SetColumn(icon, 0);
-            grid.Children.Add(icon);
+            var iconWithIndicator = BuildIconWithStatusIndicator(16, 16);
+            Grid.SetColumn(iconWithIndicator, 0);
+            grid.Children.Add(iconWithIndicator);
 
             for (var i = 0; i < detailsColumns.Count; i++)
             {
@@ -322,6 +347,51 @@ public partial class BrowserItemsView : UserControl
             return grid;
         });
     }
+
+    private Control BuildIconWithStatusIndicator(
+        double iconWidth,
+        double iconHeight,
+        HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left)
+    {
+        var indicatorSize = Math.Clamp(Math.Min(iconWidth, iconHeight) * 0.35, 4, 12);
+        var indicatorRadius = indicatorSize / 2;
+
+        var iconContainer = new Grid
+        {
+            Width = iconWidth,
+            Height = iconHeight,
+            HorizontalAlignment = horizontalAlignment,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var icon = new Image { Width = iconWidth, Height = iconHeight, HorizontalAlignment = horizontalAlignment };
+        icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
+        iconContainer.Children.Add(icon);
+
+        var statusIcon = new TextBlock
+        {
+            FontSize = indicatorSize,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            LineHeight = indicatorSize
+        };
+        statusIcon.Bind(TextBlock.TextProperty, new Binding($"Properties[{ItemStatusIconTextPropertyKey}]"));
+        statusIcon.Bind(TextBlock.ForegroundProperty, new Binding($"Properties[{ItemStatusIconColorPropertyKey}]")
+        {
+            Converter = BrushFromStringConverter
+        });
+        statusIcon.Bind(IsVisibleProperty, new Binding($"Properties[{ItemStatusIconTextPropertyKey}]")
+        {
+            Converter = HasNonEmptyValueConverter
+        });
+        iconContainer.Children.Add(statusIcon);
+
+        return iconContainer;
+    }
+
+    private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
+    private const string ItemStatusIconTextPropertyKey = "StatusIconText";
+    private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
     {

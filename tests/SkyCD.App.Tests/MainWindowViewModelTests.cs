@@ -49,6 +49,89 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void BrowserContextMenu_StatusesSubmenu_AssignsAndClearsStatusIconGlyph()
+    {
+        var vm = CreateViewModel();
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Watched", IconGlyph = "check" },
+            new StatusVariantDocument { Name = "Favorite", IconGlyph = "star" }
+        ]);
+
+        var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
+        var watched = statusesMenu.Items.Single(item => item.Header == "Watched");
+        var watchedIcon = Assert.IsType<StatusMenuIcon>(watched.Icon);
+        Assert.Equal("check", watchedIcon.IconGlyph);
+        watched.Command!.Execute(watched.CommandParameter);
+
+        Assert.Equal("Watched", vm.SelectedBrowserItem!.Properties["StatusName"]?.ToString());
+        Assert.Equal("check", vm.SelectedBrowserItem.Properties["StatusIconGlyph"]?.ToString());
+        Assert.Equal("Watched", vm.SelectedBrowserItem.Status);
+
+        statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
+        watched = statusesMenu.Items.Single(item => item.Header == "Watched");
+        Assert.False(watched.IsEnabled);
+
+        var @default = statusesMenu.Items.Single(item => item.Header == "_Default");
+        @default.Command!.Execute(@default.CommandParameter);
+
+        Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusName"));
+        Assert.False(vm.SelectedBrowserItem.Properties.ContainsKey("StatusIconGlyph"));
+        Assert.Null(vm.SelectedBrowserItem.Status);
+    }
+
+    [Fact]
+    public void StatusMenu_MixedSelection_AppliesOnlyToSupportedItemTypes()
+    {
+        var vm = CreateViewModel();
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument
+            {
+                Name = "Borrowed",
+                IconGlyph = "check",
+                ItemTypes = [CatalogDocumentType.Media]
+            },
+            new StatusVariantDocument
+            {
+                Name = "Needs inspection",
+                IconGlyph = "warning",
+                ItemTypes = [CatalogDocumentType.Folder]
+            }
+        ]);
+
+        var folderItem = vm.BrowserItems.First(item => item.Type == CatalogDocumentType.Folder);
+        vm.SelectedTreeNode = vm.TreeNodes
+            .SelectMany(root => root.Children)
+            .First(node => node.Title == "Movies");
+        var mediaItem = vm.BrowserItems.First(item => item.Type == CatalogDocumentType.Media);
+        vm.SelectedBrowserItems = new System.Collections.Generic.List<CatalogDocument> { mediaItem, folderItem };
+
+        var statusesMenu = vm.BrowserContextMenuItems.Single(item => item.Header == "_Status");
+        Assert.Contains(statusesMenu.Items, item => item.Header == "Borrowed");
+        Assert.Contains(statusesMenu.Items, item => item.Header == "Needs inspection");
+
+        var borrowed = statusesMenu.Items.Single(item => item.Header == "Borrowed");
+        borrowed.Command!.Execute(borrowed.CommandParameter);
+
+        Assert.Equal("Borrowed", mediaItem.Properties["StatusName"]?.ToString());
+        Assert.False(folderItem.Properties.ContainsKey("StatusName"));
+    }
+
+    [Fact]
+    public void EditMenu_StatusSubmenu_IsDisabledWhenNoItemSelected()
+    {
+        var vm = CreateViewModel();
+        vm.SelectedBrowserItem = null;
+
+        var statusMenu = vm.EditMenuItems.Single(item => item.Key == "edit_status");
+
+        Assert.False(statusMenu.IsEnabled);
+        vm.SelectedBrowserItem = vm.BrowserItems.FirstOrDefault();
+        Assert.True(statusMenu.IsEnabled);
+    }
+
+    [Fact]
     public void SetSortModeCommand_AppliesRequestedSortMode()
     {
         var vm = CreateViewModel();

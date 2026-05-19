@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
@@ -43,8 +44,13 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
+    private readonly List<StatusVariantDocument> statusVariants = [];
     private IReadOnlyList<MainMenuItemViewModel> topMenuItems;
     private const string DefaultStatusText = "Done.";
+    private const string ItemStatusNamePropertyKey = "StatusName";
+    private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
+    private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
+    private const string ItemStatusIconTextPropertyKey = "StatusIconText";
 
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
@@ -173,7 +179,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
-    public bool IsDeleteEnabled => SelectedBrowserItem is not null;
+    public bool IsDeleteEnabled => GetSelectedBrowserItems().Count > 0;
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
@@ -255,6 +261,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private BrowserTreeNode? selectedTreeNode;
 
     [ObservableProperty] private CatalogDocument? selectedBrowserItem;
+    [ObservableProperty] private System.Collections.IList selectedBrowserItems = new List<CatalogDocument>();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTilesViewChecked))]
@@ -702,12 +709,85 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = $"Cut {SelectedBrowserItem.Name}.";
     }
 
+    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
+    private void ApplyBrowserItemStatus(string? statusName)
+    {
+        var targets = GetSelectedBrowserItems();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var status = statusVariants.FirstOrDefault(variant =>
+            string.Equals(variant.Name, statusName, StringComparison.OrdinalIgnoreCase));
+
+        if (status is null)
+        {
+            foreach (var target in targets)
+            {
+                target.Status = null;
+                target.Properties.Remove(ItemStatusNamePropertyKey);
+                target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
+                target.Properties.Remove(ItemStatusIconColorPropertyKey);
+                target.Properties.Remove(ItemStatusIconTextPropertyKey);
+            }
+
+            StatusText = targets.Count == 1
+                ? $"Cleared status for {targets[0].Name}."
+                : $"Cleared status for {targets.Count} items.";
+        }
+        else
+        {
+            var applicableTargets = targets
+                .Where(target => IsStatusApplicableToItem(status, target))
+                .ToArray();
+            foreach (var target in applicableTargets)
+            {
+                target.Status = status.Name;
+                target.Properties[ItemStatusNamePropertyKey] = status.Name;
+                target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
+                target.Properties[ItemStatusIconColorPropertyKey] =
+                    string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
+                target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
+            }
+
+            StatusText = applicableTargets.Length == 0
+                ? $"Status '{status.Name}' is not supported for selected item types."
+                : applicableTargets.Length == 1
+                    ? $"Status '{status.Name}' applied to {applicableTargets[0].Name}."
+                    : $"Status '{status.Name}' applied to {applicableTargets.Length} items.";
+        }
+
+        IsDirtyDocument = true;
+        RefreshBrowserItemsForSelection();
+    }
+
     public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
         CurrentSortMode = NormalizeSortMode(sortMode);
         IsStatusBarVisible = isStatusBarVisible;
         RefreshBrowserItemsForSelection();
+    }
+
+    public void SetStatusVariants(IEnumerable<StatusVariantDocument>? variants)
+    {
+        statusVariants.Clear();
+        foreach (var variant in (variants ?? [])
+                     .Where(static variant => !string.IsNullOrWhiteSpace(variant.Name))
+                     .Select(static variant => new StatusVariantDocument
+                     {
+                         Name = variant.Name.Trim(),
+                         IconGlyph = variant.IconGlyph.Trim(),
+                         IconColor = string.IsNullOrWhiteSpace(variant.IconColor) ? "#FFFFFF" : variant.IconColor.Trim(),
+                         ItemTypes = variant.ItemTypes
+                     }))
+        {
+            statusVariants.Add(variant);
+        }
+
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
     }
 
     private static string GetViewModeDisplayName(BrowserViewMode viewMode)
@@ -1014,6 +1094,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnSelectedBrowserItemChanged(CatalogDocument? value)
     {
+        if (value is null)
+        {
+            SelectedBrowserItems = new List<CatalogDocument>();
+        }
+
+        if (value is not null &&
+            !selectedBrowserItems
+                .OfType<CatalogDocument>()
+                .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
+        {
+            SelectedBrowserItems = new List<CatalogDocument> { value };
+        }
+
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
         OnPropertyChanged(nameof(IsCopyEnabled));
@@ -1027,6 +1120,21 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
+        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
+    {
+        if (value.Count > 0)
+        {
+            SelectedBrowserItem = value[0] as CatalogDocument;
+        }
+
+        OnPropertyChanged(nameof(IsDeleteEnabled));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
+        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentViewModeChanged(BrowserViewMode value)
@@ -1136,6 +1244,13 @@ public partial class MainWindowViewModel : ObservableObject
                 [
                     new MainMenuItemViewModel { Header = "_Add...", HotKey = "F2", Command = AddItemCommand },
                     new MainMenuItemViewModel { Header = "_Delete", HotKey = "Delete", Command = DeleteItemCommand },
+                    new MainMenuItemViewModel
+                    {
+                        Key = "edit_status",
+                        Header = "_Status",
+                        IsEnabled = IsDeleteEnabled,
+                        Items = BuildStatusMenuItems()
+                    },
                     Separator(),
                     new MainMenuItemViewModel
                         { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
@@ -1287,6 +1402,8 @@ public partial class MainWindowViewModel : ObservableObject
         SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, "_Name"));
         SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, "_Type"));
         SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, "_Size"));
+        SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
+        SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 
     private static IEnumerable<MainMenuItemViewModel> FlattenMenuItems(IEnumerable<MainMenuItemViewModel> items)
@@ -1309,6 +1426,28 @@ public partial class MainWindowViewModel : ObservableObject
         if (byKey.TryGetValue(key, out var item))
         {
             item.Header = header;
+        }
+    }
+
+    private static void SetMenuEnabled(
+        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
+        string key,
+        bool isEnabled)
+    {
+        if (byKey.TryGetValue(key, out var item))
+        {
+            item.IsEnabled = isEnabled;
+        }
+    }
+
+    private static void SetMenuItems(
+        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
+        string key,
+        IReadOnlyList<MainMenuItemViewModel> items)
+    {
+        if (byKey.TryGetValue(key, out var item))
+        {
+            item.Items = items;
         }
     }
 
@@ -1342,6 +1481,12 @@ public partial class MainWindowViewModel : ObservableObject
                 { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
             new MainMenuItemViewModel
                 { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Header = "_Status",
+                Items = BuildStatusMenuItems()
+            },
             Separator(),
             new MainMenuItemViewModel
             {
@@ -1591,4 +1736,106 @@ public partial class MainWindowViewModel : ObservableObject
             or CatalogDocumentType.NetworkFolder
             or CatalogDocumentType.Media;
     }
+
+    private static bool HasAssignedStatus(CatalogDocument? item)
+    {
+        if (item is null)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Status))
+        {
+            return true;
+        }
+
+        return item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value) &&
+               !string.IsNullOrWhiteSpace(value?.ToString());
+    }
+
+    private static bool IsAssignedStatus(CatalogDocument? item, string? expectedStatusName)
+    {
+        if (item is null)
+        {
+            return false;
+        }
+
+        var assignedStatusName = !string.IsNullOrWhiteSpace(item.Status)
+            ? item.Status
+            : item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value)
+                ? value?.ToString()
+                : null;
+
+        if (string.IsNullOrWhiteSpace(assignedStatusName))
+        {
+            return expectedStatusName is null;
+        }
+
+        if (expectedStatusName is null)
+        {
+            return true;
+        }
+
+        return string.Equals(assignedStatusName, expectedStatusName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildStatusMenuItems()
+    {
+        var hasDefaultAssigned = !HasAssignedStatus(SelectedBrowserItem);
+
+        var statusItems = new List<MainMenuItemViewModel>
+        {
+            new()
+            {
+                Header = "_Default",
+                Icon = "○",
+                Command = ApplyBrowserItemStatusCommand,
+                CommandParameter = null,
+                IsEnabled = !hasDefaultAssigned
+            }
+        };
+
+        statusItems.AddRange(statusVariants
+            .Select(variant =>
+            {
+                var isAssigned = IsAssignedStatus(SelectedBrowserItem, variant.Name);
+                return new MainMenuItemViewModel
+                {
+                    Header = variant.Name,
+                    Icon = new StatusMenuIcon(variant.IconGlyph, variant.IconColor),
+                    Command = ApplyBrowserItemStatusCommand,
+                    CommandParameter = variant.Name,
+                    IsEnabled = !isAssigned
+                };
+            }));
+
+        return statusItems;
+    }
+
+    private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()
+    {
+        if (SelectedBrowserItems.Count > 0)
+        {
+            return SelectedBrowserItems.OfType<CatalogDocument>().ToArray();
+        }
+
+        return SelectedBrowserItem is null ? [] : [SelectedBrowserItem];
+    }
+
+    private static bool IsStatusApplicableToItem(StatusVariantDocument status, CatalogDocument item)
+    {
+        return IsStatusApplicableToType(status, item.Type);
+    }
+
+    private static bool IsStatusApplicableToType(StatusVariantDocument status, CatalogDocumentType itemType)
+    {
+        if (status.ItemTypes is { Count: > 0 })
+        {
+            return status.ItemTypes.Contains(itemType);
+        }
+
+        return true;
+    }
+
+    private static string ResolveMenuStatusIconText(string iconGlyphKey) => iconGlyphKey;
 }

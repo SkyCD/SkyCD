@@ -29,4 +29,5 @@ public sealed class AppOptionsDocument
     public int McpPort { get; set; } = 8765;
 
     public bool IsMcpStatusIconVisible { get; set; } = true;
+
 }

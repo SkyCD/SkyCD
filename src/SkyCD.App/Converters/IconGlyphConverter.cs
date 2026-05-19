@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -34,6 +35,23 @@ public sealed class IconGlyphConverter : IValueConverter
         ["toolbar-new"] = "avares://SkyCD.App/Assets/add-from-media.png",
         ["toolbar-open"] = "avares://SkyCD.App/Assets/add-from-folder.png",
         ["toolbar-save"] = "avares://SkyCD.App/Assets/add-from-internet.png",
+
+        // Status icons
+        ["check"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["check-check"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["clock"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["star"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["list-todo"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["pause"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["x-circle"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["calendar-plus"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["rotate-ccw"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",
+        ["package-check"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["handshake"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["search"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["warning"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["archive"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
+        ["circle"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
     };
 
     private static readonly Dictionary<string, Bitmap?> Cache = [];
@@ -49,6 +67,13 @@ public sealed class IconGlyphConverter : IValueConverter
         var uri = IconMap.GetValueOrDefault(key);
         if (uri is null)
         {
+            if (File.Exists(key))
+            {
+                var bitmap = new Bitmap(key);
+                Cache[key] = bitmap;
+                return bitmap;
+            }
+
             // Try as direct URI
             if (key.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
                 uri = key;

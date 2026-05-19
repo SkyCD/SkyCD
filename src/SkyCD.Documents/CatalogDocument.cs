@@ -22,6 +22,8 @@ public sealed class CatalogDocument
 
     public long ChildrenCount { get; init; }
 
+    public string? Status { get; set; }
+
     public PropertiesCollection Properties { get; init; } = new();
 
     public string DisplayType => Type.ToDisplayName();

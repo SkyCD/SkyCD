@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Documents;
+using SkyCD.Documents.Enum;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -39,6 +41,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     public ObservableCollection<LanguageItem> Languages { get; } = [];
 
     public ObservableCollection<string> FilteredSettingCategories { get; } = [];
+    public ObservableCollection<StatusVariantItemViewModel> StatusVariants { get; } = [];
 
     [ObservableProperty] private string pluginPath = string.Empty;
 
@@ -65,10 +68,14 @@ public partial class OptionsDialogViewModel : ObservableObject
     [ObservableProperty] private string mcpCopyTooltip = "Copy URL";
 
     [ObservableProperty] private string mcpAlertMessage = string.Empty;
+    [ObservableProperty] private StatusVariantItemViewModel? selectedStatusVariant;
+    [ObservableProperty] private string statusAlertMessage = string.Empty;
+
+    public bool ShowStatusAlert => !string.IsNullOrWhiteSpace(StatusAlertMessage);
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP"];
+    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP", "Statuses"];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -105,9 +112,14 @@ public partial class OptionsDialogViewModel : ObservableObject
         IsCurrentCategoryVisibleInSearch;
 
     public bool IsMcpCategorySelected => SelectedTabIndex == 2;
+    public bool IsStatusesCategorySelected => SelectedTabIndex == 3;
 
     public bool ShowMcpSection =>
         IsMcpCategorySelected &&
+        IsCurrentCategoryVisibleInSearch;
+
+    public bool ShowStatusesSection =>
+        IsStatusesCategorySelected &&
         IsCurrentCategoryVisibleInSearch;
 
     public bool HasVisibleCategoryContent =>
@@ -116,7 +128,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowPluginActionsSection ||
         ShowPluginInfoSection ||
         ShowLanguageSection ||
-        ShowMcpSection;
+        ShowMcpSection ||
+        ShowStatusesSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -125,6 +138,34 @@ public partial class OptionsDialogViewModel : ObservableObject
     public event EventHandler? BrowsePluginPathRequested;
 
     public event EventHandler? RefreshPluginsRequested;
+
+    public event EventHandler? ResetStatusVariantsRequested;
+
+    [RelayCommand]
+    private void AddStatusVariant()
+    {
+        var candidate = new StatusVariantItemViewModel
+        {
+            Name = "New Status",
+            IconGlyph = string.Empty,
+            IconColor = "#FFFFFF"
+        };
+        candidate.SetTypeSelected(CatalogDocumentType.Media, true);
+        StatusVariants.Add(candidate);
+        SelectedStatusVariant = candidate;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveStatusVariant))]
+    private void RemoveStatusVariant()
+    {
+        if (SelectedStatusVariant is null)
+        {
+            return;
+        }
+
+        StatusVariants.Remove(SelectedStatusVariant);
+        SelectedStatusVariant = StatusVariants.FirstOrDefault();
+    }
 
     [RelayCommand]
     private void BrowsePluginPath()
@@ -136,6 +177,12 @@ public partial class OptionsDialogViewModel : ObservableObject
     private void RefreshPlugins()
     {
         RefreshPluginsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void ResetStatusVariants()
+    {
+        ResetStatusVariantsRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand(CanExecute = nameof(CanConfigure))]
@@ -167,6 +214,13 @@ public partial class OptionsDialogViewModel : ObservableObject
     [RelayCommand]
     private void Confirm()
     {
+        if (StatusVariants.Any(static status => string.IsNullOrWhiteSpace(status.IconGlyph)))
+        {
+            StatusAlertMessage = "All status items must have an icon selected.";
+            return;
+        }
+
+        StatusAlertMessage = string.Empty;
         DialogAccepted = true;
     }
 
@@ -235,10 +289,38 @@ public partial class OptionsDialogViewModel : ObservableObject
             .ToArray();
     }
 
+    public void SetStatusVariants(IEnumerable<StatusVariantDocument>? variants)
+    {
+        StatusVariants.Clear();
+        foreach (var variant in (variants ?? [])
+                     .Where(static variant => !string.IsNullOrWhiteSpace(variant.Name))
+                     .Select(StatusVariantItemViewModel.FromDocument))
+        {
+            StatusVariants.Add(variant);
+        }
+
+        SelectedStatusVariant = StatusVariants.FirstOrDefault();
+        StatusAlertMessage = string.Empty;
+        RemoveStatusVariantCommand.NotifyCanExecuteChanged();
+    }
+
+    public IReadOnlyList<StatusVariantDocument> GetStatusVariants()
+    {
+        return StatusVariants
+            .Select(static variant => variant.ToDocument())
+            .Where(static variant => !string.IsNullOrWhiteSpace(variant.Name))
+            .ToArray();
+    }
+
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
         ConfigurePluginCommand.NotifyCanExecuteChanged();
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedStatusVariantChanged(StatusVariantItemViewModel? value)
+    {
+        RemoveStatusVariantCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedTabIndexChanged(int value)
@@ -285,6 +367,11 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnMcpAlertMessageChanged(string value)
     {
         OnPropertyChanged(nameof(ShowMcpAlert));
+    }
+
+    partial void OnStatusAlertMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowStatusAlert));
     }
 
     private bool MatchesSearch(params string[] terms)
@@ -345,14 +432,21 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));
         OnPropertyChanged(nameof(IsMcpCategorySelected));
+        OnPropertyChanged(nameof(IsStatusesCategorySelected));
         OnPropertyChanged(nameof(ShowProjectSettingsSection));
         OnPropertyChanged(nameof(ShowPluginPathSection));
         OnPropertyChanged(nameof(ShowMcpSection));
+        OnPropertyChanged(nameof(ShowStatusesSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));
         OnPropertyChanged(nameof(ShowLanguageSection));
         OnPropertyChanged(nameof(HasVisibleCategoryContent));
         OnPropertyChanged(nameof(ShowNoSearchResults));
+    }
+
+    private bool CanRemoveStatusVariant()
+    {
+        return SelectedStatusVariant is not null;
     }
 }

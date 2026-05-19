@@ -36,6 +36,7 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Couchbase.Lite" Version="4.0.3" />
+        <PackageReference Include="IconPacks.Avalonia" Version="2.0.0" />
         <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.6" />
         <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
     </ItemGroup>
