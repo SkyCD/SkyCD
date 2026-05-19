@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 namespace SkyCD.UI.Controls.Selectors.MultiSelectDropdown;
@@ -204,6 +205,56 @@ public partial class MultiSelectDropdown : UserControl
         }
     }
 
+    private void OnInlineSearchTextBoxKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Down && e.Key != Key.Up && e.Key != Key.Space && e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        if (!DropdownPopup.IsOpen)
+        {
+            DropdownPopup.IsOpen = true;
+            RefreshFilteredItems();
+        }
+
+        if (filteredItems.Count == 0)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Down || e.Key == Key.Up)
+        {
+            var targetIndex = e.Key == Key.Up
+                ? Math.Max(0, filteredItems.Count - 1)
+                : 0;
+            if (ItemsListBox.SelectedIndex < 0)
+            {
+                ItemsListBox.SelectedIndex = targetIndex;
+            }
+            else
+            {
+                MoveSelection(e.Key);
+            }
+
+            Dispatcher.UIThread.Post(() => ItemsListBox.Focus(), DispatcherPriority.Input);
+            e.Handled = true;
+            return;
+        }
+
+        ToggleCurrentItemFromKeyboard();
+        e.Handled = true;
+    }
+
+    private void OnItemsListGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (ItemsListBox.SelectedIndex < 0 && filteredItems.Count > 0)
+        {
+            ItemsListBox.SelectedIndex = 0;
+        }
+    }
+
     private void RefreshFilteredItems()
     {
         filteredItems.Clear();
@@ -236,6 +287,11 @@ public partial class MultiSelectDropdown : UserControl
 
     private void OnItemsListPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (e.Source is CheckBox)
+        {
+            return;
+        }
+
         var element = e.Source as Control;
         while (element is not null && element is not ListBoxItem)
         {
@@ -267,8 +323,18 @@ public partial class MultiSelectDropdown : UserControl
         }
     }
 
+    private void OnItemCheckBoxPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        e.Handled = true;
+    }
+
     private void OnItemsListSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (!IsSingleSelect)
+        {
+            return;
+        }
+
         if (IsSingleSelect)
         {
             foreach (var selected in e.AddedItems.OfType<MultiSelectOptionItem>())
@@ -285,12 +351,73 @@ public partial class MultiSelectDropdown : UserControl
             ItemsListBox.SelectedItem = null;
             return;
         }
+    }
 
-        foreach (var selected in e.AddedItems.OfType<MultiSelectOptionItem>())
+    private void OnItemsListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Up || e.Key == Key.Down)
         {
-            selected.IsSelected = !selected.IsSelected;
+            MoveSelection(e.Key);
+            e.Handled = true;
+            return;
         }
 
-        ItemsListBox.SelectedItem = null;
+        if (e.Key != Key.Space && e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        ToggleCurrentItemFromKeyboard();
+        e.Handled = true;
+    }
+
+    private void MoveSelection(Key directionKey)
+    {
+        if (filteredItems.Count == 0)
+        {
+            return;
+        }
+
+        var current = ItemsListBox.SelectedIndex;
+        if (current < 0)
+        {
+            current = directionKey == Key.Up ? filteredItems.Count : -1;
+        }
+
+        var next = directionKey == Key.Down
+            ? Math.Min(filteredItems.Count - 1, current + 1)
+            : Math.Max(0, current - 1);
+
+        ItemsListBox.SelectedIndex = next;
+        var selectedItem = ItemsListBox.SelectedItem;
+        if (selectedItem is not null)
+        {
+            ItemsListBox.ScrollIntoView(selectedItem);
+        }
+    }
+
+    private void ToggleCurrentItemFromKeyboard()
+    {
+        if (ItemsListBox.SelectedItem is not MultiSelectOptionItem item)
+        {
+            return;
+        }
+
+        if (IsSingleSelect)
+        {
+            foreach (var candidate in ItemsSource ?? [])
+            {
+                candidate.IsSelected = ReferenceEquals(candidate, item);
+            }
+
+            DropdownPopup.IsOpen = false;
+            searchText = string.Empty;
+            RefreshSelectedItemsView();
+            ItemsListBox.SelectedItem = null;
+            return;
+        }
+
+        item.IsSelected = !item.IsSelected;
+        RefreshSelectedItemsView();
     }
 }

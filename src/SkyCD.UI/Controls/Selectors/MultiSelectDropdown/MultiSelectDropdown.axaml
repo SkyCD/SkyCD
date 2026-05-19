@@ -18,6 +18,7 @@
                          BorderThickness="0"
                          Padding="0"
                          VerticalContentAlignment="Center"
+                         KeyDown="OnInlineSearchTextBoxKeyDown"
                          TextChanged="OnInlineSearchTextChanged"
                          GotFocus="OnInlineSearchTextBoxGotFocus"
                          LostFocus="OnInlineSearchTextBoxLostFocus" />
@@ -47,35 +48,37 @@
                          BorderThickness="0"
                          Padding="0"
                          SelectionMode="Single"
+                         GotFocus="OnItemsListGotFocus"
+                         KeyDown="OnItemsListKeyDown"
                          SelectionChanged="OnItemsListSelectionChanged"
                          PointerPressed="OnItemsListPointerPressed">
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem">
                             <Setter Property="Padding" Value="0" />
                         </Style>
+                        <Style Selector="ListBoxItem:selected">
+                            <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
+                        </Style>
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Border Padding="8,4"
-                                    CornerRadius="2"
-                                    Classes.selected="{Binding IsSelected}">
+                                    CornerRadius="2">
                                 <Border.Styles>
                                     <Style Selector="Border:pointerover">
                                         <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
                                     </Style>
-                                    <Style Selector="Border.selected">
-                                        <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
-                                    </Style>
-                                    <Style Selector="Border.selected:pointerover">
-                                        <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
-                                    </Style>
                                 </Border.Styles>
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                    <TextBlock IsVisible="{Binding ShowIconSymbols, ElementName=Root}"
+                                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                    <CheckBox IsChecked="{Binding IsSelected}"
+                                              PointerPressed="OnItemCheckBoxPointerPressed"
+                                              VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1"
+                                               IsVisible="{Binding ShowIconSymbols, ElementName=Root}"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                                Text="{Binding Label, Converter={StaticResource IconKeyToSymbolConverter}}" />
-                                    <TextBlock Grid.Column="1"
+                                    <TextBlock Grid.Column="2"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                                Text="{Binding Label}" />
