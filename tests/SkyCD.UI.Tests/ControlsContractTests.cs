@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.UI.Controls.Properties;
@@ -11,7 +12,7 @@ namespace SkyCD.UI.Tests;
 
 public class ControlsContractTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void ClassicToolbar_Items_AcceptsToolbarInterfaceTypes()
     {
         var toolbar = new ClassicToolbar();
@@ -23,7 +24,7 @@ public class ControlsContractTests
         Assert.All(toolbar.Items, item => Assert.IsAssignableFrom<IClassicToolbarItem>(item));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PropertiesList_ProjectsDictionaryIntoRows()
     {
         var list = new PropertiesList();
@@ -40,7 +41,7 @@ public class ControlsContractTests
         Assert.Contains(list.PropertiesRows, row => row.Key == "Location" && row.Value == "Music");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DetailsListView_ExposesGenericBindableProperties()
     {
         var view = new DetailsListView();
@@ -59,7 +60,7 @@ public class ControlsContractTests
         Assert.Same(contextMenu, view.ListContextMenu);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void BrowserItemsView_ExposesBindablePropertiesAndViewModeFlags()
     {
         var view = new BrowserItemsView();
@@ -101,7 +102,7 @@ public class ControlsContractTests
         Assert.False(view.IsTilesMode);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void BrowserDetailsColumn_DefaultsAndInitValues_AreApplied()
     {
         var defaults = new BrowserDetailsColumn
@@ -130,7 +131,7 @@ public class ControlsContractTests
         Assert.Equal(HorizontalAlignment.Right, configured.ValueAlignment);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void BrowserViewMode_EnumValues_AreStable()
     {
         Assert.Equal(0, (int)BrowserViewMode.Tiles);
@@ -140,7 +141,7 @@ public class ControlsContractTests
         Assert.Equal(4, (int)BrowserViewMode.Details);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void StatusBar_ExposesBindableStatusAndProgressProperties()
     {
         var statusBar = new StatusBar
