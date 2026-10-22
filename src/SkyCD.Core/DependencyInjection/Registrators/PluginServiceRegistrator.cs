@@ -34,11 +34,13 @@ public sealed class PluginServiceRegistrator
         registrator.RegisterInstance<IReadOnlyCollection<DiscoveredPlugin>>(plugins,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.RegisterInstance<IReadOnlyDictionary<string, DiscoveredPlugin>>(
-            plugins.ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase),
+            plugins
+                .Where(static plugin => plugin is not null && !string.IsNullOrWhiteSpace(plugin.Id))
+                .ToDictionary(static plugin => plugin.Id, StringComparer.OrdinalIgnoreCase),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         var discoveredPlugins = new DiscoveredPluginCollection();
-        discoveredPlugins.AddRange(plugins);
+        discoveredPlugins.AddRange(plugins.Where(static plugin => plugin is not null));
         discoveredPlugins.RegisterPluginServices(registrator);
 
         registrator.Register<FileFormatManager>(Reuse.Singleton,
