@@ -1,34 +1,28 @@
 # Plugin Runtime Loading
 
-## Manifest Format (`plugin.json`)
-```json
-{
-  "id": "skycd.plugin.json",
-  "version": "1.0.0",
-  "minHostVersion": "3.0.0",
-  "assembly": "SkyCD.Plugin.Json.dll",
-  "capabilities": ["file-format"]
-}
-```
-
 ## Discovery Flow
-1. Enumerate configured plugin directories.
-2. Find `plugin.json` recursively.
-3. Validate manifest fields.
-4. Check host compatibility (`hostVersion >= minHostVersion`).
-5. Load assembly (default or isolated `AssemblyLoadContext`).
-6. Discover `IPlugin` implementations and capabilities.
-7. Return discovered plugins + diagnostics.
+1. Enumerate configured plugin directories and scan DLLs recursively.
+2. Skip SDK contract assemblies, intermediate (`obj`), and reference outputs.
+3. Load each assembly once, reusing an already loaded assembly when available.
+4. Resolve identity and version constraints from assembly metadata, including
+   `PluginIdAttribute`, `MinHostVersionAttribute`, and `MaxHostVersionAttribute`.
+5. Instantiate concrete `IPluginCapability` implementations with public parameterless constructors.
+6. Check host compatibility against minimum and optional maximum host versions.
+7. Persist discovered descriptors and expose capabilities from enabled, available plugins.
+
+No `plugin.json` is used. File format, menu, modal, CLI, localization, ownership,
+account, and action capabilities all follow this same assembly discovery path.
+A plugin may contain several capability classes, and each class may implement
+several capability interfaces. Registration exposes the same instance through
+all its capability interfaces.
 
 ## Diagnostics
 - Missing directories are warnings.
-- Invalid manifests, missing assemblies, and load failures are errors.
-- Incompatible plugins are skipped with informative diagnostics.
+- Invalid DLLs and assemblies without usable capabilities are skipped with warnings.
+- Incompatible plugins are skipped.
 
-## Unload/Reload Strategy
-- Isolation mode uses collectible `AssemblyLoadContext`.
-- Recommended host behavior for reload:
-  1. Dispose plugin instances (`IAsyncDisposable`)
-  2. Release capability references
-  3. Unload the associated load context
-  4. Trigger GC cycle before reloading
+## Capability Lookup
+Use `PluginManager.GetCapabilities<TCapability>()` for enabled plugins, or register
+plugins with `DiscoveredPlugin.RegisterPluginServices` and resolve capability
+interfaces through the existing container. Ownership and account methods and
+explicitly selected action handlers receive host cancellation tokens.
