@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.App.Views.ResetStatusesConfirmWindow"
+        Width="430"
+        Height="170"
+        CanResize="False"
+        CanMinimize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
+        Title="Reset Statuses">
+
+    <Grid RowDefinitions="*,Auto" Margin="16">
+        <TextBlock Text="Reset statuses to defaults? This will remove custom statuses."
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center" />
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,14,0,0">
+            <Button Content="Yes"
+                    MinWidth="90"
+                    Click="OnYesClicked" />
+            <Button Content="No"
+                    MinWidth="90"
+                    IsCancel="True"
+                    Click="OnNoClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

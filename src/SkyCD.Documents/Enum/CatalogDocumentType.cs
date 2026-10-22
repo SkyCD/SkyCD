@@ -14,7 +14,11 @@ public enum CatalogDocumentType
     [CatalogDocumentTypeIconGlyph("folder")]
     Folder = 2,
 
+    [DisplayName("Network Folder")]
+    [CatalogDocumentTypeIconGlyph("network-folder")]
+    NetworkFolder = 3,
+
     [DisplayName("Network Resource")]
     [CatalogDocumentTypeIconGlyph("network")]
-    NetworkResource = 3
+    NetworkResource = 4
 }
