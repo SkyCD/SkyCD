@@ -9,6 +9,7 @@
                             ListMinWidth="{Binding ListMinWidth, ElementName=Root}"
                             ItemsSource="{Binding ItemsSource, ElementName=Root}"
                             SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
+                            SelectedItems="{Binding SelectedItems, ElementName=Root, Mode=TwoWay}"
                             ListContextMenu="{Binding ListContextMenu, ElementName=Root}"
                             HeaderContent="{Binding HeaderContent, ElementName=Root}"
                             RowTemplate="{Binding DetailsRowTemplate, ElementName=Root}" />
@@ -17,6 +18,7 @@
                  MinWidth="{Binding ListMinWidth, ElementName=Root}"
                  IsVisible="False"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                 SelectionMode="Multiple"
                  SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
                  ContextMenu="{Binding ListContextMenu, ElementName=Root}">
             <ListBox.ItemsPanel>
@@ -30,6 +32,7 @@
                  MinWidth="{Binding ListMinWidth, ElementName=Root}"
                  IsVisible="False"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                 SelectionMode="Multiple"
                  SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
                  ContextMenu="{Binding ListContextMenu, ElementName=Root}">
             <ListBox.ItemsPanel>

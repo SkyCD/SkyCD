@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private readonly RepositoryManager repositoryManager;
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly CatalogDocumentRepository catalogRepository;
+    private readonly StatusVariantDocumentRepository statusVariantRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private FileFormatManager fileFormatManager;
@@ -52,6 +53,7 @@ public partial class MainWindow : Window
         this.repositoryManager = repositoryManager;
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -90,6 +92,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             UpdateWindowTitle();
         }
     }
@@ -195,12 +198,15 @@ public partial class MainWindow : Window
             options.Browser.ViewMode,
             options.Browser.SortMode,
             options.IsStatusBarVisible);
+        vm.SetStatusVariants(statusVariantRepository.GetOrdered());
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
             EnsureFileFormatProvidersLoaded();
             _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
         }
+
+        RefreshMcpStatusIndicator();
 
         isSessionStateLoaded = true;
     }
@@ -507,6 +513,10 @@ public partial class MainWindow : Window
         var pluginPath = options.PluginPath;
 
         e.Dialog.PluginPath = pluginPath;
+        e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
+        e.Dialog.McpPort = options.McpPort;
+        e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
+        e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -517,6 +527,7 @@ public partial class MainWindow : Window
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -532,12 +543,22 @@ public partial class MainWindow : Window
                 .ToArray();
 
             options.PluginPath = e.Dialog.PluginPath;
+            options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
+            options.McpPort = e.Dialog.McpPort;
+            options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
+            statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
+            (Application.Current as App)?.ApplyMcpSettings();
+            RefreshMcpStatusIndicator();
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.SetStatusVariants(statusVariantRepository.GetOrdered());
+            }
 
             // Trigger UI refresh to apply new language
             InvalidateVisual();
@@ -545,6 +566,7 @@ public partial class MainWindow : Window
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+        e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
@@ -803,6 +825,23 @@ public partial class MainWindow : Window
         RefreshPlugins(dialogVm);
     }
 
+    private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var confirmed = await ShowResetStatusesPromptAsync();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        statusVariantRepository.ReplaceAll(statusVariantRepository.CreateDefaultEntries());
+        dialogVm.SetStatusVariants(statusVariantRepository.GetOrdered());
+    }
+
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
     {
         dialogVm.CapturePluginStates();
@@ -1003,7 +1042,7 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private static bool TryExtractPathEntries(object? payload, out IReadOnlyList<(string Path, long Size)> entries)
+    private static bool TryExtractPathEntries(object? payload, out IReadOnlyList<PathEntry> entries)
     {
         entries = [];
         if (payload is null)
@@ -1017,7 +1056,7 @@ public partial class MainWindow : Window
             return false;
         }
 
-        var result = new List<(string Path, long Size)>();
+        var result = new List<PathEntry>();
         foreach (var raw in rawEntries)
         {
             if (raw is null)
@@ -1036,7 +1075,12 @@ public partial class MainWindow : Window
                 ?.GetValue(raw);
             var size = sizeValue is null ? 0L : Convert.ToInt64(sizeValue, CultureInfo.InvariantCulture);
 
-            result.Add((path.Trim(), size));
+            var normalizedPath = path.Trim();
+            var isHttps = Uri.TryCreate(normalizedPath, UriKind.Absolute, out var uri) &&
+                          uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            var domain = isHttps ? uri!.Host : null;
+
+            result.Add(new PathEntry(normalizedPath, size, isHttps, domain));
         }
 
         entries = result;
@@ -1068,6 +1112,17 @@ public partial class MainWindow : Window
                 "media" => CatalogDocumentType.Media,
                 _ => CatalogDocumentType.Media
             };
+            var status = ReadString(row, "status");
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                status = ReadString(row, "statusName");
+            }
+
+            var properties = new SkyCD.Documents.Collections.PropertiesCollection();
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                properties["StatusName"] = status;
+            }
 
             results.Add(new CatalogDocument
             {
@@ -1076,15 +1131,16 @@ public partial class MainWindow : Window
                 ParentId = parentId,
                 Type = documentType,
                 Size = ReadLong(row, "size", "sizeBytes"),
-                ChildrenCount = ReadLong(row, "childrenCount")
+                ChildrenCount = ReadLong(row, "childrenCount"),
+                Status = string.IsNullOrWhiteSpace(status) ? null : status,
+                Properties = properties
             });
         }
 
         return results;
     }
 
-    private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(
-        IReadOnlyList<(string Path, long Size)> pathEntries)
+    private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(IReadOnlyList<PathEntry> pathEntries)
     {
         var entries = new Dictionary<string, CatalogDocument>(StringComparer.Ordinal);
         var rootId = "library";
@@ -1098,9 +1154,18 @@ public partial class MainWindow : Window
             ChildrenCount = 0
         };
 
-        foreach (var (path, size) in pathEntries)
+        foreach (var pathEntry in pathEntries
+                     .OrderBy(static entry => entry.IsHttps ? 0 : 1)
+                     .ThenBy(static entry => entry.Domain, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(static entry => entry.Path, StringComparer.OrdinalIgnoreCase))
         {
-            var parts = path.Replace('\\', '/')
+            if (pathEntry.IsHttps)
+            {
+                BuildHttpsEntry(entries, rootId, pathEntry);
+                continue;
+            }
+
+            var parts = pathEntry.Path.Replace('\\', '/')
                 .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (parts.Length == 0)
             {
@@ -1112,6 +1177,10 @@ public partial class MainWindow : Window
             {
                 var name = parts[i];
                 var isFile = i == parts.Length - 1;
+                var isDriveRoot = i == 0 &&
+                                  name.Length == 2 &&
+                                  char.IsLetter(name[0]) &&
+                                  name[1] == ':';
                 var id = $"{currentParentId}/{name}".ToLowerInvariant();
                 if (entries.ContainsKey(id))
                 {
@@ -1124,8 +1193,12 @@ public partial class MainWindow : Window
                     Id = id,
                     Name = name,
                     ParentId = currentParentId,
-                    Type = isFile ? CatalogDocumentType.Media : CatalogDocumentType.Folder,
-                    Size = isFile ? size : 0L,
+                    Type = isFile
+                        ? CatalogDocumentType.File
+                        : isDriveRoot
+                            ? CatalogDocumentType.Media
+                            : CatalogDocumentType.Folder,
+                    Size = isFile ? pathEntry.Size : 0L,
                     ChildrenCount = 0L
                 };
 
@@ -1134,6 +1207,42 @@ public partial class MainWindow : Window
         }
 
         return entries.Values.ToArray();
+    }
+
+    private static void BuildHttpsEntry(IDictionary<string, CatalogDocument> entries, string rootId, PathEntry pathEntry)
+    {
+        if (string.IsNullOrWhiteSpace(pathEntry.Domain))
+        {
+            return;
+        }
+
+        var domainNodeId = $"{rootId}/{pathEntry.Domain.ToLowerInvariant()}";
+        if (!entries.ContainsKey(domainNodeId))
+        {
+            entries[domainNodeId] = new CatalogDocument
+            {
+                Id = domainNodeId,
+                Name = pathEntry.Domain,
+                ParentId = rootId,
+                Type = CatalogDocumentType.NetworkFolder,
+                Size = 0L,
+                ChildrenCount = 0L
+            };
+        }
+
+        var resourceNodeId = $"{domainNodeId}/{pathEntry.Path.ToLowerInvariant()}";
+        if (!entries.ContainsKey(resourceNodeId))
+        {
+            entries[resourceNodeId] = new CatalogDocument
+            {
+                Id = resourceNodeId,
+                Name = pathEntry.Path,
+                ParentId = domainNodeId,
+                Type = CatalogDocumentType.NetworkResource,
+                Size = pathEntry.Size,
+                ChildrenCount = 0L
+            };
+        }
     }
 
     private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
@@ -1164,6 +1273,37 @@ public partial class MainWindow : Window
         }
 
         return 0L;
+    }
+
+    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain);
+
+    private void RefreshMcpStatusIndicator()
+    {
+        if (Application.Current is not App app)
+        {
+            MainStatusBar.IsMcpStatusVisible = true;
+            MainStatusBar.McpStatusGlyph = "◎";
+            MainStatusBar.McpStatusColor = "#9CA3AF";
+            MainStatusBar.McpStatusTooltip = "MCP server unavailable";
+            return;
+        }
+
+        var options = LoadAppOptions();
+        MainStatusBar.IsMcpStatusVisible = options.IsMcpStatusIconVisible;
+
+        var (isRunning, baseUrl) = app.GetMcpStatus();
+        MainStatusBar.McpStatusGlyph = isRunning ? "◉" : "◎";
+        MainStatusBar.McpStatusColor = isRunning ? "#22C55E" : "#9CA3AF";
+        MainStatusBar.McpStatusTooltip = isRunning
+            ? $"MCP server running at {baseUrl}"
+            : "MCP server stopped";
+    }
+
+    private async Task<bool> ShowResetStatusesPromptAsync()
+    {
+        var dialog = new ResetStatusesConfirmWindow();
+        var result = await dialog.ShowDialog<bool?>(this);
+        return result == true;
     }
 
 }
