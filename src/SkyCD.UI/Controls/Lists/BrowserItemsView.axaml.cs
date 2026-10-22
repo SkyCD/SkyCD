@@ -60,6 +60,15 @@ public partial class BrowserItemsView : UserControl
     public static readonly StyledProperty<IValueConverter?> IconConverterProperty =
         AvaloniaProperty.Register<BrowserItemsView, IValueConverter?>(nameof(IconConverter));
 
+    public static readonly StyledProperty<IValueConverter?> StatusIconConverterProperty =
+        AvaloniaProperty.Register<BrowserItemsView, IValueConverter?>(nameof(StatusIconConverter));
+
+    public IValueConverter? StatusIconConverter
+    {
+        get => GetValue(StatusIconConverterProperty);
+        set => SetValue(StatusIconConverterProperty, value);
+    }
+
     public new event EventHandler<TappedEventArgs>? DoubleTapped;
     public new event EventHandler<ContextRequestedEventArgs>? ContextRequested;
 
@@ -172,7 +181,7 @@ public partial class BrowserItemsView : UserControl
         {
             UpdateViewMode();
         }
-        else if (change.Property == IconConverterProperty || change.Property == DetailsColumnsProperty)
+        else if (change.Property == IconConverterProperty || change.Property == StatusIconConverterProperty || change.Property == DetailsColumnsProperty)
         {
             UpdateListTemplate();
             UpdateIconGridTemplate();
@@ -353,8 +362,7 @@ public partial class BrowserItemsView : UserControl
         double iconHeight,
         HorizontalAlignment horizontalAlignment = HorizontalAlignment.Left)
     {
-        var indicatorSize = Math.Clamp(Math.Min(iconWidth, iconHeight) * 0.35, 4, 12);
-        var indicatorRadius = indicatorSize / 2;
+        var indicatorSize = Math.Clamp(Math.Min(iconWidth, iconHeight) * 0.5, 10, 16);
 
         var iconContainer = new Grid
         {
@@ -368,29 +376,45 @@ public partial class BrowserItemsView : UserControl
         icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
         iconContainer.Children.Add(icon);
 
-        var statusIcon = new TextBlock
+        var statusIcon = new ContentControl
         {
-            FontSize = indicatorSize,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            LineHeight = indicatorSize
+            Width = indicatorSize - 2,
+            Height = indicatorSize - 2,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            VerticalContentAlignment = VerticalAlignment.Stretch
         };
-        statusIcon.Bind(TextBlock.TextProperty, new Binding($"Properties[{ItemStatusIconTextPropertyKey}]"));
-        statusIcon.Bind(TextBlock.ForegroundProperty, new Binding($"Properties[{ItemStatusIconColorPropertyKey}]")
+        statusIcon.Bind(ContentControl.ContentProperty, new Binding($"Properties[{ItemStatusIconGlyphPropertyKey}]")
+        {
+            Converter = StatusIconConverter,
+            FallbackValue = null
+        });
+        statusIcon.Bind(ContentControl.ForegroundProperty, new Binding($"Properties[{ItemStatusIconColorPropertyKey}]")
         {
             Converter = BrushFromStringConverter
         });
-        statusIcon.Bind(IsVisibleProperty, new Binding($"Properties[{ItemStatusIconTextPropertyKey}]")
+        var badge = new Border
         {
-            Converter = HasNonEmptyValueConverter
+            Width = indicatorSize,
+            Height = indicatorSize,
+            Padding = new Thickness(1),
+            CornerRadius = new CornerRadius(indicatorSize / 2),
+            Background = Brushes.Black,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Child = statusIcon
+        };
+        badge.Bind(IsVisibleProperty, new Binding($"Properties[{ItemStatusIconGlyphPropertyKey}]")
+        {
+            Converter = HasNonEmptyValueConverter,
+            FallbackValue = false
         });
-        iconContainer.Children.Add(statusIcon);
+        badge.Bind(ToolTip.TipProperty, new Binding("Properties[StatusName]"));
+        iconContainer.Children.Add(badge);
 
         return iconContainer;
     }
 
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
-    private const string ItemStatusIconTextPropertyKey = "StatusIconText";
     private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)

@@ -19,6 +19,7 @@
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:MenuIconConverter x:Key="MenuIconConverter" />
+        <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
         <ControlTheme x:Key="DynamicMenuItemTheme"
                       TargetType="MenuItem"
                       BasedOn="{StaticResource {x:Type MenuItem}}">
@@ -148,6 +149,7 @@
                                  BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
                                  BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
                                  IconConverter="{StaticResource IconConverter}"
+                                 StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
                                  ContextRequested="OnBrowserContextRequested"
                                  ListContextMenu="{DynamicResource BrowserContextMenu}"
                                  DoubleTapped="OnBrowserListDoubleTapped">
