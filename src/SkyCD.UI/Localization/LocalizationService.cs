@@ -11,16 +11,21 @@ using YamlDotNet.Serialization;
 namespace SkyCD.UI.Localization;
 
 /// <summary>Namespaced YAML catalogs with parent-culture and English fallback.</summary>
-public sealed class LocalizationService : ILocalizationService
+public sealed partial class LocalizationService : ILocalizationService
 {
     private readonly object gate = new();
     private readonly Dictionary<string, Dictionary<string, Dictionary<string, string>>> sources = new(StringComparer.Ordinal);
 
-    public static LocalizationService Current { get; } = new();
+    public static LocalizationService Current { get; } = new(userLanguageDirectory: Environment.GetEnvironmentVariable("SKYCD_I18N_DIRECTORY"));
 
-    public LocalizationService()
+    public LocalizationService(string? languageDirectory = null, string? userLanguageDirectory = null)
     {
         Register("core", new EmbeddedTranslationProvider());
+        LoadLanguagePacks(languageDirectory ?? Path.Combine(AppContext.BaseDirectory, "Data", "i18n"));
+        if (userLanguageDirectory is not null)
+        {
+            LoadLanguagePacks(userLanguageDirectory);
+        }
     }
 
     public CultureInfo CurrentCulture { get; private set; } = CultureInfo.CurrentUICulture;

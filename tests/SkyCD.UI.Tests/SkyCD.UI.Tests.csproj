@@ -16,5 +16,6 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
     </ItemGroup>
 </Project>

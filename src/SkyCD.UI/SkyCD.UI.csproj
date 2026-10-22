@@ -12,5 +12,7 @@
     <ItemGroup>
         <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
         <EmbeddedResource Include="Translations\*.yaml"/>
+        <Content Include="Translations\en-*.yaml" Link="Data\i18n\en\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
+        <Content Include="Translations\lt-*.yaml" Link="Data\i18n\lt\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
     </ItemGroup>
 </Project>

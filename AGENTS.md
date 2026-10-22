@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Mandatory Workflow Rules
-1. For every issue: create a new branch from `origin/main`, implement the fix, and open a PR.
+1. Unless the user explicitly specifies otherwise, before every new PR fetch `origin/main` and create a new branch from that updated remote branch. For every issue: implement the fix on that branch and open a PR.
 2. Before opening any PR: verify the project compiles successfully.
 3. If multiple issues are requested: solve each issue in a separate branch.
 4. Exception for sub-issues: if tasks are sub-issues of one larger feature, create PRs into the shared feature branch.

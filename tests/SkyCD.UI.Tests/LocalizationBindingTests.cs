@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using SkyCD.UI.Localization;
+using SkyCD.Presentation.ViewModels;
 using Xunit;
 
 namespace SkyCD.UI.Tests;
@@ -11,7 +13,7 @@ namespace SkyCD.UI.Tests;
 public class LocalizationBindingTests
 {
     [AvaloniaFact]
-    public void TranslateExtension_UpdatesExistingControlWhenCultureChanges()
+    public void OptionsSelection_UpdatesExistingControlAndCancelRestoresText()
     {
         var service = LocalizationService.Current;
         var originalServiceCulture = service.CurrentCulture;
@@ -22,16 +24,22 @@ public class LocalizationBindingTests
         try
         {
             service.SetCulture(CultureInfo.GetCultureInfo("en"));
+            var options = new OptionsDialogViewModel { SelectedTabIndex = 1 };
             var textBlock = new TextBlock();
             var binding = Assert.IsType<Binding>(new TranslateExtension(UiKeys.Cancel).ProvideValue(null!));
             using var subscription = textBlock.Bind(TextBlock.TextProperty, binding);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("Cancel", textBlock.Text);
 
-            service.SetCulture(CultureInfo.GetCultureInfo("lt"));
+            options.SelectedLanguage = options.Languages.Single(language => language.CultureCode == "lt");
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal("Atšaukti", textBlock.Text);
+            Assert.True(options.ShowLanguageSection);
+
+            options.CompleteLanguageSelection(false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Cancel", textBlock.Text);
         }
         finally
         {

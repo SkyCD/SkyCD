@@ -4,7 +4,7 @@ SkyCD uses a shared `ILocalizationService` for presentation code and an Avalonia
 `TranslateExtension` for XAML. The implementation lives in `SkyCD.UI.Localization`;
 plugin translation contracts live in `SkyCD.Plugin.Abstractions.Localization`.
 
-Core translations are embedded YAML resources. YamlDotNet parses these resources,
+Core translations are shipped as filesystem YAML packs with embedded fallback resources. YamlDotNet parses these resources,
 and SmartFormat handles parameter substitution and plural forms. Lepo's WPF
 localization components were rejected because SkyCD uses Avalonia, rather than
 WPF; adding WPF-specific bindings would not provide the required UI integration.
@@ -42,6 +42,32 @@ Presentation code should depend on `ILocalizationService` where practical.
 Lookups try the exact culture, then its parents, then English. A missing key is
 returned unchanged, making incomplete translations visible without hiding the UI.
 An explicit culture passed to `Get` only controls that lookup.
+
+## Filesystem language packs and Options
+
+The build and publish output includes `Data/i18n/{culture}/*.yaml`, for example
+`Data/i18n/lt/lt-UI.yaml`. Each directory name is a .NET culture code. The YAML
+files contain flat core keys such as `ui.Cancel: Atšaukti` (omit the `core.` prefix).
+Optional `_name` and `_flag` entries supply the picker display name and emoji;
+otherwise the culture's English name and a globe are used. Keys must be unique
+across a pack's files. A malformed or unreadable pack is skipped with a warning;
+empty and metadata-only packs are not offered.
+
+Add a new culture directory to the deployed `Data/i18n` folder to offer another
+language without rebuilding. The host discovers packs at startup. Set
+`SKYCD_I18N_DIRECTORY` to an optional user pack root with the same layout to merge
+overrides after installed packs. Overrides retain unspecified installed strings
+and metadata. Embedded resources supply missing strings; English always remains
+available even when the language directory is absent or corrupt. Plugin
+translation namespaces remain independent.
+
+Options uses `GetAvailableLanguages()` and applies `SetLanguage(code)` as soon
+as the selection changes. Cancel, Escape, or closing the window restores the
+previous culture; OK saves the culture code in application settings. Startup
+applies that code before constructing the main window. Legacy saved display
+names are accepted; an unavailable saved pack falls back to English with a
+warning. `SetCulture` remains available for explicit culture selection and
+plugin formatting; it does not validate filesystem pack availability.
 
 ## Plugin translations
 

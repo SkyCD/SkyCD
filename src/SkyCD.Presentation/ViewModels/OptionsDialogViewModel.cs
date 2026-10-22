@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
+using SkyCD.Plugin.Abstractions.Localization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,10 +16,41 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class OptionsDialogViewModel : ObservableObject
 {
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ILocalizationService? localizationService;
+    private readonly CultureInfo? originalLanguage;
+    private bool isRefreshingLocalization;
 
     public OptionsDialogViewModel()
-        : this(["English", "Lithuanian"])
+        : this(LocalizationService.Current)
     {
+    }
+
+    public OptionsDialogViewModel(ILocalizationService localizationService)
+        : this(localizationService.GetAvailableLanguages().Select(language => language.DisplayName))
+    {
+        this.localizationService = localizationService;
+        originalLanguage = localizationService.CurrentCulture;
+        Languages.Clear();
+        foreach (var language in localizationService.GetAvailableLanguages())
+        {
+            Languages.Add(new LanguageItem(language.DisplayName, language.Flag) { CultureCode = language.CultureCode });
+        }
+
+        selectedLanguage = Languages.FirstOrDefault(language =>
+            string.Equals(language.CultureCode, originalLanguage.Name, StringComparison.OrdinalIgnoreCase)) ?? Languages[0];
+    }
+
+    partial void OnSelectedLanguageChanged(LanguageItem value)
+    {
+        localizationService?.SetLanguage(value.CultureCode);
+    }
+
+    public void CompleteLanguageSelection(bool accepted)
+    {
+        if (!accepted && originalLanguage is not null)
+        {
+            localizationService?.SetCulture(originalLanguage);
+        }
     }
 
     public OptionsDialogViewModel(IEnumerable<string> availableLanguages)
@@ -391,7 +424,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     partial void OnSelectedSettingCategoryChanged(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (isRefreshingLocalization || string.IsNullOrWhiteSpace(value))
         {
             return;
         }
@@ -413,8 +446,16 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(SettingCategories));
         McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
-        RefreshFilteredCategories();
-        SelectedSettingCategory = CurrentCategoryName;
+        isRefreshingLocalization = true;
+        try
+        {
+            RefreshFilteredCategories();
+            SelectedSettingCategory = FilteredSettingCategories.Contains(CurrentCategoryName) ? CurrentCategoryName : null;
+        }
+        finally
+        {
+            isRefreshingLocalization = false;
+        }
         NotifySettingsVisibilityChanged();
     }
 
