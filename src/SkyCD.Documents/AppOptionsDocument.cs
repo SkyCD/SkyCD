@@ -6,6 +6,8 @@ namespace SkyCD.Documents;
 [CouchbaseDocument("settings", typeof(AppOptionsDocumentRepository))]
 public sealed class AppOptionsDocument
 {
+    public System.Collections.Generic.List<CustomPropertyDocument> CustomProperties { get; set; } = [];
+
     public const string DocumentId = "app-options";
 
     public WindowOptionsDocument Window { get; set; } = new();

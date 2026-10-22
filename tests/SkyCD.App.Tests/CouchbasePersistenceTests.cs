@@ -33,6 +33,44 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
+    public void CustomProperties_PersistSettingsAndAcceptedEditsAcrossRepositoryInstances()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+        var options = optionsRepository.GetOrCreateAppOptions();
+        options.CustomProperties = [new() { Name = "Owner", DefaultValue = "Alex" }];
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+        var restored = optionsRepository.GetOrCreateAppOptions();
+        Assert.Equal("Alex", Assert.Single(restored.CustomProperties).DefaultValue);
+
+        var vm = new MainWindowViewModel(repositories);
+        var selectedId = vm.SelectedBrowserItem?.Id ?? vm.SelectedTreeNode!.Key;
+        vm.PropertiesRequested += (_, args) =>
+        {
+            args.Dialog.ApplyCustomPropertyDefaults(restored.CustomProperties);
+            args.Dialog.CustomProperties[0].DefaultValue = "Sam";
+            args.Complete(true, args.Dialog.Comments);
+        };
+        vm.OpenPropertiesCommand.Execute(null);
+
+        var catalog = (CatalogDocumentRepository)repositories.For<CatalogDocument>();
+        Assert.Equal("Sam", catalog.Get(selectedId)!.Properties["Owner"]);
+
+        var reopened = new MainWindowViewModel(repositories);
+        reopened.PropertiesRequested += (_, args) =>
+        {
+            args.Dialog.ApplyCustomPropertyDefaults(restored.CustomProperties);
+            Assert.Equal("Sam", args.Dialog.CustomProperties[0].DefaultValue);
+            args.Dialog.CustomProperties[0].DefaultValue = "Cancelled";
+            args.Complete(false, args.Dialog.Comments);
+        };
+        reopened.OpenPropertiesCommand.Execute(null);
+        Assert.Equal("Sam", catalog.Get(selectedId)!.Properties["Owner"]);
+    }
+
+    [Fact]
     public void MainWindowViewModel_LoadsSeededCatalogDataFromRepository()
     {
         using var provider = new Container();

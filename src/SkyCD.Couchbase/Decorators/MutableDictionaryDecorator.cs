@@ -53,6 +53,9 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
             case DateTimeOffset dateTimeOffset:
                 dictionary.SetDate(key, dateTimeOffset);
                 return;
+            case IDictionary<string, object?> values:
+                dictionary.SetDictionary(key, ToMutableDictionary(values));
+                return;
             case IEnumerable enumerable and not string:
                 {
                     var array = new MutableArrayObject();
@@ -86,6 +89,8 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
                 return new DateTimeOffset(dateTime);
             case DateTimeOffset dateTimeOffset:
                 return dateTimeOffset;
+            case IDictionary<string, object?> values:
+                return ToMutableDictionary(values);
             case IEnumerable enumerable and not string:
                 {
                     var array = new MutableArrayObject();
@@ -101,6 +106,16 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
         var nestedDictionary = new MutableDictionaryObject();
         new MutableDictionaryDecorator(nestedDictionary).WriteObject(value);
         return nestedDictionary;
+    }
+
+    private static MutableDictionaryObject ToMutableDictionary(IDictionary<string, object?> values)
+    {
+        var result = new MutableDictionaryObject();
+        foreach (var (key, value) in values)
+        {
+            result.SetValue(key, ToMutableValue(value));
+        }
+        return result;
     }
 
     public bool Contains(string key)

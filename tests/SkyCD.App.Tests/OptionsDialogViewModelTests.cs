@@ -118,7 +118,7 @@ public class OptionsDialogViewModelTests
         Assert.Equal(0, vm.SelectedTabIndex);
 
         vm.SelectedTabIndex = 99;
-        Assert.Equal(3, vm.SelectedTabIndex);
+        Assert.Equal(vm.SettingCategories.Count - 1, vm.SelectedTabIndex);
     }
 
     [Fact]

@@ -442,6 +442,7 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        var selectedId = SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
         PropertiesRequested?.Invoke(this, new PropertiesDialogRequestedEventArgs
         {
             Dialog = dialog,
@@ -452,6 +453,19 @@ public partial class MainWindowViewModel : ObservableObject
                     return;
                 }
 
+                if (selectedId is not null && dialog.HasCustomProperties)
+                {
+                    var document = catalogRepository?.Get(selectedId)
+                        ?? inMemoryCatalogEntries?.FirstOrDefault(item => item.Id == selectedId);
+                    if (document is not null)
+                    {
+                        foreach (var property in dialog.GetProperties())
+                        {
+                            document.Properties[property.Key] = property.Value;
+                        }
+                        catalogRepository?.Save(document.Id, document);
+                    }
+                }
                 ApplyBrowserItemRenameIfNeeded(dialog);
                 commentsByObjectKey[dialog.ObjectKey] = comments;
                 IsDirtyDocument = true;
@@ -907,7 +921,7 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedTreeNode.Title,
                 SelectedTreeNode.IconGlyph,
                 comments,
-                new PropertiesCollection(),
+                GetBrowserItemInfoProperties(SelectedTreeNode.Key),
                 propertyValueLocalizer);
             return true;
         }

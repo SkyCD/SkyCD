@@ -71,6 +71,41 @@ public partial class OptionsDialogViewModel : ObservableObject
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
+    public ObservableCollection<CustomPropertyItemViewModel> CustomProperties { get; } = [];
+    [ObservableProperty] private CustomPropertyItemViewModel? selectedCustomProperty;
+    [ObservableProperty] private string customPropertyAlertMessage = string.Empty;
+    public bool ShowCustomPropertiesSection => SelectedTabIndex == 4 && IsCurrentCategoryVisibleInSearch;
+
+    public void SetCustomProperties(IEnumerable<CustomPropertyDocument>? properties)
+    {
+        CustomProperties.Clear();
+        foreach (var property in properties ?? [])
+        {
+            CustomProperties.Add(new CustomPropertyItemViewModel { Name = property.Name, DefaultValue = property.DefaultValue });
+        }
+        SelectedCustomProperty = CustomProperties.FirstOrDefault();
+    }
+
+    public List<CustomPropertyDocument> GetCustomProperties() => CustomProperties.Select(property =>
+        new CustomPropertyDocument { Name = property.Name.Trim(), DefaultValue = property.DefaultValue }).ToList();
+
+    [RelayCommand]
+    private void AddCustomProperty()
+    {
+        SelectedCustomProperty = new CustomPropertyItemViewModel();
+        CustomProperties.Add(SelectedCustomProperty);
+    }
+
+    [RelayCommand]
+    private void RemoveCustomProperty()
+    {
+        if (SelectedCustomProperty is not null)
+        {
+            CustomProperties.Remove(SelectedCustomProperty);
+            SelectedCustomProperty = CustomProperties.FirstOrDefault();
+        }
+    }
+
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
     public ObservableCollection<LanguageItem> Languages { get; } = [];
@@ -110,7 +145,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses)];
+    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses), LocalizationService.Current.Get(UiKeys.CustomProperties)];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -167,7 +202,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowPluginInfoSection ||
         ShowLanguageSection ||
         ShowMcpSection ||
-        ShowStatusesSection;
+        ShowStatusesSection || ShowCustomPropertiesSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -252,6 +287,13 @@ public partial class OptionsDialogViewModel : ObservableObject
     [RelayCommand]
     private void Confirm()
     {
+        if (CustomProperties.Any(property => string.IsNullOrWhiteSpace(property.Name)) ||
+            CustomProperties.Select(property => property.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != CustomProperties.Count)
+        {
+            CustomPropertyAlertMessage = LocalizationService.Current.Get(UiKeys.InvalidPropertyNames);
+            return;
+        }
+        CustomPropertyAlertMessage = string.Empty;
         if (StatusVariants.Any(static status => string.IsNullOrWhiteSpace(status.IconGlyph)))
         {
             StatusAlertMessage = LocalizationService.Current.Get(TextKeys.AllStatusItemsMustHaveAnIconSelected);
@@ -492,6 +534,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowPluginPathSection));
         OnPropertyChanged(nameof(ShowMcpSection));
         OnPropertyChanged(nameof(ShowStatusesSection));
+        OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));
