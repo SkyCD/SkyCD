@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using DryIoc;
 using SkyCD.App.Views;
@@ -34,12 +35,14 @@ public partial class App : Avalonia.Application
         {
             appServiceProvider = CreateAppServiceProvider();
             InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
+            InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
             mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
             ApplyMcpSettings();
             var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
             mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             var mainWindow = appServiceProvider.Resolve<MainWindow>();
             mainWindow.DataContext = mainWindowViewModel;
+            desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
 
             desktop.Exit += (_, _) =>
             {
@@ -66,6 +69,12 @@ public partial class App : Avalonia.Application
         }
 
         ServiceProvider.ReregisterPluginsService();
+    }
+
+    private static void InitializeDefaultStatuses(RepositoryManager repositoryManager)
+    {
+        var statusRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
+        statusRepository.EnsureDefaultStatuses();
     }
 
     private static IContainer CreateAppServiceProvider()
