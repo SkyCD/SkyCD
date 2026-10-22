@@ -9,7 +9,7 @@
 6. Do not include temporary/debug scripts in commits or PRs.
 7. Each commit message must begin with `[XXX]` where `XXX` is the issue number solved by that commit.
 8. Before each commit, verify `dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal` passes. If it fails, fix the formatting issues before committing.
-9. PR descriptions must clearly state what issue they solve, using format "Solves #XXX: [issue title]" at the beginning.
+9. PR descriptions must clearly state what issue they solve, using format "Fixes #XXX: [issue title]" at the beginning. Use GitHub-supported closing keywords so the issue is linked and automatically closed when the PR merges into the default branch. Do not use "Solves #XXX", which GitHub does not recognize as a closing keyword. For PRs targeting a feature branch, include the closing reference in the feature-to-main PR as well.
 10. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
 11. After each code change, if the build fails, do not commit the changes.
 12. If possible, everytime write integration tests for new functionality
