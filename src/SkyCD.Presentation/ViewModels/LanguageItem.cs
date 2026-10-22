@@ -8,6 +8,7 @@ namespace SkyCD.Presentation.ViewModels;
 /// </summary>
 public sealed record LanguageItem(string Name, string Flag)
 {
+    public string CultureCode { get; init; } = string.Empty;
     /// <summary>
     /// Gets the display text combining flag and language name.
     /// </summary>

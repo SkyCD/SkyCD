@@ -36,6 +36,8 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             appServiceProvider = CreateAppServiceProvider();
+            var optionsRepository = (AppOptionsDocumentRepository)appServiceProvider.Resolve<RepositoryManager>().For<AppOptionsDocument>();
+            LocalizationService.Current.SetLanguage(optionsRepository.GetOrCreateAppOptions().Language);
             InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
             InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
             mcpServerHost = appServiceProvider.Resolve<McpServerHost>();

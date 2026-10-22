@@ -544,7 +544,7 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var dialog = new OptionsDialogViewModel(["English", "Lithuanian"]);
+        var dialog = new OptionsDialogViewModel();
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,

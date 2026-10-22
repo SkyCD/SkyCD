@@ -542,13 +542,6 @@ public partial class MainWindow : Window
         e.Dialog.McpPort = options.McpPort;
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
-        if (!string.IsNullOrWhiteSpace(options.Language) &&
-            e.Dialog.Languages.FirstOrDefault(language =>
-                string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
-        {
-            e.Dialog.SelectedLanguage = language;
-        }
-
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
@@ -560,7 +553,15 @@ public partial class MainWindow : Window
             DataContext = e.Dialog
         };
 
-        var accepted = await dialog.ShowDialog<bool?>(this);
+        bool? accepted = false;
+        try
+        {
+            accepted = await dialog.ShowDialog<bool?>(this);
+        }
+        finally
+        {
+            e.Dialog.CompleteLanguageSelection(accepted == true);
+        }
         if (accepted == true)
         {
             var pluginStates = e.Dialog.Plugins
@@ -571,7 +572,7 @@ public partial class MainWindow : Window
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
-            options.Language = e.Dialog.SelectedLanguage.Name;
+            options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
@@ -1014,7 +1015,7 @@ public partial class MainWindow : Window
 
     private static void ApplyLanguage(string? languageName)
     {
-        LocalizationService.Current.SetCulture(LanguageCultureResolver.ResolveCulture(languageName));
+        LocalizationService.Current.SetLanguage(languageName);
     }
 
     private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries)
