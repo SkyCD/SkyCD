@@ -22,6 +22,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Abstractions;
+using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
@@ -43,6 +45,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
+    private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
@@ -61,6 +64,27 @@ public partial class MainWindow : Window
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closing += OnClosing;
+        PluginFailure.Reported += OnPluginFailure;
+        Closed += (_, _) => PluginFailure.Reported -= OnPluginFailure;
+    }
+
+    private void OnPluginFailure(PluginFailure failure)
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await pluginErrorDialogGate.WaitAsync();
+            try
+            {
+                if (IsVisible)
+                {
+                    await new PluginErrorWindow(failure).ShowDialog(this);
+                }
+            }
+            finally
+            {
+                pluginErrorDialogGate.Release();
+            }
+        });
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

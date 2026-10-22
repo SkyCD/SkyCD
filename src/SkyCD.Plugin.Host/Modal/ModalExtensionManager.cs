@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Modal;
 using SkyCD.Plugin.Host.Exceptions;
+using SkyCD.Plugin.Abstractions;
 
 namespace SkyCD.Plugin.Host.Modal;
 
@@ -100,9 +101,13 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
             {
                 result = await resolved.Capability.OpenModalAsync(request, linkedCts.Token);
             }
-            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested ||
+            catch (OperationCanceledException exception) when (timeoutCts.IsCancellationRequested ||
                                                      cancellationToken.IsCancellationRequested)
             {
+                if (timeoutCts.IsCancellationRequested)
+                {
+                    PluginFailure.Publish(resolved.Capability.GetType(), "modal", exception);
+                }
                 return new ModalOpenResult
                 {
                     Success = false,
@@ -114,10 +119,11 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
             }
             catch (Exception exception)
             {
+                PluginFailure.Publish(resolved.Capability.GetType(), "modal", exception);
                 return new ModalOpenResult
                 {
                     Success = false,
-                    Error = exception.Message
+                    Error = "The plugin modal failed."
                 };
             }
 
@@ -129,6 +135,11 @@ public sealed class ModalExtensionManager(IEnumerable<IModalPluginCapability> mo
                     Success = false,
                     Error = outputError
                 };
+            }
+
+            if (!result.Success && !result.Canceled)
+            {
+                PluginFailure.Publish(resolved.Capability.GetType(), "modal", new PluginOperationFailedException());
             }
 
             return result;
