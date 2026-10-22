@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private readonly RepositoryManager repositoryManager;
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly CatalogDocumentRepository catalogRepository;
+    private readonly StatusVariantDocumentRepository statusVariantRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private FileFormatManager fileFormatManager;
@@ -52,6 +53,7 @@ public partial class MainWindow : Window
         this.repositoryManager = repositoryManager;
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -90,6 +92,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             UpdateWindowTitle();
         }
     }
@@ -195,6 +198,7 @@ public partial class MainWindow : Window
             options.Browser.ViewMode,
             options.Browser.SortMode,
             options.IsStatusBarVisible);
+        vm.SetStatusVariants(statusVariantRepository.GetOrdered());
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
@@ -512,6 +516,7 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
+        e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         if (!string.IsNullOrWhiteSpace(options.Language) &&
             e.Dialog.Languages.FirstOrDefault(language =>
                 string.Equals(language.Name, options.Language, StringComparison.OrdinalIgnoreCase)) is { } language)
@@ -522,6 +527,7 @@ public partial class MainWindow : Window
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -543,11 +549,16 @@ public partial class MainWindow : Window
             options.Language = e.Dialog.SelectedLanguage.Name;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             SaveAppOptions(options);
+            statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
             (Application.Current as App)?.ApplyMcpSettings();
             RefreshMcpStatusIndicator();
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.SetStatusVariants(statusVariantRepository.GetOrdered());
+            }
 
             // Trigger UI refresh to apply new language
             InvalidateVisual();
@@ -555,6 +566,7 @@ public partial class MainWindow : Window
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+        e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
@@ -811,6 +823,23 @@ public partial class MainWindow : Window
         }
 
         RefreshPlugins(dialogVm);
+    }
+
+    private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var confirmed = await ShowResetStatusesPromptAsync();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        statusVariantRepository.ReplaceAll(statusVariantRepository.CreateDefaultEntries());
+        dialogVm.SetStatusVariants(statusVariantRepository.GetOrdered());
     }
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
@@ -1083,6 +1112,17 @@ public partial class MainWindow : Window
                 "media" => CatalogDocumentType.Media,
                 _ => CatalogDocumentType.Media
             };
+            var status = ReadString(row, "status");
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                status = ReadString(row, "statusName");
+            }
+
+            var properties = new SkyCD.Documents.Collections.PropertiesCollection();
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                properties["StatusName"] = status;
+            }
 
             results.Add(new CatalogDocument
             {
@@ -1091,7 +1131,9 @@ public partial class MainWindow : Window
                 ParentId = parentId,
                 Type = documentType,
                 Size = ReadLong(row, "size", "sizeBytes"),
-                ChildrenCount = ReadLong(row, "childrenCount")
+                ChildrenCount = ReadLong(row, "childrenCount"),
+                Status = string.IsNullOrWhiteSpace(status) ? null : status,
+                Properties = properties
             });
         }
 
@@ -1255,6 +1297,13 @@ public partial class MainWindow : Window
         MainStatusBar.McpStatusTooltip = isRunning
             ? $"MCP server running at {baseUrl}"
             : "MCP server stopped";
+    }
+
+    private async Task<bool> ShowResetStatusesPromptAsync()
+    {
+        var dialog = new ResetStatusesConfirmWindow();
+        var result = await dialog.ShowDialog<bool?>(this);
+        return result == true;
     }
 
 }
