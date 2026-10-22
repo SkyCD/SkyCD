@@ -22,12 +22,14 @@ public sealed class CouchbasePersistenceTests : IDisposable
     private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-cblite-{Guid.NewGuid():N}");
     private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
     private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
     public CouchbasePersistenceTests()
     {
         Directory.CreateDirectory(appDataRoot);
         Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
+        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
     }
 
     [Fact]
@@ -35,6 +37,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
+        Assert.StartsWith(Path.Combine(appDataRoot, "SkyCD") + Path.DirectorySeparatorChar,
+            provider.Resolve<DatabaseManager>().GetDatabase().Path, StringComparison.Ordinal);
         var repositoryManager = provider.Resolve<RepositoryManager>();
         var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
         ClearCatalog(catalogRepository);
@@ -287,6 +291,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     {
         Environment.SetEnvironmentVariable("APPDATA", previousAppData);
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
+        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
 
         if (Directory.Exists(appDataRoot))
         {
