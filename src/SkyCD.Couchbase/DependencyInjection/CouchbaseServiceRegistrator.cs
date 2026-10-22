@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using DryIoc;
 
 namespace SkyCD.Couchbase.DependencyInjection;
@@ -51,7 +52,9 @@ public sealed class CouchbaseServiceRegistrator
 
     private static bool IsTestHostProcess()
     {
-        return Process.GetCurrentProcess().ProcessName.Contains("testhost", StringComparison.OrdinalIgnoreCase);
+        return Process.GetCurrentProcess().ProcessName.Contains("testhost", StringComparison.OrdinalIgnoreCase) ||
+               AppDomain.CurrentDomain.GetAssemblies().Any(static assembly =>
+                   string.Equals(assembly.GetName().Name, "testhost", StringComparison.OrdinalIgnoreCase));
     }
 }
 

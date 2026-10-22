@@ -6,7 +6,7 @@ on:
 
 jobs:
   automerge:
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     permissions:
       pull-requests: write
       contents: write
@@ -23,7 +23,25 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge for Dependabot PRs
-        run: gh pr merge --auto --squash "$PR_URL"
+        shell: pwsh
+        run: |
+          $autoMergeAllowed = gh api "repos/$env:GH_REPO" --jq '.allow_auto_merge'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($autoMergeAllowed -ne 'true') {
+            Write-Output '::notice::Repository auto-merge is disabled; leaving the PR for manual merge.'
+            return
+          }
+
+          $mergeable = gh pr view "$env:PR_URL" --json mergeable --jq '.mergeable'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($mergeable -ne 'MERGEABLE') {
+            Write-Output '::notice::PR mergeability is conflicting or unknown; leaving the PR for review.'
+            return
+          }
+
+          gh pr merge --auto --squash "$env:PR_URL"
+          exit $LASTEXITCODE
         env:
+          GH_REPO: ${{ github.repository }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
