@@ -7,7 +7,7 @@
         <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.0.1"/>
+        <PackageReference Include="Avalonia" Version="12.0.3"/>
         <PackageReference Include="DryIoc.dll" Version="5.4.3"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7"/>
     </ItemGroup>
