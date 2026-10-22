@@ -19,6 +19,27 @@ namespace SkyCD.Couchbase.Tests;
 public class CouchbaseContractsTests
 {
     [Fact]
+    public void CouchbaseServiceRegistrator_IsolatesDefaultDatabasesBetweenTestContainers()
+    {
+        var previousDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+        try
+        {
+            Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", null);
+            using var first = new Container();
+            using var second = new Container();
+            new CouchbaseServiceRegistrator().RegisterServices(first);
+            new CouchbaseServiceRegistrator().RegisterServices(second);
+
+            Assert.NotEqual(first.Resolve<DatabaseManager>().GetDatabase().Path,
+                second.Resolve<DatabaseManager>().GetDatabase().Path);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDirectory);
+        }
+    }
+
+    [Fact]
     public void AttributeMarkers_AreDiscoverable()
     {
         var idAttribute = typeof(AnnotatedDocument).GetProperty(nameof(AnnotatedDocument.Id))!
