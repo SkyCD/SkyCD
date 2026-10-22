@@ -1,0 +1,6 @@
+extra.Select: "Pasirinkite..."
+extra.Type.File: "Failas"
+extra.Type.Media: "Laikmena"
+extra.Type.Folder: "Aplankas"
+extra.Type.NetworkFolder: "Tinklo aplankas"
+extra.Type.NetworkResource: "Tinklo išteklius"

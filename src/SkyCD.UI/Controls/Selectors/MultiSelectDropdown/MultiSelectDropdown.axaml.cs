@@ -10,6 +10,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Avalonia.Data;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.UI.Controls.Selectors.MultiSelectDropdown;
 
@@ -19,7 +21,7 @@ public partial class MultiSelectDropdown : UserControl
         AvaloniaProperty.Register<MultiSelectDropdown, IEnumerable<MultiSelectOptionItem>?>(nameof(ItemsSource));
 
     public static readonly StyledProperty<string?> PlaceholderTextProperty =
-        AvaloniaProperty.Register<MultiSelectDropdown, string?>(nameof(PlaceholderText), "Select...");
+        AvaloniaProperty.Register<MultiSelectDropdown, string?>(nameof(PlaceholderText));
 
     public static readonly StyledProperty<bool> IsSingleSelectProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, bool>(nameof(IsSingleSelect));
@@ -35,6 +37,11 @@ public partial class MultiSelectDropdown : UserControl
     public MultiSelectDropdown()
     {
         InitializeComponent();
+        this.Bind(PlaceholderTextProperty, new Binding($"[{ExtraKeys.Select}]")
+        {
+            Source = LocalizationService.Current,
+            Priority = BindingPriority.Style
+        });
         ItemsListBox.ItemsSource = filteredItems;
     }
 

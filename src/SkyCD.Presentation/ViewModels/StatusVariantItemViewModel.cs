@@ -7,11 +7,13 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Selectors.MultiSelectDropdown;
 using Avalonia.Media;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class StatusVariantItemViewModel : ObservableObject
 {
+    private readonly Dictionary<MultiSelectOptionItem, CatalogDocumentType> optionTypes = [];
     public static IReadOnlyList<CatalogDocumentType> AvailableItemTypes { get; } =
         Enum.GetValues<CatalogDocumentType>();
 
@@ -42,8 +44,9 @@ public partial class StatusVariantItemViewModel : ObservableObject
         {
             var option = new MultiSelectOptionItem
             {
-                Label = availableType.ToString()
+                Label = GetTypeLabel(availableType)
             };
+            optionTypes.Add(option, availableType);
             option.PropertyChanged += (_, args) =>
             {
                 if (args.PropertyName == nameof(MultiSelectOptionItem.IsSelected))
@@ -82,18 +85,19 @@ public partial class StatusVariantItemViewModel : ObservableObject
             };
             IconOptionItems.Add(option);
         }
+
+        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public string SelectedItemTypesDisplayText => GetSelectedTypes().Count == 0
         ? string.Empty
-        : string.Join(", ", GetSelectedTypes().OrderBy(static value => value).Select(static value => value.ToString()));
+        : string.Join(", ", GetSelectedTypes().OrderBy(static value => value).Select(GetTypeLabel));
 
     public bool IsTypeSelected(CatalogDocumentType type) => GetSelectedTypes().Contains(type);
 
     public void SetTypeSelected(CatalogDocumentType type, bool isSelected)
     {
-        var option = TypeOptions.FirstOrDefault(candidate =>
-            string.Equals(candidate.Label, type.ToString(), StringComparison.Ordinal));
+        var option = TypeOptions.FirstOrDefault(candidate => optionTypes.TryGetValue(candidate, out var value) && value == type);
         if (option is null)
         {
             return;
@@ -133,12 +137,7 @@ public partial class StatusVariantItemViewModel : ObservableObject
 
         foreach (var type in initialTypes)
         {
-            var option = vm.TypeOptions.FirstOrDefault(candidate =>
-                string.Equals(candidate.Label, type.ToString(), StringComparison.Ordinal));
-            if (option is not null)
-            {
-                option.IsSelected = true;
-            }
+            vm.SetTypeSelected(type, true);
         }
 
         vm.OnPropertyChanged(nameof(SelectedItemTypesDisplayText));
@@ -166,9 +165,21 @@ public partial class StatusVariantItemViewModel : ObservableObject
     {
         return TypeOptions
             .Where(static option => option.IsSelected)
-            .Select(option => Enum.TryParse<CatalogDocumentType>(option.Label, out var parsed) ? parsed : (CatalogDocumentType?)null)
-            .Where(static type => type.HasValue)
-            .Select(static type => type!.Value)
+            .Where(optionTypes.ContainsKey)
+            .Select(option => optionTypes[option])
             .ToHashSet();
+    }
+
+    private static string GetTypeLabel(CatalogDocumentType type) =>
+        LocalizationService.Current.Get(ExtraKeys.TypePrefix + type);
+
+    private void RefreshLocalization()
+    {
+        foreach (var (option, type) in optionTypes)
+        {
+            option.Label = GetTypeLabel(type);
+        }
+
+        OnPropertyChanged(nameof(SelectedItemTypesDisplayText));
     }
 }

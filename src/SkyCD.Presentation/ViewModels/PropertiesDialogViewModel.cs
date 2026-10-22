@@ -11,6 +11,8 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class PropertiesDialogViewModel : ObservableObject
 {
+    private readonly PropertiesCollection sourceProperties;
+    private readonly IStringLocalizer valueLocalizer;
     public PropertiesDialogViewModel(
         string objectKey,
         string name,
@@ -23,7 +25,10 @@ public partial class PropertiesDialogViewModel : ObservableObject
         this.name = name;
         IconGlyph = iconGlyph;
         this.comments = comments;
-        InfoProperties = NormalizeInfoProperties(infoProperties, localizer ?? new PropertyValueLocalizer());
+        sourceProperties = new PropertiesCollection(infoProperties.ToDictionary(item => item.Key, item => item.Value));
+        valueLocalizer = localizer ?? new PropertyValueLocalizer();
+        InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
+        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public string ObjectKey { get; }
@@ -32,7 +37,14 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public string IconGlyph { get; }
 
-    public PropertiesCollection InfoProperties { get; }
+    public PropertiesCollection InfoProperties { get; private set; }
+
+    private void RefreshLocalization()
+    {
+        InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
+        OnPropertyChanged(nameof(InfoProperties));
+        OnPropertyChanged(nameof(HasInfoTab));
+    }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 

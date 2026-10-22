@@ -1,3 +1,4 @@
+using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -108,7 +109,7 @@ public partial class AboutDialogViewModel : ObservableObject
 
     [ObservableProperty] private double memoryPercent;
 
-    [ObservableProperty] private string threadInfo = "0 threads";
+    [ObservableProperty] private string threadInfo = LocalizationService.Current.Format(TextKeys.Threads, 0);
 
     [ObservableProperty] private string uptimeFriendly = "0s";
 
@@ -150,7 +151,7 @@ public partial class AboutDialogViewModel : ObservableObject
                 ? Math.Clamp((double)currentProcess.WorkingSet64 / totalAvailableMemory * 100d, 0d, 100d)
                 : 0d;
 
-            ThreadInfo = $"{currentProcess.Threads.Count} threads";
+            ThreadInfo = LocalizationService.Current.Format(TextKeys.Threads, currentProcess.Threads.Count);
 
             var uptime = DateTime.Now - currentProcess.StartTime;
             UptimeFriendly = TimeFormatting.FormatAboutDialogDuration(uptime);
@@ -172,7 +173,7 @@ public partial class AboutDialogViewModel : ObservableObject
 
         var expectedMarkdownPath = Path.Combine(baseDirectory, "LICENSE.md");
         var expectedPlainPath = Path.Combine(baseDirectory, "LICENSE");
-        return $"Not found. Expected at: {expectedMarkdownPath} or {expectedPlainPath}";
+        return LocalizationService.Current.Format(TextKeys.NotFoundExpectedAtOr, expectedMarkdownPath, expectedPlainPath);
     }
 
     private static string? ResolveLicensePath(string baseDirectory)
@@ -225,8 +226,8 @@ public partial class AboutDialogViewModel : ObservableObject
         var copyright = assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright ?? string.Empty;
 
         return new LoadedAssemblyEntry(
-            assemblyName.Name ?? "Unknown",
-            assemblyName.Version?.ToString() ?? "Unknown",
+            assemblyName.Name ?? LocalizationService.Current.Get(TextKeys.Unknown),
+            assemblyName.Version?.ToString() ?? LocalizationService.Current.Get(TextKeys.Unknown),
             copyright,
             repositoryUrl);
     }

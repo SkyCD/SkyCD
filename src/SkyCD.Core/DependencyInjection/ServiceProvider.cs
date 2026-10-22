@@ -88,6 +88,14 @@ public static class ServiceProvider
         return child;
     }
 
+    /// <summary>Shares a host service with application and plugin child containers.</summary>
+    public static void RegisterInstance<TService>(TService instance)
+        where TService : class
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        MainContainer.RegisterInstance(instance, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    }
+
     public static object Resolve(Type serviceType, object? serviceKey = null)
     {
         ArgumentNullException.ThrowIfNull(serviceType);

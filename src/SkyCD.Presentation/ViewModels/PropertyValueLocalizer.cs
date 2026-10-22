@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Microsoft.Extensions.Localization;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -17,7 +18,7 @@ public sealed class PropertyValueLocalizer : IStringLocalizer
     public LocalizedString this[string name] => new(name, Resolve(name));
 
     public LocalizedString this[string name, params object[] arguments] =>
-        new(name, string.Format(Resolve(name), arguments));
+        new(name, string.Format(fixedCulture ?? LocalizationService.Current.CurrentCulture, Resolve(name), arguments));
 
     public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
     {
@@ -35,16 +36,7 @@ public sealed class PropertyValueLocalizer : IStringLocalizer
 
     private string Resolve(string key)
     {
-        var culture = fixedCulture ?? CultureInfo.CurrentUICulture;
-        var isLithuanian = culture.TwoLetterISOLanguageName.Equals("lt", StringComparison.OrdinalIgnoreCase);
-        return key switch
-        {
-            "Unknown" => isLithuanian ? "Nežinoma" : "Unknown",
-            "Yes" => isLithuanian ? "Taip" : "Yes",
-            "No" => isLithuanian ? "Ne" : "No",
-            "AllSupportedFiles" => isLithuanian ? "Visi palaikomi failai" : "All supported files",
-            "AllFiles" => isLithuanian ? "Visi failai" : "All files",
-            _ => key
-        };
+        var value = LocalizationService.Current.Get("core.values." + key, fixedCulture ?? CultureInfo.CurrentUICulture);
+        return value == "core.values." + key ? key : value;
     }
 }

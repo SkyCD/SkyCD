@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI"
         xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
@@ -19,6 +20,7 @@
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:MenuIconConverter x:Key="MenuIconConverter" />
+        <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
         <ControlTheme x:Key="DynamicMenuItemTheme"
                       TargetType="MenuItem"
                       BasedOn="{StaticResource {x:Type MenuItem}}">
@@ -53,19 +55,19 @@
 
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File"
+            <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.FileMenu}}"
                       ItemsSource="{Binding FileMenuItems}"
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
-            <MenuItem Header="_Edit"
+            <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.EditMenu}}"
                       ItemsSource="{Binding EditMenuItems}"
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
-            <MenuItem Header="_View"
+            <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.ViewMenu}}"
                       ItemsSource="{Binding ViewMenuItems}"
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
-            <MenuItem Header="_Tools"
+            <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.ToolsMenu}}"
                       ItemsSource="{Binding ToolsMenuItems}"
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
-            <MenuItem Header="_Help"
+            <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.HelpMenu}}"
                       ItemsSource="{Binding HelpMenuItems}"
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
         </Menu>
@@ -76,17 +78,17 @@
                                          Padding="8,3"
                                          Command="{Binding NewCatalogCommand}"
                                          ImageSrc="/Assets/add-from-media.png"
-                                         Text="_New" />
+                                         Text="{i18n:Translate {x:Static i18n:UiKeys.NewToolbar}}" />
                 <ct:ClassicToolbarButton MinWidth="68"
                                          Padding="8,3"
                                          Command="{Binding OpenCatalogCommand}"
                                          ImageSrc="/Assets/add-from-folder.png"
-                                         Text="_Open" />
+                                         Text="{i18n:Translate {x:Static i18n:UiKeys.OpenToolbar}}" />
                 <ct:ClassicToolbarButton MinWidth="68"
                                          Padding="8,3"
                                          Command="{Binding SaveCatalogCommand}"
                                          ImageSrc="/Assets/add-from-internet.png"
-                                         Text="_Save" />
+                                         Text="{i18n:Translate {x:Static i18n:UiKeys.SaveToolbar}}" />
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>
 
@@ -148,6 +150,7 @@
                                  BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
                                  BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
                                  IconConverter="{StaticResource IconConverter}"
+                                 StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
                                  ContextRequested="OnBrowserContextRequested"
                                  ListContextMenu="{DynamicResource BrowserContextMenu}"
                                  DoubleTapped="OnBrowserListDoubleTapped">
