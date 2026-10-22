@@ -1,4 +1,5 @@
 using System.Linq;
+using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -103,9 +104,9 @@ public class OptionsDialogViewModelTests
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SelectedTabIndex = 1;
+        vm.SelectedTabIndex = 2;
 
-        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.Equal(2, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -117,7 +118,7 @@ public class OptionsDialogViewModelTests
         Assert.Equal(0, vm.SelectedTabIndex);
 
         vm.SelectedTabIndex = 99;
-        Assert.Equal(1, vm.SelectedTabIndex);
+        Assert.Equal(3, vm.SelectedTabIndex);
     }
 
     [Fact]
@@ -165,6 +166,32 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void SearchText_FiltersMcpCategory()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "mcp";
+
+        Assert.Equal(["MCP"], vm.FilteredSettingCategories);
+        Assert.Equal("MCP", vm.SelectedSettingCategory);
+        Assert.Equal(2, vm.SelectedTabIndex);
+        Assert.True(vm.ShowMcpSection);
+    }
+
+    [Fact]
+    public void SearchText_FiltersStatusesCategory()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "status";
+
+        Assert.Equal(["Statuses"], vm.FilteredSettingCategories);
+        Assert.Equal("Statuses", vm.SelectedSettingCategory);
+        Assert.Equal(3, vm.SelectedTabIndex);
+        Assert.True(vm.ShowStatusesSection);
+    }
+
+    [Fact]
     public void SearchText_DoesNotFilterRightPanelItemCollections()
     {
         var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
@@ -179,5 +206,127 @@ public class OptionsDialogViewModelTests
 
         Assert.Equal(2, vm.Plugins.Count);
         Assert.Equal(2, vm.Languages.Count);
+    }
+
+    [Fact]
+    public void McpPort_IsClampedAndBuildsUrl()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.McpPort = 0;
+        Assert.Equal(1, vm.McpPort);
+
+        vm.McpPort = 70000;
+        Assert.Equal(65535, vm.McpPort);
+
+        vm.McpPort = 8787;
+        Assert.Equal("http://127.0.0.1:8787/mcp", vm.McpBaseUrl);
+    }
+
+    [Fact]
+    public void McpServer_CanBeDisabled()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.IsMcpServerEnabled = false;
+
+        Assert.False(vm.IsMcpServerEnabled);
+    }
+
+    [Fact]
+    public void McpStatusIconVisibility_DefaultsToTrueAndCanBeDisabled()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        Assert.True(vm.IsMcpStatusIconVisible);
+        Assert.Equal("Copy URL", vm.McpCopyTooltip);
+        Assert.False(vm.ShowMcpAlert);
+        vm.IsMcpStatusIconVisible = false;
+        Assert.False(vm.IsMcpStatusIconVisible);
+    }
+
+    [Fact]
+    public void StatusVariants_CanBeAddedRemovedAndExported()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument
+            {
+                Name = "Watched",
+                IconGlyph = "check",
+                ItemTypes = [SkyCD.Documents.Enum.CatalogDocumentType.Media]
+            }
+        ]);
+
+        Assert.Single(vm.StatusVariants);
+        Assert.True(vm.RemoveStatusVariantCommand.CanExecute(null));
+
+        vm.AddStatusVariantCommand.Execute(null);
+        Assert.Equal(2, vm.StatusVariants.Count);
+
+        vm.SelectedStatusVariant = vm.StatusVariants[0];
+        vm.RemoveStatusVariantCommand.Execute(null);
+        Assert.Single(vm.StatusVariants);
+
+        var exported = vm.GetStatusVariants();
+        Assert.Single(exported);
+        Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
+        Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported[0].ItemTypes!);
+    }
+
+    [Fact]
+    public void ConfirmCommand_ShowsStatusAlert_WhenAnyStatusIconIsMissing()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddStatusVariantCommand.Execute(null);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        Assert.True(vm.ShowStatusAlert);
+        Assert.Equal("All status items must have an icon selected.", vm.StatusAlertMessage);
+    }
+
+    [Fact]
+    public void ConfirmCommand_Accepts_WhenAllStatusIconsAreSet()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Watched", IconGlyph = "check" }
+        ]);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.True(vm.DialogAccepted);
+        Assert.False(vm.ShowStatusAlert);
+    }
+
+    [Fact]
+    public void ResetStatusVariantsCommand_RaisesRequestedEvent()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var raised = false;
+        vm.ResetStatusVariantsRequested += (_, _) => raised = true;
+
+        vm.ResetStatusVariantsCommand.Execute(null);
+
+        Assert.True(raised);
+    }
+
+    [Fact]
+    public void StatusVariantItemType_AllowsMultipleSelections()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddStatusVariantCommand.Execute(null);
+
+        var status = vm.StatusVariants.Single();
+        status.SetTypeSelected(SkyCD.Documents.Enum.CatalogDocumentType.Media, true);
+        status.SetTypeSelected(SkyCD.Documents.Enum.CatalogDocumentType.File, true);
+
+        var exported = vm.GetStatusVariants().Single();
+        Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported.ItemTypes!);
+        Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.File, exported.ItemTypes!);
     }
 }
