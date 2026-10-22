@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Exceptions;
+using SkyCD.Plugin.Abstractions;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 
@@ -115,10 +116,21 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             throw new FileFormatNotReadableException(formatHandler.SupportedFormat.FormatId);
         }
 
-        var result = await formatHandler.ReadAsync(request, cancellationToken);
+        FileFormatReadResult result;
+        try
+        {
+            result = await formatHandler.ReadAsync(request, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            PluginFailure.Publish(formatHandler.GetType(), "read", exception);
+            throw;
+        }
         if (!result.Success)
         {
-            throw new FileFormatReadFailedException(result.Error);
+            var failure = new FileFormatReadFailedException(result.Error);
+            PluginFailure.Publish(formatHandler.GetType(), "read", failure);
+            throw failure;
         }
 
         return result;
@@ -133,9 +145,25 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             throw new FileFormatReadOnlyException(formatHandler.SupportedFormat.FormatId);
         }
 
-        var result = await formatHandler.WriteAsync(request, cancellationToken);
+        FileFormatWriteResult result;
+        try
+        {
+            result = await formatHandler.WriteAsync(request, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            PluginFailure.Publish(formatHandler.GetType(), "write", exception);
+            throw;
+        }
 
-        return !result.Success ? throw new FileFormatWriteFailedException(result.Error) : result;
+        if (!result.Success)
+        {
+            var failure = new FileFormatWriteFailedException(result.Error);
+            PluginFailure.Publish(formatHandler.GetType(), "write", failure);
+            throw failure;
+        }
+
+        return result;
     }
 
     private IFileFormatPluginCapability ResolveHandler(string? formatId, string? fileName)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Plugin.Abstractions;
 
 namespace SkyCD.Plugin.Host.Menu;
 
@@ -62,8 +63,9 @@ public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menu
             await matchingCapability.ExecuteMenuCommandAsync(commandId, context, linkedCts.Token);
             return new MenuCommandExecutionResult { Success = true };
         }
-        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (timeoutCts.IsCancellationRequested)
         {
+            PluginFailure.Publish(matchingCapability.GetType(), "menu", exception);
             return new MenuCommandExecutionResult
             {
                 Success = false,
@@ -71,12 +73,17 @@ public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menu
                 Error = $"Command '{commandId}' timed out."
             };
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
+            PluginFailure.Publish(matchingCapability.GetType(), "menu", exception);
             return new MenuCommandExecutionResult
             {
                 Success = false,
-                Error = exception.Message
+                Error = "The plugin command failed."
             };
         }
     }
