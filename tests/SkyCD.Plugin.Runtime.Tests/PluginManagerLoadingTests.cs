@@ -8,6 +8,10 @@ using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.Plugin.Abstractions.Capabilities.Actions;
+using SkyCD.Plugin.Abstractions.Capabilities.Ownership;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -37,7 +41,19 @@ public sealed class PluginManagerLoadingTests : IDisposable
         pluginManager.Discover(_root, new Version(3, 0, 0));
 
         Assert.Contains(pluginManager.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
+        Assert.Single(pluginManager.GetCapabilities<IOwnershipProvider>());
+        Assert.Single(pluginManager.GetCapabilities<IAccountConnector>());
+        Assert.Single(pluginManager.GetCapabilities<IActionProvider>());
+        Assert.NotEmpty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
         Assert.DoesNotContain(assembliesLogger.Entries, entry => entry.LogLevel >= LogLevel.Error);
+
+        pluginManager.SavePluginEnabledStates([("tests.runtime.assembly-plugin", false)]);
+        pluginManager.Discover(_root, new Version(3, 0, 0));
+
+        Assert.Empty(pluginManager.GetCapabilities<IOwnershipProvider>());
+        Assert.Empty(pluginManager.GetCapabilities<IAccountConnector>());
+        Assert.Empty(pluginManager.GetCapabilities<IActionProvider>());
+        Assert.Empty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
     }
 
     [Fact]
