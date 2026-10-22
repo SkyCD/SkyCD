@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
              x:Class="SkyCD.UI.Controls.Selectors.ColorPaletteDropdown.ColorPaletteDropdownControl"
              x:Name="Root">
     <Grid>
@@ -45,7 +46,7 @@
                     CornerRadius="4"
                     Padding="10">
                 <StackPanel Spacing="10">
-                    <TextBlock Text="Color"
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Color}}"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                FontSize="12"
                                FontWeight="SemiBold" />
@@ -73,7 +74,7 @@
                         </Grid>
                     </Border>
 
-                    <TextBlock Text="Hue"
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Hue}}"
                                Margin="0,2,0,0"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                FontSize="12"
@@ -101,7 +102,7 @@
                         </Grid>
                     </Border>
 
-                    <TextBlock Text="Hex"
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Hex}}"
                                Margin="0,2,0,0"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                FontSize="12"

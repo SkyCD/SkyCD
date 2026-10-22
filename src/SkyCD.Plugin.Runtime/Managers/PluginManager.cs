@@ -27,6 +27,8 @@ public sealed class PluginManager(
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => plugins;
 
+    public event EventHandler? PluginsChanged;
+
     public IReadOnlyList<TCapability> GetCapabilities<TCapability>()
         where TCapability : class, IPluginCapability
     {
@@ -49,6 +51,7 @@ public sealed class PluginManager(
         UpsertPluginDocuments(MapToPluginDocuments(discovered));
         var descriptors = GetPluginDescriptors();
         plugins.Import(discovered, descriptors);
+        PluginsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public IReadOnlyList<PluginDocument> GetPluginDescriptors()

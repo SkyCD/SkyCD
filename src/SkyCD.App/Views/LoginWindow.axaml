@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.LoginWindow"
         x:DataType="vm:LoginDialogViewModel"
@@ -9,7 +10,7 @@
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
-        Title="Server login">
+        Title="{i18n:Translate {x:Static i18n:UiKeys.ServerLogin}}">
 
     <Design.DataContext>
         <vm:LoginDialogViewModel />
@@ -17,10 +18,10 @@
 
     <Grid RowDefinitions="*,Auto" Margin="14">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="110,*" ColumnSpacing="10" RowSpacing="8">
-            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Enter server credentials." />
-            <TextBlock Grid.Row="1" Text="User name" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="{i18n:Translate {x:Static i18n:UiKeys.EnterServerCredentials}}" />
+            <TextBlock Grid.Row="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Username}}" VerticalAlignment="Center" />
             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Username}" />
-            <TextBlock Grid.Row="2" Text="Password" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Password}}" VerticalAlignment="Center" />
             <TextBox Grid.Row="2" Grid.Column="1" PasswordChar="*" Text="{Binding Password}" />
         </Grid>
 
@@ -29,10 +30,10 @@
                     HorizontalAlignment="Right"
                     Spacing="8"
                     Margin="0,12,0,0">
-            <Button Content="OK"
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
                     MinWidth="90"
                     Command="{Binding ConfirmCommand}" />
-            <Button Content="Cancel"
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
                     MinWidth="90"
                     Click="OnCancelClicked" />
         </StackPanel>

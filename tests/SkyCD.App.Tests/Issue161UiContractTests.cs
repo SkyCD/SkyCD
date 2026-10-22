@@ -41,8 +41,8 @@ public class Issue161UiContractTests
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
         Assert.Contains("<TabControl", xaml, StringComparison.Ordinal);
-        Assert.Contains("Header=\"General\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Header=\"Properties\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.General}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.Properties}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("<cp:PropertiesList", xaml, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class Issue161UiContractTests
         Assert.Contains("IReadOnlyDictionary<string, object?>", controlCode, StringComparison.Ordinal);
         Assert.DoesNotContain("<Button", controlXaml, StringComparison.Ordinal);
         Assert.Contains("PropertiesData=\"{Binding InfoProperties}\"", appXaml, StringComparison.Ordinal);
-        Assert.Contains("PropertyHeader=\"Property\"", appXaml, StringComparison.Ordinal);
-        Assert.Contains("ValueHeader=\"Value\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("PropertyHeader=\"{i18n:Translate {x:Static i18n:UiKeys.Property}}\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("ValueHeader=\"{i18n:Translate {x:Static i18n:UiKeys.Value}}\"", appXaml, StringComparison.Ordinal);
     }
 
     [Fact]

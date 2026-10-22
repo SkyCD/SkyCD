@@ -286,7 +286,7 @@ public partial class BrowserItemsView : UserControl
                 IsVisible = IsTilesMode
             };
             var type = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, FontSize = 12 };
-            type.Bind(TextBlock.TextProperty, new Binding("DisplayType"));
+            type.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
             details.Children.Add(type);
 
             var size = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, FontSize = 12 };
@@ -348,7 +348,14 @@ public partial class BrowserItemsView : UserControl
                 {
                     HorizontalAlignment = column.ValueAlignment
                 };
-                valueCell.Bind(TextBlock.TextProperty, new Binding(column.ValuePath));
+                if (column.ValuePath == "DisplayType")
+                {
+                    valueCell.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
+                }
+                else
+                {
+                    valueCell.Bind(TextBlock.TextProperty, new Binding(column.ValuePath));
+                }
                 Grid.SetColumn(valueCell, i + 1);
                 grid.Children.Add(valueCell);
             }

@@ -1,3 +1,4 @@
+using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -276,7 +277,7 @@ public partial class MainWindow : Window
             var loginAccepted = await loginDialog.ShowDialog<bool?>(this);
             if (loginAccepted != true)
             {
-                vm.StatusText = "Login canceled.";
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.LoginCanceled);
                 return;
             }
         }
@@ -340,7 +341,7 @@ public partial class MainWindow : Window
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open catalog",
+            Title = LocalizationService.Current.Get(TextKeys.OpenCatalog),
             AllowMultiple = false,
             FileTypeFilter = fileTypeChoices
         });
@@ -364,28 +365,28 @@ public partial class MainWindow : Window
                 .OrderBy(static value => value, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var supportedText = readableExtensions.Length == 0
-                ? "none"
+                ? LocalizationService.Current.Get(TextKeys.None)
                 : string.Join(", ", readableExtensions);
 
             vm.StatusText = string.IsNullOrWhiteSpace(extension)
-                ? $"Failed to open catalog: unsupported file format. Readable extensions: {supportedText}."
-                : $"Failed to open catalog: no readable handler mapped for '{extension}'. Readable extensions: {supportedText}.";
+                ? LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogUnsupportedFileFormatReadableExtensions, supportedText)
+                : LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogNoReadableHandlerMappedForReadableExtensions, extension, supportedText);
         }
         catch (FileFormatHandlerResolutionException)
         {
-            vm.StatusText = "Failed to open catalog: file format handler is unavailable. Check plugin settings.";
+            vm.StatusText = LocalizationService.Current.Get(TextKeys.FailedToOpenCatalogFileFormatHandlerIsUnavailableCheckPluginSettings);
         }
         catch (FileFormatNotReadableException ex)
         {
-            vm.StatusText = $"Failed to open catalog: plugin cannot read this format ({ex.Message}).";
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogPluginCannotReadThisFormat, ex.Message);
         }
         catch (FileFormatReadFailedException ex)
         {
-            vm.StatusText = $"Failed to open catalog: plugin read error ({ex.Message}).";
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogPluginReadError, ex.Message);
         }
         catch (Exception ex)
         {
-            vm.StatusText = $"Failed to open catalog: {ex.Message}";
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, ex.Message);
         }
     }
 
@@ -410,7 +411,7 @@ public partial class MainWindow : Window
 
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Save catalog",
+                Title = LocalizationService.Current.Get(TextKeys.SaveCatalog),
                 SuggestedFileName = $"catalog.{defaultExtension}",
                 DefaultExtension = defaultExtension,
                 FileTypeChoices = fileTypeChoices
@@ -441,7 +442,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
         }
     }
 
@@ -463,7 +464,7 @@ public partial class MainWindow : Window
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save catalog as",
+            Title = LocalizationService.Current.Get(TextKeys.SaveCatalogAs),
             SuggestedFileName = $"catalog.{defaultExtension}",
             DefaultExtension = defaultExtension,
             FileTypeChoices = fileTypeChoices
@@ -492,7 +493,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.StatusText = $"Failed to save catalog: {ex.Message}";
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
         }
     }
 
@@ -612,21 +613,21 @@ public partial class MainWindow : Window
         {
             AddToListSourceMode.Internet =>
             [
-                ("Reading directory from remote server...", 20),
-                ("Preparing database for modifications...", 55),
-                ("Updating indexes...", 100)
+                (LocalizationService.Current.Get(TextKeys.ReadingDirectoryFromRemoteServer), 20),
+                (LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), 55),
+                (LocalizationService.Current.Get(TextKeys.UpdatingIndexes), 100)
             ],
             AddToListSourceMode.Folder =>
             [
-                ("Reading source folder...", 25),
-                ("Preparing database for modifications...", 60),
-                ("Updating indexes...", 100)
+                (LocalizationService.Current.Get(TextKeys.ReadingSourceFolder), 25),
+                (LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), 60),
+                (LocalizationService.Current.Get(TextKeys.UpdatingIndexes), 100)
             ],
             _ =>
             [
-                ("Reading media metadata...", 35),
-                ("Preparing database for modifications...", 70),
-                ("Updating indexes...", 100)
+                (LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata), 35),
+                (LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), 70),
+                (LocalizationService.Current.Get(TextKeys.UpdatingIndexes), 100)
             ]
         };
     }
@@ -796,7 +797,7 @@ public partial class MainWindow : Window
 
         var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Select plug-in directory",
+            Title = LocalizationService.Current.Get(TextKeys.SelectPlugInDirectory),
             AllowMultiple = false
         });
 
@@ -857,7 +858,7 @@ public partial class MainWindow : Window
                 {
                     return new OptionsPluginItem(
                         loaded.Name,
-                        string.IsNullOrWhiteSpace(loaded.Author?.Name) ? "Unknown author" : loaded.Author.Name,
+                        string.IsNullOrWhiteSpace(loaded.Author?.Name) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : loaded.Author.Name,
                         $"{loaded.Id} v{loaded.Version}",
                         isEnabled: descriptor.IsEnabled,
                         id: loaded.Id,
@@ -865,7 +866,7 @@ public partial class MainWindow : Window
                 }
 
                 var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
-                    ? "Unknown author"
+                    ? LocalizationService.Current.Get(TextKeys.UnknownAuthor)
                     : descriptor.Author.Name;
                 var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
 
@@ -989,13 +990,7 @@ public partial class MainWindow : Window
 
     private static void ApplyLanguage(string? languageName)
     {
-        var culture = LanguageCultureResolver.ResolveCulture(languageName);
-        CultureInfo.CurrentCulture = culture;
-        CultureInfo.CurrentUICulture = culture;
-        CultureInfo.DefaultThreadCurrentCulture = culture;
-        CultureInfo.DefaultThreadCurrentUICulture = culture;
-        Thread.CurrentThread.CurrentCulture = culture;
-        Thread.CurrentThread.CurrentUICulture = culture;
+        LocalizationService.Current.SetCulture(LanguageCultureResolver.ResolveCulture(languageName));
     }
 
     private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries)
@@ -1284,7 +1279,7 @@ public partial class MainWindow : Window
             MainStatusBar.IsMcpStatusVisible = true;
             MainStatusBar.McpStatusGlyph = "◎";
             MainStatusBar.McpStatusColor = "#9CA3AF";
-            MainStatusBar.McpStatusTooltip = "MCP server unavailable";
+            MainStatusBar.McpStatusTooltip = LocalizationService.Current.Get(TextKeys.MCPServerUnavailable);
             return;
         }
 
@@ -1295,8 +1290,8 @@ public partial class MainWindow : Window
         MainStatusBar.McpStatusGlyph = isRunning ? "◉" : "◎";
         MainStatusBar.McpStatusColor = isRunning ? "#22C55E" : "#9CA3AF";
         MainStatusBar.McpStatusTooltip = isRunning
-            ? $"MCP server running at {baseUrl}"
-            : "MCP server stopped";
+            ? LocalizationService.Current.Format(TextKeys.MCPServerRunningAt, baseUrl ?? string.Empty)
+            : LocalizationService.Current.Get(TextKeys.MCPServerStopped);
     }
 
     private async Task<bool> ShowResetStatusesPromptAsync()

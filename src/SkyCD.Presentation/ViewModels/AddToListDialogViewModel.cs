@@ -1,3 +1,4 @@
+using SkyCD.UI.Localization;
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,6 +10,11 @@ public partial class AddToListDialogViewModel : ObservableObject
     public AddToListDialogViewModel()
     {
         RecomputeValidation();
+        LocalizationObserver.Observe(this, static vm =>
+        {
+            vm.RecomputeValidation();
+            vm.OnPropertyChanged(nameof(SourceValueLabel));
+        });
     }
 
     public bool CanConfirm => string.IsNullOrWhiteSpace(ValidationMessage);
@@ -41,7 +47,7 @@ public partial class AddToListDialogViewModel : ObservableObject
 
     [ObservableProperty] private string? validationMessage;
 
-    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? "Address" : "Folder";
+    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? LocalizationService.Current.Get(TextKeys.Address) : LocalizationService.Current.Get(TextKeys.Folder);
 
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()
@@ -104,19 +110,19 @@ public partial class AddToListDialogViewModel : ObservableObject
         if (TargetPlacement == AddToListTargetPlacement.NewMedia &&
             string.IsNullOrWhiteSpace(MediaName))
         {
-            return "Media name is required when adding as new media.";
+            return LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredWhenAddingAsNewMedia);
         }
 
         return SourceMode switch
         {
             AddToListSourceMode.Media => string.IsNullOrWhiteSpace(MediaName)
-                ? "Media name is required for media source."
+                ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForMediaSource)
                 : null,
             AddToListSourceMode.Folder => string.IsNullOrWhiteSpace(SourceValue)
-                ? "Folder path is required for folder source."
+                ? LocalizationService.Current.Get(TextKeys.FolderPathIsRequiredForFolderSource)
                 : null,
             AddToListSourceMode.Internet => string.IsNullOrWhiteSpace(SourceValue)
-                ? "Address is required for internet source."
+                ? LocalizationService.Current.Get(TextKeys.AddressIsRequiredForInternetSource)
                 : null,
             _ => null
         };

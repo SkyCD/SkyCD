@@ -1,0 +1,6 @@
+extra.Select: "Select..."
+extra.Type.File: "File"
+extra.Type.Media: "Media"
+extra.Type.Folder: "Folder"
+extra.Type.NetworkFolder: "Network Folder"
+extra.Type.NetworkResource: "Network Resource"
