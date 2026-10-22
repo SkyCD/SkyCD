@@ -87,7 +87,14 @@ public static class StatusIconCatalog
     {
         try
         {
-            Assembly.Load(assemblyName);
+            var assembly = Assembly.Load(assemblyName);
+            foreach (var reference in assembly.GetReferencedAssemblies())
+            {
+                if (reference.Name is { } name && name.StartsWith("IconPacks.Avalonia.", StringComparison.Ordinal))
+                {
+                    TryLoadAssembly(name);
+                }
+            }
         }
         catch
         {
