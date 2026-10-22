@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -110,4 +111,5 @@ public partial class OptionsWindow : Window
             currentVm.McpAlertMessage = string.Empty;
         }
     }
+
 }

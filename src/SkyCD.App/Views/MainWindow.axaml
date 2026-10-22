@@ -18,6 +18,7 @@
 
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
+        <converters:MenuIconConverter x:Key="MenuIconConverter" />
         <ControlTheme x:Key="DynamicMenuItemTheme"
                       TargetType="MenuItem"
                       BasedOn="{StaticResource {x:Type MenuItem}}">
@@ -27,7 +28,8 @@
                     Value="{ReflectionBinding DataContext.Header, RelativeSource={RelativeSource Self}}" />
             <Setter Property="HotKey"
                     Value="{ReflectionBinding DataContext.HotKey, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="Icon" Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="Icon"
+                    Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuIconConverter}}" />
             <Setter Property="Command"
                     Value="{ReflectionBinding DataContext.Command, RelativeSource={RelativeSource Self}}" />
             <Setter Property="CommandParameter"
@@ -36,6 +38,8 @@
                     Value="{ReflectionBinding DataContext.ToggleType, RelativeSource={RelativeSource Self}}" />
             <Setter Property="IsChecked"
                     Value="{ReflectionBinding DataContext.IsChecked, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="IsEnabled"
+                    Value="{ReflectionBinding DataContext.IsEnabled, RelativeSource={RelativeSource Self}}" />
             <Setter Property="ItemsSource"
                     Value="{ReflectionBinding DataContext.Items, RelativeSource={RelativeSource Self}}" />
             <Setter Property="ItemContainerTheme" Value="{DynamicResource DynamicMenuItemTheme}" />
@@ -138,6 +142,7 @@
                                  ListMinWidth="240"
                                  ItemsSource="{Binding BrowserItems}"
                                  SelectedItem="{Binding SelectedBrowserItem}"
+                                 SelectedItems="{Binding SelectedBrowserItems}"
                                  ViewMode="{Binding CurrentViewMode}"
                                  DetailsColumns="{Binding BrowserDetailsColumns}"
                                  BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
