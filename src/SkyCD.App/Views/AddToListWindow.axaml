@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
@@ -14,7 +15,7 @@
         CanMinimize="False"
         ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
-        Title="Add To List">
+        Title="{i18n:Translate {x:Static i18n:UiKeys.AddToList}}">
 
     <Design.DataContext>
         <vm:AddToListDialogViewModel />
@@ -67,7 +68,7 @@
                                Height="48"
                                Stretch="Uniform"
                                Source="/Assets/add-from-media.png" />
-                        <TextBlock Text="From Media" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromMedia}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
                 <Button Height="70"
@@ -81,7 +82,7 @@
                                Height="48"
                                Stretch="Uniform"
                                Source="/Assets/add-from-folder.png" />
-                        <TextBlock Text="From Folder" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromFolder}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
                 <Button Height="70"
@@ -95,7 +96,7 @@
                                Height="48"
                                Stretch="Uniform"
                                Source="/Assets/add-from-internet.png" />
-                        <TextBlock Text="From Internet" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromInternet}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -104,7 +105,7 @@
         <StackPanel Grid.Column="1"
                     Grid.ColumnSpan="2"
                     Spacing="4">
-            <TextBlock Text="Select full name for selected media:" />
+            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
             <TextBox Text="{Binding MediaName}" />
         </StackPanel>
 
@@ -112,25 +113,25 @@
               Grid.Column="1"
               Grid.ColumnSpan="2">
             <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="4">
-                <TextBlock Text="Select drive:" />
-                <CheckBox Content="Include Media Info"
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
+                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
                           IsChecked="{Binding IncludeMediaInfo}" />
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="4">
-                <TextBlock Text="Select Folder:" />
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                     <TextBox Text="{Binding SourceValue}" />
                     <Button Grid.Column="1"
                             Content="..."
                             Width="28" />
                 </Grid>
-                <CheckBox Content="Include Subfolders"
+                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeSubfolders}}"
                           IsChecked="{Binding IncludeSubfolders}" />
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="4">
-                <TextBlock Text="Enter Internet address:" />
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.EnterInternetAddress}}" />
                 <TextBox Text="{Binding SourceValue}" />
             </StackPanel>
         </Grid>
@@ -139,21 +140,21 @@
                     Grid.Column="1"
                     Grid.ColumnSpan="2"
                     TabStripPlacement="Bottom">
-            <TabItem Header="All contents add...">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.AddContents}}">
                 <StackPanel Margin="10" Spacing="6">
-                    <RadioButton Content="As new Media"
+                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.AsNewMedia}}"
                                  IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
                                  CommandParameter="NewMedia" />
-                    <RadioButton Content="To selected Media/Folder"
+                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
                                  IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
                                  CommandParameter="SelectedFolder" />
                 </StackPanel>
             </TabItem>
-            <TabItem Header="Misc">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Misc}}">
                 <StackPanel Margin="10" Spacing="6">
-                    <CheckBox Content="Include Extended Info"
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
                               IsChecked="{Binding IncludeExtendedInfo}" />
                 </StackPanel>
             </TabItem>
@@ -173,12 +174,12 @@
               ColumnDefinitions="Auto,Auto"
               ColumnSpacing="6">
             <Button Grid.Column="0"
-                    Content="OK"
+                    Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
                     Width="72"
                     Height="25"
                     Command="{Binding ConfirmCommand}" />
             <Button Grid.Column="1"
-                    Content="Cancel"
+                    Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
                     Width="72"
                     Height="25"
                     Click="OnCancelClicked" />

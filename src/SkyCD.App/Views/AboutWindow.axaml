@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
@@ -10,7 +11,7 @@
         CanMaximize="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
-        Title="About SkyCD">
+        Title="{i18n:Translate {x:Static i18n:UiKeys.AboutSkyCd}}">
 
     <Design.DataContext>
         <vm:AboutDialogViewModel />
@@ -33,15 +34,15 @@
         </StackPanel>
 
         <StackPanel Margin="8" Spacing="6" Height="32" DockPanel.Dock="Bottom">
-            <Button HorizontalAlignment="Right" Width="80" Margin="0,8,0,0" Command="{Binding ConfirmCommand}">Close</Button>
+            <Button HorizontalAlignment="Right" Width="80" Margin="0,8,0,0" Command="{Binding ConfirmCommand}" Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" />
         </StackPanel>
 
         <TabControl Name="MainTabs">
-            <TabItem Header="System info" FontSize="14">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.SystemInfo}}" FontSize="14">
                 <Grid Margin="8">
                     <StackPanel Spacing="10">
                         <StackPanel>
-                            <TextBlock Text="CPU" FontWeight="SemiBold" />
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Cpu}}" FontWeight="SemiBold" />
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10"
                                              Width="220" />
@@ -50,7 +51,7 @@
                         </StackPanel>
 
                         <StackPanel>
-                            <TextBlock Text="Memory" FontWeight="SemiBold" />
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Memory}}" FontWeight="SemiBold" />
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10"
                                              Width="220" />
@@ -65,7 +66,7 @@
                             <Border Grid.Column="0" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE"
                                     BorderThickness="1" Margin="0,0,8,0">
                                 <StackPanel>
-                                    <TextBlock Text="Threads" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Threads}}" FontWeight="SemiBold" FontSize="12" />
                                     <TextBlock Text="{Binding ThreadInfo}" FontSize="20" FontWeight="Bold" />
                                 </StackPanel>
                             </Border>
@@ -73,7 +74,7 @@
                             <Border Grid.Column="1" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE"
                                     BorderThickness="1" Margin="8,0,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="Uptime" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Uptime}}" FontWeight="SemiBold" FontSize="12" />
                                     <TextBlock Text="{Binding UptimeFriendly}" FontSize="20" FontWeight="Bold" />
                                     <TextBlock Text="{Binding StartTime}" FontSize="11" Opacity="0.75" />
                                 </StackPanel>
@@ -82,7 +83,7 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
-            <TabItem Header="Loaded assemblies" FontSize="14">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}" FontSize="14">
                 <Grid Margin="8">
                     <ListBox ItemsSource="{Binding LoadedAssemblies}"
                              SelectionMode="Multiple"
@@ -174,7 +175,7 @@
                     </ListBox>
                 </Grid>
             </TabItem>
-            <TabItem Header="Project license" FontSize="14" IsSelected="True">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}" FontSize="14" IsSelected="True">
                 <Grid Margin="8">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Visible"
                                   AllowAutoHide="False">

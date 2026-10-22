@@ -26,6 +26,6 @@ public static class TimeFormatting
             minUnit: minUnit,
             maxUnit: TimeUnit.Day,
             collectionSeparator: " ",
-            culture: CultureInfo.GetCultureInfo("en-US"));
+            culture: CultureInfo.CurrentUICulture);
     }
 }

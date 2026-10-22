@@ -1,3 +1,4 @@
+using SkyCD.UI.Localization;
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
@@ -96,18 +97,18 @@ public partial class OptionsWindow : Window
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is null)
         {
-            vm.McpAlertMessage = "Clipboard is unavailable.";
+            vm.McpAlertMessage = LocalizationService.Current.Get(TextKeys.ClipboardIsUnavailable);
             return;
         }
 
-        vm.McpCopyTooltip = "Copied";
+        vm.McpCopyTooltip = LocalizationService.Current.Get(TextKeys.Copied2);
         await clipboard.SetTextAsync(vm.McpBaseUrl);
-        vm.McpAlertMessage = $"Copied MCP URL: {vm.McpBaseUrl}";
+        vm.McpAlertMessage = LocalizationService.Current.Format(TextKeys.CopiedMCPURL, vm.McpBaseUrl);
 
         await Task.Delay(4000);
         if (DataContext is OptionsDialogViewModel currentVm)
         {
-            currentVm.McpCopyTooltip = "Copy URL";
+            currentVm.McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
             currentVm.McpAlertMessage = string.Empty;
         }
     }

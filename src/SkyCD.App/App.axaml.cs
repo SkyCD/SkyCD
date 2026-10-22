@@ -16,6 +16,8 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.App;
 
@@ -55,12 +57,14 @@ public partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static void InitializePlugins(RepositoryManager repositoryManager)
+    private void InitializePlugins(RepositoryManager repositoryManager)
     {
         var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         var options = appOptionsRepository.GetOrCreateAppOptions();
         var pluginPath = options.PluginPath;
         var pluginManager = ServiceProvider.Resolve<PluginManager>();
+        var translations = appServiceProvider!.Resolve<PluginTranslationRegistry>();
+        pluginManager.PluginsChanged += (_, _) => translations.Refresh(pluginManager.Plugins);
         var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
@@ -79,9 +83,11 @@ public partial class App : Avalonia.Application
 
     private static IContainer CreateAppServiceProvider()
     {
+        ServiceProvider.RegisterInstance<ILocalizationService>(LocalizationService.Current);
         return ServiceProvider.RegisterChildContainer(static registrator =>
         {
             registrator.Register<McpServerHost>(Reuse.Singleton);
+            registrator.Register<PluginTranslationRegistry>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });

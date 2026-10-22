@@ -5,6 +5,8 @@ using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using SkyCD.UI.Controls.Lists;
 using Xunit;
 
@@ -12,7 +14,7 @@ namespace SkyCD.UI.Tests;
 
 public class BrowserStatusBadgeTests
 {
-    [Theory]
+    [AvaloniaTheory]
     [InlineData(BrowserViewMode.Details)]
     [InlineData(BrowserViewMode.List)]
     [InlineData(BrowserViewMode.SmallIcons)]
@@ -33,6 +35,7 @@ public class BrowserStatusBadgeTests
         var item = new BadgeItem();
         var row = template.Build(item)!;
         row.DataContext = item;
+        Dispatcher.UIThread.RunJobs();
 
         var content = row.GetLogicalDescendants().OfType<ContentControl>()
             .Single(control => ReferenceEquals(control.Content, renderedIcon));
@@ -44,6 +47,7 @@ public class BrowserStatusBadgeTests
         Assert.Equal(Colors.Red, Assert.IsType<SolidColorBrush>(content.Foreground).Color);
 
         row.DataContext = new BadgeItem { Properties = new Dictionary<string, object?>() };
+        Dispatcher.UIThread.RunJobs();
 
         Assert.False(badge.IsVisible);
         Assert.Null(content.Content);

@@ -1,3 +1,4 @@
+using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -34,6 +35,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         selectedLanguage = Languages[0];
         RefreshFilteredCategories();
         selectedSettingCategory = CurrentCategoryName;
+        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
@@ -65,7 +67,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private bool isMcpStatusIconVisible = true;
 
-    [ObservableProperty] private string mcpCopyTooltip = "Copy URL";
+    [ObservableProperty] private string mcpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
 
     [ObservableProperty] private string mcpAlertMessage = string.Empty;
     [ObservableProperty] private StatusVariantItemViewModel? selectedStatusVariant;
@@ -75,7 +77,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    public IReadOnlyList<string> SettingCategories { get; } = ["Plugins", "Language", "MCP", "Statuses"];
+    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses)];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -101,7 +103,10 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowPluginActionsSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("actions", "refresh", "configure", "plugin actions");
+        MatchesSearch("actions", "refresh", "configure", "plugin actions",
+            LocalizationService.Current.Get(UiKeys.Actions),
+            LocalizationService.Current.Get(UiKeys.Refresh),
+            LocalizationService.Current.Get(UiKeys.Configure));
 
     public bool ShowPluginInfoSection =>
         IsPluginsCategorySelected &&
@@ -146,7 +151,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         var candidate = new StatusVariantItemViewModel
         {
-            Name = "New Status",
+            Name = LocalizationService.Current.Get(TextKeys.NewStatus),
             IconGlyph = string.Empty,
             IconColor = "#FFFFFF"
         };
@@ -193,7 +198,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             return;
         }
 
-        InfoMessage = $"Configure '{SelectedPlugin.Name}' is not implemented yet.";
+        InfoMessage = LocalizationService.Current.Format(TextKeys.ConfigureIsNotImplementedYet, SelectedPlugin.Name);
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginAuthorUrl))]
@@ -216,7 +221,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         if (StatusVariants.Any(static status => string.IsNullOrWhiteSpace(status.IconGlyph)))
         {
-            StatusAlertMessage = "All status items must have an icon selected.";
+            StatusAlertMessage = LocalizationService.Current.Get(TextKeys.AllStatusItemsMustHaveAnIconSelected);
             return;
         }
 
@@ -249,7 +254,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         SelectedPlugin = Plugins.FirstOrDefault();
-        InfoMessage = $"Loaded {Plugins.Count} plugin(s).";
+        InfoMessage = LocalizationService.Current.Format(TextKeys.LoadedPluginS, Plugins.Count);
         ConfigurePluginCommand.NotifyCanExecuteChanged();
     }
 
@@ -402,6 +407,15 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         SelectedTabIndex = index.Value;
+    }
+
+    private void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(SettingCategories));
+        McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
+        RefreshFilteredCategories();
+        SelectedSettingCategory = CurrentCategoryName;
+        NotifySettingsVisibilityChanged();
     }
 
     private void RefreshFilteredCategories()

@@ -1,3 +1,4 @@
+using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -46,7 +47,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly List<int> progressTransitions = [];
     private readonly List<StatusVariantDocument> statusVariants = [];
     private IReadOnlyList<MainMenuItemViewModel> topMenuItems;
-    private const string DefaultStatusText = "Done.";
+    private static string DefaultStatusText => LocalizationService.Current.Get(TextKeys.Done);
     private const string ItemStatusNamePropertyKey = "StatusName";
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
     private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
@@ -100,6 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
+        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public MainWindowViewModel(
@@ -130,6 +132,17 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
+        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+    }
+
+    public void RefreshLocalization()
+    {
+        RefreshPluginMenuServices(menuExtensionManager);
+        OnPropertyChanged(nameof(BrowserDetailsColumns));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        StatusText = DefaultStatusText;
+        RefreshBrowserItemsForSelection();
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
@@ -156,21 +169,21 @@ public partial class MainWindowViewModel : ObservableObject
 
     public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
 
-    public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns { get; } =
+    public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns =>
     [
         new()
         {
-            Header = "Name", ValuePath = "Name",
+            Header = LocalizationService.Current.Get(TextKeys.Name2), ValuePath = "Name",
             Width = new Avalonia.Controls.GridLength(1, Avalonia.Controls.GridUnitType.Star)
         },
         new()
         {
-            Header = "Type", ValuePath = "DisplayType",
+            Header = LocalizationService.Current.Get(TextKeys.Type), ValuePath = "DisplayType",
             Width = new Avalonia.Controls.GridLength(150, Avalonia.Controls.GridUnitType.Pixel)
         },
         new()
         {
-            Header = "Size", ValuePath = "DisplaySize",
+            Header = LocalizationService.Current.Get(TextKeys.Size), ValuePath = "DisplaySize",
             Width = new Avalonia.Controls.GridLength(120, Avalonia.Controls.GridUnitType.Pixel),
             HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right
@@ -331,7 +344,7 @@ public partial class MainWindowViewModel : ObservableObject
         ClipboardItem = null;
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
-        StatusText = "Created a new catalog.";
+        StatusText = LocalizationService.Current.Get(TextKeys.CreatedANewCatalog);
     }
 
     [RelayCommand]
@@ -348,9 +361,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     public void CompleteOpenCatalog()
     {
-        StartOperation("Loading catalog...");
-        SetProgress(35, "Parsing catalog...");
-        SetProgress(80, "Updating browser...");
+        StartOperation(LocalizationService.Current.Get(TextKeys.LoadingCatalog));
+        SetProgress(35, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
+        SetProgress(80, LocalizationService.Current.Get(TextKeys.UpdatingBrowser));
         CompleteOperation();
 
         IsDirtyDocument = false;
@@ -367,7 +380,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(CurrentCatalogPath))
         {
-            StatusText = "Use Save As to select file location.";
+            StatusText = LocalizationService.Current.Get(TextKeys.UseSaveAsToSelectFileLocation);
             return;
         }
 
@@ -381,13 +394,13 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        StartOperation("Saving catalog...");
-        SetProgress(40, "Parsing items...");
-        SetProgress(90, "Updating indexes...");
+        StartOperation(LocalizationService.Current.Get(TextKeys.SavingCatalog));
+        SetProgress(40, LocalizationService.Current.Get(TextKeys.ParsingItems));
+        SetProgress(90, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog to {GetDisplayFileName(filePath)}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogTo, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
     }
 
@@ -410,13 +423,13 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        StartOperation("Saving catalog...");
-        SetProgress(50, "Parsing items...");
-        SetProgress(95, "Updating indexes...");
+        StartOperation(LocalizationService.Current.Get(TextKeys.SavingCatalog));
+        SetProgress(50, LocalizationService.Current.Get(TextKeys.ParsingItems));
+        SetProgress(95, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
         CompleteOperation();
 
         CurrentCatalogPath = filePath;
-        StatusText = $"Saved catalog as {GetDisplayFileName(filePath)}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogAs, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
     }
 
@@ -425,7 +438,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (!TryBuildPropertiesDialog(out var dialog))
         {
-            StatusText = "Unknown selected object.";
+            StatusText = LocalizationService.Current.Get(TextKeys.UnknownSelectedObject);
             return;
         }
 
@@ -450,7 +463,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ExitApplication()
     {
-        StatusText = "Exit requested.";
+        StatusText = LocalizationService.Current.Get(TextKeys.ExitRequested);
         ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -487,7 +500,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
             item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
         IsDirtyDocument = true;
-        StatusText = $"Added {itemName}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Added, itemName);
     }
 
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
@@ -504,7 +517,7 @@ public partial class MainWindowViewModel : ObservableObject
             var deletedNameFromRepository = SelectedBrowserItem.Name;
             RefreshBrowserItemsForSelection();
             IsDirtyDocument = true;
-            StatusText = $"Deleted {deletedNameFromRepository}.";
+            StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedNameFromRepository);
             return;
         }
 
@@ -519,7 +532,7 @@ public partial class MainWindowViewModel : ObservableObject
         var deletedName = SelectedBrowserItem.Name;
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = true;
-        StatusText = $"Deleted {deletedName}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedName);
     }
 
     [RelayCommand]
@@ -527,7 +540,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (OptionsRequested is null)
         {
-            StatusText = "Options dialog is not implemented yet.";
+            StatusText = LocalizationService.Current.Get(TextKeys.OptionsDialogIsNotImplementedYet);
             return;
         }
 
@@ -542,7 +555,7 @@ public partial class MainWindowViewModel : ObservableObject
                     return;
                 }
 
-                StatusText = $"Options saved (Language: {language}).";
+                StatusText = LocalizationService.Current.Format(TextKeys.OptionsSavedLanguage, language);
             }
         });
     }
@@ -557,11 +570,11 @@ public partial class MainWindowViewModel : ObservableObject
                 FileName = "https://sourceforge.net/projects/skycd/",
                 UseShellExecute = true
             });
-            StatusText = "Opening SourceForge project website...";
+            StatusText = LocalizationService.Current.Get(TextKeys.OpeningSourceForgeProjectWebsite);
         }
         catch (Exception ex)
         {
-            StatusText = $"Failed to open SourceForge website: {ex.Message}";
+            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenSourceForgeWebsite, ex.Message);
         }
     }
 
@@ -575,11 +588,11 @@ public partial class MainWindowViewModel : ObservableObject
                 FileName = "https://github.com/SkyCD/SkyCD",
                 UseShellExecute = true
             });
-            StatusText = "Opening GitHub project area...";
+            StatusText = LocalizationService.Current.Get(TextKeys.OpeningGitHubProjectArea);
         }
         catch (Exception ex)
         {
-            StatusText = $"Failed to open GitHub area: {ex.Message}";
+            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenGitHubArea, ex.Message);
         }
     }
 
@@ -588,7 +601,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (AboutRequested is null)
         {
-            StatusText = "About dialog is not implemented yet.";
+            StatusText = LocalizationService.Current.Get(TextKeys.AboutDialogIsNotImplementedYet);
             return;
         }
 
@@ -606,7 +619,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         targetNode.IsExpanded = true;
         SelectedTreeNode = targetNode;
-        StatusText = $"Expanded {targetNode.Title}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Expanded, targetNode.Title);
     }
 
     [RelayCommand(CanExecute = nameof(CanCollapseSelection))]
@@ -619,7 +632,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         targetNode.IsExpanded = false;
         SelectedTreeNode = targetNode;
-        StatusText = $"Collapsed {targetNode.Title}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Collapsed, targetNode.Title);
     }
 
     [RelayCommand]
@@ -628,7 +641,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (Enum.TryParse<BrowserViewMode>(modeKey, true, out var mode))
         {
             CurrentViewMode = mode;
-            StatusText = $"View mode: {GetViewModeDisplayName(mode)}.";
+            StatusText = LocalizationService.Current.Format(TextKeys.ViewMode, GetViewModeDisplayName(mode));
         }
     }
 
@@ -637,7 +650,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         CurrentSortMode = NormalizeSortMode(sortKey);
         RefreshBrowserItemsForSelection();
-        StatusText = $"Arrange icons by: {CurrentSortMode}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.ArrangeIconsBy, LocalizationService.Current.Get(CurrentSortMode switch { "Type" => TextKeys.Type, "Size" => TextKeys.Size, _ => TextKeys.Name2 }));
     }
 
     [RelayCommand]
@@ -649,8 +662,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Refresh()
     {
-        StartOperation("Updating view...");
-        SetProgress(60, "Parsing catalog...");
+        StartOperation(LocalizationService.Current.Get(TextKeys.UpdatingView));
+        SetProgress(60, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
         RefreshBrowserItemsForSelection();
         CompleteOperation();
     }
@@ -664,7 +677,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         ClipboardItem = SelectedBrowserItem;
-        StatusText = $"Copied {SelectedBrowserItem.Name}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Copied, SelectedBrowserItem.Name);
     }
 
     [RelayCommand(CanExecute = nameof(IsPasteEnabled))]
@@ -678,7 +691,7 @@ public partial class MainWindowViewModel : ObservableObject
         // In a real implementation, this would add a copy of the item to the current location
         // For now, we'll just show a status message
         IsDirtyDocument = true;
-        StatusText = $"Pasted {ClipboardItem.Name}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Pasted, ClipboardItem.Name);
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateToFolder))]
@@ -687,7 +700,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (TryResolveNodeFromBrowserSelection(out var targetNode))
         {
             SelectedTreeNode = targetNode;
-            StatusText = $"Navigated to {targetNode.Title}.";
+            StatusText = LocalizationService.Current.Format(TextKeys.NavigatedTo, targetNode.Title);
         }
     }
 
@@ -706,7 +719,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         ClipboardItem = SelectedBrowserItem;
         IsDirtyDocument = true;
-        StatusText = $"Cut {SelectedBrowserItem.Name}.";
+        StatusText = LocalizationService.Current.Format(TextKeys.Cut, SelectedBrowserItem.Name);
     }
 
     [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
@@ -733,8 +746,8 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             StatusText = targets.Count == 1
-                ? $"Cleared status for {targets[0].Name}."
-                : $"Cleared status for {targets.Count} items.";
+                ? LocalizationService.Current.Format(TextKeys.ClearedStatusFor, targets[0].Name)
+                : LocalizationService.Current.Format(TextKeys.ClearedStatusForItems, targets.Count);
         }
         else
         {
@@ -752,10 +765,10 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             StatusText = applicableTargets.Length == 0
-                ? $"Status '{status.Name}' is not supported for selected item types."
+                ? LocalizationService.Current.Format(TextKeys.StatusIsNotSupportedForSelectedItemTypes, status.Name)
                 : applicableTargets.Length == 1
-                    ? $"Status '{status.Name}' applied to {applicableTargets[0].Name}."
-                    : $"Status '{status.Name}' applied to {applicableTargets.Length} items.";
+                    ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
+                    : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
         }
 
         IsDirtyDocument = true;
@@ -794,8 +807,11 @@ public partial class MainWindowViewModel : ObservableObject
     {
         return viewMode switch
         {
-            BrowserViewMode.SmallIcons => "Small Icons",
-            BrowserViewMode.LargeIcons => "Large Icons",
+            BrowserViewMode.SmallIcons => LocalizationService.Current.Get(TextKeys.SmallIcons),
+            BrowserViewMode.LargeIcons => LocalizationService.Current.Get(TextKeys.LargeIcons),
+            BrowserViewMode.Tiles => LocalizationService.Current.Get(TextKeys.Tiles2),
+            BrowserViewMode.List => LocalizationService.Current.Get(TextKeys.List2),
+            BrowserViewMode.Details => LocalizationService.Current.Get(TextKeys.Details2),
             _ => viewMode.ToString()
         };
     }
@@ -1222,83 +1238,83 @@ public partial class MainWindowViewModel : ObservableObject
         {
             new MainMenuItemViewModel
             {
-                Header = "_File",
+                Header = LocalizationService.Current.Get(TextKeys.File),
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = "_New", HotKey = "Ctrl+N", Command = NewCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", Command = NewCatalogCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = "_Open...", HotKey = "Ctrl+O", Command = OpenCatalogCommand },
-                    new MainMenuItemViewModel { Header = "_Save", HotKey = "Ctrl+S", Command = SaveCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", Command = SaveCatalogCommand },
                     new MainMenuItemViewModel
-                        { Header = "Save _As...", HotKey = "F12", Command = SaveCatalogAsCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", Command = SaveCatalogAsCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = "E_xit", Command = ExitApplicationCommand }
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Exit), Command = ExitApplicationCommand }
                 ]
             },
             new MainMenuItemViewModel
             {
-                Header = "_Edit",
+                Header = LocalizationService.Current.Get(TextKeys.Edit),
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = "_Add...", HotKey = "F2", Command = AddItemCommand },
-                    new MainMenuItemViewModel { Header = "_Delete", HotKey = "Delete", Command = DeleteItemCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
                     new MainMenuItemViewModel
                     {
                         Key = "edit_status",
-                        Header = "_Status",
+                        Header = LocalizationService.Current.Get(TextKeys.Status),
                         IsEnabled = IsDeleteEnabled,
                         Items = BuildStatusMenuItems()
                     },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = "_Properties", HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
+                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
                 ]
             },
             new MainMenuItemViewModel
             {
-                Header = "_View",
+                Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
-                    CheckedMenuItem(IsStatusBarVisible, "_StatusBar", ToggleStatusBarCommand, key: "statusbar"),
+                    CheckedMenuItem(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar), ToggleStatusBarCommand, key: "statusbar"),
                     Separator(),
-                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles", "view_tiles"),
-                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons",
+                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles", "view_tiles"),
+                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons",
                         "view_small"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons",
+                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons",
                         "view_large"),
-                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List", "view_list"),
-                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details", "view_details"),
+                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List", "view_list"),
+                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details", "view_details"),
                     Separator(),
                     new MainMenuItemViewModel
                     {
-                        Header = "Arrange Icons By",
+                        Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
                         Items =
                         [
-                            CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name", "sort_name"),
-                            CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type", "sort_type"),
-                            CheckedMenuItem(IsSortBySizeChecked, "_Size", SetSortModeCommand, "Size", "sort_size")
+                            CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
+                            CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type"),
+                            CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
                         ]
                     },
-                    new MainMenuItemViewModel { Header = "_Refresh", HotKey = "F5", Command = RefreshCommand }
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), HotKey = "F5", Command = RefreshCommand }
                 ]
             },
             new MainMenuItemViewModel
             {
-                Header = "_Tools",
+                Header = LocalizationService.Current.Get(TextKeys.Tools),
                 Items = GetToolsMenuItems()
             },
             new MainMenuItemViewModel
             {
-                Header = "_Help",
+                Header = LocalizationService.Current.Get(TextKeys.Help),
                 Items =
                 [
                     new MainMenuItemViewModel
-                        { Header = "Project website in _SourceForge.NET", Command = OpenProjectWebsiteCommand },
-                    new MainMenuItemViewModel { Header = "Project area in _GitHub", Command = OpenGithubAreaCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.ProjectWebsiteInSourceForgeNET), Command = OpenProjectWebsiteCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.ProjectAreaInGitHub), Command = OpenGithubAreaCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = "_About...", Command = OpenAboutCommand }
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.About), Command = OpenAboutCommand }
                 ]
             }
         };
@@ -1311,7 +1327,7 @@ public partial class MainWindowViewModel : ObservableObject
         var toolsMenuItems = new List<MainMenuItemViewModel>
         {
             new MainMenuItemViewModel
-                { Header = "_Options...", HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
         };
 
         // Add plugin menu contributions to Tools menu
@@ -1337,7 +1353,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            StatusText = $"Executing plugin command '{commandId}'...";
+            StatusText = LocalizationService.Current.Format(TextKeys.ExecutingPluginCommand, commandId);
 
             var context = new MenuCommandContext
             {
@@ -1352,18 +1368,18 @@ public partial class MainWindowViewModel : ObservableObject
 
             if (result.TimedOut)
             {
-                StatusText = $"Plugin command '{commandId}' timed out.";
+                StatusText = LocalizationService.Current.Format(TextKeys.PluginCommandTimedOut, commandId);
             }
             else if (!result.Success)
             {
                 StatusText = string.IsNullOrWhiteSpace(result.Error)
-                    ? $"Plugin command '{commandId}' failed."
-                    : $"Plugin command failed: {result.Error}";
+                    ? LocalizationService.Current.Format(TextKeys.PluginCommandFailed, commandId)
+                    : LocalizationService.Current.Format(TextKeys.PluginCommandFailed2, result.Error);
             }
         }
         catch (Exception ex)
         {
-            StatusText = $"Plugin command error: {ex.Message}";
+            StatusText = LocalizationService.Current.Format(TextKeys.PluginCommandError, ex.Message);
         }
     }
 
@@ -1371,7 +1387,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
         {
-            viewModel.StatusText = $"Navigated to node {nodeId}.";
+            viewModel.StatusText = LocalizationService.Current.Format(TextKeys.NavigatedToNode, nodeId);
             return Task.CompletedTask;
         }
 
@@ -1393,15 +1409,15 @@ public partial class MainWindowViewModel : ObservableObject
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
             .ToDictionary(item => item.Key!, StringComparer.Ordinal);
 
-        SetMenuHeader(byKey, "statusbar", CheckedHeader(IsStatusBarVisible, "_StatusBar"));
-        SetMenuHeader(byKey, "view_tiles", CheckedHeader(IsTilesViewChecked, "_Tiles"));
-        SetMenuHeader(byKey, "view_small", CheckedHeader(IsSmallIconsViewChecked, "Small _Icons"));
-        SetMenuHeader(byKey, "view_large", CheckedHeader(IsLargeIconsViewChecked, "L_arge Icons"));
-        SetMenuHeader(byKey, "view_list", CheckedHeader(IsListViewChecked, "_List"));
-        SetMenuHeader(byKey, "view_details", CheckedHeader(IsDetailsViewChecked, "_Details"));
-        SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, "_Name"));
-        SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, "_Type"));
-        SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, "_Size"));
+        SetMenuHeader(byKey, "statusbar", CheckedHeader(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar)));
+        SetMenuHeader(byKey, "view_tiles", CheckedHeader(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles)));
+        SetMenuHeader(byKey, "view_small", CheckedHeader(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2)));
+        SetMenuHeader(byKey, "view_large", CheckedHeader(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu)));
+        SetMenuHeader(byKey, "view_list", CheckedHeader(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List)));
+        SetMenuHeader(byKey, "view_details", CheckedHeader(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details)));
+        SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name)));
+        SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2)));
+        SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2)));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
@@ -1478,44 +1494,44 @@ public partial class MainWindowViewModel : ObservableObject
         return
         [
             new MainMenuItemViewModel
-                { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "list" },
+                { Header = LocalizationService.Current.Get(TextKeys.Expand), Command = ExpandSelectionCommand, CommandParameter = "list" },
             new MainMenuItemViewModel
-                { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "list" },
+                { Header = LocalizationService.Current.Get(TextKeys.Collapse), Command = CollapseSelectionCommand, CommandParameter = "list" },
             Separator(),
             new MainMenuItemViewModel
             {
-                Header = "_Status",
+                Header = LocalizationService.Current.Get(TextKeys.Status),
                 Items = BuildStatusMenuItems()
             },
             Separator(),
             new MainMenuItemViewModel
             {
-                Header = "_View",
+                Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
-                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons"),
-                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List"),
-                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details"),
-                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles")
+                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons"),
+                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List"),
+                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details"),
+                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles")
                 ]
             },
             Separator(),
             new MainMenuItemViewModel
             {
-                Header = "Arrange Icons By",
+                Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
                 Items =
                 [
-                    CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name"),
-                    CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type")
+                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name"),
+                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type")
                 ]
             },
-            new MainMenuItemViewModel { Header = "_Refresh", Command = RefreshCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = "_Add...", Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = "_Delete", Command = DeleteItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
 
@@ -1524,43 +1540,43 @@ public partial class MainWindowViewModel : ObservableObject
         return
         [
             new MainMenuItemViewModel
-                { Header = "_Expand", Command = ExpandSelectionCommand, CommandParameter = "tree" },
+                { Header = LocalizationService.Current.Get(TextKeys.Expand), Command = ExpandSelectionCommand, CommandParameter = "tree" },
             new MainMenuItemViewModel
-                { Header = "C_ollapse", Command = CollapseSelectionCommand, CommandParameter = "tree" },
+                { Header = LocalizationService.Current.Get(TextKeys.Collapse), Command = CollapseSelectionCommand, CommandParameter = "tree" },
             Separator(),
             new MainMenuItemViewModel
             {
-                Header = "_View",
+                Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
-                    CheckedMenuItem(IsSmallIconsViewChecked, "Small _Icons", SetViewModeCommand, "SmallIcons"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, "L_arge Icons", SetViewModeCommand, "LargeIcons"),
-                    CheckedMenuItem(IsListViewChecked, "_List", SetViewModeCommand, "List"),
-                    CheckedMenuItem(IsDetailsViewChecked, "_Details", SetViewModeCommand, "Details"),
-                    CheckedMenuItem(IsTilesViewChecked, "_Tiles", SetViewModeCommand, "Tiles")
+                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons"),
+                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List"),
+                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details"),
+                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles")
                 ]
             },
             Separator(),
             new MainMenuItemViewModel
             {
-                Header = "Arrange Icons By",
+                Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
                 Items =
                 [
-                    CheckedMenuItem(IsSortByNameChecked, "_Name", SetSortModeCommand, "Name"),
-                    CheckedMenuItem(IsSortByTypeChecked, "_Type", SetSortModeCommand, "Type"),
-                    CheckedMenuItem(IsSortBySizeChecked, "_Size", SetSortModeCommand, "Size")
+                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name"),
+                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type"),
+                    CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size")
                 ]
             },
-            new MainMenuItemViewModel { Header = "_Refresh", Command = RefreshCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = "_Add...", Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = "_Delete", Command = DeleteItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = "_Copy", HotKey = "Ctrl+C", Command = CopyCommand },
-            new MainMenuItemViewModel { Header = "_Paste", HotKey = "Ctrl+V", Command = PasteCommand },
-            new MainMenuItemViewModel { Header = "Cu_t", HotKey = "Ctrl+X", Command = CutCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", Command = PasteCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", Command = CutCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = "_Properties...", Command = OpenPropertiesCommand }
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
 
@@ -1787,7 +1803,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             new()
             {
-                Header = "_Default",
+                Header = LocalizationService.Current.Get(TextKeys.Default),
                 Icon = "○",
                 Command = ApplyBrowserItemStatusCommand,
                 CommandParameter = null,

@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AddingProgressWindow"
         x:DataType="vm:AddingProgressDialogViewModel"
@@ -11,7 +12,7 @@
         WindowDecorations="BorderOnly"
         ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
-        Title="Adding">
+        Title="{i18n:Translate {x:Static i18n:UiKeys.Adding}}">
 
     <Design.DataContext>
         <vm:AddingProgressDialogViewModel />
