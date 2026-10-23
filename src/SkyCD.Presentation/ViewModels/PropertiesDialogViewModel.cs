@@ -31,6 +31,47 @@ public partial class PropertiesDialogViewModel : ObservableObject
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
+    public System.Collections.ObjectModel.ObservableCollection<CustomPropertyItemViewModel> CustomProperties { get; } = [];
+    public bool HasCustomProperties => CustomProperties.Count > 0;
+
+    public void ApplyCustomPropertyDefaults(IEnumerable<SkyCD.Documents.CustomPropertyDocument>? properties)
+    {
+        CustomProperties.Clear();
+        foreach (var property in properties ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(property.Name))
+            {
+                continue;
+            }
+            var key = sourceProperties.Keys.FirstOrDefault(key => string.Equals(key, property.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+            var name = key ?? property.Name.Trim();
+            if (CustomProperties.Any(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+            CustomProperties.Add(new CustomPropertyItemViewModel
+            {
+                Name = name,
+                DefaultValue = key is null ? property.DefaultValue : Convert.ToString(sourceProperties[key], CultureInfo.CurrentCulture) ?? string.Empty
+            });
+        }
+        OnPropertyChanged(nameof(HasCustomProperties));
+    }
+
+    public PropertiesCollection GetProperties()
+    {
+        var result = new PropertiesCollection(sourceProperties);
+        foreach (var property in CustomProperties)
+        {
+            if (!sourceProperties.TryGetValue(property.Name, out var original) ||
+                property.DefaultValue != (Convert.ToString(original, CultureInfo.CurrentCulture) ?? string.Empty))
+            {
+                result[property.Name] = property.DefaultValue;
+            }
+        }
+        return result;
+    }
+
     public string ObjectKey { get; }
 
     [ObservableProperty] private string name;

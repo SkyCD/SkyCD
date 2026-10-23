@@ -62,6 +62,20 @@
                                    PropertyHeader="{i18n:Translate {x:Static i18n:UiKeys.Property}}"
                                    ValueHeader="{i18n:Translate {x:Static i18n:UiKeys.Value}}" />
             </TabItem>
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" IsVisible="{Binding HasCustomProperties}">
+                <ScrollViewer Margin="8">
+                    <ItemsControl ItemsSource="{Binding CustomProperties}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
+                                <StackPanel Margin="0,0,0,8" Spacing="4">
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
 
         <Grid Grid.Row="1"

@@ -523,6 +523,7 @@ public partial class MainWindow : Window
 
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)
     {
+        e.Dialog.ApplyCustomPropertyDefaults(LoadAppOptions().CustomProperties);
         var dialog = new PropertiesWindow
         {
             DataContext = e.Dialog
@@ -542,6 +543,7 @@ public partial class MainWindow : Window
         e.Dialog.McpPort = options.McpPort;
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
+        e.Dialog.SetCustomProperties(options.CustomProperties);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
@@ -568,6 +570,7 @@ public partial class MainWindow : Window
                 .Select(static plugin => (plugin.Id, plugin.IsEnabled))
                 .ToArray();
 
+            options.CustomProperties = e.Dialog.GetCustomProperties();
             options.PluginPath = e.Dialog.PluginPath;
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;

@@ -88,4 +88,11 @@ public static class UiKeys
     public const string SaveCollectionConfirmation = "core.ui.SaveCollectionConfirmation";
     public const string Hue = "core.ui.Hue";
     public const string Hex = "core.ui.Hex";
+    public const string CustomProperties = "core.ui.CustomProperties";
+    public const string CustomPropertiesDescription = "core.ui.CustomPropertiesDescription";
+    public const string PropertyName = "core.ui.PropertyName";
+    public const string DefaultValue = "core.ui.DefaultValue";
+    public const string AddProperty = "core.ui.AddProperty";
+    public const string RemoveProperty = "core.ui.RemoveProperty";
+    public const string InvalidPropertyNames = "core.ui.InvalidPropertyNames";
 }

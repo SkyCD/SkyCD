@@ -365,6 +365,28 @@
                         </Border>
                     </Grid>
 
+                    <StackPanel Grid.Row="2" IsVisible="{Binding ShowCustomPropertiesSection}" Spacing="8">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" FontSize="15" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomPropertiesDescription}}" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="+" Command="{Binding AddCustomPropertyCommand}" ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddProperty}}" />
+                            <Button Content="-" Command="{Binding RemoveCustomPropertyCommand}" ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveProperty}}" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PropertyName}}" /><TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.DefaultValue}}" />
+                        </Grid>
+                        <ListBox ItemsSource="{Binding CustomProperties}" SelectedItem="{Binding SelectedCustomProperty}" MaxHeight="400">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                        <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBox Grid.Column="1" Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="{Binding CustomPropertyAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />
+                    </StackPanel>
                     <Border Grid.Row="4"
                             IsVisible="{Binding ShowNoSearchResults}"
                             BorderBrush="#6A5C2D"
