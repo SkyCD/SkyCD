@@ -28,6 +28,10 @@
   - Connects a provider account through `ConnectAsync(CancellationToken)` and returns
     `AccountConnectionResult` with success, an optional account identifier, and an optional error.
   - Credentials stay with the connector and must never be returned in the result.
+- `IOAuthClient` (`OAuth`)
+  - Receives a plugin-scoped `IOAuthService` through `InitializeOAuth` before host service registration.
+  - Provides browser login, secure local sessions, multiple account slots and automatic token refresh.
+  - See [OAuth foundation](oauth.md) for provider configuration, storage support and lifecycle details.
 - `IActionProvider` (`Capabilities.Actions`)
   - Returns item-specific `SkyAction` instances through `GetActions(Item)`.
   - `Item` is an SDK context containing a stable identifier and provider metadata;
