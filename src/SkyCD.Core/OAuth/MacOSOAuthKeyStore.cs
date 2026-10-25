@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 using SkyCD.Plugin.Abstractions.OAuth;
 
 namespace SkyCD.Core.OAuth;
@@ -15,6 +16,7 @@ internal sealed class MacOSOAuthKeyStore : IOAuthKeyStore
 
     public byte[]? Read(string keyId)
     {
+        using var interaction = new InteractionScope();
         using var query = Query(keyId);
         query.Set("kSecReturnData", Constant(FoundationLibrary.Value, "kCFBooleanTrue"));
         query.Set("kSecMatchLimit", Constant(SecurityLibrary.Value, "kSecMatchLimitOne"));
@@ -35,6 +37,7 @@ internal sealed class MacOSOAuthKeyStore : IOAuthKeyStore
 
     public void Create(string keyId, byte[] key)
     {
+        using var interaction = new InteractionScope();
         using var query = Query(keyId);
         var data = CFDataCreate(IntPtr.Zero, key, key.Length);
         try
@@ -50,6 +53,7 @@ internal sealed class MacOSOAuthKeyStore : IOAuthKeyStore
     // Used only by native integration tests to remove their unique keyring entries.
     internal void Delete(string keyId)
     {
+        using var interaction = new InteractionScope();
         using var query = Query(keyId);
         var status = SecItemDelete(query.Handle);
         if (status != -25300)
@@ -78,6 +82,37 @@ internal sealed class MacOSOAuthKeyStore : IOAuthKeyStore
 
     private static IntPtr Constant(IntPtr library, string name) => Marshal.ReadIntPtr(NativeLibrary.GetExport(library, name));
 
+    private sealed class InteractionScope : IDisposable
+    {
+        private static readonly object Gate = new();
+        private readonly byte _wasAllowed;
+
+        public InteractionScope()
+        {
+            if (!OperatingSystem.IsMacOS())
+                throw new OAuthException(OAuthFailure.SecureStorageUnavailable);
+            Monitor.Enter(Gate);
+            try
+            {
+                // SecItem's per-query UI flags are ignored for macOS file-based keychains.
+                // Save and restore the legacy interaction setting for every native operation.
+                Check(SecKeychainGetUserInteractionAllowed(out _wasAllowed));
+                Check(SecKeychainSetUserInteractionAllowed(0));
+            }
+            catch
+            {
+                Monitor.Exit(Gate);
+                throw;
+            }
+        }
+
+        public void Dispose()
+        {
+            try { Check(SecKeychainSetUserInteractionAllowed(_wasAllowed)); }
+            finally { Monitor.Exit(Gate); }
+        }
+    }
+
     private sealed class Dictionary : IDisposable
     {
         // No retain callbacks: owned CFStrings remain alive until after the dictionary is released.
@@ -104,6 +139,8 @@ internal sealed class MacOSOAuthKeyStore : IOAuthKeyStore
     [DllImport(Security)] private static extern int SecItemCopyMatching(IntPtr query, out IntPtr result);
     [DllImport(Security)] private static extern int SecItemAdd(IntPtr attributes, IntPtr result);
     [DllImport(Security)] private static extern int SecItemDelete(IntPtr query);
+    [DllImport(Security)] private static extern int SecKeychainGetUserInteractionAllowed(out byte allowed);
+    [DllImport(Security)] private static extern int SecKeychainSetUserInteractionAllowed(byte allowed);
     [DllImport(CoreFoundation)] private static extern IntPtr CFDictionaryCreateMutable(IntPtr allocator, nint capacity, IntPtr keyCallbacks, IntPtr valueCallbacks);
     [DllImport(CoreFoundation)] private static extern void CFDictionarySetValue(IntPtr dictionary, IntPtr key, IntPtr value);
     [DllImport(CoreFoundation)] private static extern IntPtr CFStringCreateWithCString(IntPtr allocator, [MarshalAs(UnmanagedType.LPUTF8Str)] string text, uint encoding);

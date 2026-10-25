@@ -57,6 +57,6 @@ jobs:
           security set-keychain-settings -lut 3600 "$keychain"
           security unlock-keychain -p "$password" "$keychain"
           security default-keychain -d user -s "$keychain"
-          SKYCD_TEST_NATIVE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~OAuthStorageTests
+          SKYCD_TEST_NATIVE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~OAuthStorageTests --blame-hang-timeout 60s --logger 'console;verbosity=detailed'
           security lock-keychain "$keychain"
-          SKYCD_TEST_UNAVAILABLE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~NativeKeyring_Unavailable
+          SKYCD_TEST_UNAVAILABLE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~NativeKeyring_Unavailable --blame-hang-timeout 60s --logger 'console;verbosity=detailed'

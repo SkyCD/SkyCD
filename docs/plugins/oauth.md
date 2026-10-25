@@ -124,6 +124,10 @@ Secret Service directly over D-Bus, avoiding a libsecret package/binary. No LGPL
 library is bundled. The operating system's installed keyring service remains
 responsible for encrypted storage at rest. Native Keychain avoids third-party
 macOS wrappers and uses `SecItem` rather than deprecated `SecKeychain` APIs.
+macOS file-based keychains ignore the `SecItem` no-UI flag, so calls also use
+scoped `SecKeychainSetUserInteractionAllowed` suppression, restoring the previous
+setting in `finally`. This compatibility workaround is also used by
+[Chromium](https://chromium.googlesource.com/chromium/src/crypto/+/refs/heads/main/apple/scoped_keychain_user_interaction_allowed.cc).
 Version 1.4.0 targets .NET 9 and is compatible with .NET 10; it ships generated
 bindings without a transitive source-generator dependency. Version 1.6.0 was
 evaluated but introduces `Tmds.DBus.Generator` 0.92.0 with missing NuGet license
