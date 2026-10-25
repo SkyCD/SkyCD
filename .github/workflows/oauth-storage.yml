@@ -1,0 +1,62 @@
+name: Native OAuth storage
+
+on:
+  pull_request:
+    paths:
+      - 'src/SkyCD.Core/**'
+      - 'tests/SkyCD.Plugin.Runtime.Tests/**'
+      - '.github/workflows/oauth-storage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-keyring:
+    name: Native keyring (${{ matrix.os }})
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Build OAuth tests
+        run: dotnet build tests/SkyCD.Plugin.Runtime.Tests --configuration Release
+      - name: Install Linux keyring
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y dbus-x11 gnome-keyring
+      - name: Linux encrypted keyring persistence
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" "skycd-ephemeral-ci-keyring" | gnome-keyring-daemon --unlock --components=secrets
+            SKYCD_TEST_NATIVE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~OAuthStorageTests
+          '
+      - name: Linux unavailable session bus
+        if: runner.os == 'Linux'
+        env:
+          DBUS_SESSION_BUS_ADDRESS: unix:path=/tmp/skycd-nonexistent-dbus-socket
+          SKYCD_TEST_UNAVAILABLE_OAUTH: '1'
+        run: dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~NativeKeyring_Unavailable
+      - name: macOS encrypted keychain persistence and locked keychain
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          original=$(security default-keychain -d user | xargs)
+          keychain="$RUNNER_TEMP/skycd-oauth.keychain-db"
+          password=$(uuidgen)
+          trap 'security default-keychain -d user -s "$original"; security delete-keychain "$keychain"' EXIT
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security default-keychain -d user -s "$keychain"
+          SKYCD_TEST_NATIVE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~OAuthStorageTests
+          security lock-keychain "$keychain"
+          SKYCD_TEST_UNAVAILABLE_OAUTH=1 dotnet test tests/SkyCD.Plugin.Runtime.Tests --configuration Release --no-build --filter FullyQualifiedName~NativeKeyring_Unavailable
