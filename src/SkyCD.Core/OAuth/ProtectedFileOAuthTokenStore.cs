@@ -32,9 +32,10 @@ public sealed class ProtectedFileOAuthTokenStore(string directory, IOAuthDataPro
     {
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(session);
         byte[] encrypted;
-        try { encrypted = protector.Protect(plaintext, Encoding.UTF8.GetBytes(namespaceId)); }
+        try { encrypted = await Task.Run(() => protector.Protect(plaintext, Encoding.UTF8.GetBytes(namespaceId)), cancellationToken); }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
         var path = SessionPath(namespaceId, session.AccountId);
+        cancellationToken.ThrowIfCancellationRequested();
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -74,7 +75,7 @@ public sealed class ProtectedFileOAuthTokenStore(string directory, IOAuthDataPro
     {
         var encrypted = await File.ReadAllBytesAsync(path, cancellationToken);
         byte[] plaintext;
-        try { plaintext = protector.Unprotect(encrypted, Encoding.UTF8.GetBytes(namespaceId)); }
+        try { plaintext = await Task.Run(() => protector.Unprotect(encrypted, Encoding.UTF8.GetBytes(namespaceId)), cancellationToken); }
         catch (CryptographicException) { throw new OAuthException(OAuthFailure.SecureStorageUnavailable); }
         try
         {

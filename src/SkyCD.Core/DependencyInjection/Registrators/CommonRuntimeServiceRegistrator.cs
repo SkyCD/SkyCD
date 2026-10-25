@@ -15,7 +15,7 @@ public sealed class CommonRuntimeServiceRegistrator
 {
     public void RegisterServices(IRegistrator registrator)
     {
-        registrator.Register<IOAuthDataProtector, WindowsOAuthDataProtector>(Reuse.Singleton,
+        registrator.RegisterDelegate<IOAuthDataProtector>(static _ => OAuthDataProtectorFactory.Create(), Reuse.Singleton,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.RegisterDelegate<IOAuthBrowser>(static _ => new SystemOAuthBrowser(), Reuse.Singleton,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
