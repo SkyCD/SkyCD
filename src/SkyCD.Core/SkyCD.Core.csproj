@@ -10,8 +10,8 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="SkyCD.Plugin.Runtime.Tests" />
-    <PackageReference Include="Ace4896.DBus.Services.Secrets" Version="1.4.0" />
-    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+    <PackageReference Include="Ace4896.DBus.Services.Secrets" Version="1.6.0" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.2" />
     <PackageReference Include="DryIoc.dll" Version="5.4.3" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
   </ItemGroup>
