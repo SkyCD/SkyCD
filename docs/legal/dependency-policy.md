@@ -33,6 +33,7 @@ Define a repeatable dependency license compliance process for SkyCD v3.
 ### Current Unknown-License Exceptions
 - `Avalonia.Angle.Windows.Natives` (upstream metadata does not publish SPDX expression)
 - `AvaloniaUI.DiagnosticsSupport` (upstream metadata does not publish SPDX expression)
+- `Tmds.DBus.Generator` (0.92.0 omits license metadata from its NuGet manifest; the package's repository commit [282aceb](https://github.com/tmds/Tmds.DBus/blob/282acebca8d4e4e3ba211646ac650911ee94edfd/COPYING) publishes the MIT license). This exception applies only to unknown metadata; explicitly blocked licenses still fail validation.
 
 ## Exception Process
 1. Open an issue tagged `type:legal` describing package name/version and business need.

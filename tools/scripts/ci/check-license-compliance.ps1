@@ -142,6 +142,9 @@ if ($reportDir -and -not (Test-Path $reportDir)) {
 $summary | ConvertTo-Json -Depth 100 | Set-Content -Path $ReportPath -Encoding UTF8
 
 if ($nonCompliant.Count -gt 0) {
+    foreach ($component in $nonCompliant) {
+        Write-Host ("{0} {1}: {2}" -f $component.Name, $component.Version, ($component.Reasons -join " "))
+    }
     Write-Error ("License compliance failed. Non-compliant components: " + $nonCompliant.Count)
     exit 1
 }
