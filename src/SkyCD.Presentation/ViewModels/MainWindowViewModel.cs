@@ -30,8 +30,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly bool shouldSeedDefaultCatalog;
     private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
-    private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
-    private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
+    private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
+    private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
@@ -64,6 +64,7 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? ExitRequested;
 
     private MenuExtensionManager menuExtensionManager;
+    private CancellationTokenSource? pluginCommandCancellation;
 
     public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
@@ -167,7 +168,7 @@ public partial class MainWindowViewModel : ObservableObject
         return options.AppStartCount <= 1;
     }
 
-    public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
+    public IReadOnlyList<BrowserTreeNode> TreeNodes { get; private set; }
 
     public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns =>
     [
@@ -297,1575 +298,235 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSortByNameChecked))]
-    [NotifyPropertyChangedFor(nameof(IsSortByTypeChecked))]
-    [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
-    private string currentSortMode = "Name";
-
-    [ObservableProperty] private bool isStatusBarVisible = true;
-
-    [ObservableProperty] private bool isDirtyDocument;
-
-    [ObservableProperty] private string statusText = DefaultStatusText;
-
-    [ObservableProperty] private bool isProgressVisible;
-
-    [ObservableProperty] private int progressValue;
-
-    [ObservableProperty] private CatalogDocument? clipboardItem;
-
-    [ObservableProperty] private string? currentCatalogPath;
-
-    public bool IsCopyEnabled => SelectedBrowserItem is not null;
-
-    public bool IsPasteEnabled => ClipboardItem is not null;
-
-    public bool IsCutEnabled => SelectedBrowserItem is not null;
-
-    [RelayCommand]
-    private void NewCatalog()
-    {
-        if (NewCatalogRequested is not null)
-        {
-            NewCatalogRequested.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        CompleteNewCatalog();
-    }
-
-    public void CompleteNewCatalog()
-    {
-        commentsByObjectKey.Clear();
-        addedItemsByNodeKey.Clear();
-        deletedItemNamesByNodeKey.Clear();
-        renamedBrowserItemNamesByNodeKey.Clear();
-        CurrentCatalogPath = null;
-        SelectedBrowserItem = null;
-        ClipboardItem = null;
-        RefreshBrowserItemsForSelection();
-        IsDirtyDocument = false;
-        StatusText = LocalizationService.Current.Get(TextKeys.CreatedANewCatalog);
-    }
-
-    [RelayCommand]
-    private void OpenCatalog()
-    {
-        if (OpenCatalogRequested is not null)
-        {
-            OpenCatalogRequested.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        CompleteOpenCatalog();
-    }
-
-    public void CompleteOpenCatalog()
-    {
-        StartOperation(LocalizationService.Current.Get(TextKeys.LoadingCatalog));
-        SetProgress(35, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
-        SetProgress(80, LocalizationService.Current.Get(TextKeys.UpdatingBrowser));
-        CompleteOperation();
-
-        IsDirtyDocument = false;
-    }
-
-    [RelayCommand(CanExecute = nameof(IsSaveEnabled))]
-    private void SaveCatalog()
-    {
-        if (SaveCatalogRequested is not null)
-        {
-            SaveCatalogRequested.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(CurrentCatalogPath))
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.UseSaveAsToSelectFileLocation);
-            return;
-        }
-
-        CompleteSaveCatalog(CurrentCatalogPath);
-    }
-
-    public void CompleteSaveCatalog(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return;
-        }
-
-        StartOperation(LocalizationService.Current.Get(TextKeys.SavingCatalog));
-        SetProgress(40, LocalizationService.Current.Get(TextKeys.ParsingItems));
-        SetProgress(90, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
-        CompleteOperation();
-
-        CurrentCatalogPath = filePath;
-        StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogTo, GetDisplayFileName(filePath));
-        IsDirtyDocument = false;
-    }
-
-    [RelayCommand]
-    private void SaveCatalogAs()
-    {
-        if (SaveCatalogAsRequested is not null)
-        {
-            SaveCatalogAsRequested.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        CompleteSaveCatalogAs("catalog.scd");
-    }
-
-    public void CompleteSaveCatalogAs(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return;
-        }
-
-        StartOperation(LocalizationService.Current.Get(TextKeys.SavingCatalog));
-        SetProgress(50, LocalizationService.Current.Get(TextKeys.ParsingItems));
-        SetProgress(95, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
-        CompleteOperation();
-
-        CurrentCatalogPath = filePath;
-        StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogAs, GetDisplayFileName(filePath));
-        IsDirtyDocument = false;
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPropertiesEnabled))]
-    private void OpenProperties()
-    {
-        if (!TryBuildPropertiesDialog(out var dialog))
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.UnknownSelectedObject);
-            return;
-        }
-
-        var selectedId = SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
-        PropertiesRequested?.Invoke(this, new PropertiesDialogRequestedEventArgs
-        {
-            Dialog = dialog,
-            Complete = (accepted, comments) =>
-            {
-                if (!accepted)
-                {
-                    return;
-                }
-
-                if (selectedId is not null && dialog.HasCustomProperties)
-                {
-                    var document = catalogRepository?.Get(selectedId)
-                        ?? inMemoryCatalogEntries?.FirstOrDefault(item => item.Id == selectedId);
-                    if (document is not null)
-                    {
-                        foreach (var property in dialog.GetProperties())
-                        {
-                            document.Properties[property.Key] = property.Value;
-                        }
-                        catalogRepository?.Save(document.Id, document);
-                    }
-                }
-                ApplyBrowserItemRenameIfNeeded(dialog);
-                commentsByObjectKey[dialog.ObjectKey] = comments;
-                IsDirtyDocument = true;
-                StatusText = DefaultStatusText;
-            }
-        });
-    }
-
-    [RelayCommand]
-    private void ExitApplication()
-    {
-        StatusText = LocalizationService.Current.Get(TextKeys.ExitRequested);
-        ExitRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    [RelayCommand]
-    private void AddItem()
-    {
-        AddToListRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    public void AddImportedItem(string? suggestedName)
-    {
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var itemName = string.IsNullOrWhiteSpace(suggestedName)
-            ? $"Imported Item {DateTime.Now:HHmmss}"
-            : suggestedName.Trim();
-
-        if (!addedItemsByNodeKey.TryGetValue(nodeKey, out var addedItems))
-        {
-            addedItems = [];
-            addedItemsByNodeKey[nodeKey] = addedItems;
-        }
-
-        var importedItem = new CatalogDocument
-        {
-            Id = $"imported-{Guid.NewGuid():N}",
-            Name = itemName,
-            ParentId = nodeKey,
-            Type = CatalogDocumentType.Folder,
-            Size = 0,
-            ChildrenCount = 0
-        };
-        addedItems.Add(importedItem);
-        RefreshBrowserItemsForSelection();
-        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
-            item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Added, itemName);
-    }
-
-    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
-    private void DeleteItem()
-    {
-        if (SelectedBrowserItem is null)
-        {
-            return;
-        }
-
-        if (catalogRepository is not null)
-        {
-            DeleteCatalogEntryFromRepository(SelectedBrowserItem);
-            var deletedNameFromRepository = SelectedBrowserItem.Name;
-            RefreshBrowserItemsForSelection();
-            IsDirtyDocument = true;
-            StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedNameFromRepository);
-            return;
-        }
-
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
-        if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames))
-        {
-            deletedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            deletedItemNamesByNodeKey[nodeKey] = deletedNames;
-        }
-
-        deletedNames.Add(SelectedBrowserItem.Name);
-        var deletedName = SelectedBrowserItem.Name;
-        RefreshBrowserItemsForSelection();
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedName);
-    }
-
-    [RelayCommand]
-    private void OpenOptions()
-    {
-        if (OptionsRequested is null)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.OptionsDialogIsNotImplementedYet);
-            return;
-        }
-
-        var dialog = new OptionsDialogViewModel();
-        OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
-        {
-            Dialog = dialog,
-            Complete = (accepted, pluginPath, language) =>
-            {
-                if (!accepted)
-                {
-                    return;
-                }
-
-                StatusText = LocalizationService.Current.Format(TextKeys.OptionsSavedLanguage, language);
-            }
-        });
-    }
-
-    [RelayCommand]
-    private void OpenProjectWebsite()
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://sourceforge.net/projects/skycd/",
-                UseShellExecute = true
-            });
-            StatusText = LocalizationService.Current.Get(TextKeys.OpeningSourceForgeProjectWebsite);
-        }
-        catch (Exception ex)
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenSourceForgeWebsite, ex.Message);
-        }
-    }
-
-    [RelayCommand]
-    private void OpenGithubArea()
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://github.com/SkyCD/SkyCD",
-                UseShellExecute = true
-            });
-            StatusText = LocalizationService.Current.Get(TextKeys.OpeningGitHubProjectArea);
-        }
-        catch (Exception ex)
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenGitHubArea, ex.Message);
-        }
-    }
-
-    [RelayCommand]
-    private void OpenAbout()
-    {
-        if (AboutRequested is null)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.AboutDialogIsNotImplementedYet);
-            return;
-        }
-
-        AboutRequested.Invoke(this, EventArgs.Empty);
-        StatusText = DefaultStatusText;
-    }
-
-    [RelayCommand(CanExecute = nameof(CanExpandSelection))]
-    private void ExpandSelection(string? context)
-    {
-        if (!TryResolveContextNode(context, out var targetNode))
-        {
-            return;
-        }
-
-        targetNode.IsExpanded = true;
-        SelectedTreeNode = targetNode;
-        StatusText = LocalizationService.Current.Format(TextKeys.Expanded, targetNode.Title);
-    }
-
-    [RelayCommand(CanExecute = nameof(CanCollapseSelection))]
-    private void CollapseSelection(string? context)
-    {
-        if (!TryResolveContextNode(context, out var targetNode))
-        {
-            return;
-        }
-
-        targetNode.IsExpanded = false;
-        SelectedTreeNode = targetNode;
-        StatusText = LocalizationService.Current.Format(TextKeys.Collapsed, targetNode.Title);
-    }
-
-    [RelayCommand]
-    private void SetViewMode(string modeKey)
-    {
-        if (Enum.TryParse<BrowserViewMode>(modeKey, true, out var mode))
-        {
-            CurrentViewMode = mode;
-            StatusText = LocalizationService.Current.Format(TextKeys.ViewMode, GetViewModeDisplayName(mode));
-        }
-    }
-
-    [RelayCommand]
-    private void SetSortMode(string sortKey)
-    {
-        CurrentSortMode = NormalizeSortMode(sortKey);
-        RefreshBrowserItemsForSelection();
-        StatusText = LocalizationService.Current.Format(TextKeys.ArrangeIconsBy, LocalizationService.Current.Get(CurrentSortMode switch { "Type" => TextKeys.Type, "Size" => TextKeys.Size, _ => TextKeys.Name2 }));
-    }
-
-    [RelayCommand]
-    private void ToggleStatusBar()
-    {
-        IsStatusBarVisible = !IsStatusBarVisible;
-    }
-
-    [RelayCommand]
-    private void Refresh()
-    {
-        StartOperation(LocalizationService.Current.Get(TextKeys.UpdatingView));
-        SetProgress(60, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
-        RefreshBrowserItemsForSelection();
-        CompleteOperation();
-    }
-
-    [RelayCommand(CanExecute = nameof(IsCopyEnabled))]
-    private void Copy()
-    {
-        if (SelectedBrowserItem is null)
-        {
-            return;
-        }
-
-        ClipboardItem = SelectedBrowserItem;
-        StatusText = LocalizationService.Current.Format(TextKeys.Copied, SelectedBrowserItem.Name);
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPasteEnabled))]
-    private void Paste()
-    {
-        if (ClipboardItem is null)
-        {
-            return;
-        }
-
-        // In a real implementation, this would add a copy of the item to the current location
-        // For now, we'll just show a status message
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Pasted, ClipboardItem.Name);
-    }
-
-    [RelayCommand(CanExecute = nameof(CanNavigateToFolder))]
-    private void NavigateToFolder()
-    {
-        if (TryResolveNodeFromBrowserSelection(out var targetNode))
-        {
-            SelectedTreeNode = targetNode;
-            StatusText = LocalizationService.Current.Format(TextKeys.NavigatedTo, targetNode.Title);
-        }
-    }
-
-    private bool CanNavigateToFolder()
-    {
-        return TryResolveNodeFromBrowserSelection(out _);
-    }
-
-    [RelayCommand(CanExecute = nameof(IsCutEnabled))]
-    private void Cut()
-    {
-        if (SelectedBrowserItem is null)
-        {
-            return;
-        }
-
-        ClipboardItem = SelectedBrowserItem;
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Cut, SelectedBrowserItem.Name);
-    }
-
-    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
-    private void ApplyBrowserItemStatus(string? statusName)
-    {
-        var targets = GetSelectedBrowserItems();
-        if (targets.Count == 0)
-        {
-            return;
-        }
-
-        var status = statusVariants.FirstOrDefault(variant =>
-            string.Equals(variant.Name, statusName, StringComparison.OrdinalIgnoreCase));
-
-        if (status is null)
-        {
-            foreach (var target in targets)
-            {
-                target.Status = null;
-                target.Properties.Remove(ItemStatusNamePropertyKey);
-                target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
-                target.Properties.Remove(ItemStatusIconColorPropertyKey);
-                target.Properties.Remove(ItemStatusIconTextPropertyKey);
-            }
-
-            StatusText = targets.Count == 1
-                ? LocalizationService.Current.Format(TextKeys.ClearedStatusFor, targets[0].Name)
-                : LocalizationService.Current.Format(TextKeys.ClearedStatusForItems, targets.Count);
-        }
-        else
-        {
-            var applicableTargets = targets
-                .Where(target => IsStatusApplicableToItem(status, target))
-                .ToArray();
-            foreach (var target in applicableTargets)
-            {
-                target.Status = status.Name;
-                target.Properties[ItemStatusNamePropertyKey] = status.Name;
-                target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
-                target.Properties[ItemStatusIconColorPropertyKey] =
-                    string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
-                target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
-            }
-
-            StatusText = applicableTargets.Length == 0
-                ? LocalizationService.Current.Format(TextKeys.StatusIsNotSupportedForSelectedItemTypes, status.Name)
-                : applicableTargets.Length == 1
-                    ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
-                    : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
-        }
-
-        IsDirtyDocument = true;
-        RefreshBrowserItemsForSelection();
-    }
-
-    public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
-    {
-        CurrentViewMode = viewMode;
-        CurrentSortMode = NormalizeSortMode(sortMode);
-        IsStatusBarVisible = isStatusBarVisible;
-        RefreshBrowserItemsForSelection();
-    }
-
-    public void SetStatusVariants(IEnumerable<StatusVariantDocument>? variants)
-    {
-        statusVariants.Clear();
-        foreach (var variant in (variants ?? [])
-                     .Where(static variant => !string.IsNullOrWhiteSpace(variant.Name))
-                     .Select(static variant => new StatusVariantDocument
-                     {
-                         Name = variant.Name.Trim(),
-                         IconGlyph = variant.IconGlyph.Trim(),
-                         IconColor = string.IsNullOrWhiteSpace(variant.IconColor) ? "#FFFFFF" : variant.IconColor.Trim(),
-                         ItemTypes = variant.ItemTypes
-                     }))
-        {
-            statusVariants.Add(variant);
-        }
-
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-    }
-
-    private static string GetViewModeDisplayName(BrowserViewMode viewMode)
-    {
-        return viewMode switch
-        {
-            BrowserViewMode.SmallIcons => LocalizationService.Current.Get(TextKeys.SmallIcons),
-            BrowserViewMode.LargeIcons => LocalizationService.Current.Get(TextKeys.LargeIcons),
-            BrowserViewMode.Tiles => LocalizationService.Current.Get(TextKeys.Tiles2),
-            BrowserViewMode.List => LocalizationService.Current.Get(TextKeys.List2),
-            BrowserViewMode.Details => LocalizationService.Current.Get(TextKeys.Details2),
-            _ => viewMode.ToString()
-        };
-    }
-
-    private static IEnumerable<BrowserTreeNode> FlattenNodes(IEnumerable<BrowserTreeNode> roots)
-    {
-        foreach (var root in roots)
-        {
-            yield return root;
-            foreach (var child in FlattenNodes(root.Children))
-            {
-                yield return child;
-            }
-        }
-    }
-
-    private bool CanExpandSelection(string? context)
-    {
-        return TryResolveContextNode(context, out _);
-    }
-
-    private bool CanCollapseSelection(string? context)
-    {
-        return TryResolveContextNode(context, out _);
-    }
-
-    private bool TryResolveContextNode(string? context, [NotNullWhen(true)] out BrowserTreeNode? targetNode)
-    {
-        if (string.Equals(context, "list", StringComparison.OrdinalIgnoreCase) &&
-            TryResolveNodeFromBrowserSelection(out targetNode))
-        {
-            return true;
-        }
-
-        if (SelectedTreeNode is not null)
-        {
-            targetNode = SelectedTreeNode;
-            return true;
-        }
-
-        return TryResolveNodeFromBrowserSelection(out targetNode);
-    }
-
-    private bool TryResolveNodeFromBrowserSelection([NotNullWhen(true)] out BrowserTreeNode? targetNode)
-    {
-        if (SelectedBrowserItem is not null &&
-            SelectedBrowserItem.Type is CatalogDocumentType.Folder
-                or CatalogDocumentType.NetworkFolder
-                or CatalogDocumentType.Media)
-        {
-            if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
-            {
-                return true;
-            }
-
-            var normalizedKey = SelectedBrowserItem.Name.Replace(" ", string.Empty, StringComparison.Ordinal)
-                .ToLowerInvariant();
-            if (treeNodesByKey.TryGetValue(normalizedKey, out targetNode))
-            {
-                return true;
-            }
-        }
-
-        targetNode = null;
-        return false;
-    }
-
-    private bool TryBuildPropertiesDialog([NotNullWhen(true)] out PropertiesDialogViewModel? dialog)
-    {
-        if (SelectedBrowserItem is not null)
-        {
-            var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
-            var comments = GetObjectComments(objectKey);
-            var infoProperties = GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
-
-            dialog = new PropertiesDialogViewModel(
-                objectKey,
-                SelectedBrowserItem.Name,
-                SelectedBrowserItem.IconGlyph,
-                comments,
-                infoProperties,
-                propertyValueLocalizer);
-            return true;
-        }
-
-        if (SelectedTreeNode is not null)
-        {
-            var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
-            var comments = GetObjectComments(objectKey);
-
-            dialog = new PropertiesDialogViewModel(
-                objectKey,
-                SelectedTreeNode.Title,
-                SelectedTreeNode.IconGlyph,
-                comments,
-                GetBrowserItemInfoProperties(SelectedTreeNode.Key),
-                propertyValueLocalizer);
-            return true;
-        }
-
-        dialog = null;
-        return false;
-    }
-
-    private string GetObjectComments(string objectKey)
-    {
-        return commentsByObjectKey.TryGetValue(objectKey, out var comments)
-            ? comments
-            : string.Empty;
-    }
-
-    private string GetBrowserItemObjectKey(CatalogDocument item)
-    {
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var originalName = ResolveOriginalBrowserItemName(nodeKey, item.Name);
-        return $"item:{nodeKey}:{originalName}";
-    }
-
-    private static string GetTreeNodeObjectKey(BrowserTreeNode node)
-    {
-        return $"tree:{node.Key}";
-    }
-
-    private static string GetDisplayFileName(string filePath)
-    {
-        var normalizedPath = filePath.Replace('\\', '/');
-        var fileName = Path.GetFileName(normalizedPath);
-        return string.IsNullOrWhiteSpace(fileName) ? filePath : fileName;
-    }
-
-    private void RefreshBrowserItemsForSelection()
-    {
-        var previouslySelectedName = SelectedBrowserItem?.Name;
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
-        var baseItems = GetBrowserItems(nodeKey);
-        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames) && deletedNames.Count > 0)
-        {
-            baseItems = baseItems
-                .Where(item => !deletedNames.Contains(item.Name))
-                .ToArray();
-        }
-
-        var addedItems = addedItemsByNodeKey.TryGetValue(nodeKey, out var runtimeItems)
-            ? runtimeItems
-            : [];
-        var items = baseItems.Concat(addedItems).ToArray();
-        if (deletedItemNamesByNodeKey.TryGetValue(nodeKey, out deletedNames) && deletedNames.Count > 0)
-        {
-            items = items.Where(item => !deletedNames.Contains(item.Name)).ToArray();
-        }
-
-        if (renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems) && renamedItems.Count > 0)
-        {
-            items = items
-                .Select(item =>
-                {
-                    if (!renamedItems.TryGetValue(item.Name, out var renamedName))
-                    {
-                        return item;
-                    }
-
-                    return new CatalogDocument
-                    {
-                        Id = item.Id,
-                        Name = renamedName,
-                        ParentId = item.ParentId,
-                        Type = item.Type,
-                        Size = item.Size,
-                        ChildrenCount = item.ChildrenCount,
-                        Properties = item.Properties
-                    };
-                })
-                .ToArray();
-        }
-
-        if (items.Length == 0)
-        {
-            BrowserItems = [];
-            SelectedBrowserItem = null;
-            return;
-        }
-
-        var refreshedItems = NormalizeSortMode(CurrentSortMode) switch
-        {
-            "Type" => items.OrderBy(static item => item.DisplayType)
-                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ToArray(),
-            "Size" => items.OrderBy(static item => item.Size)
-                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ToArray(),
-            _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
-        };
-
-        BrowserItems = refreshedItems;
-        SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
-                                  item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
-                              ?? refreshedItems.FirstOrDefault();
-    }
-
-    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
-    {
-        if (SelectedBrowserItem is null || SelectedTreeNode is null)
-        {
-            return;
-        }
-
-        var nodeKey = SelectedTreeNode.Key;
-        var currentDisplayName = SelectedBrowserItem.Name;
-        var requestedName = dialog.Name.Trim();
-        if (string.IsNullOrWhiteSpace(requestedName) ||
-            requestedName.Equals(currentDisplayName, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var originalName = ResolveOriginalBrowserItemName(nodeKey, currentDisplayName);
-        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
-        {
-            renamedItems = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            renamedBrowserItemNamesByNodeKey[nodeKey] = renamedItems;
-        }
-
-        renamedItems[originalName] = requestedName;
-        RefreshBrowserItemsForSelection();
-        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
-            item.Name.Equals(requestedName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private string ResolveOriginalBrowserItemName(string nodeKey, string displayName)
-    {
-        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
-        {
-            return displayName;
-        }
-
-        foreach (var (original, renamed) in renamedItems)
-        {
-            if (renamed.Equals(displayName, StringComparison.OrdinalIgnoreCase))
-            {
-                return original;
-            }
-        }
-
-        return displayName;
-    }
-
-    partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
-    {
-        RefreshBrowserItemsForSelection();
-        OnPropertyChanged(nameof(IsPropertiesEnabled));
-        OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ExpandSelectionCommand.NotifyCanExecuteChanged();
-        CollapseSelectionCommand.NotifyCanExecuteChanged();
-        NavigateToFolderCommand.NotifyCanExecuteChanged();
-    }
-
-    private void StartOperation(string initialStatus)
-    {
-        statusTransitions.Clear();
-        progressTransitions.Clear();
-        IsProgressVisible = true;
-        ProgressValue = 0;
-        TrackProgress(0);
-        SetStatus(initialStatus);
-    }
-
-    private void SetProgress(int value, string? status = null)
-    {
-        ProgressValue = Math.Clamp(value, 0, 100);
-        TrackProgress(ProgressValue);
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            SetStatus(status);
-        }
-    }
-
-    private void CompleteOperation()
-    {
-        SetProgress(100);
-        SetStatus(DefaultStatusText);
-        IsProgressVisible = false;
-        ProgressValue = 0;
-        TrackProgress(0);
-    }
-
-    private void SetStatus(string value)
-    {
-        StatusText = value;
-        statusTransitions.Add(value);
-    }
-
-    private void TrackProgress(int value)
-    {
-        progressTransitions.Add(value);
-    }
-
-    partial void OnSelectedBrowserItemChanged(CatalogDocument? value)
-    {
-        if (value is null)
-        {
-            SelectedBrowserItems = new List<CatalogDocument>();
-        }
-
-        if (value is not null &&
-            !selectedBrowserItems
-                .OfType<CatalogDocument>()
-                .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
-        {
-            SelectedBrowserItems = new List<CatalogDocument> { value };
-        }
-
-        OnPropertyChanged(nameof(IsDeleteEnabled));
-        OnPropertyChanged(nameof(IsPropertiesEnabled));
-        OnPropertyChanged(nameof(IsCopyEnabled));
-        OnPropertyChanged(nameof(IsCutEnabled));
-        DeleteItemCommand.NotifyCanExecuteChanged();
-        OpenPropertiesCommand.NotifyCanExecuteChanged();
-        CopyCommand.NotifyCanExecuteChanged();
-        CutCommand.NotifyCanExecuteChanged();
-        ExpandSelectionCommand.NotifyCanExecuteChanged();
-        CollapseSelectionCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
-    {
-        if (value.Count > 0)
-        {
-            SelectedBrowserItem = value[0] as CatalogDocument;
-        }
-
-        OnPropertyChanged(nameof(IsDeleteEnabled));
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnCurrentViewModeChanged(BrowserViewMode value)
-    {
-        OnPropertyChanged(nameof(IsTilesViewChecked));
-        OnPropertyChanged(nameof(IsSmallIconsViewChecked));
-        OnPropertyChanged(nameof(IsLargeIconsViewChecked));
-        OnPropertyChanged(nameof(IsListViewChecked));
-        OnPropertyChanged(nameof(IsDetailsViewChecked));
-        OnPropertyChanged(nameof(IsDetailsMode));
-        OnPropertyChanged(nameof(IsListMode));
-        OnPropertyChanged(nameof(IsSmallIconsMode));
-        OnPropertyChanged(nameof(IsLargeIconsMode));
-        OnPropertyChanged(nameof(IsIconGridMode));
-        OnPropertyChanged(nameof(IsListLikeMode));
-        OnPropertyChanged(nameof(IsTilesMode));
-        OnPropertyChanged(nameof(BrowserIconFontSize));
-        OnPropertyChanged(nameof(BrowserGridItemWidth));
-        OnPropertyChanged(nameof(BrowserGridItemHeight));
-        OnPropertyChanged(nameof(ShowDetailsColumns));
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-    }
-
-    partial void OnCurrentSortModeChanged(string value)
-    {
-        CurrentSortMode = NormalizeSortMode(value);
-        OnPropertyChanged(nameof(IsSortByNameChecked));
-        OnPropertyChanged(nameof(IsSortByTypeChecked));
-        OnPropertyChanged(nameof(IsSortBySizeChecked));
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-    }
-
-    private bool IsSortMode(string expected)
-    {
-        return string.Equals(CurrentSortMode, expected, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeSortMode(string? sortMode)
-    {
-        return sortMode?.Trim().ToLowerInvariant() switch
-        {
-            "type" => "Type",
-            "size" => "Size",
-            _ => "Name"
-        };
-    }
-
-    partial void OnIsDirtyDocumentChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsSaveEnabled));
-        SaveCatalogCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-    }
-
-    partial void OnProgressValueChanged(int value)
-    {
-        OnPropertyChanged(nameof(ProgressText));
-    }
-
-    partial void OnClipboardItemChanged(CatalogDocument? value)
-    {
-        OnPropertyChanged(nameof(IsPasteEnabled));
-        PasteCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-    }
-
-    partial void OnIsStatusBarVisibleChanged(bool value)
-    {
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
-        RefreshTopMenuState();
-    }
-
-    private IReadOnlyList<MainMenuItemViewModel> BuildTopMenuItems()
-    {
-        var menuItems = new List<MainMenuItemViewModel>
-        {
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.File),
-                Items =
-                [
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", Command = NewCatalogCommand },
-                    Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", Command = OpenCatalogCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", Command = SaveCatalogCommand },
-                    new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", Command = SaveCatalogAsCommand },
-                    Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand },
-                    Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Exit), Command = ExitApplicationCommand }
-                ]
-            },
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.Edit),
-                Items =
-                [
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
-                    new MainMenuItemViewModel
-                    {
-                        Key = "edit_status",
-                        Header = LocalizationService.Current.Get(TextKeys.Status),
-                        IsEnabled = IsDeleteEnabled,
-                        Items = BuildStatusMenuItems()
-                    },
-                    Separator(),
-                    new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
-                ]
-            },
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.View),
-                Items =
-                [
-                    CheckedMenuItem(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar), ToggleStatusBarCommand, key: "statusbar"),
-                    Separator(),
-                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles", "view_tiles"),
-                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons",
-                        "view_small"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons",
-                        "view_large"),
-                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List", "view_list"),
-                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details", "view_details"),
-                    Separator(),
-                    new MainMenuItemViewModel
-                    {
-                        Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
-                        Items =
-                        [
-                            CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
-                            CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type"),
-                            CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
-                        ]
-                    },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), HotKey = "F5", Command = RefreshCommand }
-                ]
-            },
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.Tools),
-                Items = GetToolsMenuItems()
-            },
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.Help),
-                Items =
-                [
-                    new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.ProjectWebsiteInSourceForgeNET), Command = OpenProjectWebsiteCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.ProjectAreaInGitHub), Command = OpenGithubAreaCommand },
-                    Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.About), Command = OpenAboutCommand }
-                ]
-            }
-        };
-
-        return menuItems;
-    }
-
-    private IReadOnlyList<MainMenuItemViewModel> GetToolsMenuItems()
-    {
-        var toolsMenuItems = new List<MainMenuItemViewModel>
-        {
-            new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
-        };
-
-        // Add plugin menu contributions to Tools menu
-        var menuContributions = menuExtensionManager.GetMenuContributions("Tools");
-        if (menuContributions.Any())
-        {
-            toolsMenuItems.Add(Separator());
-
-            foreach (var contribution in menuContributions)
-            {
-                toolsMenuItems.Add(new MainMenuItemViewModel
-                {
-                    Header = contribution.Title,
-                    Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
-                });
-            }
-        }
-
-        return toolsMenuItems;
-    }
-
-    private async void ExecutePluginMenuCommand(string commandId)
-    {
-        try
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.ExecutingPluginCommand, commandId);
-
-            var context = new MenuCommandContext
-            {
-                ActiveCatalogId = null,
-                SelectedNodeId = null,
-                Properties = null,
-                HostApi = new ViewModelHostCommandApi(this)
-            };
-
-            var result = await menuExtensionManager.ExecuteAsync(commandId, context,
-                TimeSpan.FromSeconds(30));
-
-            if (result.TimedOut)
-            {
-                StatusText = LocalizationService.Current.Format(TextKeys.PluginCommandTimedOut, commandId);
-            }
-            else if (!result.Success)
-            {
-                StatusText = string.IsNullOrWhiteSpace(result.Error)
-                    ? LocalizationService.Current.Format(TextKeys.PluginCommandFailed, commandId)
-                    : LocalizationService.Current.Format(TextKeys.PluginCommandFailed2, result.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.PluginCommandError, ex.Message);
-        }
-    }
-
-    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : IHostCommandApi
-    {
-        public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
-        {
-            viewModel.StatusText = LocalizationService.Current.Format(TextKeys.NavigatedToNode, nodeId);
-            return Task.CompletedTask;
-        }
-
-        public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
-        {
-            viewModel.StatusText = message;
-            return Task.CompletedTask;
-        }
-    }
-
-    private static MainMenuItemViewModel Separator()
-    {
-        return new MainMenuItemViewModel { Header = "-" };
-    }
-
-    private void RefreshTopMenuState()
-    {
-        var byKey = FlattenMenuItems(topMenuItems)
-            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
-            .ToDictionary(item => item.Key!, StringComparer.Ordinal);
-
-        SetMenuHeader(byKey, "statusbar", CheckedHeader(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar)));
-        SetMenuHeader(byKey, "view_tiles", CheckedHeader(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles)));
-        SetMenuHeader(byKey, "view_small", CheckedHeader(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2)));
-        SetMenuHeader(byKey, "view_large", CheckedHeader(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu)));
-        SetMenuHeader(byKey, "view_list", CheckedHeader(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List)));
-        SetMenuHeader(byKey, "view_details", CheckedHeader(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details)));
-        SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name)));
-        SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2)));
-        SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2)));
-        SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
-        SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
-    }
-
-    private static IEnumerable<MainMenuItemViewModel> FlattenMenuItems(IEnumerable<MainMenuItemViewModel> items)
-    {
-        foreach (var item in items)
-        {
-            yield return item;
-            foreach (var child in FlattenMenuItems(item.Items))
-            {
-                yield return child;
-            }
-        }
-    }
-
-    private static void SetMenuHeader(
-        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
-        string key,
-        string header)
-    {
-        if (byKey.TryGetValue(key, out var item))
-        {
-            item.Header = header;
-        }
-    }
-
-    private static void SetMenuEnabled(
-        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
-        string key,
-        bool isEnabled)
-    {
-        if (byKey.TryGetValue(key, out var item))
-        {
-            item.IsEnabled = isEnabled;
-        }
-    }
-
-    private static void SetMenuItems(
-        IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
-        string key,
-        IReadOnlyList<MainMenuItemViewModel> items)
-    {
-        if (byKey.TryGetValue(key, out var item))
-        {
-            item.Items = items;
-        }
-    }
-
-    private static string CheckedHeader(bool isChecked, string title)
-    {
-        return title;
-    }
-
-    private static MainMenuItemViewModel CheckedMenuItem(
-        bool isChecked,
-        string title,
-        IRelayCommand command,
-        object? commandParameter = null,
-        string? key = null)
-    {
-        return new MainMenuItemViewModel
-        {
-            Key = key,
-            Header = CheckedHeader(isChecked, title),
-            Icon = isChecked ? "âœ“" : "\u00A0",
-            Command = command,
-            CommandParameter = commandParameter
-        };
-    }
-
-    private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
-    {
-        return
-        [
-            new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Expand), Command = ExpandSelectionCommand, CommandParameter = "list" },
-            new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Collapse), Command = CollapseSelectionCommand, CommandParameter = "list" },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.Status),
-                Items = BuildStatusMenuItems()
-            },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.View),
-                Items =
-                [
-                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons"),
-                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List"),
-                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details"),
-                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles")
-                ]
-            },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
-                Items =
-                [
-                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name"),
-                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type")
-                ]
-            },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
-            Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
-            Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
-        ];
-    }
-
-    private IReadOnlyList<MainMenuItemViewModel> BuildTreeContextMenuItems()
-    {
-        return
-        [
-            new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Expand), Command = ExpandSelectionCommand, CommandParameter = "tree" },
-            new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Collapse), Command = CollapseSelectionCommand, CommandParameter = "tree" },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.View),
-                Items =
-                [
-                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons"),
-                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List"),
-                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details"),
-                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles")
-                ]
-            },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
-                Items =
-                [
-                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name"),
-                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type"),
-                    CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size")
-                ]
-            },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
-            Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
-            Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", Command = PasteCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", Command = CutCommand },
-            Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
-        ];
-    }
-
-    private void EnsureSeedData()
-    {
-        if (!shouldSeedDefaultCatalog || catalogRepository is null || catalogRepository.GetAll().Count > 0)
-        {
-            return;
-        }
-
-        foreach (var entry in catalogRepository.CreateDefaultEntries())
-        {
-            catalogRepository.Save(entry.Id, entry);
-        }
-    }
-
-    private IReadOnlyList<BrowserTreeNode> GetTreeNodes()
-    {
-        if (catalogRepository is not null)
-        {
-            var roots = catalogRepository
-                .GetRoots()
-                .Where(IsTreeVisibleType)
-                .ToArray();
-
-            var treeNodes = roots
-                .Select(root =>
-                {
-                    var descendants = catalogRepository
-                        .GetDescendantsOf(root.Id)
-                        .Where(IsTreeVisibleType)
-                        .ToList();
-                    descendants.Add(root);
-
-                    var byParent = descendants
-                        .GroupBy(entry => entry.ParentId ?? "__root__", StringComparer.Ordinal)
-                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
-
-                    return BuildTreeNodeFromLookup(root, byParent, isExpanded: true);
-                })
-                .ToArray();
-
-            if (treeNodes.Length > 0)
-            {
-                return treeNodes;
-            }
-
-            return [];
-        }
-
-        return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
-    }
-
-    private IReadOnlyList<CatalogDocument> GetBrowserItems(string nodeKey)
-    {
-        if (string.IsNullOrWhiteSpace(nodeKey))
-        {
-            return [];
-        }
-
-        if (catalogRepository is not null)
-        {
-            var entries = catalogRepository.GetChildrenOf(nodeKey);
-            return entries;
-        }
-
-        var inMemoryEntries = (inMemoryCatalogEntries ?? [])
-            .Where(item => string.Equals(item.ParentId, nodeKey, StringComparison.Ordinal))
-            .ToArray();
-        return inMemoryEntries;
-    }
-
-    private void DeleteCatalogEntryFromRepository(CatalogDocument item)
-    {
-        if (catalogRepository is null)
-        {
-            return;
-        }
-
-        var descendantIds = catalogRepository
-            .GetDescendantsOf(item.Id)
-            .Select(static entry => entry.Id)
-            .Where(static id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        foreach (var descendantId in descendantIds)
-        {
-            using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
-            if (descendantDocument is not null)
-            {
-                catalogRepository.Collection.Delete(descendantDocument);
-            }
-        }
-
-        using var targetDocument = catalogRepository.Collection.GetDocument(item.Id);
-        if (targetDocument is not null)
-        {
-            catalogRepository.Collection.Delete(targetDocument);
-        }
-    }
-
-    private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
-    {
-        if (string.IsNullOrWhiteSpace(itemId))
-        {
-            return new PropertiesCollection();
-        }
-
-        if (catalogRepository is not null)
-        {
-            return catalogRepository.Get(itemId)?.Properties ?? new PropertiesCollection();
-        }
-
-        return (inMemoryCatalogEntries ?? [])
-            .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal))
-            ?.Properties ?? new PropertiesCollection();
-    }
-
-    private static BrowserTreeNode BuildTreeNodeFromLookup(
-        CatalogDocument entry,
-        IReadOnlyDictionary<string, List<CatalogDocument>> byParent,
-        bool isExpanded)
-    {
-        byParent.TryGetValue(entry.Id, out var childrenOfCurrent);
-
-        var children = (childrenOfCurrent ?? [])
-            .Select(child => BuildTreeNodeFromLookup(child, byParent, isExpanded: false))
-            .ToArray();
-
-        return new BrowserTreeNode(
-            entry.Id,
-            entry.Name,
-            entry.Type.ResolveIconGlyph(),
-            children,
-            isExpanded);
-    }
-
-    private static IReadOnlyList<BrowserTreeNode> BuildTreeNodesFromEntries(IReadOnlyList<CatalogDocument> entries)
-    {
-        var filteredEntries = entries
-            .Where(IsTreeVisibleType)
-            .ToList();
-        var byId = filteredEntries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
-
-        return filteredEntries
-            .Where(entry => string.IsNullOrWhiteSpace(entry.ParentId))
-            .Select(entry => BuildTreeNode(entry, byId, isExpanded: true))
-            .ToArray();
-    }
-
-    private static BrowserTreeNode BuildTreeNode(
-        CatalogDocument entry,
-        IReadOnlyDictionary<string, CatalogDocument> byId,
-        bool isExpanded)
-    {
-        var children = byId.Values
-            .Where(candidate => string.Equals(candidate.ParentId, entry.Id, StringComparison.Ordinal))
-            .Select(child => BuildTreeNode(child, byId, isExpanded: false))
-            .ToArray();
-
-        return new BrowserTreeNode(
-            entry.Id,
-            entry.Name,
-            entry.Type.ResolveIconGlyph(),
-            children,
-            isExpanded);
-    }
-
-    private static bool IsTreeVisibleType(CatalogDocument entry)
-    {
-        return entry.Type is CatalogDocumentType.Folder
-            or CatalogDocumentType.NetworkFolder
-            or CatalogDocumentType.Media;
-    }
-
-    private static bool HasAssignedStatus(CatalogDocument? item)
-    {
-        if (item is null)
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.Status))
-        {
-            return true;
-        }
-
-        return item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value) &&
-               !string.IsNullOrWhiteSpace(value?.ToString());
-    }
-
-    private static bool IsAssignedStatus(CatalogDocument? item, string? expectedStatusName)
-    {
-        if (item is null)
-        {
-            return false;
-        }
-
-        var assignedStatusName = !string.IsNullOrWhiteSpace(item.Status)
-            ? item.Status
-            : item.Properties.TryGetValue(ItemStatusNamePropertyKey, out var value)
-                ? value?.ToString()
-                : null;
-
-        if (string.IsNullOrWhiteSpace(assignedStatusName))
-        {
-            return expectedStatusName is null;
-        }
-
-        if (expectedStatusName is null)
-        {
-            return true;
-        }
-
-        return string.Equals(assignedStatusName, expectedStatusName, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private IReadOnlyList<MainMenuItemViewModel> BuildStatusMenuItems()
-    {
-        var hasDefaultAssigned = !HasAssignedStatus(SelectedBrowserItem);
-
-        var statusItems = new List<MainMenuItemViewModel>
-        {
-            new()
-            {
-                Header = LocalizationService.Current.Get(TextKeys.Default),
-                Icon = "â—‹",
-                Command = ApplyBrowserItemStatusCommand,
-                CommandParameter = null,
-                IsEnabled = !hasDefaultAssigned
-            }
-        };
-
-        statusItems.AddRange(statusVariants
-            .Select(variant =>
-            {
-                var isAssigned = IsAssignedStatus(SelectedBrowserItem, variant.Name);
-                return new MainMenuItemViewModel
-                {
-                    Header = variant.Name,
-                    Icon = new StatusMenuIcon(variant.IconGlyph, variant.IconColor),
-                    Command = ApplyBrowserItemStatusCommand,
-                    CommandParameter = variant.Name,
-                    IsEnabled = !isAssigned
-                };
-            }));
-
-        return statusItems;
-    }
-
-    private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()
-    {
-        if (SelectedBrowserItems.Count > 0)
-        {
-            return SelectedBrowserItems.OfType<CatalogDocument>().ToArray();
-        }
-
-        return SelectedBrowserItem is null ? [] : [SelectedBrowserItem];
-    }
-
-    private static bool IsStatusApplicableToItem(StatusVariantDocument status, CatalogDocument item)
-    {
-        return IsStatusApplicableToType(status, item.Type);
-    }
-
-    private static bool IsStatusApplicableToType(StatusVariantDocument status, CatalogDocumentType itemType)
-    {
-        if (status.ItemTypes is { Count: > 0 })
-        {
-            return status.ItemTypes.Contains(itemType);
-        }
-
-        return true;
-    }
-
-    private static string ResolveMenuStatusIconText(string iconGlyphKey) => iconGlyphKey;
-}
+    [Nouß~õ¶‰ËkºwµçHØ]Ú
+^Ù\[Ûˆ^
+BˆÂˆİ]\Õ^HØØ[^˜][Û”Ù\šXÙKİ\œ™[‘›Ü›X]
+^Ù^\Ë”YÚ[ÛÛ[X[™\œ›Ü‹^“Y\ÜØYÙJNÂˆBˆš[˜[HÈYÚ[ÛÛ[X[™Ø[˜Ù[][ÛˆH[ÈBˆB‚ˆš]˜]HÙX[YÛ\ÜÈšY]Ó[Ù[ÜİÛÛ[X[™\JXZ[•Ú[™İÕšY]Ó[Ù[šY]Ó[Ù[
+HˆPØ][ÙĞØ\\™RÜİ\BˆÂˆš]˜]H™XYÛ›Hİš[™ÏÈ›ÛİYHšY]Ó[Ù[•™YS›Ù\Ë‘š\œİÜ‘Y˜][
+
+OË’Ù^NÂˆš]˜]H™XYÛ›Hİš[™ÏÈØ][ÙÔ]HšY]Ó[Ù[İ\œ™[Ø][ÙÔ]Â‚ˆX›XÈ\Ş[˜È\ÚÈ[\ÜØ\\™Yš[\Ğ\Ş[˜ÊT™XYÛ›S\İØ\\™YØ][ÙÑš[Oˆš[\ËØ[˜Ù[][Û•ÚÙ[ˆØ[˜Ù[][Û•ÚÙ[ˆHY˜][
+BˆÂˆ˜\ˆ™\ÜÚ]ÜHHšY]Ó[Ù[˜Ø][ÙÔ™\ÜÚ]ÜNÂˆYˆ
+™\ÜÚ]ÜH\È[›ÛİY\È[Ø][ÙÔ]OHšY]Ó[Ù[İ\œ™[Ø][ÙÔ]
+Bˆ›İÈ™]È[İ[ÛØ\\™PØ][ÙÕ[˜]˜Z[X›Q^Ù\[ÛŠ
+NÂˆ]ØZ]\ÚË”[Š
+
+HOˆ™\ÜÚ]ÜKÛÛXİ[Û‹‘]X˜\ÙK’[˜]Ú
+
+
+HO‚ˆÂˆİš[™È›Û\Šİš[™È\™[İš[™È˜[YJBˆÂˆ˜\ˆ^\İ[™ÈH™\ÜÚ]ÜK‘Ù]Ú[™[“ÙŠ\™[
+K‘š\œİÜ‘Y˜][
+Oˆ“˜[YHOH˜[YH	‰ˆ•\HOHØ][ÙÑØİ[Y[\K‘›Û\ŠNÂˆYˆ
+^\İ[™È\È›İ[
+H™]\›ˆ^\İ[™Ë’YÂˆ˜\ˆYHİZY“™]ÑİZY
+
+K•Ôİš[™Ê“ˆŠNÂˆ™\ÜÚ]ÜK”Ø]™JY™]ÈØ][ÙÑØİ[Y[ÈYHY\™[YH\™[˜[YHH˜[YK\HHØ][ÙÑØİ[Y[\K‘›Û\ˆJNÂˆ™]\›ˆYÂˆBˆ›Ü™XXÚ
+˜\ˆš[H[ˆš[\ÊBˆÂˆØ[˜Ù[][Û•ÚÙ[‹•›İÒYØ[˜Ù[][Û”™\]Y\İY
+
+NÂˆ˜\ˆ\™[H›Û\Š›Û\Š›ÛİYš[K‘›Û\ŠKš[K‘]JNÂˆ˜\ˆYHİZY“™]ÑİZY
+
+K•Ôİš[™Ê“ˆŠNÂˆ˜\ˆ›Ü\Y\ÈH™]È›Ü\Y\ĞÛÛXİ[ÛŠ
+NÂˆ›Ü™XXÚ
+˜\ˆ›Ü\H[ˆš[K”›Ü\Y\ÊH›Ü\Y\ÖÜ›Ü\K’Ù^WHH›Ü\K•˜[YNÂˆ™\ÜÚ]ÜK”Ø]™JY™]ÈØ][ÙÑØİ[Y[ÈYHY\™[YH\™[˜[YHHš[K“˜[YKÚ^™HHš[K”Ú^™K›Ü\Y\ÈH›Ü\Y\ÈJNÂˆBˆJKØ[˜Ù[][Û•ÚÙ[ŠNÂˆšY]Ó[Ù[•™YS›Ù\ÈHšY]Ó[Ù[‘Ù]™YS›Ù\Ê
+NÂˆ˜\ˆ›Ù\ÈH›][“›Ù\ÊšY]Ó[Ù[•™YS›Ù\ÊK•Ğ\œ˜^J
+NÂˆšY]Ó[Ù[™YS›Ù\ĞRÙ^HH›Ù\Ë•ÑXİ[Û˜\JOˆ’Ù^Kİš[™ĞÛÛ\\™\‹“Ü™[˜[YÛ›Ü™PØ\ÙJNÂˆšY]Ó[Ù[™YS›Ù\ĞU]HH›Ù\Ë‘Ü›İ\JOˆ•]Kİš[™ĞÛÛ\\™\‹“Ü™[˜[YÛ›Ü™PØ\ÙJK•ÑXİ[Û˜\JOˆ’Ù^KOˆ‘š\œİ
+
+Kİš[™ĞÛÛ\\™\‹“Ü™[˜[YÛ›Ü™PØ\ÙJNÂˆšY]Ó[Ù[“Û”›Ü\PÚ[™ÙY
+˜[Y[ÙŠ™YS›Ù\ÊJNÂˆšY]Ó[Ù[”™Yœ™\Úœ›İÜÙ\’][\Ñ›Ü”Ù[Xİ[ÛŠ
+NÂˆšY]Ó[Ù[’\Ñ\QØİ[Y[HYNÂˆBˆX›XÈ\ÚÈ˜]šYØ]UÓ›ÙP\Ş[˜ÊÛ™È›ÙRYØ[˜Ù[][Û•ÚÙ[ˆØ[˜Ù[][Û•ÚÙ[ˆHY˜][
+BˆÂˆšY]Ó[Ù[”İ]\Õ^HØØ[^˜][Û”Ù\šXÙKİ\œ™[‘›Ü›X]
+^Ù^\Ë“˜]šYØ]YÓ›ÙK›ÙRY
+NÂˆ™]\›ˆ\ÚËÛÛ\]Y\ÚÎÂˆB‚ˆX›XÈ\ÚÈ›İYP\Ş[˜Êİš[™ÈY\ÜØYÙKØ[˜Ù[][Û•ÚÙ[ˆØ[˜Ù[][Û•ÚÙ[ˆHY˜][
+BˆÂˆšY]Ó[Ù[”İ]\Õ^HY\ÜØYÙNÂˆ™]\›ˆ\ÚËÛÛ\]Y\ÚÎÂˆBˆB‚ˆš]˜]Hİ]XÈXZ[“Y[R][UšY]Ó[Ù[Ù\\˜]ÜŠ
+BˆÂˆ™]\›ˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆH‹HˆNÂˆB‚ˆš]˜]H›ÚY™Yœ™\ÚÜY[Tİ]J
+BˆÂˆ˜\ˆRÙ^HH›][“Y[R][\ÊÜY[R][\ÊBˆ•Ú\™J][HOˆ\İš[™Ë’\Ó[Ü•Ú]TÜXÙJ][K’Ù^JJBˆ•ÑXİ[Û˜\J][HOˆ][K’Ù^HKİš[™ĞÛÛ\\™\‹“Ü™[˜[
+NÂ‚ˆÙ]Y[RXY\ŠRÙ^Kœİ]\Ø˜\ˆ‹ÚXÚÙYXY\Š\Ôİ]\Ğ˜\•š\ÚX›KØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”İ]\Ğ˜\ŠJJNÂˆÙ]Y[RXY\ŠRÙ^KšY]×İ[\È‹ÚXÚÙYXY\Š\Õ[\ÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•[\ÊJJNÂˆÙ]Y[RXY\ŠRÙ^KšY]×ÜÛX[‹ÚXÚÙYXY\Š\ÔÛX[XÛÛœÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”ÛX[XÛÛœÌŠJJNÂˆÙ]Y[RXY\ŠRÙ^KšY]×Û\™ÙH‹ÚXÚÙYXY\Š\Ó\™ÙRXÛÛœÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“\™ÙRXÛÛœÓY[JJJNÂˆÙ]Y[RXY\ŠRÙ^KšY]×Û\İ‹ÚXÚÙYXY\Š\Ó\İšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“\İ
+JJNÂˆÙ]Y[RXY\ŠRÙ^KšY]×Ù]Z[È‹ÚXÚÙYXY\Š\Ñ]Z[ÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘]Z[ÊJJNÂˆÙ]Y[RXY\ŠRÙ^KœÛÜÛ˜[YH‹ÚXÚÙYXY\Š\ÔÛÜS˜[YPÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“˜[YJJJNÂˆÙ]Y[RXY\ŠRÙ^KœÛÜİ\H‹ÚXÚÙYXY\Š\ÔÛÜU\PÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•\LŠJJNÂˆÙ]Y[RXY\ŠRÙ^KœÛÜÜÚ^™H‹ÚXÚÙYXY\Š\ÔÛÜTÚ^™PÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”Ú^™LŠJJNÂˆÙ]Y[Q[˜X›Y
+RÙ^K™Y]Üİ]\È‹\Ñ[]Q[˜X›Y
+NÂˆÙ]Y[R][\ÊRÙ^K™Y]Üİ]\È‹Z[İ]\ÓY[R][\Ê
+JNÂˆB‚ˆš]˜]Hİ]XÈQ[[Y\˜X›OXZ[“Y[R][UšY]Ó[Ù[ˆ›][“Y[R][\ÊQ[[Y\˜X›OXZ[“Y[R][UšY]Ó[Ù[ˆ][\ÊBˆÂˆ›Ü™XXÚ
+˜\ˆ][H[ˆ][\ÊBˆÂˆZY[™]\›ˆ][NÂˆ›Ü™XXÚ
+˜\ˆÚ[[ˆ›][“Y[R][\Ê][K’][\ÊJBˆÂˆZY[™]\›ˆÚ[ÂˆBˆBˆB‚ˆš]˜]Hİ]XÈ›ÚYÙ]Y[RXY\ŠˆT™XYÛ›QXİ[Û˜\Oİš[™ËXZ[“Y[R][UšY]Ó[Ù[ˆRÙ^Kˆİš[™ÈÙ^Kˆİš[™ÈXY\ŠBˆÂˆYˆ
+RÙ^K•QÙ]˜[YJÙ^Kİ]˜\ˆ][JJBˆÂˆ][K’XY\ˆHXY\ÂˆBˆB‚ˆš]˜]Hİ]XÈ›ÚYÙ]Y[Q[˜X›Y
+ˆT™XYÛ›QXİ[Û˜\Oİš[™ËXZ[“Y[R][UšY]Ó[Ù[ˆRÙ^Kˆİš[™ÈÙ^Kˆ›ÛÛ\Ñ[˜X›Y
+BˆÂˆYˆ
+RÙ^K•QÙ]˜[YJÙ^Kİ]˜\ˆ][JJBˆÂˆ][K’\Ñ[˜X›YH\Ñ[˜X›YÂˆBˆB‚ˆš]˜]Hİ]XÈ›ÚYÙ]Y[R][\ÊˆT™XYÛ›QXİ[Û˜\Oİš[™ËXZ[“Y[R][UšY]Ó[Ù[ˆRÙ^Kˆİš[™ÈÙ^KˆT™XYÛ›S\İXZ[“Y[R][UšY]Ó[Ù[ˆ][\ÊBˆÂˆYˆ
+RÙ^K•QÙ]˜[YJÙ^Kİ]˜\ˆ][JJBˆÂˆ][K’][\ÈH][\ÎÂˆBˆB‚ˆš]˜]Hİ]XÈİš[™ÈÚXÚÙYXY\Š›ÛÛ\ĞÚXÚÙYİš[™È]JBˆÂˆ™]\›ˆ]NÂˆB‚ˆš]˜]Hİ]XÈXZ[“Y[R][UšY]Ó[Ù[ÚXÚÙYY[R][Jˆ›ÛÛ\ĞÚXÚÙYˆİš[™È]KˆT™[^PÛÛ[X[™ÛÛ[X[™ˆØš™XİÈÛÛ[X[™\˜[Y]\ˆH[ˆİš[™ÏÈÙ^HH[
+BˆÂˆ™]\›ˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆÙ^HHÙ^KˆXY\ˆHÚXÚÙYXY\Š\ĞÚXÚÙY]JKˆXÛÛˆH\ĞÚXÚÙYÈ¸§$Èˆˆ—LL‹ˆÛÛ[X[™HÛÛ[X[™ˆÛÛ[X[™\˜[Y]\ˆHÛÛ[X[™\˜[Y]\‚ˆNÂˆB‚ˆš]˜]HT™XYÛ›S\İXZ[“Y[R][UšY]Ó[Ù[ˆZ[œ›İÜÙ\ÛÛ^Y[R][\Ê
+BˆÂˆ™]\›‚ˆÂˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘^[™
+KÛÛ[X[™H^[™Ù[Xİ[ÛÛÛ[X[™ÛÛ[X[™\˜[Y]\ˆH›\İˆKˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\ËÛÛ\ÙJKÛÛ[X[™HÛÛ\ÙTÙ[Xİ[ÛÛÛ[X[™ÛÛ[X[™\˜[Y]\ˆH›\İˆKˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”İ]\ÊKˆ][\ÈHZ[İ]\ÓY[R][\Ê
+BˆKˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•šY]ÊKˆ][\ÈBˆÂˆÚXÚÙYY[R][J\ÔÛX[XÛÛœÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”ÛX[XÛÛœÌŠKÙ]šY]Ó[ÙPÛÛ[X[™”ÛX[XÛÛœÈŠKˆÚXÚÙYY[R][J\Ó\™ÙRXÛÛœÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“\™ÙRXÛÛœÓY[JKÙ]šY]Ó[ÙPÛÛ[X[™“\™ÙRXÛÛœÈŠKˆÚXÚÙYY[R][J\Ó\İšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“\İ
+KÙ]šY]Ó[ÙPÛÛ[X[™“\İŠKˆÚXÚÙYY[R][J\Ñ]Z[ÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘]Z[ÊKÙ]šY]Ó[ÙPÛÛ[X[™‘]Z[ÈŠKˆÚXÚÙYY[R][J\Õ[\ÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•[\ÊKÙ]šY]Ó[ÙPÛÛ[X[™•[\ÈŠBˆBˆKˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë\œ˜[™ÙRXÛÛœĞLŠKˆ][\ÈBˆÂˆÚXÚÙYY[R][J\ÔÛÜS˜[YPÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“˜[YJKÙ]ÛÜ[ÙPÛÛ[X[™“˜[YHŠKˆÚXÚÙYY[R][J\ÔÛÜU\PÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•\LŠKÙ]ÛÜ[ÙPÛÛ[X[™•\HŠBˆBˆKˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”™Yœ™\Ú
+KÛÛ[X[™H™Yœ™\ÚÛÛ[X[™KˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\ËY
+KÛÛ[X[™HY][PÛÛ[X[™Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘[]JKÛÛ[X[™H[]R][PÛÛ[X[™KˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”›Ü\Y\ÊKÛÛ[X[™HÜ[”›Ü\Y\ĞÛÛ[X[™BˆNÂˆB‚ˆš]˜]HT™XYÛ›S\İXZ[“Y[R][UšY]Ó[Ù[ˆZ[™YPÛÛ^Y[R][\Ê
+BˆÂˆ™]\›‚ˆÂˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘^[™
+KÛÛ[X[™H^[™Ù[Xİ[ÛÛÛ[X[™ÛÛ[X[™\˜[Y]\ˆH™YHˆKˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\ËÛÛ\ÙJKÛÛ[X[™HÛÛ\ÙTÙ[Xİ[ÛÛÛ[X[™ÛÛ[X[™\˜[Y]\ˆH™YHˆKˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•šY]ÊKˆ][\ÈBˆÂˆÚXÚÙYY[R][J\ÔÛX[XÛÛœÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”ÛX[XÛÛœÌŠKÙ]šY]Ó[ÙPÛÛ[X[™”ÛX[XÛÛœÈŠKˆÚXÚÙYY[R][J\Ó\™ÙRXÛÛœÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“\™ÙRXÛÛœÓY[JKÙ]šY]Ó[ÙPÛÛ[X[™“\™ÙRXÛÛœÈŠKˆÚXÚÙYY[R][J\Ó\İšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“\İ
+KÙ]šY]Ó[ÙPÛÛ[X[™“\İŠKˆÚXÚÙYY[R][J\Ñ]Z[ÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘]Z[ÊKÙ]šY]Ó[ÙPÛÛ[X[™‘]Z[ÈŠKˆÚXÚÙYY[R][J\Õ[\ÕšY]ĞÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•[\ÊKÙ]šY]Ó[ÙPÛÛ[X[™•[\ÈŠBˆBˆKˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë\œ˜[™ÙRXÛÛœĞLŠKˆ][\ÈBˆÂˆÚXÚÙYY[R][J\ÔÛÜS˜[YPÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë“˜[YJKÙ]ÛÜ[ÙPÛÛ[X[™“˜[YHŠKˆÚXÚÙYY[R][J\ÔÛÜU\PÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë•\LŠKÙ]ÛÜ[ÙPÛÛ[X[™•\HŠKˆÚXÚÙYY[R][J\ÔÛÜTÚ^™PÚXÚÙYØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”Ú^™LŠKÙ]ÛÜ[ÙPÛÛ[X[™”Ú^™HŠBˆBˆKˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”™Yœ™\Ú
+KÛÛ[X[™H™Yœ™\ÚÛÛ[X[™KˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\ËY
+KÛÛ[X[™HY][PÛÛ[X[™Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘[]JKÛÛ[X[™H[]R][PÛÛ[X[™KˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\ËÛÜJKİÙ^HHİ›
+ĞÈ‹ÛÛ[X[™HÛÜPÛÛ[X[™Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”\İJKİÙ^HHİ›
+Õˆ‹ÛÛ[X[™H\İPÛÛ[X[™Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ëİ]Y[JKİÙ^HHİ›
+Ö‹ÛÛ[X[™Hİ]ÛÛ[X[™KˆÙ\\˜]ÜŠ
+Kˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ÈXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë”›Ü\Y\ÊKÛÛ[X[™HÜ[”›Ü\Y\ĞÛÛ[X[™BˆNÂˆB‚ˆš]˜]H›ÚY[œİ\™TÙYY]J
+BˆÂˆYˆ
+\Úİ[ÙYYY˜][Ø][ÙÈØ][ÙÔ™\ÜÚ]ÜH\È[Ø][ÙÔ™\ÜÚ]ÜK‘Ù][
+
+KÛİ[ˆ
+BˆÂˆ™]\›ÂˆB‚ˆ›Ü™XXÚ
+˜\ˆ[H[ˆØ][ÙÔ™\ÜÚ]ÜKÜ™X]QY˜][[šY\Ê
+JBˆÂˆØ][ÙÔ™\ÜÚ]ÜK”Ø]™J[K’Y[JNÂˆBˆB‚ˆš]˜]HT™XYÛ›S\İœ›İÜÙ\•™YS›ÙOˆÙ]™YS›Ù\Ê
+BˆÂˆYˆ
+Ø][ÙÔ™\ÜÚ]ÜH\È›İ[
+BˆÂˆ˜\ˆ›ÛİÈHØ][ÙÔ™\ÜÚ]ÜBˆ‘Ù]›ÛİÊ
+Bˆ•Ú\™J\Õ™YUš\ÚX›U\JBˆ•Ğ\œ˜^J
+NÂ‚ˆ˜\ˆ™YS›Ù\ÈH›ÛİÂˆ”Ù[Xİ
+›ÛİO‚ˆÂˆ˜\ˆ\ØÙ[™[ÈHØ][ÙÔ™\ÜÚ]ÜBˆ‘Ù]\ØÙ[™[ÓÙŠ›Ûİ’Y
+Bˆ•Ú\™J\Õ™YUš\ÚX›U\JBˆ•Ó\İ
+
+NÂˆ\ØÙ[™[ËY
+›Ûİ
+NÂ‚ˆ˜\ˆT\™[H\ØÙ[™[Âˆ‘Ü›İ\J[HOˆ[K”\™[YÏÈ—×Ü›Ûİ×È‹İš[™ĞÛÛ\\™\‹“Ü™[˜[
+Bˆ•ÑXİ[Û˜\JÜ›İ\OˆÜ›İ\’Ù^KÜ›İ\OˆÜ›İ\•Ó\İ
+
+Kİš[™ĞÛÛ\\™\‹“Ü™[˜[
+NÂ‚ˆ™]\›ˆZ[™YS›ÙQœ›ÛSÛÚİ\
+›ÛİT\™[\Ñ^[™YˆYJNÂˆJBˆ•Ğ\œ˜^J
+NÂ‚ˆYˆ
+™YS›Ù\Ë“[™İˆ
+BˆÂˆ™]\›ˆ™YS›Ù\ÎÂˆB‚ˆ™]\›ˆ×NÂˆB‚ˆ™]\›ˆZ[™YS›Ù\Ñœ›ÛQ[šY\Ê[“Y[[ÜPØ][ÙÑ[šY\ÈÏÈ×JNÂˆB‚ˆš]˜]HT™XYÛ›S\İØ][ÙÑØİ[Y[ˆÙ]œ›İÜÙ\’][\Êİš[™È›ÙRÙ^JBˆÂˆYˆ
+İš[™Ë’\Ó[Ü•Ú]TÜXÙJ›ÙRÙ^JJBˆÂˆ™]\›ˆ×NÂˆB‚ˆYˆ
+Ø][ÙÔ™\ÜÚ]ÜH\È›İ[
+BˆÂˆ˜\ˆ[šY\ÈHØ][ÙÔ™\ÜÚ]ÜK‘Ù]Ú[™[“ÙŠ›ÙRÙ^JNÂˆ™]\›ˆ[šY\ÎÂˆB‚ˆ˜\ˆ[“Y[[ÜQ[šY\ÈH
+[“Y[[ÜPØ][ÙÑ[šY\ÈÏÈ×JBˆ•Ú\™J][HOˆİš[™Ë‘\]X[Ê][K”\™[Y›ÙRÙ^Kİš[™ĞÛÛ\\š\ÛÛ‹“Ü™[˜[
+JBˆ•Ğ\œ˜^J
+NÂˆ™]\›ˆ[“Y[[ÜQ[šY\ÎÂˆB‚ˆš]˜]H›ÚY[]PØ][ÙÑ[Qœ›ÛT™\ÜÚ]ÜJØ][ÙÑØİ[Y[][JBˆÂˆYˆ
+Ø][ÙÔ™\ÜÚ]ÜH\È[
+BˆÂˆ™]\›ÂˆB‚ˆ˜\ˆ\ØÙ[™[YÈHØ][ÙÔ™\ÜÚ]ÜBˆ‘Ù]\ØÙ[™[ÓÙŠ][K’Y
+Bˆ”Ù[Xİ
+İ]XÈ[HOˆ[K’Y
+Bˆ•Ú\™Jİ]XÈYOˆ\İš[™Ë’\Ó[Ü•Ú]TÜXÙJY
+JBˆ‘\İ[˜İ
+İš[™ĞÛÛ\\™\‹“Ü™[˜[
+Bˆ•Ğ\œ˜^J
+NÂ‚ˆ›Ü™XXÚ
+˜\ˆ\ØÙ[™[Y[ˆ\ØÙ[™[YÊBˆÂˆ\Ú[™È˜\ˆ\ØÙ[™[Øİ[Y[HØ][ÙÔ™\ÜÚ]ÜKÛÛXİ[Û‹‘Ù]Øİ[Y[
+\ØÙ[™[Y
+NÂˆYˆ
+\ØÙ[™[Øİ[Y[\È›İ[
+BˆÂˆØ][ÙÔ™\ÜÚ]ÜKÛÛXİ[Û‹‘[]J\ØÙ[™[Øİ[Y[
+NÂˆBˆB‚ˆ\Ú[™È˜\ˆ\™Ù]Øİ[Y[HØ][ÙÔ™\ÜÚ]ÜKÛÛXİ[Û‹‘Ù]Øİ[Y[
+][K’Y
+NÂˆYˆ
+\™Ù]Øİ[Y[\È›İ[
+BˆÂˆØ][ÙÔ™\ÜÚ]ÜKÛÛXİ[Û‹‘[]J\™Ù]Øİ[Y[
+NÂˆBˆB‚ˆš]˜]H›Ü\Y\ĞÛÛXİ[ÛˆÙ]œ›İÜÙ\’][R[™›Ô›Ü\Y\Êİš[™È][RY
+BˆÂˆYˆ
+İš[™Ë’\Ó[Ü•Ú]TÜXÙJ][RY
+JBˆÂˆ™]\›ˆ™]È›Ü\Y\ĞÛÛXİ[ÛŠ
+NÂˆB‚ˆYˆ
+Ø][ÙÔ™\ÜÚ]ÜH\È›İ[
+BˆÂˆ™]\›ˆØ][ÙÔ™\ÜÚ]ÜK‘Ù]
+][RY
+OË”›Ü\Y\ÈÏÈ™]È›Ü\Y\ĞÛÛXİ[ÛŠ
+NÂˆB‚ˆ™]\›ˆ
+[“Y[[ÜPØ][ÙÑ[šY\ÈÏÈ×JBˆ‘š\œİÜ‘Y˜][
+[HOˆİš[™Ë‘\]X[Ê[K’Y][RYİš[™ĞÛÛ\\š\ÛÛ‹“Ü™[˜[
+JBˆË”›Ü\Y\ÈÏÈ™]È›Ü\Y\ĞÛÛXİ[ÛŠ
+NÂˆB‚ˆš]˜]Hİ]XÈœ›İÜÙ\•™YS›ÙHZ[™YS›ÙQœ›ÛSÛÚİ\
+ˆØ][ÙÑØİ[Y[[KˆT™XYÛ›QXİ[Û˜\Oİš[™Ë\İØ][ÙÑØİ[Y[ˆT\™[ˆ›ÛÛ\Ñ^[™Y
+BˆÂˆT\™[•QÙ]˜[YJ[K’Yİ]˜\ˆÚ[™[“Ùİ\œ™[
+NÂ‚ˆ˜\ˆÚ[™[ˆH
+Ú[™[“Ùİ\œ™[ÏÈ×JBˆ”Ù[Xİ
+Ú[OˆZ[™YS›ÙQœ›ÛSÛÚİ\
+Ú[T\™[\Ñ^[™Yˆ˜[ÙJJBˆ•Ğ\œ˜^J
+NÂ‚ˆ™]\›ˆ™]Èœ›İÜÙ\•™YS›ÙJˆ[K’Yˆ[K“˜[YKˆ[K•\K”™\ÛÛ™RXÛÛ‘Û\
+
+KˆÚ[™[‹ˆ\Ñ^[™Y
+NÂˆB‚ˆš]˜]Hİ]XÈT™XYÛ›S\İœ›İÜÙ\•™YS›ÙOˆZ[™YS›Ù\Ñœ›ÛQ[šY\ÊT™XYÛ›S\İØ][ÙÑØİ[Y[ˆ[šY\ÊBˆÂˆ˜\ˆš[\™Y[šY\ÈH[šY\Âˆ•Ú\™J\Õ™YUš\ÚX›U\JBˆ•Ó\İ
+
+NÂˆ˜\ˆRYHš[\™Y[šY\Ë•ÑXİ[Û˜\J[HOˆ[K’Yİš[™ĞÛÛ\\™\‹“Ü™[˜[
+NÂ‚ˆ™]\›ˆš[\™Y[šY\Âˆ•Ú\™J[HOˆİš[™Ë’\Ó[Ü•Ú]TÜXÙJ[K”\™[Y
+JBˆ”Ù[Xİ
+[HOˆZ[™YS›ÙJ[KRY\Ñ^[™YˆYJJBˆ•Ğ\œ˜^J
+NÂˆB‚ˆš]˜]Hİ]XÈœ›İÜÙ\•™YS›ÙHZ[™YS›ÙJˆØ][ÙÑØİ[Y[[KˆT™XYÛ›QXİ[Û˜\Oİš[™ËØ][ÙÑØİ[Y[ˆRYˆ›ÛÛ\Ñ^[™Y
+BˆÂˆ˜\ˆÚ[™[ˆHRY•˜[Y\Âˆ•Ú\™JØ[™Y]HOˆİš[™Ë‘\]X[ÊØ[™Y]K”\™[Y[K’Yİš[™ĞÛÛ\\š\ÛÛ‹“Ü™[˜[
+JBˆ”Ù[Xİ
+Ú[OˆZ[™YS›ÙJÚ[RY\Ñ^[™Yˆ˜[ÙJJBˆ•Ğ\œ˜^J
+NÂ‚ˆ™]\›ˆ™]Èœ›İÜÙ\•™YS›ÙJˆ[K’Yˆ[K“˜[YKˆ[K•\K”™\ÛÛ™RXÛÛ‘Û\
+
+KˆÚ[™[‹ˆ\Ñ^[™Y
+NÂˆB‚ˆš]˜]Hİ]XÈ›ÛÛ\Õ™YUš\ÚX›U\JØ][ÙÑØİ[Y[[JBˆÂˆ™]\›ˆ[K•\H\ÈØ][ÙÑØİ[Y[\K‘›Û\‚ˆÜˆØ][ÙÑØİ[Y[\K“™]ÛÜšÑ›Û\‚ˆÜˆØ][ÙÑØİ[Y[\K“YYXNÂˆB‚ˆš]˜]Hİ]XÈ›ÛÛ\Ğ\ÜÚYÛ™Yİ]\ÊØ][ÙÑØİ[Y[È][JBˆÂˆYˆ
+][H\È[
+BˆÂˆ™]\›ˆ˜[ÙNÂˆB‚ˆYˆ
+\İš[™Ë’\Ó[Ü•Ú]TÜXÙJ][K”İ]\ÊJBˆÂˆ™]\›ˆYNÂˆB‚ˆ™]\›ˆ][K”›Ü\Y\Ë•QÙ]˜[YJ][Tİ]\Ó˜[YT›Ü\RÙ^Kİ]˜\ˆ˜[YJH	‰‚ˆ\İš[™Ë’\Ó[Ü•Ú]TÜXÙJ˜[YOË•Ôİš[™Ê
+JNÂˆB‚ˆš]˜]Hİ]XÈ›ÛÛ\Ğ\ÜÚYÛ™Yİ]\ÊØ][ÙÑØİ[Y[È][Kİš[™ÏÈ^XİYİ]\Ó˜[YJBˆÂˆYˆ
+][H\È[
+BˆÂˆ™]\›ˆ˜[ÙNÂˆB‚ˆ˜\ˆ\ÜÚYÛ™Yİ]\Ó˜[YHH\İš[™Ë’\Ó[Ü•Ú]TÜXÙJ][K”İ]\ÊBˆÈ][K”İ]\Âˆˆ][K”›Ü\Y\Ë•QÙ]˜[YJ][Tİ]\Ó˜[YT›Ü\RÙ^Kİ]˜\ˆ˜[YJBˆÈ˜[YOË•Ôİš[™Ê
+Bˆˆ[Â‚ˆYˆ
+İš[™Ë’\Ó[Ü•Ú]TÜXÙJ\ÜÚYÛ™Yİ]\Ó˜[YJJBˆÂˆ™]\›ˆ^XİYİ]\Ó˜[YH\È[ÂˆB‚ˆYˆ
+^XİYİ]\Ó˜[YH\È[
+BˆÂˆ™]\›ˆYNÂˆB‚ˆ™]\›ˆİš[™Ë‘\]X[Ê\ÜÚYÛ™Yİ]\Ó˜[YK^XİYİ]\Ó˜[YKİš[™ĞÛÛ\\š\ÛÛ‹“Ü™[˜[YÛ›Ü™PØ\ÙJNÂˆB‚ˆš]˜]HT™XYÛ›S\İXZ[“Y[R][UšY]Ó[Ù[ˆZ[İ]\ÓY[R][\Ê
+BˆÂˆ˜\ˆ\ÑY˜][\ÜÚYÛ™YHR\Ğ\ÜÚYÛ™Yİ]\ÊÙ[XİYœ›İÜÙ\’][JNÂ‚ˆ˜\ˆİ]\Ò][\ÈH™]È\İXZ[“Y[R][UšY]Ó[Ù[‚ˆÂˆ™]Ê
+BˆÂˆXY\ˆHØØ[^˜][Û”Ù\šXÙKİ\œ™[‘Ù]
+^Ù^\Ë‘Y˜][
+KˆXÛÛˆH¸¥âÈ‹ˆÛÛ[X[™H\Pœ›İÜÙ\’][Tİ]\ĞÛÛ[X[™ˆÛÛ[X[™\˜[Y]\ˆH[ˆ\Ñ[˜X›YHZ\ÑY˜][\ÜÚYÛ™YˆBˆNÂ‚ˆİ]\Ò][\ËY˜[™ÙJİ]\Õ˜\šX[Âˆ”Ù[Xİ
+˜\šX[O‚ˆÂˆ˜\ˆ\Ğ\ÜÚYÛ™YH\Ğ\ÜÚYÛ™Yİ]\ÊÙ[XİYœ›İÜÙ\’][K˜\šX[“˜[YJNÂˆ™]\›ˆ™]ÈXZ[“Y[R][UšY]Ó[Ù[ˆÂˆXY\ˆH˜\šX[“˜[YKˆXÛÛˆH™]Èİ]\ÓY[RXÛÛŠ˜\šX[’XÛÛ‘Û\˜\šX[’XÛÛÛÛÜŠKˆÛÛ[X[™H\Pœ›İÜÙ\’][Tİ]\ĞÛÛ[X[™ˆÛÛ[X[™\˜[Y]\ˆH˜\šX[“˜[YKˆ\Ñ[˜X›YHZ\Ğ\ÜÚYÛ™YˆNÂˆJJNÂ‚ˆ™]\›ˆİ]\Ò][\ÎÂˆB‚ˆš]˜]HT™XYÛ›S\İØ][ÙÑØİ[Y[ˆÙ]Ù[XİYœ›İÜÙ\’][\Ê
+BˆÂˆYˆ
+Ù[XİYœ›İÜÙ\’][\ËÛİ[ˆ
+BˆÂˆ™]\›ˆÙ[XİYœ›İÜÙ\’][\Ë“Ù•\OØ][ÙÑØİ[Y[Š
+K•Ğ\œ˜^J
+NÂˆB‚ˆ™]\›ˆÙ[XİYœ›İÜÙ\’][H\È[È×HˆÔÙ[XİYœ›İÜÙ\’][WNÂˆB‚ˆš]˜]Hİ]XÈ›ÛÛ\Ôİ]\Ğ\XØX›UÒ][Jİ]\Õ˜\šX[Øİ[Y[İ]\ËØ][ÙÑØİ[Y[][JBˆÂˆ™]\›ˆ\Ôİ]\Ğ\XØX›UÕ\Jİ]\Ë][K•\JNÂˆB‚ˆš]˜]Hİ]XÈ›ÛÛ\Ôİ]\Ğ\XØX›UÕ\Jİ]\Õ˜\šX[Øİ[Y[İ]\ËØ][ÙÑØİ[Y[\H][U\JBˆÂˆYˆ
+İ]\Ë’][U\\È\ÈÈÛİ[ˆˆJBˆÂˆ™]\›ˆİ]\Ë’][U\\ËÛÛZ[œÊ][U\JNÂˆB‚ˆ™]\›ˆYNÂˆB‚ˆš]˜]Hİ]XÈİš[™È™\ÛÛ™SY[Tİ]\ÒXÛÛ•^
+İš[™ÈXÛÛ‘Û\Ù^JHOˆXÛÛ‘Û\Ù^NÂŸB
