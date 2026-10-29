@@ -88,6 +88,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Test license validator
+        shell: pwsh
+        run: ./tools/scripts/ci/test-license-compliance.ps1
+
       - name: Install CycloneDX tool
         shell: pwsh
         run: |

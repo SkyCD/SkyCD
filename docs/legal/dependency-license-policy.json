@@ -37,6 +37,7 @@
     "CommandDotNet",
     "Couchbase.Lite",
     "Couchbase.Lite.Support.NetDesktop",
-    "SerialQueue"
+    "SerialQueue",
+    "Tmds.DBus.Generator"
   ]
 }
