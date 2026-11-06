@@ -17,6 +17,10 @@ updates:
       day: monday
       time: "05:00"
       timezone: "Europe/Vilnius"
+    # Avalonia.Headless.XUnit 12.1.4 is incompatible with xUnit v3 4.x.
+    ignore:
+      - dependency-name: xunit.v3
+        versions: [">= 4.0.0"]
     open-pull-requests-limit: 8
     labels:
       - dependencies
