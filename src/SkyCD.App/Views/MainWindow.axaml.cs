@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
+    private Task? catalogLoadTask;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
@@ -213,7 +214,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnOpened(object? sender, EventArgs e)
+    private async void OnOpened(object? sender, EventArgs e)
     {
         if (isSessionStateLoaded || DataContext is not MainWindowViewModel vm)
         {
@@ -231,7 +232,14 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
             EnsureFileFormatProvidersLoaded();
-            _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
+            try
+            {
+                await TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
+            }
+            catch (Exception exception)
+            {
+                vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, exception.Message);
+            }
         }
 
         RefreshMcpStatusIndicator();
@@ -243,6 +251,17 @@ public partial class MainWindow : Window
     {
         if (isCompletingConfirmedClose)
         {
+            return;
+        }
+
+        if (catalogLoadTask is { IsCompleted: false } loading)
+        {
+            // Keep the window responsive, and let the database operation finish
+            // before shutdown disposes its repositories.
+            e.Cancel = true;
+            try { await loading; }
+            catch (Exception) { /* The open/startup handler displays the failure. */ }
+            Close();
             return;
         }
 
@@ -703,35 +722,39 @@ public partial class MainWindow : Window
         SaveAppOptions(options);
     }
 
-    private async Task TryLoadCatalogIntoViewModelAsync(string localPath)
+    private Task TryLoadCatalogIntoViewModelAsync(string localPath)
     {
-        var capability = fileFormatManager.GetInstanceFor(localPath);
-        if (!capability.SupportedFormat.CanRead)
+        if (catalogLoadTask is { IsCompleted: false }) return catalogLoadTask;
+        return catalogLoadTask = LoadCatalogAsync(localPath);
+    }
+
+    private async Task LoadCatalogAsync(string localPath)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        vm.BeginCatalogLoad();
+        var progress = new Progress<int>(vm.ReportCatalogLoadProgress);
+        try
         {
-            throw new FileFormatNotReadableException(capability.SupportedFormat.FormatId);
+            var reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
+            {
+                var entries = ExtractCatalogEntries(payload);
+                ReplaceCatalogContent(entries, importProgress);
+                importProgress.Report(90);
+                return new MainWindowViewModel(repositoryManager);
+            }, progress);
+            reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            var options = LoadAppOptions();
+            reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
+            reloadedViewModel.CurrentCatalogPath = localPath;
+            options.LastOpenedCatalogPath = localPath;
+            SaveAppOptions(options);
+            reloadedViewModel.CompleteOpenCatalog();
+            DataContext = reloadedViewModel;
         }
-
-        await using var source = File.OpenRead(localPath);
-        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
+        finally
         {
-            FormatId = capability.SupportedFormat.FormatId,
-            Source = source,
-            FileName = Path.GetFileName(localPath)
-        });
-
-        ReplaceCatalogContent(ExtractCatalogEntries(readResult.Payload));
-        var reloadedViewModel = new MainWindowViewModel(repositoryManager);
-        reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-        var options = LoadAppOptions();
-        reloadedViewModel.ApplySessionState(
-            options.Browser.ViewMode,
-            options.Browser.SortMode,
-            options.IsStatusBarVisible);
-        reloadedViewModel.CurrentCatalogPath = localPath;
-        options.LastOpenedCatalogPath = localPath;
-        SaveAppOptions(options);
-        DataContext = reloadedViewModel;
-        reloadedViewModel.CompleteOpenCatalog();
+            vm.EndCatalogLoad();
+        }
     }
 
     private AppOptionsDocument LoadAppOptions()
@@ -1024,20 +1047,25 @@ public partial class MainWindow : Window
         LocalizationService.Current.SetLanguage(languageName);
     }
 
-    private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries)
+    private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries, IProgress<int>? progress = null)
     {
-        foreach (var existing in catalogRepository.GetAll())
+        var existingEntries = catalogRepository.GetAll();
+        var total = Math.Max(1, existingEntries.Count + entries.Count);
+        var processed = 0;
+        foreach (var existing in existingEntries)
         {
             using var document = catalogRepository.Collection.GetDocument(existing.Id);
             if (document is not null)
             {
                 catalogRepository.Collection.Delete(document);
             }
+            progress?.Report(++processed * 90 / total);
         }
 
         foreach (var entry in entries)
         {
             catalogRepository.Save(entry.Id, entry);
+            progress?.Report(++processed * 90 / total);
         }
     }
 

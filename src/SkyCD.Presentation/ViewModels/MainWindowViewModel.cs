@@ -298,7 +298,17 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
     private string currentSortMode = "Name";
 
-    [ObservableProperty] private bool isStatusBarVisible = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
+    private bool isStatusBarVisible = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
+    [NotifyPropertyChangedFor(nameof(IsCatalogInteractionEnabled))]
+    private bool isCatalogLoading;
+
+    public bool IsStatusBarShown => IsStatusBarVisible || IsCatalogLoading;
+    public bool IsCatalogInteractionEnabled => !IsCatalogLoading;
 
     [ObservableProperty] private bool isDirtyDocument;
 
@@ -354,6 +364,27 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         CompleteOpenCatalog();
+    }
+
+    public void BeginCatalogLoad()
+    {
+        IsCatalogLoading = true;
+        StartOperation(LocalizationService.Current.Get(TextKeys.LoadingCatalog));
+    }
+
+    public void ReportCatalogLoadProgress(int value)
+    {
+        if (!IsCatalogLoading) return;
+        SetProgress(Math.Max(ProgressValue, Math.Clamp(value, 0, 100)),
+            LocalizationService.Current.Get(value < 50 ? TextKeys.ParsingCatalog :
+                value < 95 ? TextKeys.UpdatingIndexes : TextKeys.UpdatingBrowser));
+    }
+
+    public void EndCatalogLoad()
+    {
+        IsCatalogLoading = false;
+        IsProgressVisible = false;
+        ProgressValue = 0;
     }
 
     public void CompleteOpenCatalog()
