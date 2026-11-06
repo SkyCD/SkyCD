@@ -27,7 +27,7 @@ public class LegacyScdPluginTests
         var catalog = Assert.IsType<LegacyScdCatalog>(result.Payload);
         Assert.Equal(5, catalog.Entries.Count);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Games\Doom.exe");
-        Assert.Contains(catalog.Entries, entry => entry.Path == @"\Pictures" && entry.SizeBytes == null);
+        Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Pictures" && entry.SizeBytes == null);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class LegacyScdPluginTests
 
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Games\Doom.exe" && entry.SizeBytes == 1048576);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Music\Song [Remix].mp3" && entry.SizeBytes == 524288);
-        Assert.Contains(catalog.Entries, entry => entry.Path == @"\Software [2023]" && entry.SizeBytes == null);
+        Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Software [2023]" && entry.SizeBytes == null);
         Assert.Contains(catalog.Entries, entry => entry.Path == @"[Disk]\Backup\Archive [2022-12-31].zip" && entry.SizeBytes == 2147483648);
     }
 
@@ -69,7 +69,7 @@ public class LegacyScdPluginTests
 
         if (!File.Exists(samplePath))
         {
-            return; // Skip if fixture is not available (e.g., in CI without legacy folder)
+            Assert.Fail("Historical SCD fixture is missing.");
         }
 
         var bytes = await File.ReadAllBytesAsync(samplePath);
@@ -85,6 +85,8 @@ public class LegacyScdPluginTests
         Assert.True(result.Success);
         var payload = Assert.IsType<LegacyScdCatalog>(result.Payload);
         Assert.NotEmpty(payload.Entries);
+        Assert.Equal(466080, payload.Entries[0].SizeBytes);
+        Assert.Equal(@"[Gamez]\Jill of the Jungle episodes 1-3 [Epic Megagames][1992].rar", payload.Entries[0].Path);
     }
 
     [Fact]
@@ -115,6 +117,7 @@ public class LegacyScdPluginTests
         Assert.True(read.Success);
         var parsed = Assert.IsType<LegacyScdCatalog>(read.Payload);
         Assert.Equal(2, parsed.Entries.Count);
+        Assert.Equal(1200, parsed.Entries[0].SizeBytes);
         Assert.Equal(@"[Disk]\Folder\File.txt", parsed.Entries[0].Path);
     }
 
@@ -126,7 +129,7 @@ public class LegacyScdPluginTests
 
         if (!File.Exists(samplePath))
         {
-            return; // Skip if fixture is not available (e.g., in CI without legacy folder)
+            Assert.Fail("Historical SCD fixture is missing.");
         }
 
         var sourceBytes = await File.ReadAllBytesAsync(samplePath);
@@ -165,6 +168,48 @@ public class LegacyScdPluginTests
         Assert.True(secondRead.Success);
         var reparsed = Assert.IsType<LegacyScdCatalog>(secondRead.Payload);
         Assert.Equal(parsed.Entries.Count, reparsed.Entries.Count);
-        Assert.Equal(parsed.Entries[0].Path, reparsed.Entries[0].Path);
+        for (var i = 0; i < parsed.Entries.Count; i++)
+        {
+            Assert.Equal(parsed.Entries[i].Path, reparsed.Entries[i].Path);
+            Assert.NotNull(parsed.Entries[i].SizeBytes);
+            Assert.NotNull(reparsed.Entries[i].SizeBytes);
+            // Legacy output truncates the numeric field to ten characters.
+            Assert.InRange(Math.Abs(parsed.Entries[i].SizeBytes!.Value - reparsed.Entries[i].SizeBytes!.Value), 0, 1024);
+        }
+    }
+
+    [Theory]
+    [InlineData("455,15625  KB   ", 466080L)]
+    [InlineData("1.5 MB", 1572864L)]
+    [InlineData("8 Bits", 1L)]
+    [InlineData("0 Bits", 0L)]
+    [InlineData("1024 Bytes", 1024L)]
+    [InlineData("1 TB", 1099511627776L)]
+    public async Task ReadAsync_ParsesFinalSegmentIndependentlyOfCulture(string size, long expected)
+    {
+        var plugin = new LegacyScdPlugin();
+        await using var source = new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"[Disk]\\Folder [2023]\\[{size}] File [Remix].txt"));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest { FormatId = "legacy-scd", Source = source });
+        Assert.True(result.Success, result.Error);
+        var entry = Assert.Single(Assert.IsType<LegacyScdCatalog>(result.Payload).Entries);
+        Assert.Equal(@"[Disk]\Folder [2023]\File [Remix].txt", entry.Path);
+        Assert.Equal(expected, entry.SizeBytes);
+    }
+
+    [Theory]
+    [InlineData(0L, "0          Bits ")]
+    [InlineData(1024L, "1024       Bytes")]
+    [InlineData(1048576L, "1024       KB   ")]
+    [InlineData(1200L, "1.171875   KB   ")]
+    public async Task WriteAsync_UsesLegacySegmentLayoutAndPadding(long bytes, string token)
+    {
+        var plugin = new LegacyScdPlugin();
+        var catalog = new LegacyScdCatalog();
+        catalog.Entries.Add(new LegacyScdEntry { Path = @"[Disk]\Folder\File.txt", SizeBytes = bytes });
+        await using var target = new MemoryStream();
+        var result = await plugin.WriteAsync(new FileFormatWriteRequest { FormatId = "legacy-scd", Target = target, Payload = catalog });
+        Assert.True(result.Success, result.Error);
+        Assert.Equal($"[Disk]\\Folder\\[{token}] File.txt" + Environment.NewLine,
+            System.Text.Encoding.UTF8.GetString(target.ToArray()).TrimStart('\uFEFF'));
     }
 }
