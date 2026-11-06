@@ -16,6 +16,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <None Include="..\..\legacy\SkyCD\Samples\gamez.scd" Link="Fixtures\Cscd\gamez.scd" CopyToOutputDirectory="PreserveNewest"/>
         <None Update="Fixtures\Cscd\catalog-sample.cscd">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
