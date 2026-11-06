@@ -6,6 +6,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -1050,14 +1053,29 @@ public partial class MainWindow : Window
             return BuildEntriesFromPaths(pathEntries);
         }
 
-        return [];
+        throw new InvalidCatalogPayloadException();
     }
 
     private static bool TryExtractRows(object? payload, out IReadOnlyList<Dictionary<string, object?>> rows)
     {
+        if (payload is JsonElement json)
+        {
+            if (json.ValueKind == JsonValueKind.Object)
+            {
+                if (json.TryGetProperty("nodes", out var nodes)) json = nodes;
+                else if (json.TryGetProperty("items", out var items)) json = items;
+            }
+            if (json.ValueKind == JsonValueKind.Array)
+            {
+                rows = json.EnumerateArray().Select(item => item.EnumerateObject().ToDictionary(
+                    property => property.Name, property => (object?)property.Value.Clone(), StringComparer.OrdinalIgnoreCase)).ToArray();
+                return true;
+            }
+        }
+
         if (payload is IEnumerable<Dictionary<string, object?>> typedRows)
         {
-            rows = typedRows.ToArray();
+            rows = typedRows.Select(row => new Dictionary<string, object?>(row, StringComparer.OrdinalIgnoreCase)).ToArray();
             return true;
         }
 
@@ -1103,19 +1121,29 @@ public partial class MainWindow : Window
                           uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
             var domain = isHttps ? uri!.Host : null;
 
-            result.Add(new PathEntry(normalizedPath, size, isHttps, domain));
+            var isDirectory = raw.GetType().GetProperty("IsDirectory", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw) is true;
+            result.Add(new PathEntry(normalizedPath, size, isHttps, domain, isDirectory));
         }
 
         entries = result;
-        return result.Count > 0;
+        return true;
     }
 
     private static IReadOnlyList<CatalogDocument> BuildEntriesFromRows(IReadOnlyList<Dictionary<string, object?>> rows)
     {
+        if (rows.Count > 0 && rows.All(row => !string.IsNullOrWhiteSpace(ReadString(row, "fullPath"))))
+        {
+            return BuildEntriesFromPaths(rows.Select(row => new PathEntry(
+                ReadString(row, "fullPath"), ReadLong(row, "size", "sizeBytes"), false, null,
+                ReadString(row, "kind").Equals("folder", StringComparison.OrdinalIgnoreCase))).ToArray());
+        }
+
         var results = new List<CatalogDocument>();
         foreach (var row in rows)
         {
             var id = ReadString(row, "id");
+            if (string.IsNullOrWhiteSpace(id)) id = ReadString(row, "nodeId");
             var name = ReadString(row, "name");
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -1123,15 +1151,17 @@ public partial class MainWindow : Window
             }
 
             var parentId = ReadString(row, "parentId");
-            if (string.Equals(parentId, "-1", StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(parentId) || string.Equals(parentId, "-1", StringComparison.Ordinal))
             {
                 parentId = null;
             }
 
             var normalizedType = ReadString(row, "type").ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(normalizedType)) normalizedType = ReadString(row, "kind").ToLowerInvariant();
             var documentType = normalizedType switch
             {
                 "folder" => CatalogDocumentType.Folder,
+                "file" => CatalogDocumentType.File,
                 "media" => CatalogDocumentType.Media,
                 _ => CatalogDocumentType.Media
             };
@@ -1199,12 +1229,11 @@ public partial class MainWindow : Window
             for (var i = 0; i < parts.Length; i++)
             {
                 var name = parts[i];
-                var isFile = i == parts.Length - 1;
-                var isDriveRoot = i == 0 &&
-                                  name.Length == 2 &&
-                                  char.IsLetter(name[0]) &&
-                                  name[1] == ':';
-                var id = $"{currentParentId}/{name}".ToLowerInvariant();
+                var isFile = i == parts.Length - 1 && !pathEntry.IsDirectory;
+                var isMediaRoot = i == 0 &&
+                                  ((name.Length == 2 && char.IsLetter(name[0]) && name[1] == ':') ||
+                                   (name.StartsWith('[') && name.EndsWith(']')));
+                var id = CreateImportedNodeId(currentParentId, name);
                 if (entries.ContainsKey(id))
                 {
                     currentParentId = id;
@@ -1218,7 +1247,7 @@ public partial class MainWindow : Window
                     ParentId = currentParentId,
                     Type = isFile
                         ? CatalogDocumentType.File
-                        : isDriveRoot
+                        : isMediaRoot
                             ? CatalogDocumentType.Media
                             : CatalogDocumentType.Folder,
                     Size = isFile ? pathEntry.Size : 0L,
@@ -1239,7 +1268,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var domainNodeId = $"{rootId}/{pathEntry.Domain.ToLowerInvariant()}";
+        var domainNodeId = CreateImportedNodeId(rootId, pathEntry.Domain);
         if (!entries.ContainsKey(domainNodeId))
         {
             entries[domainNodeId] = new CatalogDocument
@@ -1253,7 +1282,7 @@ public partial class MainWindow : Window
             };
         }
 
-        var resourceNodeId = $"{domainNodeId}/{pathEntry.Path.ToLowerInvariant()}";
+        var resourceNodeId = CreateImportedNodeId(domainNodeId, pathEntry.Path);
         if (!entries.ContainsKey(resourceNodeId))
         {
             entries[resourceNodeId] = new CatalogDocument
@@ -1271,7 +1300,7 @@ public partial class MainWindow : Window
     private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
     {
         return row.TryGetValue(key, out var value) && value is not null
-            ? value.ToString() ?? string.Empty
+            ? value is JsonElement { ValueKind: JsonValueKind.Null } ? string.Empty : value.ToString() ?? string.Empty
             : string.Empty;
     }
 
@@ -1298,7 +1327,15 @@ public partial class MainWindow : Window
         return 0L;
     }
 
-    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain);
+    private static string CreateImportedNodeId(string parentId, string name)
+    {
+        // Catalog paths and URLs can exceed Couchbase's document-ID limit.
+        // Hash each parent/name pair so IDs stay bounded at every tree depth.
+        var identity = parentId + "/" + name.ToLowerInvariant();
+        return "import-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
+    }
+
+    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain, bool IsDirectory);
 
     private void RefreshMcpStatusIndicator()
     {

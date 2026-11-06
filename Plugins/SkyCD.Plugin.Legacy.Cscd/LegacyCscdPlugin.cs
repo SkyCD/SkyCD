@@ -62,7 +62,7 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
                     }
                     else
                     {
-                        catalog.Entries.Add(new LegacyCscdEntry { Path = trimmed });
+                        catalog.Entries.Add(new LegacyCscdEntry { Path = trimmed, IsDirectory = true });
                     }
                 }
 
