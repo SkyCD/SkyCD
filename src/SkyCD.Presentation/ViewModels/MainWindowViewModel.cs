@@ -31,7 +31,6 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
-    private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
@@ -96,7 +95,6 @@ public partial class MainWindowViewModel : ObservableObject
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
-        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
         topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
@@ -127,7 +125,6 @@ public partial class MainWindowViewModel : ObservableObject
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
-        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
         topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
@@ -876,14 +873,7 @@ public partial class MainWindowViewModel : ObservableObject
                 or CatalogDocumentType.NetworkFolder
                 or CatalogDocumentType.Media)
         {
-            if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
-            {
-                return true;
-            }
-
-            var normalizedKey = SelectedBrowserItem.Name.Replace(" ", string.Empty, StringComparison.Ordinal)
-                .ToLowerInvariant();
-            if (treeNodesByKey.TryGetValue(normalizedKey, out targetNode))
+            if (treeNodesByKey.TryGetValue(SelectedBrowserItem.Id, out targetNode))
             {
                 return true;
             }

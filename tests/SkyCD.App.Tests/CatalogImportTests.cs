@@ -11,6 +11,11 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Scd;
+using SkyCD.Documents.Repository;
+using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
+using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -86,6 +91,26 @@ public sealed class CatalogImportTests
         return Assert.IsAssignableFrom<IReadOnlyList<CatalogDocument>>(method.Invoke(null, [payload]));
     }
 
+    [Fact]
+    public void Import_DuplicateFolderTitlesNavigateByIdWithinTheirParent()
+    {
+        var catalog = new LegacyScdCatalog();
+        catalog.Entries.Add(new LegacyScdEntry { Path = @"[Disk A]\disk1", IsDirectory = true });
+        catalog.Entries.Add(new LegacyScdEntry { Path = @"[Disk B]\disk1", IsDirectory = true });
+        catalog.Entries.Add(new LegacyScdEntry { Path = @"[Disk C]\DISK1", IsDirectory = true });
+        var documents = Extract(catalog);
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog(documents);
+        foreach (var folder in documents.Where(entry => entry.Name.Equals("disk1", StringComparison.OrdinalIgnoreCase)))
+        {
+            var diskNode = vm.TreeNodes.Single().Children.Single(node => node.Key == folder.ParentId);
+            vm.SelectedTreeNode = diskNode;
+            vm.SelectedBrowserItem = vm.BrowserItems.Single(item => item.Id == folder.Id);
+            vm.NavigateToFolderCommand.Execute(null);
+            Assert.Equal(folder.Id, vm.SelectedTreeNode!.Key);
+        }
+        Persist(documents);
+    }
+
     internal static void Persist(IReadOnlyList<CatalogDocument> documents)
     {
         var directory = Path.Combine(Path.GetTempPath(), "skycd-import-" + Guid.NewGuid().ToString("N"));
@@ -108,6 +133,16 @@ public sealed class CatalogImportTests
                 Assert.Equal(entry.Size, restored.Size);
                 Assert.Equal(entry.Type, restored.Type);
             }
+
+            // Opening a catalog continues past persistence into tree construction.
+            var repository = new CatalogDocumentRepository();
+            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Single(candidate => candidate.GetParameters().Length == 4);
+            var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+                [repository, new PropertyValueLocalizer(), new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()), false]));
+            if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
+                Assert.NotEmpty(vm.TreeNodes);
         }
         finally
         {
