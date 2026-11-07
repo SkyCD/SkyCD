@@ -14,6 +14,7 @@ using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Repositories;
 using Xunit;
@@ -192,6 +193,19 @@ public sealed class RuntimeCoverageTests
         Assert.NotNull(services.Resolve<IFakePluginCapability>(ifUnresolved: IfUnresolved.ReturnDefault));
         Assert.NotNull(services.Resolve<IFakePluginCapability>(serviceKey: typeof(IFakePluginCapability),
             ifUnresolved: IfUnresolved.ReturnDefault));
+    }
+
+    [Fact]
+    public void FileFormatManager_PrefersLongestMatchingExtension()
+    {
+        var gzip = new FakeFileFormatCapability(new("gzip", "GZip", [".gz"], [], true, true));
+        var tar = new FakeFileFormatCapability(new("tar", "Tar", ["*.tar.gz", ".tgz"], [], true, true));
+        var manager = new FileFormatManager([gzip, tar]);
+        Assert.Same(tar, manager.GetInstanceFor("catalog.TAR.GZ"));
+        Assert.Equal("tar", manager.ResolveFormatId(null, "catalog.TAR.GZ", forWrite: false));
+        Assert.Equal("tar", manager.ResolveFormatId(null, "catalog.TAR.GZ", forWrite: true));
+        Assert.Same(gzip, manager.GetInstanceFor("catalog.gz"));
+        Assert.Throws<UnsupportedFileFormatException>(() => manager.GetInstanceFor("catalog.tar.gz.bak"));
     }
 
     private interface IFakePluginCapability : IPluginCapability

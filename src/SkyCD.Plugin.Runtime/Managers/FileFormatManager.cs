@@ -48,12 +48,12 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
     public IFileFormatPluginCapability GetInstanceFor(string fileName)
     {
-        var extension = NormalizeExtension(Path.GetExtension(fileName));
-        foreach (var capability in fileFormatProviders)
+        foreach (var capability in fileFormatProviders.OrderByDescending(capability =>
+                     capability.SupportedFormat.Extensions.Where(extension => MatchesExtension(fileName, extension))
+                         .Select(extension => extension.Length).DefaultIfEmpty(0).Max()))
         {
             if (capability.SupportedFormat.Extensions
-                .Select(static value => NormalizeExtension(value))
-                .Contains(extension, StringComparer.OrdinalIgnoreCase))
+                .Any(extension => MatchesExtension(fileName, extension)))
             {
                 return capability;
             }
@@ -98,11 +98,10 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             throw new FileFormatHandlerResolutionException();
         }
 
-        var normalizedExtension = NormalizeExtension(extension);
-
-        var byExtension = formats.FirstOrDefault(format =>
-            format.Extensions.Any(candidate =>
-                NormalizeExtension(candidate).Equals(normalizedExtension, StringComparison.OrdinalIgnoreCase)));
+        var byExtension = formats
+            .OrderByDescending(format => format.Extensions.Where(candidate => MatchesExtension(path, candidate))
+                .Select(candidate => candidate.Length).DefaultIfEmpty(0).Max())
+            .FirstOrDefault(format => format.Extensions.Any(candidate => MatchesExtension(path, candidate)));
 
         return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
     }
@@ -211,6 +210,12 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
         var normalized = trimmed.StartsWith('.') ? trimmed : $".{trimmed}";
         return $"*{normalized}";
+    }
+
+    private static bool MatchesExtension(string fileName, string extension)
+    {
+        var normalized = NormalizeExtension(extension);
+        return normalized.Length > 1 && fileName.EndsWith(normalized, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeExtension(string? extension)

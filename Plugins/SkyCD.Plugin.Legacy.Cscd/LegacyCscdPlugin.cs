@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Formatting;
+using SkyCD.Plugin.Legacy.Scd;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Legacy.Cscd;
@@ -43,21 +43,27 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
                 }
 
                 var trimmed = line.Trim();
-                var sizeMatch = SizePrefix.Match(trimmed);
-                if (sizeMatch.Success)
+                var segmentStart = trimmed.LastIndexOf('\\') + 1;
+                var sizeMatch = SizePrefix.Match(trimmed[segmentStart..]);
+                if (sizeMatch.Success && LegacyScdSize.TryParse(sizeMatch.Groups["size"].Value, out var parsedBytes))
                 {
-                    var size = SizeFormatting.TryParseBytes(sizeMatch.Groups["size"].Value, out var parsedBytes)
-                        ? (long?)parsedBytes
-                        : null;
                     catalog.Entries.Add(new LegacyCscdEntry
                     {
-                        Path = sizeMatch.Groups["path"].Value.Trim(),
-                        SizeBytes = size
+                        Path = trimmed[..segmentStart] + sizeMatch.Groups["path"].Value.Trim(),
+                        SizeBytes = parsedBytes
                     });
                 }
                 else
                 {
-                    catalog.Entries.Add(new LegacyCscdEntry { Path = trimmed });
+                    var prefix = SizePrefix.Match(trimmed);
+                    if (prefix.Success && LegacyScdSize.TryParse(prefix.Groups["size"].Value, out var prefixBytes))
+                    {
+                        catalog.Entries.Add(new LegacyCscdEntry { Path = prefix.Groups["path"].Value.Trim(), SizeBytes = prefixBytes });
+                    }
+                    else
+                    {
+                        catalog.Entries.Add(new LegacyCscdEntry { Path = trimmed, IsDirectory = true });
+                    }
                 }
 
                 request.Progress?.Report(Math.Min(100, processed % 100));
@@ -87,8 +93,9 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
             for (var i = 0; i < catalog.Entries.Count; i++)
             {
                 var entry = catalog.Entries[i];
-                var line = entry.SizeBytes is > 0
-                    ? $"[{SizeFormatting.FormatBytes(entry.SizeBytes.Value, "0.##", removeSpace: true)}] {entry.Path}"
+                var segmentStart = entry.Path.LastIndexOf('\\') + 1;
+                var line = entry.SizeBytes is >= 0
+                    ? entry.Path[..segmentStart] + $"[{LegacyScdSize.Format(entry.SizeBytes.Value)}] " + entry.Path[segmentStart..]
                     : entry.Path;
                 await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
                 request.Progress?.Report((int)((i + 1d) / catalog.Entries.Count * 100d));

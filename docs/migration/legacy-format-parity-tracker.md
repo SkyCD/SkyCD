@@ -14,7 +14,7 @@ This tracker records migration parity status for legacy file formats and related
 ## Parity Matrix
 | Extension | Plugin Package | Read | Write | Fixture Coverage | Notes |
 |---|---|---|---|---|---|
-| `.scd` | `SkyCD.Plugin.Legacy.Scd` | Yes | Yes | `gamez.scd` parse + round-trip | Text comments/blank lines are ignored |
+| `.scd` | `SkyCD.Plugin.Legacy.Scd` | Text + VB6 binary | Text | `gamez.scd`, owned binary/text trees, malformed binaries, Couchbase import | Binary signature is detected from content; directories and sizes are retained |
 | `.cscd` | `SkyCD.Plugin.Legacy.Cscd` | Yes | Yes | synthetic compressed round-trip | Shares `.scd` text model with deflate wrapper |
 | `.ascd` | `SkyCD.Plugin.Legacy.Ascd` | Yes | Yes | `My Documents.ascd`, `ftpz.ascd`, round-trip | Safe parser accepts only `skycd-nf` + `INSERT INTO list` shape |
 
@@ -23,5 +23,6 @@ This tracker records migration parity status for legacy file formats and related
 - No host hardcoded extension-specific parser logic is required for `.scd`, `.cscd`, or `.ascd`.
 
 ## Known Limitations
+- VB6 binary SCD import decodes ANSI strings as Windows-1252. Binary export is not implemented; SCD writes use UTF-8 legacy text.
 - `.ascd` files containing SQL statements outside the supported insert shape are rejected.
 - `.scd/.cscd` output formatting may differ while preserving entry data semantics.
