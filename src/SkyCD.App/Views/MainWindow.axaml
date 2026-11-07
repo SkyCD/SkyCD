@@ -54,7 +54,7 @@
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
-        <Menu DockPanel.Dock="Top">
+        <Menu DockPanel.Dock="Top" IsEnabled="{Binding IsCatalogInteractionEnabled}">
             <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.FileMenu}}"
                       ItemsSource="{Binding FileMenuItems}"
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
@@ -94,13 +94,13 @@
 
         <cs:StatusBar x:Name="MainStatusBar"
                       DockPanel.Dock="Bottom"
-                      IsVisible="{Binding IsStatusBarVisible}"
+                      IsVisible="{Binding IsStatusBarShown}"
                       StatusText="{Binding StatusText}"
                       ProgressText="{Binding ProgressText}"
                       IsProgressVisible="{Binding IsProgressVisible}"
                       ProgressValue="{Binding ProgressValue}" />
 
-        <Grid x:Name="MainLayoutGrid" RowDefinitions="*">
+        <Grid x:Name="MainLayoutGrid" RowDefinitions="*" IsEnabled="{Binding IsCatalogInteractionEnabled}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" MinWidth="160" />
                 <ColumnDefinition Width="4" />

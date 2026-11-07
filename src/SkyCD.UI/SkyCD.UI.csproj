@@ -5,8 +5,8 @@
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.1.4"/>
-        <PackageReference Include="YamlDotNet" Version="17.1.0"/>
+        <PackageReference Include="Avalonia" Version="12.1.5"/>
+        <PackageReference Include="YamlDotNet" Version="18.1.0"/>
         <PackageReference Include="SmartFormat" Version="3.6.2"/>
     </ItemGroup>
     <ItemGroup>

@@ -5,4 +5,6 @@ public sealed class LegacyCscdEntry
     public required string Path { get; init; }
 
     public long? SizeBytes { get; init; }
+
+    public bool IsDirectory { get; init; }
 }

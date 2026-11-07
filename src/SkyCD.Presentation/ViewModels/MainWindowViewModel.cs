@@ -24,14 +24,15 @@ using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private readonly IDisposable localizationSubscription;
+    private bool isDisposed;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
-    private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByTitle;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
@@ -97,12 +98,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
-        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
         topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
-        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public MainWindowViewModel(
@@ -128,22 +128,30 @@ public partial class MainWindowViewModel : ObservableObject
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
-        treeNodesByTitle = allTreeNodes.ToDictionary(static node => node.Title, StringComparer.OrdinalIgnoreCase);
         topMenuItems = BuildTopMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
-        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public void RefreshLocalization()
     {
+        if (isDisposed) return;
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         StatusText = DefaultStatusText;
         RefreshBrowserItemsForSelection();
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed) return;
+        isDisposed = true;
+        localizationSubscription.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
@@ -302,7 +310,17 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
     private string currentSortMode = "Name";
 
-    [ObservableProperty] private bool isStatusBarVisible = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
+    private bool isStatusBarVisible = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
+    [NotifyPropertyChangedFor(nameof(IsCatalogInteractionEnabled))]
+    private bool isCatalogLoading;
+
+    public bool IsStatusBarShown => IsStatusBarVisible || IsCatalogLoading;
+    public bool IsCatalogInteractionEnabled => !IsCatalogLoading;
 
     [ObservableProperty] private bool isDirtyDocument;
 
@@ -358,6 +376,27 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         CompleteOpenCatalog();
+    }
+
+    public void BeginCatalogLoad()
+    {
+        IsCatalogLoading = true;
+        StartOperation(LocalizationService.Current.Get(TextKeys.LoadingCatalog));
+    }
+
+    public void ReportCatalogLoadProgress(int value)
+    {
+        if (!IsCatalogLoading) return;
+        SetProgress(Math.Max(ProgressValue, Math.Clamp(value, 0, 100)),
+            LocalizationService.Current.Get(value < 50 ? TextKeys.ParsingCatalog :
+                value < 95 ? TextKeys.UpdatingIndexes : TextKeys.UpdatingBrowser));
+    }
+
+    public void EndCatalogLoad()
+    {
+        IsCatalogLoading = false;
+        IsProgressVisible = false;
+        ProgressValue = 0;
     }
 
     public void CompleteOpenCatalog()
@@ -877,14 +916,7 @@ public partial class MainWindowViewModel : ObservableObject
                 or CatalogDocumentType.NetworkFolder
                 or CatalogDocumentType.Media)
         {
-            if (treeNodesByTitle.TryGetValue(SelectedBrowserItem.Name, out targetNode))
-            {
-                return true;
-            }
-
-            var normalizedKey = SelectedBrowserItem.Name.Replace(" ", string.Empty, StringComparison.Ordinal)
-                .ToLowerInvariant();
-            if (treeNodesByKey.TryGetValue(normalizedKey, out targetNode))
+            if (treeNodesByKey.TryGetValue(SelectedBrowserItem.Id, out targetNode))
             {
                 return true;
             }
@@ -1435,7 +1467,6 @@ public partial class MainWindowViewModel : ObservableObject
             viewModel.TreeNodes = viewModel.GetTreeNodes();
             var nodes = FlattenNodes(viewModel.TreeNodes).ToArray();
             viewModel.treeNodesByKey = nodes.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
-            viewModel.treeNodesByTitle = nodes.GroupBy(x => x.Title, StringComparer.OrdinalIgnoreCase).ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
             viewModel.OnPropertyChanged(nameof(TreeNodes));
             viewModel.RefreshBrowserItemsForSelection();
             viewModel.IsDirtyDocument = true;

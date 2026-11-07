@@ -6,6 +6,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -46,6 +49,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
+    private Task? catalogLoadTask;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
@@ -66,7 +70,11 @@ public partial class MainWindow : Window
         Opened += OnOpened;
         Closing += OnClosing;
         PluginFailure.Reported += OnPluginFailure;
-        Closed += (_, _) => PluginFailure.Reported -= OnPluginFailure;
+        Closed += (_, _) =>
+        {
+            PluginFailure.Reported -= OnPluginFailure;
+            subscribedViewModel?.Dispose();
+        };
     }
 
     private void OnPluginFailure(PluginFailure failure)
@@ -102,6 +110,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
 
         subscribedViewModel = DataContext as MainWindowViewModel;
@@ -210,7 +219,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnOpened(object? sender, EventArgs e)
+    private async void OnOpened(object? sender, EventArgs e)
     {
         if (isSessionStateLoaded || DataContext is not MainWindowViewModel vm)
         {
@@ -228,7 +237,14 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
             EnsureFileFormatProvidersLoaded();
-            _ = TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
+            try
+            {
+                await TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
+            }
+            catch (Exception exception)
+            {
+                vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, exception.Message);
+            }
         }
 
         RefreshMcpStatusIndicator();
@@ -240,6 +256,17 @@ public partial class MainWindow : Window
     {
         if (isCompletingConfirmedClose)
         {
+            return;
+        }
+
+        if (catalogLoadTask is { IsCompleted: false } loading)
+        {
+            // Keep the window responsive, and let the database operation finish
+            // before shutdown disposes its repositories.
+            e.Cancel = true;
+            try { await loading; }
+            catch (Exception) { /* The open/startup handler displays the failure. */ }
+            Close();
             return;
         }
 
@@ -700,35 +727,42 @@ public partial class MainWindow : Window
         SaveAppOptions(options);
     }
 
-    private async Task TryLoadCatalogIntoViewModelAsync(string localPath)
+    private Task TryLoadCatalogIntoViewModelAsync(string localPath)
     {
-        var capability = fileFormatManager.GetInstanceFor(localPath);
-        if (!capability.SupportedFormat.CanRead)
+        if (catalogLoadTask is { IsCompleted: false }) return catalogLoadTask;
+        return catalogLoadTask = LoadCatalogAsync(localPath);
+    }
+
+    private async Task LoadCatalogAsync(string localPath)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        vm.BeginCatalogLoad();
+        var progress = new Progress<int>(vm.ReportCatalogLoadProgress);
+        MainWindowViewModel? reloadedViewModel = null;
+        try
         {
-            throw new FileFormatNotReadableException(capability.SupportedFormat.FormatId);
+            reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
+            {
+                var entries = ExtractCatalogEntries(payload);
+                ReplaceCatalogContent(entries, importProgress);
+                importProgress.Report(90);
+                return new MainWindowViewModel(repositoryManager);
+            }, progress);
+            reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            var options = LoadAppOptions();
+            reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
+            reloadedViewModel.CurrentCatalogPath = localPath;
+            options.LastOpenedCatalogPath = localPath;
+            SaveAppOptions(options);
+            reloadedViewModel.CompleteOpenCatalog();
+            DataContext = reloadedViewModel;
+            reloadedViewModel = null; // Ownership passes to the window.
         }
-
-        await using var source = File.OpenRead(localPath);
-        var readResult = await fileFormatManager.ReadAsync(new FileFormatReadRequest
+        finally
         {
-            FormatId = capability.SupportedFormat.FormatId,
-            Source = source,
-            FileName = Path.GetFileName(localPath)
-        });
-
-        ReplaceCatalogContent(ExtractCatalogEntries(readResult.Payload));
-        var reloadedViewModel = new MainWindowViewModel(repositoryManager);
-        reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-        var options = LoadAppOptions();
-        reloadedViewModel.ApplySessionState(
-            options.Browser.ViewMode,
-            options.Browser.SortMode,
-            options.IsStatusBarVisible);
-        reloadedViewModel.CurrentCatalogPath = localPath;
-        options.LastOpenedCatalogPath = localPath;
-        SaveAppOptions(options);
-        DataContext = reloadedViewModel;
-        reloadedViewModel.CompleteOpenCatalog();
+            reloadedViewModel?.Dispose();
+            vm.EndCatalogLoad();
+        }
     }
 
     private AppOptionsDocument LoadAppOptions()
@@ -1021,20 +1055,25 @@ public partial class MainWindow : Window
         LocalizationService.Current.SetLanguage(languageName);
     }
 
-    private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries)
+    private void ReplaceCatalogContent(IReadOnlyList<CatalogDocument> entries, IProgress<int>? progress = null)
     {
-        foreach (var existing in catalogRepository.GetAll())
+        var existingEntries = catalogRepository.GetAll();
+        var total = Math.Max(1, existingEntries.Count + entries.Count);
+        var processed = 0;
+        foreach (var existing in existingEntries)
         {
             using var document = catalogRepository.Collection.GetDocument(existing.Id);
             if (document is not null)
             {
                 catalogRepository.Collection.Delete(document);
             }
+            progress?.Report(++processed * 90 / total);
         }
 
         foreach (var entry in entries)
         {
             catalogRepository.Save(entry.Id, entry);
+            progress?.Report(++processed * 90 / total);
         }
     }
 
@@ -1050,14 +1089,29 @@ public partial class MainWindow : Window
             return BuildEntriesFromPaths(pathEntries);
         }
 
-        return [];
+        throw new InvalidCatalogPayloadException();
     }
 
     private static bool TryExtractRows(object? payload, out IReadOnlyList<Dictionary<string, object?>> rows)
     {
+        if (payload is JsonElement json)
+        {
+            if (json.ValueKind == JsonValueKind.Object)
+            {
+                if (json.TryGetProperty("nodes", out var nodes)) json = nodes;
+                else if (json.TryGetProperty("items", out var items)) json = items;
+            }
+            if (json.ValueKind == JsonValueKind.Array)
+            {
+                rows = json.EnumerateArray().Select(item => item.EnumerateObject().ToDictionary(
+                    property => property.Name, property => (object?)property.Value.Clone(), StringComparer.OrdinalIgnoreCase)).ToArray();
+                return true;
+            }
+        }
+
         if (payload is IEnumerable<Dictionary<string, object?>> typedRows)
         {
-            rows = typedRows.ToArray();
+            rows = typedRows.Select(row => new Dictionary<string, object?>(row, StringComparer.OrdinalIgnoreCase)).ToArray();
             return true;
         }
 
@@ -1103,19 +1157,29 @@ public partial class MainWindow : Window
                           uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
             var domain = isHttps ? uri!.Host : null;
 
-            result.Add(new PathEntry(normalizedPath, size, isHttps, domain));
+            var isDirectory = raw.GetType().GetProperty("IsDirectory", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw) is true;
+            result.Add(new PathEntry(normalizedPath, size, isHttps, domain, isDirectory));
         }
 
         entries = result;
-        return result.Count > 0;
+        return true;
     }
 
     private static IReadOnlyList<CatalogDocument> BuildEntriesFromRows(IReadOnlyList<Dictionary<string, object?>> rows)
     {
+        if (rows.Count > 0 && rows.All(row => !string.IsNullOrWhiteSpace(ReadString(row, "fullPath"))))
+        {
+            return BuildEntriesFromPaths(rows.Select(row => new PathEntry(
+                ReadString(row, "fullPath"), ReadLong(row, "size", "sizeBytes"), false, null,
+                ReadString(row, "kind").Equals("folder", StringComparison.OrdinalIgnoreCase))).ToArray());
+        }
+
         var results = new List<CatalogDocument>();
         foreach (var row in rows)
         {
             var id = ReadString(row, "id");
+            if (string.IsNullOrWhiteSpace(id)) id = ReadString(row, "nodeId");
             var name = ReadString(row, "name");
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -1123,16 +1187,20 @@ public partial class MainWindow : Window
             }
 
             var parentId = ReadString(row, "parentId");
-            if (string.Equals(parentId, "-1", StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(parentId) || string.Equals(parentId, "-1", StringComparison.Ordinal))
             {
                 parentId = null;
             }
 
             var normalizedType = ReadString(row, "type").ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(normalizedType)) normalizedType = ReadString(row, "kind").ToLowerInvariant();
             var documentType = normalizedType switch
             {
                 "folder" => CatalogDocumentType.Folder,
+                "file" => CatalogDocumentType.File,
                 "media" => CatalogDocumentType.Media,
+                "networkfolder" => CatalogDocumentType.NetworkFolder,
+                "networkresource" => CatalogDocumentType.NetworkResource,
                 _ => CatalogDocumentType.Media
             };
             var status = ReadString(row, "status");
@@ -1199,12 +1267,11 @@ public partial class MainWindow : Window
             for (var i = 0; i < parts.Length; i++)
             {
                 var name = parts[i];
-                var isFile = i == parts.Length - 1;
-                var isDriveRoot = i == 0 &&
-                                  name.Length == 2 &&
-                                  char.IsLetter(name[0]) &&
-                                  name[1] == ':';
-                var id = $"{currentParentId}/{name}".ToLowerInvariant();
+                var isFile = i == parts.Length - 1 && !pathEntry.IsDirectory;
+                var isMediaRoot = i == 0 &&
+                                  ((name.Length == 2 && char.IsLetter(name[0]) && name[1] == ':') ||
+                                   (name.StartsWith('[') && name.EndsWith(']')));
+                var id = CreateImportedNodeId(currentParentId, name);
                 if (entries.ContainsKey(id))
                 {
                     currentParentId = id;
@@ -1218,7 +1285,7 @@ public partial class MainWindow : Window
                     ParentId = currentParentId,
                     Type = isFile
                         ? CatalogDocumentType.File
-                        : isDriveRoot
+                        : isMediaRoot
                             ? CatalogDocumentType.Media
                             : CatalogDocumentType.Folder,
                     Size = isFile ? pathEntry.Size : 0L,
@@ -1239,7 +1306,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var domainNodeId = $"{rootId}/{pathEntry.Domain.ToLowerInvariant()}";
+        var domainNodeId = CreateImportedNodeId(rootId, pathEntry.Domain);
         if (!entries.ContainsKey(domainNodeId))
         {
             entries[domainNodeId] = new CatalogDocument
@@ -1253,7 +1320,7 @@ public partial class MainWindow : Window
             };
         }
 
-        var resourceNodeId = $"{domainNodeId}/{pathEntry.Path.ToLowerInvariant()}";
+        var resourceNodeId = CreateImportedNodeId(domainNodeId, pathEntry.Path);
         if (!entries.ContainsKey(resourceNodeId))
         {
             entries[resourceNodeId] = new CatalogDocument
@@ -1271,7 +1338,7 @@ public partial class MainWindow : Window
     private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
     {
         return row.TryGetValue(key, out var value) && value is not null
-            ? value.ToString() ?? string.Empty
+            ? value is JsonElement { ValueKind: JsonValueKind.Null } ? string.Empty : value.ToString() ?? string.Empty
             : string.Empty;
     }
 
@@ -1298,7 +1365,15 @@ public partial class MainWindow : Window
         return 0L;
     }
 
-    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain);
+    private static string CreateImportedNodeId(string parentId, string name)
+    {
+        // Catalog paths and URLs can exceed Couchbase's document-ID limit.
+        // Hash each parent/name pair so IDs stay bounded at every tree depth.
+        var identity = parentId + "/" + name.ToLowerInvariant();
+        return "import-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
+    }
+
+    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain, bool IsDirectory);
 
     private void RefreshMcpStatusIndicator()
     {

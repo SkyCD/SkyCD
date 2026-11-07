@@ -45,7 +45,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         var restored = optionsRepository.GetOrCreateAppOptions();
         Assert.Equal("Alex", Assert.Single(restored.CustomProperties).DefaultValue);
 
-        var vm = new MainWindowViewModel(repositories);
+        using var vm = new MainWindowViewModel(repositories);
         var selectedId = vm.SelectedBrowserItem?.Id ?? vm.SelectedTreeNode!.Key;
         vm.PropertiesRequested += (_, args) =>
         {
@@ -58,7 +58,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         var catalog = (CatalogDocumentRepository)repositories.For<CatalogDocument>();
         Assert.Equal("Sam", catalog.Get(selectedId)!.Properties["Owner"]);
 
-        var reopened = new MainWindowViewModel(repositories);
+        using var reopened = new MainWindowViewModel(repositories);
         reopened.PropertiesRequested += (_, args) =>
         {
             args.Dialog.ApplyCustomPropertyDefaults(restored.CustomProperties);
@@ -89,7 +89,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         var options = appOptionsRepository.GetOrCreateAppOptions();
         options.AppStartCount = 99;
         appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
-        var viewModel = new MainWindowViewModel(repositoryManager);
+        using var viewModel = new MainWindowViewModel(repositoryManager);
 
         var roots = viewModel.TreeNodes;
         Assert.Single(roots);
@@ -112,7 +112,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         options.AppStartCount = 1;
         appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
 
-        var secondStartViewModel = new MainWindowViewModel(repositoryManager);
+        using var secondStartViewModel = new MainWindowViewModel(repositoryManager);
 
         Assert.Empty(secondStartViewModel.TreeNodes);
 
@@ -138,7 +138,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         options.AppStartCount = 99;
         appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
 
-        var viewModel = new MainWindowViewModel(repositoryManager);
+        using var viewModel = new MainWindowViewModel(repositoryManager);
         var libraryNode = viewModel.TreeNodes.Single();
         var moviesNode = libraryNode.Children.Single(child => child.Key == "movies");
         viewModel.SelectedTreeNode = moviesNode;
@@ -146,7 +146,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
 
         viewModel.DeleteItemCommand.Execute(null);
 
-        var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+        using var reloadedViewModel = new MainWindowViewModel(repositoryManager);
         var reloadedMoviesNode = reloadedViewModel.TreeNodes.Single().Children.Single(child => child.Key == "movies");
         reloadedViewModel.SelectedTreeNode = reloadedMoviesNode;
 
