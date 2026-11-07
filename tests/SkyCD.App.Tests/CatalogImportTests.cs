@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -111,6 +112,42 @@ public sealed class CatalogImportTests
         Persist(documents);
     }
 
+    [Fact]
+    public void ClosedImportedCatalog_DoesNotQueryDisposedDatabaseOnCultureChange()
+    {
+        var original = LocalizationService.Current.CurrentCulture;
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        var originalDefaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+        var originalDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+        MainWindowViewModel? retained = null;
+        var documents = new[]
+        {
+            new CatalogDocument { Id = "root", Name = "Root", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "child", ParentId = "root", Name = "File", Type = CatalogDocumentType.File }
+        };
+        Persist(documents, vm => retained = vm);
+        Assert.NotNull(retained);
+        retained.StatusText = "Closed catalog";
+        try
+        {
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo(original.Name == "lt" ? "en" : "lt"));
+            Assert.Equal("Closed catalog", retained.StatusText);
+            retained.Dispose(); // Disposal is safe when called more than once.
+            retained.RefreshLocalization();
+            Assert.Equal("Closed catalog", retained.StatusText);
+        }
+        finally
+        {
+            LocalizationService.Current.SetCulture(original);
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = originalDefaultCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = originalDefaultUiCulture;
+            GC.KeepAlive(retained);
+        }
+    }
+
     internal static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
         var directory = Path.Combine(Path.GetTempPath(), "skycd-import-" + Guid.NewGuid().ToString("N"));
@@ -139,7 +176,7 @@ public sealed class CatalogImportTests
             repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
             var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
                 .Single(candidate => candidate.GetParameters().Length == 4);
-            var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
                 [repository, new PropertyValueLocalizer(), new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()), false]));
             if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
                 Assert.NotEmpty(vm.TreeNodes);

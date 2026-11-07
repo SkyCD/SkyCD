@@ -70,7 +70,11 @@ public partial class MainWindow : Window
         Opened += OnOpened;
         Closing += OnClosing;
         PluginFailure.Reported += OnPluginFailure;
-        Closed += (_, _) => PluginFailure.Reported -= OnPluginFailure;
+        Closed += (_, _) =>
+        {
+            PluginFailure.Reported -= OnPluginFailure;
+            subscribedViewModel?.Dispose();
+        };
     }
 
     private void OnPluginFailure(PluginFailure failure)
@@ -106,6 +110,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
 
         subscribedViewModel = DataContext as MainWindowViewModel;
@@ -733,9 +738,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm) return;
         vm.BeginCatalogLoad();
         var progress = new Progress<int>(vm.ReportCatalogLoadProgress);
+        MainWindowViewModel? reloadedViewModel = null;
         try
         {
-            var reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
+            reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
             {
                 var entries = ExtractCatalogEntries(payload);
                 ReplaceCatalogContent(entries, importProgress);
@@ -750,9 +756,11 @@ public partial class MainWindow : Window
             SaveAppOptions(options);
             reloadedViewModel.CompleteOpenCatalog();
             DataContext = reloadedViewModel;
+            reloadedViewModel = null; // Ownership passes to the window.
         }
         finally
         {
+            reloadedViewModel?.Dispose();
             vm.EndCatalogLoad();
         }
     }

@@ -24,8 +24,10 @@ using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private readonly IDisposable localizationSubscription;
+    private bool isDisposed;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
@@ -99,7 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
-        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public MainWindowViewModel(
@@ -129,17 +131,26 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
-        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public void RefreshLocalization()
     {
+        if (isDisposed) return;
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         StatusText = DefaultStatusText;
         RefreshBrowserItemsForSelection();
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed) return;
+        isDisposed = true;
+        localizationSubscription.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
