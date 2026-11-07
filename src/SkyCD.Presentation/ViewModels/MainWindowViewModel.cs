@@ -32,7 +32,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly bool shouldSeedDefaultCatalog;
     private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
-    private readonly IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
+    private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
@@ -65,6 +65,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? ExitRequested;
 
     private MenuExtensionManager menuExtensionManager;
+    private CancellationTokenSource? pluginCommandCancellation;
 
     public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
@@ -175,7 +176,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return options.AppStartCount <= 1;
     }
 
-    public IReadOnlyList<BrowserTreeNode> TreeNodes { get; }
+    public IReadOnlyList<BrowserTreeNode> TreeNodes { get; private set; }
 
     public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns =>
     [
@@ -1397,6 +1398,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async void ExecutePluginMenuCommand(string commandId)
     {
+        if (pluginCommandCancellation is not null) { pluginCommandCancellation.Cancel(); return; }
+        using var cancellation = new CancellationTokenSource();
+        pluginCommandCancellation = cancellation;
         try
         {
             StatusText = LocalizationService.Current.Format(TextKeys.ExecutingPluginCommand, commandId);
@@ -1410,7 +1414,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             };
 
             var result = await menuExtensionManager.ExecuteAsync(commandId, context,
-                TimeSpan.FromSeconds(30));
+                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), cancellation.Token);
 
             if (result.TimedOut)
             {
@@ -1427,10 +1431,46 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             StatusText = LocalizationService.Current.Format(TextKeys.PluginCommandError, ex.Message);
         }
+        finally { pluginCommandCancellation = null; }
     }
 
-    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : IHostCommandApi
+    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi
     {
+        private readonly string? rootId = viewModel.TreeNodes.FirstOrDefault()?.Key;
+        private readonly string? catalogPath = viewModel.CurrentCatalogPath;
+
+        public async Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files, CancellationToken cancellationToken = default)
+        {
+            var repository = viewModel.catalogRepository;
+            if (repository is null || rootId is null || catalogPath != viewModel.CurrentCatalogPath)
+                throw new MotionCaptureCatalogUnavailableException();
+            await Task.Run(() => repository.Collection.Database.InBatch(() =>
+            {
+                string Folder(string parent, string name)
+                {
+                    var existing = repository.GetChildrenOf(parent).FirstOrDefault(x => x.Name == name && x.Type == CatalogDocumentType.Folder);
+                    if (existing is not null) return existing.Id;
+                    var id = Guid.NewGuid().ToString("N");
+                    repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = name, Type = CatalogDocumentType.Folder });
+                    return id;
+                }
+                foreach (var file in files)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var parent = Folder(Folder(rootId, file.Folder), file.Date);
+                    var id = Guid.NewGuid().ToString("N");
+                    var properties = new PropertiesCollection();
+                    foreach (var property in file.Properties) properties[property.Key] = property.Value;
+                    repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = file.Name, Size = file.Size, Properties = properties });
+                }
+            }), cancellationToken);
+            viewModel.TreeNodes = viewModel.GetTreeNodes();
+            var nodes = FlattenNodes(viewModel.TreeNodes).ToArray();
+            viewModel.treeNodesByKey = nodes.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
+            viewModel.OnPropertyChanged(nameof(TreeNodes));
+            viewModel.RefreshBrowserItemsForSelection();
+            viewModel.IsDirtyDocument = true;
+        }
         public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
         {
             viewModel.StatusText = LocalizationService.Current.Format(TextKeys.NavigatedToNode, nodeId);
