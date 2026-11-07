@@ -203,6 +203,36 @@ public class LegacyAscdPluginTests
         Assert.DoesNotContain("INSERT INTO", content, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("scdCDDisk", "Media")]
+    [InlineData("SCDCDDISK", "Media")]
+    [InlineData("scdMedia", "Media")]
+    [InlineData("scdNetworkRecource", "NetworkFolder")]
+    [InlineData("scdNetworkFolder", "NetworkFolder")]
+    [InlineData("scdNetworkResource", "NetworkResource")]
+    [InlineData("scdFile", "File")]
+    public async Task ReadWriteReadAsync_PreservesLegacyNodeTypes(string legacyType, string expected)
+    {
+        var text = "# format: skycd-nf 1.0\n" +
+            $"INSERT INTO list VALUES ('0', 'Root', '-1', '{legacyType}', '', '0', '<?Application_ID?>')";
+        await using var source = new MemoryStream(CompressText(text));
+        var plugin = new LegacyAscdPlugin();
+        var read = await plugin.ReadAsync(new FileFormatReadRequest { FormatId = "legacy-ascd", Source = source });
+        Assert.True(read.Success, read.Error);
+        var row = Assert.Single(Assert.IsType<List<Dictionary<string, object?>>>(read.Payload));
+        Assert.Equal(expected, row["type"]);
+        Assert.Equal(legacyType, row["legacyType"]);
+        await using var target = new MemoryStream();
+        var write = await plugin.WriteAsync(new FileFormatWriteRequest { FormatId = "legacy-ascd", Target = target, Payload = read.Payload! });
+        Assert.True(write.Success, write.Error);
+        target.Position = 0;
+        var reread = await plugin.ReadAsync(new FileFormatReadRequest { FormatId = "legacy-ascd", Source = target });
+        Assert.True(reread.Success, reread.Error);
+        var restored = Assert.Single(Assert.IsType<List<Dictionary<string, object?>>>(reread.Payload));
+        Assert.Equal(expected, restored["type"]);
+        Assert.Equal(legacyType, restored["legacyType"]);
+    }
+
     private static byte[] CompressText(string text)
     {
         using var output = new MemoryStream();

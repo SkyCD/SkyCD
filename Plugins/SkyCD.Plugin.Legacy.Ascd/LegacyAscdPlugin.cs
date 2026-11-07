@@ -512,7 +512,9 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
         return legacyType.Trim().ToLowerInvariant() switch
         {
             "scdfolder" => "Folder",
-            "scdmedia" => "Media",
+            "scdmedia" or "scdcddisk" => "Media",
+            // This spelling is the original enum name, used by historical FTP catalogs.
+            "scdnetworkrecource" or "scdnetworkfolder" => "NetworkFolder",
             "scdnetworkresource" => "NetworkResource",
             _ => "File"
         };
@@ -525,6 +527,7 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             "folder" => "scdFolder",
             "media" => "scdMedia",
             "networkresource" => "scdNetworkResource",
+            "networkfolder" => "scdNetworkRecource",
             _ => "scdFile"
         };
     }

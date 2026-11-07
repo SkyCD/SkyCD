@@ -111,7 +111,7 @@ public sealed class CatalogImportTests
         Persist(documents);
     }
 
-    internal static void Persist(IReadOnlyList<CatalogDocument> documents)
+    internal static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
         var directory = Path.Combine(Path.GetTempPath(), "skycd-import-" + Guid.NewGuid().ToString("N"));
         try
@@ -143,6 +143,7 @@ public sealed class CatalogImportTests
                 [repository, new PropertyValueLocalizer(), new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()), false]));
             if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
                 Assert.NotEmpty(vm.TreeNodes);
+            verify?.Invoke(vm);
         }
         finally
         {

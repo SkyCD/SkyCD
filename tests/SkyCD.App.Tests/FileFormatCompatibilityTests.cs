@@ -90,6 +90,35 @@ public sealed class FileFormatCompatibilityTests
         await Assert.ThrowsAnyAsync<InvalidOperationException>(() => manager.ReadAsync(new FileFormatReadRequest { FormatId = string.Empty, Source = target, FileName = name }));
     }
 
+    [Theory]
+    [InlineData("ftpz.ascd", CatalogDocumentType.NetworkFolder, 10911)]
+    [InlineData("my-documents.ascd", CatalogDocumentType.Folder, 3438)]
+    public async Task HistoricalAscd_LoadsVisibleRootsAndBrowsableChildren(string file, CatalogDocumentType rootType, int count)
+    {
+        var service = new CatalogLoadService(new FileFormatManager(CreateProviders()));
+        await service.LoadAsync(Path.Combine(AppContext.BaseDirectory, "FormatFixtures", file), (payload, _) =>
+        {
+            var entries = CatalogImportTests.Extract(payload!);
+            Assert.Equal(count, entries.Count);
+            var roots = entries.Where(entry => entry.ParentId is null).ToArray();
+            Assert.NotEmpty(roots);
+            Assert.All(roots, entry => Assert.Equal(rootType, entry.Type));
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File);
+            CatalogImportTests.Persist(entries, vm =>
+            {
+                Assert.Equal(roots.Select(entry => entry.Id).Order(), vm.TreeNodes.Select(node => node.Key).Order());
+                Assert.NotEmpty(vm.TreeNodes.First().Children);
+                Assert.NotEmpty(vm.BrowserItems);
+                var child = vm.BrowserItems.First(entry => entry.Type == CatalogDocumentType.Folder);
+                vm.SelectedBrowserItem = child;
+                vm.NavigateToFolderCommand.Execute(null);
+                Assert.Equal(child.Id, vm.SelectedTreeNode!.Key);
+                Assert.NotEmpty(vm.BrowserItems);
+            });
+            return entries.Count;
+        }, new Progress<int>());
+    }
+
     private static IFileFormatPluginCapability[] CreateProviders() =>
     [
         new SkyCD.Plugin.Legacy.Scd.LegacyScdPlugin(),

@@ -35,6 +35,8 @@
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="FormatFixtures\ftpz.ascd" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="FormatFixtures\my-documents.ascd" CopyToOutputDirectory="PreserveNewest"/>
         <None Include="..\SkyCD.Plugin.*.Tests\Fixtures\**\*" Link="FormatFixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"/>
         <None Include="..\SkyCD.Plugin.Legacy.Scd.Tests\Fixtures\Scd\*-sample.scd" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
