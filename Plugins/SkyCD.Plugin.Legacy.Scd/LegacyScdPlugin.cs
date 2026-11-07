@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Formatting;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Legacy.Scd;
@@ -16,7 +15,7 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
     public FileFormatDescriptor SupportedFormat =>
         new(
             FormatId: "legacy-scd",
-            DisplayName: "SkyCD Text Format",
+            DisplayName: "SkyCD Legacy Text/Binary Format",
             Extensions: [".scd"],
             MimeTypes: ["application/vnd.skycd.scd"],
             CanRead: true,
@@ -27,7 +26,20 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8, leaveOpen: true);
+            using var buffered = new MemoryStream();
+            await request.Source.CopyToAsync(buffered, cancellationToken);
+            buffered.Position = 0;
+            var signature = new byte[(int)Math.Min(buffered.Length, 12)];
+            buffered.ReadExactly(signature);
+            buffered.Position = 0;
+            if (Encoding.ASCII.GetString(signature).Equals("# SkyCD File", StringComparison.OrdinalIgnoreCase))
+            {
+                var binaryCatalog = LegacyScdBinaryReader.Read(buffered, cancellationToken);
+                request.Progress?.Report(100);
+                return new FileFormatReadResult { Success = true, Payload = binaryCatalog };
+            }
+
+            using var reader = new StreamReader(buffered, Encoding.UTF8, leaveOpen: true);
             var catalog = new LegacyScdCatalog();
             string? line;
             var processed = 0;
@@ -40,23 +52,10 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
                     continue;
                 }
 
-                var trimmed = line.Trim();
-                var sizeMatch = SizePrefix.Match(trimmed);
-                if (sizeMatch.Success)
-                {
-                    var size = SizeFormatting.TryParseBytes(sizeMatch.Groups["size"].Value, out var parsedBytes)
-                        ? (long?)parsedBytes
-                        : null;
-                    catalog.Entries.Add(new LegacyScdEntry
-                    {
-                        Path = sizeMatch.Groups["path"].Value.Trim(),
-                        SizeBytes = size
-                    });
-                }
-                else
-                {
-                    catalog.Entries.Add(new LegacyScdEntry { Path = trimmed });
-                }
+                if (line.Contains('\0'))
+                    throw new InvalidLegacyScdBinaryException("unrecognized binary header");
+
+                catalog.Entries.Add(ParseEntry(line.Trim()));
 
                 request.Progress?.Report(Math.Min(100, processed % 100));
             }
@@ -68,6 +67,26 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
         {
             return new FileFormatReadResult { Success = false, Error = exception.Message };
         }
+    }
+
+    internal static LegacyScdEntry ParseEntry(string path)
+    {
+        var segmentStart = path.LastIndexOf('\\') + 1;
+        var sizeMatch = SizePrefix.Match(path[segmentStart..]);
+        if (sizeMatch.Success && LegacyScdSize.TryParse(sizeMatch.Groups["size"].Value, out var parsedBytes))
+        {
+            return new LegacyScdEntry
+            {
+                Path = path[..segmentStart] + sizeMatch.Groups["path"].Value.Trim(),
+                SizeBytes = parsedBytes
+            };
+        }
+
+        var prefix = SizePrefix.Match(path);
+        if (prefix.Success && LegacyScdSize.TryParse(prefix.Groups["size"].Value, out var prefixBytes))
+            return new LegacyScdEntry { Path = prefix.Groups["path"].Value.Trim(), SizeBytes = prefixBytes };
+
+        return new LegacyScdEntry { Path = path, IsDirectory = true };
     }
 
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
@@ -84,8 +103,9 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
             for (var i = 0; i < catalog.Entries.Count; i++)
             {
                 var entry = catalog.Entries[i];
-                var line = entry.SizeBytes is > 0
-                    ? $"[{SizeFormatting.FormatBytes(entry.SizeBytes.Value, "0.##", removeSpace: true)}] {entry.Path}"
+                var segmentStart = entry.Path.LastIndexOf('\\') + 1;
+                var line = entry.SizeBytes is >= 0
+                    ? entry.Path[..segmentStart] + $"[{LegacyScdSize.Format(entry.SizeBytes.Value)}] " + entry.Path[segmentStart..]
                     : entry.Path;
                 await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
                 request.Progress?.Report((int)((i + 1d) / catalog.Entries.Count * 100d));
