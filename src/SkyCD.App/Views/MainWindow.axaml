@@ -110,7 +110,7 @@
             </Grid.ColumnDefinitions>
             <TreeView Grid.Column="0"
                       MinWidth="50"
-                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                       ItemsSource="{Binding TreeNodes}"
                       SelectedItem="{Binding SelectedTreeNode}"

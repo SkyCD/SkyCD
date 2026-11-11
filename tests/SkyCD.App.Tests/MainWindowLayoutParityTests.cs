@@ -30,7 +30,7 @@ public class MainWindowLayoutParityTests
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
 
-        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ScrollViewer.VerticalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains("ToolTip.Tip=\"{Binding Title}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Width=\"16\" Height=\"16\"", xaml, StringComparison.Ordinal);
@@ -47,6 +47,7 @@ public class MainWindowLayoutParityTests
         Assert.Contains("Property=\"MinHeight\" Value=\"20\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"TreeViewItem:selected:not(:focus)", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"TreeViewItem:selected:focus", stylesXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Selector=\"TreeViewItem:pointerover /template/ Border#SelectionBorder\"", stylesXaml, StringComparison.Ordinal);
     }
 
     [Fact]

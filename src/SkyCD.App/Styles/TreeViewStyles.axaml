@@ -24,8 +24,4 @@
         <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush4}" />
     </Style>
 
-    <Style Selector="TreeViewItem:pointerover /template/ Border#SelectionBorder">
-        <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
-    </Style>
-
 </Styles>
