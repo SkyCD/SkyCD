@@ -545,6 +545,62 @@ public class MainWindowViewModelTests
         Assert.NotEmpty(vm.BrowserItems);
         Assert.Equal("music", vm.SelectedTreeNode?.Key);
         Assert.Equal(vm.BrowserItems[0], vm.SelectedBrowserItem);
+        Assert.Single(vm.SelectedBrowserItems);
+        Assert.Equal(vm.BrowserItems[0], vm.SelectedBrowserItems[0]);
+    }
+
+    [Fact]
+    public void DeleteCommand_SingleItemAfterMultiSelection_DeletesOnlyTargetItem()
+    {
+        var vm = CreateViewModel();
+        var item1 = vm.BrowserItems[0];
+        var item2 = vm.BrowserItems[1];
+        var item3 = vm.BrowserItems[2];
+
+        // First select multiple items
+        vm.SelectedBrowserItems = new List<CatalogDocument> { item1, item2 };
+        Assert.Equal(2, vm.SelectedBrowserItems.Count);
+
+        // Then select only item1
+        vm.SelectedBrowserItems = new List<CatalogDocument> { item1 };
+        vm.ActivePane = ActivePane.Browser;
+
+        var originalCount = vm.BrowserItems.Count;
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == item1.Name);
+        Assert.Contains(vm.BrowserItems, item => item.Name == item2.Name);
+        Assert.Contains(vm.BrowserItems, item => item.Name == item3.Name);
+        Assert.Equal($"Deleted {item1.Name}.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteCommand_StaleSelectionFromOtherFolder_OnlyDeletesItemsInCurrentFolder()
+    {
+        var vm = CreateViewModel();
+        var libraryItem = vm.BrowserItems.First(item => item.Id == "movies");
+
+        // Navigate to music folder
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        vm.SelectedTreeNode = musicNode;
+        var musicItem = vm.BrowserItems.First();
+
+        // In case SelectedBrowserItems artificially had stale item from previous folder
+        vm.SelectedBrowserItems = new List<CatalogDocument> { libraryItem, musicItem };
+        vm.ActivePane = ActivePane.Browser;
+
+        var musicCountBefore = vm.BrowserItems.Count;
+        vm.DeleteItemCommand.Execute(null);
+
+        // Only musicItem should be deleted because libraryItem is not in current folder
+        Assert.Equal(musicCountBefore - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == musicItem.Name);
+        Assert.Equal($"Deleted {musicItem.Name}.", vm.StatusText);
+
+        // Switch back to library to ensure libraryItem was not deleted
+        vm.SelectedTreeNode = vm.TreeNodes[0];
+        Assert.Contains(vm.BrowserItems, item => item.Id == "movies");
     }
 
     [Fact]

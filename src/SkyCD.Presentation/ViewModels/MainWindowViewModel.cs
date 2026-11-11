@@ -1258,6 +1258,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             BrowserItems = [];
             SelectedBrowserItem = null;
+            SelectedBrowserItems = new List<CatalogDocument>();
             return;
         }
 
@@ -1276,6 +1277,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
                                   item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                               ?? refreshedItems.FirstOrDefault();
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
     }
 
     private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
@@ -1384,13 +1388,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (value is null)
         {
-            SelectedBrowserItems = new List<CatalogDocument>();
+            if (selectedBrowserItems.Count > 0)
+            {
+                SelectedBrowserItems = new List<CatalogDocument>();
+            }
         }
-
-        if (value is not null &&
-            !selectedBrowserItems
-                .OfType<CatalogDocument>()
-                .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
+        else if (selectedBrowserItems.Count <= 1 ||
+                 !selectedBrowserItems
+                     .OfType<CatalogDocument>()
+                     .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
         {
             SelectedBrowserItems = new List<CatalogDocument> { value };
         }
@@ -1415,10 +1421,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (value.Count > 0)
         {
-            SelectedBrowserItem = value[0] as CatalogDocument;
+            var first = value[0] as CatalogDocument;
+            if (!ReferenceEquals(selectedBrowserItem, first))
+            {
+                selectedBrowserItem = first;
+                OnPropertyChanged(nameof(SelectedBrowserItem));
+            }
+        }
+        else if (selectedBrowserItem is not null)
+        {
+            selectedBrowserItem = null;
+            OnPropertyChanged(nameof(SelectedBrowserItem));
         }
 
         OnPropertyChanged(nameof(IsDeleteEnabled));
+        OnPropertyChanged(nameof(IsPropertiesEnabled));
+        OnPropertyChanged(nameof(IsCopyEnabled));
+        OnPropertyChanged(nameof(IsCutEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
+        OpenPropertiesCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
+        ExpandSelectionCommand.NotifyCanExecuteChanged();
+        CollapseSelectionCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
@@ -2121,12 +2146,40 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()
     {
-        if (SelectedBrowserItems.Count > 0)
+        var validBrowserItems = BrowserItems;
+        if (validBrowserItems.Count == 0)
         {
-            return SelectedBrowserItems.OfType<CatalogDocument>().ToArray();
+            return [];
         }
 
-        return SelectedBrowserItem is null ? [] : [SelectedBrowserItem];
+        var validIds = new HashSet<string>(
+            validBrowserItems.Select(static item => item.Id).Where(static id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.Ordinal);
+
+        var validNames = new HashSet<string>(
+            validBrowserItems.Select(static item => item.Name),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (SelectedBrowserItems.Count > 0)
+        {
+            var selected = SelectedBrowserItems
+                .OfType<CatalogDocument>()
+                .Where(item => validIds.Contains(item.Id) || validNames.Contains(item.Name))
+                .ToArray();
+
+            if (selected.Length > 0)
+            {
+                return selected;
+            }
+        }
+
+        if (SelectedBrowserItem is not null &&
+            (validIds.Contains(SelectedBrowserItem.Id) || validNames.Contains(SelectedBrowserItem.Name)))
+        {
+            return [SelectedBrowserItem];
+        }
+
+        return [];
     }
 
     private static bool IsStatusApplicableToItem(StatusVariantDocument status, CatalogDocument item)

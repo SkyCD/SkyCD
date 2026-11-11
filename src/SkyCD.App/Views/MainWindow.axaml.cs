@@ -294,7 +294,12 @@ public partial class MainWindow : Window
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
         if (listBoxItem?.DataContext is CatalogDocument item)
         {
-            subscribedViewModel.SelectedBrowserItem = item;
+            var currentSelected = subscribedViewModel.SelectedBrowserItems.OfType<CatalogDocument>().ToList();
+            if (!currentSelected.Any(sel => string.Equals(sel.Id, item.Id, StringComparison.Ordinal)))
+            {
+                subscribedViewModel.SelectedBrowserItem = item;
+                subscribedViewModel.SelectedBrowserItems = new List<CatalogDocument> { item };
+            }
             return;
         }
 

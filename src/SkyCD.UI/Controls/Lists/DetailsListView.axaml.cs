@@ -61,8 +61,16 @@ public partial class DetailsListView : UserControl
                     return;
                 }
 
-                SelectedItem = listBox.SelectedItem;
-                SelectedItems = listBox.SelectedItems?.Cast<object>().ToList();
+                isUpdatingSelection = true;
+                try
+                {
+                    SelectedItem = listBox.SelectedItem;
+                    SelectedItems = listBox.SelectedItems?.Cast<object>().ToList();
+                }
+                finally
+                {
+                    isUpdatingSelection = false;
+                }
             };
         }
         Loaded += (_, _) => AttachScrollViewer();
@@ -323,26 +331,39 @@ public partial class DetailsListView : UserControl
                     {
                         if (SelectedItems is { Count: > 0 } && listBox.Selection is not null)
                         {
-                            listBox.Selection.Clear();
-                            var items = listBox.ItemsSource?.Cast<object>().ToList();
-                            if (items is not null)
+                            var currentSelection = listBox.SelectedItems?.Cast<object>().ToHashSet();
+                            var newSelection = SelectedItems.Cast<object>().Where(static x => x != null).ToHashSet();
+                            if (currentSelection == null || !currentSelection.SetEquals(newSelection))
                             {
-                                foreach (var sel in SelectedItems)
+                                listBox.Selection.Clear();
+                                var items = listBox.ItemsSource?.Cast<object>().ToList();
+                                if (items is not null)
                                 {
-                                    if (sel is not null)
+                                    foreach (var sel in SelectedItems)
                                     {
-                                        var idx = items.IndexOf(sel);
-                                        if (idx >= 0)
+                                        if (sel is not null)
                                         {
-                                            listBox.Selection.Select(idx);
+                                            var idx = items.IndexOf(sel);
+                                            if (idx >= 0)
+                                            {
+                                                listBox.Selection.Select(idx);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                        else if (SelectedItems is { Count: 0 })
+                        {
+                            listBox.Selection?.Clear();
+                            listBox.SelectedItem = null;
+                        }
                         else
                         {
-                            listBox.SelectedItem = SelectedItem;
+                            if (!Equals(listBox.SelectedItem, SelectedItem))
+                            {
+                                listBox.SelectedItem = SelectedItem;
+                            }
                         }
                     }
                     finally
