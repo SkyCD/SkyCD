@@ -94,6 +94,24 @@ public class MainWindowLayoutParityTests
         Assert.Contains("Selector=\"ct|ClassicToolbarButton:disabled\"", stylesXaml, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("new.png")]
+    [InlineData("open.png")]
+    [InlineData("save.png")]
+    public void ToolbarIconAssets_AreValidPngFiles(string fileName)
+    {
+        var root = FindRepoRoot();
+        var filePath = Path.Combine(root, "src", "SkyCD.App", "Assets", fileName);
+
+        Assert.True(File.Exists(filePath), $"File {filePath} does not exist.");
+        var bytes = File.ReadAllBytes(filePath);
+        Assert.True(bytes.Length > 8);
+
+        // PNG Magic: 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A
+        byte[] expectedPngHeader = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        Assert.Equal(expectedPngHeader, bytes[..8]);
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();
