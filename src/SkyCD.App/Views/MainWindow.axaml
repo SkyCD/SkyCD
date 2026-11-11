@@ -122,7 +122,7 @@
                 </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Spacing="4" ToolTip.Tip="{Binding Title}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="{Binding Title}">
                             <Image Width="16" Height="16"
                                    VerticalAlignment="Center"
                                    Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
