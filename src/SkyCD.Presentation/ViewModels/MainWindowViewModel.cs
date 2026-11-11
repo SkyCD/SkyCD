@@ -997,6 +997,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return TryResolveNodeFromBrowserSelection(out _);
     }
 
+    [RelayCommand(CanExecute = nameof(CanNavigateToParentFolder))]
+    private void NavigateToParentFolder()
+    {
+        if (SelectedTreeNode is null)
+        {
+            return;
+        }
+
+        var parentNode = FindParentTreeNode(TreeNodes, SelectedTreeNode.Key);
+        if (parentNode is not null)
+        {
+            SelectedTreeNode = parentNode;
+            StatusText = LocalizationService.Current.Format(TextKeys.NavigatedTo, parentNode.Title);
+        }
+    }
+
+    private bool CanNavigateToParentFolder()
+    {
+        return SelectedTreeNode is not null && FindParentTreeNode(TreeNodes, SelectedTreeNode.Key) is not null;
+    }
+
     [RelayCommand(CanExecute = nameof(IsCutEnabled))]
     private void Cut()
     {
@@ -1353,6 +1374,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
+        NavigateToParentFolderCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();

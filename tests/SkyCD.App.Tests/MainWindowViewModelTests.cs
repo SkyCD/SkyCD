@@ -985,6 +985,37 @@ public class MainWindowViewModelTests
         Assert.Equal("Sample.txt", vm.BrowserItems[0].Name);
     }
 
+    [Fact]
+    public void NavigateToParentFolderCommand_NavigatesToParentAndUpdatesStatus()
+    {
+        var vm = CreateViewModel();
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        var classicalNode = musicNode.Children.Single(node => node.Key == "classical-collection");
+
+        vm.SelectedTreeNode = classicalNode;
+        Assert.True(vm.NavigateToParentFolderCommand.CanExecute(null));
+
+        vm.NavigateToParentFolderCommand.Execute(null);
+        Assert.Equal("music", vm.SelectedTreeNode?.Key);
+        Assert.Equal("Navigated to Music.", vm.StatusText);
+
+        Assert.True(vm.NavigateToParentFolderCommand.CanExecute(null));
+        vm.NavigateToParentFolderCommand.Execute(null);
+        Assert.Equal("library", vm.SelectedTreeNode?.Key);
+        Assert.Equal("Navigated to Library.", vm.StatusText);
+
+        Assert.False(vm.NavigateToParentFolderCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void NavigateToParentFolderCommand_WhenAtRootNode_CannotExecute()
+    {
+        var vm = CreateViewModel();
+        Assert.Equal("library", vm.SelectedTreeNode?.Key);
+
+        Assert.False(vm.NavigateToParentFolderCommand.CanExecute(null));
+    }
+
     private static MainWindowViewModel CreateViewModel()
     {
         return MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
