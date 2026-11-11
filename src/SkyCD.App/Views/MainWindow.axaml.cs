@@ -795,7 +795,7 @@ public partial class MainWindow : Window
                 Height);
         }
 
-        if (options.Window.TreePaneWidth is >= 160)
+        if (options.Window.TreePaneWidth is > 0)
         {
             TreePaneColumn.Width = new GridLength(options.Window.TreePaneWidth.Value, GridUnitType.Pixel);
         }

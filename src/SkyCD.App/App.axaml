@@ -9,5 +9,6 @@
         <StyleInclude Source="avares://SkyCD.App/Styles/TabControlStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/IconStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/ButtonStyles.axaml" />
+        <StyleInclude Source="avares://SkyCD.App/Styles/TreeViewStyles.axaml" />
     </Application.Styles>
 </Application>

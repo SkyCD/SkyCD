@@ -13,8 +13,10 @@
         x:Name="RootWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/skycd.ico"
-        MinWidth="700"
-        MinHeight="450"
+        Width="503"
+        Height="273"
+        MinWidth="320"
+        MinHeight="200"
         Title="SkyCD">
 
     <Window.Resources>
@@ -102,12 +104,14 @@
 
         <Grid x:Name="MainLayoutGrid" RowDefinitions="*" IsEnabled="{Binding IsCatalogInteractionEnabled}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" MinWidth="160" />
-                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="121" MinWidth="50" />
+                <ColumnDefinition Width="3" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TreeView Grid.Column="0"
-                      MinWidth="160"
+                      MinWidth="50"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                       ItemsSource="{Binding TreeNodes}"
                       SelectedItem="{Binding SelectedTreeNode}"
                       ContextRequested="OnTreeContextRequested">
@@ -118,10 +122,11 @@
                 </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
+                        <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="{Binding Title}">
                             <Image Width="16" Height="16"
+                                   VerticalAlignment="Center"
                                    Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
-                            <TextBlock Text="{Binding Title}" />
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
                         </StackPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
@@ -135,13 +140,13 @@
             </TreeView>
 
             <GridSplitter Grid.Column="1"
-                          Width="4"
+                          Width="3"
                           ResizeDirection="Columns"
-                          Background="#CFCFCF"
+                          Background="{DynamicResource ThemeControlMidBrush}"
                           ShowsPreview="True" />
 
             <cl:BrowserItemsView Grid.Column="2"
-                                 ListMinWidth="240"
+                                 ListMinWidth="120"
                                  ItemsSource="{Binding BrowserItems}"
                                  SelectedItem="{Binding SelectedBrowserItem}"
                                  SelectedItems="{Binding SelectedBrowserItems}"
