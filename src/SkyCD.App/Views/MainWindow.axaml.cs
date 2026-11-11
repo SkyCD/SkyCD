@@ -170,18 +170,18 @@ public partial class MainWindow : Window
 
     private void OnBrowserContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is not ListBox listBox || subscribedViewModel is null)
+        if (sender is not Control control || subscribedViewModel is null)
         {
             return;
         }
 
-        if (!e.TryGetPosition(listBox, out var point))
+        if (!e.TryGetPosition(control, out var point))
         {
             e.Handled = subscribedViewModel.SelectedBrowserItem is null;
             return;
         }
 
-        var hit = listBox.InputHitTest(point) as Visual;
+        var hit = control.InputHitTest(point) as Visual;
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
         if (listBoxItem?.DataContext is CatalogDocument item)
         {

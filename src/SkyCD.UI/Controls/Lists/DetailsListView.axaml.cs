@@ -12,6 +12,8 @@ namespace SkyCD.UI.Controls.Lists;
 
 public partial class DetailsListView : UserControl
 {
+    private bool isUpdatingSelection;
+
     public static readonly StyledProperty<IEnumerable?> ItemsSourceProperty =
         AvaloniaProperty.Register<DetailsListView, IEnumerable?>(nameof(ItemsSource));
 
@@ -46,8 +48,71 @@ public partial class DetailsListView : UserControl
             listBox.DoubleTapped += (s, e) => DoubleTapped?.Invoke(this, e);
             listBox.SelectionChanged += (_, _) =>
             {
+                if (isUpdatingSelection)
+                {
+                    return;
+                }
+
+                SelectedItem = listBox.SelectedItem;
                 SelectedItems = listBox.SelectedItems?.Cast<object>().ToList();
             };
+        }
+    }
+
+    public void ScrollIntoView(object? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        var listBox = this.FindControl<ListBox>("InnerListBox");
+        listBox?.ScrollIntoView(item);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == SelectedItemProperty || change.Property == SelectedItemsProperty)
+        {
+            if (!isUpdatingSelection)
+            {
+                var listBox = this.FindControl<ListBox>("InnerListBox");
+                if (listBox is not null)
+                {
+                    isUpdatingSelection = true;
+                    try
+                    {
+                        if (SelectedItems is { Count: > 0 } && listBox.Selection is not null)
+                        {
+                            listBox.Selection.Clear();
+                            var items = listBox.ItemsSource?.Cast<object>().ToList();
+                            if (items is not null)
+                            {
+                                foreach (var sel in SelectedItems)
+                                {
+                                    if (sel is not null)
+                                    {
+                                        var idx = items.IndexOf(sel);
+                                        if (idx >= 0)
+                                        {
+                                            listBox.Selection.Select(idx);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            listBox.SelectedItem = SelectedItem;
+                        }
+                    }
+                    finally
+                    {
+                        isUpdatingSelection = false;
+                    }
+                }
+            }
         }
     }
 
