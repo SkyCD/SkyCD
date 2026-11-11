@@ -45,12 +45,10 @@ public class MainWindowLayoutParityTests
         Assert.Contains("<StyleInclude Source=\"avares://SkyCD.App/Styles/TreeViewStyles.axaml\" />", appXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"TreeViewItem\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Property=\"MinHeight\" Value=\"24\"", stylesXaml, StringComparison.Ordinal);
-        Assert.Contains("Selector=\"TreeViewItem:selected:not(:focus)", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Selector=\"TreeViewItem:selected /template/ Border#SelectionBorder\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"TreeViewItem:selected:focus", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Value=\"{DynamicResource TreeViewActiveSelectionBackgroundBrush}\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Value=\"{DynamicResource TreeViewActiveSelectionForegroundBrush}\"", stylesXaml, StringComparison.Ordinal);
-        Assert.Contains("Value=\"{DynamicResource TreeViewInactiveSelectionBackgroundBrush}\"", stylesXaml, StringComparison.Ordinal);
-        Assert.Contains("Value=\"{DynamicResource TreeViewInactiveSelectionForegroundBrush}\"", stylesXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Selector=\"TreeViewItem:pointerover /template/ Border#SelectionBorder\"", stylesXaml, StringComparison.Ordinal);
     }
 
