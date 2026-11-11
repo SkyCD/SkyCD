@@ -25,7 +25,20 @@
                          Value="{Binding ProgressValue, ElementName=Root}"
                          VerticalAlignment="Center"
                          Margin="2,0,4,0"
-                         IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
+                         IsVisible="{Binding IsProgressVisible, ElementName=Root}">
+                <ProgressBar.Foreground>
+                    <DrawingBrush TileMode="Tile"
+                                  SourceRect="0,0,8,14"
+                                  DestinationRect="0,0,8,14">
+                        <DrawingBrush.Drawing>
+                            <DrawingGroup>
+                                <GeometryDrawing Brush="{DynamicResource ThemeAccentBrush}"
+                                                 Geometry="M 0,0 L 6,0 L 6,14 L 0,14 Z" />
+                            </DrawingGroup>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </ProgressBar.Foreground>
+            </ProgressBar>
             <TextBlock Grid.Column="3"
                        Margin="4,0,2,0"
                        VerticalAlignment="Center"

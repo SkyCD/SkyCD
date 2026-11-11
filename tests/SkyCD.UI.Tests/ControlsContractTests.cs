@@ -181,5 +181,11 @@ public class ControlsContractTests
         Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[1].Width.GridUnitType);
         Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[2].Width.GridUnitType);
         Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[3].Width.GridUnitType);
+
+        var progressBar = Assert.IsType<ProgressBar>(grid.Children[2]);
+        Assert.Equal(100, progressBar.Width);
+        Assert.Equal(14, progressBar.Height);
+        var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(progressBar.Foreground);
+        Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
     }
 }
