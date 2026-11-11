@@ -3,13 +3,43 @@
              xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
              x:Class="SkyCD.UI.Controls.Lists.BrowserItemsView"
              x:Name="Root">
+    <UserControl.Styles>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}" />
+            <Setter Property="Padding" Value="2" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Focusable" Value="True" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightLowBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:focus">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightHighBrush}" />
+        </Style>
+        <Style Selector="ListBox:focus ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightHighBrush}" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid>
         <cl:DetailsListView x:Name="DetailsListView"
                             IsVisible="False"
                             ListMinWidth="{Binding ListMinWidth, ElementName=Root}"
                             ItemsSource="{Binding ItemsSource, ElementName=Root}"
-                            SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
-                            SelectedItems="{Binding SelectedItems, ElementName=Root, Mode=TwoWay}"
                             ListContextMenu="{Binding ListContextMenu, ElementName=Root}"
                             HeaderContent="{Binding HeaderContent, ElementName=Root}"
                             RowTemplate="{Binding DetailsRowTemplate, ElementName=Root}" />
@@ -19,11 +49,12 @@
                  IsVisible="False"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
                  SelectionMode="Multiple"
-                 SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
-                 ContextMenu="{Binding ListContextMenu, ElementName=Root}">
+                 ContextMenu="{Binding ListContextMenu, ElementName=Root}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" />
+                    <WrapPanel Orientation="Vertical" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
         </ListBox>
@@ -33,8 +64,9 @@
                  IsVisible="False"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
                  SelectionMode="Multiple"
-                 SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
-                 ContextMenu="{Binding ListContextMenu, ElementName=Root}">
+                 ContextMenu="{Binding ListContextMenu, ElementName=Root}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <WrapPanel Orientation="Horizontal" />

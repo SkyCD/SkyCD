@@ -10,6 +10,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 
 namespace SkyCD.UI.Controls.Lists;
@@ -24,6 +25,7 @@ public partial class BrowserItemsView : UserControl
     private readonly DetailsListView? detailsListView;
     private readonly ListBox? listModeListBox;
     private readonly ListBox? iconGridListBox;
+    private bool isUpdatingSelection;
 
     public static readonly StyledProperty<IEnumerable?> ItemsSourceProperty =
         AvaloniaProperty.Register<BrowserItemsView, IEnumerable?>(nameof(ItemsSource));
@@ -88,19 +90,55 @@ public partial class BrowserItemsView : UserControl
         detailsListView.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
         detailsListView.PropertyChanged += (_, e) =>
         {
-            if (e.Property == DetailsListView.SelectedItemsProperty)
+            if (isUpdatingSelection)
             {
-                SelectedItems = detailsListView.SelectedItems;
+                return;
+            }
+
+            if (ViewMode == BrowserViewMode.Details)
+            {
+                if (e.Property == DetailsListView.SelectedItemProperty)
+                {
+                    SelectedItem = detailsListView.SelectedItem;
+                }
+                else if (e.Property == DetailsListView.SelectedItemsProperty)
+                {
+                    SelectedItems = detailsListView.SelectedItems;
+                }
             }
         };
 
         listModeListBox.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         listModeListBox.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
-        listModeListBox.SelectionChanged += (_, _) => SelectedItems = listModeListBox.SelectedItems;
+        listModeListBox.SelectionChanged += (_, _) =>
+        {
+            if (isUpdatingSelection)
+            {
+                return;
+            }
+
+            if (ViewMode == BrowserViewMode.List)
+            {
+                SelectedItem = listModeListBox.SelectedItem;
+                SelectedItems = listModeListBox.SelectedItems?.Cast<object>().ToList();
+            }
+        };
 
         iconGridListBox.DoubleTapped += (_, e) => DoubleTapped?.Invoke(this, e);
         iconGridListBox.ContextRequested += (_, e) => ContextRequested?.Invoke(this, e);
-        iconGridListBox.SelectionChanged += (_, _) => SelectedItems = iconGridListBox.SelectedItems;
+        iconGridListBox.SelectionChanged += (_, _) =>
+        {
+            if (isUpdatingSelection)
+            {
+                return;
+            }
+
+            if (ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons)
+            {
+                SelectedItem = iconGridListBox.SelectedItem;
+                SelectedItems = iconGridListBox.SelectedItems?.Cast<object>().ToList();
+            }
+        };
 
         UpdateViewMode();
         UpdateListTemplate();
@@ -181,6 +219,45 @@ public partial class BrowserItemsView : UserControl
         {
             UpdateViewMode();
         }
+        else if (change.Property == SelectedItemProperty)
+        {
+            if (!isUpdatingSelection)
+            {
+                var active = GetActiveControl();
+                if (active is not null)
+                {
+                    isUpdatingSelection = true;
+                    try
+                    {
+                        SyncSelectionToControl(active, SelectedItem, SelectedItems);
+                        RevealSelectedItem(active, SelectedItem);
+                    }
+                    finally
+                    {
+                        isUpdatingSelection = false;
+                    }
+                }
+            }
+        }
+        else if (change.Property == SelectedItemsProperty)
+        {
+            if (!isUpdatingSelection)
+            {
+                var active = GetActiveControl();
+                if (active is not null)
+                {
+                    isUpdatingSelection = true;
+                    try
+                    {
+                        SyncSelectionToControl(active, SelectedItem, SelectedItems);
+                    }
+                    finally
+                    {
+                        isUpdatingSelection = false;
+                    }
+                }
+            }
+        }
         else if (change.Property == IconConverterProperty || change.Property == StatusIconConverterProperty || change.Property == DetailsColumnsProperty)
         {
             UpdateListTemplate();
@@ -189,7 +266,88 @@ public partial class BrowserItemsView : UserControl
         }
         else if (change.Property == BrowserGridItemWidthProperty || change.Property == BrowserGridItemHeightProperty)
         {
+            UpdateListTemplate();
             UpdateIconGridTemplate();
+        }
+    }
+
+    private Control? GetActiveControl()
+    {
+        return ViewMode switch
+        {
+            BrowserViewMode.Details => detailsListView,
+            BrowserViewMode.List => listModeListBox,
+            _ => iconGridListBox
+        };
+    }
+
+    private void SyncSelectionToControl(Control? control, object? selectedItem, IList? selectedItems)
+    {
+        if (control is null)
+        {
+            return;
+        }
+
+        if (control is DetailsListView details)
+        {
+            var inner = details.FindControl<ListBox>("InnerListBox");
+            if (inner is not null)
+            {
+                ApplySelectionToListBox(inner, selectedItem, selectedItems);
+            }
+
+            details.SelectedItem = selectedItem;
+            details.SelectedItems = selectedItems;
+        }
+        else if (control is ListBox listBox)
+        {
+            ApplySelectionToListBox(listBox, selectedItem, selectedItems);
+        }
+    }
+
+    private static void ApplySelectionToListBox(ListBox listBox, object? selectedItem, IList? selectedItems)
+    {
+        if (selectedItems is { Count: > 0 } && listBox.Selection is not null)
+        {
+            listBox.Selection.Clear();
+            var items = listBox.ItemsSource?.Cast<object>().ToList();
+            if (items is not null)
+            {
+                foreach (var sel in selectedItems)
+                {
+                    if (sel is null)
+                    {
+                        continue;
+                    }
+
+                    var idx = items.IndexOf(sel);
+                    if (idx >= 0)
+                    {
+                        listBox.Selection.Select(idx);
+                    }
+                }
+            }
+        }
+        else
+        {
+            listBox.SelectedItem = selectedItem;
+        }
+    }
+
+    private static void RevealSelectedItem(Control? control, object? item)
+    {
+        if (item is null || control is null)
+        {
+            return;
+        }
+
+        if (control is DetailsListView details)
+        {
+            details.ScrollIntoView(item);
+        }
+        else if (control is ListBox listBox)
+        {
+            listBox.ScrollIntoView(item);
         }
     }
 
@@ -200,17 +358,35 @@ public partial class BrowserItemsView : UserControl
             return;
         }
 
+        var currentItem = SelectedItem;
+        var currentItems = SelectedItems;
+
         detailsListView.IsVisible = ViewMode == BrowserViewMode.Details;
         listModeListBox.IsVisible = ViewMode == BrowserViewMode.List;
         iconGridListBox.IsVisible =
             ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons;
         IsTilesMode = ViewMode == BrowserViewMode.Tiles;
-        SelectedItems = ViewMode switch
+
+        UpdateIconGridTemplate();
+
+        var activeControl = GetActiveControl();
+        if (activeControl is not null)
         {
-            BrowserViewMode.Details => detailsListView.SelectedItems,
-            BrowserViewMode.List => listModeListBox.SelectedItems,
-            _ => iconGridListBox.SelectedItems
-        };
+            isUpdatingSelection = true;
+            try
+            {
+                SyncSelectionToControl(activeControl, currentItem, currentItems);
+            }
+            finally
+            {
+                isUpdatingSelection = false;
+            }
+
+            SelectedItem = currentItem;
+            SelectedItems = currentItems;
+
+            RevealSelectedItem(activeControl, currentItem);
+        }
     }
 
     private void UpdateDetailsTemplate()
@@ -234,20 +410,29 @@ public partial class BrowserItemsView : UserControl
 
         listModeListBox.ItemTemplate = new FuncDataTemplate<object?>((item, _) =>
         {
-            var stack = new StackPanel
+            var panel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 6,
-                Margin = new Thickness(4, 2)
+                Margin = new Thickness(4, 2),
+                Height = 22,
+                MinWidth = 120,
+                MaxWidth = 240,
+                VerticalAlignment = VerticalAlignment.Center
             };
 
-            stack.Children.Add(BuildIconWithStatusIndicator(14, 14));
+            panel.Children.Add(BuildIconWithStatusIndicator(16, 16));
 
-            var name = new TextBlock { FontSize = 13 };
+            var name = new TextBlock
+            {
+                FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
             name.Bind(TextBlock.TextProperty, new Binding("Name"));
-            stack.Children.Add(name);
+            panel.Children.Add(name);
 
-            return stack;
+            return panel;
         });
     }
 
@@ -258,43 +443,129 @@ public partial class BrowserItemsView : UserControl
             return;
         }
 
-        iconGridListBox.ItemTemplate = new FuncDataTemplate<object?>((item, _) =>
+        iconGridListBox.ItemTemplate = ViewMode switch
         {
-            var border = new Border
+            BrowserViewMode.SmallIcons => BuildSmallIconsTemplate(),
+            BrowserViewMode.LargeIcons => BuildLargeIconsTemplate(),
+            BrowserViewMode.Tiles => BuildTilesTemplate(),
+            _ => BuildTilesTemplate()
+        };
+    }
+
+    private IDataTemplate BuildSmallIconsTemplate()
+    {
+        return new FuncDataTemplate<object?>((item, _) =>
+        {
+            var panel = new StackPanel
             {
-                Width = BrowserGridItemWidth,
-                Height = BrowserGridItemHeight,
-                Margin = new Thickness(6),
-                Padding = new Thickness(8),
-                BorderBrush = new SolidColorBrush(Color.Parse("#D0D0D0")),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4)
+                Orientation = Orientation.Horizontal,
+                Spacing = 6,
+                Margin = new Thickness(4, 2),
+                Height = 22,
+                MinWidth = 100,
+                MaxWidth = BrowserGridItemWidth > 0 ? BrowserGridItemWidth : 160,
+                VerticalAlignment = VerticalAlignment.Center
             };
 
-            var stack = new StackPanel();
-            border.Child = stack;
+            panel.Children.Add(BuildIconWithStatusIndicator(16, 16));
 
-            stack.Children.Add(BuildIconWithStatusIndicator(32, 32, HorizontalAlignment.Center));
-
-            var name = new TextBlock { TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
+            var name = new TextBlock
+            {
+                FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
             name.Bind(TextBlock.TextProperty, new Binding("Name"));
-            stack.Children.Add(name);
+            panel.Children.Add(name);
+
+            return panel;
+        });
+    }
+
+    private IDataTemplate BuildLargeIconsTemplate()
+    {
+        return new FuncDataTemplate<object?>((item, _) =>
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                Margin = new Thickness(4),
+                Width = BrowserGridItemWidth > 0 ? Math.Min(BrowserGridItemWidth, 120) : 90,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            panel.Children.Add(BuildIconWithStatusIndicator(32, 32, HorizontalAlignment.Center));
+
+            var name = new TextBlock
+            {
+                FontSize = 12,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                MaxLines = 2,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(0, 4, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            name.Bind(TextBlock.TextProperty, new Binding("Name"));
+            panel.Children.Add(name);
+
+            return panel;
+        });
+    }
+
+    private IDataTemplate BuildTilesTemplate()
+    {
+        return new FuncDataTemplate<object?>((item, _) =>
+        {
+            var grid = new Grid
+            {
+                Margin = new Thickness(4),
+                Width = BrowserGridItemWidth > 0 ? BrowserGridItemWidth : 260,
+                Height = BrowserGridItemHeight > 0 ? BrowserGridItemHeight : 60,
+                ColumnDefinitions = new ColumnDefinitions("Auto,*")
+            };
+
+            var iconContainer = BuildIconWithStatusIndicator(32, 32, HorizontalAlignment.Left);
+            iconContainer.Margin = new Thickness(0, 0, 8, 0);
+            iconContainer.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(iconContainer, 0);
+            grid.Children.Add(iconContainer);
 
             var details = new StackPanel
             {
-                Margin = new Thickness(0, 4, 0, 0),
-                IsVisible = IsTilesMode
+                VerticalAlignment = VerticalAlignment.Center
             };
-            var type = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, FontSize = 12 };
+
+            var name = new TextBlock
+            {
+                FontSize = 13,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            name.Bind(TextBlock.TextProperty, new Binding("Name"));
+            details.Children.Add(name);
+
+            var type = new TextBlock
+            {
+                FontSize = 11,
+                Opacity = 0.75,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
             type.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
             details.Children.Add(type);
 
-            var size = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, FontSize = 12 };
+            var size = new TextBlock
+            {
+                FontSize = 11,
+                Opacity = 0.75,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
             size.Bind(TextBlock.TextProperty, new Binding("DisplaySize"));
             details.Children.Add(size);
-            stack.Children.Add(details);
 
-            return border;
+            Grid.SetColumn(details, 1);
+            grid.Children.Add(details);
+
+            return grid;
         });
     }
 
@@ -319,12 +590,14 @@ public partial class BrowserItemsView : UserControl
             grid.Children.Add(text);
         }
 
-        return new Border
+        var border = new Border
         {
             BorderThickness = new Thickness(0, 0, 0, 1),
             Padding = new Thickness(4, 2),
             Child = grid
         };
+        border.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
+        return border;
     }
 
     private IDataTemplate BuildDetailsRowTemplate(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
@@ -346,7 +619,9 @@ public partial class BrowserItemsView : UserControl
                 var column = detailsColumns[i];
                 var valueCell = new TextBlock
                 {
-                    HorizontalAlignment = column.ValueAlignment
+                    HorizontalAlignment = column.ValueAlignment,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis
                 };
                 if (column.ValuePath == "DisplayType")
                 {

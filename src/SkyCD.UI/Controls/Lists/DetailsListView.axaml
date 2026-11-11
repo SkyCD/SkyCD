@@ -2,6 +2,39 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SkyCD.UI.Controls.Lists.DetailsListView"
              x:Name="Root">
+    <UserControl.Styles>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Focusable" Value="True" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightLowBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:focus">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightHighBrush}" />
+        </Style>
+        <Style Selector="ListBox:focus ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightHighBrush}" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto,*">
         <ContentPresenter Content="{Binding HeaderContent, ElementName=Root}" />
         <ListBox x:Name="InnerListBox"
@@ -9,7 +42,6 @@
                  MinWidth="{Binding ListMinWidth, ElementName=Root}"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
                  SelectionMode="Multiple"
-                 SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
                  ItemTemplate="{Binding RowTemplate, ElementName=Root}"
                  ContextMenu="{Binding ListContextMenu, ElementName=Root}" />
     </Grid>

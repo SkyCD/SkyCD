@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
@@ -274,6 +275,50 @@ public class MainWindowViewModelTests
                 }
                 .Count(c => c);
             Assert.Equal(1, checkedCount);
+        }
+    }
+
+    [Fact]
+    public void ViewModeSwitching_PreservesSelectedBrowserItemAndMultiSelection()
+    {
+        var vm = CreateViewModel();
+        var moviesItem = vm.BrowserItems.First();
+        var musicItem = vm.BrowserItems.Last();
+
+        vm.SelectedBrowserItem = moviesItem;
+        vm.SelectedBrowserItems = new List<CatalogDocument> { moviesItem, musicItem };
+
+        var modes = new[] { "List", "SmallIcons", "LargeIcons", "Tiles", "Details" };
+        foreach (var mode in modes)
+        {
+            vm.SetViewModeCommand.Execute(mode);
+            Assert.Same(moviesItem, vm.SelectedBrowserItem);
+            Assert.Equal(2, vm.SelectedBrowserItems.Count);
+            Assert.True(vm.IsDeleteEnabled);
+            Assert.True(vm.IsCopyEnabled);
+            Assert.True(vm.IsPropertiesEnabled);
+        }
+    }
+
+    [Fact]
+    public void BrowserCommands_TargetSelectionConsistentlyAcrossAllViewModes()
+    {
+        var modes = new[] { "Details", "List", "SmallIcons", "LargeIcons", "Tiles" };
+        foreach (var mode in modes)
+        {
+            var vm = CreateViewModel();
+            vm.SetViewModeCommand.Execute(mode);
+
+            var item = vm.BrowserItems.First();
+            vm.SelectedBrowserItem = item;
+
+            // Copy command targets selection
+            vm.CopyCommand.Execute(null);
+            Assert.Same(item, vm.ClipboardItem);
+
+            // Delete command targets selection
+            vm.DeleteItemCommand.Execute(null);
+            Assert.DoesNotContain(vm.BrowserItems, doc => doc.Name == item.Name);
         }
     }
 
