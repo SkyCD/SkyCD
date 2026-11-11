@@ -464,6 +464,77 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void DeleteCommand_MultiSelection_RemovesAllSelectedItemsAndFormatsStatus()
+    {
+        var vm = CreateViewModel();
+        var item1 = vm.BrowserItems[0];
+        var item2 = vm.BrowserItems[1];
+        vm.SelectedBrowserItems = new List<CatalogDocument> { item1, item2 };
+        vm.ActivePane = ActivePane.Browser;
+
+        var originalCount = vm.BrowserItems.Count;
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal(originalCount - 2, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == item1.Name);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == item2.Name);
+        Assert.Equal($"Deleted {item1.Name}, {item2.Name}.", vm.StatusText);
+        Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
+    public void DeleteCommand_TreeSelection_RemovesTreeNodeAndSelectsParent()
+    {
+        var vm = CreateViewModel();
+        var libraryNode = vm.TreeNodes.Single();
+        var moviesNode = libraryNode.Children.Single(node => node.Key == "movies");
+        vm.SelectedTreeNode = moviesNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        Assert.True(vm.DeleteItemCommand.CanExecute(null));
+        Assert.True(vm.IsDeleteEnabled);
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("Deleted Movies.", vm.StatusText);
+        Assert.Equal("library", vm.SelectedTreeNode?.Key);
+        Assert.DoesNotContain(vm.TreeNodes.Single().Children, child => child.Key == "movies");
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Id == "movies");
+        Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
+    public void DeleteCommand_SyntheticRoot_IsDisabled()
+    {
+        var vm = CreateViewModel();
+        var libraryNode = vm.TreeNodes.Single();
+        vm.SelectedTreeNode = libraryNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        Assert.False(vm.DeleteItemCommand.CanExecute(null));
+        Assert.False(vm.IsDeleteEnabled);
+    }
+
+    [Fact]
+    public void DeleteCommand_TreeFocus_IgnoresStaleBrowserSelection()
+    {
+        var vm = CreateViewModel();
+        var libraryNode = vm.TreeNodes.Single();
+        var musicNode = libraryNode.Children.Single(node => node.Key == "music");
+        vm.SelectedTreeNode = musicNode;
+
+        var browserItemBefore = vm.BrowserItems.First();
+        vm.SelectedBrowserItem = browserItemBefore;
+        vm.ActivePane = ActivePane.Tree;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("Deleted Music.", vm.StatusText);
+        Assert.Equal("library", vm.SelectedTreeNode?.Key);
+        Assert.DoesNotContain(vm.TreeNodes.Single().Children, child => child.Key == "music");
+    }
+
+    [Fact]
     public void SelectingDifferentTreeNode_RefreshesListAndSelectsFirstItem()
     {
         var vm = CreateViewModel();
@@ -474,6 +545,90 @@ public class MainWindowViewModelTests
         Assert.NotEmpty(vm.BrowserItems);
         Assert.Equal("music", vm.SelectedTreeNode?.Key);
         Assert.Equal(vm.BrowserItems[0], vm.SelectedBrowserItem);
+        Assert.Single(vm.SelectedBrowserItems);
+        Assert.Equal(vm.BrowserItems[0], vm.SelectedBrowserItems[0]);
+    }
+
+    [Fact]
+    public void DeleteCommand_SingleItemAfterMultiSelection_DeletesOnlyTargetItem()
+    {
+        var vm = CreateViewModel();
+        var item1 = vm.BrowserItems[0];
+        var item2 = vm.BrowserItems[1];
+        var item3 = vm.BrowserItems[2];
+
+        // First select multiple items
+        vm.SelectedBrowserItems = new List<CatalogDocument> { item1, item2 };
+        Assert.Equal(2, vm.SelectedBrowserItems.Count);
+
+        // Then select only item1
+        vm.SelectedBrowserItems = new List<CatalogDocument> { item1 };
+        vm.ActivePane = ActivePane.Browser;
+
+        var originalCount = vm.BrowserItems.Count;
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == item1.Name);
+        Assert.Contains(vm.BrowserItems, item => item.Name == item2.Name);
+        Assert.Contains(vm.BrowserItems, item => item.Name == item3.Name);
+        Assert.Equal($"Deleted {item1.Name}.", vm.StatusText);
+    }
+
+    [Fact]
+    public void DeleteCommand_StaleSelectionFromOtherFolder_OnlyDeletesItemsInCurrentFolder()
+    {
+        var vm = CreateViewModel();
+        var libraryItem = vm.BrowserItems.First(item => item.Id == "movies");
+
+        // Navigate to music folder
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        vm.SelectedTreeNode = musicNode;
+        var musicItem = vm.BrowserItems.First();
+
+        // In case SelectedBrowserItems artificially had stale item from previous folder
+        vm.SelectedBrowserItems = new List<CatalogDocument> { libraryItem, musicItem };
+        vm.ActivePane = ActivePane.Browser;
+
+        var musicCountBefore = vm.BrowserItems.Count;
+        vm.DeleteItemCommand.Execute(null);
+
+        // Only musicItem should be deleted because libraryItem is not in current folder
+        Assert.Equal(musicCountBefore - 1, vm.BrowserItems.Count);
+        Assert.DoesNotContain(vm.BrowserItems, item => item.Name == musicItem.Name);
+        Assert.Equal($"Deleted {musicItem.Name}.", vm.StatusText);
+
+        // Switch back to library to ensure libraryItem was not deleted
+        vm.SelectedTreeNode = vm.TreeNodes[0];
+        Assert.Contains(vm.BrowserItems, item => item.Id == "movies");
+    }
+
+    [Fact]
+    public void DeleteCommand_InBrowserList_PreservesSelectedTreeNodeAndExpandedState()
+    {
+        var vm = CreateViewModel();
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        vm.TreeNodes[0].IsExpanded = true;
+        musicNode.IsExpanded = true;
+        vm.SelectedTreeNode = musicNode;
+        vm.ActivePane = ActivePane.Browser;
+
+        var targetItem = vm.BrowserItems.First();
+        vm.SelectedBrowserItems = new List<CatalogDocument> { targetItem };
+
+        vm.DeleteItemCommand.Execute(null);
+
+        // SelectedTreeNode must remain music
+        Assert.NotNull(vm.SelectedTreeNode);
+        Assert.Equal("music", vm.SelectedTreeNode.Key);
+
+        // SelectedTreeNode must be the exact reference inside TreeNodes
+        var currentMusicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        Assert.Same(currentMusicNode, vm.SelectedTreeNode);
+
+        // Expanded state should be preserved
+        Assert.True(vm.TreeNodes[0].IsExpanded);
+        Assert.True(currentMusicNode.IsExpanded);
     }
 
     [Fact]

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using DryIoc;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
@@ -66,6 +67,8 @@ public partial class MainWindow : Window
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
         InitializeComponent();
+        AttachPaneFocusHandlers();
+        AddHandler(InputElement.KeyDownEvent, OnMainWindowKeyDown, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closing += OnClosing;
@@ -151,6 +154,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        subscribedViewModel.ActivePane = ActivePane.Tree;
+
         if (!e.TryGetPosition(treeView, out var point))
         {
             e.Handled = subscribedViewModel.SelectedTreeNode is null;
@@ -168,12 +173,116 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void AttachPaneFocusHandlers()
+    {
+        var treeView = this.FindControl<TreeView>("MainTreeView");
+        if (treeView is not null)
+        {
+            treeView.AddHandler(InputElement.PointerPressedEvent, (_, _) =>
+            {
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Tree;
+                }
+            }, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+
+            treeView.AddHandler(InputElement.GotFocusEvent, (_, _) =>
+            {
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Tree;
+                }
+            }, RoutingStrategies.Bubble, handledEventsToo: true);
+        }
+
+        var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
+        if (browserView is not null)
+        {
+            browserView.AddHandler(InputElement.PointerPressedEvent, (_, _) =>
+            {
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Browser;
+                }
+            }, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+
+            browserView.AddHandler(InputElement.GotFocusEvent, (_, _) =>
+            {
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Browser;
+                }
+            }, RoutingStrategies.Bubble, handledEventsToo: true);
+        }
+    }
+
+    private void OnMainWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete && e.KeyModifiers == KeyModifiers.None)
+        {
+            var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+            if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null)
+            {
+                return;
+            }
+
+            if (subscribedViewModel is not null)
+            {
+                UpdateActivePaneFromFocusedElement(focused);
+
+                if (subscribedViewModel.DeleteItemCommand.CanExecute(null))
+                {
+                    subscribedViewModel.DeleteItemCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }
+        }
+    }
+
+    private void UpdateActivePaneFromFocusedElement(IInputElement? focused)
+    {
+        if (focused is not Visual visual || subscribedViewModel is null)
+        {
+            return;
+        }
+
+        var treeView = this.FindControl<TreeView>("MainTreeView");
+        var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
+
+        if (treeView is not null && (visual == treeView || treeView.IsVisualAncestorOf(visual)))
+        {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
+        }
+        else if (browserView is not null && (visual == browserView || browserView.IsVisualAncestorOf(visual)))
+        {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
+        }
+    }
+
+    private void OnTreeGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
+        }
+    }
+
+    private void OnTreePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
+        }
+    }
+
     private void OnBrowserContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is not Control control || subscribedViewModel is null)
         {
             return;
         }
+
+        subscribedViewModel.ActivePane = ActivePane.Browser;
 
         if (!e.TryGetPosition(control, out var point))
         {
@@ -185,11 +294,32 @@ public partial class MainWindow : Window
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
         if (listBoxItem?.DataContext is CatalogDocument item)
         {
-            subscribedViewModel.SelectedBrowserItem = item;
+            var currentSelected = subscribedViewModel.SelectedBrowserItems.OfType<CatalogDocument>().ToList();
+            if (!currentSelected.Any(sel => string.Equals(sel.Id, item.Id, StringComparison.Ordinal)))
+            {
+                subscribedViewModel.SelectedBrowserItem = item;
+                subscribedViewModel.SelectedBrowserItems = new List<CatalogDocument> { item };
+            }
             return;
         }
 
         e.Handled = true;
+    }
+
+    private void OnBrowserGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
+        }
+    }
+
+    private void OnBrowserPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
+        }
     }
 
     private void OnBrowserListDoubleTapped(object? sender, TappedEventArgs e)

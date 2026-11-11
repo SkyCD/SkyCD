@@ -188,6 +188,7 @@ public class CouchbaseContractsTests
         var roots = typedRepository.GetRoots();
         var children = typedRepository.GetChildrenOf("root");
         var descendants = typedRepository.GetDescendantsOf("root");
+        var batchDescendants = typedRepository.GetDescendantsOf(["root", "non-existent"]);
 
         Assert.NotNull(loaded);
         Assert.Equal("root", loaded!.Id);
@@ -195,6 +196,8 @@ public class CouchbaseContractsTests
         Assert.Single(roots);
         Assert.Single(children);
         Assert.Single(descendants);
+        Assert.Single(batchDescendants);
+        Assert.Equal("child", batchDescendants[0].Id);
     }
 
     [Fact]

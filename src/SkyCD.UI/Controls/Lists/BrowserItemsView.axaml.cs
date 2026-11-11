@@ -97,13 +97,21 @@ public partial class BrowserItemsView : UserControl
 
             if (ViewMode == BrowserViewMode.Details)
             {
-                if (e.Property == DetailsListView.SelectedItemProperty)
+                isUpdatingSelection = true;
+                try
                 {
-                    SelectedItem = detailsListView.SelectedItem;
+                    if (e.Property == DetailsListView.SelectedItemProperty)
+                    {
+                        SelectedItem = detailsListView.SelectedItem;
+                    }
+                    else if (e.Property == DetailsListView.SelectedItemsProperty)
+                    {
+                        SelectedItems = detailsListView.SelectedItems;
+                    }
                 }
-                else if (e.Property == DetailsListView.SelectedItemsProperty)
+                finally
                 {
-                    SelectedItems = detailsListView.SelectedItems;
+                    isUpdatingSelection = false;
                 }
             }
         };
@@ -119,8 +127,16 @@ public partial class BrowserItemsView : UserControl
 
             if (ViewMode == BrowserViewMode.List)
             {
-                SelectedItem = listModeListBox.SelectedItem;
-                SelectedItems = listModeListBox.SelectedItems?.Cast<object>().ToList();
+                isUpdatingSelection = true;
+                try
+                {
+                    SelectedItem = listModeListBox.SelectedItem;
+                    SelectedItems = listModeListBox.SelectedItems?.Cast<object>().ToList();
+                }
+                finally
+                {
+                    isUpdatingSelection = false;
+                }
             }
         };
 
@@ -135,8 +151,16 @@ public partial class BrowserItemsView : UserControl
 
             if (ViewMode is BrowserViewMode.Tiles or BrowserViewMode.SmallIcons or BrowserViewMode.LargeIcons)
             {
-                SelectedItem = iconGridListBox.SelectedItem;
-                SelectedItems = iconGridListBox.SelectedItems?.Cast<object>().ToList();
+                isUpdatingSelection = true;
+                try
+                {
+                    SelectedItem = iconGridListBox.SelectedItem;
+                    SelectedItems = iconGridListBox.SelectedItems?.Cast<object>().ToList();
+                }
+                finally
+                {
+                    isUpdatingSelection = false;
+                }
             }
         };
 
@@ -309,6 +333,13 @@ public partial class BrowserItemsView : UserControl
     {
         if (selectedItems is { Count: > 0 } && listBox.Selection is not null)
         {
+            var currentSelection = listBox.SelectedItems?.Cast<object>().ToHashSet();
+            var newSelection = selectedItems.Cast<object>().Where(static x => x != null).ToHashSet();
+            if (currentSelection != null && currentSelection.SetEquals(newSelection))
+            {
+                return;
+            }
+
             listBox.Selection.Clear();
             var items = listBox.ItemsSource?.Cast<object>().ToList();
             if (items is not null)
@@ -328,9 +359,17 @@ public partial class BrowserItemsView : UserControl
                 }
             }
         }
+        else if (selectedItems is { Count: 0 })
+        {
+            listBox.Selection?.Clear();
+            listBox.SelectedItem = null;
+        }
         else
         {
-            listBox.SelectedItem = selectedItem;
+            if (!Equals(listBox.SelectedItem, selectedItem))
+            {
+                listBox.SelectedItem = selectedItem;
+            }
         }
     }
 

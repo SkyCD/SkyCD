@@ -30,7 +30,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool isDisposed;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly bool shouldSeedDefaultCatalog;
-    private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
+    private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
@@ -120,7 +120,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IStringLocalizer? propertyValueLocalizer = null,
         MenuExtensionManager? menuExtensionManager = null)
     {
-        inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
+        inMemoryCatalogEntries = catalogEntries?.ToList() ?? throw new ArgumentNullException(nameof(catalogEntries));
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
         this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
         shouldSeedDefaultCatalog = false;
@@ -196,7 +196,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
-    public bool IsDeleteEnabled => GetSelectedBrowserItems().Count > 0;
+    public bool IsDeleteEnabled => CanDeleteItem(null);
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
@@ -328,6 +328,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private CatalogDocument? clipboardItem;
 
     [ObservableProperty] private string? currentCatalogPath;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDeleteEnabled))]
+    private ActivePane activePane = ActivePane.Browser;
+
+    partial void OnActivePaneChanged(ActivePane value)
+    {
+        OnPropertyChanged(nameof(IsDeleteEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
+    }
 
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
@@ -552,36 +562,265 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         StatusText = LocalizationService.Current.Format(TextKeys.Added, itemName);
     }
 
-    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
-    private void DeleteItem()
+    [RelayCommand(CanExecute = nameof(CanDeleteItem))]
+    private void DeleteItem(object? parameter = null)
     {
-        if (SelectedBrowserItem is null)
+        var targetPane = ResolveTargetPane(parameter);
+        if (targetPane == ActivePane.Tree)
+        {
+            DeleteSelectedTreeNode();
+        }
+        else
+        {
+            DeleteSelectedBrowserItems();
+        }
+    }
+
+    public bool CanDeleteItem(object? parameter = null)
+    {
+        var targetPane = ResolveTargetPane(parameter);
+        if (targetPane == ActivePane.Tree)
+        {
+            return CanDeleteTreeNode(SelectedTreeNode);
+        }
+
+        return GetSelectedBrowserItems().Count > 0;
+    }
+
+    private ActivePane ResolveTargetPane(object? parameter)
+    {
+        if (parameter is string str)
+        {
+            if (string.Equals(str, "tree", StringComparison.OrdinalIgnoreCase))
+            {
+                return ActivePane.Tree;
+            }
+
+            if (string.Equals(str, "list", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(str, "browser", StringComparison.OrdinalIgnoreCase))
+            {
+                return ActivePane.Browser;
+            }
+        }
+        else if (parameter is ActivePane pane)
+        {
+            return pane;
+        }
+
+        return ActivePane;
+    }
+
+    private void DeleteSelectedBrowserItems()
+    {
+        var itemsToDelete = GetSelectedBrowserItems();
+        if (itemsToDelete.Count == 0)
         {
             return;
         }
+
+        var deletedNames = itemsToDelete.Select(item => item.Name).ToList();
 
         if (catalogRepository is not null)
         {
-            DeleteCatalogEntryFromRepository(SelectedBrowserItem);
-            var deletedNameFromRepository = SelectedBrowserItem.Name;
-            RefreshBrowserItemsForSelection();
-            IsDirtyDocument = true;
-            StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedNameFromRepository);
+            DeleteCatalogEntriesFromRepository(itemsToDelete);
+        }
+        else if (inMemoryCatalogEntries is not null)
+        {
+            DeleteCatalogEntriesFromInMemory(itemsToDelete);
+        }
+        else
+        {
+            var nodeKey = SelectedTreeNode?.Key ?? "library";
+            if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNamesSet))
+            {
+                deletedNamesSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                deletedItemNamesByNodeKey[nodeKey] = deletedNamesSet;
+            }
+
+            foreach (var item in itemsToDelete)
+            {
+                deletedNamesSet.Add(item.Name);
+            }
+        }
+
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+
+        SelectedBrowserItem = BrowserItems.FirstOrDefault();
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
+
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, string.Join(", ", deletedNames));
+    }
+
+    private void DeleteSelectedTreeNode()
+    {
+        if (SelectedTreeNode is null || !CanDeleteTreeNode(SelectedTreeNode))
+        {
             return;
         }
 
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
-        if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames))
+        var targetNode = SelectedTreeNode;
+        var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
+
+        if (catalogRepository is not null)
         {
-            deletedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            deletedItemNamesByNodeKey[nodeKey] = deletedNames;
+            var descendantIds = catalogRepository
+                .GetDescendantsOf(targetNode.Key)
+                .Select(static entry => entry.Id)
+                .Where(static id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            var allIdsToDelete = new[] { targetNode.Key }.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+
+            catalogRepository.Collection.Database.InBatch(() =>
+            {
+                foreach (var id in allIdsToDelete)
+                {
+                    using var descendantDocument = catalogRepository.Collection.GetDocument(id);
+                    if (descendantDocument is not null)
+                    {
+                        catalogRepository.Collection.Delete(descendantDocument);
+                    }
+                }
+            });
+
+            foreach (var descendantId in allIdsToDelete)
+            {
+                addedItemsByNodeKey.Remove(descendantId);
+                deletedItemNamesByNodeKey.Remove(descendantId);
+                renamedBrowserItemNamesByNodeKey.Remove(descendantId);
+            }
+        }
+        else if (inMemoryCatalogEntries is not null)
+        {
+            var doc = inMemoryCatalogEntries.FirstOrDefault(entry => string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
+            if (doc is not null)
+            {
+                DeleteCatalogEntriesFromInMemory([doc]);
+            }
+            else
+            {
+                var dummyDoc = new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
+                DeleteCatalogEntriesFromInMemory([dummyDoc]);
+            }
         }
 
-        deletedNames.Add(SelectedBrowserItem.Name);
-        var deletedName = SelectedBrowserItem.Name;
+        RefreshTreeNodes(parentNode?.Key);
+
         RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault();
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
+
         IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedName);
+        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
+    }
+
+    private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
+    {
+        if (inMemoryCatalogEntries is null || items.Count == 0)
+        {
+            return;
+        }
+
+        var toDelete = new HashSet<string>(
+            items.Select(static entry => entry.Id).Where(static id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.Ordinal);
+
+        var added = true;
+        while (added)
+        {
+            added = false;
+            foreach (var entry in inMemoryCatalogEntries)
+            {
+                if (entry.ParentId is not null && toDelete.Contains(entry.ParentId) && toDelete.Add(entry.Id))
+                {
+                    added = true;
+                }
+            }
+        }
+
+        inMemoryCatalogEntries.RemoveAll(entry => toDelete.Contains(entry.Id));
+
+        foreach (var deletedId in toDelete)
+        {
+            addedItemsByNodeKey.Remove(deletedId);
+            deletedItemNamesByNodeKey.Remove(deletedId);
+            renamedBrowserItemNamesByNodeKey.Remove(deletedId);
+        }
+    }
+
+    private bool CanDeleteTreeNode(BrowserTreeNode? node)
+    {
+        if (node is null)
+        {
+            return false;
+        }
+
+        if (TreeNodes.Any(root => string.Equals(root.Key, node.Key, StringComparison.OrdinalIgnoreCase)) ||
+            string.Equals(node.Key, "library", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static BrowserTreeNode? FindParentTreeNode(IEnumerable<BrowserTreeNode> nodes, string childKey)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.Children.Any(child => string.Equals(child.Key, childKey, StringComparison.OrdinalIgnoreCase)))
+            {
+                return node;
+            }
+
+            var foundInChild = FindParentTreeNode(node.Children, childKey);
+            if (foundInChild is not null)
+            {
+                return foundInChild;
+            }
+        }
+
+        return null;
+    }
+
+    private void RefreshTreeNodes(string? preferredSelectedKey = null)
+    {
+        var targetKey = preferredSelectedKey ?? SelectedTreeNode?.Key;
+        var expandedKeys = FlattenNodes(TreeNodes)
+            .Where(static node => node.IsExpanded)
+            .Select(static node => node.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        TreeNodes = GetTreeNodes();
+        var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        foreach (var node in allTreeNodes)
+        {
+            if (expandedKeys.Contains(node.Key))
+            {
+                node.IsExpanded = true;
+            }
+        }
+
+        treeNodesByKey = allTreeNodes
+            .GroupBy(static node => node.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.OrdinalIgnoreCase);
+        OnPropertyChanged(nameof(TreeNodes));
+
+        if (targetKey is not null && treeNodesByKey.TryGetValue(targetKey, out var matchedNode))
+        {
+            SelectedTreeNode = matchedNode;
+        }
+        else
+        {
+            SelectedTreeNode = TreeNodes.FirstOrDefault();
+        }
     }
 
     [RelayCommand]
@@ -1033,6 +1272,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             BrowserItems = [];
             SelectedBrowserItem = null;
+            SelectedBrowserItems = new List<CatalogDocument>();
             return;
         }
 
@@ -1051,6 +1291,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
                                   item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                               ?? refreshedItems.FirstOrDefault();
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
     }
 
     private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
@@ -1103,11 +1346,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
     {
         RefreshBrowserItemsForSelection();
+        OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     private void StartOperation(string initialStatus)
@@ -1154,13 +1402,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (value is null)
         {
-            SelectedBrowserItems = new List<CatalogDocument>();
+            if (selectedBrowserItems.Count > 0)
+            {
+                SelectedBrowserItems = new List<CatalogDocument>();
+            }
         }
-
-        if (value is not null &&
-            !selectedBrowserItems
-                .OfType<CatalogDocument>()
-                .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
+        else if (selectedBrowserItems.Count <= 1 ||
+                 !selectedBrowserItems
+                     .OfType<CatalogDocument>()
+                     .Any(item => string.Equals(item.Id, value.Id, StringComparison.Ordinal)))
         {
             SelectedBrowserItems = new List<CatalogDocument> { value };
         }
@@ -1185,10 +1435,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (value.Count > 0)
         {
-            SelectedBrowserItem = value[0] as CatalogDocument;
+            var first = value[0] as CatalogDocument;
+            if (!ReferenceEquals(selectedBrowserItem, first))
+            {
+                selectedBrowserItem = first;
+                OnPropertyChanged(nameof(SelectedBrowserItem));
+            }
+        }
+        else if (selectedBrowserItem is not null)
+        {
+            selectedBrowserItem = null;
+            OnPropertyChanged(nameof(SelectedBrowserItem));
         }
 
         OnPropertyChanged(nameof(IsDeleteEnabled));
+        OnPropertyChanged(nameof(IsPropertiesEnabled));
+        OnPropertyChanged(nameof(IsCopyEnabled));
+        OnPropertyChanged(nameof(IsCutEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
+        OpenPropertiesCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
+        ExpandSelectionCommand.NotifyCanExecuteChanged();
+        CollapseSelectionCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
@@ -1459,10 +1728,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = file.Name, Size = file.Size, Properties = properties });
                 }
             }), cancellationToken);
-            viewModel.TreeNodes = viewModel.GetTreeNodes();
-            var nodes = FlattenNodes(viewModel.TreeNodes).ToArray();
-            viewModel.treeNodesByKey = nodes.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
-            viewModel.OnPropertyChanged(nameof(TreeNodes));
+            viewModel.RefreshTreeNodes();
             viewModel.RefreshBrowserItemsForSelection();
             viewModel.IsDirtyDocument = true;
         }
@@ -1610,7 +1876,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
@@ -1651,7 +1917,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "tree" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", Command = PasteCommand },
@@ -1678,34 +1944,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (catalogRepository is not null)
         {
-            var roots = catalogRepository
-                .GetRoots()
-                .Where(IsTreeVisibleType)
-                .ToArray();
-
-            var treeNodes = roots
-                .Select(root =>
-                {
-                    var descendants = catalogRepository
-                        .GetDescendantsOf(root.Id)
-                        .Where(IsTreeVisibleType)
-                        .ToList();
-                    descendants.Add(root);
-
-                    var byParent = descendants
-                        .GroupBy(entry => entry.ParentId ?? "__root__", StringComparer.Ordinal)
-                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
-
-                    return BuildTreeNodeFromLookup(root, byParent, isExpanded: true);
-                })
-                .ToArray();
-
-            if (treeNodes.Length > 0)
-            {
-                return treeNodes;
-            }
-
-            return [];
+            return BuildTreeNodesFromEntries(catalogRepository.GetAll());
         }
 
         return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
@@ -1732,31 +1971,48 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void DeleteCatalogEntryFromRepository(CatalogDocument item)
     {
-        if (catalogRepository is null)
+        DeleteCatalogEntriesFromRepository([item]);
+    }
+
+    private void DeleteCatalogEntriesFromRepository(IReadOnlyList<CatalogDocument> items)
+    {
+        if (catalogRepository is null || items.Count == 0)
         {
             return;
         }
 
-        var descendantIds = catalogRepository
-            .GetDescendantsOf(item.Id)
+        var itemIds = items
             .Select(static entry => entry.Id)
             .Where(static id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        foreach (var descendantId in descendantIds)
-        {
-            using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
-            if (descendantDocument is not null)
-            {
-                catalogRepository.Collection.Delete(descendantDocument);
-            }
-        }
+        var descendantIds = catalogRepository
+            .GetDescendantsOf(itemIds)
+            .Select(static entry => entry.Id)
+            .Where(static id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
 
-        using var targetDocument = catalogRepository.Collection.GetDocument(item.Id);
-        if (targetDocument is not null)
+        var allIdsToDelete = itemIds.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+
+        catalogRepository.Collection.Database.InBatch(() =>
         {
-            catalogRepository.Collection.Delete(targetDocument);
+            foreach (var id in allIdsToDelete)
+            {
+                using var descendantDocument = catalogRepository.Collection.GetDocument(id);
+                if (descendantDocument is not null)
+                {
+                    catalogRepository.Collection.Delete(descendantDocument);
+                }
+            }
+        });
+
+        foreach (var descendantId in allIdsToDelete)
+        {
+            addedItemsByNodeKey.Remove(descendantId);
+            deletedItemNamesByNodeKey.Remove(descendantId);
+            renamedBrowserItemNamesByNodeKey.Remove(descendantId);
         }
     }
 
@@ -1801,30 +2057,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var filteredEntries = entries
             .Where(IsTreeVisibleType)
             .ToList();
-        var byId = filteredEntries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        var byParent = filteredEntries
+            .GroupBy(
+                entry => string.IsNullOrWhiteSpace(entry.ParentId) ? string.Empty : entry.ParentId,
+                StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
 
-        return filteredEntries
-            .Where(entry => string.IsNullOrWhiteSpace(entry.ParentId))
-            .Select(entry => BuildTreeNode(entry, byId, isExpanded: true))
+        if (!byParent.TryGetValue(string.Empty, out var roots))
+        {
+            return [];
+        }
+
+        return roots
+            .Select(root => BuildTreeNodeFromLookup(root, byParent, isExpanded: true))
             .ToArray();
-    }
-
-    private static BrowserTreeNode BuildTreeNode(
-        CatalogDocument entry,
-        IReadOnlyDictionary<string, CatalogDocument> byId,
-        bool isExpanded)
-    {
-        var children = byId.Values
-            .Where(candidate => string.Equals(candidate.ParentId, entry.Id, StringComparison.Ordinal))
-            .Select(child => BuildTreeNode(child, byId, isExpanded: false))
-            .ToArray();
-
-        return new BrowserTreeNode(
-            entry.Id,
-            entry.Name,
-            entry.Type.ResolveIconGlyph(),
-            children,
-            isExpanded);
     }
 
     private static bool IsTreeVisibleType(CatalogDocument entry)
@@ -1911,12 +2157,40 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()
     {
-        if (SelectedBrowserItems.Count > 0)
+        var validBrowserItems = BrowserItems;
+        if (validBrowserItems.Count == 0)
         {
-            return SelectedBrowserItems.OfType<CatalogDocument>().ToArray();
+            return [];
         }
 
-        return SelectedBrowserItem is null ? [] : [SelectedBrowserItem];
+        var validIds = new HashSet<string>(
+            validBrowserItems.Select(static item => item.Id).Where(static id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.Ordinal);
+
+        var validNames = new HashSet<string>(
+            validBrowserItems.Select(static item => item.Name),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (SelectedBrowserItems.Count > 0)
+        {
+            var selected = SelectedBrowserItems
+                .OfType<CatalogDocument>()
+                .Where(item => validIds.Contains(item.Id) || validNames.Contains(item.Name))
+                .ToArray();
+
+            if (selected.Length > 0)
+            {
+                return selected;
+            }
+        }
+
+        if (SelectedBrowserItem is not null &&
+            (validIds.Contains(SelectedBrowserItem.Id) || validNames.Contains(SelectedBrowserItem.Name)))
+        {
+            return [SelectedBrowserItem];
+        }
+
+        return [];
     }
 
     private static bool IsStatusApplicableToItem(StatusVariantDocument status, CatalogDocument item)
