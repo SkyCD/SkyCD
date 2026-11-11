@@ -32,6 +32,7 @@ using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
+using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
 
@@ -461,6 +462,64 @@ public partial class MainWindow : Window
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.LoginCanceled);
                 return;
             }
+        }
+
+        if (dialogVm.SourceMode == AddToListSourceMode.Folder)
+        {
+            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+                ? null
+                : vm.SelectedTreeNode?.Key ?? "library";
+
+            var rootType = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+                ? CatalogDocumentType.Media
+                : CatalogDocumentType.Folder;
+
+            var scanOptions = new FolderScanOptions(
+                FolderPath: dialogVm.SourceValue,
+                MediaName: string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
+                TargetParentId: targetParentId,
+                RootType: rootType,
+                IncludeSubfolders: dialogVm.IncludeSubfolders,
+                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
+
+            var scanner = new FolderCatalogScanner();
+            var progressVm = new AddingProgressDialogViewModel();
+            var progressDialog = new AddingProgressWindow
+            {
+                DataContext = progressVm
+            };
+            progressDialog.Show(this);
+
+            try
+            {
+                var progress = new Progress<(string Status, int Percentage)>(p =>
+                {
+                    progressVm.OperationText = p.Status;
+                    progressVm.ProgressValue = p.Percentage;
+                });
+
+                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progress));
+                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications);
+                progressVm.ProgressValue = 60;
+                await Task.Delay(50);
+
+                vm.AddImportedDocuments(scannedDocuments);
+
+                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.UpdatingIndexes);
+                progressVm.ProgressValue = 100;
+                await Task.Delay(50);
+
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = ex.Message;
+            }
+            finally
+            {
+                progressDialog.Close();
+            }
+            return;
         }
 
         await ShowAddProgressAsync(dialogVm);
