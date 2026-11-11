@@ -1986,6 +1986,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 catalogRepository.Collection.Delete(descendantDocument);
             }
+            addedItemsByNodeKey.Remove(descendantId);
+            deletedItemNamesByNodeKey.Remove(descendantId);
+            renamedBrowserItemNamesByNodeKey.Remove(descendantId);
         }
 
         using var targetDocument = catalogRepository.Collection.GetDocument(item.Id);
@@ -1993,6 +1996,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             catalogRepository.Collection.Delete(targetDocument);
         }
+        addedItemsByNodeKey.Remove(item.Id);
+        deletedItemNamesByNodeKey.Remove(item.Id);
+        renamedBrowserItemNamesByNodeKey.Remove(item.Id);
     }
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
