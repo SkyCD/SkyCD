@@ -573,31 +573,112 @@ public partial class BrowserItemsView : UserControl
     {
         var grid = new Grid
         {
-            ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns)
+            ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns, isHeader: true)
         };
 
         for (var i = 0; i < detailsColumns.Count; i++)
         {
             var column = detailsColumns[i];
-            var text = new TextBlock
+            var cellGrid = new Grid
+            {
+                ClipToBounds = true,
+                Background = Brushes.Transparent
+            };
+
+            var cellBorder = new Border
+            {
+                BorderThickness = new Thickness(0, 0, 1, 1),
+                Padding = new Thickness(6, 3),
+                MinHeight = 24
+            };
+            cellBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
+            cellBorder.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
+
+            var headerText = new TextBlock
             {
                 Text = column.Header,
                 FontWeight = FontWeight.SemiBold,
                 FontSize = 12,
-                HorizontalAlignment = column.HeaderAlignment
+                HorizontalAlignment = column.HeaderAlignment,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
-            Grid.SetColumn(text, i + 1);
-            grid.Children.Add(text);
+            cellBorder.Child = headerText;
+            cellGrid.Children.Add(cellBorder);
+
+            var splitter = new Border
+            {
+                Width = 8,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Background = Brushes.Transparent,
+                Cursor = new Cursor(StandardCursorType.SizeWestEast)
+            };
+
+            var targetColumn = column;
+            var isDragging = false;
+            var dragStartX = 0.0;
+            var startWidth = 0.0;
+
+            splitter.PointerPressed += (s, e) =>
+            {
+                if (e.GetCurrentPoint(splitter).Properties.IsLeftButtonPressed)
+                {
+                    isDragging = true;
+                    dragStartX = e.GetPosition(grid).X;
+                    startWidth = targetColumn.Width.GridUnitType == GridUnitType.Pixel
+                        ? targetColumn.Width.Value
+                        : cellGrid.Bounds.Width;
+                    e.Pointer.Capture(splitter);
+                    e.Handled = true;
+                }
+            };
+
+            splitter.PointerMoved += (s, e) =>
+            {
+                if (isDragging)
+                {
+                    var currentX = e.GetPosition(grid).X;
+                    var delta = currentX - dragStartX;
+                    var newWidth = Math.Max(targetColumn.MinWidth, startWidth + delta);
+                    targetColumn.Width = new GridLength(newWidth, GridUnitType.Pixel);
+                    e.Handled = true;
+                }
+            };
+
+            splitter.PointerReleased += (s, e) =>
+            {
+                if (isDragging)
+                {
+                    isDragging = false;
+                    e.Pointer.Capture(null);
+                    e.Handled = true;
+                }
+            };
+
+            splitter.PointerCaptureLost += (_, _) =>
+            {
+                isDragging = false;
+            };
+
+            cellGrid.Children.Add(splitter);
+            Grid.SetColumn(cellGrid, i);
+            grid.Children.Add(cellGrid);
         }
 
-        var border = new Border
+        if (detailsColumns.Count > 0)
         {
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(4, 2),
-            Child = grid
-        };
-        border.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
-        return border;
+            var fillerBorder = new Border
+            {
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                MinHeight = 24
+            };
+            fillerBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
+            fillerBorder.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
+            Grid.SetColumn(fillerBorder, detailsColumns.Count);
+            grid.Children.Add(fillerBorder);
+        }
+
+        return grid;
     }
 
     private IDataTemplate BuildDetailsRowTemplate(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
@@ -606,22 +687,55 @@ public partial class BrowserItemsView : UserControl
         {
             var grid = new Grid
             {
-                Margin = new Thickness(4, 2),
-                ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns)
+                Margin = new Thickness(0, 1),
+                ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns, isHeader: false)
+            };
+
+            var col0Panel = new DockPanel
+            {
+                ClipToBounds = true,
+                Margin = new Thickness(4, 0, 2, 0),
+                VerticalAlignment = VerticalAlignment.Center
             };
 
             var iconWithIndicator = BuildIconWithStatusIndicator(16, 16);
-            Grid.SetColumn(iconWithIndicator, 0);
-            grid.Children.Add(iconWithIndicator);
+            DockPanel.SetDock(iconWithIndicator, Dock.Left);
+            col0Panel.Children.Add(iconWithIndicator);
 
-            for (var i = 0; i < detailsColumns.Count; i++)
+            var firstCol = detailsColumns.Count > 0 ? detailsColumns[0] : null;
+            var valuePath = firstCol?.ValuePath ?? "Name";
+            var valueAlignment = firstCol?.ValueAlignment ?? HorizontalAlignment.Left;
+
+            var firstText = new TextBlock
+            {
+                HorizontalAlignment = valueAlignment,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(4, 0, 0, 0),
+                ClipToBounds = true
+            };
+            if (valuePath == "DisplayType")
+            {
+                firstText.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
+            }
+            else
+            {
+                firstText.Bind(TextBlock.TextProperty, new Binding(valuePath));
+            }
+            col0Panel.Children.Add(firstText);
+            Grid.SetColumn(col0Panel, 0);
+            grid.Children.Add(col0Panel);
+
+            for (var i = 1; i < detailsColumns.Count; i++)
             {
                 var column = detailsColumns[i];
                 var valueCell = new TextBlock
                 {
                     HorizontalAlignment = column.ValueAlignment,
                     VerticalAlignment = VerticalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    Margin = new Thickness(6, 0),
+                    ClipToBounds = true
                 };
                 if (column.ValuePath == "DisplayType")
                 {
@@ -631,7 +745,7 @@ public partial class BrowserItemsView : UserControl
                 {
                     valueCell.Bind(TextBlock.TextProperty, new Binding(column.ValuePath));
                 }
-                Grid.SetColumn(valueCell, i + 1);
+                Grid.SetColumn(valueCell, i);
                 grid.Children.Add(valueCell);
             }
 
@@ -699,16 +813,28 @@ public partial class BrowserItemsView : UserControl
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
     private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
 
-    private static ColumnDefinitions BuildDetailsColumnDefinitions(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
+    private static ColumnDefinitions BuildDetailsColumnDefinitions(
+        IReadOnlyList<BrowserDetailsColumn> detailsColumns,
+        bool isHeader = false)
     {
-        var columns = new ColumnDefinitions
+        var columns = new ColumnDefinitions();
+
+        if (detailsColumns.Count == 0)
         {
-            new ColumnDefinition(new GridLength(24, GridUnitType.Pixel))
-        };
+            columns.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+            return columns;
+        }
 
         foreach (var column in detailsColumns)
         {
-            columns.Add(new ColumnDefinition(column.Width));
+            var colDef = new ColumnDefinition();
+            colDef.Bind(ColumnDefinition.WidthProperty, new Binding(nameof(BrowserDetailsColumn.Width)) { Source = column });
+            columns.Add(colDef);
+        }
+
+        if (isHeader)
+        {
+            columns.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
         }
 
         return columns;

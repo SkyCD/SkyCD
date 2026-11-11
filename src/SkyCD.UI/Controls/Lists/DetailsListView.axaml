@@ -36,13 +36,32 @@
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*">
-        <ContentPresenter Content="{Binding HeaderContent, ElementName=Root}" />
+        <Grid Grid.Row="0" x:Name="HeaderRowGrid" ColumnDefinitions="*,Auto">
+            <ScrollViewer x:Name="HeaderScrollViewer"
+                          HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollBarVisibility="Disabled">
+                <ContentPresenter Content="{Binding HeaderContent, ElementName=Root}" />
+            </ScrollViewer>
+            <Border x:Name="HeaderScrollBarSpacer"
+                    Grid.Column="1"
+                    Width="0"
+                    Background="{DynamicResource ThemeControlBackgroundBrush}"
+                    BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource ThemeBorderLowBrush}" />
+        </Grid>
         <ListBox x:Name="InnerListBox"
                  Grid.Row="1"
                  MinWidth="{Binding ListMinWidth, ElementName=Root}"
                  ItemsSource="{Binding ItemsSource, ElementName=Root}"
                  SelectionMode="Multiple"
                  ItemTemplate="{Binding RowTemplate, ElementName=Root}"
-                 ContextMenu="{Binding ListContextMenu, ElementName=Root}" />
+                 ContextMenu="{Binding ListContextMenu, ElementName=Root}">
+            <ListBox.Styles>
+                <Style Selector="ScrollViewer">
+                    <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+                    <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                </Style>
+            </ListBox.Styles>
+        </ListBox>
     </Grid>
 </UserControl>

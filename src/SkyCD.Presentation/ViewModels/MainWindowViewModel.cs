@@ -183,17 +183,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         new()
         {
             Header = LocalizationService.Current.Get(TextKeys.Name2), ValuePath = "Name",
-            Width = new Avalonia.Controls.GridLength(1, Avalonia.Controls.GridUnitType.Star)
-        },
-        new()
-        {
-            Header = LocalizationService.Current.Get(TextKeys.Type), ValuePath = "DisplayType",
-            Width = new Avalonia.Controls.GridLength(150, Avalonia.Controls.GridUnitType.Pixel)
+            Width = new Avalonia.Controls.GridLength(500, Avalonia.Controls.GridUnitType.Pixel)
         },
         new()
         {
             Header = LocalizationService.Current.Get(TextKeys.Size), ValuePath = "DisplaySize",
-            Width = new Avalonia.Controls.GridLength(120, Avalonia.Controls.GridUnitType.Pixel),
+            Width = new Avalonia.Controls.GridLength(100, Avalonia.Controls.GridUnitType.Pixel),
             HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right
         }
