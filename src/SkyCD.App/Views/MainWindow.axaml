@@ -76,20 +76,14 @@
 
         <ct:ClassicToolbar DockPanel.Dock="Top">
             <ct:ClassicToolbar.Items>
-                <ct:ClassicToolbarButton MinWidth="68"
-                                         Padding="8,3"
-                                         Command="{Binding NewCatalogCommand}"
-                                         ImageSrc="/Assets/add-from-media.png"
+                <ct:ClassicToolbarButton Command="{Binding NewCatalogCommand}"
+                                         ImageSrc="/Assets/new.png"
                                          Text="{i18n:Translate {x:Static i18n:UiKeys.NewToolbar}}" />
-                <ct:ClassicToolbarButton MinWidth="68"
-                                         Padding="8,3"
-                                         Command="{Binding OpenCatalogCommand}"
-                                         ImageSrc="/Assets/add-from-folder.png"
+                <ct:ClassicToolbarButton Command="{Binding OpenCatalogCommand}"
+                                         ImageSrc="/Assets/open.png"
                                          Text="{i18n:Translate {x:Static i18n:UiKeys.OpenToolbar}}" />
-                <ct:ClassicToolbarButton MinWidth="68"
-                                         Padding="8,3"
-                                         Command="{Binding SaveCatalogCommand}"
-                                         ImageSrc="/Assets/add-from-internet.png"
+                <ct:ClassicToolbarButton Command="{Binding SaveCatalogCommand}"
+                                         ImageSrc="/Assets/save.png"
                                          Text="{i18n:Translate {x:Static i18n:UiKeys.SaveToolbar}}" />
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>

@@ -61,6 +61,39 @@ public class MainWindowLayoutParityTests
         Assert.DoesNotContain("if (options.Window.TreePaneWidth is >= 160)", csCode, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MainWindow_Toolbar_MatchesLegacyCommandArtworkAndCompactStructure()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
+
+        Assert.Contains("ImageSrc=\"/Assets/new.png\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ImageSrc=\"/Assets/open.png\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ImageSrc=\"/Assets/save.png\"", xaml, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("ImageSrc=\"/Assets/add-from-media.png\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImageSrc=\"/Assets/add-from-folder.png\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImageSrc=\"/Assets/add-from-internet.png\"", xaml, StringComparison.Ordinal);
+
+        // Ensure 68-DIP minwidth override and wide padding were removed from the view
+        Assert.DoesNotContain("MinWidth=\"68\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ButtonStyles_ToolbarButton_ProvidesPaintedSurfaceAndAccessKeys()
+    {
+        var stylesXaml = ReadRepoFile("src", "SkyCD.App", "Styles", "ButtonStyles.axaml");
+        var appXaml = ReadRepoFile("src", "SkyCD.App", "App.axaml");
+
+        Assert.Contains("<StyleInclude Source=\"avares://SkyCD.App/Styles/ButtonStyles.axaml\" />", appXaml, StringComparison.Ordinal);
+        Assert.Contains("Selector=\"ct|ClassicToolbarButton\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("<AccessText", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Border Name=\"PART_ButtonBorder\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Selector=\"ct|ClassicToolbarButton:pointerover\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Selector=\"ct|ClassicToolbarButton:pressed\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Selector=\"ct|ClassicToolbarButton:focus-visible\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Selector=\"ct|ClassicToolbarButton:disabled\"", stylesXaml, StringComparison.Ordinal);
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();

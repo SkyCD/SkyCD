@@ -32,9 +32,9 @@ public sealed class IconGlyphConverter : IValueConverter
         ["network"] = "avares://SkyCD.App/Assets/add-from-internet.png",
 
         // Toolbar icons
-        ["toolbar-new"] = "avares://SkyCD.App/Assets/add-from-media.png",
-        ["toolbar-open"] = "avares://SkyCD.App/Assets/add-from-folder.png",
-        ["toolbar-save"] = "avares://SkyCD.App/Assets/add-from-internet.png",
+        ["toolbar-new"] = "avares://SkyCD.App/Assets/new.png",
+        ["toolbar-open"] = "avares://SkyCD.App/Assets/open.png",
+        ["toolbar-save"] = "avares://SkyCD.App/Assets/save.png",
 
         // Status icons
         ["check"] = "avares://SkyCD.App/Assets/legacy/icon-cd.png",

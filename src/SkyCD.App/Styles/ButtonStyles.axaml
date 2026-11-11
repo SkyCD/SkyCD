@@ -3,25 +3,55 @@
         xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI">
     <Style Selector="ct|ClassicToolbarButton">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Padding" Value="2,1" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Padding" Value="4,1" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="MinHeight" Value="22" />
+        <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <ControlTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <Image Width="16"
-                           Height="16"
-                           Source="{TemplateBinding ImageSrc}" />
-                    <TextBlock Text="{TemplateBinding Text}" />
-                </StackPanel>
+                <Border Name="PART_ButtonBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="4"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center">
+                        <Image Name="PART_Image"
+                               Width="16"
+                               Height="16"
+                               Source="{TemplateBinding ImageSrc}"
+                               VerticalAlignment="Center" />
+                        <AccessText Name="PART_Text"
+                                    Text="{TemplateBinding Text}"
+                                    VerticalAlignment="Center"
+                                    Foreground="{TemplateBinding Foreground}" />
+                    </StackPanel>
+                </Border>
             </ControlTemplate>
         </Setter>
     </Style>
     <Style Selector="ct|ClassicToolbarButton:pointerover">
-        <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}" />
     </Style>
     <Style Selector="ct|ClassicToolbarButton:pressed">
-        <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
+    </Style>
+    <Style Selector="ct|ClassicToolbarButton:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ThemeControlLowBrush}" />
     </Style>
     <Style Selector="ct|ClassicToolbarButton:disabled">
         <Setter Property="Opacity" Value="0.5" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 </Styles>
