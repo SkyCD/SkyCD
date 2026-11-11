@@ -14,7 +14,7 @@
 
                 <!-- Dark Theme Resources -->
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#353842" />
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#2A4371" />
                     <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#2B2D30" />
                     <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#DFE1E5" />
@@ -22,7 +22,7 @@
 
                 <!-- Default Fallback Theme Resources -->
                 <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#353842" />
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#2A4371" />
                     <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#2B2D30" />
                     <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#DFE1E5" />
