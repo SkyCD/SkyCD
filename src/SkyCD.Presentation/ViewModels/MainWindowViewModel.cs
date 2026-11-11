@@ -532,18 +532,58 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         AddToListRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents)
+    {
+        if (documents is null || documents.Count == 0)
+        {
+            return;
+        }
+
+        if (catalogRepository is not null)
+        {
+            catalogRepository.Collection.Database.InBatch(() =>
+            {
+                foreach (var doc in documents)
+                {
+                    catalogRepository.Save(doc.Id, doc);
+                }
+            });
+        }
+        else if (inMemoryCatalogEntries is not null)
+        {
+            inMemoryCatalogEntries.AddRange(documents);
+        }
+        else
+        {
+            foreach (var doc in documents)
+            {
+                var parentKey = doc.ParentId ?? "library";
+                if (!addedItemsByNodeKey.TryGetValue(parentKey, out var list))
+                {
+                    list = [];
+                    addedItemsByNodeKey[parentKey] = list;
+                }
+                list.Add(doc);
+            }
+        }
+
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+
+        var rootImported = documents[0];
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+            string.Equals(item.Id, rootImported.Id, StringComparison.Ordinal) ||
+            item.Name.Equals(rootImported.Name, StringComparison.OrdinalIgnoreCase));
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Added, rootImported.Name);
+    }
+
     public void AddImportedItem(string? suggestedName)
     {
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var itemName = string.IsNullOrWhiteSpace(suggestedName)
             ? $"Imported Item {DateTime.Now:HHmmss}"
             : suggestedName.Trim();
-
-        if (!addedItemsByNodeKey.TryGetValue(nodeKey, out var addedItems))
-        {
-            addedItems = [];
-            addedItemsByNodeKey[nodeKey] = addedItems;
-        }
 
         var importedItem = new CatalogDocument
         {
@@ -554,12 +594,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Size = 0,
             ChildrenCount = 0
         };
-        addedItems.Add(importedItem);
-        RefreshBrowserItemsForSelection();
-        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
-            item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Added, itemName);
+
+        AddImportedDocuments([importedItem]);
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteItem))]

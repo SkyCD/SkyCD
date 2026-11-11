@@ -124,7 +124,8 @@
                     <TextBox Text="{Binding SourceValue}" />
                     <Button Grid.Column="1"
                             Content="..."
-                            Width="28" />
+                            Width="28"
+                            Click="OnBrowseFolderClicked" />
                 </Grid>
                 <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeSubfolders}}"
                           IsChecked="{Binding IncludeSubfolders}" />
