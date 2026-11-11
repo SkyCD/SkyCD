@@ -1,16 +1,43 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SkyCD.UI.Controls.Toolbars.ClassicToolbar"
-             x:Name="Root">
+             x:Name="Root"
+             Height="25"
+             MinHeight="25">
     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
             BorderThickness="0,0,0,1"
-            Padding="4,3">
-        <ItemsControl ItemsSource="{Binding Items, ElementName=Root}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="8" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-        </ItemsControl>
+            Background="{DynamicResource ThemeControlLowBrush}"
+            Padding="2,1"
+            Height="25"
+            MinHeight="25">
+        <DockPanel LastChildFill="True">
+            <!-- Legacy ToolStrip Grip Handle -->
+            <Rectangle DockPanel.Dock="Left"
+                       Width="3"
+                       Height="14"
+                       VerticalAlignment="Center"
+                       Margin="2,0,4,0"
+                       IsHitTestVisible="False">
+                <Rectangle.Fill>
+                    <DrawingBrush TileMode="Tile"
+                                  SourceRect="0,0,3,4"
+                                  DestinationRect="0,0,3,4">
+                        <DrawingBrush.Drawing>
+                            <DrawingGroup>
+                                <GeometryDrawing Brush="{DynamicResource ThemeBorderMidBrush}"
+                                                 Geometry="M 0,0 L 2,0 L 2,2 L 0,2 Z" />
+                            </DrawingGroup>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <ItemsControl ItemsSource="{Binding Items, ElementName=Root}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </DockPanel>
     </Border>
 </UserControl>

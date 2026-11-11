@@ -188,4 +188,54 @@ public class ControlsContractTests
         var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(progressBar.Foreground);
         Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
     }
+
+    [AvaloniaFact]
+    public void ClassicToolbar_LayoutStructure_MatchesCompactLegacy25pxSpecification()
+    {
+        var toolbar = new ClassicToolbar();
+
+        Assert.Equal(25, toolbar.Height);
+        Assert.Equal(25, toolbar.MinHeight);
+
+        var border = Assert.IsType<Border>(toolbar.Content);
+        Assert.Equal(new Avalonia.Thickness(0, 0, 0, 1), border.BorderThickness);
+        Assert.Equal(new Avalonia.Thickness(2, 1), border.Padding);
+        Assert.Equal(25, border.Height);
+
+        var dockPanel = Assert.IsType<DockPanel>(border.Child);
+        var grip = Assert.IsType<Avalonia.Controls.Shapes.Rectangle>(dockPanel.Children[0]);
+        Assert.Equal(3, grip.Width);
+        Assert.Equal(14, grip.Height);
+        var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(grip.Fill);
+        Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
+
+        var itemsControl = Assert.IsType<ItemsControl>(dockPanel.Children[1]);
+        Assert.Same(toolbar.Items, itemsControl.ItemsSource);
+    }
+
+    [Theory]
+    [InlineData("&New", "_New")]
+    [InlineData("&Open", "_Open")]
+    [InlineData("Į&rašyti", "Į_rašyti")]
+    [InlineData("_New", "_New")]
+    [InlineData("&&Save", "&Save")]
+    [InlineData("File", "File")]
+    [InlineData(null, null)]
+    public void ClassicToolbarButton_MnemonicNormalization_NormalizesAmpersandAndUnderscore(string? input, string? expected)
+    {
+        var button = new ClassicToolbarButton { Text = input };
+        Assert.Equal(expected, button.Text);
+    }
+
+    [AvaloniaFact]
+    public void ClassicToolbarButton_ExecutesBoundCommand()
+    {
+        var executed = false;
+        var command = new CommunityToolkit.Mvvm.Input.RelayCommand(() => executed = true);
+        var button = new ClassicToolbarButton { Command = command };
+
+        Assert.True(button.IsEnabled);
+        button.Command.Execute(null);
+        Assert.True(executed);
+    }
 }
