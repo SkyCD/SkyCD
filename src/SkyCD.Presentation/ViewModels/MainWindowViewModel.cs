@@ -709,16 +709,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
-        RefreshTreeNodes();
-
-        if (parentNode is not null && treeNodesByKey.TryGetValue(parentNode.Key, out var remainingParent))
-        {
-            SelectedTreeNode = remainingParent;
-        }
-        else
-        {
-            SelectedTreeNode = TreeNodes.FirstOrDefault();
-        }
+        RefreshTreeNodes(parentNode?.Key);
 
         RefreshBrowserItemsForSelection();
         SelectedBrowserItem = BrowserItems.FirstOrDefault();
@@ -799,14 +790,37 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return null;
     }
 
-    private void RefreshTreeNodes()
+    private void RefreshTreeNodes(string? preferredSelectedKey = null)
     {
+        var targetKey = preferredSelectedKey ?? SelectedTreeNode?.Key;
+        var expandedKeys = FlattenNodes(TreeNodes)
+            .Where(static node => node.IsExpanded)
+            .Select(static node => node.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         TreeNodes = GetTreeNodes();
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        foreach (var node in allTreeNodes)
+        {
+            if (expandedKeys.Contains(node.Key))
+            {
+                node.IsExpanded = true;
+            }
+        }
+
         treeNodesByKey = allTreeNodes
-            .GroupBy(node => node.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            .GroupBy(static node => node.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.OrdinalIgnoreCase);
         OnPropertyChanged(nameof(TreeNodes));
+
+        if (targetKey is not null && treeNodesByKey.TryGetValue(targetKey, out var matchedNode))
+        {
+            SelectedTreeNode = matchedNode;
+        }
+        else
+        {
+            SelectedTreeNode = TreeNodes.FirstOrDefault();
+        }
     }
 
     [RelayCommand]
@@ -1714,10 +1728,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = file.Name, Size = file.Size, Properties = properties });
                 }
             }), cancellationToken);
-            viewModel.TreeNodes = viewModel.GetTreeNodes();
-            var nodes = FlattenNodes(viewModel.TreeNodes).ToArray();
-            viewModel.treeNodesByKey = nodes.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
-            viewModel.OnPropertyChanged(nameof(TreeNodes));
+            viewModel.RefreshTreeNodes();
             viewModel.RefreshBrowserItemsForSelection();
             viewModel.IsDirtyDocument = true;
         }

@@ -604,6 +604,34 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void DeleteCommand_InBrowserList_PreservesSelectedTreeNodeAndExpandedState()
+    {
+        var vm = CreateViewModel();
+        var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        vm.TreeNodes[0].IsExpanded = true;
+        musicNode.IsExpanded = true;
+        vm.SelectedTreeNode = musicNode;
+        vm.ActivePane = ActivePane.Browser;
+
+        var targetItem = vm.BrowserItems.First();
+        vm.SelectedBrowserItems = new List<CatalogDocument> { targetItem };
+
+        vm.DeleteItemCommand.Execute(null);
+
+        // SelectedTreeNode must remain music
+        Assert.NotNull(vm.SelectedTreeNode);
+        Assert.Equal("music", vm.SelectedTreeNode.Key);
+
+        // SelectedTreeNode must be the exact reference inside TreeNodes
+        var currentMusicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
+        Assert.Same(currentMusicNode, vm.SelectedTreeNode);
+
+        // Expanded state should be preserved
+        Assert.True(vm.TreeNodes[0].IsExpanded);
+        Assert.True(currentMusicNode.IsExpanded);
+    }
+
+    [Fact]
     public void TreeAndListItems_ExposeIconGlyphs()
     {
         var vm = CreateViewModel();
