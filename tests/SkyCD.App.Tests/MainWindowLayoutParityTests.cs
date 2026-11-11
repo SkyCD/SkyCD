@@ -47,6 +47,8 @@ public class MainWindowLayoutParityTests
         Assert.Contains("Property=\"MinHeight\" Value=\"20\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"TreeViewItem:selected:not(:focus)", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"TreeViewItem:selected:focus", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{DynamicResource HighlightBrush}\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Value=\"{DynamicResource HighlightForegroundBrush}\"", stylesXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Selector=\"TreeViewItem:pointerover /template/ Border#SelectionBorder\"", stylesXaml, StringComparison.Ordinal);
     }
 

@@ -12,16 +12,23 @@
     <Style Selector="TreeViewItem">
         <Setter Property="MinHeight" Value="20" />
         <Setter Property="Padding" Value="2,1" />
+        <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
     </Style>
 
     <!-- Inactive selection: persistent selection visibility when TreeView loses focus -->
     <Style Selector="TreeViewItem:selected:not(:focus) /template/ Border#SelectionBorder">
         <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightLowBrush}" />
     </Style>
+    <Style Selector="TreeViewItem:selected:not(:focus)">
+        <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
+    </Style>
 
-    <!-- Active selection: highlighted when focused -->
+    <!-- Active selection: high-contrast highlighted text and background when focused -->
     <Style Selector="TreeViewItem:selected:focus /template/ Border#SelectionBorder">
-        <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush4}" />
+        <Setter Property="Background" Value="{DynamicResource HighlightBrush}" />
+    </Style>
+    <Style Selector="TreeViewItem:selected:focus">
+        <Setter Property="Foreground" Value="{DynamicResource HighlightForegroundBrush}" />
     </Style>
 
 </Styles>
