@@ -620,25 +620,25 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var deletedNames = itemsToDelete.Select(item => item.Name).ToList();
 
-        foreach (var item in itemsToDelete)
+        if (catalogRepository is not null)
         {
-            if (catalogRepository is not null)
+            DeleteCatalogEntriesFromRepository(itemsToDelete);
+        }
+        else if (inMemoryCatalogEntries is not null)
+        {
+            DeleteCatalogEntriesFromInMemory(itemsToDelete);
+        }
+        else
+        {
+            var nodeKey = SelectedTreeNode?.Key ?? "library";
+            if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNamesSet))
             {
-                DeleteCatalogEntryFromRepository(item);
+                deletedNamesSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                deletedItemNamesByNodeKey[nodeKey] = deletedNamesSet;
             }
-            else if (inMemoryCatalogEntries is not null)
-            {
-                DeleteCatalogEntryFromInMemory(item);
-            }
-            else
-            {
-                var nodeKey = SelectedTreeNode?.Key ?? "library";
-                if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNamesSet))
-                {
-                    deletedNamesSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    deletedItemNamesByNodeKey[nodeKey] = deletedNamesSet;
-                }
 
+            foreach (var item in itemsToDelete)
+            {
                 deletedNamesSet.Add(item.Name);
             }
         }
@@ -667,40 +667,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         if (catalogRepository is not null)
         {
-            var doc = catalogRepository.Get(targetNode.Key);
-            if (doc is not null)
-            {
-                DeleteCatalogEntryFromRepository(doc);
-            }
-            else
-            {
-                var descendantIds = catalogRepository
-                    .GetDescendantsOf(targetNode.Key)
-                    .Select(static entry => entry.Id)
-                    .Where(static id => !string.IsNullOrWhiteSpace(id))
-                    .Distinct(StringComparer.Ordinal)
-                    .ToArray();
+            var descendantIds = catalogRepository
+                .GetDescendantsOf(targetNode.Key)
+                .Select(static entry => entry.Id)
+                .Where(static id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
 
-                foreach (var descendantId in descendantIds)
+            var allIdsToDelete = new[] { targetNode.Key }.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+
+            catalogRepository.Collection.Database.InBatch(() =>
+            {
+                foreach (var id in allIdsToDelete)
                 {
-                    using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
+                    using var descendantDocument = catalogRepository.Collection.GetDocument(id);
                     if (descendantDocument is not null)
                     {
                         catalogRepository.Collection.Delete(descendantDocument);
                     }
-                    addedItemsByNodeKey.Remove(descendantId);
-                    deletedItemNamesByNodeKey.Remove(descendantId);
-                    renamedBrowserItemNamesByNodeKey.Remove(descendantId);
                 }
+            });
 
-                using var targetDocument = catalogRepository.Collection.GetDocument(targetNode.Key);
-                if (targetDocument is not null)
-                {
-                    catalogRepository.Collection.Delete(targetDocument);
-                }
-                addedItemsByNodeKey.Remove(targetNode.Key);
-                deletedItemNamesByNodeKey.Remove(targetNode.Key);
-                renamedBrowserItemNamesByNodeKey.Remove(targetNode.Key);
+            foreach (var descendantId in allIdsToDelete)
+            {
+                addedItemsByNodeKey.Remove(descendantId);
+                deletedItemNamesByNodeKey.Remove(descendantId);
+                renamedBrowserItemNamesByNodeKey.Remove(descendantId);
             }
         }
         else if (inMemoryCatalogEntries is not null)
@@ -708,12 +700,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var doc = inMemoryCatalogEntries.FirstOrDefault(entry => string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
             if (doc is not null)
             {
-                DeleteCatalogEntryFromInMemory(doc);
+                DeleteCatalogEntriesFromInMemory([doc]);
             }
             else
             {
                 var dummyDoc = new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
-                DeleteCatalogEntryFromInMemory(dummyDoc);
+                DeleteCatalogEntriesFromInMemory([dummyDoc]);
             }
         }
 
@@ -738,14 +730,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
     }
 
-    private void DeleteCatalogEntryFromInMemory(CatalogDocument item)
+    private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
     {
-        if (inMemoryCatalogEntries is null)
+        if (inMemoryCatalogEntries is null || items.Count == 0)
         {
             return;
         }
 
-        var toDelete = new HashSet<string>(StringComparer.Ordinal) { item.Id };
+        var toDelete = new HashSet<string>(
+            items.Select(static entry => entry.Id).Where(static id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.Ordinal);
+
         var added = true;
         while (added)
         {
@@ -1913,34 +1908,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (catalogRepository is not null)
         {
-            var roots = catalogRepository
-                .GetRoots()
-                .Where(IsTreeVisibleType)
-                .ToArray();
-
-            var treeNodes = roots
-                .Select(root =>
-                {
-                    var descendants = catalogRepository
-                        .GetDescendantsOf(root.Id)
-                        .Where(IsTreeVisibleType)
-                        .ToList();
-                    descendants.Add(root);
-
-                    var byParent = descendants
-                        .GroupBy(entry => entry.ParentId ?? "__root__", StringComparer.Ordinal)
-                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
-
-                    return BuildTreeNodeFromLookup(root, byParent, isExpanded: true);
-                })
-                .ToArray();
-
-            if (treeNodes.Length > 0)
-            {
-                return treeNodes;
-            }
-
-            return [];
+            return BuildTreeNodesFromEntries(catalogRepository.GetAll());
         }
 
         return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
@@ -1967,38 +1935,49 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void DeleteCatalogEntryFromRepository(CatalogDocument item)
     {
-        if (catalogRepository is null)
+        DeleteCatalogEntriesFromRepository([item]);
+    }
+
+    private void DeleteCatalogEntriesFromRepository(IReadOnlyList<CatalogDocument> items)
+    {
+        if (catalogRepository is null || items.Count == 0)
         {
             return;
         }
 
-        var descendantIds = catalogRepository
-            .GetDescendantsOf(item.Id)
+        var itemIds = items
             .Select(static entry => entry.Id)
             .Where(static id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        foreach (var descendantId in descendantIds)
+        var descendantIds = catalogRepository
+            .GetDescendantsOf(itemIds)
+            .Select(static entry => entry.Id)
+            .Where(static id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var allIdsToDelete = itemIds.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+
+        catalogRepository.Collection.Database.InBatch(() =>
         {
-            using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
-            if (descendantDocument is not null)
+            foreach (var id in allIdsToDelete)
             {
-                catalogRepository.Collection.Delete(descendantDocument);
+                using var descendantDocument = catalogRepository.Collection.GetDocument(id);
+                if (descendantDocument is not null)
+                {
+                    catalogRepository.Collection.Delete(descendantDocument);
+                }
             }
+        });
+
+        foreach (var descendantId in allIdsToDelete)
+        {
             addedItemsByNodeKey.Remove(descendantId);
             deletedItemNamesByNodeKey.Remove(descendantId);
             renamedBrowserItemNamesByNodeKey.Remove(descendantId);
         }
-
-        using var targetDocument = catalogRepository.Collection.GetDocument(item.Id);
-        if (targetDocument is not null)
-        {
-            catalogRepository.Collection.Delete(targetDocument);
-        }
-        addedItemsByNodeKey.Remove(item.Id);
-        deletedItemNamesByNodeKey.Remove(item.Id);
-        renamedBrowserItemNamesByNodeKey.Remove(item.Id);
     }
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
@@ -2042,30 +2021,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var filteredEntries = entries
             .Where(IsTreeVisibleType)
             .ToList();
-        var byId = filteredEntries.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        var byParent = filteredEntries
+            .GroupBy(
+                entry => string.IsNullOrWhiteSpace(entry.ParentId) ? string.Empty : entry.ParentId,
+                StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
 
-        return filteredEntries
-            .Where(entry => string.IsNullOrWhiteSpace(entry.ParentId))
-            .Select(entry => BuildTreeNode(entry, byId, isExpanded: true))
+        if (!byParent.TryGetValue(string.Empty, out var roots))
+        {
+            return [];
+        }
+
+        return roots
+            .Select(root => BuildTreeNodeFromLookup(root, byParent, isExpanded: true))
             .ToArray();
-    }
-
-    private static BrowserTreeNode BuildTreeNode(
-        CatalogDocument entry,
-        IReadOnlyDictionary<string, CatalogDocument> byId,
-        bool isExpanded)
-    {
-        var children = byId.Values
-            .Where(candidate => string.Equals(candidate.ParentId, entry.Id, StringComparison.Ordinal))
-            .Select(child => BuildTreeNode(child, byId, isExpanded: false))
-            .ToArray();
-
-        return new BrowserTreeNode(
-            entry.Id,
-            entry.Name,
-            entry.Type.ResolveIconGlyph(),
-            children,
-            isExpanded);
     }
 
     private static bool IsTreeVisibleType(CatalogDocument entry)

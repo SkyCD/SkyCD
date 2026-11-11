@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Couchbase.Lite;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Helpers;
@@ -58,6 +59,21 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
     public IReadOnlyList<TDocument> GetDescendantsOf(string parentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parentId);
+        return GetDescendantsOf([parentId]);
+    }
+
+    public IReadOnlyList<TDocument> GetDescendantsOf(IEnumerable<string> parentIds)
+    {
+        ArgumentNullException.ThrowIfNull(parentIds);
+
+        var parentIdSet = new HashSet<string>(
+            parentIds.Where(static id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.Ordinal);
+
+        if (parentIdSet.Count == 0)
+        {
+            return [];
+        }
 
         var items = GetAll();
         var childrenByParent = new Dictionary<string, List<TDocument>>(StringComparer.Ordinal);
@@ -79,8 +95,8 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
         }
 
         var descendants = new List<TDocument>();
-        var stack = new Stack<string>();
-        stack.Push(parentId);
+        var stack = new Stack<string>(parentIdSet);
+        var visited = new HashSet<string>(parentIdSet, StringComparer.Ordinal);
 
         while (stack.Count > 0)
         {
@@ -92,10 +108,10 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
 
             foreach (var child in children)
             {
-                descendants.Add(child);
                 var childId = GetId(child);
-                if (!string.IsNullOrWhiteSpace(childId))
+                if (!string.IsNullOrWhiteSpace(childId) && visited.Add(childId))
                 {
+                    descendants.Add(child);
                     stack.Push(childId);
                 }
             }

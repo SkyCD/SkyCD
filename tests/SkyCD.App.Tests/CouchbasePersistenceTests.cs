@@ -287,6 +287,45 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
+    public void MainWindowViewModel_DeleteMultipleFoldersAndItems_PerformsFastBatchDeletion()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+        var libraryNode = viewModel.TreeNodes.Single();
+        viewModel.SelectedTreeNode = libraryNode;
+        viewModel.ActivePane = ActivePane.Browser;
+
+        var movies = viewModel.BrowserItems.Single(item => item.Id == "movies");
+        var music = viewModel.BrowserItems.Single(item => item.Id == "music");
+        viewModel.SelectedBrowserItems = new List<CatalogDocument> { movies, music };
+
+        Assert.True(viewModel.DeleteItemCommand.CanExecute(null));
+        viewModel.DeleteItemCommand.Execute(null);
+
+        Assert.Null(catalogRepository.Get("movies"));
+        Assert.Null(catalogRepository.Get("arrival"));
+        Assert.Null(catalogRepository.Get("interstellar"));
+        Assert.Null(catalogRepository.Get("music"));
+        Assert.Null(catalogRepository.Get("classical-collection"));
+        Assert.Null(catalogRepository.Get("concert-2025"));
+        Assert.NotNull(catalogRepository.Get("projects"));
+    }
+
+    [Fact]
     public void MainWindowViewModel_DeleteSyntheticRoot_IsDisabledAndProtected()
     {
         using var provider = new Container();
