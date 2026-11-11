@@ -151,6 +151,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        subscribedViewModel.ActivePane = ActivePane.Tree;
+
         if (!e.TryGetPosition(treeView, out var point))
         {
             e.Handled = subscribedViewModel.SelectedTreeNode is null;
@@ -168,12 +170,30 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnTreeGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
+        }
+    }
+
+    private void OnTreePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
+        }
+    }
+
     private void OnBrowserContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is not Control control || subscribedViewModel is null)
         {
             return;
         }
+
+        subscribedViewModel.ActivePane = ActivePane.Browser;
 
         if (!e.TryGetPosition(control, out var point))
         {
@@ -190,6 +210,22 @@ public partial class MainWindow : Window
         }
 
         e.Handled = true;
+    }
+
+    private void OnBrowserGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
+        }
+    }
+
+    private void OnBrowserPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
+        }
     }
 
     private void OnBrowserListDoubleTapped(object? sender, TappedEventArgs e)

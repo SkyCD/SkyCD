@@ -108,7 +108,9 @@
                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                       ItemsSource="{Binding TreeNodes}"
                       SelectedItem="{Binding SelectedTreeNode}"
-                      ContextRequested="OnTreeContextRequested">
+                      ContextRequested="OnTreeContextRequested"
+                      GotFocus="OnTreeGotFocus"
+                      PointerPressed="OnTreePointerPressed">
                 <TreeView.Styles>
                     <Style Selector="TreeViewItem" x:DataType="vm:BrowserTreeNode">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
@@ -152,7 +154,9 @@
                                  StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
                                  ContextRequested="OnBrowserContextRequested"
                                  ListContextMenu="{DynamicResource BrowserContextMenu}"
-                                 DoubleTapped="OnBrowserListDoubleTapped">
+                                 DoubleTapped="OnBrowserListDoubleTapped"
+                                 GotFocus="OnBrowserGotFocus"
+                                 PointerPressed="OnBrowserPointerPressed">
             </cl:BrowserItemsView>
         </Grid>
     </DockPanel>

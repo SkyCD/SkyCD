@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -152,6 +153,169 @@ public sealed class CouchbasePersistenceTests : IDisposable
 
         Assert.DoesNotContain(reloadedViewModel.BrowserItems, static item => item.Id == "arrival");
         Assert.Single(reloadedViewModel.BrowserItems);
+    }
+
+    [Fact]
+    public void MainWindowViewModel_DeleteMultiBrowserSelection_RemovesSiblingEntriesAndPersistsAcrossReopen()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+        var libraryNode = viewModel.TreeNodes.Single();
+        var moviesNode = libraryNode.Children.Single(child => child.Key == "movies");
+        viewModel.SelectedTreeNode = moviesNode;
+
+        var arrival = viewModel.BrowserItems.Single(item => item.Id == "arrival");
+        var interstellar = viewModel.BrowserItems.Single(item => item.Id == "interstellar");
+        viewModel.SelectedBrowserItems = new List<CatalogDocument> { arrival, interstellar };
+        viewModel.ActivePane = ActivePane.Browser;
+
+        Assert.True(viewModel.DeleteItemCommand.CanExecute(null));
+        Assert.True(viewModel.IsDeleteEnabled);
+
+        viewModel.DeleteItemCommand.Execute(null);
+
+        Assert.Contains("Arrival.mkv", viewModel.StatusText);
+        Assert.Contains("Interstellar.mkv", viewModel.StatusText);
+        Assert.Empty(viewModel.BrowserItems);
+        Assert.True(viewModel.IsDirtyDocument);
+
+        using var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+        var reloadedMoviesNode = reloadedViewModel.TreeNodes.Single().Children.Single(child => child.Key == "movies");
+        reloadedViewModel.SelectedTreeNode = reloadedMoviesNode;
+
+        Assert.Empty(reloadedViewModel.BrowserItems);
+        Assert.Null(catalogRepository.Get("arrival"));
+        Assert.Null(catalogRepository.Get("interstellar"));
+    }
+
+    [Fact]
+    public void MainWindowViewModel_DeleteTreeNode_RemovesNestedFolderAndDescendantsConsistently()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+        var libraryNode = viewModel.TreeNodes.Single();
+        var moviesNode = libraryNode.Children.Single(child => child.Key == "movies");
+        viewModel.SelectedTreeNode = moviesNode;
+        viewModel.ActivePane = ActivePane.Tree;
+
+        Assert.True(viewModel.DeleteItemCommand.CanExecute(null));
+        Assert.True(viewModel.IsDeleteEnabled);
+
+        viewModel.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("Deleted Movies.", viewModel.StatusText);
+        Assert.Equal("library", viewModel.SelectedTreeNode?.Key);
+        Assert.DoesNotContain(viewModel.TreeNodes.Single().Children, child => child.Key == "movies");
+        Assert.DoesNotContain(viewModel.BrowserItems, item => item.Id == "movies");
+
+        using var reloadedViewModel = new MainWindowViewModel(repositoryManager);
+        Assert.DoesNotContain(reloadedViewModel.TreeNodes.Single().Children, child => child.Key == "movies");
+        Assert.Null(catalogRepository.Get("movies"));
+        Assert.Null(catalogRepository.Get("arrival"));
+        Assert.Null(catalogRepository.Get("interstellar"));
+    }
+
+    [Fact]
+    public void MainWindowViewModel_TreeDelete_WithUnrelatedBrowserSelection_TargetsTreeFolderNotBrowserItem()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+        var libraryNode = viewModel.TreeNodes.Single();
+        var musicNode = libraryNode.Children.Single(child => child.Key == "music");
+        viewModel.SelectedTreeNode = musicNode;
+
+        // Tree is focused
+        viewModel.ActivePane = ActivePane.Tree;
+
+        // Execute Delete with Tree active
+        viewModel.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("Deleted Music.", viewModel.StatusText);
+        Assert.Equal("library", viewModel.SelectedTreeNode?.Key);
+
+        // Music and its descendants are deleted
+        Assert.Null(catalogRepository.Get("music"));
+        Assert.Null(catalogRepository.Get("classical-collection"));
+        Assert.Null(catalogRepository.Get("concert-2025"));
+
+        // Movies and its contents remain intact
+        Assert.NotNull(catalogRepository.Get("movies"));
+        Assert.NotNull(catalogRepository.Get("arrival"));
+        Assert.NotNull(catalogRepository.Get("interstellar"));
+    }
+
+    [Fact]
+    public void MainWindowViewModel_DeleteSyntheticRoot_IsDisabledAndProtected()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 99;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+        var libraryNode = viewModel.TreeNodes.Single();
+        viewModel.SelectedTreeNode = libraryNode;
+        viewModel.ActivePane = ActivePane.Tree;
+
+        Assert.False(viewModel.DeleteItemCommand.CanExecute(null));
+        Assert.False(viewModel.IsDeleteEnabled);
+
+        viewModel.DeleteItemCommand.Execute(null);
+
+        Assert.NotNull(catalogRepository.Get("library"));
+        Assert.NotEmpty(viewModel.TreeNodes);
     }
 
     [Fact]

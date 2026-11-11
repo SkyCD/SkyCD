@@ -30,7 +30,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool isDisposed;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly bool shouldSeedDefaultCatalog;
-    private readonly IReadOnlyList<CatalogDocument>? inMemoryCatalogEntries;
+    private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
@@ -120,7 +120,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IStringLocalizer? propertyValueLocalizer = null,
         MenuExtensionManager? menuExtensionManager = null)
     {
-        inMemoryCatalogEntries = catalogEntries ?? throw new ArgumentNullException(nameof(catalogEntries));
+        inMemoryCatalogEntries = catalogEntries?.ToList() ?? throw new ArgumentNullException(nameof(catalogEntries));
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
         this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
         shouldSeedDefaultCatalog = false;
@@ -196,7 +196,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
-    public bool IsDeleteEnabled => GetSelectedBrowserItems().Count > 0;
+    public bool IsDeleteEnabled => CanDeleteItem(null);
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
@@ -328,6 +328,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private CatalogDocument? clipboardItem;
 
     [ObservableProperty] private string? currentCatalogPath;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDeleteEnabled))]
+    private ActivePane activePane = ActivePane.Browser;
+
+    partial void OnActivePaneChanged(ActivePane value)
+    {
+        OnPropertyChanged(nameof(IsDeleteEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
+    }
 
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
 
@@ -552,36 +562,256 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         StatusText = LocalizationService.Current.Format(TextKeys.Added, itemName);
     }
 
-    [RelayCommand(CanExecute = nameof(IsDeleteEnabled))]
-    private void DeleteItem()
+    [RelayCommand(CanExecute = nameof(CanDeleteItem))]
+    private void DeleteItem(object? parameter = null)
     {
-        if (SelectedBrowserItem is null)
+        var targetPane = ResolveTargetPane(parameter);
+        if (targetPane == ActivePane.Tree)
+        {
+            DeleteSelectedTreeNode();
+        }
+        else
+        {
+            DeleteSelectedBrowserItems();
+        }
+    }
+
+    public bool CanDeleteItem(object? parameter = null)
+    {
+        var targetPane = ResolveTargetPane(parameter);
+        if (targetPane == ActivePane.Tree)
+        {
+            return CanDeleteTreeNode(SelectedTreeNode);
+        }
+
+        return GetSelectedBrowserItems().Count > 0;
+    }
+
+    private ActivePane ResolveTargetPane(object? parameter)
+    {
+        if (parameter is string str)
+        {
+            if (string.Equals(str, "tree", StringComparison.OrdinalIgnoreCase))
+            {
+                return ActivePane.Tree;
+            }
+
+            if (string.Equals(str, "list", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(str, "browser", StringComparison.OrdinalIgnoreCase))
+            {
+                return ActivePane.Browser;
+            }
+        }
+        else if (parameter is ActivePane pane)
+        {
+            return pane;
+        }
+
+        return ActivePane;
+    }
+
+    private void DeleteSelectedBrowserItems()
+    {
+        var itemsToDelete = GetSelectedBrowserItems();
+        if (itemsToDelete.Count == 0)
         {
             return;
         }
+
+        var deletedNames = itemsToDelete.Select(item => item.Name).ToList();
+
+        foreach (var item in itemsToDelete)
+        {
+            if (catalogRepository is not null)
+            {
+                DeleteCatalogEntryFromRepository(item);
+            }
+            else if (inMemoryCatalogEntries is not null)
+            {
+                DeleteCatalogEntryFromInMemory(item);
+            }
+            else
+            {
+                var nodeKey = SelectedTreeNode?.Key ?? "library";
+                if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNamesSet))
+                {
+                    deletedNamesSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    deletedItemNamesByNodeKey[nodeKey] = deletedNamesSet;
+                }
+
+                deletedNamesSet.Add(item.Name);
+            }
+        }
+
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+
+        SelectedBrowserItem = BrowserItems.FirstOrDefault();
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
+
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, string.Join(", ", deletedNames));
+    }
+
+    private void DeleteSelectedTreeNode()
+    {
+        if (SelectedTreeNode is null || !CanDeleteTreeNode(SelectedTreeNode))
+        {
+            return;
+        }
+
+        var targetNode = SelectedTreeNode;
+        var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
 
         if (catalogRepository is not null)
         {
-            DeleteCatalogEntryFromRepository(SelectedBrowserItem);
-            var deletedNameFromRepository = SelectedBrowserItem.Name;
-            RefreshBrowserItemsForSelection();
-            IsDirtyDocument = true;
-            StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedNameFromRepository);
+            var doc = catalogRepository.Get(targetNode.Key);
+            if (doc is not null)
+            {
+                DeleteCatalogEntryFromRepository(doc);
+            }
+            else
+            {
+                var descendantIds = catalogRepository
+                    .GetDescendantsOf(targetNode.Key)
+                    .Select(static entry => entry.Id)
+                    .Where(static id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+
+                foreach (var descendantId in descendantIds)
+                {
+                    using var descendantDocument = catalogRepository.Collection.GetDocument(descendantId);
+                    if (descendantDocument is not null)
+                    {
+                        catalogRepository.Collection.Delete(descendantDocument);
+                    }
+                    addedItemsByNodeKey.Remove(descendantId);
+                    deletedItemNamesByNodeKey.Remove(descendantId);
+                    renamedBrowserItemNamesByNodeKey.Remove(descendantId);
+                }
+
+                using var targetDocument = catalogRepository.Collection.GetDocument(targetNode.Key);
+                if (targetDocument is not null)
+                {
+                    catalogRepository.Collection.Delete(targetDocument);
+                }
+                addedItemsByNodeKey.Remove(targetNode.Key);
+                deletedItemNamesByNodeKey.Remove(targetNode.Key);
+                renamedBrowserItemNamesByNodeKey.Remove(targetNode.Key);
+            }
+        }
+        else if (inMemoryCatalogEntries is not null)
+        {
+            var doc = inMemoryCatalogEntries.FirstOrDefault(entry => string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
+            if (doc is not null)
+            {
+                DeleteCatalogEntryFromInMemory(doc);
+            }
+            else
+            {
+                var dummyDoc = new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
+                DeleteCatalogEntryFromInMemory(dummyDoc);
+            }
+        }
+
+        RefreshTreeNodes();
+
+        if (parentNode is not null && treeNodesByKey.TryGetValue(parentNode.Key, out var remainingParent))
+        {
+            SelectedTreeNode = remainingParent;
+        }
+        else
+        {
+            SelectedTreeNode = TreeNodes.FirstOrDefault();
+        }
+
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = BrowserItems.FirstOrDefault();
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
+
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
+    }
+
+    private void DeleteCatalogEntryFromInMemory(CatalogDocument item)
+    {
+        if (inMemoryCatalogEntries is null)
+        {
             return;
         }
 
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
-        if (!deletedItemNamesByNodeKey.TryGetValue(nodeKey, out var deletedNames))
+        var toDelete = new HashSet<string>(StringComparer.Ordinal) { item.Id };
+        var added = true;
+        while (added)
         {
-            deletedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            deletedItemNamesByNodeKey[nodeKey] = deletedNames;
+            added = false;
+            foreach (var entry in inMemoryCatalogEntries)
+            {
+                if (entry.ParentId is not null && toDelete.Contains(entry.ParentId) && toDelete.Add(entry.Id))
+                {
+                    added = true;
+                }
+            }
         }
 
-        deletedNames.Add(SelectedBrowserItem.Name);
-        var deletedName = SelectedBrowserItem.Name;
-        RefreshBrowserItemsForSelection();
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, deletedName);
+        inMemoryCatalogEntries.RemoveAll(entry => toDelete.Contains(entry.Id));
+
+        foreach (var deletedId in toDelete)
+        {
+            addedItemsByNodeKey.Remove(deletedId);
+            deletedItemNamesByNodeKey.Remove(deletedId);
+            renamedBrowserItemNamesByNodeKey.Remove(deletedId);
+        }
+    }
+
+    private bool CanDeleteTreeNode(BrowserTreeNode? node)
+    {
+        if (node is null)
+        {
+            return false;
+        }
+
+        if (TreeNodes.Any(root => string.Equals(root.Key, node.Key, StringComparison.OrdinalIgnoreCase)) ||
+            string.Equals(node.Key, "library", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static BrowserTreeNode? FindParentTreeNode(IEnumerable<BrowserTreeNode> nodes, string childKey)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.Children.Any(child => string.Equals(child.Key, childKey, StringComparison.OrdinalIgnoreCase)))
+            {
+                return node;
+            }
+
+            var foundInChild = FindParentTreeNode(node.Children, childKey);
+            if (foundInChild is not null)
+            {
+                return foundInChild;
+            }
+        }
+
+        return null;
+    }
+
+    private void RefreshTreeNodes()
+    {
+        TreeNodes = GetTreeNodes();
+        var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        treeNodesByKey = allTreeNodes
+            .GroupBy(node => node.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        OnPropertyChanged(nameof(TreeNodes));
     }
 
     [RelayCommand]
@@ -1103,11 +1333,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
     {
         RefreshBrowserItemsForSelection();
+        OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     private void StartOperation(string initialStatus)
@@ -1610,7 +1845,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
@@ -1651,7 +1886,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "tree" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", Command = PasteCommand },
