@@ -2,20 +2,32 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Styles.Resources>
-        <!-- Light Theme Resources -->
-        <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#3399FF" />
-            <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#E5E5E5" />
-            <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#000000" />
-        </ResourceDictionary>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- Light Theme Resources -->
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#D4E2FF" />
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#1E1F22" />
+                    <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#E4E6EB" />
+                    <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#1E1F22" />
+                </ResourceDictionary>
 
-        <!-- Dark Theme Resources -->
-        <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#094771" />
-            <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#37373D" />
-            <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#FFFFFF" />
+                <!-- Dark Theme Resources -->
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#353842" />
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#2B2D30" />
+                    <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#DFE1E5" />
+                </ResourceDictionary>
+
+                <!-- Default Fallback Theme Resources -->
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionBackgroundBrush" Color="#353842" />
+                    <SolidColorBrush x:Key="TreeViewActiveSelectionForegroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TreeViewInactiveSelectionBackgroundBrush" Color="#2B2D30" />
+                    <SolidColorBrush x:Key="TreeViewInactiveSelectionForegroundBrush" Color="#DFE1E5" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Styles.Resources>
 
