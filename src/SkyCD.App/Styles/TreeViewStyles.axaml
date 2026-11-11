@@ -1,0 +1,31 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- TreeView container styling -->
+    <Style Selector="TreeView">
+        <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!-- TreeViewItem compact row height and spacing matching legacy shell -->
+    <Style Selector="TreeViewItem">
+        <Setter Property="MinHeight" Value="20" />
+        <Setter Property="Padding" Value="2,1" />
+    </Style>
+
+    <!-- Inactive selection: persistent selection visibility when TreeView loses focus -->
+    <Style Selector="TreeViewItem:selected:not(:focus) /template/ Border#SelectionBorder">
+        <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightLowBrush}" />
+    </Style>
+
+    <!-- Active selection: highlighted when focused -->
+    <Style Selector="TreeViewItem:selected:focus /template/ Border#SelectionBorder">
+        <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush4}" />
+    </Style>
+
+    <Style Selector="TreeViewItem:pointerover /template/ Border#SelectionBorder">
+        <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+    </Style>
+
+</Styles>
