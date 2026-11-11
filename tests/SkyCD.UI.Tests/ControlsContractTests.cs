@@ -161,4 +161,25 @@ public class ControlsContractTests
         Assert.Equal(10, statusBar.ProgressMin);
         Assert.Equal(90, statusBar.ProgressMax);
     }
+
+    [AvaloniaFact]
+    public void StatusBar_LayoutStructure_MatchesCompactLegacy22pxSpecification()
+    {
+        var statusBar = new StatusBar();
+
+        Assert.Equal(22, statusBar.Height);
+        Assert.Equal(22, statusBar.MinHeight);
+
+        var border = Assert.IsType<Border>(statusBar.Content);
+        Assert.Equal(new Avalonia.Thickness(0, 1, 0, 0), border.BorderThickness);
+        Assert.Equal(new Avalonia.Thickness(4, 0), border.Padding);
+        Assert.Equal(22, border.Height);
+
+        var grid = Assert.IsType<Grid>(border.Child);
+        Assert.Equal(4, grid.ColumnDefinitions.Count);
+        Assert.Equal(GridUnitType.Star, grid.ColumnDefinitions[0].Width.GridUnitType);
+        Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[1].Width.GridUnitType);
+        Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[2].Width.GridUnitType);
+        Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[3].Width.GridUnitType);
+    }
 }

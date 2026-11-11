@@ -1,36 +1,40 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SkyCD.UI.Controls.StatusBar.StatusBar"
-             x:Name="Root">
+             x:Name="Root"
+             Height="22"
+             MinHeight="22">
     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
-            BorderThickness="1,1,0,0"
-            Padding="8,4">
-        <Grid ColumnDefinitions="*,Auto,120,Auto" ColumnSpacing="10">
-            <TextBlock Text="{Binding StatusText, ElementName=Root}" VerticalAlignment="Center" />
+            BorderThickness="0,1,0,0"
+            Padding="4,0"
+            Height="22">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+            <TextBlock Text="{Binding StatusText, ElementName=Root}"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProgressText, ElementName=Root}"
                        VerticalAlignment="Center"
+                       Margin="4,0"
                        IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
             <ProgressBar Grid.Column="2"
+                         Width="100"
+                         Height="14"
                          Minimum="{Binding ProgressMin, ElementName=Root}"
                          Maximum="{Binding ProgressMax, ElementName=Root}"
                          Value="{Binding ProgressValue, ElementName=Root}"
+                         VerticalAlignment="Center"
+                         Margin="2,0,4,0"
                          IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
-            <Button Grid.Column="3"
-                    Padding="4,2"
-                    MinHeight="22"
-                    MinWidth="26"
-                    BorderThickness="0"
-                    BorderBrush="Transparent"
-                    Background="Transparent"
-                    Foreground="{Binding McpStatusColor, ElementName=Root}"
-                    Content="{Binding McpStatusGlyph, ElementName=Root}"
-                    FontSize="14"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Right"
-                    ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
-                    IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}"
-                    IsHitTestVisible="False" />
+            <TextBlock Grid.Column="3"
+                       Margin="4,0,2,0"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
+                       Foreground="{Binding McpStatusColor, ElementName=Root}"
+                       Text="{Binding McpStatusGlyph, ElementName=Root}"
+                       FontSize="11"
+                       ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
+                       IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}" />
         </Grid>
     </Border>
 </UserControl>
