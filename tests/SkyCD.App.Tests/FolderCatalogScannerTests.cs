@@ -135,6 +135,8 @@ public sealed class FolderCatalogScannerTests : IDisposable
 
         var rootDoc = documents.First(doc => doc.Type == CatalogDocumentType.Folder);
         Assert.True(rootDoc.Properties.ContainsKey("FullName"));
+        Assert.True(rootDoc.Properties.ContainsKey("RealDirectoryFullName"));
+        Assert.True(rootDoc.Properties.ContainsKey("RealDirectoryName"));
         Assert.True(rootDoc.Properties.ContainsKey("LastWriteTime"));
 
         var fileDoc = documents.First(doc => doc.Type == CatalogDocumentType.File);

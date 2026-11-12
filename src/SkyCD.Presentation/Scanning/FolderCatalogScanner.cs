@@ -81,7 +81,7 @@ public sealed class FolderCatalogScanner
         {
             files = directory.GetFiles();
         }
-        catch (UnauthorizedAccessException)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
             files = [];
         }
@@ -118,7 +118,7 @@ public sealed class FolderCatalogScanner
             {
                 subdirectories = directory.GetDirectories();
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
                 subdirectories = [];
             }
@@ -127,6 +127,8 @@ public sealed class FolderCatalogScanner
             {
                 directChildrenCount++;
                 var subDirId = $"folder-{Guid.NewGuid():N}";
+
+                progress?.Report(($"Reading '{subDir.Name}'...", 50));
 
                 var (subDirSize, subDirDirectChildren, subDirProperties) = ScanDirectory(
                     subDir,
@@ -175,5 +177,7 @@ public sealed class FolderCatalogScanner
         properties["CreationTime"] = dir.CreationTime.ToString("O");
         properties["Attributes"] = dir.Attributes.ToString();
         properties["FullName"] = dir.FullName;
+        properties["RealDirectoryFullName"] = dir.FullName;
+        properties["RealDirectoryName"] = dir.Name;
     }
 }

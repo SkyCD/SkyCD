@@ -131,4 +131,61 @@ public sealed class FolderScanningIntegrationTests : IDisposable
         Assert.Contains(reloadedVm.BrowserItems, item => item.Name == "track1.mp3");
         Assert.Contains(reloadedVm.BrowserItems, item => item.Name == "Bonus");
     }
+
+    [Fact]
+    public void FolderScan_WithNewMediaPlacement_And_WithoutSubfolders_ImportsCorrectly()
+    {
+        var mediaDir = Path.Combine(scanTestDirectory, "BackupFolder");
+        Directory.CreateDirectory(mediaDir);
+        File.WriteAllText(Path.Combine(mediaDir, "root_file.txt"), "root-data");
+
+        var ignoredSubDir = Path.Combine(mediaDir, "IgnoredSubDir");
+        Directory.CreateDirectory(ignoredSubDir);
+        File.WriteAllText(Path.Combine(ignoredSubDir, "child.txt"), "child-data");
+
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
+        var options = appOptionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 10;
+        appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+
+        var scanner = new FolderCatalogScanner();
+        var scanOptions = new FolderScanOptions(
+            FolderPath: mediaDir,
+            MediaName: "Custom Media Title",
+            TargetParentId: null,
+            RootType: CatalogDocumentType.Media,
+            IncludeSubfolders: false,
+            IncludeExtendedInfo: true);
+
+        var scannedDocs = scanner.Scan(scanOptions);
+        Assert.Equal(2, scannedDocs.Count); // Media root + root_file.txt
+
+        viewModel.AddImportedDocuments(scannedDocs);
+
+        var rootDoc = scannedDocs[0];
+        Assert.Equal("Custom Media Title", rootDoc.Name);
+        Assert.Equal(CatalogDocumentType.Media, rootDoc.Type);
+        Assert.Null(rootDoc.ParentId);
+
+        using var reloadedVm = new MainWindowViewModel(repositoryManager);
+        var rootMediaNode = reloadedVm.TreeNodes.FirstOrDefault(node => node.Title == "Custom Media Title");
+        Assert.NotNull(rootMediaNode);
+
+        reloadedVm.SelectedTreeNode = rootMediaNode;
+        Assert.Single(reloadedVm.BrowserItems);
+        Assert.Contains(reloadedVm.BrowserItems, item => item.Name == "root_file.txt");
+        Assert.DoesNotContain(reloadedVm.BrowserItems, item => item.Name == "IgnoredSubDir");
+    }
 }
