@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 
@@ -12,24 +13,60 @@ namespace SkyCD.App.Views;
 
 public partial class AddToListWindow : Window
 {
+    private readonly DispatcherTimer driveRefreshTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(500)
+    };
+
+    private AddToListDialogViewModel? subscribedViewModel;
+
     public AddToListWindow()
     {
         InitializeComponent();
+        driveRefreshTimer.Tick += OnDriveRefreshTimerTick;
         DataContextChanged += OnDataContextChanged;
+        Opened += OnOpened;
+        Closed += OnClosed;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (sender is not AddToListWindow window)
+        if (subscribedViewModel is not null)
         {
-            return;
+            subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
-        if (window.DataContext is AddToListDialogViewModel vm)
+        if (sender is AddToListWindow window && window.DataContext is AddToListDialogViewModel vm)
         {
-            vm.PropertyChanged -= OnViewModelPropertyChanged;
+            subscribedViewModel = vm;
             vm.PropertyChanged += OnViewModelPropertyChanged;
         }
+        else
+        {
+            subscribedViewModel = null;
+        }
+    }
+
+    private void OnOpened(object? sender, EventArgs e)
+    {
+        subscribedViewModel?.RefreshDrives();
+        driveRefreshTimer.Start();
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        driveRefreshTimer.Stop();
+        if (subscribedViewModel is not null)
+        {
+            subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            subscribedViewModel.Dispose();
+            subscribedViewModel = null;
+        }
+    }
+
+    private void OnDriveRefreshTimerTick(object? sender, EventArgs e)
+    {
+        subscribedViewModel?.RefreshDrives();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

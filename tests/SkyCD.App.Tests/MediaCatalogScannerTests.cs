@@ -35,6 +35,12 @@ public sealed class MediaCatalogScannerTests : IDisposable
 
     private sealed class FakeDriveProvider(IReadOnlyList<MediaDriveInfo> drives) : IMediaDriveProvider
     {
+        public event EventHandler? DrivesChanged
+        {
+            add { }
+            remove { }
+        }
+
         public IReadOnlyList<MediaDriveInfo> GetSupportedDrives() => drives;
         public MediaDriveInfo? GetDrive(string drivePathOrName) => drives.FirstOrDefault(d => d.Name == drivePathOrName || d.RootDirectory == drivePathOrName);
     }

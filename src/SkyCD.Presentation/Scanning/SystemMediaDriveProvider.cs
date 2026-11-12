@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -5,6 +6,12 @@ namespace SkyCD.Presentation.Scanning;
 
 public sealed class SystemMediaDriveProvider : IMediaDriveProvider
 {
+    public event EventHandler? DrivesChanged
+    {
+        add { }
+        remove { }
+    }
+
     public IReadOnlyList<MediaDriveInfo> GetSupportedDrives()
     {
         var result = new List<MediaDriveInfo>();
