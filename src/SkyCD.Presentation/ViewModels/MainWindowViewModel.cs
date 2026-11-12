@@ -2105,7 +2105,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return new BrowserTreeNode(
             entry.Id,
             entry.Name,
-            entry.Type.ResolveIconGlyph(),
+            entry.IconGlyph,
             children,
             isExpanded);
     }

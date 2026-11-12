@@ -1454,7 +1454,9 @@ public partial class MainWindow : Window
 
             var isDirectory = raw.GetType().GetProperty("IsDirectory", BindingFlags.Instance | BindingFlags.Public)
                 ?.GetValue(raw) is true;
-            result.Add(new PathEntry(normalizedPath, size, isHttps, domain, isDirectory));
+            var icon = raw.GetType().GetProperty("Icon", BindingFlags.Instance | BindingFlags.Public)
+                ?.GetValue(raw) as string;
+            result.Add(new PathEntry(normalizedPath, size, isHttps, domain, isDirectory, icon));
         }
 
         entries = result;
@@ -1467,7 +1469,8 @@ public partial class MainWindow : Window
         {
             return BuildEntriesFromPaths(rows.Select(row => new PathEntry(
                 ReadString(row, "fullPath"), ReadLong(row, "size", "sizeBytes"), false, null,
-                ReadString(row, "kind").Equals("folder", StringComparison.OrdinalIgnoreCase))).ToArray());
+                ReadString(row, "kind").Equals("folder", StringComparison.OrdinalIgnoreCase),
+                ReadString(row, "icon", "Icon"))).ToArray());
         }
 
         var results = new List<CatalogDocument>();
@@ -1504,10 +1507,30 @@ public partial class MainWindow : Window
                 status = ReadString(row, "statusName");
             }
 
+            var icon = ReadString(row, "icon");
+            if (string.IsNullOrWhiteSpace(icon))
+            {
+                icon = ReadString(row, "Icon");
+            }
+
             var properties = new SkyCD.Documents.Collections.PropertiesCollection();
+            if (row.TryGetValue("properties", out var rawProps) && rawProps is not null)
+            {
+                CopyProperties(properties, rawProps);
+            }
+            else if (row.TryGetValue("Properties", out rawProps) && rawProps is not null)
+            {
+                CopyProperties(properties, rawProps);
+            }
+
             if (!string.IsNullOrWhiteSpace(status))
             {
                 properties["StatusName"] = status;
+            }
+
+            if (!string.IsNullOrWhiteSpace(icon) && !properties.ContainsKey("Icon"))
+            {
+                properties["Icon"] = icon;
             }
 
             results.Add(new CatalogDocument
@@ -1524,6 +1547,34 @@ public partial class MainWindow : Window
         }
 
         return results;
+    }
+
+    private static void CopyProperties(SkyCD.Documents.Collections.PropertiesCollection target, object rawProps)
+    {
+        if (rawProps is JsonElement json && json.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var prop in json.EnumerateObject())
+            {
+                target[prop.Name] = prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString() ?? string.Empty,
+                    JsonValueKind.Number => prop.Value.GetRawText(),
+                    JsonValueKind.True => "true",
+                    JsonValueKind.False => "false",
+                    _ => prop.Value.GetRawText()
+                };
+            }
+        }
+        else if (rawProps is IDictionary<string, object?> dict)
+        {
+            foreach (var (key, value) in dict)
+            {
+                if (value is not null)
+                {
+                    target[key] = value;
+                }
+            }
+        }
     }
 
     private static IReadOnlyList<CatalogDocument> BuildEntriesFromPaths(IReadOnlyList<PathEntry> pathEntries)
@@ -1573,6 +1624,12 @@ public partial class MainWindow : Window
                     continue;
                 }
 
+                var entryProperties = new SkyCD.Documents.Collections.PropertiesCollection();
+                if (isFile && !string.IsNullOrWhiteSpace(pathEntry.Icon))
+                {
+                    entryProperties["Icon"] = pathEntry.Icon;
+                }
+
                 entries[id] = new CatalogDocument
                 {
                     Id = id,
@@ -1584,7 +1641,8 @@ public partial class MainWindow : Window
                             ? CatalogDocumentType.Media
                             : CatalogDocumentType.Folder,
                     Size = isFile ? pathEntry.Size : 0L,
-                    ChildrenCount = 0L
+                    ChildrenCount = 0L,
+                    Properties = entryProperties
                 };
 
                 currentParentId = id;
@@ -1618,6 +1676,12 @@ public partial class MainWindow : Window
         var resourceNodeId = CreateImportedNodeId(domainNodeId, pathEntry.Path);
         if (!entries.ContainsKey(resourceNodeId))
         {
+            var entryProperties = new SkyCD.Documents.Collections.PropertiesCollection();
+            if (!string.IsNullOrWhiteSpace(pathEntry.Icon))
+            {
+                entryProperties["Icon"] = pathEntry.Icon;
+            }
+
             entries[resourceNodeId] = new CatalogDocument
             {
                 Id = resourceNodeId,
@@ -1625,16 +1689,27 @@ public partial class MainWindow : Window
                 ParentId = domainNodeId,
                 Type = CatalogDocumentType.NetworkResource,
                 Size = pathEntry.Size,
-                ChildrenCount = 0L
+                ChildrenCount = 0L,
+                Properties = entryProperties
             };
         }
     }
 
-    private static string ReadString(IReadOnlyDictionary<string, object?> row, string key)
+    private static string ReadString(IReadOnlyDictionary<string, object?> row, params string[] keys)
     {
-        return row.TryGetValue(key, out var value) && value is not null
-            ? value is JsonElement { ValueKind: JsonValueKind.Null } ? string.Empty : value.ToString() ?? string.Empty
-            : string.Empty;
+        foreach (var key in keys)
+        {
+            if (row.TryGetValue(key, out var value) && value is not null)
+            {
+                var str = value is JsonElement { ValueKind: JsonValueKind.Null } ? string.Empty : value.ToString() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(str))
+                {
+                    return str;
+                }
+            }
+        }
+
+        return string.Empty;
     }
 
     private static long ReadLong(IReadOnlyDictionary<string, object?> row, params string[] keys)
@@ -1668,7 +1743,7 @@ public partial class MainWindow : Window
         return "import-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
     }
 
-    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain, bool IsDirectory);
+    private sealed record PathEntry(string Path, long Size, bool IsHttps, string? Domain, bool IsDirectory, string? Icon = null);
 
     private void RefreshMcpStatusIndicator()
     {
