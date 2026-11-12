@@ -32,4 +32,24 @@ public class LoginDialogViewModelTests
 
         Assert.True(vm.DialogAccepted);
     }
+
+    [Fact]
+    public void ConfirmCommand_AllowsAnonymousAccessWithoutAPassword()
+    {
+        var anonymousUser = new LoginDialogViewModel
+        {
+            Username = "anonymous"
+        };
+        Assert.True(anonymousUser.ConfirmCommand.CanExecute(null));
+
+        var anonymousAccess = new LoginDialogViewModel
+        {
+            UseAnonymous = true
+        };
+        Assert.False(anonymousAccess.IsCredentialEntryEnabled);
+        Assert.True(anonymousAccess.ConfirmCommand.CanExecute(null));
+
+        anonymousAccess.ConfirmCommand.Execute(null);
+        Assert.True(anonymousAccess.DialogAccepted);
+    }
 }

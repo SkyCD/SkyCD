@@ -5,7 +5,7 @@
         x:Class="SkyCD.App.Views.LoginWindow"
         x:DataType="vm:LoginDialogViewModel"
         Width="380"
-        Height="210"
+        Height="248"
         CanResize="False"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
@@ -20,9 +20,13 @@
         <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="110,*" ColumnSpacing="10" RowSpacing="8">
             <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="{i18n:Translate {x:Static i18n:UiKeys.EnterServerCredentials}}" />
             <TextBlock Grid.Row="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Username}}" VerticalAlignment="Center" />
-            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Username}" />
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Username}" IsEnabled="{Binding IsCredentialEntryEnabled}" />
             <TextBlock Grid.Row="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Password}}" VerticalAlignment="Center" />
-            <TextBox Grid.Row="2" Grid.Column="1" PasswordChar="*" Text="{Binding Password}" />
+            <TextBox Grid.Row="2" Grid.Column="1" PasswordChar="*" Text="{Binding Password}" IsEnabled="{Binding IsCredentialEntryEnabled}" />
+            <CheckBox Grid.Row="3"
+                      Grid.ColumnSpan="2"
+                      Content="{i18n:Translate {x:Static i18n:UiKeys.AnonymousAccess}}"
+                      IsChecked="{Binding UseAnonymous}" />
         </Grid>
 
         <StackPanel Grid.Row="1"

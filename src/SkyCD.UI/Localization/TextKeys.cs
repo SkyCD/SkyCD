@@ -139,4 +139,9 @@ public static class TextKeys
     public const string FindSearching = "core.text.FindSearching";
     public const string FindNoMatches = "core.text.FindNoMatches";
     public const string FindMatchCount = "core.text.FindMatchCount";
+    public const string OnlyFileTransferProtocolCurrentlyIsSupported = "core.text.OnlyFileTransferProtocolCurrentlyIsSupported";
+    public const string FtpAuthenticationFailed = "core.text.FtpAuthenticationFailed";
+    public const string FtpConnectionFailed = "core.text.FtpConnectionFailed";
+    public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";
+    public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
 }

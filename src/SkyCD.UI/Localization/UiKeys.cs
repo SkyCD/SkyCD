@@ -9,6 +9,7 @@ public static class UiKeys
     public const string EnterServerCredentials = "core.ui.EnterServerCredentials";
     public const string Username = "core.ui.Username";
     public const string Password = "core.ui.Password";
+    public const string AnonymousAccess = "core.ui.AnonymousAccess";
     public const string Ok = "core.ui.Ok";
     public const string Cancel = "core.ui.Cancel";
     public const string Yes = "core.ui.Yes";
