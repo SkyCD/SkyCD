@@ -560,6 +560,23 @@ public partial class MainWindow : Window
             }
         }
 
+        if (dialogVm.SourceMode == AddToListSourceMode.TitleOnly)
+        {
+            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+                ? null
+                : vm.SelectedTreeNode?.Key ?? "library";
+            try
+            {
+                vm.AddTitleOnlyMedia(dialogVm.MediaName, targetParentId);
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = ex.Message;
+            }
+
+            return;
+        }
+
         if (dialogVm.SourceMode == AddToListSourceMode.Media)
         {
             var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
@@ -1588,6 +1605,7 @@ public partial class MainWindow : Window
                 Type = documentType,
                 Size = ReadLong(row, "size", "sizeBytes"),
                 ChildrenCount = ReadLong(row, "childrenCount"),
+                ContentsState = ReadContentsState(row, properties),
                 Status = string.IsNullOrWhiteSpace(status) ? null : status,
                 Properties = properties
             });
@@ -1740,6 +1758,27 @@ public partial class MainWindow : Window
                 Properties = entryProperties
             };
         }
+    }
+
+    private static CatalogContentsState ReadContentsState(
+        IReadOnlyDictionary<string, object?> row,
+        SkyCD.Documents.Collections.PropertiesCollection properties)
+    {
+        var raw = ReadString(row, "contentsState", "ContentsState");
+        if (string.IsNullOrWhiteSpace(raw) &&
+            properties.TryGetValue("ContentsState", out var propertyValue))
+        {
+            raw = propertyValue switch
+            {
+                JsonElement json when json.ValueKind == JsonValueKind.String => json.GetString() ?? string.Empty,
+                JsonElement json => json.ToString(),
+                _ => propertyValue?.ToString() ?? string.Empty
+            };
+        }
+
+        return Enum.TryParse<CatalogContentsState>(raw, ignoreCase: true, out var parsed)
+            ? parsed
+            : CatalogContentsState.Known;
     }
 
     private static string ReadString(IReadOnlyDictionary<string, object?> row, params string[] keys)

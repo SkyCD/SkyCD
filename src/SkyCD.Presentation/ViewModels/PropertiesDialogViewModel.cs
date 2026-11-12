@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Documents.Collections;
+using SkyCD.Documents.Enum;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -144,6 +145,15 @@ public partial class PropertiesDialogViewModel : ObservableObject
         if (bool.TryParse(text, out var parsedBool))
         {
             return parsedBool ? yesText : noText;
+        }
+
+        if (string.Equals(text, nameof(CatalogContentsState.NotScanned), StringComparison.OrdinalIgnoreCase))
+        {
+            var localized = localizer[nameof(CatalogContentsState.NotScanned)].Value;
+            if (!string.Equals(localized, nameof(CatalogContentsState.NotScanned), StringComparison.Ordinal))
+            {
+                return localized;
+            }
         }
 
         return text;

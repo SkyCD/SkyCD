@@ -21,6 +21,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.UndoRedo;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -286,6 +287,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => BuildTreeContextMenuItems();
 
     [ObservableProperty] private IReadOnlyList<CatalogDocument> browserItems = [];
+
+    [ObservableProperty] private string? selectedContentsNotice;
+
+    [ObservableProperty] private bool showContentsNotScannedNotice;
 
     [ObservableProperty] private BrowserTreeNode? selectedTreeNode;
 
@@ -608,6 +613,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void AddItem()
     {
         AddToListRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public CatalogDocument AddTitleOnlyMedia(string? mediaName, string? parentId)
+    {
+        var document = TitleOnlyMedia.Create(mediaName, parentId);
+        AddImportedDocuments([document]);
+        if (treeNodesByKey.TryGetValue(document.Id, out var node))
+        {
+            SelectedTreeNode = node;
+        }
+
+        return document;
     }
 
     public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents)
@@ -1446,6 +1463,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         Type = item.Type,
                         Size = item.Size,
                         ChildrenCount = item.ChildrenCount,
+                        ContentsState = item.ContentsState,
+                        Status = item.Status,
                         Properties = item.Properties
                     };
                 })
@@ -1457,6 +1476,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             BrowserItems = [];
             SelectedBrowserItem = null;
             SelectedBrowserItems = new List<CatalogDocument>();
+            UpdateSelectedContentsNotice();
             return;
         }
 
@@ -1478,6 +1498,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SelectedBrowserItems = SelectedBrowserItem is not null
             ? new List<CatalogDocument> { SelectedBrowserItem }
             : new List<CatalogDocument>();
+        UpdateSelectedContentsNotice();
+    }
+
+    private void UpdateSelectedContentsNotice()
+    {
+        var document = SelectedTreeNode is null ? null : FindCatalogDocument(SelectedTreeNode.Key);
+        var notice = document?.ContentsState == CatalogContentsState.NotScanned
+            ? LocalizationService.Current.Get(TextKeys.ContentsNotScanned)
+            : null;
+        SelectedContentsNotice = notice;
+        ShowContentsNotScannedNotice = !string.IsNullOrWhiteSpace(notice) && BrowserItems.Count == 0;
+    }
+
+    private CatalogDocument? FindCatalogDocument(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return null;
+        }
+
+        if (catalogRepository is not null)
+        {
+            return catalogRepository.Get(itemId);
+        }
+
+        return (inMemoryCatalogEntries ?? [])
+            .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal));
     }
 
     private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
@@ -2209,19 +2256,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
     {
-        if (string.IsNullOrWhiteSpace(itemId))
+        var document = FindCatalogDocument(itemId);
+        if (document is null)
         {
             return new PropertiesCollection();
         }
 
-        if (catalogRepository is not null)
+        if (document.ContentsState != CatalogContentsState.NotScanned ||
+            document.Properties.ContainsKey(TitleOnlyMedia.ContentsStatePropertyKey))
         {
-            return catalogRepository.Get(itemId)?.Properties ?? new PropertiesCollection();
+            return document.Properties;
         }
 
-        return (inMemoryCatalogEntries ?? [])
-            .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal))
-            ?.Properties ?? new PropertiesCollection();
+        var copy = new PropertiesCollection(document.Properties)
+        {
+            [TitleOnlyMedia.ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString()
+        };
+        return copy;
     }
 
     private static BrowserTreeNode BuildTreeNodeFromLookup(

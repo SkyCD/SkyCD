@@ -22,6 +22,8 @@ public sealed class CatalogDocument
 
     public long ChildrenCount { get; init; }
 
+    public CatalogContentsState ContentsState { get; init; } = CatalogContentsState.Known;
+
     public string? Status { get; set; }
 
     public PropertiesCollection Properties { get; init; } = new();

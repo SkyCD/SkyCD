@@ -56,6 +56,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                 Type = doc.Type,
                 Size = doc.Size,
                 ChildrenCount = doc.ChildrenCount,
+                ContentsState = doc.ContentsState,
                 Status = doc.Status,
                 Properties = updatedProperties
             };
