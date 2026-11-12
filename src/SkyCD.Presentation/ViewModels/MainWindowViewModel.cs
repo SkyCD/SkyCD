@@ -62,6 +62,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
+    public event EventHandler? FindCatalogRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
@@ -355,6 +356,40 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsPasteEnabled => ClipboardItem is not null;
 
     public bool IsCutEnabled => SelectedBrowserItem is not null;
+
+    [RelayCommand]
+    private void FindCatalog() => FindCatalogRequested?.Invoke(this, EventArgs.Empty);
+
+    public CatalogFindDialogViewModel CreateCatalogFindDialogViewModel() =>
+        new(GetAllCatalogEntries(), NavigateToFindResult);
+
+    private IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
+        catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
+
+    private void NavigateToFindResult(CatalogFindResult result)
+    {
+        var document = result.Document;
+        var nodeKey = IsTreeVisibleType(document) ? document.Id : document.ParentId;
+        if (string.IsNullOrWhiteSpace(nodeKey) || !treeNodesByKey.TryGetValue(nodeKey, out var node)) return;
+
+        ExpandAncestors(node.Key);
+        SelectedTreeNode = node;
+        if (!IsTreeVisibleType(document))
+        {
+            SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+                string.Equals(item.Id, document.Id, StringComparison.Ordinal));
+        }
+    }
+
+    private void ExpandAncestors(string nodeKey)
+    {
+        var current = FindParentTreeNode(TreeNodes, nodeKey);
+        while (current is not null)
+        {
+            current.IsExpanded = true;
+            current = FindParentTreeNode(TreeNodes, current.Key);
+        }
+    }
 
     [RelayCommand]
     private void NewCatalog()
@@ -1733,7 +1768,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand }
+                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand },
+                    Separator(),
+                    new MainMenuItemViewModel
+                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand }
                 ]
             },
             new MainMenuItemViewModel
