@@ -3,6 +3,7 @@
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:cp="clr-namespace:SkyCD.UI.Controls.Properties;assembly=SkyCD.UI"
+        xmlns:rt="clr-namespace:SkyCD.UI.Controls.RichText;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
@@ -47,13 +48,10 @@
 
                     <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Margin="0,12,0,4" Text="{i18n:Translate {x:Static i18n:UiKeys.CommentsLabel}}"
                                VerticalAlignment="Top" />
-                    <TextBox Grid.Row="3"
-                             Grid.ColumnSpan="3"
-                             Margin="0,0,0,0"
-                             Text="{Binding Comments}"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <rt:RichTextEditor Grid.Row="3"
+                                       Grid.ColumnSpan="3"
+                                       Margin="0,0,0,0"
+                                       RtfText="{Binding Comments, Mode=TwoWay}" />
                 </Grid>
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Properties}}" IsVisible="{Binding HasInfoTab}">
