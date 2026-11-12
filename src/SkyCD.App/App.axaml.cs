@@ -14,6 +14,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
+using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Localization;
@@ -88,6 +89,7 @@ public partial class App : Avalonia.Application
         ServiceProvider.RegisterInstance<ILocalizationService>(LocalizationService.Current);
         return ServiceProvider.RegisterChildContainer(static registrator =>
         {
+            registrator.Register<IMediaDriveProvider, SystemMediaDriveProvider>(Reuse.Singleton);
             registrator.Register<McpServerHost>(Reuse.Singleton);
             registrator.Register<PluginTranslationRegistry>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);

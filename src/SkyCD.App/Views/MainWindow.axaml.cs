@@ -47,6 +47,7 @@ public partial class MainWindow : Window
     private readonly StatusVariantDocumentRepository statusVariantRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
+    private readonly IMediaDriveProvider mediaDriveProvider;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -58,9 +59,11 @@ public partial class MainWindow : Window
     public MainWindow(
         RepositoryManager repositoryManager,
         PluginManager pluginManager,
-        FileFormatManager fileFormatManager)
+        FileFormatManager fileFormatManager,
+        IMediaDriveProvider? mediaDriveProvider = null)
     {
         this.repositoryManager = repositoryManager;
+        this.mediaDriveProvider = mediaDriveProvider ?? new SystemMediaDriveProvider();
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
         statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
@@ -481,7 +484,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dialogVm = new AddToListDialogViewModel();
+        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider);
         var dialog = new AddToListWindow
         {
             DataContext = dialogVm
@@ -507,6 +510,64 @@ public partial class MainWindow : Window
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.LoginCanceled);
                 return;
             }
+        }
+
+        if (dialogVm.SourceMode == AddToListSourceMode.Media)
+        {
+            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+                ? null
+                : vm.SelectedTreeNode?.Key ?? "library";
+
+            var rootType = CatalogDocumentType.Media;
+
+            var selectedDrivePath = dialogVm.SelectedDrive?.RootDirectory ?? dialogVm.SelectedDrive?.Name ?? string.Empty;
+
+            var scanOptions = new MediaScanOptions(
+                DrivePathOrName: selectedDrivePath,
+                MediaName: string.IsNullOrWhiteSpace(dialogVm.MediaName) ? dialogVm.SelectedDrive?.DisplayName : dialogVm.MediaName,
+                TargetParentId: targetParentId,
+                RootType: rootType,
+                IncludeMediaInfo: dialogVm.IncludeMediaInfo,
+                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
+
+            var scanner = new MediaCatalogScanner(mediaDriveProvider);
+            var progressVm = new AddingProgressDialogViewModel();
+            var progressDialog = new AddingProgressWindow
+            {
+                DataContext = progressVm
+            };
+            progressDialog.Show(this);
+
+            try
+            {
+                var progress = new Progress<(string Status, int Percentage)>(p =>
+                {
+                    progressVm.OperationText = p.Status;
+                    progressVm.ProgressValue = p.Percentage;
+                });
+
+                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progress));
+                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications);
+                progressVm.ProgressValue = 60;
+                await Task.Delay(50);
+
+                vm.AddImportedDocuments(scannedDocuments);
+
+                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.UpdatingIndexes);
+                progressVm.ProgressValue = 100;
+                await Task.Delay(50);
+
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = ex.Message;
+            }
+            finally
+            {
+                progressDialog.Close();
+            }
+            return;
         }
 
         if (dialogVm.SourceMode == AddToListSourceMode.Folder)
