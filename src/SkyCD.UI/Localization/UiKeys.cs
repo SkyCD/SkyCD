@@ -95,4 +95,11 @@ public static class UiKeys
     public const string AddProperty = "core.ui.AddProperty";
     public const string RemoveProperty = "core.ui.RemoveProperty";
     public const string InvalidPropertyNames = "core.ui.InvalidPropertyNames";
+    public const string Bold = "core.ui.Bold";
+    public const string Italic = "core.ui.Italic";
+    public const string Underline = "core.ui.Underline";
+    public const string Strikeout = "core.ui.Strikeout";
+    public const string Bullets = "core.ui.Bullets";
+    public const string Undo = "core.ui.Undo";
+    public const string Redo = "core.ui.Redo";
 }
