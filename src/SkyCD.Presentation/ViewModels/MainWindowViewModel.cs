@@ -21,6 +21,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Presentation.UndoRedo;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -29,6 +30,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
     private readonly CatalogDocumentRepository? catalogRepository;
+    private readonly CatalogUndoManager? undoManager;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
@@ -83,11 +85,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IRepository<CatalogDocument> catalogRepository,
         IStringLocalizer propertyValueLocalizer,
         MenuExtensionManager menuExtensionManager,
-        bool shouldSeedDefaultCatalog)
+        bool shouldSeedDefaultCatalog,
+        CatalogUndoManager? undoManager = null)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
+        this.undoManager = undoManager;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
@@ -111,7 +115,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             repositoryManager.For<CatalogDocument>(),
             new PropertyValueLocalizer(),
             CreateEmptyMenuExtensionManager(),
-            RegisterAppStart(repositoryManager))
+            RegisterAppStart(repositoryManager),
+            new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()))
     {
     }
 

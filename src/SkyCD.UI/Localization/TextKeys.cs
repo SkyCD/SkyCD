@@ -47,6 +47,10 @@ public static class TextKeys
     public const string Edit = "core.text.Edit";
     public const string Add = "core.text.Add";
     public const string Delete = "core.text.Delete";
+    public const string Undo = "core.text.Undo";
+    public const string Redo = "core.text.Redo";
+    public const string UndoAction = "core.text.UndoAction";
+    public const string RedoAction = "core.text.RedoAction";
     public const string Status = "core.text.Status";
     public const string Properties2 = "core.text.Properties2";
     public const string View = "core.text.View";
