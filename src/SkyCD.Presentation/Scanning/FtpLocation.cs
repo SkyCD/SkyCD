@@ -41,6 +41,48 @@ public sealed record FtpLocation(string Host, int Port, string Path, string Publ
         return new FtpLocation(uri.IdnHost, port, path, publicUrl);
     }
 
+    public static bool TryReadUserInfo(string? address, out string username, out string password)
+    {
+        username = string.Empty;
+        password = string.Empty;
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return false;
+        }
+
+        var trimmed = address.Trim();
+        if (!trimmed.Contains("://", StringComparison.Ordinal))
+        {
+            trimmed = "ftp://" + trimmed;
+        }
+
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
+            !uri.Scheme.Equals("ftp", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrEmpty(uri.UserInfo))
+        {
+            return false;
+        }
+
+        var separator = uri.UserInfo.IndexOf(':');
+        var userPart = separator < 0 ? uri.UserInfo : uri.UserInfo[..separator];
+        var passwordPart = separator < 0 ? string.Empty : uri.UserInfo[(separator + 1)..];
+        username = Unescape(userPart);
+        password = Unescape(passwordPart);
+        return username.Length > 0 || password.Length > 0;
+    }
+
+    private static string Unescape(string value)
+    {
+        try
+        {
+            return Uri.UnescapeDataString(value);
+        }
+        catch (UriFormatException)
+        {
+            return value;
+        }
+    }
+
     public static string NormalizePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))

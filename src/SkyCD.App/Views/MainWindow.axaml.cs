@@ -547,7 +547,7 @@ public partial class MainWindow : Window
 
         if (dialogVm.SourceMode == AddToListSourceMode.Internet)
         {
-            var loginVm = new LoginDialogViewModel();
+            var loginVm = LoginDialogViewModel.FromAddress(dialogVm.SourceValue);
             var loginDialog = new LoginWindow
             {
                 DataContext = loginVm

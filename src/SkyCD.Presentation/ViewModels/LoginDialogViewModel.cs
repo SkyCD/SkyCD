@@ -21,6 +21,18 @@ public partial class LoginDialogViewModel : ObservableObject
 
     [ObservableProperty] private bool dialogAccepted;
 
+    public static LoginDialogViewModel FromAddress(string? address)
+    {
+        var viewModel = new LoginDialogViewModel();
+        if (FtpLocation.TryReadUserInfo(address, out var username, out var password))
+        {
+            viewModel.Username = username;
+            viewModel.Password = password;
+        }
+
+        return viewModel;
+    }
+
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()
     {

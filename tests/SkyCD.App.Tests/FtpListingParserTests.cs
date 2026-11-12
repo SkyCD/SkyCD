@@ -59,6 +59,14 @@ public class FtpListingParserTests
         Assert.DoesNotContain("s3cret-pass", location.PublicUrl, StringComparison.Ordinal);
         Assert.DoesNotContain("@", location.PublicUrl, StringComparison.Ordinal);
         Assert.Contains("127.0.0.1:2121", location.PublicUrl, StringComparison.Ordinal);
+
+        Assert.True(FtpLocation.TryReadUserInfo("ftp://alice:s3cret-pass@127.0.0.1:2121/pub/docs/", out var username, out var password));
+        Assert.Equal("alice", username);
+        Assert.Equal("s3cret-pass", password);
+        Assert.True(FtpLocation.TryReadUserInfo("ftp://alice:p%40ss:word@127.0.0.1/pub", out username, out password));
+        Assert.Equal("alice", username);
+        Assert.Equal("p@ss:word", password);
+        Assert.False(FtpLocation.TryReadUserInfo("ftp://127.0.0.1/pub", out _, out _));
     }
 
     [Fact]
