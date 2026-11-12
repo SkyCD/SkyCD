@@ -265,7 +265,7 @@ namespace SkyCD.Core.UndoRedo
 
         protected virtual void Dispose(bool disposing)
         {
-       
+
             if (_isDisposed) return;
             _isDisposed = true;
             Clear();
