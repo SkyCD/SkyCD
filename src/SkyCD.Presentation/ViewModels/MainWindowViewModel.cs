@@ -1137,6 +1137,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var status = statusVariants.FirstOrDefault(variant =>
             string.Equals(variant.Name, statusName, StringComparison.OrdinalIgnoreCase));
 
+        // Record old statuses for undo
+        var oldStatuses = targets.ToDictionary(t => t, t => t.Status);
+
         if (status is null)
         {
             foreach (var target in targets)
@@ -1172,8 +1175,39 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 : applicableTargets.Length == 1
                     ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
                     : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
+
+            // Record status changes for undo
+            foreach (var target in applicableTargets)
+            {
+                if (oldStatuses.TryGetValue(target, out var oldStatus))
+                {
+                    undoManager?.RecordStatusChange(target, oldStatus, status.Name);
+                }
+            }
         }
 
+        // Record status clears for undo
+        if (status is null)
+        {
+            foreach (var target in targets)
+            {
+                if (oldStatuses.TryGetValue(target, out var oldStatus) && oldStatus != null)
+                {
+                    undoManager?.RecordStatusChange(target, oldStatus, null);
+                }
+            }
+        }
+
+        // Save changes to repository
+        if (catalogRepository is not null)
+        {
+            foreach (var target in targets)
+            {
+                catalogRepository.Save(target.Id, target);
+            }
+        }
+
+        UpdateUndoRedoState();
         IsDirtyDocument = true;
         RefreshBrowserItemsForSelection();
     }
