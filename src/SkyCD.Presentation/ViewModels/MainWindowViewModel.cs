@@ -203,8 +203,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool IsDeleteEnabled => CanDeleteItem(null);
 
-    public bool CanUndo => undoManager?.CanUndo ?? false;
-    public bool CanRedo => undoManager?.CanRedo ?? false;
+    [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
@@ -534,6 +537,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void UpdateUndoRedoState()
+    {
+        CanUndo = undoManager?.CanUndo ?? false;
+        CanRedo = undoManager?.CanRedo ?? false;
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
@@ -541,6 +550,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             await undoManager.UndoAsync();
             StatusText = LocalizationService.Current.Get(TextKeys.UndoAction);
+            UpdateUndoRedoState();
             RefreshTreeNodes();
             RefreshBrowserItemsForSelection();
         }
@@ -553,6 +563,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             await undoManager.RedoAsync();
             StatusText = LocalizationService.Current.Get(TextKeys.RedoAction);
+            UpdateUndoRedoState();
             RefreshTreeNodes();
             RefreshBrowserItemsForSelection();
         }
@@ -599,6 +610,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
+        undoManager?.RecordAddition(documents);
+        UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
 
@@ -711,6 +724,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
+        undoManager?.RecordDeletion(itemsToDelete);
+        UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
 
@@ -732,7 +747,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var targetNode = SelectedTreeNode;
         var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
-
+        var documentsToDelete = new List<CatalogDocument>();
         if (catalogRepository is not null)
         {
             var descendantIds = catalogRepository
@@ -743,6 +758,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 .ToArray();
 
             var allIdsToDelete = new[] { targetNode.Key }.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+
+            // Collect documents before deletion for undo recording
+            documentsToDelete = allIdsToDelete
+                .Select(id => catalogRepository.Get(id))
+                .Where(doc => doc != null)
+                .Cast<CatalogDocument>()
+                .ToList();
 
             catalogRepository.Collection.Database.InBatch(() =>
             {
@@ -768,15 +790,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var doc = inMemoryCatalogEntries.FirstOrDefault(entry => string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
             if (doc is not null)
             {
+                documentsToDelete.Add(doc);
                 DeleteCatalogEntriesFromInMemory([doc]);
             }
             else
             {
                 var dummyDoc = new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
+                documentsToDelete.Add(dummyDoc);
                 DeleteCatalogEntriesFromInMemory([dummyDoc]);
             }
         }
 
+        undoManager?.RecordDeletion(documentsToDelete);
+        UpdateUndoRedoState();
         RefreshTreeNodes(parentNode?.Key);
 
         RefreshBrowserItemsForSelection();
