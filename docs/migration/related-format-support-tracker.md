@@ -22,6 +22,10 @@ This file tracks v3 format-support tickets created from issue `#118` ("Add relat
 - `#84` TAR/TAR.GZ (`*.tar`, `*.tar.gz`, `*.tgz`) read-only
 - `#85` ISO (`*.iso`) read-only
 
+## Third-party catalog report import formats
+
+- `#448` WinCatalog CSV report (`*.csv`) read-only
+
 ## Notes
 
 - Tickets are grouped by behavior (read/write, write-only, read-only).

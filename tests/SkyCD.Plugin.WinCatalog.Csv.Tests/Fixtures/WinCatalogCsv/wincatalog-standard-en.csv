@@ -1,0 +1,11 @@
+Disk,Catalog Path,Name,Size,Type,Modified,Comments,Tags,Rating,MD5,SHA256
+"Archive Disk 1","Catalog\Archive Disk 1\Documents","Documents","0","Folder","2026-01-10 12:00:00","Root documentation folder","docs,work","5","",""
+"Archive Disk 1","Catalog\Archive Disk 1\Documents\readme.txt","readme.txt","1024","File","2026-01-10 12:05:00","Documentation ""v1.0"", initial draft","docs","4","d41d8cd98f00b204e9800998ecf8427e","e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+"Archive Disk 1","Catalog\Archive Disk 1\Documents\Manuals","Manuals","0","Folder","2026-01-11 14:00:00","Equipment manuals","docs","3","",""
+"Archive Disk 1","Catalog\Archive Disk 1\Documents\Manuals\readme.txt","readme.txt","2048","File","2026-01-11 14:10:00","Manual index and notes:
+Line 1: overview
+Line 2: index","manuals","5","098f6bcd4621d373cade4e832627b4f6","9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+"Archive Disk 1","Catalog\Archive Disk 1\Photos\2026\sample.jpg","sample.jpg","1.5 MB","File","2026-02-01 09:30:00","Summer photo","vacation,2026","5","c4ca4238a0b923820dcc509a6f75849b","6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+"Archive Disk 2","Catalog\Archive Disk 2\Backups","Backups","0","Folder","2026-03-01 10:00:00","System backups","backup","4","",""
+"Archive Disk 2","Catalog\Archive Disk 2\Backups\readme.txt","readme.txt","512","File","2026-03-01 10:15:00","Backup instructions","backup","3","eccbc87e4b5ce2fe28308fd9f2a7baf3","4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce"
+"Archive Disk 2","Catalog\Archive Disk 2\Backups\archive.tar.gz","archive.tar.gz","10.2 MB","File","2026-03-01 10:20:00","Full archive","backup,system","4","a87ff679a2f3e71d9181a67b7542122c","ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d"
