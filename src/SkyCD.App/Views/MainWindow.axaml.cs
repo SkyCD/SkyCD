@@ -219,10 +219,23 @@ public partial class MainWindow : Window
 
     private void OnMainWindowKeyDown(object? sender, KeyEventArgs e)
     {
+        try
+        {
+            if (OwnedWindows is { Count: > 0 } && OwnedWindows.Any(static w => w?.IsVisible == true))
+            {
+                return;
+            }
+        }
+        catch
+        {
+            // In headless or unit test environments OwnedWindows may not be initialized
+        }
+
         if (e.Key == Key.Delete && e.KeyModifiers == KeyModifiers.None)
         {
-            var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
-            if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null)
+            var focused = GetFocusedElement();
+            if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
+                e.Source is TextBox || FindAncestor<TextBox>(e.Source as Visual) is not null)
             {
                 return;
             }
@@ -237,6 +250,38 @@ public partial class MainWindow : Window
                     e.Handled = true;
                 }
             }
+        }
+        else if ((e.Key == Key.Back || e.Key == Key.BrowserBack) && e.KeyModifiers == KeyModifiers.None)
+        {
+            var focused = GetFocusedElement();
+            if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
+                e.Source is TextBox || FindAncestor<TextBox>(e.Source as Visual) is not null)
+            {
+                return;
+            }
+
+            if (subscribedViewModel is not null)
+            {
+                UpdateActivePaneFromFocusedElement(focused);
+
+                if (subscribedViewModel.NavigateToParentFolderCommand.CanExecute(null))
+                {
+                    subscribedViewModel.NavigateToParentFolderCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }
+        }
+    }
+
+    private IInputElement? GetFocusedElement()
+    {
+        try
+        {
+            return TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        }
+        catch
+        {
+            return null;
         }
     }
 
