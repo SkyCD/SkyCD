@@ -242,6 +242,40 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void TitleOnlySource_RequiresOnlyAMediaName()
+    {
+        var provider = new FakeDriveProvider([]);
+        var vm = new AddToListDialogViewModel(provider, AddToListSourceMode.TitleOnly);
+
+        Assert.True(vm.IsSourceTitleOnly);
+        Assert.False(vm.IsScanOptionsEnabled);
+        Assert.False(vm.CanConfirm);
+        Assert.Equal("A media name is required.", vm.ValidationMessage);
+
+        vm.MediaName = "   ";
+        Assert.False(vm.CanConfirm);
+
+        vm.MediaName = "Office Backup";
+        Assert.True(vm.CanConfirm);
+        Assert.Null(vm.SelectedDrive);
+        vm.ConfirmCommand.Execute(null);
+        Assert.True(vm.DialogAccepted);
+    }
+
+    [Fact]
+    public void TitleOnlySource_CancelLeavesDialogUnaccepted()
+    {
+        var vm = new AddToListDialogViewModel(new FakeDriveProvider([]))
+        {
+            SourceMode = AddToListSourceMode.TitleOnly,
+            MediaName = "Unsaved Disc"
+        };
+
+        Assert.True(vm.CanConfirm);
+        Assert.False(vm.DialogAccepted);
+    }
+
+    [Fact]
     public void ValidFolderFlow_CanConfirmAndAccept()
     {
         var vm = new AddToListDialogViewModel

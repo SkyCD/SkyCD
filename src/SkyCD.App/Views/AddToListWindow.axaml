@@ -5,11 +5,11 @@
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
         Width="428"
-        Height="269"
+        Height="380"
         MinWidth="428"
-        MinHeight="269"
+        MinHeight="380"
         MaxWidth="428"
-        MaxHeight="269"
+        MaxHeight="380"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         CanMinimize="False"
@@ -57,46 +57,60 @@
                 BorderBrush="#B0B0B0"
                 BorderThickness="1">
             <StackPanel Margin="2" Spacing="4">
-                <Button Height="70"
+                <Button Height="58"
                         Padding="2"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Media">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="48"
-                               Height="48"
+                        <Image Width="28"
+                               Height="28"
                                Stretch="Uniform"
                                Source="/Assets/add-from-media.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromMedia}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
-                <Button Height="70"
+                <Button Height="58"
                         Padding="2"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Folder">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="48"
-                               Height="48"
+                        <Image Width="28"
+                               Height="28"
                                Stretch="Uniform"
                                Source="/Assets/add-from-folder.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromFolder}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
-                <Button Height="70"
+                <Button Height="58"
                         Padding="2"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Internet">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="48"
-                               Height="48"
+                        <Image Width="28"
+                               Height="28"
                                Stretch="Uniform"
                                Source="/Assets/add-from-internet.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromInternet}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+                <Button Height="58"
+                        Padding="2"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Command="{Binding SelectSourceCommand}"
+                        CommandParameter="TitleOnly">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <Image Width="28"
+                               Height="28"
+                               Stretch="Uniform"
+                               Source="/Assets/add-from-media.png" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnly}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -144,6 +158,10 @@
                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.EnterInternetAddress}}" />
                 <TextBox Text="{Binding SourceValue}" />
             </StackPanel>
+
+            <TextBlock IsVisible="{Binding IsSourceTitleOnly}"
+                       Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
+                       TextWrapping="Wrap" />
         </Grid>
 
         <TabControl Grid.Row="2"
@@ -165,7 +183,8 @@
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Misc}}">
                 <StackPanel Margin="10" Spacing="6">
                     <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
-                              IsChecked="{Binding IncludeExtendedInfo}" />
+                              IsChecked="{Binding IncludeExtendedInfo}"
+                              IsEnabled="{Binding IsScanOptionsEnabled}" />
                 </StackPanel>
             </TabItem>
         </TabControl>

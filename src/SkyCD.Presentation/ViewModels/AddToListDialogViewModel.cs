@@ -15,11 +15,18 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
 
-    public AddToListDialogViewModel(IMediaDriveProvider? driveProvider = null)
+    public AddToListDialogViewModel(
+        IMediaDriveProvider? driveProvider = null,
+        AddToListSourceMode initialSourceMode = AddToListSourceMode.Media)
     {
         this.driveProvider = driveProvider ?? new SystemMediaDriveProvider();
         this.driveProvider.DrivesChanged += OnDrivesChanged;
         RefreshDrives();
+        if (initialSourceMode != AddToListSourceMode.Media)
+        {
+            SourceMode = initialSourceMode;
+        }
+
         RecomputeValidation();
         localizationSubscription = LocalizationObserver.Observe(this, static vm =>
         {
@@ -39,6 +46,10 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool IsSourceFolder => SourceMode == AddToListSourceMode.Folder;
 
     public bool IsSourceInternet => SourceMode == AddToListSourceMode.Internet;
+
+    public bool IsSourceTitleOnly => SourceMode == AddToListSourceMode.TitleOnly;
+
+    public bool IsScanOptionsEnabled => SourceMode != AddToListSourceMode.TitleOnly;
 
     public bool IsTargetSelectedFolder => TargetPlacement == AddToListTargetPlacement.SelectedFolder;
 
@@ -213,6 +224,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsSourceMedia));
         OnPropertyChanged(nameof(IsSourceFolder));
         OnPropertyChanged(nameof(IsSourceInternet));
+        OnPropertyChanged(nameof(IsSourceTitleOnly));
+        OnPropertyChanged(nameof(IsScanOptionsEnabled));
     }
 
     partial void OnSelectedDriveChanged(MediaDriveInfo? value)
@@ -270,6 +283,9 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
                 : null,
             AddToListSourceMode.Internet => string.IsNullOrWhiteSpace(SourceValue)
                 ? LocalizationService.Current.Get(TextKeys.AddressIsRequiredForInternetSource)
+                : null,
+            AddToListSourceMode.TitleOnly => string.IsNullOrWhiteSpace(MediaName)
+                ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForTitleOnly)
                 : null,
             _ => null
         };

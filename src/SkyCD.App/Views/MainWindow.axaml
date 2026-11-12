@@ -145,24 +145,34 @@
                           Background="{DynamicResource ThemeControlMidBrush}"
                           ShowsPreview="True" />
 
-            <cl:BrowserItemsView x:Name="MainBrowserItemsView"
-                                 Grid.Column="2"
-                                 ListMinWidth="120"
-                                 ItemsSource="{Binding BrowserItems}"
-                                 SelectedItem="{Binding SelectedBrowserItem}"
-                                 SelectedItems="{Binding SelectedBrowserItems}"
-                                 ViewMode="{Binding CurrentViewMode}"
-                                 DetailsColumns="{Binding BrowserDetailsColumns}"
-                                 BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
-                                 BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
-                                 IconConverter="{StaticResource IconConverter}"
-                                 StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
-                                 ContextRequested="OnBrowserContextRequested"
-                                 ListContextMenu="{DynamicResource BrowserContextMenu}"
-                                 DoubleTapped="OnBrowserListDoubleTapped"
-                                 GotFocus="OnBrowserGotFocus"
-                                 PointerPressed="OnBrowserPointerPressed">
-            </cl:BrowserItemsView>
+            <Grid Grid.Column="2">
+                <cl:BrowserItemsView x:Name="MainBrowserItemsView"
+                                     ListMinWidth="120"
+                                     ItemsSource="{Binding BrowserItems}"
+                                     SelectedItem="{Binding SelectedBrowserItem}"
+                                     SelectedItems="{Binding SelectedBrowserItems}"
+                                     ViewMode="{Binding CurrentViewMode}"
+                                     DetailsColumns="{Binding BrowserDetailsColumns}"
+                                     BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
+                                     BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
+                                     IconConverter="{StaticResource IconConverter}"
+                                     StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
+                                     ContextRequested="OnBrowserContextRequested"
+                                     ListContextMenu="{DynamicResource BrowserContextMenu}"
+                                     DoubleTapped="OnBrowserListDoubleTapped"
+                                     GotFocus="OnBrowserGotFocus"
+                                     PointerPressed="OnBrowserPointerPressed">
+                </cl:BrowserItemsView>
+                <TextBlock Text="{Binding SelectedContentsNotice}"
+                           IsVisible="{Binding ShowContentsNotScannedNotice}"
+                           IsHitTestVisible="False"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="16"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Opacity="0.8" />
+            </Grid>
         </Grid>
     </DockPanel>
 

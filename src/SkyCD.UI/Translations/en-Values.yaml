@@ -1,4 +1,5 @@
 values.Unknown: "Unknown"
+values.NotScanned: "Not scanned"
 values.Yes: "Yes"
 values.No: "No"
 values.AllSupportedFiles: "All supported files"

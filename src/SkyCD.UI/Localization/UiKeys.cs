@@ -17,6 +17,8 @@ public static class UiKeys
     public const string FromMedia = "core.ui.FromMedia";
     public const string FromFolder = "core.ui.FromFolder";
     public const string FromInternet = "core.ui.FromInternet";
+    public const string TitleOnly = "core.ui.TitleOnly";
+    public const string TitleOnlyMediaHint = "core.ui.TitleOnlyMediaHint";
     public const string SelectMediaName = "core.ui.SelectMediaName";
     public const string SelectDrive = "core.ui.SelectDrive";
     public const string IncludeMediaInfo = "core.ui.IncludeMediaInfo";

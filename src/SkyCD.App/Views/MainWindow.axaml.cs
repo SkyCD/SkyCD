@@ -108,6 +108,7 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
+            subscribedViewModel.AddTitleOnlyRequested -= OnAddTitleOnlyRequested;
             subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
@@ -125,6 +126,7 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
+            subscribedViewModel.AddTitleOnlyRequested += OnAddTitleOnlyRequested;
             subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
@@ -525,14 +527,24 @@ public partial class MainWindow : Window
         SaveUiState(vm);
     }
 
+    private void OnAddTitleOnlyRequested(object? sender, EventArgs e)
+    {
+        OnAddToListRequested(sender, AddToListSourceMode.TitleOnly);
+    }
+
     private async void OnAddToListRequested(object? sender, EventArgs e)
+    {
+        OnAddToListRequested(sender, AddToListSourceMode.Media);
+    }
+
+    private async void OnAddToListRequested(object? sender, AddToListSourceMode sourceMode)
     {
         if (DataContext is not MainWindowViewModel vm)
         {
             return;
         }
 
-        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider);
+        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider, sourceMode);
         var dialog = new AddToListWindow
         {
             DataContext = dialogVm
@@ -558,6 +570,23 @@ public partial class MainWindow : Window
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.LoginCanceled);
                 return;
             }
+        }
+
+        if (dialogVm.SourceMode == AddToListSourceMode.TitleOnly)
+        {
+            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+                ? null
+                : vm.SelectedTreeNode?.Key ?? "library";
+            try
+            {
+                vm.AddTitleOnlyMedia(dialogVm.MediaName, targetParentId);
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = ex.Message;
+            }
+
+            return;
         }
 
         if (dialogVm.SourceMode == AddToListSourceMode.Media)
@@ -1588,6 +1617,7 @@ public partial class MainWindow : Window
                 Type = documentType,
                 Size = ReadLong(row, "size", "sizeBytes"),
                 ChildrenCount = ReadLong(row, "childrenCount"),
+                ContentsState = ReadContentsState(row, properties),
                 Status = string.IsNullOrWhiteSpace(status) ? null : status,
                 Properties = properties
             });
@@ -1740,6 +1770,27 @@ public partial class MainWindow : Window
                 Properties = entryProperties
             };
         }
+    }
+
+    private static CatalogContentsState ReadContentsState(
+        IReadOnlyDictionary<string, object?> row,
+        SkyCD.Documents.Collections.PropertiesCollection properties)
+    {
+        var raw = ReadString(row, "contentsState", "ContentsState");
+        if (string.IsNullOrWhiteSpace(raw) &&
+            properties.TryGetValue("ContentsState", out var propertyValue))
+        {
+            raw = propertyValue switch
+            {
+                JsonElement json when json.ValueKind == JsonValueKind.String => json.GetString() ?? string.Empty,
+                JsonElement json => json.ToString(),
+                _ => propertyValue?.ToString() ?? string.Empty
+            };
+        }
+
+        return Enum.TryParse<CatalogContentsState>(raw, ignoreCase: true, out var parsed)
+            ? parsed
+            : CatalogContentsState.Known;
     }
 
     private static string ReadString(IReadOnlyDictionary<string, object?> row, params string[] keys)
