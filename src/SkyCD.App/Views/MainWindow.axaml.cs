@@ -274,6 +274,22 @@ public partial class MainWindow : Window
                 }
             }
         }
+        else if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control)
+        {
+            if (subscribedViewModel?.UndoCommand.CanExecute(null) == true)
+            {
+                subscribedViewModel.UndoCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
+        else if (e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control)
+        {
+            if (subscribedViewModel?.RedoCommand.CanExecute(null) == true)
+            {
+                subscribedViewModel.RedoCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
     }
 
     private IInputElement? GetFocusedElement()
