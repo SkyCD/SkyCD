@@ -86,6 +86,8 @@
                 <ct:ClassicToolbarButton Command="{Binding SaveCatalogCommand}"
                                          ImageSrc="/Assets/save.png"
                                          Text="{i18n:Translate {x:Static i18n:UiKeys.SaveToolbar}}" />
+                <ct:ClassicToolbarButton Command="{Binding FindCatalogCommand}"
+                                         Text="{i18n:Translate {x:Static i18n:UiKeys.Find}}" />
             </ct:ClassicToolbar.Items>
         </ct:ClassicToolbar>
 

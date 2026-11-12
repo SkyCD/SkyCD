@@ -113,6 +113,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
+            subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
@@ -129,6 +130,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
+            subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
@@ -303,6 +305,22 @@ public partial class MainWindow : Window
                 subscribedViewModel.RedoCommand.Execute(null);
                 e.Handled = true;
             }
+        }
+        else if (e.Key == Key.F && e.KeyModifiers == KeyModifiers.Control)
+        {
+            if (subscribedViewModel?.FindCatalogCommand.CanExecute(null) == true)
+            {
+                subscribedViewModel.FindCatalogCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private async void OnFindCatalogRequested(object? sender, EventArgs e)
+    {
+        if (sender is MainWindowViewModel vm)
+        {
+            await new CatalogFindWindow { DataContext = vm.CreateCatalogFindDialogViewModel() }.ShowDialog(this);
         }
     }
 

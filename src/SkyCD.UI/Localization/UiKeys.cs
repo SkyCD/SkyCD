@@ -109,4 +109,9 @@ public static class UiKeys
     public const string CurrentItem = "core.ui.CurrentItem";
     public const string ClearLog = "core.ui.ClearLog";
     public const string CopyLog = "core.ui.CopyLog";
+    public const string FindCatalog = "core.ui.FindCatalog";
+    public const string FindCatalogHint = "core.ui.FindCatalogHint";
+    public const string Find = "core.ui.Find";
+    public const string Location = "core.ui.Location";
+    public const string OpenResult = "core.ui.OpenResult";
 }
