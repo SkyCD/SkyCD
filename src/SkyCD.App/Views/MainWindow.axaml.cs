@@ -108,7 +108,6 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
-            subscribedViewModel.AddTitleOnlyRequested -= OnAddTitleOnlyRequested;
             subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
@@ -126,7 +125,6 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
-            subscribedViewModel.AddTitleOnlyRequested += OnAddTitleOnlyRequested;
             subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
@@ -527,24 +525,14 @@ public partial class MainWindow : Window
         SaveUiState(vm);
     }
 
-    private void OnAddTitleOnlyRequested(object? sender, EventArgs e)
-    {
-        OnAddToListRequested(sender, AddToListSourceMode.TitleOnly);
-    }
-
     private async void OnAddToListRequested(object? sender, EventArgs e)
-    {
-        OnAddToListRequested(sender, AddToListSourceMode.Media);
-    }
-
-    private async void OnAddToListRequested(object? sender, AddToListSourceMode sourceMode)
     {
         if (DataContext is not MainWindowViewModel vm)
         {
             return;
         }
 
-        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider, sourceMode);
+        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider);
         var dialog = new AddToListWindow
         {
             DataContext = dialogVm

@@ -46,7 +46,6 @@ public static class TextKeys
     public const string Exit = "core.text.Exit";
     public const string Edit = "core.text.Edit";
     public const string Add = "core.text.Add";
-    public const string AddMediaTitleOnly = "core.text.AddMediaTitleOnly";
     public const string Delete = "core.text.Delete";
     public const string Undo = "core.text.Undo";
     public const string Redo = "core.text.Redo";

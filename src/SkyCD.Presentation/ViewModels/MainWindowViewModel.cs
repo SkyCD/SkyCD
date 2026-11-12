@@ -58,7 +58,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private const string ItemStatusIconTextPropertyKey = "StatusIconText";
 
     public event EventHandler? AddToListRequested;
-    public event EventHandler? AddTitleOnlyRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
     public event EventHandler? SaveCatalogAsRequested;
@@ -614,12 +613,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void AddItem()
     {
         AddToListRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    [RelayCommand]
-    private void AddTitleOnlyItem()
-    {
-        AddTitleOnlyRequested?.Invoke(this, EventArgs.Empty);
     }
 
     public CatalogDocument AddTitleOnlyMedia(string? mediaName, string? parentId)
@@ -1812,12 +1805,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), HotKey = "Ctrl+Y", Command = RedoCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
-                    new MainMenuItemViewModel
-                    {
-                        Header = LocalizationService.Current.Get(TextKeys.AddMediaTitleOnly),
-                        HotKey = "Shift+F2",
-                        Command = AddTitleOnlyItemCommand
-                    },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
                     new MainMenuItemViewModel
                     {
@@ -2127,7 +2114,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.AddMediaTitleOnly), Command = AddTitleOnlyItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
@@ -2169,7 +2155,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.AddMediaTitleOnly), Command = AddTitleOnlyItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "tree" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
