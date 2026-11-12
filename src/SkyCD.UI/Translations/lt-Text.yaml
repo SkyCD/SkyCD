@@ -126,3 +126,7 @@ text.FailedToOpenCatalogNoReadableHandlerMappedForReadableExtensions: "Nepavyko 
 text.None: "nėra"
 text.NewStatus: "Nauja būsena"
 text.Unknown: "Nežinoma"
+text.Undo: "_Atšaukti"
+text.Redo: "_Pakartoti"
+text.UndoAction: "Atšaukti"
+text.RedoAction: "Pakartoti"

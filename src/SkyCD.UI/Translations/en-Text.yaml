@@ -126,3 +126,7 @@ text.FailedToOpenCatalogNoReadableHandlerMappedForReadableExtensions: "Failed to
 text.None: "none"
 text.NewStatus: "New Status"
 text.Unknown: "Unknown"
+text.Undo: "_Undo"
+text.Redo: "_Redo"
+text.UndoAction: "Undo"
+text.RedoAction: "Redo"
