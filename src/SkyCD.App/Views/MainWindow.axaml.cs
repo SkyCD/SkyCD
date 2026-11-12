@@ -32,6 +32,7 @@ using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
+using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
@@ -546,7 +547,7 @@ public partial class MainWindow : Window
 
         if (dialogVm.SourceMode == AddToListSourceMode.Internet)
         {
-            var loginVm = new LoginDialogViewModel();
+            var loginVm = LoginDialogViewModel.FromAddress(dialogVm.SourceValue);
             var loginDialog = new LoginWindow
             {
                 DataContext = loginVm
@@ -555,9 +556,62 @@ public partial class MainWindow : Window
             var loginAccepted = await loginDialog.ShowDialog<bool?>(this);
             if (loginAccepted != true)
             {
+                loginVm.Password = string.Empty;
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.LoginCanceled);
                 return;
             }
+
+            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+                ? null
+                : vm.SelectedTreeNode?.Key ?? "library";
+            var scanOptions = new FtpScanOptions(
+                dialogVm.SourceValue,
+                loginVm.Username,
+                loginVm.Password,
+                loginVm.UseAnonymous,
+                string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
+                targetParentId,
+                dialogVm.IncludeExtendedInfo);
+            loginVm.Password = string.Empty;
+
+            var scanner = new FtpCatalogScanner();
+            var progressVm = new AddingProgressDialogViewModel();
+            var progressDialog = new AddingProgressWindow
+            {
+                DataContext = progressVm
+            };
+            progressDialog.Show(this);
+
+            try
+            {
+                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+
+                progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 80);
+                progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
+                await Task.Delay(50);
+
+                progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 90);
+                progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
+                vm.AddImportedDocuments(scannedDocuments);
+
+                progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
+                progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
+                await Task.Delay(50);
+
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (Exception ex)
+            {
+                var message = SecretSanitizer.Sanitize(ex.Message);
+                progressVm.ReportError(message);
+                vm.StatusText = message;
+            }
+            finally
+            {
+                progressDialog.Close();
+            }
+
+            return;
         }
 
         if (dialogVm.SourceMode == AddToListSourceMode.TitleOnly)
