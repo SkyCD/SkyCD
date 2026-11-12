@@ -5,6 +5,8 @@
         <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
         <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj"/>
         <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj"/>
+        <ProjectReference Include="..\SkyCD.Core\SkyCD.Core.csproj"/>
+        <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
