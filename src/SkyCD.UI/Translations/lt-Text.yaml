@@ -105,6 +105,7 @@ text.FtpAuthenticationFailed: "FTP autentifikacija nepavyko. Patikrinkite naudot
 text.FtpConnectionFailed: "Nepavyko prisijungti prie FTP serverio {0}."
 text.RemoteDirectoryNotFound: "Nuotolinis aplankas nerastas: {0}"
 text.ReadingRemoteDirectory: "Skaitomas „{0}“..."
+text.FoundItemsInRemoteDirectory: "Aplanke „{1}“ rasta elementų: {0}."
 text.ReadingSourceFolder: "Skaitomas šaltinio aplankas..."
 text.ReadingMediaMetadata: "Skaitomi laikmenos metaduomenys..."
 text.SelectPlugInDirectory: "Pasirinkite papildinių aplanką"

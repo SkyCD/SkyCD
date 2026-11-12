@@ -120,13 +120,20 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         }
 
         state.Listed++;
+        var reading = LocalizationService.Current.Format(TextKeys.ReadingRemoteDirectory, normalized);
         progress?.ReportStage(
-            LocalizationService.Current.Format(TextKeys.ReadingRemoteDirectory, normalized),
+            reading,
             stagePercentage: null,
             overallPercentage: Math.Min(65, 8 + (state.Listed * 4)));
         progress?.ReportItem(normalized);
+        progress?.ReportInfo(reading, itemPath: normalized);
 
-        foreach (var entry in session.ListDirectory(normalized))
+        var entries = session.ListDirectory(normalized);
+        progress?.ReportInfo(
+            LocalizationService.Current.Format(TextKeys.FoundItemsInRemoteDirectory, entries.Count, normalized),
+            itemPath: normalized);
+
+        foreach (var entry in entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (entry.IsDirectory)

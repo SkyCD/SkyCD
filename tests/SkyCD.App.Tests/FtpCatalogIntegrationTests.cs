@@ -15,6 +15,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -124,6 +125,10 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         Assert.Contains(progress.Messages, message => message.Contains("deep", StringComparison.Ordinal));
         Assert.Contains(progress.Messages, message => message.Contains("note.txt", StringComparison.Ordinal));
         Assert.Contains(progress.Messages, message => message.Contains("Scanning complete", StringComparison.Ordinal));
+        AssertDirectoryLog(progress.Messages, "/", 4, "/docs");
+        AssertDirectoryLog(progress.Messages, "/docs", 2, "/docs/deep");
+        AssertDirectoryLog(progress.Messages, "/docs/deep", 1, followingStart: null);
+        AssertDirectoryLog(progress.Messages, "/empty-dir", 0, followingStart: null);
         AssertNoSecrets(progress.Messages);
 
         var withoutMetadata = new FtpCatalogScanner().Scan(new FtpScanOptions(
@@ -290,6 +295,24 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
 
     private static DateTime TruncateToSeconds(DateTime value) =>
         new(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, DateTimeKind.Utc);
+
+    private static void AssertDirectoryLog(IReadOnlyList<string> messages, string path, int count, string? followingStart)
+    {
+        var started = LocalizationService.Current.Format(TextKeys.ReadingRemoteDirectory, path);
+        var found = LocalizationService.Current.Format(TextKeys.FoundItemsInRemoteDirectory, count, path);
+        var startIndex = messages.ToList().FindIndex(message => message.Contains(started, StringComparison.Ordinal));
+        var foundIndex = messages.ToList().FindIndex(message => message.Contains(found, StringComparison.Ordinal));
+        Assert.True(startIndex >= 0, started);
+        Assert.True(foundIndex > startIndex, found);
+        if (followingStart is null)
+        {
+            return;
+        }
+
+        var nextStart = LocalizationService.Current.Format(TextKeys.ReadingRemoteDirectory, followingStart);
+        var nextIndex = messages.ToList().FindIndex(message => message.Contains(nextStart, StringComparison.Ordinal));
+        Assert.True(nextIndex > foundIndex, nextStart);
+    }
 
     private static void AssertNoSecrets(IEnumerable<CatalogDocument> documents)
     {

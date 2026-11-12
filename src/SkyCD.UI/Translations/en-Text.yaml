@@ -105,6 +105,7 @@ text.FtpAuthenticationFailed: "FTP authentication failed. Check the user name an
 text.FtpConnectionFailed: "Could not connect to the FTP server {0}."
 text.RemoteDirectoryNotFound: "The remote directory was not found: {0}"
 text.ReadingRemoteDirectory: "Reading '{0}'..."
+text.FoundItemsInRemoteDirectory: "Found {0} items in '{1}'."
 text.ReadingSourceFolder: "Reading source folder..."
 text.ReadingMediaMetadata: "Reading media metadata..."
 text.SelectPlugInDirectory: "Select plug-in directory"
