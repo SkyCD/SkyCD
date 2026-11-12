@@ -119,6 +119,22 @@ public sealed class FileFormatCompatibilityTests
         }, new Progress<int>());
     }
 
+    [Fact]
+    public async Task WinCatalogCsv_ReadsAndImportsThroughFileFormatManager()
+    {
+        var manager = new FileFormatManager(CreateProviders());
+        var fixture = "wincatalog-standard-en.csv";
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", fixture);
+        await using var source = File.OpenRead(fixturePath);
+        Assert.Equal("wincatalog-csv", manager.GetInstanceFor(fixture, source).SupportedFormat.FormatId);
+        source.Position = 0;
+        var result = await manager.ReadAsync(new FileFormatReadRequest { FormatId = string.Empty, Source = source, FileName = fixture });
+        Assert.True(result.Success, result.Error);
+        var entries = CatalogImportTests.Extract(result.Payload!);
+        Assert.NotEmpty(entries);
+        CatalogImportTests.Persist(entries);
+    }
+
     private static IFileFormatPluginCapability[] CreateProviders() =>
     [
         new SkyCD.Plugin.Legacy.Scd.LegacyScdPlugin(),
@@ -126,6 +142,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Legacy.Ascd.LegacyAscdPlugin(),
         new SkyCD.Plugin.Json.JsonCatalogPlugin(),
         new SkyCD.Plugin.Csv.CsvCatalogPlugin(),
+        new SkyCD.Plugin.WinCatalog.Csv.WinCatalogCsvPlugin(),
         new SkyCD.Plugin.Xml.XmlCatalogPlugin(),
         new SkyCD.Plugin.Yaml.YamlCatalogPlugin(),
         new SkyCD.Plugin.Toml.TomlCatalogPlugin(),

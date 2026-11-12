@@ -1,0 +1,5 @@
+Disk,File Path,Filename,Size,Modified
+"Work Drive","D:\Projects\ProjectX\Docs\Specs\architecture.docx","architecture.docx","1048576","2026-04-01 15:30:00"
+"Work Drive","D:\Projects\ProjectX\Source\Core\main.cs","main.cs","4096","2026-04-02 08:20:00"
+"Work Drive","D:\Projects\ProjectY\Source\Core\main.cs","main.cs","8192","2026-04-02 09:00:00"
+"NAS Share","\\StorageServer\Public\Media\Music\intro.ogg","intro.ogg","3145728","2026-04-03 18:00:00"

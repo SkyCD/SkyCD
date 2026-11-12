@@ -1,0 +1,5 @@
+Disk,Catalog Path,Name,Size,Type,Modified
+"BackupDisk","Catalog\BackupDisk\ValidFolder","ValidFolder","0","Folder","2026-05-01 10:00:00"
+"BackupDisk","Catalog\BackupDisk\ValidFolder\file1.txt","file1.txt","100","File","2026-05-01 10:01:00"
+"BackupDisk","","corrupt-missing-path.txt","200","File","2026-05-01 10:02:00"
+"BackupDisk","Catalog\BackupDisk\ValidFolder\file2.txt","file2.txt","300","File","2026-05-01 10:03:00"

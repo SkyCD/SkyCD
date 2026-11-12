@@ -18,8 +18,9 @@ public sealed class CatalogLoadService(FileFormatManager formats)
         {
             var readProgress = new StageProgress(progress, 0, 50);
             readProgress.Report(0);
-            var format = formats.GetInstanceFor(path).SupportedFormat;
             await using var source = File.OpenRead(path);
+            var format = formats.GetInstanceFor(path, source).SupportedFormat;
+            source.Position = 0;
             var result = await formats.ReadAsync(new FileFormatReadRequest
             {
                 FormatId = format.FormatId,

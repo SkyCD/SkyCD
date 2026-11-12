@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
@@ -31,6 +31,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Html\SkyCD.Plugin.Html.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Markdown\SkyCD.Plugin.Markdown.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Scd\SkyCD.Plugin.Legacy.Scd.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.WinCatalog.Csv\SkyCD.Plugin.WinCatalog.Csv.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
     </ItemGroup>

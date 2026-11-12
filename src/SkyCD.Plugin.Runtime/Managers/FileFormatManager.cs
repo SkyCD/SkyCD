@@ -48,18 +48,69 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
     public IFileFormatPluginCapability GetInstanceFor(string fileName)
     {
-        foreach (var capability in fileFormatProviders.OrderByDescending(capability =>
-                     capability.SupportedFormat.Extensions.Where(extension => MatchesExtension(fileName, extension))
-                         .Select(extension => extension.Length).DefaultIfEmpty(0).Max()))
+        return GetInstanceFor(fileName, contentStream: null);
+    }
+
+    public IFileFormatPluginCapability GetInstanceFor(string fileName, Stream? contentStream)
+    {
+        var candidates = fileFormatProviders
+            .Where(capability => capability.SupportedFormat.Extensions.Any(extension => MatchesExtension(fileName, extension)))
+            .OrderByDescending(capability =>
+                capability.SupportedFormat.Extensions.Where(extension => MatchesExtension(fileName, extension))
+                    .Select(extension => extension.Length).DefaultIfEmpty(0).Max())
+            .ToList();
+
+        if (candidates.Count == 0)
         {
-            if (capability.SupportedFormat.Extensions
-                .Any(extension => MatchesExtension(fileName, extension)))
+            throw new UnsupportedFileFormatException(fileName);
+        }
+
+        if (candidates.Count == 1)
+        {
+            return candidates[0];
+        }
+
+        var stream = contentStream;
+        FileStream? openedStream = null;
+        if (stream is null && File.Exists(fileName))
+        {
+            try
             {
-                return capability;
+                openedStream = File.OpenRead(fileName);
+                stream = openedStream;
+            }
+            catch
+            {
+                // Ignore open failure and fallback to candidates.
             }
         }
 
-        throw new UnsupportedFileFormatException(fileName);
+        try
+        {
+            if (stream is not null && stream.CanRead)
+            {
+                foreach (var candidate in candidates.OfType<IContentAwareFileFormatCapability>())
+                {
+                    try
+                    {
+                        if (candidate.CanHandleContent(stream, fileName))
+                        {
+                            return (IFileFormatPluginCapability)candidate;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore inspection error and evaluate next candidate.
+                    }
+                }
+            }
+        }
+        finally
+        {
+            openedStream?.Dispose();
+        }
+
+        return candidates.FirstOrDefault(static candidate => candidate.SupportedFormat.CanWrite) ?? candidates[0];
     }
 
     public string GetPreferredSaveExtension(string fallback = "scd")
@@ -98,6 +149,22 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             throw new FileFormatHandlerResolutionException();
         }
 
+        if (!forWrite && File.Exists(path))
+        {
+            try
+            {
+                var detected = GetInstanceFor(path);
+                if (detected.SupportedFormat.CanRead)
+                {
+                    return detected.SupportedFormat.FormatId;
+                }
+            }
+            catch
+            {
+                // Fall back to extension resolution.
+            }
+        }
+
         var byExtension = formats
             .OrderByDescending(format => format.Extensions.Where(candidate => MatchesExtension(path, candidate))
                 .Select(candidate => candidate.Length).DefaultIfEmpty(0).Max())
@@ -109,7 +176,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
     {
-        var formatHandler = ResolveHandler(request.FormatId, request.FileName);
+        var formatHandler = ResolveHandler(request.FormatId, request.FileName, request.Source);
         if (!formatHandler.SupportedFormat.CanRead)
         {
             throw new FileFormatNotReadableException(formatHandler.SupportedFormat.FormatId);
@@ -165,7 +232,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return result;
     }
 
-    private IFileFormatPluginCapability ResolveHandler(string? formatId, string? fileName)
+    private IFileFormatPluginCapability ResolveHandler(string? formatId, string? fileName, Stream? contentStream = null)
     {
         if (!string.IsNullOrWhiteSpace(formatId))
         {
@@ -178,7 +245,7 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         }
 
         return !string.IsNullOrWhiteSpace(fileName)
-            ? GetInstanceFor(fileName)
+            ? GetInstanceFor(fileName, contentStream)
             : throw new FileFormatHandlerResolutionException();
     }
 

@@ -152,52 +152,7 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
             : null;
     }
 
-    private static string EscapeCsv(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
+    private static string EscapeCsv(string? value) => CsvParser.Escape(value, ',');
 
-        var escaped = value.Replace("\"", "\"\"");
-        return escaped.Contains(',') || escaped.Contains('"') || escaped.Contains('\n') || escaped.Contains('\r')
-            ? $"\"{escaped}\""
-            : escaped;
-    }
-
-    private static List<string> ParseCsvLine(string line)
-    {
-        var result = new List<string>();
-        var buffer = new StringBuilder();
-        var inQuotes = false;
-
-        for (var index = 0; index < line.Length; index++)
-        {
-            var current = line[index];
-            if (current == '"')
-            {
-                if (inQuotes && index + 1 < line.Length && line[index + 1] == '"')
-                {
-                    buffer.Append('"');
-                    index++;
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
-            }
-            else if (current == ',' && !inQuotes)
-            {
-                result.Add(buffer.ToString());
-                buffer.Clear();
-            }
-            else
-            {
-                buffer.Append(current);
-            }
-        }
-
-        result.Add(buffer.ToString());
-        return result;
-    }
+    private static List<string> ParseCsvLine(string line) => CsvParser.ParseLine(line, ',');
 }
