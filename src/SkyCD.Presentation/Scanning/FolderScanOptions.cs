@@ -8,4 +8,5 @@ public sealed record FolderScanOptions(
     string? TargetParentId = "library",
     CatalogDocumentType RootType = CatalogDocumentType.Folder,
     bool IncludeSubfolders = true,
-    bool IncludeExtendedInfo = false);
+    bool IncludeExtendedInfo = false,
+    ScanTraversalOptions? Traversal = null);

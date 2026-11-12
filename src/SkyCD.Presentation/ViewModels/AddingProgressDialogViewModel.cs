@@ -61,6 +61,9 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     private int skippedCount;
 
     [ObservableProperty]
+    private int failedCount;
+
+    [ObservableProperty]
     private int errorCount;
 
     [ObservableProperty]
@@ -71,6 +74,9 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     [ObservableProperty]
     private bool hasSkipped;
+
+    [ObservableProperty]
+    private bool hasFailed;
 
     [ObservableProperty]
     private string summaryText = string.Empty;
@@ -221,6 +227,14 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     public void ReportSkipped(string itemPath, string reason, string? stage = null) =>
         ReportLog(OperationLogLevel.ItemSkipped, $"Skipped: {reason}", stage, itemPath, reason);
 
+    public void ReportFailed(string itemPath, string reason, string? stage = null, Exception? exception = null) =>
+        ReportLog(
+            OperationLogLevel.ItemFailed,
+            $"Failed: {reason}",
+            stage,
+            itemPath,
+            exception?.ToString() ?? reason);
+
     private void ApplyReport(OperationProgressReport report)
     {
         if (!string.IsNullOrEmpty(report.OperationTitle))
@@ -319,6 +333,12 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
                     SkippedCount++;
                     HasSkipped = true;
                     break;
+                case OperationLogLevel.ItemFailed:
+                    FailedCount++;
+                    HasFailed = true;
+                    ErrorCount++;
+                    HasErrors = true;
+                    break;
                 case OperationLogLevel.Error:
                     ErrorCount++;
                     HasErrors = true;
@@ -340,7 +360,7 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     private void UpdateSummaryText()
     {
-        SummaryText = $"Processed: {ProcessedCount} | Skipped: {SkippedCount} | Errors: {ErrorCount}";
+        SummaryText = $"Processed: {ProcessedCount} | Skipped: {SkippedCount} | Failed: {FailedCount} | Errors: {ErrorCount}";
     }
 
     private static void RunOnUi(Action action)

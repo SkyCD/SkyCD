@@ -8,5 +8,6 @@ public enum OperationLogLevel
     Error,
     ItemProcessed,
     ItemSkipped,
+    ItemFailed,
     StageChanged
 }

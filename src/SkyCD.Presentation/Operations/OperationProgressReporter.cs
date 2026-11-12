@@ -90,4 +90,12 @@ public sealed class OperationProgressReporter : IOperationProgress
 
     public void ReportSkipped(string itemPath, string reason, string? stage = null) =>
         ReportLog(OperationLogLevel.ItemSkipped, $"Skipped: {reason}", stage, itemPath, reason);
+
+    public void ReportFailed(string itemPath, string reason, string? stage = null, Exception? exception = null) =>
+        ReportLog(
+            OperationLogLevel.ItemFailed,
+            $"Failed: {reason}",
+            stage,
+            itemPath,
+            exception?.ToString() ?? reason);
 }

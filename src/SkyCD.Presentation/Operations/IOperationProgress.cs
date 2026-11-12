@@ -42,4 +42,6 @@ public interface IOperationProgress : IProgress<OperationProgressReport>
     void ReportError(string message, Exception? exception = null, string? itemPath = null, string? stage = null);
 
     void ReportSkipped(string itemPath, string reason, string? stage = null);
+
+    void ReportFailed(string itemPath, string reason, string? stage = null, Exception? exception = null);
 }

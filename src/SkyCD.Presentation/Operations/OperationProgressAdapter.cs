@@ -74,4 +74,6 @@ public sealed class OperationProgressAdapter : IOperationProgress
     public void ReportError(string message, Exception? exception = null, string? itemPath = null, string? stage = null) { }
 
     public void ReportSkipped(string itemPath, string reason, string? stage = null) { }
+
+    public void ReportFailed(string itemPath, string reason, string? stage = null, Exception? exception = null) { }
 }

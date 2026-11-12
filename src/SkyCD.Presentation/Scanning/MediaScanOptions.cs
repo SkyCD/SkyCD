@@ -9,4 +9,5 @@ public sealed record MediaScanOptions(
     CatalogDocumentType RootType = CatalogDocumentType.Media,
     bool IncludeMediaInfo = true,
     bool IncludeExtendedInfo = false,
-    bool IncludeSubfolders = true);
+    bool IncludeSubfolders = true,
+    ScanTraversalOptions? Traversal = null);
