@@ -114,6 +114,15 @@
               Grid.ColumnSpan="2">
             <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="4">
                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
+                <ComboBox ItemsSource="{Binding AvailableDrives}"
+                          SelectedItem="{Binding SelectedDrive}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
                           IsChecked="{Binding IncludeMediaInfo}" />
             </StackPanel>
