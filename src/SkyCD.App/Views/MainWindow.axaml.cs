@@ -540,27 +540,25 @@ public partial class MainWindow : Window
 
             try
             {
-                var progress = new Progress<(string Status, int Percentage)>(p =>
-                {
-                    progressVm.OperationText = p.Status;
-                    progressVm.ProgressValue = p.Percentage;
-                });
+                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
 
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progress));
-                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications);
-                progressVm.ProgressValue = 60;
+                progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 60);
+                progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
                 await Task.Delay(50);
 
+                progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
+                progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 vm.AddImportedDocuments(scannedDocuments);
 
-                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.UpdatingIndexes);
-                progressVm.ProgressValue = 100;
+                progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
+                progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
             catch (Exception ex)
             {
+                progressVm.ReportError($"Failed to scan/add media: {ex.Message}", ex);
                 vm.StatusText = ex.Message;
             }
             finally
@@ -598,27 +596,25 @@ public partial class MainWindow : Window
 
             try
             {
-                var progress = new Progress<(string Status, int Percentage)>(p =>
-                {
-                    progressVm.OperationText = p.Status;
-                    progressVm.ProgressValue = p.Percentage;
-                });
+                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
 
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progress));
-                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications);
-                progressVm.ProgressValue = 60;
+                progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 60);
+                progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
                 await Task.Delay(50);
 
+                progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
+                progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 vm.AddImportedDocuments(scannedDocuments);
 
-                progressVm.OperationText = LocalizationService.Current.Get(TextKeys.UpdatingIndexes);
-                progressVm.ProgressValue = 100;
+                progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
+                progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
             catch (Exception ex)
             {
+                progressVm.ReportError($"Failed to scan/add folder: {ex.Message}", ex);
                 vm.StatusText = ex.Message;
             }
             finally
@@ -944,10 +940,13 @@ public partial class MainWindow : Window
         progressDialog.Show(this);
         try
         {
-            foreach (var (text, value) in BuildAddProgressSteps(addDialog))
+            var steps = BuildAddProgressSteps(addDialog);
+            for (int i = 0; i < steps.Count; i++)
             {
-                progressVm.OperationText = text;
-                progressVm.ProgressValue = value;
+                var (text, value) = steps[i];
+                var stagePercent = (double)(i + 1) / steps.Count * 100;
+                progressVm.ReportStage(text, stagePercentage: stagePercent, overallPercentage: value);
+                progressVm.ReportInfo(text);
                 await Task.Delay(140);
             }
         }

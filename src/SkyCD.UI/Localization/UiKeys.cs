@@ -102,4 +102,11 @@ public static class UiKeys
     public const string Bullets = "core.ui.Bullets";
     public const string Undo = "core.ui.Undo";
     public const string Redo = "core.ui.Redo";
+    public const string Progress = "core.ui.Progress";
+    public const string Log = "core.ui.Log";
+    public const string OverallProgress = "core.ui.OverallProgress";
+    public const string CurrentStage = "core.ui.CurrentStage";
+    public const string CurrentItem = "core.ui.CurrentItem";
+    public const string ClearLog = "core.ui.ClearLog";
+    public const string CopyLog = "core.ui.CopyLog";
 }
