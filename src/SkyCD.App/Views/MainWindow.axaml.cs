@@ -274,6 +274,36 @@ public partial class MainWindow : Window
                 }
             }
         }
+        else if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control)
+        {
+            var focused = GetFocusedElement();
+            if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
+                e.Source is TextBox || FindAncestor<TextBox>(e.Source as Visual) is not null)
+            {
+                return;
+            }
+
+            if (subscribedViewModel?.UndoCommand.CanExecute(null) == true)
+            {
+                subscribedViewModel.UndoCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
+        else if (e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control)
+        {
+            var focused = GetFocusedElement();
+            if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
+                e.Source is TextBox || FindAncestor<TextBox>(e.Source as Visual) is not null)
+            {
+                return;
+            }
+
+            if (subscribedViewModel?.RedoCommand.CanExecute(null) == true)
+            {
+                subscribedViewModel.RedoCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
     }
 
     private IInputElement? GetFocusedElement()

@@ -175,9 +175,9 @@ public sealed class CatalogImportTests
             var repository = new CatalogDocumentRepository();
             repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
             var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 4);
+                .Single(candidate => candidate.GetParameters().Length == 5);
             using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()), false]));
+                [repository, new PropertyValueLocalizer(), new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()), false, null]));
             if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
                 Assert.NotEmpty(vm.TreeNodes);
             verify?.Invoke(vm);

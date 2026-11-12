@@ -21,6 +21,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Presentation.UndoRedo;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -29,6 +30,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
     private readonly CatalogDocumentRepository? catalogRepository;
+    private readonly CatalogUndoManager? undoManager;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
@@ -83,11 +85,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IRepository<CatalogDocument> catalogRepository,
         IStringLocalizer propertyValueLocalizer,
         MenuExtensionManager menuExtensionManager,
-        bool shouldSeedDefaultCatalog)
+        bool shouldSeedDefaultCatalog,
+        CatalogUndoManager? undoManager = null)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
+        this.undoManager = undoManager;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
@@ -111,7 +115,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             repositoryManager.For<CatalogDocument>(),
             new PropertyValueLocalizer(),
             CreateEmptyMenuExtensionManager(),
-            RegisterAppStart(repositoryManager))
+            RegisterAppStart(repositoryManager),
+            new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()))
     {
     }
 
@@ -197,6 +202,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsSaveEnabled => IsDirtyDocument;
 
     public bool IsDeleteEnabled => CanDeleteItem(null);
+
+    [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
@@ -526,6 +537,38 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void UpdateUndoRedoState()
+    {
+        CanUndo = undoManager?.CanUndo ?? false;
+        CanRedo = undoManager?.CanRedo ?? false;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private async Task Undo()
+    {
+        if (undoManager is not null)
+        {
+            await undoManager.UndoAsync();
+            StatusText = LocalizationService.Current.Get(TextKeys.UndoAction);
+            UpdateUndoRedoState();
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private async Task Redo()
+    {
+        if (undoManager is not null)
+        {
+            await undoManager.RedoAsync();
+            StatusText = LocalizationService.Current.Get(TextKeys.RedoAction);
+            UpdateUndoRedoState();
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+        }
+    }
+
     [RelayCommand]
     private void AddItem()
     {
@@ -567,6 +610,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
+        undoManager?.RecordAddition(documents);
+        UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
 
@@ -679,6 +724,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
+        undoManager?.RecordDeletion(itemsToDelete);
+        UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
 
@@ -700,7 +747,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var targetNode = SelectedTreeNode;
         var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
-
+        var documentsToDelete = new List<CatalogDocument>();
         if (catalogRepository is not null)
         {
             var descendantIds = catalogRepository
@@ -711,6 +758,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 .ToArray();
 
             var allIdsToDelete = new[] { targetNode.Key }.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+
+            // Collect documents before deletion for undo recording
+            documentsToDelete = allIdsToDelete
+                .Select(id => catalogRepository.Get(id))
+                .Where(doc => doc != null)
+                .Cast<CatalogDocument>()
+                .ToList();
 
             catalogRepository.Collection.Database.InBatch(() =>
             {
@@ -736,15 +790,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var doc = inMemoryCatalogEntries.FirstOrDefault(entry => string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
             if (doc is not null)
             {
+                documentsToDelete.Add(doc);
                 DeleteCatalogEntriesFromInMemory([doc]);
             }
             else
             {
                 var dummyDoc = new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
+                documentsToDelete.Add(dummyDoc);
                 DeleteCatalogEntriesFromInMemory([dummyDoc]);
             }
         }
 
+        undoManager?.RecordDeletion(documentsToDelete);
+        UpdateUndoRedoState();
         RefreshTreeNodes(parentNode?.Key);
 
         RefreshBrowserItemsForSelection();
@@ -1079,6 +1137,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var status = statusVariants.FirstOrDefault(variant =>
             string.Equals(variant.Name, statusName, StringComparison.OrdinalIgnoreCase));
 
+        // Record old statuses for undo
+        var oldStatuses = targets.ToDictionary(t => t, t => t.Status);
+
         if (status is null)
         {
             foreach (var target in targets)
@@ -1114,8 +1175,39 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 : applicableTargets.Length == 1
                     ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
                     : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
+
+            // Record status changes for undo
+            foreach (var target in applicableTargets)
+            {
+                if (oldStatuses.TryGetValue(target, out var oldStatus))
+                {
+                    undoManager?.RecordStatusChange(target, oldStatus, status.Name);
+                }
+            }
         }
 
+        // Record status clears for undo
+        if (status is null)
+        {
+            foreach (var target in targets)
+            {
+                if (oldStatuses.TryGetValue(target, out var oldStatus) && oldStatus != null)
+                {
+                    undoManager?.RecordStatusChange(target, oldStatus, null);
+                }
+            }
+        }
+
+        // Save changes to repository
+        if (catalogRepository is not null)
+        {
+            foreach (var target in targets)
+            {
+                catalogRepository.Save(target.Id, target);
+            }
+        }
+
+        UpdateUndoRedoState();
         IsDirtyDocument = true;
         RefreshBrowserItemsForSelection();
     }
@@ -1627,6 +1719,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.Edit),
                 Items =
                 [
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), HotKey = "Ctrl+Z", Command = UndoCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), HotKey = "Ctrl+Y", Command = RedoCommand },
+                    Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
                     new MainMenuItemViewModel
