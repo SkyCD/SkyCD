@@ -152,14 +152,28 @@ public sealed class FolderCatalogScannerTests : IDisposable
         File.WriteAllText(Path.Combine(testDirectory, "file.txt"), "data");
 
         var progressReports = new List<(string Status, int Percentage)>();
-        var progress = new Progress<(string Status, int Percentage)>(p => progressReports.Add(p));
+        var progress = new SynchronousProgress<(string Status, int Percentage)>(p =>
+        {
+            lock (progressReports)
+            {
+                progressReports.Add(p);
+            }
+        });
 
         var scanner = new FolderCatalogScanner();
         var options = new FolderScanOptions(testDirectory);
 
         scanner.Scan(options, progress);
 
-        Assert.NotEmpty(progressReports);
-        Assert.Contains(progressReports, p => p.Percentage == 100);
+        lock (progressReports)
+        {
+            Assert.NotEmpty(progressReports);
+            Assert.Contains(progressReports, p => p.Percentage == 100);
+        }
+    }
+
+    private sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) => handler(value);
     }
 }

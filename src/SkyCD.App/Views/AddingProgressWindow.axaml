@@ -2,14 +2,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:ops="clr-namespace:SkyCD.Presentation.Operations;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AddingProgressWindow"
         x:DataType="vm:AddingProgressDialogViewModel"
-        Width="470"
-        Height="140"
-        CanResize="False"
+        Width="520"
+        Height="360"
+        MinWidth="460"
+        MinHeight="280"
+        CanResize="True"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
-        WindowDecorations="BorderOnly"
         ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static i18n:UiKeys.Adding}}">
@@ -18,11 +20,92 @@
         <vm:AddingProgressDialogViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,Auto" RowSpacing="10" Margin="16">
-        <TextBlock Text="{Binding OperationText}" TextWrapping="Wrap" />
-        <ProgressBar Grid.Row="1"
-                     Minimum="0"
-                     Maximum="100"
-                     Value="{Binding ProgressValue}" />
+    <Grid Margin="12" RowDefinitions="*,Auto">
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}" Margin="0">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Progress}}">
+                <StackPanel Spacing="16" Margin="8,12,8,8">
+                    <!-- Overall Progress Section -->
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.OverallProgress}}" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="{Binding OverallProgressText}" Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        </Grid>
+                        <TextBlock Text="{Binding OperationText}" TextWrapping="Wrap" />
+                        <ProgressBar Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding OverallProgressValue}"
+                                     IsIndeterminate="{Binding IsOverallIndeterminate}"
+                                     Height="18" />
+                    </StackPanel>
+
+                    <Separator Margin="0,4" />
+
+                    <!-- Current Stage Progress Section -->
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CurrentStage}}" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="{Binding CurrentStageProgressText}" Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        </Grid>
+                        <TextBlock Text="{Binding CurrentStageText}" TextWrapping="Wrap" />
+                        <ProgressBar Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding CurrentStageProgressValue}"
+                                     IsIndeterminate="{Binding IsStageIndeterminate}"
+                                     Height="18" />
+                        <TextBlock Text="{Binding CurrentItemText}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Log}}">
+                <Grid RowDefinitions="*,Auto" Margin="0,8,0,0">
+                    <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                            BorderThickness="1"
+                            CornerRadius="3"
+                            Background="{DynamicResource ThemeBackgroundBrush}">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding LogEntries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="ops:OperationLogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"
+                                                   FontFamily="Cascadia Code,Consolas,Courier New,monospace"
+                                                   FontSize="12"
+                                                   Margin="6,2"
+                                                   TextWrapping="NoWrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0" ColumnSpacing="6">
+                        <TextBlock Text="{Binding SummaryText}"
+                                   VerticalAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <Button Grid.Column="1"
+                                Content="{i18n:Translate {x:Static i18n:UiKeys.CopyLog}}"
+                                Click="OnCopyLogClicked"
+                                Padding="8,3"
+                                FontSize="11" />
+                        <Button Grid.Column="2"
+                                Content="{i18n:Translate {x:Static i18n:UiKeys.ClearLog}}"
+                                Command="{Binding ClearLogCommand}"
+                                Padding="8,3"
+                                FontSize="11" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Summary Footer -->
+        <TextBlock Grid.Row="1"
+                   Text="{Binding SummaryText}"
+                   FontSize="11"
+                   Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                   Margin="4,8,4,0" />
     </Grid>
 </Window>

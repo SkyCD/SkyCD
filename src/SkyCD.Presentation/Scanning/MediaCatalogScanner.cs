@@ -5,6 +5,7 @@ using System.IO;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
+using SkyCD.Presentation.Operations;
 
 namespace SkyCD.Presentation.Scanning;
 
@@ -12,7 +13,7 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
 {
     private readonly IMediaDriveProvider driveProvider = driveProvider ?? new SystemMediaDriveProvider();
 
-    public IReadOnlyList<CatalogDocument> Scan(MediaScanOptions options, IProgress<(string Status, int Percentage)>? progress = null)
+    public IReadOnlyList<CatalogDocument> Scan(MediaScanOptions options, IOperationProgress? progress = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -41,7 +42,8 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
                 ? driveInfo.VolumeLabel.Trim()
                 : driveInfo.DisplayName);
 
-        progress?.Report(("Reading media metadata...", 10));
+        progress?.ReportStage("Reading media metadata...", stagePercentage: null, overallPercentage: 10);
+        progress?.ReportInfo($"Starting media scan: {driveInfo.DisplayName} ({driveInfo.RootDirectory})", itemPath: driveInfo.RootDirectory);
 
         var documents = new List<CatalogDocument>();
         var rootId = $"media-{Guid.NewGuid():N}";
@@ -72,9 +74,13 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
 
         documents.Insert(0, rootDoc);
 
-        progress?.Report(("Scanning complete", 100));
+        progress?.ReportStage("Scanning complete", stagePercentage: 100, overallPercentage: 100);
+        progress?.ReportInfo($"Scanning complete. Scanned {documents.Count} documents ({totalSize} bytes).");
         return documents;
     }
+
+    public IReadOnlyList<CatalogDocument> Scan(MediaScanOptions options, IProgress<(string Status, int Percentage)> progress) =>
+        Scan(options, progress is not null ? new OperationProgressAdapter(progress) : null);
 
     private static void PopulateMediaDriveProperties(PropertiesCollection properties, MediaDriveInfo drive)
     {
@@ -97,7 +103,7 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
         bool includeSubfolders,
         bool includeExtendedInfo,
         List<CatalogDocument> documents,
-        IProgress<(string Status, int Percentage)>? progress)
+        IOperationProgress? progress)
     {
         long totalSize = 0;
         var directChildrenCount = 0;
@@ -115,6 +121,8 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
+            progress?.ReportWarning($"Cannot read files in '{directory.FullName}': {ex.Message}", itemPath: directory.FullName);
+            progress?.ReportSkipped(directory.FullName, ex.Message);
             files = [];
         }
 
@@ -141,6 +149,8 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
             };
 
             documents.Add(fileDoc);
+            progress?.ReportItem(file.FullName);
+            progress?.ReportLog(OperationLogLevel.ItemProcessed, $"Added file: {file.Name}", itemPath: file.FullName);
         }
 
         if (includeSubfolders)
@@ -152,6 +162,8 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
+                progress?.ReportWarning($"Cannot read subdirectories in '{directory.FullName}': {ex.Message}", itemPath: directory.FullName);
+                progress?.ReportSkipped(directory.FullName, ex.Message);
                 subdirectories = [];
             }
 
@@ -160,7 +172,8 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
                 directChildrenCount++;
                 var subDirId = $"folder-{Guid.NewGuid():N}";
 
-                progress?.Report(($"Reading '{subDir.Name}'...", 50));
+                progress?.ReportStage($"Reading '{subDir.Name}'...", stagePercentage: null);
+                progress?.ReportLog(OperationLogLevel.ItemProcessed, $"Scanning folder: {subDir.Name}", itemPath: subDir.FullName);
 
                 var (subDirSize, subDirDirectChildren, subDirProperties) = ScanDirectory(
                     subDir,
@@ -209,5 +222,7 @@ public sealed class MediaCatalogScanner(IMediaDriveProvider? driveProvider = nul
         properties["CreationTime"] = dir.CreationTime.ToString("O");
         properties["Attributes"] = dir.Attributes.ToString();
         properties["FullName"] = dir.FullName;
+        properties["RealDirectoryFullName"] = dir.FullName;
+        properties["RealDirectoryName"] = dir.Name;
     }
 }

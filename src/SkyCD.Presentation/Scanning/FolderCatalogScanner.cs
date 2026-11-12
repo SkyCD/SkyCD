@@ -5,12 +5,13 @@ using System.IO;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
+using SkyCD.Presentation.Operations;
 
 namespace SkyCD.Presentation.Scanning;
 
 public sealed class FolderCatalogScanner
 {
-    public IReadOnlyList<CatalogDocument> Scan(FolderScanOptions options, IProgress<(string Status, int Percentage)>? progress = null)
+    public IReadOnlyList<CatalogDocument> Scan(FolderScanOptions options, IOperationProgress? progress = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -29,7 +30,8 @@ public sealed class FolderCatalogScanner
             rootName = rootDirectory.FullName;
         }
 
-        progress?.Report(("Reading source folder...", 10));
+        progress?.ReportStage("Reading source folder...", stagePercentage: null, overallPercentage: 10);
+        progress?.ReportInfo($"Starting folder scan: {options.FolderPath}", itemPath: options.FolderPath);
 
         var documents = new List<CatalogDocument>();
         var rootId = $"folder-{Guid.NewGuid():N}";
@@ -55,9 +57,13 @@ public sealed class FolderCatalogScanner
 
         documents.Insert(0, rootDoc);
 
-        progress?.Report(("Scanning complete", 100));
+        progress?.ReportStage("Scanning complete", stagePercentage: 100, overallPercentage: 100);
+        progress?.ReportInfo($"Scanning complete. Scanned {documents.Count} documents ({totalSize} bytes).");
         return documents;
     }
+
+    public IReadOnlyList<CatalogDocument> Scan(FolderScanOptions options, IProgress<(string Status, int Percentage)> progress) =>
+        Scan(options, progress is not null ? new OperationProgressAdapter(progress) : null);
 
     private static (long TotalSize, int DirectChildrenCount, PropertiesCollection Properties) ScanDirectory(
         DirectoryInfo directory,
@@ -65,7 +71,7 @@ public sealed class FolderCatalogScanner
         bool includeSubfolders,
         bool includeExtendedInfo,
         List<CatalogDocument> documents,
-        IProgress<(string Status, int Percentage)>? progress)
+        IOperationProgress? progress)
     {
         long totalSize = 0;
         var directChildrenCount = 0;
@@ -83,6 +89,8 @@ public sealed class FolderCatalogScanner
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
+            progress?.ReportWarning($"Cannot read files in '{directory.FullName}': {ex.Message}", itemPath: directory.FullName);
+            progress?.ReportSkipped(directory.FullName, ex.Message);
             files = [];
         }
 
@@ -109,6 +117,8 @@ public sealed class FolderCatalogScanner
             };
 
             documents.Add(fileDoc);
+            progress?.ReportItem(file.FullName);
+            progress?.ReportLog(OperationLogLevel.ItemProcessed, $"Added file: {file.Name}", itemPath: file.FullName);
         }
 
         if (includeSubfolders)
@@ -120,6 +130,8 @@ public sealed class FolderCatalogScanner
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
+                progress?.ReportWarning($"Cannot read subdirectories in '{directory.FullName}': {ex.Message}", itemPath: directory.FullName);
+                progress?.ReportSkipped(directory.FullName, ex.Message);
                 subdirectories = [];
             }
 
@@ -128,7 +140,8 @@ public sealed class FolderCatalogScanner
                 directChildrenCount++;
                 var subDirId = $"folder-{Guid.NewGuid():N}";
 
-                progress?.Report(($"Reading '{subDir.Name}'...", 50));
+                progress?.ReportStage($"Reading '{subDir.Name}'...", stagePercentage: null);
+                progress?.ReportLog(OperationLogLevel.ItemProcessed, $"Scanning folder: {subDir.Name}", itemPath: subDir.FullName);
 
                 var (subDirSize, subDirDirectChildren, subDirProperties) = ScanDirectory(
                     subDir,
