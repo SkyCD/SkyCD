@@ -202,7 +202,22 @@ public sealed class IconGlyphConverter : IValueConverter
             }
         }
 
-        if (OperatingSystem.IsWindows())
+        if (LinuxFreeDesktopIconProvider.Instance.ForceEnable || OperatingSystem.IsLinux())
+        {
+            try
+            {
+                var linuxIcon = LinuxFreeDesktopIconProvider.Instance.ResolveExtensionIcon(ext);
+                if (linuxIcon is not null)
+                {
+                    return linuxIcon;
+                }
+            }
+            catch
+            {
+                // Fall back gracefully
+            }
+        }
+        else if (OperatingSystem.IsWindows())
         {
             try
             {
