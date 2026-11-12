@@ -1,16 +1,18 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using SkyCD.App.Icons;
 
 namespace SkyCD.App.Converters;
 
 /// <summary>
-/// Converts an icon glyph key (e.g. "folder", "cd") to a legacy Bitmap image.
-/// This replaces the previous emoji-based icon approach with proper legacy-style icons.
+/// Converts an icon glyph key (e.g. "folder", "ext:pdf", base64/file path) to a Bitmap image.
+/// Supports captured custom icon metadata, platform shell icon extraction, and portable fallbacks.
 /// </summary>
 public sealed class IconGlyphConverter : IValueConverter
 {
@@ -54,42 +56,229 @@ public sealed class IconGlyphConverter : IValueConverter
         ["circle"] = "avares://SkyCD.App/Assets/legacy/icon-folder.png",
     };
 
-    private static readonly Dictionary<string, Bitmap?> Cache = [];
+    private static readonly ConcurrentDictionary<string, Bitmap?> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public static IIconResolver? CustomResolver { get; set; }
+
+    public static void ClearCache() => Cache.Clear();
+
+    public static Bitmap? Resolve(string? key)
     {
-        if (value is not string key || string.IsNullOrWhiteSpace(key))
-            return null;
-
-        if (Cache.TryGetValue(key, out var cached))
-            return cached;
-
-        var uri = IconMap.GetValueOrDefault(key);
-        if (uri is null)
+        if (string.IsNullOrWhiteSpace(key))
         {
-            if (File.Exists(key))
+            return GetDefaultFileIcon();
+        }
+
+        var normalizedKey = key.Trim();
+        if (Cache.TryGetValue(normalizedKey, out var cached))
+        {
+            return cached;
+        }
+
+        var bitmap = ResolveUncached(normalizedKey);
+        Cache[normalizedKey] = bitmap;
+        return bitmap;
+    }
+
+    private static Bitmap? ResolveUncached(string key)
+    {
+        if (CustomResolver is not null)
+        {
+            try
             {
-                var bitmap = new Bitmap(key);
-                Cache[key] = bitmap;
-                return bitmap;
+                var custom = CustomResolver.ResolveIcon(key);
+                if (custom is not null)
+                {
+                    return custom;
+                }
+            }
+            catch
+            {
+                // Fall back gracefully
+            }
+        }
+
+        if (IconMap.TryGetValue(key, out var mapUri))
+        {
+            try
+            {
+                return LoadBitmap(mapUri);
+            }
+            catch
+            {
+                return GetDefaultFileIcon();
+            }
+        }
+
+        if (key.StartsWith("ext:", StringComparison.OrdinalIgnoreCase))
+        {
+            var ext = key[4..].TrimStart('.');
+            return ResolveExtensionIcon(ext);
+        }
+
+        if (key.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) ||
+            key.StartsWith("base64:", StringComparison.OrdinalIgnoreCase))
+        {
+            return TryLoadFromBase64(key) ?? GetDefaultFileIcon();
+        }
+
+        if (key.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                return LoadBitmap(key);
+            }
+            catch
+            {
+                return GetDefaultFileIcon();
+            }
+        }
+
+        if (File.Exists(key))
+        {
+            try
+            {
+                if (OperatingSystem.IsWindows() &&
+                    (key.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                     key.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var shellIcon = WindowsShellIconProvider.Instance.ResolvePathIcon(key);
+                    if (shellIcon is not null)
+                    {
+                        return shellIcon;
+                    }
+                }
+
+                return new Bitmap(key);
+            }
+            catch
+            {
+                return ResolveExtensionIcon(Path.GetExtension(key));
+            }
+        }
+
+        if (LooksLikeBase64(key))
+        {
+            var base64Bitmap = TryLoadFromBase64(key);
+            if (base64Bitmap is not null)
+            {
+                return base64Bitmap;
+            }
+        }
+
+        if (key.Contains('.') || key.Contains('\\') || key.Contains('/'))
+        {
+            var ext = Path.GetExtension(key);
+            if (!string.IsNullOrWhiteSpace(ext))
+            {
+                return ResolveExtensionIcon(ext);
+            }
+        }
+
+        return GetDefaultFileIcon();
+    }
+
+    public static Bitmap? ResolveExtensionIcon(string? extension)
+    {
+        var ext = (extension ?? string.Empty).Trim().TrimStart('.').ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(ext))
+        {
+            return GetDefaultFileIcon();
+        }
+
+        if (CustomResolver is not null)
+        {
+            try
+            {
+                var custom = CustomResolver.ResolveIcon("ext:" + ext);
+                if (custom is not null)
+                {
+                    return custom;
+                }
+            }
+            catch
+            {
+                // Fall back gracefully
+            }
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var shellIcon = WindowsShellIconProvider.Instance.ResolveExtensionIcon(ext);
+                if (shellIcon is not null)
+                {
+                    return shellIcon;
+                }
+            }
+            catch
+            {
+                // Fall back gracefully
+            }
+        }
+
+        return PortableExtensionIconProvider.Instance.ResolveExtensionIcon(ext) ?? GetDefaultFileIcon();
+    }
+
+    private static Bitmap? TryLoadFromBase64(string data)
+    {
+        try
+        {
+            var raw = data;
+            var commaIndex = raw.IndexOf(',');
+            if (commaIndex >= 0 && raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                raw = raw[(commaIndex + 1)..];
+            }
+            else if (raw.StartsWith("base64:", StringComparison.OrdinalIgnoreCase))
+            {
+                raw = raw[7..];
             }
 
-            // Try as direct URI
-            if (key.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
-                uri = key;
-            else
-                return null;
+            var bytes = System.Convert.FromBase64String(raw.Trim());
+            using var stream = new MemoryStream(bytes);
+            return new Bitmap(stream);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool LooksLikeBase64(string s)
+    {
+        if (s.Length < 32 || s.Length % 4 != 0)
+        {
+            return false;
+        }
+
+        foreach (var c in s)
+        {
+            if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '='))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static Bitmap? GetDefaultFileIcon()
+    {
+        if (Cache.TryGetValue("file", out var cached) && cached is not null)
+        {
+            return cached;
         }
 
         try
         {
-            var bitmap = LoadBitmap(uri);
-            Cache[key] = bitmap;
+            var bitmap = LoadBitmap("avares://SkyCD.App/Assets/add-from-media.png");
+            Cache["file"] = bitmap;
             return bitmap;
         }
         catch
         {
-            Cache[key] = null;
             return null;
         }
     }
@@ -99,6 +288,11 @@ public sealed class IconGlyphConverter : IValueConverter
         var uriObj = new Uri(uri);
         using var stream = AssetLoader.Open(uriObj);
         return new Bitmap(stream);
+    }
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return Resolve(value?.ToString());
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

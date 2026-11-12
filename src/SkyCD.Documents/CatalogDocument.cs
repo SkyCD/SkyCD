@@ -30,5 +30,33 @@ public sealed class CatalogDocument
 
     public string DisplaySize => SizeFormatting.FormatBytes(Size, "0.##");
 
-    public string IconGlyph => Type.ResolveIconGlyph();
+    public string IconGlyph => ResolveIconGlyph();
+
+    private string ResolveIconGlyph()
+    {
+        if (Properties.TryGetValue("Icon", out var iconValue) && iconValue is not null)
+        {
+            if (iconValue is byte[] bytes)
+            {
+                return $"data:image/x-icon;base64,{System.Convert.ToBase64String(bytes)}";
+            }
+
+            var iconStr = iconValue.ToString()?.Trim();
+            if (!string.IsNullOrWhiteSpace(iconStr))
+            {
+                return iconStr;
+            }
+        }
+
+        if (Type == CatalogDocumentType.File)
+        {
+            var ext = System.IO.Path.GetExtension(Name);
+            if (!string.IsNullOrWhiteSpace(ext))
+            {
+                return $"ext:{ext.TrimStart('.').ToLowerInvariant()}";
+            }
+        }
+
+        return Type.ResolveIconGlyph();
+    }
 }
