@@ -203,6 +203,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool IsDeleteEnabled => CanDeleteItem(null);
 
+    public bool CanUndo => undoManager?.CanUndo ?? false;
+    public bool CanRedo => undoManager?.CanRedo ?? false;
+
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
 
     public string ProgressText => $"{ProgressValue}%";
@@ -529,6 +532,30 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         StatusText = LocalizationService.Current.Get(TextKeys.ExitRequested);
         ExitRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private async Task Undo()
+    {
+        if (undoManager is not null)
+        {
+            await undoManager.UndoAsync();
+            StatusText = LocalizationService.Current.Get(TextKeys.UndoAction);
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private async Task Redo()
+    {
+        if (undoManager is not null)
+        {
+            await undoManager.RedoAsync();
+            StatusText = LocalizationService.Current.Get(TextKeys.RedoAction);
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+        }
     }
 
     [RelayCommand]
@@ -1632,6 +1659,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.Edit),
                 Items =
                 [
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), HotKey = "Ctrl+Z", Command = UndoCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), HotKey = "Ctrl+Y", Command = RedoCommand },
+                    Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
                     new MainMenuItemViewModel
