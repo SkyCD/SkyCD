@@ -16,12 +16,30 @@ public sealed class MediaCatalogScanner(
     private readonly IMediaDriveProvider driveProvider = driveProvider ?? new SystemMediaDriveProvider();
     private readonly IScanFileSystem fileSystem = fileSystem ?? new RealScanFileSystem();
 
+    /// <summary>
+    /// Runs the scan and returns only the document list.
+    /// Throws <see cref="OperationCanceledException"/> when canceled.
+    /// </summary>
     public IReadOnlyList<CatalogDocument> Scan(
         MediaScanOptions options,
         IOperationProgress? progress = null,
-        CancellationToken cancellationToken = default) =>
-        ScanDetailed(options, progress, cancellationToken).Documents;
+        CancellationToken cancellationToken = default)
+    {
+        var result = ScanDetailed(options, progress, cancellationToken);
+        if (result.Outcome == ScanOutcome.Canceled)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new OperationCanceledException("Media scan was canceled.");
+        }
 
+        return result.Documents;
+    }
+
+    /// <summary>
+    /// Runs the scan and returns a <see cref="CatalogScanResult"/> that includes the
+    /// <see cref="ScanOutcome"/>. This overload never throws <see cref="OperationCanceledException"/>
+    /// for cooperative cancellation; check <see cref="CatalogScanResult.Outcome"/> instead.
+    /// </summary>
     public CatalogScanResult ScanDetailed(
         MediaScanOptions options,
         IOperationProgress? progress = null,
@@ -66,41 +84,55 @@ public sealed class MediaCatalogScanner(
         var rootId = $"media-{Guid.NewGuid():N}";
         var traverser = new FileSystemCatalogTraverser(context);
 
-        var (totalSize, directChildrenCount, rootProperties) = traverser.Traverse(
-            driveInfo.RootDirectory,
-            rootId,
-            options.IncludeSubfolders,
-            options.IncludeExtendedInfo,
-            documents);
-
-        if (options.IncludeMediaInfo)
+        try
         {
-            PopulateMediaDriveProperties(rootProperties, driveInfo);
+            var (totalSize, directChildrenCount, rootProperties) = traverser.Traverse(
+                driveInfo.RootDirectory,
+                rootId,
+                options.IncludeSubfolders,
+                options.IncludeExtendedInfo,
+                documents);
+
+            if (options.IncludeMediaInfo)
+            {
+                PopulateMediaDriveProperties(rootProperties, driveInfo);
+            }
+
+            var rootDoc = new CatalogDocument
+            {
+                Id = rootId,
+                Name = rootName,
+                ParentId = options.TargetParentId,
+                Type = options.RootType,
+                Size = totalSize,
+                ChildrenCount = directChildrenCount,
+                Properties = rootProperties
+            };
+
+            documents.Insert(0, rootDoc);
+            context.Statistics.IncrementDiscovered();
+
+            progress?.ReportStage("Scanning complete", stagePercentage: 100, overallPercentage: 100);
+            progress?.ReportInfo(
+                $"Scanning complete. Discovered={context.Statistics.Discovered}, Skipped={context.Statistics.Skipped}, Failed={context.Statistics.Failed}, Documents={documents.Count} ({totalSize} bytes).");
+
+            return new CatalogScanResult
+            {
+                Documents = documents,
+                Statistics = context.Statistics,
+                Outcome = ScanOutcome.Success
+            };
         }
-
-        var rootDoc = new CatalogDocument
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
         {
-            Id = rootId,
-            Name = rootName,
-            ParentId = options.TargetParentId,
-            Type = options.RootType,
-            Size = totalSize,
-            ChildrenCount = directChildrenCount,
-            Properties = rootProperties
-        };
-
-        documents.Insert(0, rootDoc);
-        context.Statistics.IncrementDiscovered();
-
-        progress?.ReportStage("Scanning complete", stagePercentage: 100, overallPercentage: 100);
-        progress?.ReportInfo(
-            $"Scanning complete. Discovered={context.Statistics.Discovered}, Skipped={context.Statistics.Skipped}, Failed={context.Statistics.Failed}, Documents={documents.Count} ({totalSize} bytes).");
-
-        return new CatalogScanResult
-        {
-            Documents = documents,
-            Statistics = context.Statistics
-        };
+            progress?.ReportWarning("Scan canceled by user.");
+            return new CatalogScanResult
+            {
+                Documents = [],
+                Statistics = context.Statistics,
+                Outcome = ScanOutcome.Canceled
+            };
+        }
     }
 
     public IReadOnlyList<CatalogDocument> Scan(MediaScanOptions options, IProgress<(string Status, int Percentage)> progress) =>

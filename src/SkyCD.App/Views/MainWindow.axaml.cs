@@ -575,7 +575,7 @@ public partial class MainWindow : Window
             loginVm.Password = string.Empty;
 
             var scanner = new FtpCatalogScanner();
-            var progressVm = new AddingProgressDialogViewModel();
+            using var progressVm = new AddingProgressDialogViewModel();
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -584,7 +584,15 @@ public partial class MainWindow : Window
 
             try
             {
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+                var scannedDocuments = await Task.Run(
+                    () => scanner.Scan(scanOptions, progressVm, progressVm.CancellationToken),
+                    progressVm.CancellationToken);
+
+                if (progressVm.IsCanceled)
+                {
+                    vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+                    return;
+                }
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 80);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
@@ -598,6 +606,10 @@ public partial class MainWindow : Window
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (OperationCanceledException)
+            {
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
             catch (Exception ex)
@@ -650,7 +662,7 @@ public partial class MainWindow : Window
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider);
-            var progressVm = new AddingProgressDialogViewModel();
+            using var progressVm = new AddingProgressDialogViewModel();
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -659,7 +671,17 @@ public partial class MainWindow : Window
 
             try
             {
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+                var result = await Task.Run(
+                    () => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken),
+                    progressVm.CancellationToken);
+
+                if (result.Outcome == SkyCD.Presentation.Scanning.ScanOutcome.Canceled)
+                {
+                    vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+                    return;
+                }
+
+                var scannedDocuments = result.Documents;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 60);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
@@ -673,6 +695,10 @@ public partial class MainWindow : Window
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (OperationCanceledException)
+            {
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
             catch (Exception ex)
@@ -706,7 +732,7 @@ public partial class MainWindow : Window
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
 
             var scanner = new FolderCatalogScanner();
-            var progressVm = new AddingProgressDialogViewModel();
+            using var progressVm = new AddingProgressDialogViewModel();
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -715,7 +741,17 @@ public partial class MainWindow : Window
 
             try
             {
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+                var result = await Task.Run(
+                    () => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken),
+                    progressVm.CancellationToken);
+
+                if (result.Outcome == SkyCD.Presentation.Scanning.ScanOutcome.Canceled)
+                {
+                    vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+                    return;
+                }
+
+                var scannedDocuments = result.Documents;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 60);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
@@ -729,6 +765,10 @@ public partial class MainWindow : Window
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (OperationCanceledException)
+            {
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
             catch (Exception ex)

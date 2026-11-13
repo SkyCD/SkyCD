@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Threading;
 using Avalonia;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,10 +11,12 @@ using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class AddingProgressDialogViewModel : ObservableObject, IOperationProgress
+public partial class AddingProgressDialogViewModel : ObservableObject, IOperationProgress, IDisposable
 {
     private readonly object gate = new();
     private string? currentStage;
+    private readonly CancellationTokenSource cancellationSource = new();
+    private bool disposed;
 
     [ObservableProperty]
     private string operationText = LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications);
@@ -84,11 +87,38 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     [ObservableProperty]
     private int selectedTabIndex;
 
+    [ObservableProperty]
+    private bool isCanceled;
+
+    [ObservableProperty]
+    private bool isCancelEnabled = true;
+
     public ObservableCollection<OperationLogEntry> LogEntries { get; } = new();
+
+    /// <summary>
+    /// Cancellation token for the in-progress scan operation.
+    /// Wire this to <c>cancellationToken</c> on scanner calls so the Cancel button stops traversal.
+    /// </summary>
+    public CancellationToken CancellationToken => cancellationSource.Token;
 
     public AddingProgressDialogViewModel()
     {
         UpdateSummaryText();
+    }
+
+    /// <summary>Requests cancellation of the ongoing scan.</summary>
+    [RelayCommand]
+    public void CancelScan()
+    {
+        if (disposed || cancellationSource.IsCancellationRequested)
+        {
+            return;
+        }
+
+        IsCancelEnabled = false;
+        IsCanceled = true;
+        cancellationSource.Cancel();
+        ReportWarning("Cancel requested — stopping scan as soon as possible.");
     }
 
     partial void OnProgressValueChanged(int value)
@@ -387,5 +417,16 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
         {
             action();
         }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        cancellationSource.Dispose();
     }
 }
