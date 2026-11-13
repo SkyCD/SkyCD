@@ -12,5 +12,7 @@ Binary layout is taken from commit `c0567ab`, `modTypes.bas` and
   each encoded as a little-endian UInt16 byte length followed by ANSI bytes.
 - No array descriptor is stored by VB6 binary-mode `Put` for this array.
 
-The importer uses Windows-1252 for legacy ANSI strings. Writing uses the
-existing UTF-8 text SCD format; binary export is not implemented.
+The importer and binary exporter use Windows-1252 for legacy ANSI strings.
+The exporter writes the historical fixed header and `skyFileProperties` record;
+characters outside Windows-1252 are replaced with `?`, and modern-only catalog
+metadata has no representation in this format.

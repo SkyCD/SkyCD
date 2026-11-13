@@ -14,6 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Scd\SkyCD.Plugin.Legacy.Scd.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\legacy\SkyCD\Samples\gamez.scd" Link="fixtures\gamez.scd" Condition="Exists('..\..\legacy\SkyCD\Samples\gamez.scd')">
