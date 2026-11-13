@@ -104,6 +104,8 @@ namespace SkyCD.Core.UndoRedo
                 {
                     oldest.Value.Dispose();
                     _undoStack.RemoveFirst();
+                    if (_savedRevisionIndex > 0)
+                        _savedRevisionIndex--;
                 }
             }
         }
@@ -119,9 +121,18 @@ namespace SkyCD.Core.UndoRedo
                 _undoStack.RemoveLast();
                 _redoStack.AddLast(action);
             }
-            if (action is not null)
+            try
             {
                 await action.UndoAsync();
+            }
+            catch
+            {
+                lock (_syncLock)
+                {
+                    _redoStack.Remove(action);
+                    _undoStack.AddLast(action);
+                }
+                throw;
             }
         }
 
@@ -136,9 +147,18 @@ namespace SkyCD.Core.UndoRedo
                 _redoStack.RemoveLast();
                 _undoStack.AddLast(action);
             }
-            if (action is not null)
+            try
             {
                 await action.RedoAsync();
+            }
+            catch
+            {
+                lock (_syncLock)
+                {
+                    _undoStack.Remove(action);
+                    _redoStack.AddLast(action);
+                }
+                throw;
             }
         }
 
@@ -164,6 +184,7 @@ namespace SkyCD.Core.UndoRedo
         {
             lock (_syncLock)
             {
+                ClearUndoStack();
                 ClearRedoStack();
                 _savedRevisionIndex = -1;
             }
