@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WinCatalog version="2026">
+  <Disks>
+    <Disk Name="Broken Disk">
+      <Folder Name="Documents">
+        <File Name="readme.txt" Size="1024"/>
+      </Folder>
+</WinCatalog>

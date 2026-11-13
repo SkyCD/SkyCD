@@ -25,6 +25,7 @@ This file tracks v3 format-support tickets created from issue `#118` ("Add relat
 ## Third-party catalog report import formats
 
 - `#448` WinCatalog CSV report (`*.csv`) read-only
+- `#447` WinCatalog XML report (`*.xml`) read-only
 
 ## Notes
 
