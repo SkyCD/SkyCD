@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WinCatalog version="2026">
+  <Results>
+    <Item Disk="Archive Disk 1" CatalogPath="Catalog\Archive Disk 1\Documents\readme.txt" Name="readme.txt" Size="1024" Type="File" Modified="2026-01-10 12:05:00"/>
+    <Item Disk="Archive Disk 1" CatalogPath="Catalog\Archive Disk 1\Documents\Manuals\manual-index.txt" Name="manual-index.txt" Size="2048" Type="File" Modified="2026-01-11 14:10:00" Tags="manuals"/>
+    <Item Disk="Archive Disk 2" FilePath="D:\Photos\2026\sample.jpg" Filename="sample.jpg" Size="1.5 MB" Modified="2026-02-01 09:30:00"/>
+  </Results>
+</WinCatalog>

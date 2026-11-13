@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WinCatalog version="2026">
+  <Disks>
+    <Disk Name="Empty Disk" Size="">
+      <Folder Name="Empty Folder" Comments="">
+        <File Name="no-metadata.txt" Size="" Modified=""/>
+        <File Name="with-comment.txt" Size="512" Comments="Only a comment"/>
+      </Folder>
+    </Disk>
+  </Disks>
+</WinCatalog>

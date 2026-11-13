@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE WinCatalog [
+  <!ENTITY xxe SYSTEM "file:///C:/Windows/win.ini">
+]>
+<WinCatalog version="2026">
+  <Disks>
+    <Disk Name="Evil &xxe; Disk"/>
+  </Disks>
+</WinCatalog>

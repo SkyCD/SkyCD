@@ -32,6 +32,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Basenji.Vdb/SkyCD.Plugin.Basenji.Vdb.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCollect/SkyCD.Plugin.CdCollect.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Librer/SkyCD.Plugin.Librer.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Xml/SkyCD.Plugin.WinCatalog.Xml.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -84,6 +85,7 @@
         <Project Path="tests/SkyCD.Plugin.Basenji.Vdb.Tests/SkyCD.Plugin.Basenji.Vdb.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCollect.Tests/SkyCD.Plugin.CdCollect.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Librer.Tests/SkyCD.Plugin.Librer.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.WinCatalog.Xml.Tests/SkyCD.Plugin.WinCatalog.Xml.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>
