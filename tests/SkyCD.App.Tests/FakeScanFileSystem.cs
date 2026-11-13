@@ -21,6 +21,12 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
 
     public int EnumerateDirectoriesCallCount { get; private set; }
 
+    /// <summary>
+    /// Invoked at the start of each <see cref="EnumerateFiles"/> call with the directory path.
+    /// Tests can use this hook to trigger cancellation mid-traversal.
+    /// </summary>
+    public Action<string>? OnEnumerateFiles { get; set; }
+
     public void AddDirectory(
         string path,
         FileAttributes attributes = FileAttributes.Directory,
@@ -129,6 +135,7 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
     public IEnumerable<ScanFileSystemEntry> EnumerateFiles(string path)
     {
         EnumerateFilesCallCount++;
+        OnEnumerateFiles?.Invoke(path);
         foreach (var child in EnumerateChildren(path, directories: false))
         {
             yield return child;
