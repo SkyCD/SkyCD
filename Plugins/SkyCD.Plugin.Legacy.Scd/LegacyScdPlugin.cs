@@ -15,7 +15,7 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
     public FileFormatDescriptor SupportedFormat =>
         new(
             FormatId: "legacy-scd",
-            DisplayName: "SkyCD Legacy Text/Binary Format",
+            DisplayName: "SkyCD Legacy Text Format",
             Extensions: [".scd"],
             MimeTypes: ["application/vnd.skycd.scd"],
             CanRead: true,

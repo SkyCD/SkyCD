@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -9,6 +10,48 @@ namespace SkyCD.LegacyFormats.Tests;
 
 public sealed class LegacyScdBinaryTests
 {
+    [Fact]
+    public async Task BinaryWriteAsync_UsesHistoricalLayoutAndIndependentDecoder()
+    {
+        var catalog = new LegacyScdCatalog();
+        catalog.Entries.Add(new LegacyScdEntry { Path = @"[Disk]\Folder\Readme.txt", SizeBytes = 1536 });
+        catalog.Entries.Add(new LegacyScdEntry { Path = @"[Disk]\Empty", IsDirectory = true });
+        await using var stream = new MemoryStream();
+
+        var result = await new LegacyScdBinaryPlugin().WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "legacy-scd-binary",
+            Target = stream,
+            Payload = catalog
+        });
+
+        Assert.True(result.Success, result.Error);
+        var bytes = stream.ToArray();
+        Assert.True(bytes.Length > 5519);
+        Assert.Equal("# SkyCD File\r\n", System.Text.Encoding.ASCII.GetString(bytes, 0, 14));
+        Assert.Equal(4d, BitConverter.ToDouble(bytes, 391));
+        var nodes = DecodeHistoricalNodes(bytes);
+        Assert.Equal(("", "n0000001", "[Disk]"), nodes[0]);
+        Assert.Equal(("n0000001", "n0000002", "Folder"), nodes[1]);
+        Assert.Equal(("n0000002", "n0000003", "[1.5        KB   ] Readme.txt"), nodes[2]);
+        Assert.Equal(("n0000001", "n0000004", "Empty"), nodes[3]);
+    }
+
+    private static List<(string Parent, string Key, string Text)> DecodeHistoricalNodes(byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes, 5519, bytes.Length - 5519);
+        var ansi = System.Text.CodePagesEncodingProvider.Instance.GetEncoding(1252)!;
+        using var reader = new BinaryReader(stream, ansi);
+        var nodes = new List<(string Parent, string Key, string Text)>();
+        while (stream.Position < stream.Length)
+        {
+            nodes.Add((Read(), Read(), Read()));
+        }
+
+        return nodes;
+
+        string Read() => ansi.GetString(reader.ReadBytes(reader.ReadUInt16()));
+    }
     [Theory]
     [InlineData("binary-sample.scd")]
     [InlineData("text-sample.scd")]
