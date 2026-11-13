@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WinCatalog version="2024">
+  <Disks>
+    <Disk Name="Музыка" VolumeLabel="MUSIC" Comments="Музыкальная коллекция">
+      <Folder Name="Классика" Comments="Классическая музыка">
+        <File Name="Чайковский - Лебединое озеро.flac" Size="12,5 MB" Modified="15.02.2025 18:30:00" Comments="Русская запись" Tags="классика"/>
+      </Folder>
+      <File Name="каталог.txt" Size="1024" Modified="01.03.2025 09:00:00"/>
+    </Disk>
+  </Disks>
+</WinCatalog>
