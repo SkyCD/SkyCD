@@ -262,6 +262,36 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         Assert.Contains(closedPort.ToString(CultureInfo.InvariantCulture), failure.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void FtpScan_ControlConnectionDropped_ReconnectsAndCompletesTheTraversal()
+    {
+        Directory.CreateDirectory(Path.Combine(ftpRoot, "docs"));
+        File.WriteAllText(Path.Combine(ftpRoot, "readme.txt"), "hello");
+        File.WriteAllText(Path.Combine(ftpRoot, "docs", "guide.txt"), "guide");
+
+        // The fixture drops the control connection right after the first listing, so the scan
+        // has to detect the disconnect, reconnect and finish the traversal (#433).
+        using var server = new LocalFtpServer(ftpRoot, Username, Password, dropConnectionAfterListings: 1);
+        var progress = new RecordingProgress();
+
+        var scanned = new FtpCatalogScanner().Scan(new FtpScanOptions(
+            $"ftp://127.0.0.1:{server.Port}/",
+            Username,
+            Password,
+            anonymous: false,
+            mediaName: "Reconnected",
+            targetParentId: null,
+            includeExtendedInfo: true), progress);
+
+        Assert.Equal(4, scanned.Count);
+        Assert.Contains(scanned, document => document.Name == "readme.txt");
+        Assert.Contains(scanned, document => document.Name == "docs");
+        Assert.Contains(scanned, document => document.Name == "guide.txt");
+        Assert.Contains(progress.Messages, message => message.Contains("Transient failure", StringComparison.Ordinal));
+        AssertNoSecrets(scanned);
+        AssertNoSecrets(progress.Messages);
+    }
+
     private string WriteFile(string relativePath, string contents, DateTime stamp)
     {
         var path = Path.Combine(ftpRoot, relativePath);

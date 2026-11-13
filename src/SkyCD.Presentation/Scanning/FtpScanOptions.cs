@@ -11,7 +11,8 @@ public sealed class FtpScanOptions
         bool anonymous,
         string? mediaName,
         string? targetParentId,
-        bool includeExtendedInfo)
+        bool includeExtendedInfo,
+        ScanTraversalOptions? traversal = null)
     {
         Address = address;
         Username = username;
@@ -20,6 +21,7 @@ public sealed class FtpScanOptions
         MediaName = mediaName;
         TargetParentId = targetParentId;
         IncludeExtendedInfo = includeExtendedInfo;
+        Traversal = traversal;
     }
 
     public string Address { get; }
@@ -35,6 +37,12 @@ public sealed class FtpScanOptions
     public string? TargetParentId { get; }
 
     public bool IncludeExtendedInfo { get; }
+
+    /// <summary>
+    /// Bounded traversal policy (retries, timeout, exclusion patterns) used by the resilient
+    /// FTP traversal. Null falls back to <see cref="ScanTraversalOptions.Default"/>.
+    /// </summary>
+    public ScanTraversalOptions? Traversal { get; }
 
     public override string ToString()
     {
