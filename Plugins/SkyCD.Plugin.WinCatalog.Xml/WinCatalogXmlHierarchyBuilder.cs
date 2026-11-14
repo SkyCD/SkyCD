@@ -28,9 +28,10 @@ public static class WinCatalogXmlHierarchyBuilder
             item is not null &&
             (item.Fields.ContainsKey(WinCatalogCsvColumn.CatalogPath) ||
              item.Fields.ContainsKey(WinCatalogCsvColumn.FilePath)));
+        var hasGroupNames = parseResult.Items.Any(item => item is not null && !string.IsNullOrWhiteSpace(item.GroupName));
         var hasNestedAncestors = parseResult.Items.Any(item => item is not null && item.ParentIndex >= 0);
 
-        if (!hasNestedAncestors && hasPathFields)
+        if (!hasNestedAncestors && (hasPathFields || hasGroupNames))
         {
             return ComposeFlat(parseResult);
         }
@@ -374,6 +375,39 @@ public static class WinCatalogXmlHierarchyBuilder
     /// </summary>
     private static WinCatalogXmlReportDocument ComposeFlat(WinCatalogXmlParseResult parseResult)
     {
+        var groupPathByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string? rootGroupName = null;
+
+        foreach (var item in parseResult.Items)
+        {
+            if (item is null || string.IsNullOrWhiteSpace(item.GroupName))
+            {
+                continue;
+            }
+
+            var group = item.GroupName!;
+            if (!groupPathByName.ContainsKey(group))
+            {
+                if (rootGroupName is null)
+                {
+                    rootGroupName = group;
+                    groupPathByName[group] = group;
+                }
+            }
+
+            var isFolder = item.Kind == WinCatalogXmlElementKind.Folder ||
+                           (item.Fields.TryGetValue(WinCatalogCsvColumn.Type, out var t) && WinCatalogXmlVocabulary.IsFolderType(t));
+
+            if (isFolder &&
+                item.Fields.TryGetValue(WinCatalogCsvColumn.Name, out var folderName) &&
+                !string.IsNullOrWhiteSpace(folderName))
+            {
+                var parentGroupPath = groupPathByName.TryGetValue(group, out var p) ? p : group;
+                var folderPath = string.IsNullOrEmpty(parentGroupPath) ? folderName : $"{parentGroupPath}\\{folderName}";
+                groupPathByName[folderName] = folderPath;
+            }
+        }
+
         var csvColumns = new[]
         {
             (WinCatalogCsvColumn.Disk, "Disk"),
@@ -407,7 +441,18 @@ public static class WinCatalogXmlHierarchyBuilder
             foreach (var (column, _) in csvColumns)
             {
                 string? value = null;
-                if (column == WinCatalogCsvColumn.Type &&
+                if (column == WinCatalogCsvColumn.CatalogPath &&
+                    !item.Fields.TryGetValue(WinCatalogCsvColumn.CatalogPath, out value) &&
+                    !string.IsNullOrWhiteSpace(item.GroupName))
+                {
+                    var parentPath = groupPathByName.TryGetValue(item.GroupName, out var p) ? p : item.GroupName;
+                    var itemName = item.Fields.GetValueOrDefault(WinCatalogCsvColumn.Filename) ?? item.Fields.GetValueOrDefault(WinCatalogCsvColumn.Name);
+                    if (!string.IsNullOrWhiteSpace(itemName))
+                    {
+                        value = string.IsNullOrEmpty(parentPath) ? itemName : $"{parentPath}\\{itemName}";
+                    }
+                }
+                else if (column == WinCatalogCsvColumn.Type &&
                     !item.Fields.TryGetValue(WinCatalogCsvColumn.Type, out value))
                 {
                     value = item.HasItemChildren ? "Folder" : "File";

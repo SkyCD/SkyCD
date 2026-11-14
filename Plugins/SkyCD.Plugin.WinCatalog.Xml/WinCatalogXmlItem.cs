@@ -18,4 +18,5 @@ public sealed record WinCatalogXmlItem(
     int ParentIndex,
     bool HasItemChildren,
     IReadOnlyDictionary<WinCatalogCsvColumn, string> Fields,
-    string? IconValue);
+    string? IconValue,
+    string? GroupName = null);

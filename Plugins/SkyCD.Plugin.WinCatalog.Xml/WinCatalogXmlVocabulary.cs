@@ -32,7 +32,8 @@ public static class WinCatalogXmlVocabulary
     private static readonly string[] TransparentNames =
     [
         "catalog", "catalogue", "wincatalog", "items", "results", "entries", "records", "data",
-        "report", "reports", "disks", "discs", "drives", "folders", "files", "documents", "contents"
+        "report", "reports", "disks", "discs", "drives", "folders", "files", "documents", "contents",
+        "group", "groups"
     ];
 
     private static readonly string[] GenericItemNames = ["item", "entry", "record"];
@@ -113,7 +114,16 @@ public static class WinCatalogXmlVocabulary
         }
 
         var lower = type.Trim().ToLowerInvariant();
-        return lower is "folder" or "directory" or "ordner" or "dossier" or "carpeta" or "папка" or "cartella";
+        return lower is "folder" or "directory" or "ordner" or "dossier" or "carpeta" or "папка" or "cartella" ||
+               lower.Contains("folder", StringComparison.Ordinal) ||
+               lower.Contains("ordner", StringComparison.Ordinal) ||
+               lower.Contains("dossier", StringComparison.Ordinal) ||
+               lower.Contains("carpeta", StringComparison.Ordinal) ||
+               lower.Contains("папка", StringComparison.Ordinal) ||
+               lower.Contains("cartella", StringComparison.Ordinal) ||
+               lower.Contains("directory", StringComparison.Ordinal) ||
+               lower.Contains("verzeichnis", StringComparison.Ordinal) ||
+               lower.Contains("каталог", StringComparison.Ordinal);
     }
 
     public static bool IsMediaType(string? type)
@@ -124,6 +134,6 @@ public static class WinCatalogXmlVocabulary
         }
 
         var lower = type.Trim().ToLowerInvariant();
-        return MediaTypeWords.Contains(lower, StringComparer.Ordinal);
+        return MediaTypeWords.Any(word => lower.Contains(word, StringComparison.Ordinal));
     }
 }

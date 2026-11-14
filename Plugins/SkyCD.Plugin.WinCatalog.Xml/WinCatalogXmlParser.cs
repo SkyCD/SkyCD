@@ -44,7 +44,8 @@ public static class WinCatalogXmlParser
 
     public static WinCatalogXmlParseResult Parse(Stream source, CancellationToken cancellationToken)
     {
-        using var reader = XmlReader.Create(source, CreateSecureSettings());
+        using var streamReader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
+        using var reader = XmlReader.Create(streamReader, CreateSecureSettings());
         try
         {
             return ParseCore(reader, cancellationToken);
@@ -208,8 +209,11 @@ public static class WinCatalogXmlParser
                 RecordUnsupported(localName, unsupportedFields, unsupportedSeen);
             }
 
-            // Wrapper element (e.g. <Disks>, <Results>) or unmapped complex element.
-            frames.Push(new ElementFrame(localName));
+            // Wrapper element (e.g. <Disks>, <Results>, <Group Name="...">) or unmapped complex element.
+            var groupName = fields.TryGetValue(WinCatalogCsvColumn.Name, out var nameVal) && !string.IsNullOrWhiteSpace(nameVal)
+                ? nameVal
+                : null;
+            frames.Push(new ElementFrame(localName, groupName));
             return;
         }
 
@@ -294,6 +298,11 @@ public static class WinCatalogXmlParser
             return;
         }
 
+        if (frame.Fields.TryGetValue(WinCatalogCsvColumn.Type, out var typeText) && !string.IsNullOrWhiteSpace(typeText))
+        {
+            frame.Kind = WinCatalogXmlVocabulary.ClassifyElement(frame.LocalName, frame.Fields);
+        }
+
         EmitItem(items, frames, skippedReasons, ref skippedItemsCount, ref nodeCounter, frame);
     }
 
@@ -311,13 +320,16 @@ public static class WinCatalogXmlParser
             parentItemFrame.HasItemChildren = true;
         }
 
+        var groupName = FindEnclosingGroupName(frames);
+
         var item = new WinCatalogXmlItem(
             Index: frame.ProvisionalIndex,
             Kind: frame.Kind!.Value,
             ParentIndex: parentItemFrame?.ProvisionalIndex ?? -1,
             HasItemChildren: frame.HasItemChildren,
             Fields: frame.Fields!,
-            IconValue: frame.IconValue);
+            IconValue: frame.IconValue,
+            GroupName: groupName);
 
         while (items.Count <= frame.ProvisionalIndex)
         {
@@ -326,6 +338,19 @@ public static class WinCatalogXmlParser
 
         items[frame.ProvisionalIndex] = item;
         nodeCounter++;
+    }
+
+    private static string? FindEnclosingGroupName(Stack<ElementFrame> frames)
+    {
+        foreach (var frame in frames)
+        {
+            if (!string.IsNullOrWhiteSpace(frame.GroupName))
+            {
+                return frame.GroupName;
+            }
+        }
+
+        return null;
     }
 
     private static ElementFrame? FindParentItemFrame(Stack<ElementFrame> frames)
@@ -404,9 +429,10 @@ public static class WinCatalogXmlParser
     {
         private StringBuilder? text;
 
-        public ElementFrame(string localName)
+        public ElementFrame(string localName, string? groupName = null)
         {
             LocalName = localName;
+            GroupName = groupName;
         }
 
         public ElementFrame(string localName, WinCatalogCsvColumn fieldColumn, ElementFrame parentItemFrame)
@@ -440,11 +466,13 @@ public static class WinCatalogXmlParser
 
         public WinCatalogCsvColumn? FieldColumn { get; }
 
-        public WinCatalogXmlElementKind? Kind { get; }
+        public WinCatalogXmlElementKind? Kind { get; set; }
 
         public Dictionary<WinCatalogCsvColumn, string> Fields { get; } = new();
 
         public string? IconValue { get; }
+
+        public string? GroupName { get; set; }
 
         public bool HasItemChildren { get; set; }
 

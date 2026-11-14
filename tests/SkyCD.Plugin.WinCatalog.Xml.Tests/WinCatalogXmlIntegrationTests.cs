@@ -125,6 +125,69 @@ public sealed class WinCatalogXmlIntegrationTests
         Assert.True(loadedCount > 0);
     }
 
+    [Fact]
+    public async Task LoadAsync_WithWinCatalog2026GroupedCustomFixture_ImportsAndPersistsHierarchy()
+    {
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "WinCatalogXml", "wincatalog-2026-grouped-custom.xml");
+        var manager = new FileFormatManager([new SkyCD.Plugin.Xml.XmlCatalogPlugin(), new WinCatalogXmlPlugin()]);
+        var loadService = new CatalogLoadService(manager);
+
+        var loadedCount = await loadService.LoadAsync(fixturePath, (payload, _) =>
+        {
+            var report = Assert.IsType<WinCatalogXmlReportDocument>(payload);
+            Assert.NotEmpty(report.Rows);
+
+            var documents = Extract(payload!);
+            Assert.NotEmpty(documents);
+
+            Persist(documents, vm =>
+            {
+                var rootKeys = vm.TreeNodes.Select(node => node.Key).ToList();
+                Assert.NotEmpty(rootKeys);
+
+                var mp4File = documents.SingleOrDefault(document =>
+                    document.Name == "20260914_172056.mp4" && document.Type == CatalogDocumentType.File);
+                Assert.NotNull(mp4File);
+                Assert.True(mp4File.Size > 0);
+            });
+
+            return documents.Count;
+        }, new Progress<int>());
+
+        Assert.True(loadedCount > 0);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WithWinCatalog2026AllColumnsFixture_ImportsAllColumnsAndChecksums()
+    {
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "WinCatalogXml", "wincatalog-2026-all-columns.xml");
+        var manager = new FileFormatManager([new SkyCD.Plugin.Xml.XmlCatalogPlugin(), new WinCatalogXmlPlugin()]);
+        var loadService = new CatalogLoadService(manager);
+
+        var loadedCount = await loadService.LoadAsync(fixturePath, (payload, _) =>
+        {
+            var report = Assert.IsType<WinCatalogXmlReportDocument>(payload);
+            Assert.NotEmpty(report.Rows);
+
+            var documents = Extract(payload!);
+            Assert.NotEmpty(documents);
+
+            Persist(documents, vm =>
+            {
+                var rootKeys = vm.TreeNodes.Select(node => node.Key).ToList();
+                Assert.NotEmpty(rootKeys);
+
+                var doomFile = documents.SingleOrDefault(document =>
+                    document.Name.Contains("DOOM 64", StringComparison.OrdinalIgnoreCase) && document.Type == CatalogDocumentType.File);
+                Assert.NotNull(doomFile);
+            });
+
+            return documents.Count;
+        }, new Progress<int>());
+
+        Assert.True(loadedCount > 0);
+    }
+
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
     {
         var method = typeof(MainWindow).GetMethod("ExtractCatalogEntries", BindingFlags.NonPublic | BindingFlags.Static)!;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using SkyCD.Plugin.WinCatalog.Csv;
 
@@ -29,7 +30,8 @@ public static class WinCatalogXmlRecognizer
     {
         try
         {
-            using var reader = XmlReader.Create(stream, WinCatalogXmlParser.CreateSecureSettings());
+            using var streamReader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
+            using var reader = XmlReader.Create(streamReader, WinCatalogXmlParser.CreateSecureSettings());
             return Scan(reader);
         }
         catch
@@ -82,6 +84,21 @@ public static class WinCatalogXmlRecognizer
                     WinCatalogXmlElementKind.File => 1,
                     _ => 0
                 };
+
+                var elementColumn = WinCatalogXmlProfile.MapField(elementName);
+                if (elementColumn != WinCatalogCsvColumn.Unknown && countedFieldColumns.Add(elementColumn))
+                {
+                    if ((elementColumn == WinCatalogCsvColumn.CatalogPath || elementColumn == WinCatalogCsvColumn.FilePath) && !pathScored)
+                    {
+                        score += 2;
+                        pathScored = true;
+                    }
+                    else if (fieldScore < MaxFieldScore)
+                    {
+                        score++;
+                        fieldScore++;
+                    }
+                }
             }
 
             if (reader.HasAttributes)
