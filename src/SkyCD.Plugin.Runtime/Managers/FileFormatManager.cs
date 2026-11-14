@@ -53,6 +53,33 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
     public IFileFormatPluginCapability GetInstanceFor(string fileName, Stream? contentStream)
     {
+        if (Directory.Exists(fileName))
+        {
+            foreach (var folderCapability in fileFormatProviders.OfType<IFolderAwareFileFormatCapability>())
+            {
+                try
+                {
+                    if (folderCapability.CanHandleFolder(fileName))
+                    {
+                        return (IFileFormatPluginCapability)folderCapability;
+                    }
+                }
+                catch
+                {
+                    // Ignore inspection error and evaluate next candidate.
+                }
+            }
+
+            var folderCandidates = fileFormatProviders
+                .Where(capability => capability.SupportedFormat.SupportsFolder)
+                .ToList();
+
+            if (folderCandidates.Count > 0)
+            {
+                return folderCandidates[0];
+            }
+        }
+
         var candidates = fileFormatProviders
             .Where(capability => capability.SupportedFormat.Extensions.Any(extension => MatchesExtension(fileName, extension)))
             .OrderByDescending(capability =>
@@ -146,6 +173,22 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         var extension = Path.GetExtension(path);
         if (string.IsNullOrWhiteSpace(extension))
         {
+            if (!forWrite && Directory.Exists(path))
+            {
+                try
+                {
+                    var detected = GetInstanceFor(path);
+                    if (detected.SupportedFormat.CanRead)
+                    {
+                        return detected.SupportedFormat.FormatId;
+                    }
+                }
+                catch
+                {
+                    // Fall through
+                }
+            }
+
             throw new FileFormatHandlerResolutionException();
         }
 

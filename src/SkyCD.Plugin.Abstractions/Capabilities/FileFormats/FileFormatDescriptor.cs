@@ -11,4 +11,20 @@ public sealed record FileFormatDescriptor(
     IReadOnlyCollection<string> Extensions,
     IReadOnlyCollection<string> MimeTypes,
     bool CanRead,
-    bool CanWrite);
+    bool CanWrite,
+    bool SupportsFolder = false)
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FileFormatDescriptor"/> record without folder support.
+    /// </summary>
+    public FileFormatDescriptor(
+        string formatId,
+        string displayName,
+        IReadOnlyCollection<string> extensions,
+        IReadOnlyCollection<string> mimeTypes,
+        bool canRead,
+        bool canWrite)
+        : this(formatId, displayName, extensions, mimeTypes, canRead, canWrite, false)
+    {
+    }
+}
