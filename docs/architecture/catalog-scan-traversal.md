@@ -1,6 +1,6 @@
 # Catalog scan traversal policy
 
-Shared folder and media catalog scanning uses a resilient traversal pipeline (`FileSystemCatalogTraverser`) with explicit skip-versus-fatal behavior, bounded retries, and structured operation events (#420).
+Shared folder, media and FTP catalog scanning uses a resilient traversal pipeline (`FileSystemCatalogTraverser` for local media, `FtpCatalogScanner` for remote catalogs) with explicit skip-versus-fatal behavior, bounded retries, and structured operation events (#420).
 
 ## Default link-follow policy
 
@@ -38,3 +38,43 @@ Failed and skipped items are reported through `IOperationProgress.ReportFailed` 
 - `MaxRetries` (default 3) and `RetryDelay` bound transient I/O retries.
 - Retry waits honor the scan `CancellationToken` (and optional `OperationTimeout`).
 - `MaxConcurrency` is clamped to `1..ScanTraversalOptions.AbsoluteMaxConcurrency` (8).
+
+## FTP traversal policy
+
+The FTP catalog scan (`FtpCatalogScanner`) applies the same bounded retry, cancellation and
+statistics infrastructure to remote listings. The traversal policy is supplied through
+`FtpScanOptions.Traversal`; when it is omitted `ScanTraversalOptions.Default` is used.
+
+### Link / cycle policy
+
+- FTP listings do not expose symlinks or reparse points, so `LinkFollowPolicy` does not apply.
+- The **stable visited identity** of a remote directory is its normalized path
+  (`FtpLocation.NormalizePath`), which collapses `.`, `..`, duplicate and trailing separators.
+- A directory whose identity was already visited is **skipped** as a cycle, never descended
+  into, so a server that lists a parent back into its child cannot loop the scan.
+
+### Disconnect and reconnect
+
+- A dropped control connection (`FtpConnectionException`) is **transient** and is retried.
+- The retry **re-establishes the control session** and repeats the listing, so a server that
+  drops the connection mid-traversal is survived instead of failing the scan.
+- Rejected credentials (`FtpAuthenticationException`), an unsupported scheme
+  (`FtpSchemeNotSupportedException`) and a vanished directory (`FtpDirectoryNotFoundException`)
+  are permanent and are never retried.
+
+### FTP skip versus fatal
+
+| Condition | Disposition |
+| --- | --- |
+| Authentication rejected / unsupported scheme | **Fatal** (typed exception) |
+| Root connect retry exhausted | **Fatal** (`FtpConnectionException`) |
+| Root listing retry exhausted | **Fatal** (`FtpConnectionException`) |
+| Cancellation or operation timeout | **Fatal** (`OperationCanceledException`) |
+| Remote directory cycle | **Skip** |
+| Child listing retry exhausted | **Fail item** (continue) |
+| Child directory vanished | **Fail item** (continue) |
+| Entry excluded by pattern | **Skip** |
+
+FTP listings carry no hidden/system attributes, so `HiddenSystemFilePolicy` only applies to
+local folder and media scans. `ExclusionPatterns` apply to remote entry names as well and are
+matched case-sensitively, because remote path casing is server-defined.

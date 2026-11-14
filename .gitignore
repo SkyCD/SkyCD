@@ -424,6 +424,7 @@ sessions/**
 *.trace.ndjson
 *.session.json
 *.transcript.md
+*.info.txt
 
 .agentbridge/
 .agentbridge/**

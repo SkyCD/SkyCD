@@ -15,17 +15,26 @@ internal sealed class LocalFtpServer : IDisposable
     private readonly string password;
     private readonly bool allowAnonymous;
     private readonly bool supportMlsd;
+    private readonly int dropConnectionAfterListings;
     private readonly TcpListener listener;
     private readonly Thread thread;
     private volatile bool stopping;
     private TcpClient? active;
+    private int listingsServed;
 
-    public LocalFtpServer(string rootPath, string username, string password, bool allowAnonymous = false, bool supportMlsd = true)
+    public LocalFtpServer(
+        string rootPath,
+        string username,
+        string password,
+        bool allowAnonymous = false,
+        bool supportMlsd = true,
+        int dropConnectionAfterListings = int.MaxValue)
     {
         this.username = username;
         this.password = password;
         this.allowAnonymous = allowAnonymous;
         this.supportMlsd = supportMlsd;
+        this.dropConnectionAfterListings = dropConnectionAfterListings;
         rootFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
         listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
@@ -168,6 +177,14 @@ internal sealed class LocalFtpServer : IDisposable
                     case "MLSD":
                     case "LIST":
                         ServeListing(writer, ref passive, verb, string.IsNullOrWhiteSpace(argument) ? "/" : argument);
+                        if (ShouldDropConnection())
+                        {
+                            // Simulate an abrupt server-side disconnect so the client has to
+                            // reconnect to finish the traversal.
+                            client.Close();
+                            break;
+                        }
+
                         break;
                     default:
                         writer.WriteLine("502 Command not implemented");
@@ -250,8 +267,17 @@ internal sealed class LocalFtpServer : IDisposable
         if (transferred)
         {
             writer.WriteLine("226 Transfer complete");
+            Interlocked.Increment(ref listingsServed);
         }
     }
+
+    /// <summary>
+    /// Returns true once the configured number of listings has been served, so the fixture can
+    /// simulate a dropped control connection.
+    /// </summary>
+    private bool ShouldDropConnection() =>
+        dropConnectionAfterListings != int.MaxValue &&
+        Volatile.Read(ref listingsServed) >= dropConnectionAfterListings;
 
     private static TcpClient AcceptData(TcpListener passive)
     {
