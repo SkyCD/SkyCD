@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.Plugin.Sample.Configuration.SampleConfigurationWindow"
+        Width="420"
+        Height="240"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
+        <TextBlock Text="Greeting" FontWeight="SemiBold" />
+        <TextBox Grid.Row="1" x:Name="GreetingTextBox" />
+        <TextBlock Grid.Row="2" Text="Signature" FontWeight="SemiBold" />
+        <TextBox Grid.Row="3" x:Name="SignatureTextBox" />
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+            <Button Content="_OK"
+                    MinWidth="75"
+                    IsDefault="True"
+                    Click="OnOkClicked" />
+            <Button Content="_Cancel"
+                    MinWidth="75"
+                    IsCancel="True"
+                    Click="OnCancelClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

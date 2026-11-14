@@ -212,6 +212,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public event EventHandler? RefreshPluginsRequested;
 
+    public event EventHandler<ConfigurePluginRequestedEventArgs>? ConfigurePluginRequested;
+
     public event EventHandler? ResetStatusVariantsRequested;
 
     [RelayCommand]
@@ -266,7 +268,11 @@ public partial class OptionsDialogViewModel : ObservableObject
             return;
         }
 
-        InfoMessage = LocalizationService.Current.Format(TextKeys.ConfigureIsNotImplementedYet, SelectedPlugin.Name);
+        ConfigurePluginRequested?.Invoke(this, new ConfigurePluginRequestedEventArgs
+        {
+            PluginId = SelectedPlugin.Id,
+            PluginName = SelectedPlugin.Name
+        });
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginAuthorUrl))]
