@@ -29,6 +29,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Cathy/SkyCD.Plugin.Cathy.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdPlayer.Ini/SkyCD.Plugin.CdPlayer.Ini.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCat.Hcf/SkyCD.Plugin.CdCat.Hcf.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Basenji.Vdb/SkyCD.Plugin.Basenji.Vdb.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -78,6 +79,7 @@
         <Project Path="tests/SkyCD.Plugin.Cathy.Tests/SkyCD.Plugin.Cathy.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdPlayer.Ini.Tests/SkyCD.Plugin.CdPlayer.Ini.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCat.Hcf.Tests/SkyCD.Plugin.CdCat.Hcf.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Basenji.Vdb.Tests/SkyCD.Plugin.Basenji.Vdb.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>
