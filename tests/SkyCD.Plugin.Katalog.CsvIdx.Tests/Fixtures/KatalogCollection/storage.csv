@@ -1,0 +1,3 @@
+ID	Name	Type	Location	Path	Label	FileSystem	Total	Free	Brand	Model	SerialNumber	BuildDate	ContentType	Container	Comment	PicturePath	UserId
+101	Backup Disk 1	External HDD	Cabinet A	/dev/sdb1	BACKUP1	ext4	500000000	250000000	Seagate	Expansion	SN12345	2025-01-01	Data	Box1	Storage notes	/images/sdb1.jpg	1
+102	Photos 2026	Flash Drive	Desk	D:	PHOTOS	NTFS	1000000000	500000000	SanDisk	Ultra	SN67890	2026-02-02	Pictures	Pouch	Photo storage notes	/images/photos.jpg	2

@@ -60,6 +60,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
+    public event EventHandler? OpenCatalogFolderRequested;
     public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
@@ -428,6 +429,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (OpenCatalogRequested is not null)
         {
             OpenCatalogRequested.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteOpenCatalog();
+    }
+
+    [RelayCommand]
+    private void OpenCatalogFolder()
+    {
+        if (OpenCatalogFolderRequested is not null)
+        {
+            OpenCatalogFolderRequested.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -1787,6 +1800,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", Command = NewCatalogCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.OpenFolder), HotKey = "Ctrl+Shift+O", Command = OpenCatalogFolderCommand },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", Command = SaveCatalogCommand },
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", Command = SaveCatalogAsCommand },

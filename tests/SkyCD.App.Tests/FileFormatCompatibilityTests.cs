@@ -143,6 +143,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Json.JsonCatalogPlugin(),
         new SkyCD.Plugin.Csv.CsvCatalogPlugin(),
         new SkyCD.Plugin.WinCatalog.Csv.WinCatalogCsvPlugin(),
+        new SkyCD.Plugin.Katalog.CsvIdx.KatalogCsvIdxPlugin(),
         new SkyCD.Plugin.Xml.XmlCatalogPlugin(),
         new SkyCD.Plugin.Yaml.YamlCatalogPlugin(),
         new SkyCD.Plugin.Toml.TomlCatalogPlugin(),

@@ -18,22 +18,37 @@ public sealed class CatalogLoadService(FileFormatManager formats)
         {
             var readProgress = new StageProgress(progress, 0, 50);
             readProgress.Report(0);
-            await using var source = File.OpenRead(path);
-            var format = formats.GetInstanceFor(path, source).SupportedFormat;
-            source.Position = 0;
-            var result = await formats.ReadAsync(new FileFormatReadRequest
+
+            Stream? source = null;
+            if (File.Exists(path) || !Directory.Exists(path))
             {
-                FormatId = format.FormatId,
-                Source = source,
-                FileName = Path.GetFileName(path),
-                Progress = readProgress
-            }, cancellationToken);
-            readProgress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
-            var importProgress = new StageProgress(progress, 50, 100);
-            var catalog = import(result.Payload, importProgress);
-            importProgress.Report(100);
-            return catalog;
+                source = File.OpenRead(path);
+            }
+
+            await using (source)
+            {
+                var stream = source ?? Stream.Null;
+                var format = formats.GetInstanceFor(path, source).SupportedFormat;
+                if (source is not null && source.CanSeek)
+                {
+                    source.Position = 0;
+                }
+
+                var result = await formats.ReadAsync(new FileFormatReadRequest
+                {
+                    FormatId = format.FormatId,
+                    Source = stream,
+                    FileName = Path.GetFileName(path),
+                    SourcePath = path,
+                    Progress = readProgress
+                }, cancellationToken);
+                readProgress.Report(100);
+                cancellationToken.ThrowIfCancellationRequested();
+                var importProgress = new StageProgress(progress, 50, 100);
+                var catalog = import(result.Payload, importProgress);
+                importProgress.Report(100);
+                return catalog;
+            }
         }, cancellationToken);
     }
 

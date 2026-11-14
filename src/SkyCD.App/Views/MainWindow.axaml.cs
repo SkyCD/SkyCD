@@ -111,6 +111,7 @@ public partial class MainWindow : Window
             subscribedViewModel.AddToListRequested -= OnAddToListRequested;
             subscribedViewModel.NewCatalogRequested -= OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
+            subscribedViewModel.OpenCatalogFolderRequested -= OnOpenCatalogFolderRequested;
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
@@ -128,6 +129,7 @@ public partial class MainWindow : Window
             subscribedViewModel.AddToListRequested += OnAddToListRequested;
             subscribedViewModel.NewCatalogRequested += OnNewCatalogRequested;
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
+            subscribedViewModel.OpenCatalogFolderRequested += OnOpenCatalogFolderRequested;
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
@@ -832,6 +834,67 @@ public partial class MainWindow : Window
             vm.StatusText = string.IsNullOrWhiteSpace(extension)
                 ? LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogUnsupportedFileFormatReadableExtensions, supportedText)
                 : LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogNoReadableHandlerMappedForReadableExtensions, extension, supportedText);
+        }
+        catch (FileFormatHandlerResolutionException)
+        {
+            vm.StatusText = LocalizationService.Current.Get(TextKeys.FailedToOpenCatalogFileFormatHandlerIsUnavailableCheckPluginSettings);
+        }
+        catch (FileFormatNotReadableException ex)
+        {
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogPluginCannotReadThisFormat, ex.Message);
+        }
+        catch (FileFormatReadFailedException ex)
+        {
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalogPluginReadError, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, ex.Message);
+        }
+    }
+
+    private async void OnOpenCatalogFolderRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        EnsureFileFormatProvidersLoaded();
+
+        if (vm.IsDirtyDocument)
+        {
+            var decision = await ShowUnsavedChangesPromptAsync();
+            if (decision == UnsavedChangesDecision.Cancel)
+            {
+                return;
+            }
+
+            if (decision == UnsavedChangesDecision.Save)
+            {
+                vm.SaveCatalogCommand.Execute(null);
+            }
+        }
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = LocalizationService.Current.Get(TextKeys.OpenFolder),
+            AllowMultiple = false
+        });
+
+        var localPath = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            await TryLoadCatalogIntoViewModelAsync(localPath);
+        }
+        catch (UnsupportedFileFormatException)
+        {
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, "Unsupported catalog collection folder format.");
         }
         catch (FileFormatHandlerResolutionException)
         {

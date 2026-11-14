@@ -11,7 +11,7 @@ public sealed class FileFormatReadRequest
     /// <summary>
     /// Gets the source stream containing file content.
     /// </summary>
-    public required Stream Source { get; init; }
+    public Stream Source { get; init; } = Stream.Null;
 
     /// <summary>
     /// Gets the format identifier chosen by host routing.
@@ -22,6 +22,11 @@ public sealed class FileFormatReadRequest
     /// Gets optional file name metadata.
     /// </summary>
     public string? FileName { get; init; }
+
+    /// <summary>
+    /// Gets optional source file or directory path.
+    /// </summary>
+    public string? SourcePath { get; init; }
 
     /// <summary>
     /// Gets optional progress reporter (0-100).

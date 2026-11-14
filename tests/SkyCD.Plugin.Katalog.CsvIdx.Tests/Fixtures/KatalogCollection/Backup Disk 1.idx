@@ -1,0 +1,14 @@
+<catalogSourcePath>/mnt/backup1
+<catalogFileCount>1
+<catalogTotalFileSize>1400000
+<catalogIncludeHidden>false
+<catalogFileType>All
+<catalogStorage>
+<catalogIncludeSymblinks>false
+<catalogIncludeSubDir>true
+<catalogIsFullDevice>true
+<catalogIncludeMetadata>true
+<catalogIncludeChecksum>SHA256
+<catalogAppVersion>3.0
+<catalogID>2
+/mnt/backup1/Documents/project_plan.pdf	1400000	2026/11/10 12:05:00	pdf	Document	application/pdf	1	0								0	Doc Author	Project Album	Plan Title	Work	2026	1	0	0	Extra metadata	2026/11/10 12:05:00	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	2026/11/10 12:05:00
