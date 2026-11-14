@@ -7,6 +7,7 @@ using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Collections;
+using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
@@ -29,6 +30,13 @@ public sealed class PluginServiceRegistrator
             var repositoryManager = resolver.Resolve<RepositoryManager>();
             return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();
         }, Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterDelegate<IRepository<PluginConfigurationDocument>>(static resolver =>
+        {
+            var repositoryManager = resolver.Resolve<RepositoryManager>();
+            return (IRepository<PluginConfigurationDocument>)repositoryManager.For<PluginConfigurationDocument>();
+        }, Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<PluginConfigurationStore>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<PluginConfigurationManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 

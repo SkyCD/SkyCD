@@ -30,6 +30,7 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions;
 using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
+using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Operations;
@@ -42,6 +43,7 @@ namespace SkyCD.App.Views;
 public partial class MainWindow : Window
 {
     private static readonly IStringLocalizer PickerLocalizer = new PropertyValueLocalizer();
+    private static readonly TimeSpan PluginConfigurationTimeout = TimeSpan.FromMinutes(5);
     private readonly RepositoryManager repositoryManager;
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly CatalogDocumentRepository catalogRepository;
@@ -1047,6 +1049,7 @@ public partial class MainWindow : Window
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         RefreshPlugins(e.Dialog);
 
@@ -1095,6 +1098,7 @@ public partial class MainWindow : Window
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+        e.Dialog.ConfigurePluginRequested -= OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
@@ -1364,6 +1368,37 @@ public partial class MainWindow : Window
         RefreshPlugins(dialogVm);
     }
 
+    private async void OnConfigurePluginRequested(object? sender, ConfigurePluginRequestedEventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var configurationManager = ServiceProvider.Resolve<PluginConfigurationManager>();
+        var outcome = await configurationManager.ConfigureAsync(e.PluginId, PluginConfigurationTimeout);
+        dialogVm.InfoMessage = DescribeConfigurationOutcome(e.PluginName, outcome);
+    }
+
+    private static string DescribeConfigurationOutcome(string pluginName, PluginConfigurationOutcome outcome)
+    {
+        return outcome.Status switch
+        {
+            PluginConfigurationStatus.Succeeded =>
+                LocalizationService.Current.Format(TextKeys.PluginConfigurationSaved, pluginName),
+            PluginConfigurationStatus.Canceled =>
+                LocalizationService.Current.Format(TextKeys.PluginConfigurationCanceled, pluginName),
+            PluginConfigurationStatus.NotSupported =>
+                LocalizationService.Current.Format(TextKeys.PluginConfigurationNotSupported, pluginName),
+            PluginConfigurationStatus.TimedOut =>
+                LocalizationService.Current.Format(TextKeys.PluginConfigurationTimedOut, pluginName),
+            _ => LocalizationService.Current.Format(
+                TextKeys.PluginConfigurationFailed,
+                pluginName,
+                outcome.Error ?? string.Empty)
+        };
+    }
+
     private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
@@ -1388,6 +1423,7 @@ public partial class MainWindow : Window
         var descriptors = pluginManager.GetPluginDescriptors();
         var loadedById = pluginManager.Plugins
             .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
+        var configurationManager = ServiceProvider.Resolve<PluginConfigurationManager>();
 
         var plugins = descriptors
             .Select(descriptor =>
@@ -1398,6 +1434,7 @@ public partial class MainWindow : Window
                         loaded.Name,
                         string.IsNullOrWhiteSpace(loaded.Author?.Name) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : loaded.Author.Name,
                         $"{loaded.Id} v{loaded.Version}",
+                        supportsConfiguration: configurationManager.SupportsConfiguration(loaded.Id),
                         isEnabled: descriptor.IsEnabled,
                         id: loaded.Id,
                         authorUrl: loaded.Author?.Url);
@@ -1412,6 +1449,7 @@ public partial class MainWindow : Window
                     descriptor.Name,
                     authorSummary,
                     extendedInfo,
+                    supportsConfiguration: configurationManager.SupportsConfiguration(descriptor.Id),
                     isEnabled: descriptor.IsEnabled,
                     id: descriptor.Id,
                     authorUrl: descriptor.Author?.Url);

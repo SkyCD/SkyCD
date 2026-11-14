@@ -95,6 +95,11 @@ public static class TextKeys
     public const string MCP = "core.text.MCP";
     public const string Statuses = "core.text.Statuses";
     public const string ConfigureIsNotImplementedYet = "core.text.ConfigureIsNotImplementedYet";
+    public const string PluginConfigurationSaved = "core.text.PluginConfigurationSaved";
+    public const string PluginConfigurationCanceled = "core.text.PluginConfigurationCanceled";
+    public const string PluginConfigurationNotSupported = "core.text.PluginConfigurationNotSupported";
+    public const string PluginConfigurationTimedOut = "core.text.PluginConfigurationTimedOut";
+    public const string PluginConfigurationFailed = "core.text.PluginConfigurationFailed";
     public const string AllStatusItemsMustHaveAnIconSelected = "core.text.AllStatusItemsMustHaveAnIconSelected";
     public const string LoadedPluginS = "core.text.LoadedPluginS";
     public const string PreparingDatabaseForModifications = "core.text.PreparingDatabaseForModifications";
