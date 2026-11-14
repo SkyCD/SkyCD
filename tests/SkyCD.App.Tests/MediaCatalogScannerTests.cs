@@ -179,11 +179,25 @@ public sealed class MediaCatalogScannerTests : IDisposable
         var options = new MediaScanOptions("D:\\");
 
         var progressReports = new List<(string Status, int Percentage)>();
-        var progress = new Progress<(string Status, int Percentage)>(p => progressReports.Add(p));
+        var progress = new SynchronousProgress<(string Status, int Percentage)>(p =>
+        {
+            lock (progressReports)
+            {
+                progressReports.Add(p);
+            }
+        });
 
         scanner.Scan(options, progress);
 
-        Assert.NotEmpty(progressReports);
-        Assert.Contains(progressReports, p => p.Percentage == 100);
+        lock (progressReports)
+        {
+            Assert.NotEmpty(progressReports);
+            Assert.Contains(progressReports, p => p.Percentage == 100);
+        }
+    }
+
+    private sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) => handler(value);
     }
 }

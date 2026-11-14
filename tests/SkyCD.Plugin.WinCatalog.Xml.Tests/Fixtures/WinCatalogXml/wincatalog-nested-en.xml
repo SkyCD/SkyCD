@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WinCatalog version="2026" generator="WinCatalog 2026 Professional (26.1)">
+  <Disks>
+    <Disk Name="Archive Disk 1" VolumeLabel="ARCH1" Size="700 MB" Comments="Backup archive disk">
+      <Folder Name="Documents" Modified="2026-01-10 12:00:00" Comments="Root documentation folder" Tags="docs,work" Rating="5">
+        <File Name="readme.txt" Size="1024" Modified="2026-01-10 12:05:00" Comments="Documentation &quot;v1.0&quot;, initial draft" Tags="docs" Rating="4" MD5="d41d8cd98f00b204e9800998ecf8427e" SHA256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"/>
+        <Folder Name="Manuals" Modified="2026-01-11 14:00:00" Comments="Equipment manuals">
+          <File Name="manual-index.txt" Size="2048" Modified="2026-01-11 14:10:00" Comments="Manual index and notes:&#10;Line 1: overview&#10;Line 2: index" Tags="manuals" Rating="5" MD5="098f6bcd4621d373cade4e832627b4f6"/>
+        </Folder>
+      </Folder>
+      <File Name="catalog.dat" Size="5120" Modified="2026-02-01 10:00:00"/>
+    </Disk>
+    <Disk Name="Archive Disk 2" VolumeLabel="ARCH2" Comments="Photo archive">
+      <Folder Name="Photos" Created="2026-01-15 08:00:00">
+        <Folder Name="2026">
+          <File Name="sample.jpg" Size="1.5 MB" Modified="2026-02-01 09:30:00" Comments="Summer photo" Tags="vacation,2026" Rating="5" CRC32="8A9B0C1D"/>
+        </Folder>
+      </Folder>
+    </Disk>
+  </Disks>
+</WinCatalog>
