@@ -30,6 +30,7 @@
         <Project Path="Plugins/SkyCD.Plugin.CdPlayer.Ini/SkyCD.Plugin.CdPlayer.Ini.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCat.Hcf/SkyCD.Plugin.CdCat.Hcf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCollect/SkyCD.Plugin.CdCollect.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Librer/SkyCD.Plugin.Librer.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -80,6 +81,7 @@
         <Project Path="tests/SkyCD.Plugin.CdPlayer.Ini.Tests/SkyCD.Plugin.CdPlayer.Ini.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCat.Hcf.Tests/SkyCD.Plugin.CdCat.Hcf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCollect.Tests/SkyCD.Plugin.CdCollect.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Librer.Tests/SkyCD.Plugin.Librer.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>
