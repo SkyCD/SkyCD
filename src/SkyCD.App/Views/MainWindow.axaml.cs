@@ -37,6 +37,7 @@ using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
+using SkyCD.UI.Controls.Tree;
 
 namespace SkyCD.App.Views;
 
@@ -121,6 +122,8 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
+            subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
+            subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -139,6 +142,8 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
+            subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
+            subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             UpdateWindowTitle();
@@ -158,14 +163,43 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnFocusBrowserRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
+            if (browserView is not null)
+            {
+                browserView.FocusActiveControl();
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Browser;
+                }
+            }
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OnFocusTreeRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            var treeView = this.FindControl<TreeView>("MainTreeView");
+            if (treeView is null || subscribedViewModel is null)
+            {
+                return;
+            }
+
+            TreeViewFocus.FocusItem(treeView, subscribedViewModel.SelectedTreeNode);
+            subscribedViewModel.ActivePane = ActivePane.Tree;
+        }, DispatcherPriority.Loaded);
+    }
+
     private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is not TreeView treeView || subscribedViewModel is null)
         {
             return;
         }
-
-        subscribedViewModel.ActivePane = ActivePane.Tree;
 
         if (!e.TryGetPosition(treeView, out var point))
         {
@@ -177,6 +211,7 @@ public partial class MainWindow : Window
         var treeViewItem = FindAncestor<TreeViewItem>(hit);
         if (treeViewItem?.DataContext is BrowserTreeNode node)
         {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
             subscribedViewModel.SelectedTreeNode = node;
             return;
         }
@@ -396,6 +431,7 @@ public partial class MainWindow : Window
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
         if (listBoxItem?.DataContext is CatalogDocument item)
         {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
             var currentSelected = subscribedViewModel.SelectedBrowserItems.OfType<CatalogDocument>().ToList();
             if (!currentSelected.Any(sel => string.Equals(sel.Id, item.Id, StringComparison.Ordinal)))
             {

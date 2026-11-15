@@ -295,6 +295,30 @@ public partial class BrowserItemsView : UserControl
         }
     }
 
+    public void FocusActiveControl()
+    {
+        var active = GetActiveControl();
+        if (active is null)
+        {
+            return;
+        }
+
+        active.Focus();
+
+        // Focus the specific selected item so keyboard navigation works immediately
+        if (active is ListBox listBox && listBox.SelectedItem is not null)
+        {
+            var container = listBox.ContainerFromItem(listBox.SelectedItem) as ListBoxItem;
+            container?.Focus();
+        }
+        else if (active is DetailsListView details && details.SelectedItem is not null)
+        {
+            var inner = details.FindControl<ListBox>("InnerListBox");
+            var container = inner?.ContainerFromItem(details.SelectedItem) as ListBoxItem;
+            container?.Focus();
+        }
+    }
+
     private Control? GetActiveControl()
     {
         return ViewMode switch
