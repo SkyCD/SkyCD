@@ -156,6 +156,15 @@ public partial class PropertiesDialogViewModel : ObservableObject
             }
         }
 
+        if (string.Equals(text, nameof(CatalogContentsState.Incomplete), StringComparison.OrdinalIgnoreCase))
+        {
+            var localized = localizer[nameof(CatalogContentsState.Incomplete)].Value;
+            if (!string.Equals(localized, nameof(CatalogContentsState.Incomplete), StringComparison.Ordinal))
+            {
+                return localized;
+            }
+        }
+
         return text;
     }
 }
