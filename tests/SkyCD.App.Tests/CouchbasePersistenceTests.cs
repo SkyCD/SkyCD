@@ -232,7 +232,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         viewModel.DeleteItemCommand.Execute(null);
 
         Assert.Equal("Deleted Movies.", viewModel.StatusText);
-        Assert.Equal("library", viewModel.SelectedTreeNode?.Key);
+        Assert.Equal("music", viewModel.SelectedTreeNode?.Key);
         Assert.DoesNotContain(viewModel.TreeNodes.Single().Children, child => child.Key == "movies");
         Assert.DoesNotContain(viewModel.BrowserItems, item => item.Id == "movies");
 
@@ -273,7 +273,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
         viewModel.DeleteItemCommand.Execute(null);
 
         Assert.Equal("Deleted Music.", viewModel.StatusText);
-        Assert.Equal("library", viewModel.SelectedTreeNode?.Key);
+        Assert.Equal("projects", viewModel.SelectedTreeNode?.Key);
+        Assert.DoesNotContain(viewModel.TreeNodes.Single().Children, child => child.Key == "music");
 
         // Music and its descendants are deleted
         Assert.Null(catalogRepository.Get("music"));

@@ -483,7 +483,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_RemovesTreeNodeAndSelectsParent()
+    public void DeleteCommand_TreeSelection_RemovesTreeNodeAndSelectsNextSibling()
     {
         var vm = CreateViewModel();
         var libraryNode = vm.TreeNodes.Single();
@@ -497,10 +497,118 @@ public class MainWindowViewModelTests
         vm.DeleteItemCommand.Execute(null);
 
         Assert.Equal("Deleted Movies.", vm.StatusText);
-        Assert.Equal("library", vm.SelectedTreeNode?.Key);
+        Assert.Equal("music", vm.SelectedTreeNode?.Key);
         Assert.DoesNotContain(vm.TreeNodes.Single().Children, child => child.Key == "movies");
         Assert.DoesNotContain(vm.BrowserItems, item => item.Id == "movies");
         Assert.True(vm.IsDirtyDocument);
+    }
+
+    [Fact]
+    public void DeleteCommand_TreeSelection_LastSibling_SelectsPreviousSibling()
+    {
+        var vm = CreateViewModel();
+        var projectsNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "projects");
+        vm.SelectedTreeNode = projectsNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("music", vm.SelectedTreeNode?.Key);
+        Assert.DoesNotContain(vm.TreeNodes.Single().Children, child => child.Key == "projects");
+    }
+
+    [Fact]
+    public void DeleteCommand_TreeSelection_OnlyChild_SelectsParentNode()
+    {
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog(
+        [
+            new CatalogDocument { Id = "library", Name = "Library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "documents", Name = "Documents", ParentId = "library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "reports", Name = "Reports", ParentId = "documents", Type = CatalogDocumentType.Folder }
+        ]);
+
+        var reportsNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "documents")
+            .Children.Single(node => node.Key == "reports");
+        vm.SelectedTreeNode = reportsNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("documents", vm.SelectedTreeNode?.Key);
+        Assert.Empty(vm.TreeNodes.Single().Children.Single(node => node.Key == "documents").Children);
+    }
+
+    [Fact]
+    public void DeleteCommand_TreeSelection_NestedNode_RemovesNodeAndItsDescendantsFromTree()
+    {
+        var vm = CreateViewModel();
+        var musicNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "music");
+        var classicalNode = musicNode.Children.Single(node => node.Key == "classical-collection");
+        vm.SelectedTreeNode = classicalNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        var refreshedMusicNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "music");
+        Assert.DoesNotContain(refreshedMusicNode.Children, child => child.Key == "classical-collection");
+        Assert.Equal("concert-2025", vm.SelectedTreeNode?.Key);
+    }
+
+    [Fact]
+    public void DeleteCommand_TreeSelection_PreservesExpandedStateOfOtherNodes()
+    {
+        var vm = CreateViewModel();
+        var libraryNode = vm.TreeNodes.Single();
+        var moviesNode = libraryNode.Children.Single(node => node.Key == "movies");
+        var musicNode = libraryNode.Children.Single(node => node.Key == "music");
+        musicNode.IsExpanded = true;
+        vm.SelectedTreeNode = moviesNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.True(vm.TreeNodes.Single().IsExpanded);
+        Assert.True(vm.TreeNodes.Single().Children.Single(node => node.Key == "music").IsExpanded);
+    }
+
+    [Fact]
+    public void DeleteCommand_BrowserSelection_KeepsSelectionAtDeletedPosition()
+    {
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog(
+        [
+            new CatalogDocument { Id = "library", Name = "Library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "alpha", Name = "Alpha", ParentId = "library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "beta", Name = "Beta", ParentId = "library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "gamma", Name = "Gamma", ParentId = "library", Type = CatalogDocumentType.Folder }
+        ]);
+
+        vm.ActivePane = ActivePane.Browser;
+        var beta = vm.BrowserItems.Single(item => item.Id == "beta");
+        vm.SelectedBrowserItems = new List<CatalogDocument> { beta };
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("Gamma", vm.SelectedBrowserItem?.Name);
+        Assert.Equal("Gamma", (vm.SelectedBrowserItems.Cast<CatalogDocument>().Single()).Name);
+    }
+
+    [Fact]
+    public void DeleteCommand_BrowserSelection_LastItem_KeepsSelectionAtEndOfList()
+    {
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog(
+        [
+            new CatalogDocument { Id = "library", Name = "Library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "alpha", Name = "Alpha", ParentId = "library", Type = CatalogDocumentType.Folder },
+            new CatalogDocument { Id = "beta", Name = "Beta", ParentId = "library", Type = CatalogDocumentType.Folder }
+        ]);
+
+        vm.ActivePane = ActivePane.Browser;
+        var beta = vm.BrowserItems.Single(item => item.Id == "beta");
+        vm.SelectedBrowserItems = new List<CatalogDocument> { beta };
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.Equal("Alpha", vm.SelectedBrowserItem?.Name);
     }
 
     [Fact]
@@ -530,7 +638,7 @@ public class MainWindowViewModelTests
         vm.DeleteItemCommand.Execute(null);
 
         Assert.Equal("Deleted Music.", vm.StatusText);
-        Assert.Equal("library", vm.SelectedTreeNode?.Key);
+        Assert.Equal("projects", vm.SelectedTreeNode?.Key);
         Assert.DoesNotContain(vm.TreeNodes.Single().Children, child => child.Key == "music");
     }
 

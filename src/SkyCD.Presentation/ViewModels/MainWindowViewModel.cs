@@ -859,7 +859,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // Remove deleted items from BrowserItems directly instead of calling RefreshBrowserItemsForSelection()
         foreach (var item in itemsToDelete)
         {
-            browserItems.Remove(item);
+            BrowserItems.Remove(item);
         }
 
         // Restore selection to the same position, or next available
@@ -872,6 +872,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             SelectedBrowserItem = null;
         }
+
+        SelectedBrowserItems = SelectedBrowserItem is not null
+            ? new List<CatalogDocument> { SelectedBrowserItem }
+            : new List<CatalogDocument>();
+
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, string.Join(", ", deletedNames));
+        FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void DeleteSelectedTreeNode()
@@ -881,19 +889,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var selectedIndex = -1;
-        for (var i = 0; i < TreeNodes.Count; i++)
-        {
-            if (ReferenceEquals(TreeNodes[i], SelectedTreeNode))
-            {
-                selectedIndex = i;
-                break;
-            }
-        }
-
         var targetNode = SelectedTreeNode;
 
         var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
+        var selectionKeyAfterDelete = ResolveSelectionKeyNearDeletedNode(parentNode, targetNode);
 
         var documentsToDelete = new List<CatalogDocument>();
         if (catalogRepository is not null)
@@ -951,21 +950,43 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         undoManager?.RecordDeletion(documentsToDelete);
         UpdateUndoRedoState();
-        treeNodes.Remove(targetNode);
 
-        SelectedTreeNode = parentNode ?? treeNodes.FirstOrDefault();
-
-        RefreshBrowserItemsForSelection();
-
-        RefreshBrowserItemsForSelection();
-        SelectedBrowserItem = BrowserItems.FirstOrDefault();
-        SelectedBrowserItems = SelectedBrowserItem is not null
-            ? new List<CatalogDocument> { SelectedBrowserItem }
-            : new List<CatalogDocument>();
+        // The deleted node is usually nested, so rebuild the tree instead of detaching it from the root collection.
+        RefreshTreeNodes(selectionKeyAfterDelete);
 
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
         FocusTreeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static string ResolveSelectionKeyNearDeletedNode(BrowserTreeNode? parentNode, BrowserTreeNode deletedNode)
+    {
+        if (parentNode is null)
+        {
+            return deletedNode.Key;
+        }
+
+        var siblings = parentNode.Children;
+        var deletedIndex = -1;
+        for (var i = 0; i < siblings.Count; i++)
+        {
+            if (string.Equals(siblings[i].Key, deletedNode.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                deletedIndex = i;
+                break;
+            }
+        }
+
+        if (deletedIndex < 0 || siblings.Count < 2)
+        {
+            return parentNode.Key;
+        }
+
+        // Keep the selection where the deleted node was, mirroring list view deletion.
+        var neighbour = deletedIndex + 1 < siblings.Count
+            ? siblings[deletedIndex + 1]
+            : siblings[deletedIndex - 1];
+        return neighbour.Key;
     }
 
     private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
@@ -1593,8 +1614,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
 
-        browserItems.Clear();
-        foreach (var item in refreshedItems) browserItems.Add(item);
+        BrowserItems.Clear();
+        foreach (var item in refreshedItems) BrowserItems.Add(item);
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
                               item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                               ?? refreshedItems.FirstOrDefault();
