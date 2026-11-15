@@ -20,9 +20,11 @@ using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
+using SkyCD.UI.Controls.Preview;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 
@@ -52,6 +54,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private readonly List<StatusVariantDocument> statusVariants = [];
+    private readonly IMediaCacheStore mediaCacheStore;
+    private readonly bool ownsMediaCacheStore;
+    private readonly MediaPreviewImageService mediaPreviewImages;
+    private readonly MediaPreviewResolver mediaPreviewResolver;
+    private readonly EntryPreviewViewModel entryPreview;
+    private readonly MediaCacheThumbnailProvider browserThumbnailProvider;
+    private readonly MediaCacheSearchFieldProvider searchFieldProvider;
     private IReadOnlyList<MainMenuItemViewModel> topMenuItems = [];
 
     // Cached rather than computed on each get: an open ContextMenu binds ItemsSource to these, and
@@ -119,6 +128,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
         this.shouldSeedDefaultCatalog = shouldSeedDefaultCatalog;
 
+        mediaCacheStore = MediaCacheStore.Create(this.catalogRepository.Collection?.Database);
+        ownsMediaCacheStore = true;
+        mediaPreviewResolver = new MediaPreviewResolver(mediaCacheStore);
+        mediaPreviewImages = new MediaPreviewImageService(mediaPreviewResolver);
+        entryPreview = new EntryPreviewViewModel(mediaPreviewResolver, mediaPreviewImages, this.propertyValueLocalizer);
+        browserThumbnailProvider = new MediaCacheThumbnailProvider(mediaPreviewResolver, mediaPreviewImages);
+        searchFieldProvider = new MediaCacheSearchFieldProvider(mediaCacheStore);
+
         EnsureSeedData();
         treeNodes.Clear();
         foreach (var node in GetTreeNodes()) treeNodes.Add(node);
@@ -159,12 +176,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private MainWindowViewModel(
         IReadOnlyList<CatalogDocument> catalogEntries,
         IStringLocalizer? propertyValueLocalizer = null,
-        MenuExtensionManager? menuExtensionManager = null)
+        MenuExtensionManager? menuExtensionManager = null,
+        IMediaCacheStore? mediaCacheStore = null)
     {
         inMemoryCatalogEntries = catalogEntries?.ToList() ?? throw new ArgumentNullException(nameof(catalogEntries));
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
         this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
         shouldSeedDefaultCatalog = false;
+
+        this.mediaCacheStore = mediaCacheStore ?? MediaCacheStore.Create();
+        ownsMediaCacheStore = mediaCacheStore is null;
+        mediaPreviewResolver = new MediaPreviewResolver(this.mediaCacheStore);
+        mediaPreviewImages = new MediaPreviewImageService(mediaPreviewResolver);
+        entryPreview = new EntryPreviewViewModel(mediaPreviewResolver, mediaPreviewImages, this.propertyValueLocalizer);
+        browserThumbnailProvider = new MediaCacheThumbnailProvider(mediaPreviewResolver, mediaPreviewImages);
+        searchFieldProvider = new MediaCacheSearchFieldProvider(this.mediaCacheStore);
+
         treeNodes.Clear();
         foreach (var node in BuildTreeNodesFromEntries(inMemoryCatalogEntries)) treeNodes.Add(node);
 
@@ -183,6 +210,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
         StatusText = DefaultStatusText;
+        entryPreview.RefreshLocalization();
         RefreshBrowserItemsForSelection();
     }
 
@@ -191,16 +219,36 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (isDisposed) return;
         isDisposed = true;
         localizationSubscription.Dispose();
+        entryPreview.Dispose();
+        mediaPreviewImages.Dispose();
+        if (ownsMediaCacheStore)
+        {
+            mediaCacheStore.Dispose();
+        }
+
         GC.SuppressFinalize(this);
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
         IReadOnlyList<CatalogDocument> catalogEntries,
         IStringLocalizer? propertyValueLocalizer = null,
-        MenuExtensionManager? menuExtensionManager = null)
+        MenuExtensionManager? menuExtensionManager = null,
+        IMediaCacheStore? mediaCacheStore = null)
     {
-        return new MainWindowViewModel(catalogEntries, propertyValueLocalizer, menuExtensionManager);
+        return new MainWindowViewModel(catalogEntries, propertyValueLocalizer, menuExtensionManager, mediaCacheStore);
     }
+
+    /// <summary>
+    /// The offline details and preview surface of the browser. It follows the browser selection and renders
+    /// only what is already stored, so it keeps working while the media is disconnected.
+    /// </summary>
+    public EntryPreviewViewModel Preview => entryPreview;
+
+    /// <summary>Cached-thumbnail source for realized browser items.</summary>
+    public IPreviewThumbnailProvider BrowserThumbnailProvider => browserThumbnailProvider;
+
+    /// <summary>The store previews and captured metadata are read from.</summary>
+    public IMediaCacheStore MediaCache => mediaCacheStore;
 
     private static MenuExtensionManager CreateEmptyMenuExtensionManager()
     {
@@ -360,6 +408,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
     private bool isStatusBarVisible = true;
 
+    /// <summary>Whether the offline details and preview pane is shown under the browser.</summary>
+    [ObservableProperty]
+    private bool isPreviewPaneVisible = true;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
     [NotifyPropertyChangedFor(nameof(IsCatalogInteractionEnabled))]
@@ -400,7 +452,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void FindCatalog() => FindCatalogRequested?.Invoke(this, EventArgs.Empty);
 
     public CatalogFindDialogViewModel CreateCatalogFindDialogViewModel() =>
-        new(GetAllCatalogEntries(), NavigateToFindResult);
+        new(GetAllCatalogEntries(), NavigateToFindResult, searchFieldProvider);
 
     private IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
@@ -1223,11 +1275,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    private void TogglePreviewPane()
+    {
+        IsPreviewPaneVisible = !IsPreviewPaneVisible;
+    }
+
+    [RelayCommand]
     private void Refresh()
     {
         StartOperation(LocalizationService.Current.Get(TextKeys.UpdatingView));
         SetProgress(60, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
         RefreshBrowserItemsForSelection();
+        RefreshPreview();
         CompleteOperation();
     }
 
@@ -1759,6 +1818,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedBrowserItemChanged(CatalogDocument? value)
     {
+        UpdatePreviewFor(value);
+
         if (value is null)
         {
             if (selectedBrowserItems.Count > 0)
@@ -1790,9 +1851,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
     {
+        var first = value.Count > 0 ? value[0] as CatalogDocument : null;
+
         if (value.Count > 0)
         {
-            var first = value[0] as CatalogDocument;
             if (!ReferenceEquals(selectedBrowserItem, first))
             {
                 selectedBrowserItem = first;
@@ -1804,6 +1866,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             selectedBrowserItem = null;
             OnPropertyChanged(nameof(SelectedBrowserItem));
         }
+
+        UpdatePreviewFor(first);
 
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
@@ -1817,6 +1881,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Points the preview pane at <paramref name="item"/>. A selection that is echoed back through
+    /// <see cref="SelectedBrowserItems"/> keeps the same entry id and must not restart the resolve, because
+    /// restarting would cancel a load that is already about to finish.
+    /// </summary>
+    private void UpdatePreviewFor(CatalogDocument? item)
+    {
+        if (entryPreview.State != MediaPreviewState.Loading &&
+            string.Equals(entryPreview.CurrentSnapshot?.EntryId, item?.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        entryPreview.Show(item);
+    }
+
+    /// <summary>
+    /// Drops decoded images and re-resolves the current selection, so a refresh that captured new data or
+    /// recovered a missing artifact is reflected without restarting the application.
+    /// </summary>
+    public void RefreshPreview()
+    {
+        mediaPreviewImages.ClearCache();
+        entryPreview.Show(SelectedBrowserItem);
     }
 
     partial void OnCurrentViewModeChanged(BrowserViewMode value)
@@ -1888,6 +1978,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTopMenuState();
     }
 
+    partial void OnIsPreviewPaneVisibleChanged(bool value)
+    {
+        RefreshTopMenuState();
+    }
+
     private IReadOnlyList<MainMenuItemViewModel> BuildTopMenuItems()
     {
         var menuItems = new List<MainMenuItemViewModel>
@@ -1941,6 +2036,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Items =
                 [
                     CheckedMenuItem(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar), ToggleStatusBarCommand, key: "statusbar"),
+                    CheckedMenuItem(IsPreviewPaneVisible, LocalizationService.Current.Get(PreviewKeys.PreviewPane), TogglePreviewPaneCommand,
+                        key: "previewpane"),
                     Separator(),
                     CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles", "view_tiles"),
                     CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons",
@@ -2116,6 +2213,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .ToDictionary(item => item.Key!, StringComparer.Ordinal);
 
         SetMenuChecked(byKey, "statusbar", IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar));
+        SetMenuChecked(byKey, "previewpane", IsPreviewPaneVisible, LocalizationService.Current.Get(PreviewKeys.PreviewPane));
         SetMenuChecked(byKey, "view_tiles", IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles));
         SetMenuChecked(byKey, "view_small", IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2));
         SetMenuChecked(byKey, "view_large", IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu));

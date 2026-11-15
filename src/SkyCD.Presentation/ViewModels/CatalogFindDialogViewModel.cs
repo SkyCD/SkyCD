@@ -9,7 +9,10 @@ using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class CatalogFindDialogViewModel(IReadOnlyList<CatalogDocument> documents, Action<CatalogFindResult> navigate)
+public partial class CatalogFindDialogViewModel(
+    IReadOnlyList<CatalogDocument> documents,
+    Action<CatalogFindResult> navigate,
+    ICatalogSearchFieldProvider? fieldProvider = null)
     : ObservableObject, IDisposable
 {
     private CancellationTokenSource? searchCancellation;
@@ -36,7 +39,7 @@ public partial class CatalogFindDialogViewModel(IReadOnlyList<CatalogDocument> d
         StatusText = LocalizationService.Current.Get(TextKeys.FindSearching);
         try
         {
-            var matches = await Task.Run(() => CatalogFindService.Search(documents, Query), cancellationToken);
+            var matches = await Task.Run(() => CatalogFindService.Search(documents, Query, fieldProvider), cancellationToken);
             Results = matches;
             SelectedResult = matches.Count > 0 ? matches[0] : null;
             StatusText = matches.Count == 0

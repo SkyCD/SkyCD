@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
@@ -12,6 +13,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
+using SkyCD.UI.Controls.Preview;
 
 namespace SkyCD.UI.Controls.Lists;
 
@@ -64,6 +66,19 @@ public partial class BrowserItemsView : UserControl
 
     public static readonly StyledProperty<IValueConverter?> StatusIconConverterProperty =
         AvaloniaProperty.Register<BrowserItemsView, IValueConverter?>(nameof(StatusIconConverter));
+
+    /// <summary>
+    /// Optional source of cached thumbnails. When set, realized items overlay an asynchronously loaded
+    /// thumbnail on top of their type icon; when null the list renders icons only, exactly as before.
+    /// </summary>
+    public static readonly StyledProperty<IPreviewThumbnailProvider?> ThumbnailProviderProperty =
+        AvaloniaProperty.Register<BrowserItemsView, IPreviewThumbnailProvider?>(nameof(ThumbnailProvider));
+
+    public IPreviewThumbnailProvider? ThumbnailProvider
+    {
+        get => GetValue(ThumbnailProviderProperty);
+        set => SetValue(ThumbnailProviderProperty, value);
+    }
 
     public IValueConverter? StatusIconConverter
     {
@@ -282,7 +297,8 @@ public partial class BrowserItemsView : UserControl
                 }
             }
         }
-        else if (change.Property == IconConverterProperty || change.Property == StatusIconConverterProperty || change.Property == DetailsColumnsProperty)
+        else if (change.Property == IconConverterProperty || change.Property == StatusIconConverterProperty || change.Property == DetailsColumnsProperty ||
+                 change.Property == ThumbnailProviderProperty)
         {
             UpdateListTemplate();
             UpdateIconGridTemplate();
@@ -834,6 +850,21 @@ public partial class BrowserItemsView : UserControl
         var icon = new Image { Width = iconWidth, Height = iconHeight, HorizontalAlignment = horizontalAlignment };
         icon.Bind(Image.SourceProperty, new Binding("IconGlyph") { Converter = IconConverter });
         iconContainer.Children.Add(icon);
+
+        // Added only when a thumbnail source exists, so icon-only rendering keeps its exact former shape.
+        if (ThumbnailProvider is { } thumbnailProvider)
+        {
+            var thumbnail = new AsyncThumbnailImage
+            {
+                Width = iconWidth,
+                Height = iconHeight,
+                HorizontalAlignment = horizontalAlignment,
+                Stretch = Stretch.UniformToFill,
+                ThumbnailProvider = thumbnailProvider
+            };
+            thumbnail.Bind(AutomationProperties.NameProperty, PreviewAutomationBinding.CreateThumbnailName());
+            iconContainer.Children.Add(thumbnail);
+        }
 
         var statusIcon = new ContentControl
         {
