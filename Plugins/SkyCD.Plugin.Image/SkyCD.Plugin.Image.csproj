@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Apache-2.0: EXIF/DateTimeOriginal, which the decoder does not expose. -->
+        <PackageReference Include="MetadataExtractor" Version="2.9.3"/>
+        <!-- MIT: decoding, orientation-aware scaling and thumbnail encoding. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Image Preview and Metadata</AssemblyTitle>
+        <Description>Extracts dimensions, format, orientation and capture date from JPEG, PNG, WebP and GIF sources, and renders bounded orientation-corrected thumbnails.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Image.Tests"/>
+    </ItemGroup>
+</Project>
