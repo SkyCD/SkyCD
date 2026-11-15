@@ -36,3 +36,7 @@ worker retains its concurrency slot and resources until it actually exits; the h
 late exceptions and disposes its stream then. This is in-process cooperative isolation, not
 a security sandbox: terminating arbitrary plugin CPU work or bounding plugin allocations
 requires a separate process. Plugins must honor cancellation and avoid retaining source access.
+
+The host stores results durably and keeps them available offline; plugins hold no state of their
+own. See `docs/architecture/media-cache-lifecycle.md` for how a descriptor's schema id and version
+key the stored result, and why bumping the schema version is what invalidates cached data.
