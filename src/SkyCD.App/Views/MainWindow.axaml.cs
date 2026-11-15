@@ -37,6 +37,7 @@ using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
+using SkyCD.UI.Controls.Tree;
 
 namespace SkyCD.App.Views;
 
@@ -183,19 +184,13 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.InvokeAsync(() =>
         {
             var treeView = this.FindControl<TreeView>("MainTreeView");
-            if (treeView is not null)
+            if (treeView is null || subscribedViewModel is null)
             {
-                treeView.Focus();
-                if (subscribedViewModel is not null && subscribedViewModel.SelectedTreeNode is not null)
-                {
-                    var container = treeView.ContainerFromItem(subscribedViewModel.SelectedTreeNode) as TreeViewItem;
-                    container?.Focus();
-                }
-                if (subscribedViewModel is not null)
-                {
-                    subscribedViewModel.ActivePane = ActivePane.Tree;
-                }
+                return;
             }
+
+            TreeViewFocus.FocusItem(treeView, subscribedViewModel.SelectedTreeNode);
+            subscribedViewModel.ActivePane = ActivePane.Tree;
         }, DispatcherPriority.Loaded);
     }
 

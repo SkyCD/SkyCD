@@ -37,7 +37,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
-    private IReadOnlyDictionary<string, BrowserTreeNode> treeNodesByKey;
+    private Dictionary<string, BrowserTreeNode> treeNodesByKey;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
@@ -52,7 +52,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly List<string> statusTransitions = [];
     private readonly List<int> progressTransitions = [];
     private readonly List<StatusVariantDocument> statusVariants = [];
-    private IReadOnlyList<MainMenuItemViewModel> topMenuItems;
+    private IReadOnlyList<MainMenuItemViewModel> topMenuItems = [];
+
+    // Cached rather than computed on each get: an open ContextMenu binds ItemsSource to these, and
+    // handing it a new list tears down its items mid-click. State changes go through
+    // RefreshTopMenuState, which mutates the cached items in place.
+    private IReadOnlyList<MainMenuItemViewModel> browserContextMenuItems = [];
+    private IReadOnlyList<MainMenuItemViewModel> treeContextMenuItems = [];
     private static string DefaultStatusText => LocalizationService.Current.Get(TextKeys.Done);
     private const string ItemStatusNamePropertyKey = "StatusName";
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
@@ -79,13 +85,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
         menuExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
-        topMenuItems = BuildTopMenuItems();
+        RebuildMenuItems();
         OnPropertyChanged(nameof(TopMenuItems));
         OnPropertyChanged(nameof(FileMenuItems));
         OnPropertyChanged(nameof(EditMenuItems));
         OnPropertyChanged(nameof(ViewMenuItems));
         OnPropertyChanged(nameof(ToolsMenuItems));
         OnPropertyChanged(nameof(HelpMenuItems));
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+    }
+
+    private void RebuildMenuItems()
+    {
+        topMenuItems = BuildTopMenuItems();
+        browserContextMenuItems = BuildBrowserContextMenuItems();
+        treeContextMenuItems = BuildTreeContextMenuItems();
     }
 
     private MainWindowViewModel(
@@ -110,7 +125,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
-        topMenuItems = BuildTopMenuItems();
+        RebuildMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
@@ -155,7 +170,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
-        topMenuItems = BuildTopMenuItems();
+        RebuildMenuItems();
         SelectedTreeNode = TreeNodes.FirstOrDefault();
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
@@ -167,8 +182,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (isDisposed) return;
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         StatusText = DefaultStatusText;
         RefreshBrowserItemsForSelection();
     }
@@ -303,9 +316,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public IReadOnlyList<MainMenuItemViewModel> ToolsMenuItems => topMenuItems[3].Items;
     public IReadOnlyList<MainMenuItemViewModel> HelpMenuItems => topMenuItems[4].Items;
 
-    public IReadOnlyList<MainMenuItemViewModel> BrowserContextMenuItems => BuildBrowserContextMenuItems();
+    public IReadOnlyList<MainMenuItemViewModel> BrowserContextMenuItems => browserContextMenuItems;
 
-    public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => BuildTreeContextMenuItems();
+    public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => treeContextMenuItems;
 
     [ObservableProperty] private ObservableCollection<CatalogDocument> browserItems = [];
 
@@ -892,7 +905,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var targetNode = SelectedTreeNode;
 
         var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
-        var selectionKeyAfterDelete = ResolveSelectionKeyNearDeletedNode(parentNode, targetNode);
+        if (parentNode is null || parentNode.Children.IndexOf(targetNode) < 0)
+        {
+            return;
+        }
 
         var documentsToDelete = new List<CatalogDocument>();
         if (catalogRepository is not null)
@@ -951,42 +967,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         undoManager?.RecordDeletion(documentsToDelete);
         UpdateUndoRedoState();
 
-        // The deleted node is usually nested, so rebuild the tree instead of detaching it from the root collection.
-        RefreshTreeNodes(selectionKeyAfterDelete);
+        DetachTreeNode(parentNode, targetNode);
 
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
         FocusTreeRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private static string ResolveSelectionKeyNearDeletedNode(BrowserTreeNode? parentNode, BrowserTreeNode deletedNode)
+    /// <summary>
+    /// Detaches <paramref name="deletedNode"/> from the live tree and moves the selection to the
+    /// sibling that took its place, mirroring list view deletion. Only the deleted subtree is
+    /// touched, so sibling TreeViewItems stay realized and can receive keyboard focus.
+    /// </summary>
+    private void DetachTreeNode(BrowserTreeNode parentNode, BrowserTreeNode deletedNode)
     {
-        if (parentNode is null)
+        foreach (var descendant in FlattenNodes([deletedNode]))
         {
-            return deletedNode.Key;
+            treeNodesByKey.Remove(descendant.Key);
         }
 
         var siblings = parentNode.Children;
-        var deletedIndex = -1;
-        for (var i = 0; i < siblings.Count; i++)
-        {
-            if (string.Equals(siblings[i].Key, deletedNode.Key, StringComparison.OrdinalIgnoreCase))
-            {
-                deletedIndex = i;
-                break;
-            }
-        }
+        var deletedIndex = siblings.IndexOf(deletedNode);
+        siblings.RemoveAt(deletedIndex);
 
-        if (deletedIndex < 0 || siblings.Count < 2)
-        {
-            return parentNode.Key;
-        }
-
-        // Keep the selection where the deleted node was, mirroring list view deletion.
-        var neighbour = deletedIndex + 1 < siblings.Count
-            ? siblings[deletedIndex + 1]
-            : siblings[deletedIndex - 1];
-        return neighbour.Key;
+        SelectedTreeNode = siblings.Count == 0
+            ? parentNode
+            : siblings[Math.Min(deletedIndex, siblings.Count - 1)];
     }
 
     private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
@@ -1411,8 +1417,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             statusVariants.Add(variant);
         }
 
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
+        RefreshTopMenuState();
     }
 
     private static string GetViewModeDisplayName(BrowserViewMode viewMode)
@@ -1709,8 +1714,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
         NavigateToParentFolderCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
     }
 
@@ -1781,8 +1784,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
     }
@@ -1814,8 +1815,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
     }
@@ -1838,8 +1837,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(BrowserGridItemWidth));
         OnPropertyChanged(nameof(BrowserGridItemHeight));
         OnPropertyChanged(nameof(ShowDetailsColumns));
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
     }
 
@@ -1849,8 +1846,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsSortByNameChecked));
         OnPropertyChanged(nameof(IsSortByTypeChecked));
         OnPropertyChanged(nameof(IsSortBySizeChecked));
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
     }
 
@@ -1873,8 +1868,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(IsSaveEnabled));
         SaveCatalogCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
     }
 
@@ -1887,15 +1880,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(IsPasteEnabled));
         PasteCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
     }
 
     partial void OnIsStatusBarVisibleChanged(bool value)
     {
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
         RefreshTopMenuState();
     }
 
@@ -2115,19 +2104,26 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshTopMenuState()
     {
-        var byKey = FlattenMenuItems(topMenuItems)
+        ApplyMenuState(topMenuItems);
+        ApplyMenuState(browserContextMenuItems);
+        ApplyMenuState(treeContextMenuItems);
+    }
+
+    private void ApplyMenuState(IEnumerable<MainMenuItemViewModel> menuItems)
+    {
+        var byKey = FlattenMenuItems(menuItems)
             .Where(item => !string.IsNullOrWhiteSpace(item.Key))
             .ToDictionary(item => item.Key!, StringComparer.Ordinal);
 
-        SetMenuHeader(byKey, "statusbar", CheckedHeader(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar)));
-        SetMenuHeader(byKey, "view_tiles", CheckedHeader(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles)));
-        SetMenuHeader(byKey, "view_small", CheckedHeader(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2)));
-        SetMenuHeader(byKey, "view_large", CheckedHeader(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu)));
-        SetMenuHeader(byKey, "view_list", CheckedHeader(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List)));
-        SetMenuHeader(byKey, "view_details", CheckedHeader(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details)));
-        SetMenuHeader(byKey, "sort_name", CheckedHeader(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name)));
-        SetMenuHeader(byKey, "sort_type", CheckedHeader(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2)));
-        SetMenuHeader(byKey, "sort_size", CheckedHeader(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2)));
+        SetMenuChecked(byKey, "statusbar", IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar));
+        SetMenuChecked(byKey, "view_tiles", IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles));
+        SetMenuChecked(byKey, "view_small", IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2));
+        SetMenuChecked(byKey, "view_large", IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu));
+        SetMenuChecked(byKey, "view_list", IsListViewChecked, LocalizationService.Current.Get(TextKeys.List));
+        SetMenuChecked(byKey, "view_details", IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details));
+        SetMenuChecked(byKey, "sort_name", IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name));
+        SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
+        SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
@@ -2144,14 +2140,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private static void SetMenuHeader(
+    private static void SetMenuChecked(
         IReadOnlyDictionary<string, MainMenuItemViewModel> byKey,
         string key,
-        string header)
+        bool isChecked,
+        string title)
     {
         if (byKey.TryGetValue(key, out var item))
         {
-            item.Header = header;
+            item.Header = title;
+            item.Icon = CheckedIcon(isChecked);
         }
     }
 
@@ -2177,9 +2175,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private static string CheckedHeader(bool isChecked, string title)
+    private static object CheckedIcon(bool isChecked)
     {
-        return title;
+        return isChecked ? "✓" : "\u00A0";
     }
 
     private static MainMenuItemViewModel CheckedMenuItem(
@@ -2192,8 +2190,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return new MainMenuItemViewModel
         {
             Key = key,
-            Header = CheckedHeader(isChecked, title),
-            Icon = isChecked ? "✓" : "\u00A0",
+            Header = title,
+            Icon = CheckedIcon(isChecked),
             Command = command,
             CommandParameter = commandParameter
         };
@@ -2210,6 +2208,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Separator(),
             new MainMenuItemViewModel
             {
+                Key = "edit_status",
                 Header = LocalizationService.Current.Get(TextKeys.Status),
                 Items = BuildStatusMenuItems()
             },
@@ -2219,11 +2218,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
-                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons"),
-                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List"),
-                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details"),
-                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles")
+                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand,
+                        "SmallIcons", "view_small"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand,
+                        "LargeIcons", "view_large"),
+                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List", "view_list"),
+                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand,
+                        "Details", "view_details"),
+                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand,
+                        "Tiles", "view_tiles")
                 ]
             },
             Separator(),
@@ -2232,8 +2235,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
                 Items =
                 [
-                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name"),
-                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type")
+                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
+                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type")
                 ]
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
@@ -2259,11 +2262,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
-                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand, "SmallIcons"),
-                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand, "LargeIcons"),
-                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List"),
-                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand, "Details"),
-                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand, "Tiles")
+                    CheckedMenuItem(IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2), SetViewModeCommand,
+                        "SmallIcons", "view_small"),
+                    CheckedMenuItem(IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu), SetViewModeCommand,
+                        "LargeIcons", "view_large"),
+                    CheckedMenuItem(IsListViewChecked, LocalizationService.Current.Get(TextKeys.List), SetViewModeCommand, "List", "view_list"),
+                    CheckedMenuItem(IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details), SetViewModeCommand,
+                        "Details", "view_details"),
+                    CheckedMenuItem(IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles), SetViewModeCommand,
+                        "Tiles", "view_tiles")
                 ]
             },
             Separator(),
@@ -2272,9 +2279,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
                 Items =
                 [
-                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name"),
-                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type"),
-                    CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size")
+                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
+                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type"),
+                    CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
                 ]
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },

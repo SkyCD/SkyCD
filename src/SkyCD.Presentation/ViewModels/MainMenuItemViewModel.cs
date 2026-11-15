@@ -17,7 +17,7 @@ public sealed partial class MainMenuItemViewModel : ObservableObject
 
     public object? CommandParameter { get; init; }
 
-    public object? Icon { get; init; }
+    [ObservableProperty] private object? icon;
 
     public MenuItemToggleType ToggleType { get; init; }
 

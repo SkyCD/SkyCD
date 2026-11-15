@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -11,7 +12,7 @@ public partial class BrowserTreeNode : ObservableObject
         Key = key;
         Title = title;
         IconGlyph = iconGlyph;
-        Children = children;
+        Children = new ObservableCollection<BrowserTreeNode>(children);
         this.isExpanded = isExpanded;
     }
 
@@ -26,7 +27,9 @@ public partial class BrowserTreeNode : ObservableObject
 
     public string IconGlyph { get; }
 
-    public IReadOnlyList<BrowserTreeNode> Children { get; }
+    // Observable so a deleted node can be detached in place. Rebuilding the whole tree instead
+    // destroys every realized TreeViewItem, including the one holding keyboard focus.
+    public ObservableCollection<BrowserTreeNode> Children { get; }
 
     [ObservableProperty] private bool isExpanded;
 }

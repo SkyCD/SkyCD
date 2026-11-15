@@ -555,7 +555,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_PreservesExpandedStateOfOtherNodes()
+    public void DeleteCommand_TreeSelection_DetachesNodeInPlaceLeavingSiblingsUntouched()
     {
         var vm = CreateViewModel();
         var libraryNode = vm.TreeNodes.Single();
@@ -567,8 +567,12 @@ public class MainWindowViewModelTests
 
         vm.DeleteItemCommand.Execute(null);
 
-        Assert.True(vm.TreeNodes.Single().IsExpanded);
-        Assert.True(vm.TreeNodes.Single().Children.Single(node => node.Key == "music").IsExpanded);
+        // Surviving nodes keep their identity, so their realized TreeViewItems are not torn down
+        // along with the deleted subtree and keyboard focus has somewhere to land.
+        Assert.Same(libraryNode, vm.TreeNodes.Single());
+        Assert.Same(musicNode, libraryNode.Children.Single(node => node.Key == "music"));
+        Assert.True(libraryNode.IsExpanded);
+        Assert.True(musicNode.IsExpanded);
     }
 
     [Fact]
@@ -1153,6 +1157,66 @@ public class MainWindowViewModelTests
 
         Assert.True(focusRaised);
         Assert.Equal(ActivePane.Tree, vm.ActivePane);
+    }
+
+    [Fact]
+    public void ContextMenuItems_KeepIdentityWhenSelectionChanges()
+    {
+        var vm = CreateViewModel();
+        var treeMenu = vm.TreeContextMenuItems;
+        var browserMenu = vm.BrowserContextMenuItems;
+
+        vm.SelectedTreeNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "music");
+        vm.SelectedBrowserItem = vm.BrowserItems.First();
+
+        // An open ContextMenu binds ItemsSource to these; replacing the list tears its items down
+        // while the user is still clicking one.
+        Assert.Same(treeMenu, vm.TreeContextMenuItems);
+        Assert.Same(browserMenu, vm.BrowserContextMenuItems);
+    }
+
+    [Fact]
+    public void SetViewModeCommand_MovesCheckmarkInCachedMenus()
+    {
+        var vm = CreateViewModel();
+
+        vm.SetViewModeCommand.Execute("Tiles");
+
+        Assert.Equal("✓", SingleByKey(vm.TreeContextMenuItems, "view_tiles").Icon);
+        Assert.Equal("\u00A0", SingleByKey(vm.TreeContextMenuItems, "view_details").Icon);
+        Assert.Equal("✓", SingleByKey(vm.BrowserContextMenuItems, "view_tiles").Icon);
+        Assert.Equal("✓", SingleByKey(vm.ViewMenuItems, "view_tiles").Icon);
+        Assert.Equal("\u00A0", SingleByKey(vm.ViewMenuItems, "view_details").Icon);
+    }
+
+    [Fact]
+    public void SetSortModeCommand_MovesCheckmarkInCachedContextMenus()
+    {
+        var vm = CreateViewModel();
+
+        vm.SetSortModeCommand.Execute("Size");
+
+        Assert.Equal("✓", SingleByKey(vm.TreeContextMenuItems, "sort_size").Icon);
+        Assert.Equal("\u00A0", SingleByKey(vm.TreeContextMenuItems, "sort_name").Icon);
+    }
+
+    private static MainMenuItemViewModel SingleByKey(
+        IEnumerable<MainMenuItemViewModel> items,
+        string key)
+    {
+        return FlattenMenuItems(items).Single(item => item.Key == key);
+    }
+
+    private static IEnumerable<MainMenuItemViewModel> FlattenMenuItems(IEnumerable<MainMenuItemViewModel> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+            foreach (var child in FlattenMenuItems(item.Items))
+            {
+                yield return child;
+            }
+        }
     }
 
     private static MainWindowViewModel CreateViewModel()
