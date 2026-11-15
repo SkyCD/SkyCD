@@ -12,6 +12,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 using SkyCD.Plugin.Abstractions.Capabilities.Actions;
 using SkyCD.Plugin.Abstractions.Capabilities.Ownership;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -45,6 +46,8 @@ public sealed class PluginManagerLoadingTests : IDisposable
         Assert.Single(pluginManager.GetCapabilities<IAccountConnector>());
         Assert.Single(pluginManager.GetCapabilities<IActionProvider>());
         Assert.NotEmpty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
+        Assert.Single(pluginManager.GetCapabilities<IMediaMetadataCapability>());
+        Assert.Single(pluginManager.GetCapabilities<IMediaPreviewCapability>());
         Assert.DoesNotContain(assembliesLogger.Entries, entry => entry.LogLevel >= LogLevel.Error);
 
         pluginManager.SavePluginEnabledStates([("tests.runtime.assembly-plugin", false)]);
@@ -54,6 +57,13 @@ public sealed class PluginManagerLoadingTests : IDisposable
         Assert.Empty(pluginManager.GetCapabilities<IAccountConnector>());
         Assert.Empty(pluginManager.GetCapabilities<IActionProvider>());
         Assert.Empty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
+        Assert.Empty(pluginManager.GetCapabilities<IMediaMetadataCapability>());
+        Assert.Empty(pluginManager.GetCapabilities<IMediaPreviewCapability>());
+
+        pluginManager.SavePluginEnabledStates([("tests.runtime.assembly-plugin", true)]);
+        pluginManager.Discover(_root, new Version(4, 0, 0));
+        Assert.Empty(pluginManager.GetCapabilities<IMediaMetadataCapability>());
+        Assert.Empty(pluginManager.GetCapabilities<IMediaPreviewCapability>());
     }
 
     [Fact]
