@@ -22,6 +22,7 @@ using SkyCD.UI.Controls.Lists;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -110,6 +111,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
         localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+
+        try
+        {
+            if (this.catalogRepository?.Collection?.Database is { } db)
+            {
+                using var store = new CouchbaseScanStagingStore(db);
+                store.CleanupAbandonedSessions(TimeSpan.FromHours(24));
+            }
+        }
+        catch
+        {
+            // Best effort cleanup of abandoned staging sessions on startup
+        }
     }
 
     public MainWindowViewModel(
@@ -640,6 +654,44 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return document;
     }
 
+    public ScanPublishResult? PublishStagedScan(IStagingStore store, string sessionId, ScanPublishOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+
+        if (catalogRepository is null)
+        {
+            var staged = store.GetStagedDocuments(sessionId);
+            AddImportedDocuments(staged);
+            store.DropSession(sessionId);
+            return new ScanPublishResult
+            {
+                GenerationId = $"gen-{Guid.NewGuid():N}",
+                PublishedDocumentsCount = staged.Count,
+                PublishedDocuments = staged
+            };
+        }
+
+        var publisher = new CatalogScanPublisher();
+        var result = publisher.Publish(store, sessionId, catalogRepository, options, undoManager?.History);
+
+        UpdateUndoRedoState();
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+
+        if (result.PublishedDocuments.Count > 0)
+        {
+            var rootImported = result.PublishedDocuments[0];
+            SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
+                string.Equals(item.Id, rootImported.Id, StringComparison.Ordinal) ||
+                item.Name.Equals(rootImported.Name, StringComparison.OrdinalIgnoreCase));
+            StatusText = LocalizationService.Current.Format(TextKeys.Added, rootImported.Name);
+        }
+
+        IsDirtyDocument = true;
+        return result;
+    }
+
     public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents)
     {
         if (documents is null || documents.Count == 0)
@@ -649,13 +701,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         if (catalogRepository is not null)
         {
-            catalogRepository.Collection.Database.InBatch(() =>
-            {
-                foreach (var doc in documents)
-                {
-                    catalogRepository.Save(doc.Id, doc);
-                }
-            });
+            var publisher = new CatalogScanPublisher();
+            publisher.PublishDirect(documents, catalogRepository, new ScanPublishOptions(), undoManager?.History);
         }
         else if (inMemoryCatalogEntries is not null)
         {
@@ -675,7 +722,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
-        undoManager?.RecordAddition(documents);
         UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();

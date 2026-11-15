@@ -76,6 +76,20 @@ namespace SkyCD.Presentation.UndoRedo
             _history.PushAction(new Actions.AddCatalogAction(_catalogRepository, documents));
         }
 
+        public void RecordScanPublication(
+            IReadOnlyList<CatalogDocument> insertedDocuments,
+            IReadOnlyList<(CatalogDocument Previous, CatalogDocument Updated)>? updatedDocuments = null,
+            string? displayName = null)
+        {
+            if ((insertedDocuments == null || insertedDocuments.Count == 0) &&
+                (updatedDocuments == null || updatedDocuments.Count == 0))
+            {
+                return;
+            }
+
+            _history.PushAction(new Actions.PublishScanAction(_catalogRepository, insertedDocuments ?? [], updatedDocuments, displayName));
+        }
+
         public void Dispose()
         {
             Dispose(true);
