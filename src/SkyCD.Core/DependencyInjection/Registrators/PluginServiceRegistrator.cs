@@ -6,6 +6,7 @@ using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -63,11 +64,13 @@ public sealed class PluginServiceRegistrator
         discoveredPlugins.AddRange(plugins.Where(static plugin => plugin is not null));
         discoveredPlugins.RegisterPluginServices(registrator);
 
+        registrator.RegisterInstance(new MediaExtensionManager(plugins.SelectMany(plugin =>
+            plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability)))),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
         registrator.Register<FileFormatManager>(Reuse.Singleton,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<MenuExtensionManager>(Reuse.Singleton,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 }
-
-

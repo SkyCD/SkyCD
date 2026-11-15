@@ -23,7 +23,7 @@ public sealed record PluginFailure(string PluginIdentity, string PluginVersion, 
             return $"{method?.DeclaringType?.FullName}.{method?.Name}";
         }));
         // Operation is host-controlled; arbitrary plugin strings are never exported.
-        var safeOperation = operation is "menu" or "modal" or "read" or "write" or "configure" ? operation : "plugin";
+        var safeOperation = operation is "menu" or "modal" or "read" or "write" or "configure" or "media" ? operation : "plugin";
         return new PluginFailure(identity, pluginType.Assembly.GetName().Version?.ToString() ?? "0.0",
             safeOperation, Hash($"v1\n{identity}\n{safeOperation}\n{exception.GetType().FullName}\n{methods}"));
     }
