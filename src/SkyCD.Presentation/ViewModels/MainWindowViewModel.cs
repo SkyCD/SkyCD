@@ -1,6 +1,7 @@
 using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -70,6 +71,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
     public event EventHandler? FocusBrowserRequested;
+    public event EventHandler? FocusTreeRequested;
 
     private MenuExtensionManager menuExtensionManager;
     private CancellationTokenSource? pluginCommandCancellation;
@@ -103,7 +105,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         this.shouldSeedDefaultCatalog = shouldSeedDefaultCatalog;
 
         EnsureSeedData();
-        TreeNodes = GetTreeNodes();
+        treeNodes.Clear();
+        foreach (var node in GetTreeNodes()) treeNodes.Add(node);
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
@@ -147,7 +150,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         this.propertyValueLocalizer = propertyValueLocalizer ?? new PropertyValueLocalizer();
         this.menuExtensionManager = menuExtensionManager ?? CreateEmptyMenuExtensionManager();
         shouldSeedDefaultCatalog = false;
-        TreeNodes = BuildTreeNodesFromEntries(inMemoryCatalogEntries);
+        treeNodes.Clear();
+        foreach (var node in BuildTreeNodesFromEntries(inMemoryCatalogEntries)) treeNodes.Add(node);
 
         var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
         treeNodesByKey = allTreeNodes.ToDictionary(static node => node.Key, StringComparer.OrdinalIgnoreCase);
@@ -199,7 +203,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return options.AppStartCount <= 1;
     }
 
-    public IReadOnlyList<BrowserTreeNode> TreeNodes { get; private set; }
+    private ObservableCollection<BrowserTreeNode> treeNodes = new ObservableCollection<BrowserTreeNode>();
+    public IReadOnlyList<BrowserTreeNode> TreeNodes => treeNodes;
 
     public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns =>
     [
@@ -302,7 +307,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => BuildTreeContextMenuItems();
 
-    [ObservableProperty] private IReadOnlyList<CatalogDocument> browserItems = [];
+    [ObservableProperty] private ObservableCollection<CatalogDocument> browserItems = [];
 
     [ObservableProperty] private string? selectedContentsNotice;
 
@@ -813,6 +818,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var deletedNames = itemsToDelete.Select(item => item.Name).ToList();
 
+        // Capture the index of the currently selected item before deletion
+        // so we can restore focus to the next item at the same position.
+        var selectedIndex = -1;
+        for (var i = 0; i < BrowserItems.Count; i++)
+        {
+            if (ReferenceEquals(BrowserItems[i], SelectedBrowserItem))
+            {
+                selectedIndex = i;
+                break;
+            }
+        }
+
         if (catalogRepository is not null)
         {
             DeleteCatalogEntriesFromRepository(itemsToDelete);
@@ -838,9 +855,24 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         undoManager?.RecordDeletion(itemsToDelete);
         UpdateUndoRedoState();
-        RefreshBrowserItemsForSelection();
 
-        SelectedBrowserItem = BrowserItems.FirstOrDefault();
+        // Remove deleted items from BrowserItems directly instead of replacing the entire list
+        foreach (var item in itemsToDelete)
+        {
+            browserItems.Remove(item);
+        }
+
+        // Restore selection to the same position, or next available
+        if (BrowserItems.Count > 0 && selectedIndex >= 0)
+        {
+            var index = Math.Min(selectedIndex, BrowserItems.Count - 1);
+            SelectedBrowserItem = BrowserItems[index];
+        }
+        else
+        {
+            SelectedBrowserItem = null;
+        }
+
         SelectedBrowserItems = SelectedBrowserItem is not null
             ? new List<CatalogDocument> { SelectedBrowserItem }
             : new List<CatalogDocument>();
@@ -857,8 +889,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var selectedIndex = -1;
+        for (var i = 0; i < TreeNodes.Count; i++)
+        {
+            if (ReferenceEquals(TreeNodes[i], SelectedTreeNode))
+            {
+                selectedIndex = i;
+                break;
+            }
+        }
+
         var targetNode = SelectedTreeNode;
+
         var parentNode = FindParentTreeNode(TreeNodes, targetNode.Key);
+
         var documentsToDelete = new List<CatalogDocument>();
         if (catalogRepository is not null)
         {
@@ -915,7 +959,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         undoManager?.RecordDeletion(documentsToDelete);
         UpdateUndoRedoState();
-        RefreshTreeNodes(parentNode?.Key);
+        treeNodes.Remove(targetNode);
+
+        SelectedTreeNode = parentNode ?? treeNodes.FirstOrDefault();
+
+        RefreshBrowserItemsForSelection();
 
         RefreshBrowserItemsForSelection();
         SelectedBrowserItem = BrowserItems.FirstOrDefault();
@@ -925,7 +973,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
-        FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
+        FocusTreeRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
@@ -1005,8 +1053,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Select(static node => node.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        TreeNodes = GetTreeNodes();
-        var allTreeNodes = FlattenNodes(TreeNodes).ToArray();
+        treeNodes.Clear();
+        foreach (var node in GetTreeNodes()) treeNodes.Add(node);
+        var allTreeNodes = FlattenNodes(treeNodes).ToArray();
         foreach (var node in allTreeNodes)
         {
             if (expandedKeys.Contains(node.Key))
@@ -1552,8 +1601,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
         };
 
-        BrowserItems = refreshedItems;
-        SelectedBrowserItem = refreshedItems.FirstOrDefault(item =>
+        browserItems.Clear();
+        foreach (var item in refreshedItems) browserItems.Add(item);
+        SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
                                   item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                               ?? refreshedItems.FirstOrDefault();
         SelectedBrowserItems = SelectedBrowserItem is not null

@@ -1031,7 +1031,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreePane_RaisesFocusBrowserRequested()
+    public void DeleteCommand_TreePane_RaisesFocusTreeRequested()
     {
         var vm = CreateViewModel();
         var moviesNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "movies");
@@ -1039,7 +1039,7 @@ public class MainWindowViewModelTests
         vm.ActivePane = ActivePane.Tree;
 
         var focusRaised = false;
-        vm.FocusBrowserRequested += (_, _) => focusRaised = true;
+        vm.FocusTreeRequested += (_, _) => focusRaised = true;
 
         vm.DeleteItemCommand.Execute(null);
 

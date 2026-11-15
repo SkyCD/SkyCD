@@ -122,6 +122,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
+            subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -141,6 +142,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
+            subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             UpdateWindowTitle();
@@ -162,15 +164,39 @@ public partial class MainWindow : Window
 
     private void OnFocusBrowserRequested(object? sender, EventArgs e)
     {
-        var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
-        if (browserView is not null)
+        Dispatcher.UIThread.InvokeAsync(() =>
         {
-            browserView.Focus();
-            if (subscribedViewModel is not null)
+            var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
+            if (browserView is not null)
             {
-                subscribedViewModel.ActivePane = ActivePane.Browser;
+                browserView.FocusActiveControl();
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Browser;
+                }
             }
-        }
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OnFocusTreeRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            var treeView = this.FindControl<TreeView>("MainTreeView");
+            if (treeView is not null)
+            {
+                treeView.Focus();
+                if (subscribedViewModel is not null && subscribedViewModel.SelectedTreeNode is not null)
+                {
+                    var container = treeView.ContainerFromItem(subscribedViewModel.SelectedTreeNode) as TreeViewItem;
+                    container?.Focus();
+                }
+                if (subscribedViewModel is not null)
+                {
+                    subscribedViewModel.ActivePane = ActivePane.Tree;
+                }
+            }
+        }, DispatcherPriority.Loaded);
     }
 
     private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)
