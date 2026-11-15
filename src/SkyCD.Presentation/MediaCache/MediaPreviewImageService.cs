@@ -42,6 +42,11 @@ public sealed class MediaPreviewImageService : IDisposable
     /// <see cref="Exceptions.MediaPreviewDecodeException"/> so the caller can show a failed state instead of
     /// an empty pane.
     /// </summary>
+    /// <remarks>
+    /// The cached-image probe and the store read both happen synchronously on the calling thread; only the
+    /// CPU-bound decode is offloaded. That keeps every store access on the thread that owns the store, so a
+    /// decode still running after a catalog is closed can never touch a disposed database.
+    /// </remarks>
     public Task<IImage?> GetImageAsync(EntryPreviewSnapshot snapshot, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -54,20 +59,23 @@ public sealed class MediaPreviewImageService : IDisposable
             return Task.FromResult<IImage?>(null);
         }
 
+        var cacheKey = CreateCacheKey(snapshot.RecordId, snapshot.Artifact.Key);
+        if (images.TryGet(cacheKey, out var cached))
+        {
+            return Task.FromResult(cached);
+        }
+
+        if (!resolver.TryReadPayload(snapshot, out var data) || data.Length == 0)
+        {
+            return Task.FromResult<IImage?>(null);
+        }
+
         var contentType = snapshot.Artifact.ContentType;
         var declaredLength = snapshot.Artifact.Length;
 
         return images.GetAsync(
-            CreateCacheKey(snapshot.RecordId, snapshot.Artifact.Key),
-            async token =>
-            {
-                if (!resolver.TryReadPayload(snapshot, out var data) || data.Length == 0)
-                {
-                    return null;
-                }
-
-                return await decoder.DecodeAsync(data, contentType, declaredLength, token).ConfigureAwait(false);
-            },
+            cacheKey,
+            token => decoder.DecodeAsync(data, contentType, declaredLength, token),
             cancellationToken);
     }
 

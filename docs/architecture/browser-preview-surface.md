@@ -55,8 +55,11 @@ identity no longer matches.
 - `MaxTextPreviewCharacters` (8192) — text bodies are cut at the bound and flagged as truncated;
 - `ImageCacheEntries` (64) and `ImageCacheBytes` (48 MiB of decoded pixels) — the decode cache budget.
 
-Resolution and decoding both run off the UI thread. `BoundedAsyncCache<TValue>` backs the decode cache and
-provides three properties the browser depends on:
+Resolution reads stored records on the calling thread — the thread that owns the store — and only the
+CPU-bound decode is offloaded. That split is deliberate: a fire-and-forget background query issued on a
+selection change can still be running when an imported catalog is closed, and running it against a
+disposed database crashes the process natively instead of throwing. `BoundedAsyncCache<TValue>` backs the
+decode cache and provides three properties the browser depends on:
 
 - **coalescing** — concurrent requests for one artifact share a single decode, so scrolling a grid does
   not start one decode per item;

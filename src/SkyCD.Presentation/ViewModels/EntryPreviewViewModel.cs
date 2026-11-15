@@ -14,10 +14,11 @@ using SkyCD.UI.Localization;
 namespace SkyCD.Presentation.ViewModels;
 
 /// <summary>
-/// Drives the catalog browser's details and preview surface from stored extraction results. Selection
-/// changes are resolved off the UI thread and guarded by a generation counter, so walking quickly through a
-/// catalog cannot apply an older entry's preview to a newer selection and cannot block navigation while a
-/// payload is decoded.
+/// Drives the catalog browser's details and preview surface from stored extraction results. Stored results
+/// are read synchronously on the thread that owns the store and only decoding is offloaded, so no query can
+/// outlive a catalog database that is closed right after a selection change. Selection changes are guarded
+/// by a generation counter, so walking quickly through a catalog cannot apply an older entry's preview to a
+/// newer selection and cannot block navigation while a payload is decoded.
 /// </summary>
 public partial class EntryPreviewViewModel : ObservableObject, IDisposable
 {
@@ -140,7 +141,10 @@ public partial class EntryPreviewViewModel : ObservableObject, IDisposable
         IImage? image = null;
         try
         {
-            snapshot = await Task.Run(() => resolver.Resolve(entry), cancellationToken).ConfigureAwait(true);
+            // Resolved synchronously on the calling thread: the store read must complete before this method
+            // yields, so no background query can outlive a catalog database that is closed right after a
+            // selection change. Only the decode runs asynchronously.
+            snapshot = resolver.Resolve(entry);
 
             if (snapshot.PayloadKind == PreviewPayloadKind.Image && images is not null)
             {

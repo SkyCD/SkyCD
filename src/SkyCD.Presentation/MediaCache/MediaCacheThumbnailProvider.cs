@@ -23,21 +23,27 @@ public sealed class MediaCacheThumbnailProvider : IPreviewThumbnailProvider
         this.images = images ?? throw new ArgumentNullException(nameof(images));
     }
 
-    public async Task<IImage?> GetThumbnailAsync(object item, CancellationToken cancellationToken)
+    /// <remarks>
+    /// Resolving and reading the artifact both run synchronously on the calling thread — the thread that
+    /// owns the store — and only the decode is offloaded, so a thumbnail still decoding after a catalog is
+    /// closed can never reach a disposed database.
+    /// </remarks>
+    public Task<IImage?> GetThumbnailAsync(object item, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(item);
 
         if (item is not CatalogDocument entry || string.IsNullOrWhiteSpace(entry.Id))
         {
-            return null;
+            return Task.FromResult<IImage?>(null);
         }
 
-        var snapshot = await Task.Run(() => resolver.Resolve(entry), cancellationToken).ConfigureAwait(true);
+        // Realizing a row while scrolling is not the user opening the item, so it must not disturb LRU order.
+        var snapshot = resolver.Resolve(entry, markServed: false);
         if (snapshot.PayloadKind != PreviewPayloadKind.Image)
         {
-            return null;
+            return Task.FromResult<IImage?>(null);
         }
 
-        return await images.GetImageAsync(snapshot, cancellationToken).ConfigureAwait(true);
+        return images.GetImageAsync(snapshot, cancellationToken);
     }
 }

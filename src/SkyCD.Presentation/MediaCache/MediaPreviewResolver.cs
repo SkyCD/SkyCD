@@ -48,7 +48,16 @@ public sealed class MediaPreviewResolver
     /// display bound is reported rather than decoded, and a record whose bytes are gone is reported as
     /// missing instead of failing navigation.
     /// </summary>
-    public EntryPreviewSnapshot Resolve(CatalogDocument? entry)
+    /// <remarks>
+    /// Synchronous and store-only by design: callers run it on the thread that owns the store so no
+    /// background read can outlive a closed catalog database. Only decoding belongs off that thread.
+    /// </remarks>
+    /// <param name="entry">The selected entry, or null when nothing is selected.</param>
+    /// <param name="markServed">
+    /// Whether serving this entry should protect its record from LRU eviction. Browser thumbnails pass
+    /// false, because realizing a row while scrolling is not the same as the user opening the item.
+    /// </param>
+    public EntryPreviewSnapshot Resolve(CatalogDocument? entry, bool markServed = true)
     {
         if (entry is null || string.IsNullOrWhiteSpace(entry.Id))
         {
@@ -92,7 +101,11 @@ public sealed class MediaPreviewResolver
             }
 
             var snapshot = BuildPayloadSnapshot(entry.Id, record, artifact, fields);
-            store.Touch(record.Id, timeProvider.GetUtcNow());
+            if (markServed)
+            {
+                store.Touch(record.Id, timeProvider.GetUtcNow());
+            }
+
             return snapshot;
         }
 

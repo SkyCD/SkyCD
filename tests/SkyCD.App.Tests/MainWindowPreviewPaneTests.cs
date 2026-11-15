@@ -149,6 +149,65 @@ public sealed class MainWindowPreviewPaneTests
         Assert.IsType<MediaCacheThumbnailProvider>(viewModel.BrowserThumbnailProvider);
     }
 
+    [Fact]
+    public void Selection_ResolvesSynchronously_SoNoQueryCanOutliveTheStore()
+    {
+        using var store = MediaCacheStore.Create();
+        SaveMetadataRecord(store, TrackId);
+        using var preview = new EntryPreviewViewModel(new MediaPreviewResolver(store));
+
+        // Show is fire-and-forget from the UI thread. The store read has to be finished when it returns,
+        // otherwise a background query can still be running after the catalog database is closed.
+        preview.Show(Catalog.Single(document => document.Id == TrackId));
+
+        Assert.NotEqual(MediaPreviewState.Loading, preview.State);
+        Assert.Equal(TrackId, preview.CurrentSnapshot?.EntryId);
+    }
+
+    [Fact]
+    public void EntryWithoutCacheRecords_ResolvesSynchronously()
+    {
+        using var store = MediaCacheStore.Create();
+        using var preview = new EntryPreviewViewModel(new MediaPreviewResolver(store));
+
+        preview.Show(Catalog.Single(document => document.Id == "file-plain-1"));
+
+        Assert.Equal(MediaPreviewState.Unavailable, preview.State);
+        Assert.NotNull(preview.CurrentSnapshot);
+    }
+
+    [Fact]
+    public void DisposingViewModelAndStoreRightAfterSelection_LeavesNoQueryInFlight()
+    {
+        var store = MediaCacheStore.Create();
+        var viewModel = MainWindowViewModel.CreateForInMemoryCatalog(Catalog, mediaCacheStore: store);
+
+        viewModel.SelectedBrowserItem = Catalog.Single(document => document.Id == TrackId);
+
+        Assert.Equal(TrackId, viewModel.Preview.CurrentSnapshot?.EntryId);
+
+        // Mirrors closing an imported catalog: the database goes away right after the selection change,
+        // so anything still queued against the store would run against a disposed database.
+        viewModel.Dispose();
+        store.Dispose();
+    }
+
+    [Fact]
+    public async Task ThumbnailRequests_ResolveSynchronouslyAgainstTheStore()
+    {
+        using var store = MediaCacheStore.Create();
+        SaveMetadataRecord(store, TrackId);
+        var resolver = new MediaPreviewResolver(store);
+        using var images = new MediaPreviewImageService(resolver);
+        var provider = new MediaCacheThumbnailProvider(resolver, images);
+
+        var request = provider.GetThumbnailAsync(Catalog.Single(document => document.Id == TrackId), default);
+
+        // Already completed means the store was read on this thread and nothing is queued against it.
+        Assert.True(request.IsCompleted);
+        Assert.Null(await request);
+    }
+
     private static MainMenuItemViewModel FindMenuItem(
         IEnumerable<MainMenuItemViewModel> items,
         string key) =>
