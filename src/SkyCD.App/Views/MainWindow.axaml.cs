@@ -121,6 +121,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
+            subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -139,6 +140,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
+            subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             UpdateWindowTitle();
@@ -158,14 +160,25 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnFocusBrowserRequested(object? sender, EventArgs e)
+    {
+        var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
+        if (browserView is not null)
+        {
+            browserView.Focus();
+            if (subscribedViewModel is not null)
+            {
+                subscribedViewModel.ActivePane = ActivePane.Browser;
+            }
+        }
+    }
+
     private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is not TreeView treeView || subscribedViewModel is null)
         {
             return;
         }
-
-        subscribedViewModel.ActivePane = ActivePane.Tree;
 
         if (!e.TryGetPosition(treeView, out var point))
         {
@@ -177,6 +190,7 @@ public partial class MainWindow : Window
         var treeViewItem = FindAncestor<TreeViewItem>(hit);
         if (treeViewItem?.DataContext is BrowserTreeNode node)
         {
+            subscribedViewModel.ActivePane = ActivePane.Tree;
             subscribedViewModel.SelectedTreeNode = node;
             return;
         }
@@ -396,6 +410,7 @@ public partial class MainWindow : Window
         var listBoxItem = FindAncestor<ListBoxItem>(hit);
         if (listBoxItem?.DataContext is CatalogDocument item)
         {
+            subscribedViewModel.ActivePane = ActivePane.Browser;
             var currentSelected = subscribedViewModel.SelectedBrowserItems.OfType<CatalogDocument>().ToList();
             if (!currentSelected.Any(sel => string.Equals(sel.Id, item.Id, StringComparison.Ordinal)))
             {

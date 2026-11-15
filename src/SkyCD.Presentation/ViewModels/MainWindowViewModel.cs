@@ -69,6 +69,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
+    public event EventHandler? FocusBrowserRequested;
 
     private MenuExtensionManager menuExtensionManager;
     private CancellationTokenSource? pluginCommandCancellation;
@@ -837,7 +838,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         undoManager?.RecordDeletion(itemsToDelete);
         UpdateUndoRedoState();
-        RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
 
         SelectedBrowserItem = BrowserItems.FirstOrDefault();
@@ -847,6 +847,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Deleted, string.Join(", ", deletedNames));
+        FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void DeleteSelectedTreeNode()
@@ -924,6 +925,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
+        FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)

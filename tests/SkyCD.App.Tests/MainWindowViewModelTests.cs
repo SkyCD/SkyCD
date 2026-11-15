@@ -1016,6 +1016,37 @@ public class MainWindowViewModelTests
         Assert.False(vm.NavigateToParentFolderCommand.CanExecute(null));
     }
 
+    [Fact]
+    public void DeleteCommand_BrowserPane_RaisesFocusBrowserRequested()
+    {
+        var vm = CreateViewModel();
+        vm.ActivePane = ActivePane.Browser;
+        var focusRaised = false;
+        vm.FocusBrowserRequested += (_, _) => focusRaised = true;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.True(focusRaised);
+        Assert.Equal(ActivePane.Browser, vm.ActivePane);
+    }
+
+    [Fact]
+    public void DeleteCommand_TreePane_RaisesFocusBrowserRequested()
+    {
+        var vm = CreateViewModel();
+        var moviesNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "movies");
+        vm.SelectedTreeNode = moviesNode;
+        vm.ActivePane = ActivePane.Tree;
+
+        var focusRaised = false;
+        vm.FocusBrowserRequested += (_, _) => focusRaised = true;
+
+        vm.DeleteItemCommand.Execute(null);
+
+        Assert.True(focusRaised);
+        Assert.Equal(ActivePane.Tree, vm.ActivePane);
+    }
+
     private static MainWindowViewModel CreateViewModel()
     {
         return MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
