@@ -5,6 +5,7 @@
         xmlns:ct="clr-namespace:SkyCD.UI.Controls.Toolbars;assembly=SkyCD.UI"
         xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
         xmlns:cs="clr-namespace:SkyCD.UI.Controls.StatusBar;assembly=SkyCD.UI"
+        xmlns:pv="clr-namespace:SkyCD.UI.Controls.Preview;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -145,34 +146,51 @@
                           Background="{DynamicResource ThemeControlMidBrush}"
                           ShowsPreview="True" />
 
-            <Grid Grid.Column="2">
-                <cl:BrowserItemsView x:Name="MainBrowserItemsView"
-                                     ListMinWidth="120"
-                                     ItemsSource="{Binding BrowserItems}"
-                                     SelectedItem="{Binding SelectedBrowserItem}"
-                                     SelectedItems="{Binding SelectedBrowserItems}"
-                                     ViewMode="{Binding CurrentViewMode}"
-                                     DetailsColumns="{Binding BrowserDetailsColumns}"
-                                     BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
-                                     BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
-                                     IconConverter="{StaticResource IconConverter}"
-                                     StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
-                                     ContextRequested="OnBrowserContextRequested"
-                                     ListContextMenu="{DynamicResource BrowserContextMenu}"
-                                     DoubleTapped="OnBrowserListDoubleTapped"
-                                     GotFocus="OnBrowserGotFocus"
-                                     PointerPressed="OnBrowserPointerPressed">
-                </cl:BrowserItemsView>
-                <TextBlock Text="{Binding SelectedContentsNotice}"
-                           IsVisible="{Binding ShowContentsNotScannedNotice}"
-                           IsHitTestVisible="False"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Margin="16"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center"
-                           Opacity="0.8" />
-            </Grid>
+            <DockPanel Grid.Column="2" LastChildFill="True">
+                <pv:MediaPreviewPane x:Name="MainPreviewPane"
+                                     DockPanel.Dock="Bottom"
+                                     Height="150"
+                                     MinHeight="70"
+                                     IsVisible="{Binding IsPreviewPaneVisible}"
+                                     State="{Binding Preview.State}"
+                                     EntryName="{Binding Preview.EntryName}"
+                                     StatusText="{Binding Preview.StatusText}"
+                                     StateMessage="{Binding Preview.StateMessage}"
+                                     PreviewImage="{Binding Preview.PreviewImage}"
+                                     PreviewText="{Binding Preview.PreviewText}"
+                                     PreviewAutomationName="{Binding Preview.PreviewAutomationName}"
+                                     Fields="{Binding Preview.Fields}" />
+
+                <Grid>
+                    <cl:BrowserItemsView x:Name="MainBrowserItemsView"
+                                         ListMinWidth="120"
+                                         ItemsSource="{Binding BrowserItems}"
+                                         SelectedItem="{Binding SelectedBrowserItem}"
+                                         SelectedItems="{Binding SelectedBrowserItems}"
+                                         ViewMode="{Binding CurrentViewMode}"
+                                         DetailsColumns="{Binding BrowserDetailsColumns}"
+                                         BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
+                                         BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
+                                         IconConverter="{StaticResource IconConverter}"
+                                         StatusIconConverter="{StaticResource StatusBadgeIconConverter}"
+                                         ThumbnailProvider="{Binding BrowserThumbnailProvider}"
+                                         ContextRequested="OnBrowserContextRequested"
+                                         ListContextMenu="{DynamicResource BrowserContextMenu}"
+                                         DoubleTapped="OnBrowserListDoubleTapped"
+                                         GotFocus="OnBrowserGotFocus"
+                                         PointerPressed="OnBrowserPointerPressed">
+                    </cl:BrowserItemsView>
+                    <TextBlock Text="{Binding SelectedContentsNotice}"
+                               IsVisible="{Binding ShowContentsNotScannedNotice}"
+                               IsHitTestVisible="False"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="16"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Opacity="0.8" />
+                </Grid>
+            </DockPanel>
         </Grid>
     </DockPanel>
 

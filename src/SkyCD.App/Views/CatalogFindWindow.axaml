@@ -22,9 +22,12 @@
                  DoubleTapped="OnResultsDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:CatalogFindResult">
-                    <Grid Margin="4,3" ColumnDefinitions="2*,4*" ColumnSpacing="12">
+                    <Grid Margin="4,3" ColumnDefinitions="2*,4*,Auto" ColumnSpacing="12">
                         <TextBlock Text="{Binding Document.Name}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1" Text="{Binding FullPath}" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <TextBlock Grid.Column="2" Text="{Binding MatchedField}" TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding HasMatchedField}"
                                    Foreground="{DynamicResource ThemeForegroundLowBrush}" />
                     </Grid>
                 </DataTemplate>
