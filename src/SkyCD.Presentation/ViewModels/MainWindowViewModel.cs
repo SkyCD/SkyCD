@@ -856,7 +856,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         undoManager?.RecordDeletion(itemsToDelete);
         UpdateUndoRedoState();
 
-        // Remove deleted items from BrowserItems directly instead of replacing the entire list
+        // Remove deleted items from BrowserItems directly instead of calling RefreshBrowserItemsForSelection()
         foreach (var item in itemsToDelete)
         {
             browserItems.Remove(item);
@@ -872,14 +872,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             SelectedBrowserItem = null;
         }
-
-        SelectedBrowserItems = SelectedBrowserItem is not null
-            ? new List<CatalogDocument> { SelectedBrowserItem }
-            : new List<CatalogDocument>();
-
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, string.Join(", ", deletedNames));
-        FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void DeleteSelectedTreeNode()
@@ -1604,7 +1596,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         browserItems.Clear();
         foreach (var item in refreshedItems) browserItems.Add(item);
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
-                                  item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
+                              item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                               ?? refreshedItems.FirstOrDefault();
         SelectedBrowserItems = SelectedBrowserItem is not null
             ? new List<CatalogDocument> { SelectedBrowserItem }
