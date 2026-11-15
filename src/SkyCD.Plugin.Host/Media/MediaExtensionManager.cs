@@ -37,8 +37,7 @@ public sealed class MediaExtensionManager
         CancellationToken cancellationToken = default)
     {
         var results = new List<(int Priority, MediaProviderResult Result)>();
-        foreach (var provider in providers.OrderBy(p => p.PluginId, StringComparer.Ordinal)
-                     .ThenBy(p => p.Capability.GetType().FullName, StringComparer.Ordinal))
+        foreach (var provider in OrderedProviders())
         {
             cancellationToken.ThrowIfCancellationRequested();
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -65,6 +64,47 @@ public sealed class MediaExtensionManager
         return results.OrderByDescending(r => r.Priority).Select(r => r.Result).ToArray();
     }
 
+    /// <summary>
+    /// Identities of the registered providers that would run for the source, in the same deterministic
+    /// order <see cref="ProcessAsync"/> uses. Lets a host decide whether cached results are still current
+    /// without executing any plugin.
+    /// </summary>
+    public IReadOnlyList<MediaProviderIdentity> ResolveProviders(MediaItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        var identities = new List<MediaProviderIdentity>();
+        foreach (var provider in OrderedProviders())
+        {
+            var descriptor = ResolveDescriptor(provider.Capability);
+            if (descriptor is null || !Matches(descriptor, item))
+            {
+                continue;
+            }
+
+            identities.Add(new MediaProviderIdentity(
+                provider.PluginId,
+                provider.PluginVersion,
+                provider.Capability.GetType().FullName!,
+                descriptor.Schema.Id,
+                descriptor.Schema.Version,
+                descriptor.Priority));
+        }
+
+        return identities;
+    }
+
+    private IEnumerable<MediaProvider> OrderedProviders() => providers
+        .OrderBy(p => p.PluginId, StringComparer.Ordinal)
+        .ThenBy(p => p.Capability.GetType().FullName, StringComparer.Ordinal);
+
+    private static MediaDescriptor? ResolveDescriptor(IPluginCapability capability) => capability switch
+    {
+        IMediaMetadataCapability metadata => metadata.Descriptor,
+        IMediaPreviewCapability preview => preview.Descriptor,
+        _ => null
+    };
+
     private async Task<(int Priority, MediaProviderResult Result)?> RunAsync(MediaProvider provider,
         MediaItem item, Func<CancellationToken, Task<Stream>> openSource,
         IProgress<MediaProgress>? progress, CancellationToken token)
@@ -76,12 +116,7 @@ public sealed class MediaExtensionManager
             // and stream until it exits, preventing uncooperative plugins from bypassing concurrency limits.
             return await Task.Run(async () =>
             {
-                var descriptor = provider.Capability switch
-                {
-                    IMediaMetadataCapability metadata => metadata.Descriptor,
-                    IMediaPreviewCapability preview => preview.Descriptor,
-                    _ => null
-                };
+                var descriptor = ResolveDescriptor(provider.Capability);
                 if (descriptor is null || !Matches(descriptor, item)) return null;
                 ValidateSchema(descriptor.Schema);
                 await using var stream = await openSource(token);
