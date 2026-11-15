@@ -64,21 +64,26 @@ first is decoded or stored, so animation length cannot inflate the cache.
 
 ## Resource behaviour
 
-The plugin reads through the host's bounded `IMediaSource` and never sees a path:
+The plugin reads through the host's bounded `IMediaSource` and never sees a path.
 
-- `MediaSourceStream` adapts bounded random-access reads into the seekable stream a decoder needs. Every
-  fetched byte is retained, so the decoder and the EXIF reader can both scan the source while the cumulative
-  charge against the host budget stays at the high-water mark. Reads are fetched in 64 KiB blocks, so a
-  byte-at-a-time metadata scan does not become thousands of host calls.
-- `NonClosingStream` shields the adapter from libraries that dispose the stream they are handed — Skia
-  disposes whatever stream a codec was created from.
-- Metadata extraction reads only as far as the header and EXIF blocks; it does not decode pixels.
+`ImageSourceReader` reads the whole source into a buffer in 256 KiB chunks **before** any native decoder sees
+it. That is deliberate rather than convenient: Skia pulls bytes from a managed stream through a native
+callback, and an exception raised inside that callback — including the host's own read-budget exception —
+cannot cross back into managed code. It terminates the process instead of failing the provider. Reading
+first keeps every failure on the plugin's own stack, where it becomes an ordinary provider error. The
+consequence is that a source must fit inside the host's source budget to be processed at all, which is the
+budget's purpose; a regression test asserts that an exhausted budget surfaces as an exception rather than a
+crash.
+
+- Metadata extraction decodes no pixels: geometry comes from the container header, tags from EXIF.
 - A source above `ImagePluginOptions.MaxSourceBytes` (64 MiB, deliberately above the host's 16 MiB default)
   is rejected before a single byte is charged, so the host budget is what normally binds.
 - Cancellation is checked before the first read, after decode and before encode. Decode itself is not
   interruptible; the host's per-provider timeout covers a decoder that ignores cancellation.
 - Malformed and truncated sources raise `ImageDecodeException`, which the host turns into a `failed` record
   with a sanitized reason. Failures never surface plugin exception text to the catalog.
+- A malformed EXIF directory is not a failure. Every offset is bounds checked and the reader gives up on
+  tags while the geometry already extracted from the decoder stands.
 
 ## Dependencies and licensing
 
@@ -86,12 +91,18 @@ The plugin reads through the host's bounded `IMediaSource` and never sees a path
 |---|---|---|---|
 | `SkiaSharp` | 3.119.4 | MIT | Decode, orientation-aware scaling, thumbnail encoding |
 | `SkiaSharp.NativeAssets.Win32` / `.Linux` / `.macOS` | 3.119.4 | MIT | Platform natives |
-| `MetadataExtractor` | 2.9.3 | Apache-2.0 | EXIF capture date and UTC offset, which the decoder does not expose |
 
-All are on the allow-list in `docs/legal/dependency-license-policy.json`. SkiaSharp 3.119.4 is the version
-Avalonia already resolves for the desktop app, so the plugin adds no second imaging stack. `SixLabors.ImageSharp`
-was rejected because its Six Labors Split License is not on the allow-list, and `TagLib#`-style LGPL options
-are blocked outright.
+SkiaSharp is the only dependency, and 3.119.4 is the version Avalonia already resolves for the desktop app,
+so the plugin adds no second imaging stack. All packages are on the allow-list in
+`docs/legal/dependency-license-policy.json`, verified with the same CycloneDX SBOM the CI license gate uses.
+
+EXIF is read by `ExifReader` directly from the container's TIFF directory rather than through a metadata
+library. The obvious candidate (`MetadataExtractor`, Apache-2.0) drags in `XmpCore`, whose NuGet license is
+declared as a URL rather than an SPDX expression; the policy gate reports it as unknown and
+`failOnUnknownLicense` rejects it. Only two tags are actually needed — `DateTimeOriginal` with its
+`OffsetTimeOriginal` companion, falling back to IFD0 `DateTime` — so parsing them in-plugin is both smaller
+and license-clean. `SixLabors.ImageSharp` was likewise rejected: its Six Labors Split License is not on the
+allow-list.
 
 ## Limitations
 
@@ -102,6 +113,9 @@ are blocked outright.
 - Animated WebP and APNG report a frame count but, like GIF, are previewed by the first frame only.
 - Thumbnails are a single fixed size. There is no per-view-mode thumbnail set; the browser scales what is
   stored.
+- A source has to fit inside the host's per-provider source budget (16 MiB by default) to be processed at
+  all, because the plugin buffers it before handing it to a native decoder. Raising
+  `MediaExecutionLimits.SourceBytes` raises that ceiling; there is no partial-image decode.
 - Decoding is in-process. A malformed image that crashes the native decoder would take the host with it; the
   host's timeout and failure isolation cover hangs and exceptions, not native faults.
 
@@ -109,8 +123,8 @@ are blocked outright.
 
 `tests/SkyCD.Plugin.Image.Tests/` builds every fixture in memory with SkiaSharp or from hand-assembled
 container bytes, so the suite carries no binary blobs and each fixture's properties are known to the test
-that asserts on them. Coverage includes a rotated JPEG with injected EXIF (orientation 2/3/6/8), a
-transparent PNG, an animated GIF with a hand-written LZW stream, corrupt and truncated input, oversized
-sources, cancellation, the host's own source budget, assembly discovery without a manifest, and offline
-retrieval through the real scheduler and Couchbase Lite store with the database reopened and the plugin
-unloaded.
+that asserts on them. Coverage includes a rotated JPEG with injected EXIF (orientation 2/3/6/8) checked at
+pixel level, a transparent PNG, an animated GIF with a hand-written LZW stream, corrupt and truncated input,
+a valid image whose EXIF directory is corrupt, oversized sources, cancellation, an exhausted host budget
+surfacing as a failure rather than a crash, assembly discovery without a manifest, and offline retrieval
+through the real scheduler and Couchbase Lite store with the database reopened and the plugin unloaded.

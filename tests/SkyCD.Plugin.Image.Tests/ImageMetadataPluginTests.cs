@@ -204,7 +204,7 @@ public class ImageMetadataPluginTests
     }
 
     [Fact]
-    public async Task MetadataReads_StayInsideTheHostBudget()
+    public async Task MetadataReads_ChargeEachByteExactlyOnce()
     {
         var image = ImageFixtures.JpegWithExif(1600, 1200, orientation: 1, new DateTime(2019, 3, 2, 1, 0, 0));
         var source = new ByteArrayMediaSource(image);
@@ -213,9 +213,37 @@ public class ImageMetadataPluginTests
             new MediaItem(".jpg", "image/jpeg", image.Length), source, null, CancellationToken.None);
 
         Assert.Equal(1600L, Integer(result, ImageSchema.Width));
-        Assert.True(source.ChargedBytes <= image.Length,
-            $"Metadata charged {source.ChargedBytes} bytes for a {image.Length} byte source.");
-        Assert.True(source.ReadCount < 200, $"Metadata needed {source.ReadCount} host reads; the adapter should batch.");
+        Assert.Equal(image.Length, source.ChargedBytes);
+        Assert.True(source.ReadCount < 64, $"A {image.Length} byte source took {source.ReadCount} host reads.");
+    }
+
+    [Fact]
+    public async Task ExhaustedHostBudget_FailsOnThePluginStackRatherThanInsideTheDecoder()
+    {
+        // Regression guard: Skia pulls bytes through a native callback, so a budget exception raised while
+        // the decoder is reading cannot cross back into managed code and takes the process down with it.
+        // The plugin therefore reads the source itself, where the failure is an ordinary provider error.
+        var image = ImageFixtures.Jpeg(200, 200);
+        var source = new ByteArrayMediaSource(image, budget: 64);
+        var item = new MediaItem(".jpg", "image/jpeg", image.Length);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new ImageMetadataPlugin().ExtractAsync(item, source, null, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new ImagePreviewPlugin().GeneratePreviewAsync(item, source, null, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MalformedExif_IsIgnoredAndGeometryIsStillReported()
+    {
+        var image = ImageFixtures.JpegWithExif(24, 16, orientation: 1, new DateTime(2023, 7, 4, 12, 34, 56));
+        ImageFixtures.CorruptExifIfdOffset(image);
+
+        var result = await ExtractAsync(image, ".jpg", "image/jpeg");
+
+        Assert.Equal(24L, Integer(result, ImageSchema.Width));
+        Assert.Equal(16L, Integer(result, ImageSchema.Height));
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.CapturedAt);
     }
 
     private static Task<MediaExtractionResult> ExtractAsync(byte[] image, string extension, string contentType) =>

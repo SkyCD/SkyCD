@@ -7,7 +7,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 namespace SkyCD.Plugin.Image;
 
 /// <summary>
-/// Extracts typed image metadata from the container header and EXIF, without decoding pixels. Dimensions
+/// Extracts typed image metadata from the container header and EXIF, without rendering pixels. Dimensions
 /// are reported as displayed, so a rotated photo reports the size the user sees rather than the stored one;
 /// the stored orientation and the rotation needed to reach it are published alongside.
 /// </summary>
@@ -28,23 +28,20 @@ public sealed class ImageMetadataPlugin : IMediaMetadataCapability
     public MediaDescriptor Descriptor =>
         new(ImageSchema.Extensions, ImageSchema.ContentTypes, ImageSchema.Metadata);
 
-    public Task<MediaExtractionResult> ExtractAsync(
+    public async Task<MediaExtractionResult> ExtractAsync(
         MediaItem item,
         IMediaSource source,
         IProgress<MediaProgress>? progress,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(item);
-        ArgumentNullException.ThrowIfNull(source);
-        cancellationToken.ThrowIfCancellationRequested();
-        ImageSourceGuard.Validate(item, source, options.MaxSourceBytes);
+        var data = await ImageSourceReader.ReadAllAsync(item, source, options.MaxSourceBytes, cancellationToken)
+            .ConfigureAwait(false);
 
-        using var stream = new MediaSourceStream(source, cancellationToken);
-        var probe = ImageDecoder.Probe(stream);
+        var probe = ImageDecoder.Probe(data);
         progress?.Report(new MediaProgress(0.7));
 
         // Best-effort: geometry is already known, so a source without EXIF still yields a full result.
-        var capturedAt = ExifReader.TryReadCapturedAt(stream);
+        var capturedAt = ExifReader.TryReadCapturedAt(data);
         progress?.Report(new MediaProgress(1));
 
         var values = new List<MediaMetadataValue>
@@ -65,6 +62,6 @@ public sealed class ImageMetadataPlugin : IMediaMetadataCapability
                 ImageSchema.CapturedAt, MediaMetadataType.Timestamp, Timestamp: timestamp));
         }
 
-        return Task.FromResult(new MediaExtractionResult(values));
+        return new MediaExtractionResult(values);
     }
 }

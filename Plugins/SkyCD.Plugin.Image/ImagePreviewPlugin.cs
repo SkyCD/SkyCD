@@ -27,26 +27,22 @@ public sealed class ImagePreviewPlugin : IMediaPreviewCapability
     public MediaDescriptor Descriptor =>
         new(ImageSchema.Extensions, ImageSchema.ContentTypes, ImageSchema.Preview);
 
-    public Task<MediaPreviewResult> GeneratePreviewAsync(
+    public async Task<MediaPreviewResult> GeneratePreviewAsync(
         MediaItem item,
         IMediaSource source,
         IProgress<MediaProgress>? progress,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(item);
-        ArgumentNullException.ThrowIfNull(source);
-        cancellationToken.ThrowIfCancellationRequested();
-        ImageSourceGuard.Validate(item, source, options.MaxSourceBytes);
+        var data = await ImageSourceReader.ReadAllAsync(item, source, options.MaxSourceBytes, cancellationToken)
+            .ConfigureAwait(false);
 
-        using var stream = new MediaSourceStream(source, cancellationToken);
-        var probe = ImageDecoder.Probe(stream);
+        var probe = ImageDecoder.Probe(data);
         progress?.Report(new MediaProgress(0.2));
 
         var thumbnail = ImageDecoder.RenderThumbnail(
-            stream, probe, options.MaxThumbnailDimension, options.JpegQuality, cancellationToken);
+            data, probe, options.MaxThumbnailDimension, options.JpegQuality, cancellationToken);
         progress?.Report(new MediaProgress(1));
 
-        return Task.FromResult(new MediaPreviewResult(
-            [new MediaPreviewArtifact(thumbnail.ContentType, thumbnail.Data)]));
+        return new MediaPreviewResult([new MediaPreviewArtifact(thumbnail.ContentType, thumbnail.Data)]);
     }
 }

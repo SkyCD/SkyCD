@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading;
 using SkiaSharp;
 using SkyCD.Plugin.Image.Exceptions;
@@ -11,19 +10,20 @@ namespace SkyCD.Plugin.Image;
 /// clockwise rotation plus an optional horizontal mirror, so the display size and the drawing matrix are
 /// derived from the same two facts and can never disagree.
 /// </summary>
+/// <remarks>
+/// Input is always an in-memory buffer rather than a stream. Skia pulls bytes from a managed stream through a
+/// native callback, and an exception raised there — including the host's own read-budget exception — cannot
+/// cross back into managed code and terminates the process instead of failing the provider. Reading first
+/// keeps every failure on this plugin's own stack. See <see cref="ImageSourceReader"/>.
+/// </remarks>
 internal static class ImageDecoder
 {
     /// <summary>Animated containers are previewed by their first frame only; the frame count stays in metadata.</summary>
     internal const int PreviewFrameIndex = 0;
 
-    public static ImageProbeInfo Probe(Stream stream)
+    public static ImageProbeInfo Probe(byte[] data)
     {
-        stream.Position = 0;
-
-        // Skia disposes the stream a codec is built from, so it never gets the owner's stream directly.
-        using var codec = SKCodec.Create(new NonClosingStream(stream))
-                          ?? throw new ImageDecodeException("the source is not a recognized image container");
-
+        using var codec = CreateCodec(data);
         var info = codec.Info;
         if (info.Width <= 0 || info.Height <= 0)
         {
@@ -50,16 +50,13 @@ internal static class ImageDecoder
     /// with the stored aspect ratio. Images smaller than the bound are never upscaled.
     /// </summary>
     public static ImageThumbnail RenderThumbnail(
-        Stream stream,
+        byte[] data,
         ImageProbeInfo probe,
         int maxDimension,
         int jpegQuality,
         CancellationToken cancellationToken)
     {
-        stream.Position = 0;
-        using var codec = SKCodec.Create(new NonClosingStream(stream))
-                          ?? throw new ImageDecodeException("the source is not a recognized image container");
-
+        using var codec = CreateCodec(data);
         var decodeInfo = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var bitmap = SKBitmap.Decode(codec, decodeInfo)
                            ?? throw new ImageDecodeException(
@@ -140,6 +137,13 @@ internal static class ImageDecoder
             (_, false) => Matrix(0, scaleX, 0, -scaleY, 0, scaleY * a),
             _ => Matrix(0, scaleX, 0, scaleY, 0, 0)
         };
+    }
+
+    private static SKCodec CreateCodec(byte[] data)
+    {
+        using var buffer = SKData.CreateCopy(data);
+        return SKCodec.Create(buffer)
+               ?? throw new ImageDecodeException("the source is not a recognized image container");
     }
 
     private static SKMatrix Matrix(float scaleX, float skewX, float transX, float skewY, float scaleY, float transY)

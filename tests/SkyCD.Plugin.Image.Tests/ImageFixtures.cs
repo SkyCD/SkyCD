@@ -144,6 +144,43 @@ internal static class ImageFixtures
     /// <summary>A structurally valid image cut short, which decoders must reject rather than half-decode.</summary>
     public static byte[] Truncated(byte[] image) => image[..(image.Length / 3)];
 
+    /// <summary>
+    /// Points the EXIF IFD0 offset past the end of the data in place, producing a container whose pixels are
+    /// fine but whose tag directory is not — the case where a reader must give up on tags, not on the image.
+    /// </summary>
+    public static void CorruptExifIfdOffset(byte[] image)
+    {
+        byte[] exifPrefix = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00];
+
+        for (var i = 0; i + exifPrefix.Length + 8 <= image.Length; i++)
+        {
+            var matched = true;
+            for (var j = 0; j < exifPrefix.Length; j++)
+            {
+                if (image[i + j] != exifPrefix[j])
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (!matched)
+            {
+                continue;
+            }
+
+            var tiff = i + exifPrefix.Length;
+            for (var offset = 4; offset < 8; offset++)
+            {
+                image[tiff + offset] = 0xFF;
+            }
+
+            return;
+        }
+
+        throw new InvalidOperationException("The fixture carries no EXIF segment to corrupt.");
+    }
+
     /// <summary>Reads back the pixel at a point of a decoded image, for orientation assertions.</summary>
     public static SKColor PixelAt(ReadOnlyMemory<byte> image, int x, int y)
     {
