@@ -247,6 +247,57 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task UndoAfterDeepMediaTreeNodeDeletion_RestoresTheNodeInTheTree()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+
+        // The shape real catalogs have and the folder-only seed does not: Media nodes several levels down,
+        // with Media children of their own. The tree admits Folder, NetworkFolder and Media, so a Type
+        // that does not survive the round trip would make the restored node vanish from the pane.
+        context.Catalog.Save("series", new CatalogDocument
+        {
+            Id = "series",
+            Name = "Series",
+            ParentId = "scifi",
+            Type = CatalogDocumentType.Folder
+        });
+        context.Catalog.Save("disc-1", new CatalogDocument
+        {
+            Id = "disc-1",
+            Name = "Disc 1",
+            ParentId = "series",
+            Type = CatalogDocumentType.Media
+        });
+        context.Catalog.Save("reel-1", new CatalogDocument
+        {
+            Id = "reel-1",
+            Name = "Reel 1",
+            ParentId = "disc-1",
+            Type = CatalogDocumentType.Media
+        });
+
+        using var viewModel = context.CreateViewModel();
+
+        viewModel.ActivePane = ActivePane.Tree;
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "disc-1");
+
+        viewModel.DeleteItemCommand.Execute("tree");
+
+        Assert.Null(context.FindTreeNode(viewModel, "disc-1"));
+        Assert.True(viewModel.CanUndo);
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+
+        var restored = context.FindTreeNode(viewModel, "disc-1");
+        Assert.NotNull(restored);
+        Assert.Equal(CatalogDocumentType.Media, context.Catalog.Get("disc-1")!.Type);
+        Assert.Equal("series", context.Catalog.Get("disc-1")!.ParentId);
+        Assert.Contains(restored!.Children, child => child.Key == "reel-1");
+        Assert.Contains(context.SelectTreeNode(viewModel, "series").Children, child => child.Key == "disc-1");
+    }
+
+    [Fact]
     public async Task RedoAfterUndo_RemovesTheSameRecordsAndIgnoresTheCurrentSelection()
     {
         using var context = new TestContext();
@@ -582,7 +633,12 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         var fingerprint = $"fingerprint-{entryId}";
         var record = new MediaCacheRecord
         {
-            Id = MediaCacheRecord.CreateId(fingerprint, "plugin.video", "1.0.0", "Preview", "fake.preview", 1),
+            Id = MediaCacheRecord.CreateId(fingerprint,
+            "plugin.video",
+            "1.0.0",
+            "Preview",
+            "fake.preview",
+            1),
             EntryId = entryId,
             Fingerprint = fingerprint,
             PluginId = "plugin.video",

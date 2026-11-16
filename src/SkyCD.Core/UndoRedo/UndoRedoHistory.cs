@@ -46,6 +46,7 @@ namespace SkyCD.Core.UndoRedo
         public event EventHandler<UndoActionRejectedEventArgs>? ActionRejected;
 
         public bool CanUndo => _undoStack.Count > 0;
+        public IUndoableAction? LastCompletedAction { get; private set; }
         public bool CanRedo => _redoStack.Count > 0;
         public string? UndoActionName => _undoStack.Count > 0 ? _undoStack.Last?.Value.DisplayName : null;
         public string? RedoActionName => _redoStack.Count > 0 ? _redoStack.Last?.Value.DisplayName : null;
@@ -213,6 +214,7 @@ namespace SkyCD.Core.UndoRedo
             try
             {
                 await action.UndoAsync();
+                LastCompletedAction = action;
             }
             catch
             {
@@ -239,6 +241,7 @@ namespace SkyCD.Core.UndoRedo
             try
             {
                 await action.RedoAsync();
+                LastCompletedAction = action;
             }
             catch
             {
@@ -281,6 +284,7 @@ namespace SkyCD.Core.UndoRedo
 
         private void ClearUndoStack()
         {
+            LastCompletedAction = null;
             foreach (var action in _undoStack)
             {
                 action.Dispose();
@@ -290,6 +294,7 @@ namespace SkyCD.Core.UndoRedo
 
         private void ClearRedoStack()
         {
+            LastCompletedAction = null;
             foreach (var action in _redoStack)
             {
                 action.Dispose();

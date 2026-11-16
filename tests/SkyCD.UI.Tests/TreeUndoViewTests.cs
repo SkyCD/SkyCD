@@ -128,8 +128,111 @@ public sealed class TreeUndoViewTests : IDisposable
         window.Close();
     }
 
+    /// <summary>
+    /// Mirrors the shape of a real imported catalog: two roots, one holding several hundred children, most
+    /// of them scrolled out of view and therefore never realized. A small tree realizes every container, so
+    /// it cannot show whether a rebuild survives virtualization.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task UndoAfterTreeDelete_AtRealCatalogScale_RestoresTheNode()
+    {
+        var catalog = CreateCatalog();
+        SeedWide(catalog, childCount: 507, victimIndex: 250);
+
+        using var viewModel = new MainWindowViewModel(catalog.Owner);
+        var treeView = BuildTreeView(viewModel);
+        var window = new Window { Width = 400, Height = 400, Content = treeView };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var ftpRoot = FindNode(viewModel, "ftp-root");
+        Assert.NotNull(ftpRoot);
+        Assert.Equal(507, ftpRoot!.Children.Count);
+
+        var victim = FindNode(viewModel, "victim-250");
+        Assert.NotNull(victim);
+
+        viewModel.ActivePane = ActivePane.Tree;
+        viewModel.SelectedTreeNode = victim;
+        Dispatcher.UIThread.RunJobs();
+
+        viewModel.DeleteItemCommand.Execute("tree");
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("Deleted VICTIM-250.", viewModel.StatusText);
+        Assert.True(viewModel.CanUndo);
+        Assert.Null(FindNode(viewModel, "victim-250"));
+        Assert.Equal(506, FindNode(viewModel, "ftp-root")!.Children.Count);
+
+        // Moving elsewhere before undo must not leave the restored folder hidden.
+        FindNode(viewModel, "ftp-root")!.IsExpanded = false;
+        viewModel.SelectedTreeNode = FindNode(viewModel, "library");
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("Undone: Delete VICTIM-250.", viewModel.StatusText);
+
+        var restored = FindNode(viewModel, "victim-250");
+        Assert.True(restored is not null, "the restored leaf is missing from the rebuilt tree");
+        Assert.Equal(507, FindNode(viewModel, "ftp-root")!.Children.Count);
+        Assert.True(
+            FindNode(viewModel, "ftp-root")!.Children.Any(child => child.Key == "victim-250"),
+            "the restored leaf is not re-attached under its original parent");
+        Assert.True(FindNode(viewModel, "ftp-root")!.IsExpanded, "the parent chain is collapsed, hiding the node");
+        Assert.Same(restored, viewModel.SelectedTreeNode);
+
+        window.Close();
+    }
+
     private static bool IsContainerRealized(TreeView treeView, BrowserTreeNode node) =>
         TreeViewFocus.FindContainer(treeView, node) is not null;
+
+    /// <summary>
+    /// Expands the way a user does — through the realized container only — and reports whether the TwoWay
+    /// binding writes it back to the model. <see cref="MainWindowViewModel"/> preserves expansion across a
+    /// tree rebuild by reading the model, so if this write-back does not happen, undo collapses the tree.
+    /// </summary>
+    [AvaloniaFact]
+    public void ExpandingThroughTheContainer_WritesBackToTheModelSoARebuildKeepsIt()
+    {
+        var catalog = CreateCatalog();
+        Seed(catalog);
+
+        using var viewModel = new MainWindowViewModel(catalog.Owner);
+        var treeView = BuildTreeView(viewModel);
+        var window = new Window { Width = 400, Height = 400, Content = treeView };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var library = FindNode(viewModel, "library");
+        Assert.NotNull(library);
+
+        // Roots are built expanded, so collapse first to get a known starting state.
+        library!.IsExpanded = false;
+        Dispatcher.UIThread.RunJobs();
+
+        var libraryContainer = TreeViewFocus.FindContainer(treeView, library) as TreeViewItem;
+        Assert.NotNull(libraryContainer);
+        Assert.False(libraryContainer!.IsExpanded);
+
+        libraryContainer.IsExpanded = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(library.IsExpanded, "the TwoWay IsExpanded binding did not write back to the model");
+
+        var movies = FindNode(viewModel, "movies");
+        Assert.NotNull(movies);
+        var moviesContainer = TreeViewFocus.FindContainer(treeView, movies) as TreeViewItem;
+        Assert.NotNull(moviesContainer);
+
+        moviesContainer!.IsExpanded = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(movies!.IsExpanded, "a nested node's expansion did not write back to the model");
+
+        window.Close();
+    }
 
     private static TreeView BuildTreeView(MainWindowViewModel viewModel)
     {
@@ -140,6 +243,16 @@ public sealed class TreeUndoViewTests : IDisposable
                 (node, _) => new TextBlock { Text = node.Title },
                 node => node.Children)
         };
+
+        // MainWindow.axaml also binds SelectedItem two-way. RefreshTreeNodes clears and refills the
+        // collection, which drives SelectedItem to null and writes that straight back into the view model,
+        // so omitting this binding hides re-entrancy the real window has to survive.
+        treeView.Bind(TreeView.SelectedItemProperty,
+            new Binding(nameof(MainWindowViewModel.SelectedTreeNode))
+            {
+                Source = viewModel,
+                Mode = BindingMode.TwoWay
+            });
 
         // Mirrors MainWindow.axaml, where TreeViewItem.IsExpanded follows BrowserTreeNode.IsExpanded.
         var expansionStyle = new Style(x => x.OfType<TreeViewItem>());
@@ -211,6 +324,45 @@ public sealed class TreeUndoViewTests : IDisposable
             Type = CatalogDocumentType.File,
             Size = 4096
         });
+    }
+
+    /// <summary>
+    /// Two roots, the second holding <paramref name="childCount"/> leaf folders, so most of the tree is
+    /// outside the viewport and never realized — the shape a real imported catalog has.
+    /// </summary>
+    private static void SeedWide(
+        (RepositoryManager Owner, CatalogDocumentRepository Catalog) catalog,
+        int childCount,
+        int victimIndex)
+    {
+        Save(catalog.Catalog, new CatalogDocument { Id = "library", Name = "Library", Type = CatalogDocumentType.Folder });
+        Save(catalog.Catalog, new CatalogDocument
+        {
+            Id = "gamez",
+            Name = "[Gamez]",
+            ParentId = "library",
+            Type = CatalogDocumentType.Media
+        });
+        Save(catalog.Catalog, new CatalogDocument
+        {
+            Id = "ftp-root",
+            Name = "demo scene by artists",
+            Type = CatalogDocumentType.NetworkFolder
+        });
+
+        for (var i = 0; i < childCount; i++)
+        {
+            Save(catalog.Catalog, new CatalogDocument
+            {
+                Id = $"victim-{i}",
+                Name = $"VICTIM-{i}",
+                ParentId = "ftp-root",
+                Type = CatalogDocumentType.Folder
+            });
+        }
+
+        // The victim sits far enough down that its container is not realized in a 400px window.
+        Assert.True(victimIndex < childCount);
     }
 
     private static void Save(CatalogDocumentRepository catalog, CatalogDocument document) =>

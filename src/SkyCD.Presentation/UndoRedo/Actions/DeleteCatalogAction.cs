@@ -29,6 +29,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
         private readonly List<CatalogDocument> _deletedDocuments;
         private readonly List<CatalogDocument> _restoreOrder;
         private readonly List<CatalogDocument> _removalOrder;
+        private readonly string[] _affectedIds;
         private readonly CatalogHistoryCachePins? _pins;
 
         public DeleteCatalogAction(
@@ -45,6 +46,10 @@ namespace SkyCD.Presentation.UndoRedo.Actions
 
             _restoreOrder = OrderParentsFirst(_deletedDocuments);
             _removalOrder = _restoreOrder.AsEnumerable().Reverse().ToList();
+            _affectedIds = _restoreOrder
+                .Select(static document => document.Id)
+                .Where(static id => !string.IsNullOrWhiteSpace(id))
+                .ToArray();
 
             // Artifacts of a deleted subtree stay reclaimable-blocked only for as long as this action can
             // still restore it, which ends when history evicts or clears it and disposes it here.
@@ -58,6 +63,9 @@ namespace SkyCD.Presentation.UndoRedo.Actions
         public override bool CanRedo => true;
 
         public override long EstimatedFootprintBytes => UndoFootprint.ForDocuments(_deletedDocuments.Count);
+
+        /// <inheritdoc/>
+        public override IReadOnlyList<string> AffectedEntryIds => _affectedIds;
 
         public override Task UndoAsync()
         {

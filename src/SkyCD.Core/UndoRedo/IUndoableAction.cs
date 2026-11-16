@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -24,6 +25,15 @@ namespace SkyCD.Core.UndoRedo
         /// </remarks>
         long EstimatedFootprintBytes => 0;
 
+        /// <summary>Catalog entries this action acts on, outermost first.</summary>
+        /// <remarks>
+        /// The UI uses the first id to reveal the outcome. Rebuilding a pane is not enough: undoing a
+        /// deletion several hundred entries deep in a large tree restores the record correctly and still
+        /// looks like nothing happened, because the node comes back outside the viewport with no selection
+        /// drawn to it. Empty means the action is not tied to specific entries.
+        /// </remarks>
+        IReadOnlyList<string> AffectedEntryIds => [];
+
         Task UndoAsync();
         Task RedoAsync();
     }
@@ -47,6 +57,9 @@ namespace SkyCD.Core.UndoRedo
 
         /// <inheritdoc/>
         public virtual long EstimatedFootprintBytes => 0;
+
+        /// <inheritdoc/>
+        public virtual IReadOnlyList<string> AffectedEntryIds => [];
 
         /// <summary>True once <see cref="Dispose()"/> has run, so subclasses can skip release work twice.</summary>
         protected bool IsDisposed => _isDisposed;
@@ -80,7 +93,7 @@ namespace SkyCD.Core.UndoRedo
         public static long ForDocuments(int documentCount) =>
             (long)Math.Max(0, documentCount) * BytesPerDocument;
 
-        public static long ForDocuments<T>(System.Collections.Generic.IEnumerable<T>? documents) =>
+        public static long ForDocuments<T>(IEnumerable<T>? documents) =>
             documents is null ? 0 : ForDocuments(documents.Count());
     }
 }
