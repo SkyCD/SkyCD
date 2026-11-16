@@ -11,6 +11,7 @@ public sealed class CouchbaseServiceRegistrator
     private const string AppDirectoryName = "SkyCD";
     private const string DefaultDatabaseName = "default";
     private const string DatabaseDirectoryEnvironmentVariable = "SKYCD_DATABASE_DIRECTORY";
+    public static string RecoveryLocationFile => Path.Combine(AppContext.BaseDirectory, "skycd-database-location.txt");
 
     public void RegisterServices(IRegistrator registrator)
     {
@@ -27,7 +28,7 @@ public sealed class CouchbaseServiceRegistrator
         registrator.Register<RepositoryManager>(Reuse.Singleton);
     }
 
-    private static string ResolveDatabaseDirectory()
+    public static string ResolveDatabaseDirectory()
     {
         var configuredPath = Environment.GetEnvironmentVariable(DatabaseDirectoryEnvironmentVariable);
         if (!string.IsNullOrWhiteSpace(configuredPath))
@@ -43,6 +44,12 @@ public sealed class CouchbaseServiceRegistrator
                 "tests",
                 Process.GetCurrentProcess().Id.ToString(),
                 Guid.NewGuid().ToString("N"));
+        }
+
+        if (File.Exists(RecoveryLocationFile))
+        {
+            var path = File.ReadAllText(RecoveryLocationFile).Trim();
+            if (!string.IsNullOrWhiteSpace(path)) return path;
         }
 
         return Path.Combine(
