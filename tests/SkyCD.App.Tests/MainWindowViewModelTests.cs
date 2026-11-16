@@ -974,6 +974,26 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void OpenPropertiesCommand_TreeActive_UsesTreeNodeInsteadOfBrowserItem()
+    {
+        var vm = CreateViewModel();
+        var moviesNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
+        vm.SelectedTreeNode = moviesNode;
+        vm.SelectedBrowserItem = vm.BrowserItems.First();
+        vm.ActivePane = ActivePane.Tree;
+
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal(moviesNode.Title, request!.Dialog.Name);
+        Assert.Equal(moviesNode.IconGlyph, request.Dialog.IconGlyph);
+        Assert.Equal("tree:movies", request.Dialog.ObjectKey);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_Accepted_PersistsCommentsAndMarksDocumentDirty()
     {
         var vm = CreateViewModel();

@@ -701,7 +701,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var selectedId = SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
+        var isTreeProperties = ActivePane == ActivePane.Tree;
+        var selectedId = isTreeProperties
+            ? SelectedTreeNode?.Key
+            : SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
         PropertiesRequested?.Invoke(this, new PropertiesDialogRequestedEventArgs
         {
             Dialog = dialog,
@@ -725,7 +728,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         catalogRepository?.Save(document.Id, document);
                     }
                 }
-                ApplyBrowserItemRenameIfNeeded(dialog);
+                if (!isTreeProperties)
+                {
+                    ApplyBrowserItemRenameIfNeeded(dialog);
+                }
                 commentsByObjectKey[dialog.ObjectKey] = comments;
                 IsDirtyDocument = true;
                 StatusText = DefaultStatusText;
@@ -1804,6 +1810,21 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private bool TryBuildPropertiesDialog([NotNullWhen(true)] out PropertiesDialogViewModel? dialog)
     {
+        if (ActivePane == ActivePane.Tree && SelectedTreeNode is not null)
+        {
+            var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
+            var comments = GetObjectComments(objectKey);
+
+            dialog = new PropertiesDialogViewModel(
+                objectKey,
+                SelectedTreeNode.Title,
+                SelectedTreeNode.IconGlyph,
+                comments,
+                GetBrowserItemInfoProperties(SelectedTreeNode.Key),
+                propertyValueLocalizer);
+            return true;
+        }
+
         if (SelectedBrowserItem is not null)
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
