@@ -56,6 +56,7 @@ public static class TextKeys
     public const string UndoFailed = "core.text.UndoFailed";
     public const string RedoFailed = "core.text.RedoFailed";
     public const string DeletedNotUndoable = "core.text.DeletedNotUndoable";
+    public const string DeletedStaleEntry = "core.text.DeletedStaleEntry";
     public const string HistoryCapacityReached = "core.text.HistoryCapacityReached";
     public const string OperationNotUndoable = "core.text.OperationNotUndoable";
     public const string Status = "core.text.Status";

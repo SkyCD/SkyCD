@@ -1109,6 +1109,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ? new List<CatalogDocument> { SelectedBrowserItem }
             : new List<CatalogDocument>();
 
+        // A folder deleted here is a tree node too. Leaving it in the tree produces a node that points at a
+        // record which no longer exists, and deleting that ghost afterwards has nothing authoritative to
+        // snapshot — which is how undo ends up with a placeholder instead of the real subtree.
+        DetachTreeNodesForRemovedDocuments(removedDocuments);
+
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(
             deletionIsNotUndoable ? TextKeys.DeletedNotUndoable : TextKeys.Deleted,
@@ -1132,35 +1137,46 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         // Routed through the same helpers as browser deletion so both paths snapshot the complete subtree.
-        // The tree used to build its own list, and its in-memory branch could only offer a placeholder
-        // document with no parent, type or properties — which undo then restored as an empty shell.
+        // Only authoritative documents are snapshotted. A placeholder for a node whose record is already
+        // gone would carry the default Type (File) and no ParentId, so undo would write back a record the
+        // tree filters out of view and the browser cannot place — the user is told the delete was undone
+        // while the tree shows nothing at all.
         IReadOnlyList<CatalogDocument> removedDocuments;
         if (catalogRepository is not null)
         {
-            var target = catalogRepository.Get(targetNode.Key)
-                         ?? new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
-            removedDocuments = DeleteCatalogEntriesFromRepository([target]);
+            var target = catalogRepository.Get(targetNode.Key);
+            removedDocuments = target is null ? [] : DeleteCatalogEntriesFromRepository([target]);
         }
         else if (inMemoryCatalogEntries is not null)
         {
             var target = inMemoryCatalogEntries.FirstOrDefault(entry =>
-                             string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal))
-                         ?? new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
-            removedDocuments = DeleteCatalogEntriesFromInMemory([target]);
+                string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
+            removedDocuments = target is null ? [] : DeleteCatalogEntriesFromInMemory([target]);
         }
         else
         {
             removedDocuments = [];
         }
 
-        var deletionIsNotUndoable = undoManager is not null && !undoManager.RecordDeletion(removedDocuments);
+        // Nothing removed means the node was a stale artifact: detaching it is the whole operation. Leaving
+        // it out of history matters, because an empty snapshot records no action and Ctrl+Z would then
+        // quietly replay some earlier, unrelated operation.
+        var nodeHadNoRecord = removedDocuments.Count == 0;
+        var deletionIsNotUndoable = nodeHadNoRecord ||
+                                    (undoManager is not null && !undoManager.RecordDeletion(removedDocuments));
         UpdateUndoRedoState();
 
         DetachTreeNode(parentNode, targetNode);
 
-        IsDirtyDocument = true;
+        if (!nodeHadNoRecord)
+        {
+            IsDirtyDocument = true;
+        }
+
         StatusText = LocalizationService.Current.Format(
-            deletionIsNotUndoable ? TextKeys.DeletedNotUndoable : TextKeys.Deleted,
+            nodeHadNoRecord ? TextKeys.DeletedStaleEntry
+            : deletionIsNotUndoable ? TextKeys.DeletedNotUndoable
+            : TextKeys.Deleted,
             targetNode.Title);
         FocusTreeRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -1184,6 +1200,59 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SelectedTreeNode = siblings.Count == 0
             ? parentNode
             : siblings[Math.Min(deletedIndex, siblings.Count - 1)];
+    }
+
+    /// <summary>
+    /// Detaches every tree node whose record was removed through the browser pane.
+    /// </summary>
+    /// <remarks>
+    /// In place, like <see cref="DetachTreeNode"/>, rather than by rebuilding: a rebuild destroys every
+    /// realized TreeViewItem including the one holding keyboard focus. Only ids that are actually tree
+    /// nodes are considered, so deleting plain files costs a dictionary lookup each and no tree walk.
+    /// </remarks>
+    private void DetachTreeNodesForRemovedDocuments(IReadOnlyList<CatalogDocument> removedDocuments)
+    {
+        var ids = removedDocuments
+            .Select(static document => document.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && treeNodesByKey.ContainsKey(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var id in ids)
+        {
+            treeNodesByKey.Remove(id);
+        }
+
+        DetachMatchingTreeNodes(treeNodes, ids);
+
+        // The browser pane deletes children of the selected node, so the selection normally survives. When
+        // it does not, keeping a detached node selected would leave the browser bound to a record that is
+        // gone.
+        if (SelectedTreeNode is not null && ids.Contains(SelectedTreeNode.Key))
+        {
+            SelectedTreeNode = FindParentTreeNode(TreeNodes, SelectedTreeNode.Key) ?? TreeNodes.FirstOrDefault();
+        }
+    }
+
+    private static void DetachMatchingTreeNodes(IList<BrowserTreeNode> nodes, IReadOnlySet<string> ids)
+    {
+        for (var i = nodes.Count - 1; i >= 0; i--)
+        {
+            var node = nodes[i];
+
+            // Children first, so each removal reaches the TreeView as a targeted notification against a
+            // parent that is still attached.
+            DetachMatchingTreeNodes(node.Children, ids);
+
+            if (ids.Contains(node.Key))
+            {
+                nodes.RemoveAt(i);
+            }
+        }
     }
 
     /// <summary>

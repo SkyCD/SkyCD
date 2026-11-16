@@ -158,6 +158,95 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task UndoAfterTreeNodeDeletion_RestoresTheNodeAndItsChildrenInTheTree()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        using var viewModel = context.CreateViewModel();
+
+        viewModel.ActivePane = ActivePane.Tree;
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
+
+        viewModel.DeleteItemCommand.Execute("tree");
+
+        Assert.Null(context.FindTreeNode(viewModel, "scifi"));
+        Assert.True(viewModel.CanUndo);
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+
+        var restored = context.FindTreeNode(viewModel, "scifi");
+        Assert.NotNull(restored);
+        Assert.Contains(context.SelectTreeNode(viewModel, "movies").Children, child => child.Key == "scifi");
+
+        // The node has to come back as the folder it was, not as an empty shell. The tree only shows
+        // folders and media, so the browser pane is what proves the restored document kept its type and
+        // parent and that its file children came back with it.
+        viewModel.SelectedTreeNode = restored;
+        Assert.Equal(2, viewModel.BrowserItems.Count);
+        Assert.Equal(CatalogDocumentType.Folder, context.Catalog.Get("scifi")!.Type);
+    }
+
+    [Fact]
+    public async Task UndoAfterBrowserFolderDeletion_RestoresTheNodeAndItsChildrenInTheTree()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        using var viewModel = context.CreateViewModel();
+
+        viewModel.ActivePane = ActivePane.Browser;
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "movies");
+        viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "scifi");
+        viewModel.SelectedBrowserItems = new List<CatalogDocument> { viewModel.SelectedBrowserItem! };
+
+        viewModel.DeleteItemCommand.Execute("list");
+
+        Assert.Null(context.FindTreeNode(viewModel, "scifi"));
+        Assert.True(viewModel.CanUndo);
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+
+        var restored = context.FindTreeNode(viewModel, "scifi");
+        Assert.NotNull(restored);
+        Assert.Contains(context.SelectTreeNode(viewModel, "movies").Children, child => child.Key == "scifi");
+
+        viewModel.SelectedTreeNode = restored;
+        Assert.Equal(2, viewModel.BrowserItems.Count);
+        Assert.Equal(CatalogDocumentType.Folder, context.Catalog.Get("scifi")!.Type);
+    }
+
+    [Fact]
+    public async Task TreeDeletionOfANodeWhoseRecordIsAlreadyGone_DoesNotFabricateAnUndoSnapshot()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        using var viewModel = context.CreateViewModel();
+
+        // Whatever made the tree stale, this is the state the user can reach: the record is gone but the
+        // node is still on screen and still selectable.
+        context.DeleteRecord("scifi");
+        var staleNode = context.SelectTreeNode(viewModel, "scifi");
+
+        viewModel.ActivePane = ActivePane.Tree;
+        viewModel.SelectedTreeNode = staleNode;
+
+        viewModel.DeleteItemCommand.Execute("tree");
+
+        // The pane is cleaned up, but nothing may be presented as reversible: there was no record left to
+        // restore. A placeholder snapshot would come back as Type=File with no ParentId, which the tree
+        // filters out of view — reporting "undone" while the tree shows nothing at all.
+        Assert.Null(context.FindTreeNode(viewModel, "scifi"));
+        Assert.False(viewModel.CanUndo);
+        Assert.Equal(
+            LocalizationService.Current.Format(TextKeys.DeletedStaleEntry, "Sci-Fi"),
+            viewModel.StatusText);
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+
+        Assert.Null(context.Catalog.Get("scifi"));
+        Assert.Null(context.FindTreeNode(viewModel, "scifi"));
+    }
+
+    [Fact]
     public async Task RedoAfterUndo_RemovesTheSameRecordsAndIgnoresTheCurrentSelection()
     {
         using var context = new TestContext();
@@ -560,10 +649,28 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
 
         public BrowserTreeNode SelectTreeNode(MainWindowViewModel viewModel, string key)
         {
-            var node = Flatten(viewModel.TreeNodes).FirstOrDefault(candidate => candidate.Key == key);
+            var node = FindTreeNode(viewModel, key);
             Assert.NotNull(node);
             return node!;
         }
+
+        /// <summary>
+        /// Removes a record behind the view model's back, which is how a tree ends up showing a node whose
+        /// document no longer exists.
+        /// </summary>
+        public void DeleteRecord(string id)
+        {
+            using var stored = Catalog.Collection.GetDocument(id);
+            if (stored is not null)
+            {
+                Catalog.Collection.Delete(stored);
+            }
+        }
+
+        public BrowserTreeNode? FindTreeNode(MainWindowViewModel viewModel, string key) =>
+            Flatten(viewModel.TreeNodes).FirstOrDefault(candidate => candidate.Key == key);
+
+        public static IEnumerable<BrowserTreeNode> FlattenTree(IEnumerable<BrowserTreeNode> nodes) => Flatten(nodes);
 
         public void SeedCatalog()
         {
