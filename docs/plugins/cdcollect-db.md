@@ -11,3 +11,5 @@ Export accepts catalog row arrays, domain document arrays, JSON arrays, and impo
 Executable `infoplugins` and `compplugins` rows are only counted on import, never invoked or restored into executable configuration. Export creates these tables empty. SQLite connections use read-only mode for input and disable pooling. Discovery uses the existing assembly capability; no manifest file is involved. No new dependencies are introduced.
 
 The implementation independently expresses observed schema/format facts from CDCollect SVN r138 (DBsql.cs, Conf.cs, FileItem.cs); no GPL implementation is copied. Committed synthetic fixtures document provenance in the test Fixtures directory. Automated tests verify schema and round trips; a CDCollect 0.6.x GUI smoke test requires a compatible Mono/GTK installation.
+
+Legacy SQLite 2 `cds.db` catalogs use the separate [read-only SQLite 2 capability](cdcollect-sqlite2.md) from this assembly.
