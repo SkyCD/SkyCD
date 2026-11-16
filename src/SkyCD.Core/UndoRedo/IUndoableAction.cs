@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SkyCD.Core.UndoRedo
@@ -10,6 +12,28 @@ namespace SkyCD.Core.UndoRedo
         DateTimeOffset Timestamp { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
+
+        /// <summary>
+        /// Approximate bytes this action retains for as long as it stays in history.
+        /// </summary>
+        /// <remarks>
+        /// A bounded history needs to bound what it holds, not just how many entries it keeps: one action
+        /// that snapshots a large subtree can outweigh a hundred small ones. The history compares this
+        /// against its own budget and refuses an action that cannot fit, so an operation is never recorded as
+        /// undoable when reversing it would require memory the application has not agreed to hold. Zero means
+        /// the action keeps nothing beyond its own object.
+        /// </remarks>
+        long EstimatedFootprintBytes => 0;
+
+        /// <summary>Catalog entries this action acts on, outermost first.</summary>
+        /// <remarks>
+        /// The UI uses the first id to reveal the outcome. Rebuilding a pane is not enough: undoing a
+        /// deletion several hundred entries deep in a large tree restores the record correctly and still
+        /// looks like nothing happened, because the node comes back outside the viewport with no selection
+        /// drawn to it. Empty means the action is not tied to specific entries.
+        /// </remarks>
+        IReadOnlyList<string> AffectedEntryIds => [];
+
         Task UndoAsync();
         Task RedoAsync();
     }
@@ -30,6 +54,16 @@ namespace SkyCD.Core.UndoRedo
         public DateTimeOffset Timestamp { get; }
         public abstract bool CanUndo { get; }
         public abstract bool CanRedo { get; }
+
+        /// <inheritdoc/>
+        public virtual long EstimatedFootprintBytes => 0;
+
+        /// <inheritdoc/>
+        public virtual IReadOnlyList<string> AffectedEntryIds => [];
+
+        /// <summary>True once <see cref="Dispose()"/> has run, so subclasses can skip release work twice.</summary>
+        protected bool IsDisposed => _isDisposed;
+
         public abstract Task UndoAsync();
         public abstract Task RedoAsync();
 
@@ -44,5 +78,22 @@ namespace SkyCD.Core.UndoRedo
             if (_isDisposed) return;
             _isDisposed = true;
         }
+    }
+
+    /// <summary>Helpers for estimating how much an action retains while it sits in history.</summary>
+    public static class UndoFootprint
+    {
+        /// <summary>
+        /// Per-document allowance used when an action estimates its footprint. A catalog entry is a handful
+        /// of short strings plus a property dictionary, so this is an order-of-magnitude figure: the budget
+        /// exists to stop a million-entry import being recorded as undoable, not to account for every byte.
+        /// </summary>
+        public const long BytesPerDocument = 2048;
+
+        public static long ForDocuments(int documentCount) =>
+            (long)Math.Max(0, documentCount) * BytesPerDocument;
+
+        public static long ForDocuments<T>(IEnumerable<T>? documents) =>
+            documents is null ? 0 : ForDocuments(documents.Count());
     }
 }

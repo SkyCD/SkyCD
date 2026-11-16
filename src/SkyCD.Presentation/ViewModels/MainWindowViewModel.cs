@@ -27,6 +27,7 @@ using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
+using SkyCD.Core.UndoRedo;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -34,6 +35,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
+    private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly CatalogUndoManager? undoManager;
     private readonly bool shouldSeedDefaultCatalog;
@@ -147,6 +149,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
         localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        AttachHistoryNotifications();
 
         try
         {
@@ -202,6 +205,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshBrowserItemsForSelection();
         RefreshTopMenuState();
         localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        AttachHistoryNotifications();
+    }
+
+    /// <summary>
+    /// Wires the bounded history's notifications so capacity events reach the user. Without this the history
+    /// silently drops its oldest entry and an operation that could not be recorded leaves Undo pointing at
+    /// something else entirely.
+    /// </summary>
+    private void AttachHistoryNotifications()
+    {
+        if (undoManager is null)
+        {
+            return;
+        }
+
+        undoManager.ActionEvicted += OnHistoryActionEvicted;
+        undoManager.ActionRejected += OnHistoryActionRejected;
     }
 
     public void RefreshLocalization()
@@ -219,6 +239,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (isDisposed) return;
         isDisposed = true;
         localizationSubscription.Dispose();
+
+        if (undoManager is not null)
+        {
+            undoManager.ActionEvicted -= OnHistoryActionEvicted;
+            undoManager.ActionRejected -= OnHistoryActionRejected;
+
+            // Disposing history disposes every retained action, which releases its cache pins. Doing this
+            // here is what stops a discarded view model from pinning preview artifacts forever.
+            undoManager.Dispose();
+        }
+
         entryPreview.Dispose();
         mediaPreviewImages.Dispose();
         if (ownsMediaCacheStore)
@@ -249,6 +280,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     /// <summary>The store previews and captured metadata are read from.</summary>
     public IMediaCacheStore MediaCache => mediaCacheStore;
+
+    /// <summary>
+    /// The bounded undo/redo history for the open catalog, or null when the view model runs without one.
+    /// </summary>
+    /// <remarks>
+    /// Exposed so a host can size the history and its per-action footprint budget, read the pending action
+    /// names for menu tooltips, and observe capacity events. Snapshot capture and replay stay internal to the
+    /// recorded actions; this is configuration and visibility, not a way to push arbitrary edits.
+    /// </remarks>
+    public CatalogUndoManager? UndoManager => undoManager;
 
     private static MenuExtensionManager CreateEmptyMenuExtensionManager()
     {
@@ -503,9 +544,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CurrentCatalogPath = null;
         SelectedBrowserItem = null;
         ClipboardItem = null;
+
+        // History describes edits to the catalog that was open. Carrying it into a new catalog would let Undo
+        // write records into a database they no longer belong to, and would keep preview artifacts pinned for
+        // entries that no longer exist.
+        ResetUndoHistory();
+
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
         StatusText = LocalizationService.Current.Get(TextKeys.CreatedANewCatalog);
+    }
+
+    /// <summary>Drops all undo/redo entries and releases the cache pins they held.</summary>
+    private void ResetUndoHistory()
+    {
+        if (undoManager is null)
+        {
+            return;
+        }
+
+        undoManager.Clear();
+        previewArtifactReclaimPending = false;
+        ReclaimUnreferencedPreviewArtifacts();
+        UpdateUndoRedoState();
     }
 
     [RelayCommand]
@@ -555,6 +616,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void CompleteOpenCatalog()
     {
+        // Opening a different catalog invalidates every recorded edit: the snapshots refer to records of the
+        // catalog that was open, and undoing one against the newly opened database would be meaningless.
+        ResetUndoHistory();
+
         StartOperation(LocalizationService.Current.Get(TextKeys.LoadingCatalog));
         SetProgress(35, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
         SetProgress(80, LocalizationService.Current.Get(TextKeys.UpdatingBrowser));
@@ -684,27 +749,123 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
-        if (undoManager is not null)
+        if (undoManager is null)
+        {
+            return;
+        }
+
+        var actionName = undoManager.UndoActionName;
+        try
         {
             await undoManager.UndoAsync();
-            StatusText = LocalizationService.Current.Get(TextKeys.UndoAction);
-            UpdateUndoRedoState();
-            RefreshTreeNodes();
-            RefreshBrowserItemsForSelection();
         }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The history has already put the action back on the undo stack, so state is consistent; what
+            // must not happen is an exception escaping a command into the dispatcher.
+            UpdateUndoRedoState();
+            StatusText = LocalizationService.Current.Format(TextKeys.UndoFailed, exception.Message);
+            return;
+        }
+
+        // Restored records are different instances from whatever the browser still holds, and redo replays
+        // captured ids rather than the live selection. Dropping the selection here is what stops a following
+        // delete or redo from acting on a detached object that merely shares a name.
+        SelectedBrowserItem = null;
+        SelectedBrowserItems = new List<CatalogDocument>();
+
+        UpdateUndoRedoState();
+        RefreshTreeNodes();
+        RevealRestoredTreeNode();
+        RefreshBrowserItemsForSelection();
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.UndoCompleted, actionName ?? string.Empty);
     }
 
     [RelayCommand(CanExecute = nameof(CanRedo))]
     private async Task Redo()
     {
-        if (undoManager is not null)
+        if (undoManager is null)
+        {
+            return;
+        }
+
+        var actionName = undoManager.RedoActionName;
+        try
         {
             await undoManager.RedoAsync();
-            StatusText = LocalizationService.Current.Get(TextKeys.RedoAction);
-            UpdateUndoRedoState();
-            RefreshTreeNodes();
-            RefreshBrowserItemsForSelection();
         }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            UpdateUndoRedoState();
+            StatusText = LocalizationService.Current.Format(TextKeys.RedoFailed, exception.Message);
+            return;
+        }
+
+        SelectedBrowserItem = null;
+        SelectedBrowserItems = new List<CatalogDocument>();
+
+        UpdateUndoRedoState();
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.RedoCompleted, actionName ?? string.Empty);
+    }
+
+    /// <summary>
+    /// Runs a media cache retention pass that treats history-pinned entries as still present.
+    /// </summary>
+    /// <remarks>
+    /// A deleted entry whose snapshot is still in undo history is not an orphan: restoring it brings back the
+    /// same id, name and ancestor chain, which is exactly what the cache fingerprint is built from. Reclaiming
+    /// its previews early would leave the restored entry pointing at artifacts that no longer exist. Once
+    /// history evicts that snapshot the pin is released and this pass reclaims the records; blob files are
+    /// reclaimed by compaction, which is left to explicit maintenance rather than run inline on the UI thread.
+    /// </remarks>
+    public MediaCacheCleanupResult? ReclaimUnreferencedPreviewArtifacts()
+    {
+        if (mediaCacheStore is null)
+        {
+            return null;
+        }
+
+        var pins = undoManager?.CachePins;
+        return mediaCacheStore.EnforceRetention(
+            new MediaCacheRetentionPolicy(CompactAfterCleanup: false),
+            entryExists: entryId => EntryExistsForRetention(entryId, pins));
+    }
+
+    private bool EntryExistsForRetention(string entryId, CatalogHistoryCachePins? pins)
+    {
+        if (pins?.IsPinned(entryId) == true)
+        {
+            return true;
+        }
+
+        if (catalogRepository is not null)
+        {
+            return catalogRepository.Get(entryId) is not null;
+        }
+
+        return inMemoryCatalogEntries?.Any(entry =>
+            string.Equals(entry.Id, entryId, StringComparison.Ordinal)) == true;
+    }
+
+    private void OnHistoryActionEvicted(object? sender, UndoActionEvictedEventArgs e)
+    {
+        if (isDisposed) return;
+
+        // The eviction released whatever that action pinned, so its previews are now reclaimable.
+        previewArtifactReclaimPending = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.HistoryCapacityReached, e.DisplayName);
+        UpdateUndoRedoState();
+    }
+
+    private void OnHistoryActionRejected(object? sender, UndoActionRejectedEventArgs e)
+    {
+        if (isDisposed) return;
+        StatusText = LocalizationService.Current.Get(TextKeys.OperationNotUndoable);
+        UpdateUndoRedoState();
     }
 
     [RelayCommand]
@@ -895,13 +1056,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
+        // The removed set includes every descendant, which the selection alone does not: recording only the
+        // selection is what made undoing a folder deletion restore the folder and lose its contents.
+        IReadOnlyList<CatalogDocument> removedDocuments;
         if (catalogRepository is not null)
         {
-            DeleteCatalogEntriesFromRepository(itemsToDelete);
+            removedDocuments = DeleteCatalogEntriesFromRepository(itemsToDelete);
         }
         else if (inMemoryCatalogEntries is not null)
         {
-            DeleteCatalogEntriesFromInMemory(itemsToDelete);
+            removedDocuments = DeleteCatalogEntriesFromInMemory(itemsToDelete);
         }
         else
         {
@@ -916,9 +1080,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 deletedNamesSet.Add(item.Name);
             }
+
+            removedDocuments = itemsToDelete;
         }
 
-        undoManager?.RecordDeletion(itemsToDelete);
+        // A refusal only counts when there is a history to refuse it; the in-memory view model has none and
+        // must keep reporting a plain deletion.
+        var deletionIsNotUndoable = undoManager is not null && !undoManager.RecordDeletion(removedDocuments);
         UpdateUndoRedoState();
 
         // Remove deleted items from BrowserItems directly instead of calling RefreshBrowserItemsForSelection()
@@ -942,8 +1110,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ? new List<CatalogDocument> { SelectedBrowserItem }
             : new List<CatalogDocument>();
 
+        // A folder deleted here is a tree node too. Leaving it in the tree produces a node that points at a
+        // record which no longer exists, and deleting that ghost afterwards has nothing authoritative to
+        // snapshot — which is how undo ends up with a placeholder instead of the real subtree.
+        DetachTreeNodesForRemovedDocuments(removedDocuments);
+
         IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, string.Join(", ", deletedNames));
+        StatusText = LocalizationService.Current.Format(
+            deletionIsNotUndoable ? TextKeys.DeletedNotUndoable : TextKeys.Deleted,
+            string.Join(", ", deletedNames));
         FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -962,67 +1137,48 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var documentsToDelete = new List<CatalogDocument>();
+        // Routed through the same helpers as browser deletion so both paths snapshot the complete subtree.
+        // Only authoritative documents are snapshotted. A placeholder for a node whose record is already
+        // gone would carry the default Type (File) and no ParentId, so undo would write back a record the
+        // tree filters out of view and the browser cannot place — the user is told the delete was undone
+        // while the tree shows nothing at all.
+        IReadOnlyList<CatalogDocument> removedDocuments;
         if (catalogRepository is not null)
         {
-            var descendantIds = catalogRepository
-                .GetDescendantsOf(targetNode.Key)
-                .Select(static entry => entry.Id)
-                .Where(static id => !string.IsNullOrWhiteSpace(id))
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            var allIdsToDelete = new[] { targetNode.Key }.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
-
-            // Collect documents before deletion for undo recording
-            documentsToDelete = allIdsToDelete
-                .Select(id => catalogRepository.Get(id))
-                .Where(doc => doc != null)
-                .Cast<CatalogDocument>()
-                .ToList();
-
-            catalogRepository.Collection.Database.InBatch(() =>
-            {
-                foreach (var id in allIdsToDelete)
-                {
-                    using var descendantDocument = catalogRepository.Collection.GetDocument(id);
-                    if (descendantDocument is not null)
-                    {
-                        catalogRepository.Collection.Delete(descendantDocument);
-                    }
-                }
-            });
-
-            foreach (var descendantId in allIdsToDelete)
-            {
-                addedItemsByNodeKey.Remove(descendantId);
-                deletedItemNamesByNodeKey.Remove(descendantId);
-                renamedBrowserItemNamesByNodeKey.Remove(descendantId);
-            }
+            var target = catalogRepository.Get(targetNode.Key);
+            removedDocuments = target is null ? [] : DeleteCatalogEntriesFromRepository([target]);
         }
         else if (inMemoryCatalogEntries is not null)
         {
-            var doc = inMemoryCatalogEntries.FirstOrDefault(entry => string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
-            if (doc is not null)
-            {
-                documentsToDelete.Add(doc);
-                DeleteCatalogEntriesFromInMemory([doc]);
-            }
-            else
-            {
-                var dummyDoc = new CatalogDocument { Id = targetNode.Key, Name = targetNode.Title };
-                documentsToDelete.Add(dummyDoc);
-                DeleteCatalogEntriesFromInMemory([dummyDoc]);
-            }
+            var target = inMemoryCatalogEntries.FirstOrDefault(entry =>
+                string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
+            removedDocuments = target is null ? [] : DeleteCatalogEntriesFromInMemory([target]);
+        }
+        else
+        {
+            removedDocuments = [];
         }
 
-        undoManager?.RecordDeletion(documentsToDelete);
+        // Nothing removed means the node was a stale artifact: detaching it is the whole operation. Leaving
+        // it out of history matters, because an empty snapshot records no action and Ctrl+Z would then
+        // quietly replay some earlier, unrelated operation.
+        var nodeHadNoRecord = removedDocuments.Count == 0;
+        var deletionIsNotUndoable = nodeHadNoRecord ||
+                                    (undoManager is not null && !undoManager.RecordDeletion(removedDocuments));
         UpdateUndoRedoState();
 
         DetachTreeNode(parentNode, targetNode);
 
-        IsDirtyDocument = true;
-        StatusText = LocalizationService.Current.Format(TextKeys.Deleted, targetNode.Title);
+        if (!nodeHadNoRecord)
+        {
+            IsDirtyDocument = true;
+        }
+
+        StatusText = LocalizationService.Current.Format(
+            nodeHadNoRecord ? TextKeys.DeletedStaleEntry
+            : deletionIsNotUndoable ? TextKeys.DeletedNotUndoable
+            : TextKeys.Deleted,
+            targetNode.Title);
         FocusTreeRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -1047,11 +1203,68 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             : siblings[Math.Min(deletedIndex, siblings.Count - 1)];
     }
 
-    private void DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
+    /// <summary>
+    /// Detaches every tree node whose record was removed through the browser pane.
+    /// </summary>
+    /// <remarks>
+    /// In place, like <see cref="DetachTreeNode"/>, rather than by rebuilding: a rebuild destroys every
+    /// realized TreeViewItem including the one holding keyboard focus. Only ids that are actually tree
+    /// nodes are considered, so deleting plain files costs a dictionary lookup each and no tree walk.
+    /// </remarks>
+    private void DetachTreeNodesForRemovedDocuments(IReadOnlyList<CatalogDocument> removedDocuments)
+    {
+        var ids = removedDocuments
+            .Select(static document => document.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && treeNodesByKey.ContainsKey(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var id in ids)
+        {
+            treeNodesByKey.Remove(id);
+        }
+
+        DetachMatchingTreeNodes(treeNodes, ids);
+
+        // The browser pane deletes children of the selected node, so the selection normally survives. When
+        // it does not, keeping a detached node selected would leave the browser bound to a record that is
+        // gone.
+        if (SelectedTreeNode is not null && ids.Contains(SelectedTreeNode.Key))
+        {
+            SelectedTreeNode = FindParentTreeNode(TreeNodes, SelectedTreeNode.Key) ?? TreeNodes.FirstOrDefault();
+        }
+    }
+
+    private static void DetachMatchingTreeNodes(IList<BrowserTreeNode> nodes, IReadOnlySet<string> ids)
+    {
+        for (var i = nodes.Count - 1; i >= 0; i--)
+        {
+            var node = nodes[i];
+
+            // Children first, so each removal reaches the TreeView as a targeted notification against a
+            // parent that is still attached.
+            DetachMatchingTreeNodes(node.Children, ids);
+
+            if (ids.Contains(node.Key))
+            {
+                nodes.RemoveAt(i);
+            }
+        }
+    }
+
+    /// <summary>
+    /// In-memory counterpart of <see cref="DeleteCatalogEntriesFromRepository"/>: expands to the full subtree
+    /// and returns what was removed, so the caller records a snapshot undo can actually restore.
+    /// </summary>
+    private IReadOnlyList<CatalogDocument> DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
     {
         if (inMemoryCatalogEntries is null || items.Count == 0)
         {
-            return;
+            return [];
         }
 
         var toDelete = new HashSet<string>(
@@ -1071,6 +1284,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
+        var removed = inMemoryCatalogEntries
+            .Where(entry => toDelete.Contains(entry.Id))
+            .ToList();
+
         inMemoryCatalogEntries.RemoveAll(entry => toDelete.Contains(entry.Id));
 
         foreach (var deletedId in toDelete)
@@ -1079,6 +1296,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             deletedItemNamesByNodeKey.Remove(deletedId);
             renamedBrowserItemNamesByNodeKey.Remove(deletedId);
         }
+
+        return removed;
     }
 
     private bool CanDeleteTreeNode(BrowserTreeNode? node)
@@ -1114,6 +1333,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         return null;
+    }
+
+    private void RevealRestoredTreeNode()
+    {
+        var restoredNode = undoManager?.History.LastCompletedAction?.AffectedEntryIds
+            .Select(id => treeNodesByKey.GetValueOrDefault(id))
+            .FirstOrDefault(node => node is not null);
+        if (restoredNode is null)
+        {
+            return;
+        }
+
+        var parent = FindParentTreeNode(TreeNodes, restoredNode.Key);
+        while (parent is not null)
+        {
+            parent.IsExpanded = true;
+            parent = FindParentTreeNode(TreeNodes, parent.Key);
+        }
+
+        SelectedTreeNode = restoredNode;
+        FocusTreeRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void RefreshTreeNodes(string? preferredSelectedKey = null)
@@ -1285,8 +1525,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         StartOperation(LocalizationService.Current.Get(TextKeys.UpdatingView));
         SetProgress(60, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
+
+        // The tree is built from the repository, so anything that changed underneath it — a restore, an
+        // import, an edit made while the pane was stale — only becomes visible once it is rebuilt. Without
+        // this the command refreshed the browser and the preview but left the tree showing whatever it held.
+        RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
         RefreshPreview();
+
+        // Deferred from history eviction: reclaiming inline with the eviction would run a cache scan on the
+        // UI thread in the middle of a deletion, so it waits for a point the user already expects work.
+        if (previewArtifactReclaimPending)
+        {
+            previewArtifactReclaimPending = false;
+            ReclaimUnreferencedPreviewArtifacts();
+        }
+
         CompleteOperation();
     }
 
@@ -2442,11 +2696,21 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         DeleteCatalogEntriesFromRepository([item]);
     }
 
-    private void DeleteCatalogEntriesFromRepository(IReadOnlyList<CatalogDocument> items)
+    /// <summary>
+    /// Deletes the given entries together with every descendant, and returns the complete set of documents
+    /// that was removed.
+    /// </summary>
+    /// <returns>
+    /// The authoritative snapshot of everything deleted, which is what undo has to restore. Returning it is
+    /// the point: the caller cannot reconstruct the descendant set afterwards, because the records are gone.
+    /// Documents are read from the repository rather than taken from the caller's list, so the snapshot holds
+    /// what was actually stored and not a view-model overlay copy.
+    /// </returns>
+    private IReadOnlyList<CatalogDocument> DeleteCatalogEntriesFromRepository(IReadOnlyList<CatalogDocument> items)
     {
         if (catalogRepository is null || items.Count == 0)
         {
-            return;
+            return [];
         }
 
         var itemIds = items
@@ -2455,14 +2719,36 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var descendantIds = catalogRepository
-            .GetDescendantsOf(itemIds)
-            .Select(static entry => entry.Id)
-            .Where(static id => !string.IsNullOrWhiteSpace(id))
+        var descendants = catalogRepository.GetDescendantsOf(itemIds);
+        var descendantsById = new Dictionary<string, CatalogDocument>(StringComparer.Ordinal);
+        foreach (var descendant in descendants)
+        {
+            if (!string.IsNullOrWhiteSpace(descendant.Id))
+            {
+                descendantsById.TryAdd(descendant.Id, descendant);
+            }
+        }
+
+        var allIdsToDelete = itemIds
+            .Concat(descendantsById.Keys)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var allIdsToDelete = itemIds.Concat(descendantIds).Distinct(StringComparer.Ordinal).ToArray();
+        var snapshot = new List<CatalogDocument>(allIdsToDelete.Length);
+        foreach (var id in allIdsToDelete)
+        {
+            var stored = catalogRepository.Get(id);
+            if (stored is null)
+            {
+                descendantsById.TryGetValue(id, out stored);
+            }
+
+            stored ??= items.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+            if (stored is not null)
+            {
+                snapshot.Add(stored);
+            }
+        }
 
         catalogRepository.Collection.Database.InBatch(() =>
         {
@@ -2482,6 +2768,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             deletedItemNamesByNodeKey.Remove(descendantId);
             renamedBrowserItemNamesByNodeKey.Remove(descendantId);
         }
+
+        return snapshot;
     }
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)
