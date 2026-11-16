@@ -13,6 +13,10 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read
+
+env:
+  NuGetPackageSourceCredentials_skycd: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
 
 jobs:
   style:

@@ -23,6 +23,30 @@ namespace SkyCD.Plugin.CdCollect.Tests;
 public sealed class CdCollectIntegrationTests
 {
     [Fact]
+    public async Task LegacySqlite2Fixture_LoadsIntoDomainAndPersistsHierarchyAndMetadata()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Sqlite2", "cds.db");
+        var service = new CatalogLoadService(new FileFormatManager([new CdCollectPlugin(), new CdCollectSqlite2Plugin()]));
+        var count = await service.LoadAsync(path, (payload, _) =>
+        {
+            var documents = Extract(payload!);
+            var file = documents.Single(d => d.Name == "O'Brien.mp3");
+            Assert.Equal(CatalogDocumentType.File, file.Type);
+            Assert.Equal(123456L, file.Size);
+            Assert.Equal("Music", documents.Single(d => d.Id == file.ParentId).Name);
+            Assert.Equal("audio/mpeg", file.Properties["MimeType"]);
+            Assert.Equal("Queen", file.Properties["Artist"]);
+            var media = documents.Single(d => d.Name == "Legacy music");
+            Assert.Equal("rock, backups", media.Properties["Keywords"]);
+            Assert.Equal("2005-03-15", media.Properties["Date"]);
+            Assert.Equal("cdrom", media.Properties["Icon"]);
+            Persist(documents);
+            return documents.Count;
+        }, new Progress<int>());
+        Assert.Equal(6, count);
+    }
+
+    [Fact]
     public async Task CommittedFixture_ImportsIntoDomainAndPersistsThumbnail()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "cds3.db");

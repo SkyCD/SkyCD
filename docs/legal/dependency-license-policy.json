@@ -39,6 +39,7 @@
     "Couchbase.Lite.Support.NetDesktop",
     "SerialQueue",
     "SQLite",
+    "SkyCD.Native.Sqlite2",
     "Tmds.DBus.Generator"
   ]
 }

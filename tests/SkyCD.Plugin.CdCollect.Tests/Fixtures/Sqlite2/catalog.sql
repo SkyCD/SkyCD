@@ -1,0 +1,12 @@
+BEGIN TRANSACTION;
+CREATE TABLE cds(id INTEGER PRIMARY KEY NOT NULL,name TEXT,keywords TEXT,year INTEGER,month INTEGER,day INTEGER,icon TEXT);
+INSERT INTO cds VALUES(7,'Legacy music','rock, backups',2005,3,15,'cdrom');
+INSERT INTO cds VALUES(9,'Empty disc','',2004,12,31,'harddisk');
+CREATE TABLE files(cd_id INTEGER,path TEXT,name TEXT,info TEXT,size INTEGER,mime TEXT,type INTEGER,packed INTEGER);
+INSERT INTO files VALUES(7,0,'Music','Folder description',0,'inode/directory',0,0);
+INSERT INTO files VALUES(7,'0:0','O''Brien.mp3','Artist: Queen',123456,'audio/mpeg',1,0);
+INSERT INTO files VALUES(7,1,'archive.zip','archive info',200,'application/zip',1,1);
+INSERT INTO files VALUES(7,'1:0','readme.txt','  keep whitespace  ',50,'text/plain',1,1);
+CREATE TABLE infoplugins(mime TEXT,program TEXT,arguments TEXT,regex_input TEXT,regex_pattern TEXT,regex_case INTEGER);
+INSERT INTO infoplugins VALUES('text/plain','DO_NOT_EXECUTE','malicious command data','','',0);
+COMMIT;
