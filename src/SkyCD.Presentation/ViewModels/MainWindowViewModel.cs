@@ -776,6 +776,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         UpdateUndoRedoState();
         RefreshTreeNodes();
+        RevealRestoredTreeNode();
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.UndoCompleted, actionName ?? string.Empty);
@@ -1334,6 +1335,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return null;
     }
 
+    private void RevealRestoredTreeNode()
+    {
+        var restoredNode = undoManager?.History.LastCompletedAction?.AffectedEntryIds
+            .Select(id => treeNodesByKey.GetValueOrDefault(id))
+            .FirstOrDefault(node => node is not null);
+        if (restoredNode is null)
+        {
+            return;
+        }
+
+        var parent = FindParentTreeNode(TreeNodes, restoredNode.Key);
+        while (parent is not null)
+        {
+            parent.IsExpanded = true;
+            parent = FindParentTreeNode(TreeNodes, parent.Key);
+        }
+
+        SelectedTreeNode = restoredNode;
+        FocusTreeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void RefreshTreeNodes(string? preferredSelectedKey = null)
     {
         var targetKey = preferredSelectedKey ?? SelectedTreeNode?.Key;
@@ -1503,6 +1525,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         StartOperation(LocalizationService.Current.Get(TextKeys.UpdatingView));
         SetProgress(60, LocalizationService.Current.Get(TextKeys.ParsingCatalog));
+
+        // The tree is built from the repository, so anything that changed underneath it — a restore, an
+        // import, an edit made while the pane was stale — only becomes visible once it is rebuilt. Without
+        // this the command refreshed the browser and the preview but left the tree showing whatever it held.
+        RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
         RefreshPreview();
 
