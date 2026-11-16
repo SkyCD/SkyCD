@@ -14,11 +14,11 @@ sealed class Program
             CliStdIo.EnsureConsoleAttached();
         }
 
-        var cliResult = CliEntryPoint.TryRun(
+        var cliResult = args.Length == 0 ? null : CliEntryPoint.TryRun(
             args,
             stdout: CliStdIo.CreateOutputWriter(),
             stderr: CliStdIo.CreateErrorWriter());
-        if (cliResult.Handled)
+        if (cliResult is { Handled: true })
         {
             Environment.ExitCode = (int)cliResult.ExitCode;
             return;

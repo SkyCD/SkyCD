@@ -36,25 +36,38 @@ public partial class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            appServiceProvider = CreateAppServiceProvider();
-            var optionsRepository = (AppOptionsDocumentRepository)appServiceProvider.Resolve<RepositoryManager>().For<AppOptionsDocument>();
-            LocalizationService.Current.SetLanguage(optionsRepository.GetOrCreateAppOptions().Language);
-            InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
-            InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
-            mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
-            ApplyMcpSettings();
-            var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
-            mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-            var mainWindow = appServiceProvider.Resolve<MainWindow>();
-            mainWindow.DataContext = mainWindowViewModel;
-            desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
-
-            desktop.Exit += (_, _) =>
+            string? lastOpenedCatalogPath = null;
+            try
             {
-                mcpServerHost?.Dispose();
-                appServiceProvider.Dispose();
-            };
-            desktop.MainWindow = mainWindow;
+                appServiceProvider = CreateAppServiceProvider();
+                var optionsRepository = (AppOptionsDocumentRepository)appServiceProvider.Resolve<RepositoryManager>().For<AppOptionsDocument>();
+                var options = optionsRepository.GetOrCreateAppOptions();
+                lastOpenedCatalogPath = options.LastOpenedCatalogPath;
+                LocalizationService.Current.SetLanguage(options.Language);
+                InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
+                InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
+                mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
+                ApplyMcpSettings();
+                var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
+                mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+                var mainWindow = appServiceProvider.Resolve<MainWindow>();
+                mainWindow.DataContext = mainWindowViewModel;
+                desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
+
+                desktop.Exit += (_, _) =>
+                {
+                    mcpServerHost?.Dispose();
+                    appServiceProvider.Dispose();
+                };
+                desktop.MainWindow = mainWindow;
+            }
+            catch (Exception exception) when (DatabaseRecoveryWindow.IsDatabaseFailure(exception))
+            {
+                try { appServiceProvider?.Resolve<DatabaseManager>().GetDatabase().Dispose(); }
+                catch (Exception) { /* The database may never have opened. */ }
+                desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
+                desktop.MainWindow = new DatabaseRecoveryWindow(exception, lastOpenedCatalogPath);
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

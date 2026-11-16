@@ -429,3 +429,5 @@ sessions/**
 .agentbridge/
 .agentbridge/**
 .junie
+.skycd-rider-data/
+.skycd-recovered-*/
