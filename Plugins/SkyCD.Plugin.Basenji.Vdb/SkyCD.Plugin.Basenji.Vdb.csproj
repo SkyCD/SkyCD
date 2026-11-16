@@ -3,7 +3,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="11.0.0" />
         <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.14" />
     </ItemGroup>
     <PropertyGroup>
