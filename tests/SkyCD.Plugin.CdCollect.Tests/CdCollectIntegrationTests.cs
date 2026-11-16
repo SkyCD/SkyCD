@@ -23,6 +23,20 @@ namespace SkyCD.Plugin.CdCollect.Tests;
 public sealed class CdCollectIntegrationTests
 {
     [Fact]
+    public async Task CommittedFixture_ImportsIntoDomainAndPersistsThumbnail()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "cds3.db");
+        using var source = File.OpenRead(path);
+        var result = await new CdCollectPlugin().ReadAsync(new FileFormatReadRequest
+        { Source = source, FormatId = "cdcollect-db" });
+        Assert.True(result.Success, result.Error);
+        var documents = Extract(result.Payload!);
+        var cover = documents.Single(d => d.Name == "cover.png");
+        Assert.StartsWith("data:image/png;base64,", cover.Properties["Thumbnail"]?.ToString());
+        Persist(documents);
+    }
+
+    [Fact]
     public async Task ReadAsync_StandardDatabase_BuildsDocumentAndSummary()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_int_" + Guid.NewGuid().ToString("N"));
@@ -111,7 +125,7 @@ public sealed class CdCollectIntegrationTests
     }
 
     [Fact]
-    public async Task WriteAsync_ReturnsFailure_BecauseFormatIsReadOnly()
+    public async Task WriteAsync_EmptyCatalog_ReturnsActionableFailure()
     {
         var plugin = new CdCollectPlugin();
         using var stream = new MemoryStream();
@@ -123,7 +137,7 @@ public sealed class CdCollectIntegrationTests
         });
 
         Assert.False(result.Success);
-        Assert.Contains("read-only", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no CD media", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

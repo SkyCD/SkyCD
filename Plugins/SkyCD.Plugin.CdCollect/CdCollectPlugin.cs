@@ -8,7 +8,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 namespace SkyCD.Plugin.CdCollect;
 
 /// <summary>
-/// File format capability plugin for importing CDcollect SQLite database catalogs (*.db, *.cdcollect).
+/// File format capability plugin for importing and exporting CDcollect SQLite database catalogs (*.db, *.cdcollect).
 /// </summary>
 public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
 {
@@ -21,7 +21,7 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
             Extensions: [".db", ".cdcollect"],
             MimeTypes: ["application/x-sqlite3", "application/vnd.sqlite3", "application/x-cdcollect"],
             CanRead: true,
-            CanWrite: false);
+            CanWrite: true);
 
     /// <summary>
     /// Inspects the stream content to verify if it represents a CDcollect SQLite database.
@@ -29,7 +29,7 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
     /// </summary>
     public bool CanHandleContent(Stream stream, string? fileName = null)
     {
-        if (!stream.CanRead)
+        if (!stream.CanRead || !stream.CanSeek)
         {
             return false;
         }
@@ -37,8 +37,9 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
         var initialPosition = stream.CanSeek ? stream.Position : -1;
         try
         {
+            stream.Position = 0;
             var header = new byte[16];
-            var bytesRead = stream.Read(header, 0, header.Length);
+            var bytesRead = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
             if (bytesRead < 16)
             {
                 return false;
@@ -52,17 +53,7 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
                 }
             }
 
-            // If file extension matches CDcollect known extensions, fast pass
-            if (!string.IsNullOrEmpty(fileName))
-            {
-                var ext = Path.GetExtension(fileName);
-                if (ext.Equals(".cdcollect", StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            // Verify SQLite database contains 'cds' table if stream can seek
+            // Confirm the catalog schema; a SQLite header alone is not format detection.
             if (stream.CanSeek)
             {
                 var tempFile = Path.Combine(Path.GetTempPath(), $"cdcollect_detect_{Guid.NewGuid():N}.db");
@@ -77,10 +68,7 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
                     using (var conn = new SqliteConnection($"Data Source={tempFile};Mode=ReadOnly;Pooling=False"))
                     {
                         conn.Open();
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='cds';";
-                        var count = Convert.ToInt32(cmd.ExecuteScalar());
-                        return count > 0;
+                        return CdCollectParser.HasCatalogSchema(conn);
                     }
                 }
                 catch
@@ -91,7 +79,6 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
                 {
                     try
                     {
-                        SqliteConnection.ClearAllPools();
                         if (File.Exists(tempFile))
                         {
                             File.Delete(tempFile);
@@ -103,7 +90,7 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
                 }
             }
 
-            return true;
+            return false;
         }
         catch
         {
@@ -127,7 +114,8 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
             var document = CdCollectParser.Parse(
                 request.Source,
                 request.Progress,
-                cancellationToken);
+                cancellationToken,
+                request.SourcePath ?? (request.Source as FileStream)?.Name);
 
             return Task.FromResult(new FileFormatReadResult
             {
@@ -153,10 +141,15 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
         FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new FileFormatWriteResult
+        try
         {
-            Success = false,
-            Error = "CDcollect export is not supported. Format is read-only."
-        });
+            CdCollectWriter.Write(request, cancellationToken);
+            return Task.FromResult(new FileFormatWriteResult { Success = true });
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception exception)
+        {
+            return Task.FromResult(new FileFormatWriteResult { Success = false, Error = exception.Message });
+        }
     }
 }

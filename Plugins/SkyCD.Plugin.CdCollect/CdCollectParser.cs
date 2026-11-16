@@ -21,29 +21,36 @@ public static class CdCollectParser
     public static CdCollectReportDocument Parse(
         Stream stream,
         IProgress<int>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? sourcePath = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
 
         progress?.Report(5);
         cancellationToken.ThrowIfCancellationRequested();
 
-        ValidateSqliteHeader(stream);
 
         var tempFilePath = Path.Combine(Path.GetTempPath(), $"cdcollect_{Guid.NewGuid():N}.db");
         try
         {
             CopyStreamToFile(stream, tempFilePath, cancellationToken);
+            using (var headerStream = File.OpenRead(tempFilePath))
+            {
+                ValidateSqliteHeader(headerStream);
+            }
             progress?.Report(20);
             cancellationToken.ThrowIfCancellationRequested();
 
-            return ParseDatabaseFile(tempFilePath, progress, cancellationToken);
+            return ParseDatabaseFile(tempFilePath, progress, cancellationToken, sourcePath);
+        }
+        catch (SqliteException ex)
+        {
+            throw new CdCollectCorruptDatabaseException(ex.Message);
         }
         finally
         {
             try
             {
-                SqliteConnection.ClearAllPools();
                 if (File.Exists(tempFilePath))
                 {
                     File.Delete(tempFilePath);
@@ -67,7 +74,7 @@ public static class CdCollectParser
         try
         {
             var header = new byte[16];
-            var bytesRead = stream.Read(header, 0, header.Length);
+            var bytesRead = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
             if (bytesRead < 16)
             {
                 throw new CdCollectCorruptDatabaseException("File is empty or truncated.");
@@ -98,13 +105,20 @@ public static class CdCollectParser
         }
 
         using var dest = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        source.CopyTo(dest);
+        var buffer = new byte[81920];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) != 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            dest.Write(buffer, 0, read);
+        }
     }
 
     private static CdCollectReportDocument ParseDatabaseFile(
         string databasePath,
         IProgress<int>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? sourcePath)
     {
         var diagnostics = new List<string>();
         var unsupportedFeatures = new List<string>();
@@ -126,10 +140,14 @@ public static class CdCollectParser
             throw new CdCollectCorruptDatabaseException($"Failed to open SQLite database: {ex.Message}");
         }
 
-        var version = GetDatabaseVersion(connection);
-        if (version > 4)
+        if (!HasCatalogSchema(connection))
         {
-            diagnostics.Add($"Database version {version} is newer than known CDcollect version 4; parsing in compatibility mode.");
+            throw new CdCollectInvalidFormatException("Required catalog tables or columns are missing; expected a CDCollect cds3.db database.");
+        }
+        var version = GetDatabaseVersion(connection);
+        if (version != 4 && !(version == 0 && !TableExists(connection, "files_v1")))
+        {
+            throw new CdCollectUnsupportedVersionException(version);
         }
 
         progress?.Report(35);
@@ -152,8 +170,12 @@ public static class CdCollectParser
         progress?.Report(75);
         cancellationToken.ThrowIfCancellationRequested();
 
+        var mediaIds = cds.Select(cd => cd.Id).ToHashSet();
+        if (filesByCd.Keys.Any(id => !mediaIds.Contains(id)))
+            throw new CdCollectCorruptDatabaseException("File entries reference missing media.");
         var rows = BuildCatalogRows(cds, filesByCd, out var totalSize, out var totalDirs, out var totalFiles);
 
+        ImportThumbnails(rows, sourcePath, cancellationToken);
         progress?.Report(100);
 
         var summary = new CdCollectImportSummary(
@@ -178,19 +200,53 @@ public static class CdCollectParser
         }
 
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT ver FROM cdcollect_version LIMIT 1;";
-        try
+        cmd.CommandText = "SELECT ver FROM cdcollect_version;";
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read() || reader.IsDBNull(0) ||
+            !int.TryParse(reader.GetValue(0).ToString(), out var version) || reader.Read())
         {
-            var result = cmd.ExecuteScalar();
-            if (result != null && result != DBNull.Value && int.TryParse(result.ToString(), out var ver))
-            {
-                return ver;
-            }
-            return 0;
+            throw new CdCollectCorruptDatabaseException("Expected exactly one integer schema version. Restore a valid version-4 backup.");
         }
-        catch
+        return version;
+    }
+
+    internal static bool HasCatalogSchema(SqliteConnection connection)
+    {
+        return HasColumns("cds", "id,name,keywords,year,month,day,icon") &&
+            ((HasColumns("files_v1", "cd_id,path,name,info,size,mime,location,type,packed") &&
+              HasColumns("cdcollect_version", "ver")) ||
+             (!TableExists(connection, "files_v1") && HasColumns("files", "cd_id,path,name,info,size,mime,type,packed")));
+
+        bool HasColumns(string table, string required)
         {
-            return 0;
+            if (!TableExists(connection, table)) return false;
+            using var command = connection.CreateCommand();
+            command.CommandText = $"PRAGMA table_info({table});";
+            using var reader = command.ExecuteReader();
+            var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            while (reader.Read()) columns.Add(reader.GetString(1));
+            return required.Split(',').All(columns.Contains);
+        }
+    }
+
+    private static void ImportThumbnails(List<Dictionary<string, object?>> rows, string? sourcePath, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(sourcePath)) return;
+        var directory = Path.GetDirectoryName(Path.GetFullPath(sourcePath))!;
+        foreach (var row in rows)
+        {
+            token.ThrowIfCancellationRequested();
+            var props = (Dictionary<string, object?>)row["Properties"]!;
+            if (!props.TryGetValue("CdCollectPath", out var path)) continue;
+            var key = path!.ToString()!;
+            // Only catalog indices may select a sidecar, never stored filesystem paths.
+            if (key.Length == 0 || key.Any(c => c != ':' && (c < '0' || c > '9'))) continue;
+            var media = props["CdCollectMediaId"]!.ToString()!;
+            var thumbnail = Path.Combine(directory, "thumbs", media, $"{media}_{key}.png");
+            if (!File.Exists(thumbnail) || new FileInfo(thumbnail).Length > 8 * 1024 * 1024) continue;
+            var bytes = File.ReadAllBytes(thumbnail);
+            if (bytes.AsSpan().StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }))
+                props["Thumbnail"] = "data:image/png;base64," + Convert.ToBase64String(bytes);
         }
     }
 
@@ -421,6 +477,9 @@ public static class CdCollectParser
         {
             nodeIndex++;
             var nodeId = $"{cdIdStr}_n{nodeIndex}";
+            if (rec.Type is not (0 or 1) || rec.Size < 0 ||
+                rec.PathKey.Length == 0 || pathToNodeId.ContainsKey(rec.PathKey))
+                throw new CdCollectCorruptDatabaseException("Invalid entry type, size, or duplicate/empty hierarchy key.");
             var isDirectory = rec.Type == 0;
 
             // Determine ParentId
@@ -431,15 +490,18 @@ public static class CdCollectParser
                 if (lastColon > 0)
                 {
                     var parentPathKey = rec.PathKey[..lastColon];
-                    if (pathToNodeId.TryGetValue(parentPathKey, out var foundParentId))
-                    {
-                        parentId = foundParentId;
-                    }
+                    if (!pathToNodeId.TryGetValue(parentPathKey, out var foundParentId))
+                        throw new CdCollectCorruptDatabaseException($"Missing hierarchy parent '{parentPathKey}'.");
+                    parentId = foundParentId;
                 }
                 pathToNodeId[rec.PathKey] = nodeId;
             }
 
-            var itemProps = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            var itemProps = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["CdCollectPath"] = rec.PathKey,
+                ["CdCollectMediaId"] = rec.CdId.ToString(CultureInfo.InvariantCulture)
+            };
             if (!string.IsNullOrWhiteSpace(rec.Mime))
             {
                 itemProps["MimeType"] = rec.Mime;
@@ -459,6 +521,7 @@ public static class CdCollectParser
             }
 
             CdCollectMetadataExtractor.ExtractInfoProperties(rec.Info, itemProps);
+            itemProps["Info"] = rec.Info ?? string.Empty;
 
             var itemRow = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
             {

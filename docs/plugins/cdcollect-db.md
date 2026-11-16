@@ -1,28 +1,13 @@
-# CDcollect Database Catalog Import Plugin
+# CDCollect SQLite catalog plugin
 
-## Overview
-The `cdcollect-db` plugin provides import-only support for catalog databases (`*.db`, `*.cdcollect`) created by **CDcollect** (GNOME CD cataloging application, versions 0 through 4).
+`cdcollect-db` imports CDCollect schema-version-4 SQLite 3 catalogs (`cds3.db`, `*.db`, `*.cdcollect`) and exports version 4. Legacy version-0 `files` catalogs remain readable. Other versions fail with an actionable dedicated exception; malformed version rows and missing columns are rejected.
 
-## Format Characteristics
-- **Format**: SQLite 3 database catalog.
-- **Structure**:
-  - `cdcollect_version`: Contains catalog schema version (up to version 4).
-  - `cds`: Table containing CD media items (id, name, keywords, year/month/day dates, icon).
-  - `files_v1` (or legacy `files`): Table containing cataloged files and directories (cd_id, path, name, info, size, mime, location, type, packed).
-  - `infoplugins` / `compplugins`: Catalog plugin definitions.
-- **Security**: Opened in ReadOnly mode with safe SQLite parameterization and transactional queries.
+Detection checks the SQLite signature and required catalog columns, including the version column for `files_v1`. An extension alone never identifies a catalog. Nonseekable detection returns false; import supports nonseekable streams.
 
-## How to Import in SkyCD
-1. In SkyCD, choose **File -> Open...** (or pass the file path via CLI).
-2. Select your `.db` or `.cdcollect` catalog file.
-3. Content-aware detection automatically verifies the SQLite header and CDcollect table schema.
-4. Media roots, directory hierarchies, file sizes, mime types, comments, and extracted audio/video metadata are imported directly into the SkyCD catalog.
+Imports produce Media/Folder/File rows consumed by the normal catalog loader. Names, hierarchy, sizes, dates, keywords, icons, exact information text, MIME types, locations, and packed markers are retained. Additional information fields are extracted into properties. When SourcePath is supplied, available PNG sidecars in `thumbs/<media-id>/<media-id>_<tree-path>.png` are retained as a `Thumbnail` data URI property (up to 8 MiB each). Thumbnail paths only use numeric catalog indices; stored file locations never select sidecars.
 
-## Supported Metadata
-- **Media items**: CD names, keywords/comments, release/creation dates (year/month/day), icons, volume ID.
-- **Folders & Files**: Hierarchical directory structure, file sizes, MIME types, archive packed flag, location paths.
-- **Plugin Metadata & Info**: Audio metadata (Artist, Album, Title, Bitrate, Duration), video metadata (Dimensions, VideoFormat, AudioFormat), and comments.
+Export accepts catalog row arrays, domain document arrays, JSON arrays, and imported reports. Media IDs and colon-separated sibling indices are assigned in input order. Media must be roots; missing parents, duplicate IDs, cycles, nested media, negative sizes, and files exceeding CDCollect 0.6.x's signed 32-bit size reader are rejected before the output stream is written. Network folders/resources become directories. Missing dates become zero components. Info, Comments, then Description supply file information; Keywords then Comments supply media keywords. Unmapped SkyCD properties and IDs are omitted; directory sizes are recalculated on import. Export writes the database stream only: thumbnails remain available in SkyCD properties but are not exported as sidecar files.
 
-## Supported Versions
-- CDcollect version 4 (standard `files_v1` schema) and legacy version 0 (`files` schema) are fully supported.
-- Future versions beyond version 4 are handled gracefully in backward-compatibility mode with diagnostic notes.
+Executable `infoplugins` and `compplugins` rows are only counted on import, never invoked or restored into executable configuration. Export creates these tables empty. SQLite connections use read-only mode for input and disable pooling. Discovery uses the existing assembly capability; no manifest file is involved. No new dependencies are introduced.
+
+The implementation independently expresses observed schema/format facts from CDCollect SVN r138 (DBsql.cs, Conf.cs, FileItem.cs); no GPL implementation is copied. Committed synthetic fixtures document provenance in the test Fixtures directory. Automated tests verify schema and round trips; a CDCollect 0.6.x GUI smoke test requires a compatible Mono/GTK installation.
