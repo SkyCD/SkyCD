@@ -14,4 +14,14 @@ public sealed class ScanPublishResult
     public bool IsIncomplete { get; init; }
     public string? ErrorSummary { get; init; }
     public IReadOnlyList<CatalogDocument> PublishedDocuments { get; init; } = [];
+
+    /// <summary>
+    /// True when the publication was recorded in undo history and can be reversed as one operation.
+    /// </summary>
+    /// <remarks>
+    /// False means the documents are in the catalog but the snapshot was too large for the history to keep,
+    /// so Undo would reverse some earlier operation instead. Callers must tell the user this rather than
+    /// leaving an enabled Undo command that silently does the wrong thing.
+    /// </remarks>
+    public bool IsUndoRecorded { get; init; }
 }

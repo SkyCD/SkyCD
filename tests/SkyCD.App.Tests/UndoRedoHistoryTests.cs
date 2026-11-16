@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using SkyCD.Core.UndoRedo;
 using Xunit;
@@ -256,6 +257,99 @@ public sealed class UndoRedoHistoryTests
         Assert.True(history.IsDirty);
     }
 
+    // --- footprint budget ---------------------------------------------------
+
+    [Fact]
+    public void PushAction_ExceedingTheFootprintBudget_IsRejectedAndNotRecorded()
+    {
+        using var history = new UndoRedoHistory(maxHistorySize: 10)
+        {
+            MaxActionFootprintBytes = 100
+        };
+
+        var rejected = new List<UndoActionRejectedEventArgs>();
+        history.ActionRejected += (_, args) => rejected.Add(args);
+
+        var accepted = history.PushAction(new LambdaAction("small", () => { }, () => { }, footprint: 100));
+        var refused = history.PushAction(new LambdaAction("huge", () => { }, () => { }, footprint: 101));
+
+        Assert.True(accepted);
+        Assert.False(refused);
+        Assert.Equal(1, history.UndoCount);
+        Assert.Equal("small", history.UndoActionName);
+
+        var rejection = Assert.Single(rejected);
+        Assert.Equal("huge", rejection.DisplayName);
+        Assert.Equal(101, rejection.RequestedBytes);
+        Assert.Equal(100, rejection.BudgetBytes);
+    }
+
+    [Fact]
+    public void PushAction_WithoutAFootprintBudget_AcceptsAnySize()
+    {
+        using var history = new UndoRedoHistory(maxHistorySize: 10);
+
+        Assert.True(history.PushAction(new LambdaAction("huge", () => { }, () => { }, footprint: long.MaxValue / 2)));
+        Assert.Equal(1, history.UndoCount);
+    }
+
+    [Fact]
+    public async Task TotalFootprintBytes_SumsBothStacks()
+    {
+        using var history = new UndoRedoHistory(maxHistorySize: 10);
+        history.PushAction(new LambdaAction("a", () => { }, () => { }, footprint: 10));
+        history.PushAction(new LambdaAction("b", () => { }, () => { }, footprint: 25));
+
+        Assert.Equal(35, history.TotalFootprintBytes);
+
+        await history.UndoAsync();
+
+        // An undone action is still retained, on the redo stack, so its footprint still counts.
+        Assert.Equal(35, history.TotalFootprintBytes);
+    }
+
+    [Fact]
+    public void Transaction_FootprintIsTheSumOfItsChildren()
+    {
+        using var history = new UndoRedoHistory(maxHistorySize: 10);
+        history.BeginTransaction("two edits");
+        history.PushAction(new LambdaAction("a", () => { }, () => { }, footprint: 10));
+        history.PushAction(new LambdaAction("b", () => { }, () => { }, footprint: 25));
+        history.CommitTransaction();
+
+        Assert.Equal(1, history.UndoCount);
+        Assert.Equal(35, history.TotalFootprintBytes);
+    }
+
+    [Fact]
+    public void Eviction_RaisesAnEventAndDisposesTheDroppedAction()
+    {
+        using var history = new UndoRedoHistory(maxHistorySize: 2);
+        var evicted = new List<UndoActionEvictedEventArgs>();
+        history.ActionEvicted += (_, args) => evicted.Add(args);
+
+        var dropped = new LambdaAction("oldest", () => { }, () => { });
+        history.PushAction(dropped);
+        history.PushAction(new LambdaAction("middle", () => { }, () => { }));
+        Assert.Empty(evicted);
+
+        history.PushAction(new LambdaAction("newest", () => { }, () => { }));
+
+        var args = Assert.Single(evicted);
+        Assert.Equal("oldest", args.DisplayName);
+        Assert.Equal(2, args.RemainingUndoCount);
+        Assert.True(dropped.IsDisposedForTest);
+        Assert.Equal(2, history.UndoCount);
+    }
+
+    [Fact]
+    public void MaxActionFootprintBytes_RejectsNegativeValues()
+    {
+        using var history = new UndoRedoHistory();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => history.MaxActionFootprintBytes = -1);
+    }
+
     // --- helper action type -------------------------------------------------
 
     private sealed class LambdaAction : UndoableActionBase
@@ -263,15 +357,21 @@ public sealed class UndoRedoHistoryTests
         private readonly Action _undo;
         private readonly Action _redo;
 
-        public LambdaAction(string name, Action undo, Action redo)
+        public LambdaAction(string name, Action undo, Action redo, long footprint = 0)
             : base(name)
         {
             _undo = undo;
             _redo = redo;
+            EstimatedFootprintBytes = footprint;
         }
 
         public override bool CanUndo => true;
         public override bool CanRedo => true;
+
+        public override long EstimatedFootprintBytes { get; }
+
+        /// <summary>Exposes the base dispose flag so eviction can be asserted without reaching into privates.</summary>
+        public bool IsDisposedForTest => IsDisposed;
 
         public override Task UndoAsync() { _undo(); return Task.CompletedTask; }
         public override Task RedoAsync() { _redo(); return Task.CompletedTask; }

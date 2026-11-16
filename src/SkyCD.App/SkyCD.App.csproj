@@ -26,16 +26,16 @@
         <AvaloniaResource Include="..\..\legacy\SkyCD\Resources\shared_folder.ICO" Link="Assets\legacy\icon-network-folder.ico" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.1.5" />
-        <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
-        <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />
-        <PackageReference Include="Avalonia.Themes.Simple" Version="12.1.5" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.5" />
+        <PackageReference Include="Avalonia" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.2" />
+        <PackageReference Include="Avalonia.Themes.Simple" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.6" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Couchbase.Lite" Version="4.1.2" />
+        <PackageReference Include="Couchbase.Lite" Version="4.1.3" />
         <PackageReference Include="IconPacks.Avalonia" Version="2.0.0" />
         <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="11.0.0" />
         <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />

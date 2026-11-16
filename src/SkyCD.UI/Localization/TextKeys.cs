@@ -51,6 +51,14 @@ public static class TextKeys
     public const string Redo = "core.text.Redo";
     public const string UndoAction = "core.text.UndoAction";
     public const string RedoAction = "core.text.RedoAction";
+    public const string UndoCompleted = "core.text.UndoCompleted";
+    public const string RedoCompleted = "core.text.RedoCompleted";
+    public const string UndoFailed = "core.text.UndoFailed";
+    public const string RedoFailed = "core.text.RedoFailed";
+    public const string DeletedNotUndoable = "core.text.DeletedNotUndoable";
+    public const string DeletedStaleEntry = "core.text.DeletedStaleEntry";
+    public const string HistoryCapacityReached = "core.text.HistoryCapacityReached";
+    public const string OperationNotUndoable = "core.text.OperationNotUndoable";
     public const string Status = "core.text.Status";
     public const string Properties2 = "core.text.Properties2";
     public const string View = "core.text.View";

@@ -179,10 +179,21 @@ public class AsyncThumbnailImageTests
             return request.Completion.Task;
         }
 
-        public Task CompleteCurrentAsync(IImage? image)
+        /// <summary>
+        /// Completes the in-flight request and lets the control apply it.
+        /// </summary>
+        /// <remarks>
+        /// The pump has to run on the test's UI thread. <c>Dispatcher.UIThread.RunJobs</c> verifies thread
+        /// affinity, so continuing on <c>TaskScheduler.Default</c> throws "the calling thread cannot access
+        /// this object" whenever the pool thread wins the race — which is why this intermittently failed on
+        /// Windows CI while passing elsewhere. Awaiting without ConfigureAwait resumes on the Avalonia
+        /// synchronization context the headless test host installs.
+        /// </remarks>
+        public async Task CompleteCurrentAsync(IImage? image)
         {
             Current.Completion.TrySetResult(image);
-            return Task.Delay(20).ContinueWith(_ => Dispatcher.UIThread.RunJobs(), TaskScheduler.Default);
+            await Task.Delay(20);
+            Dispatcher.UIThread.RunJobs();
         }
 
         public void FailCurrent(Exception exception) => Current.Completion.TrySetException(exception);

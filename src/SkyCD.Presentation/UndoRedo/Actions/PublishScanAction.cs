@@ -22,7 +22,7 @@ public sealed class PublishScanAction : UndoableActionBase
         IReadOnlyList<CatalogDocument> insertedDocuments,
         IReadOnlyList<(CatalogDocument Previous, CatalogDocument Updated)>? updatedDocuments = null,
         string? displayName = null)
-        : base(displayName ?? "Publish Scan")
+        : base(displayName ?? DefaultDisplayName(insertedDocuments, updatedDocuments))
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.insertedDocuments = new List<CatalogDocument>(insertedDocuments ?? throw new ArgumentNullException(nameof(insertedDocuments)));
@@ -32,8 +32,37 @@ public sealed class PublishScanAction : UndoableActionBase
     public override bool CanUndo => true;
     public override bool CanRedo => true;
 
+    /// <summary>
+    /// A completed capture or import is reversed as one operation, so its footprint is the whole snapshot:
+    /// every inserted document plus both the before and after state of every merged one. Reporting it lets a
+    /// bounded history refuse a publication too large to reverse honestly instead of quietly keeping it.
+    /// </summary>
+    public override long EstimatedFootprintBytes =>
+        UndoFootprint.ForDocuments(insertedDocuments.Count) +
+        UndoFootprint.ForDocuments(updatedDocuments.Count * 2);
+
     public IReadOnlyList<CatalogDocument> InsertedDocuments => insertedDocuments.AsReadOnly();
     public IReadOnlyList<(CatalogDocument Previous, CatalogDocument Updated)> UpdatedDocuments => updatedDocuments.AsReadOnly();
+
+    private static string DefaultDisplayName(
+        IReadOnlyList<CatalogDocument>? inserted,
+        IReadOnlyList<(CatalogDocument Previous, CatalogDocument Updated)>? updated)
+    {
+        var insertedCount = inserted?.Count ?? 0;
+        var updatedCount = updated?.Count ?? 0;
+
+        if (insertedCount == 0)
+        {
+            return updatedCount == 0 ? "Publish Scan" : $"Publish Scan ({updatedCount} items)";
+        }
+
+        if (insertedCount == 1 && updatedCount == 0)
+        {
+            return $"Publish Scan ({inserted![0].Name})";
+        }
+
+        return $"Publish Scan ({insertedCount + updatedCount} items)";
+    }
 
     public override Task UndoAsync()
     {
