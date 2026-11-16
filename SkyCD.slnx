@@ -5,6 +5,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Audio/SkyCD.Plugin.Audio.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.MotionDetector/SkyCD.Plugin.MotionDetector.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Pdf/SkyCD.Plugin.Pdf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Legacy.Ascd/SkyCD.Plugin.Legacy.Ascd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Legacy.Cscd/SkyCD.Plugin.Legacy.Cscd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Legacy.Scd/SkyCD.Plugin.Legacy.Scd.csproj"/>
@@ -59,6 +60,7 @@
         <Project Path="tests/SkyCD.Plugin.Image.Tests/SkyCD.Plugin.Image.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Text.Tests/SkyCD.Plugin.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.MotionDetector.Tests/SkyCD.Plugin.MotionDetector.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Pdf.Tests/SkyCD.Plugin.Pdf.Tests.csproj"/>
         <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj"/>
         <Project Path="tests/SkyCD.Cli.Tests/SkyCD.Cli.Tests.csproj"/>
         <Project Path="tests/SkyCD.Couchbase.Tests/SkyCD.Couchbase.Tests.csproj"/>
