@@ -261,14 +261,19 @@ public sealed class CatalogScanPublisher(CatalogEntryMerger? entryMerger = null)
             throw new CatalogScanPublicationException(generationId, ex.Message);
         }
 
+        // Recorded only after every batch has been written, so a partial publication never leaves an undo
+        // entry that claims to reverse more than it can. A refusal here means the snapshot was too large for
+        // the bounded history: the documents stay in the catalog and the result says the import is not
+        // undoable, which is the honest state rather than an Undo command bound to an older operation.
+        var isUndoRecorded = false;
         if (undoHistory is not null && (inserted.Count > 0 || updated.Count > 0))
         {
             var action = new PublishScanAction(
                 repository,
                 inserted,
                 updated,
-                displayName: options.IsIncomplete ? "Publish Scan (Partial)" : "Publish Scan");
-            undoHistory.PushAction(action);
+                displayName: options.IsIncomplete ? "Publish Scan (Partial)" : null);
+            isUndoRecorded = undoHistory.PushAction(action);
         }
 
         return new ScanPublishResult
@@ -280,7 +285,8 @@ public sealed class CatalogScanPublisher(CatalogEntryMerger? entryMerger = null)
             UpdatedDocumentsCount = updated.Count,
             IsIncomplete = options.IsIncomplete,
             ErrorSummary = options.ErrorSummary,
-            PublishedDocuments = mergedDocuments
+            PublishedDocuments = mergedDocuments,
+            IsUndoRecorded = isUndoRecorded
         };
     }
 }

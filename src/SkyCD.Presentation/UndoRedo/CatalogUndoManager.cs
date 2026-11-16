@@ -17,9 +17,39 @@ namespace SkyCD.Presentation.UndoRedo
         {
             _catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
             _history = new UndoRedoHistory(maxHistorySize);
+            CachePins = new CatalogHistoryCachePins();
         }
 
         public UndoRedoHistory History => _history;
+
+        /// <summary>
+        /// Entries whose cached previews must survive retention because history can still restore them.
+        /// Pass <see cref="CatalogHistoryCachePins.IsPinned"/> into the cache's <c>entryExists</c> predicate so
+        /// a deleted-but-undoable entry is not treated as orphaned.
+        /// </summary>
+        public CatalogHistoryCachePins CachePins { get; }
+
+        /// <summary>Largest single snapshot the history will keep; zero means unlimited.</summary>
+        public long MaxActionFootprintBytes
+        {
+            get => _history.MaxActionFootprintBytes;
+            set => _history.MaxActionFootprintBytes = value;
+        }
+
+        /// <summary>Forwarded from the history so the UI can report that older operations stopped being reversible.</summary>
+        public event EventHandler<UndoActionEvictedEventArgs>? ActionEvicted
+        {
+            add => _history.ActionEvicted += value;
+            remove => _history.ActionEvicted -= value;
+        }
+
+        /// <summary>Forwarded from the history so the UI can report an operation that is not undoable.</summary>
+        public event EventHandler<UndoActionRejectedEventArgs>? ActionRejected
+        {
+            add => _history.ActionRejected += value;
+            remove => _history.ActionRejected -= value;
+        }
+
         public bool CanUndo => _history.CanUndo;
         public bool CanRedo => _history.CanRedo;
         public string? UndoActionName => _history.UndoActionName;
@@ -64,10 +94,16 @@ namespace SkyCD.Presentation.UndoRedo
             _history.PushAction(new Actions.ChangePropertyAction(_catalogRepository, document.Id, propertyName, oldValue, newValue));
         }
 
-        public void RecordDeletion(IReadOnlyList<CatalogDocument> documents)
+        /// <summary>
+        /// Records a deletion. <paramref name="documents"/> must be the complete removed subtree, not just the
+        /// selection, because undo restores exactly what is handed in and anything missing stays deleted.
+        /// </summary>
+        /// <returns>False when the snapshot was too large for the bounded history and nothing was recorded.</returns>
+        public bool RecordDeletion(IReadOnlyList<CatalogDocument> documents)
         {
-            if (documents == null || documents.Count == 0) return;
-            _history.PushAction(new Actions.DeleteCatalogAction(_catalogRepository, documents));
+            if (documents == null || documents.Count == 0) return true;
+            return _history.PushAction(new Actions.DeleteCatalogAction(
+                _catalogRepository, documents, CachePins));
         }
 
         public void RecordAddition(IReadOnlyList<CatalogDocument> documents)
