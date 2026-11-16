@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Data.Sqlite;
+using SkyCD.Native.Sqlite2;
 using SkyCD.Plugin.CdCollect.Exceptions;
 
 namespace SkyCD.Plugin.CdCollect;
@@ -20,7 +21,7 @@ public static class CdCollectSqlite2Parser
     public static CdCollectReportDocument Parse(Stream source, IProgress<int>? progress = null,
         CancellationToken cancellationToken = default, string? sourcePath = null)
     {
-        var reader = new Sqlite2Reader(source, cancellationToken);
+        using var reader = new CdCollectSqlite2Source(source, cancellationToken);
         var tables = CatalogTables(reader);
         var media = Resolve(tables, "cds", MediaColumns);
         var fileTable = tables.ContainsKey("files_v1") ? "files_v1" : "files";
@@ -98,7 +99,7 @@ public static class CdCollectSqlite2Parser
 
     internal static bool HasCatalogSchema(Stream source)
     {
-        var reader = new Sqlite2Reader(source, CancellationToken.None);
+        using var reader = new CdCollectSqlite2Source(source, CancellationToken.None);
         var tables = CatalogTables(reader);
         Resolve(tables, "cds", MediaColumns);
         var files = tables.ContainsKey("files_v1") ? "files_v1" : "files";
@@ -106,7 +107,7 @@ public static class CdCollectSqlite2Parser
         return true;
     }
 
-    private static Dictionary<string, Sqlite2Row> CatalogTables(Sqlite2Reader reader)
+    private static Dictionary<string, Sqlite2Row> CatalogTables(CdCollectSqlite2Source reader)
     {
         var tables = new Dictionary<string, Sqlite2Row>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in reader.ReadTable(2))

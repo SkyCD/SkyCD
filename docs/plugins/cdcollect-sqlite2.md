@@ -1,25 +1,21 @@
 # Legacy CDCollect SQLite 2 catalogs
 
-The CDCollect assembly discovers `CdCollectSqlite2Plugin` as a separate, read-only file-format capability (`cdcollect-sqlite2`). It imports pre-0.6 `cds.db` catalogs without a SQLite 2 installation, shell commands, native SQLite 2 libraries, or additional packages. SQLite 3 catalogs continue to use `cdcollect-db` from the same assembly. The legacy capability is absent from save/export choices.
+The CDCollect assembly discovers `CdCollectSqlite2Plugin` as a separate, read-only file-format capability (`cdcollect-sqlite2`). It imports pre-0.6 `cds.db` catalogs through the [SkyCD.Native.Sqlite2 subproject](../../src/SkyCD.Native.Sqlite2/README.md), which bundles the SQLite 2.8.17 native engine. Users need no SQLite 2 installation or conversion executables. SQLite 3 catalogs continue to use `cdcollect-db`. The legacy capability is absent from save/export choices.
 
-Detection requires the SQLite 2 signature, valid page/header metadata, and CDCollect's `cds` and `files`/`files_v1` column definitions. The `.db` extension alone is insufficient. Detection preserves stream position. Import also supports nonseekable streams and short reads.
+Detection requires the SQLite 2 signature, a valid native integrity check, and CDCollect's `cds` and `files`/`files_v1` column definitions. The extension alone is insufficient. Detection preserves stream position; import also supports nonseekable streams and short reads.
 
-The managed reader implements the standard SQLite 2.8 layout: 1024-byte pages, both native byte orders, table b-trees including internal-page records, linked overflow pages, 1/2/3-byte field indices, null/empty text, UTF-8 strings, and INTEGER PRIMARY KEY row IDs. SQLite storage formats 2–4 are accepted. SQL stored in `sqlite_master` is inspected only to identify column positions; it is never executed. The converter writes a private temporary SQLite 3 catalog using only fixed statements and parameterized values, then reuses SkyCD's CDCollect domain mapping. Input bytes are never changed. Stored triggers, views, indexes, and external-command plugin configurations are ignored.
-
-Supported catalog schemas:
+Supported schemas:
 
 - Unversioned or explicit version-0 `files` catalogs, with `cds(id,name,keywords,year,month,day,icon)` and `files(cd_id,path,name,info,size,mime,type,packed)`.
 - Version-4 `files_v1` catalogs stored in SQLite 2, with the additional `location` column.
-- Columns can be reordered; unrelated columns are ignored. Column declarations must use the simple column layout used by CDCollect. Missing required columns, unsupported layouts, invalid version rows, and intermediate or unknown schema versions raise `CdCollectSqlite2VersionException` with the upstream migration/upgrade path. They are not guessed into a modern layout.
+- Columns can be reordered; unrelated columns are ignored. Column declarations must use CDCollect's simple layout. Missing required columns, unsupported layouts, invalid version rows, and intermediate or unknown versions raise `CdCollectSqlite2VersionException` with the upstream migration path.
 
-Media, folder/file hierarchy, dates, keywords, icons, exact information text, sizes, MIME types, and packed/archive markers use the same domain representation as SQLite 3 imports. When the original catalog path is available, the existing mapper can also import available thumbnail sidecars. Legacy executable-plugin configuration is not migrated. No SQLite 2 files are written by the plugin; use SQLite 3 export for new catalogs.
+The plugin keeps media names, hierarchy, dates, keywords, icons, exact information text, sizes, MIME types and packed/archive markers. It writes a private SQLite 3 staging catalog with fixed statements and parameterized values, then reuses SkyCD's existing domain mapping. Available thumbnail sidecars can be imported when the original source path is supplied. Executable-plugin configuration is never invoked or migrated; no SQLite 2 files are exported.
 
-Malformed pages, invalid byte-order markers, overlapping/cyclic cells, reused/out-of-range pages, invalid record offsets, and cyclic/truncated overflow chains are rejected. Imports are bounded to 256 MiB of input, 16 MiB per record, 128 columns, one million records per table, and 64 b-tree levels; cancellation is checked during input and traversal. Non-UTF-8 catalogs are rejected rather than silently changing text. Restore a valid backup for corrupt files. For unsupported historical variants, follow CDCollect's documented SQLite 2.8 dump-to-SQLite 3 migration and its internal schema upgrade, then import the resulting `cds3.db`.
+The native subproject opens a private snapshot, restricts SQL through an authorizer, and checks integrity before table reads. Its native bounds patches reject cyclic pages/cells and excessive depth. Input is bounded to 256 MiB, decoded records to 16 MiB, columns to 128, rows to one million per query and native b-tree depth to 64. Cancellation is checked during copying, native VM execution and mapping. Non-UTF-8 text is rejected. The original catalog remains unchanged.
 
-Format facts were independently derived from public-domain SQLite 2.8.17 (`btree.c`, `pager.h`, `vdbe.c`, `main.c`) and CDCollect's observed schemas. No GPL implementation was copied. The development-only SQLite executable is not shipped. Committed synthetic fixtures were created and integrity-checked with the official SQLite 2.8.17 CLI; their provenance is recorded alongside them. Tests cover actual binary database import and SkyCD persistence, not a CDCollect GUI run.
+Committed synthetic fixtures were generated and independently integrity-checked using the official SQLite 2.8.17 CLI. Tests cover both byte orders, domain persistence, unsupported variants, corrupt/truncated data and native corruption defenses. No CDCollect GUI validation is claimed. No GPL implementation or development compiler/tool executable is shipped.
 
-References:
+NuGet alternatives were evaluated: `SqliteReader` 1.1.0, `MBW.Utilities.ManagedSqlite` 0.13.0 and `Microsoft.Data.Sqlite` 11.0.0 all read the SQLite 3 control but reject both SQLite 2 fixtures. The native engine replaces the original custom managed parser.
 
-- [SQLite 2.8.17 public-domain source](https://www.sqlite.org/sqlite-2.8.17.tar.gz)
-- [SQLite 2.8.17 Windows CLI](https://www.sqlite.org/sqlite-2_8_17.zip), fixture generation only
-- [CDCollect upstream source and migration FAQ](https://svn.code.sf.net/p/cdcollect/code/cdcollect/trunk/)
+References: [SQLite 2.8.17 source](https://www.sqlite.org/sqlite-source-2_8_17.zip), [CDCollect source and migration FAQ](https://svn.code.sf.net/p/cdcollect/code/cdcollect/trunk/).

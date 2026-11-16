@@ -39,6 +39,8 @@
     "Couchbase.Lite.Support.NetDesktop",
     "SerialQueue",
     "SQLite",
+    "SQLite2",
+    "SQLite2.MinGW.Runtime",
     "Tmds.DBus.Generator"
   ]
 }

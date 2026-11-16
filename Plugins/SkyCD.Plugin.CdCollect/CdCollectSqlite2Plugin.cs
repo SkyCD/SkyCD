@@ -20,9 +20,9 @@ public sealed class CdCollectSqlite2Plugin : IFileFormatPluginCapability, IConte
         try
         {
             stream.Position = 0;
-            Span<byte> header = stackalloc byte[Sqlite2Reader.Signature.Length];
+            Span<byte> header = stackalloc byte[CdCollectSqlite2Source.Signature.Length];
             if (stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) != header.Length ||
-                !header.SequenceEqual(Sqlite2Reader.Signature)) return false;
+                !header.SequenceEqual(CdCollectSqlite2Source.Signature)) return false;
             return CdCollectSqlite2Parser.HasCatalogSchema(stream);
         }
         catch (Exception) { return false; }

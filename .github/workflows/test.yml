@@ -109,6 +109,10 @@ jobs:
             -SbomPath artifacts/licenses/bom.json `
             -PolicyPath docs/legal/dependency-license-policy.json `
             -ReportPath artifacts/licenses/license-compliance.json
+          ./tools/scripts/ci/check-license-compliance.ps1 `
+            -SbomPath docs/legal/sqlite2-native-sbom.json `
+            -PolicyPath docs/legal/dependency-license-policy.json `
+            -ReportPath artifacts/licenses/sqlite2-native-compliance.json
 
       - name: Upload license artifacts
         if: always()
