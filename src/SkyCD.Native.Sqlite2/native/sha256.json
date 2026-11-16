@@ -1,6 +1,0 @@
-{
-  "runtimes/linux-x64/native/libskycd_sqlite2.so": "2d5b17faa81419219202e4a7d107d3538df3c50f38e233f0fbb00b078d241abf",
-  "runtimes/osx-arm64/native/libskycd_sqlite2.dylib": "78f8eede84be507f946bcf39aaa56eb0b41c2d153dc0914e3914dd338d3f862e",
-  "runtimes/osx-x64/native/libskycd_sqlite2.dylib": "186bc5f0f1530e03ed52b96ae515f9c56afdbd90db35bbd4e3fc05e82229a6cd",
-  "runtimes/win-x64/native/skycd_sqlite2.dll": "68a08248c7df415a62957c006c125c50f02521d1c375cba375a3bd0106ae70e7"
-}

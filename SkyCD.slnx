@@ -50,7 +50,6 @@
         <Project Path="src/SkyCD.Formatting/SkyCD.Formatting.csproj"/>
         <Project Path="src/SkyCD.Logging/SkyCD.Logging.csproj"/>
         <Project Path="src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj"/>
-        <Project Path="src/SkyCD.Native.Sqlite2/SkyCD.Native.Sqlite2.csproj"/>
         <Project Path="src/SkyCD.Plugin.Host/SkyCD.Plugin.Host.csproj"/>
         <Project Path="src/SkyCD.Plugin.Runtime/SkyCD.Plugin.Runtime.csproj"/>
         <Project Path="src/SkyCD.Presentation/SkyCD.Presentation.csproj"/>
@@ -97,7 +96,6 @@
         <Project Path="tests/SkyCD.Plugin.CdCat.Hcf.Tests/SkyCD.Plugin.CdCat.Hcf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Basenji.Vdb.Tests/SkyCD.Plugin.Basenji.Vdb.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCollect.Tests/SkyCD.Plugin.CdCollect.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Native.Sqlite2.Tests/SkyCD.Native.Sqlite2.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Librer.Tests/SkyCD.Plugin.Librer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Xml.Tests/SkyCD.Plugin.WinCatalog.Xml.Tests.csproj"/>
     </Folder>
