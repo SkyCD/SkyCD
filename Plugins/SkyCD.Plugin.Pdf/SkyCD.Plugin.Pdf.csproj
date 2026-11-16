@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Apache-2.0: page count, document information dictionary and bounded text extraction. -->
+        <PackageReference Include="PdfPig" Version="0.1.16"/>
+        <!-- MIT, over BSD-3 PDFium: renders the first page to an image for the thumbnail. -->
+        <PackageReference Include="Docnet.Core" Version="2.6.0"/>
+        <!-- MIT: PDFium returns raw pixels, so the raster is encoded to PNG here. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>PDF Document Metadata and First-Page Previews</AssemblyTitle>
+        <Description>Reads page count, document information and a bounded text excerpt from PDF sources, and renders a bounded first-page thumbnail. Embedded scripts are never executed and external references are never followed.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Pdf.Tests"/>
+    </ItemGroup>
+</Project>
