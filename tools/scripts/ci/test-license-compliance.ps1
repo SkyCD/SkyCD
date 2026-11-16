@@ -8,6 +8,8 @@ try {
     $sbomPath = Join-Path $testDir "bom.json"
     $reportPath = Join-Path $testDir "report.json"
     $cases = @(
+        @{ Name = "SQLite"; License = "Unknown - See URL"; Status = "CompliantByException"; ExitCode = 0 },
+        @{ Name = "SQLite"; License = "GPL-3.0-only"; Status = "Blocked"; ExitCode = 1 },
         @{ Name = "Tmds.DBus.Generator"; License = "Unknown - See URL"; Status = "CompliantByException"; ExitCode = 0 },
         @{ Name = "Tmds.DBus.Generator"; License = "GPL-3.0-only"; Status = "Blocked"; ExitCode = 1 },
         @{ Name = "Unapproved.Package"; License = "Unknown - See URL"; Status = "Unknown"; ExitCode = 1 },

@@ -31,6 +31,7 @@ Define a repeatable dependency license compliance process for SkyCD v3.
 - Package-specific exceptions are permitted in `allowedUnknownLicensePackages` with explicit rationale.
 
 ### Current Unknown-License Exceptions
+- `SQLite` (3.53.4 is reported by the SBOM as `Unknown - See URL`; the [official copyright statement](https://www.sqlite.org/copyright.html) dedicates all deliverable SQLite code to the public domain and permits commercial redistribution). This exception covers missing license metadata only; explicitly blocked licenses still fail validation.
 - `Avalonia.Angle.Windows.Natives` (upstream metadata does not publish SPDX expression)
 - `AvaloniaUI.DiagnosticsSupport` (upstream metadata does not publish SPDX expression)
 - `Tmds.DBus.Generator` (0.92.0 omits license metadata from its NuGet manifest; the package's repository commit [282aceb](https://github.com/tmds/Tmds.DBus/blob/282acebca8d4e4e3ba211646ac650911ee94edfd/COPYING) publishes the MIT license). This exception applies only to unknown metadata; explicitly blocked licenses still fail validation.
