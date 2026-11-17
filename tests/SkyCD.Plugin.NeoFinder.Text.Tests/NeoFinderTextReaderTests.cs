@@ -138,6 +138,7 @@ public sealed class NeoFinderTextReaderTests
     [Theory]
     [InlineData("2026-01-06 11:00:00", "2026-01-06 11:00:00")]
     [InlineData("06.01.2026 11:00:00", "2026-01-06 11:00:00")]
+    [InlineData("06/01/2026 11:00:00", "2026-06-01 11:00:00")]
     public void NormalizeDate_HandlesConfiguredFormats(string raw, string expected)
     {
         Assert.Equal(expected, NeoFinderTextHierarchyBuilder.NormalizeDate(raw));

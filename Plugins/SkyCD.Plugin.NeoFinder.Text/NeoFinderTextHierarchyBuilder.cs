@@ -390,7 +390,7 @@ public static class NeoFinderTextHierarchyBuilder
         return long.TryParse(digitsOnly, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size) ? size : 0L;
     }
 
-    private static readonly CultureInfo[] DateCultures =
+    private static readonly CultureInfo[] SlashFirstCultures =
     [
         CultureInfo.InvariantCulture,
         new CultureInfo("en-US"),
@@ -401,17 +401,35 @@ public static class NeoFinderTextHierarchyBuilder
         new CultureInfo("ru-RU"),
     ];
 
+    private static readonly CultureInfo[] DotFirstCultures =
+    [
+        new CultureInfo("de-DE"),
+        new CultureInfo("fr-FR"),
+        new CultureInfo("es-ES"),
+        new CultureInfo("it-IT"),
+        new CultureInfo("ru-RU"),
+        CultureInfo.InvariantCulture,
+        new CultureInfo("en-US"),
+    ];
+
     /// <summary>
     /// Normalizes a NeoFinder date cell to <c>yyyy-MM-dd HH:mm:ss</c>.
     /// </summary>
     /// <remarks>
     /// The export dialog offers locale-dependent date formats, so several cultures are tried in order.
-    /// Values matching none of them are preserved verbatim rather than dropping the row.
+    /// Dotted numeric dates (<c>06.01.2026</c>) are day-first in every exporter locale that uses dots,
+    /// while invariant parsing would misread them as month-first, so day-first cultures go first for
+    /// dotted inputs. Slashed numeric dates stay month-first (US/ISO convention); a day-first slashed
+    /// date with day and month both under 13 cannot be distinguished and keeps that reading.
+    /// Values matching no culture are preserved verbatim rather than dropping the row.
     /// </remarks>
     public static string NormalizeDate(string raw)
     {
         var trimmed = raw.Trim();
-        foreach (var culture in DateCultures)
+        var cultures = trimmed.Contains('.') && !trimmed.Contains('/')
+            ? DotFirstCultures
+            : SlashFirstCultures;
+        foreach (var culture in cultures)
         {
             if (DateTimeOffset.TryParse(trimmed, culture, DateTimeStyles.None, out var dto))
             {
