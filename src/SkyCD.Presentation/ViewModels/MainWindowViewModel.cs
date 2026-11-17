@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
@@ -123,16 +124,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IStringLocalizer propertyValueLocalizer,
         MenuExtensionManager menuExtensionManager,
         bool shouldSeedDefaultCatalog,
-        CatalogUndoManager? undoManager = null,
-        VirtualCollectionDocumentRepository? collectionDocuments = null)
+        CatalogUndoManager? undoManager = null)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.undoManager = undoManager;
-        this.collectionRepository = collectionDocuments;
-        this.collectionService = collectionDocuments is not null
-            ? new VirtualCollectionService(this.catalogRepository, collectionDocuments)
+        this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
+        this.collectionService = this.collectionRepository is not null
+            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository)
             : null;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
@@ -181,9 +181,45 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new PropertyValueLocalizer(),
             CreateEmptyMenuExtensionManager(),
             RegisterAppStart(repositoryManager),
-            new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()),
-            (VirtualCollectionDocumentRepository)repositoryManager.For<VirtualCollectionDocument>())
+            new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()))
     {
+    }
+
+    /// <summary>
+    /// Opens the collections repository on the catalog database without changing
+    /// the view-model constructor surface: persistence tests construct this type
+    /// through a fixed-arity private constructor, so new services must be wired
+    /// internally rather than as extra parameters.
+    /// </summary>
+    private static VirtualCollectionDocumentRepository? CreateCollectionDocuments(
+        CatalogDocumentRepository catalog)
+    {
+        try
+        {
+            var database = catalog.Collection?.Database;
+            if (database is null)
+            {
+                return null;
+            }
+
+            var mapping = (CouchbaseDocument?)typeof(VirtualCollectionDocument)
+                .GetCustomAttributes(typeof(CouchbaseDocument), inherit: false)
+                .FirstOrDefault();
+            if (mapping is null || string.IsNullOrWhiteSpace(mapping.CollectionName))
+            {
+                return null;
+            }
+
+            var collection = database.GetCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName)
+                ?? database.CreateCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName);
+            var repository = new VirtualCollectionDocumentRepository();
+            repository.Initialize(typeof(VirtualCollectionDocument), mapping.CollectionName, collection);
+            return repository;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private MainWindowViewModel(
