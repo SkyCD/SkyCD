@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Couchbase.Lite;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
@@ -68,6 +69,26 @@ public sealed class LanguagePackTests : IDisposable
 
         Assert.Equal("Retour", service.Get(UiKeys.Cancel));
         Assert.Equal("Accepter", service.Get(UiKeys.Ok));
+    }
+
+    [Fact]
+    public void ShippedKeyConstants_ResolveInEnglishCatalog()
+    {
+        var service = new LocalizationService();
+        service.SetCulture(CultureInfo.GetCultureInfo("en"));
+
+        foreach (var type in new[] { typeof(UiKeys), typeof(TextKeys) })
+        {
+            var keys = type.GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+                .Select(field => Assert.IsType<string>(field.GetValue(null)));
+
+            foreach (var key in keys)
+            {
+                Assert.True(!string.Equals(service.Get(key), key, StringComparison.Ordinal),
+                    $"{type.Name} constant '{key}' has no translation in the shipped English catalog.");
+            }
+        }
     }
 
     [Theory]
