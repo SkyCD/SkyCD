@@ -230,6 +230,15 @@ public static class TellicoParser
 
             switch (reader.NodeType)
             {
+                case XmlNodeType.DocumentType:
+                    if (!string.IsNullOrEmpty(reader.Value) &&
+                        reader.Value.Contains("<!ENTITY", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new TellicoMalformedException(
+                            "document type entity declarations are not supported.");
+                    }
+
+                    break;
                 case XmlNodeType.Element:
                     elementCount++;
                     if (elementCount > MaxEntries * 100)
@@ -260,6 +269,11 @@ public static class TellicoParser
                             title: ReadAttribute(reader, "title") ?? "Untitled collection",
                             type: ReadAttribute(reader, "type") ?? string.Empty,
                             entryTitle: ReadAttribute(reader, "entryTitle"));
+                        if (reader.IsEmptyElement)
+                        {
+                            collections.Add(current.Complete(syntaxVersion));
+                            current = null;
+                        }
                     }
                     else if (current is not null && entry is null
                         && reader.LocalName.Equals(TellicoElementNames.FieldsElement, StringComparison.OrdinalIgnoreCase))
@@ -851,7 +865,7 @@ public static class TellicoParser
 
             entry.Fields[key] = text;
             var normalized = NormalizeDate(text);
-            if (normalized is not null && !normalized.Equals(text, StringComparison.Ordinal))
+            if (normalized is not null)
             {
                 entry.Fields[key + "Normalized"] = normalized;
             }
