@@ -1,0 +1,8 @@
+VOLUME	PATH	ITEMTYPE	NAME	FILES	FOLDERS	SIZE	DATE	TIME	TYPE	DESC	CATEGORY
+Media1		Volume	Media1								
+Media2		Volume	Media2								
+Media1	Docs	Folder	Docs	2	1						
+Media1	Docs	CategoryFolder	Photos	1	0						
+Media1	Docs	File	sunset.jpg			3145728	2024-02-01	10:00:00	JPEG Image	"Beach, ""sunny"" day"	Photos
+Media1	Docs	File	café.txt			512	2024-02-02	11:30:00	Text	"A	B tabbed"	
+Media2		File	big.bin			5000000000	2024-03-01	12:00:00	Binary		

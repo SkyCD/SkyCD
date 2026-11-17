@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
@@ -25,9 +26,11 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.Presentation.Search;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
+using SkyCD.Presentation.Collections;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -38,6 +41,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly CatalogUndoManager? undoManager;
+    private readonly VirtualCollectionService? collectionService;
+    private readonly VirtualCollectionDocumentRepository? collectionRepository;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
@@ -84,6 +89,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
+    public event EventHandler<CollectionsDialogRequestedEventArgs>? CollectionsRequested;
+    public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler? ExitRequested;
@@ -125,6 +132,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.undoManager = undoManager;
+        this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
+        this.collectionService = this.collectionRepository is not null
+            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository)
+            : null;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
@@ -174,6 +185,43 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             RegisterAppStart(repositoryManager),
             new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()))
     {
+    }
+
+    /// <summary>
+    /// Opens the collections repository on the catalog database without changing
+    /// the view-model constructor surface: persistence tests construct this type
+    /// through a fixed-arity private constructor, so new services must be wired
+    /// internally rather than as extra parameters.
+    /// </summary>
+    private static VirtualCollectionDocumentRepository? CreateCollectionDocuments(
+        CatalogDocumentRepository catalog)
+    {
+        try
+        {
+            var database = catalog.Collection?.Database;
+            if (database is null)
+            {
+                return null;
+            }
+
+            var mapping = (CouchbaseDocument?)typeof(VirtualCollectionDocument)
+                .GetCustomAttributes(typeof(CouchbaseDocument), inherit: false)
+                .FirstOrDefault();
+            if (mapping is null || string.IsNullOrWhiteSpace(mapping.CollectionName))
+            {
+                return null;
+            }
+
+            var collection = database.GetCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName)
+                ?? database.CreateCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName);
+            var repository = new VirtualCollectionDocumentRepository();
+            repository.Initialize(typeof(VirtualCollectionDocument), mapping.CollectionName, collection);
+            return repository;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private MainWindowViewModel(
@@ -494,6 +542,121 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public CatalogFindDialogViewModel CreateCatalogFindDialogViewModel() =>
         new(GetAllCatalogEntries(), NavigateToFindResult, searchFieldProvider);
+
+    [RelayCommand]
+    private void AdvancedFindCatalog() => AdvancedFindRequested?.Invoke(
+        this, new AdvancedFindDialogRequestedEventArgs { Dialog = CreateAdvancedCatalogFindDialogViewModel() });
+
+    public AdvancedCatalogFindDialogViewModel CreateAdvancedCatalogFindDialogViewModel()
+    {
+        var entries = GetAllCatalogEntries();
+        var (lookup, metadataKeys) = BuildAdvancedFindMetadata();
+        return new AdvancedCatalogFindDialogViewModel(
+            entries,
+            NavigateToFindResult,
+            lookup,
+            metadataKeys,
+            DiscoverCustomPropertyKeys(entries),
+            DiscoverStatusValues(entries));
+    }
+
+    private (AdvancedCatalogSearchService.MetadataLookup? Lookup, IReadOnlyList<string> Keys) BuildAdvancedFindMetadata()
+    {
+        IReadOnlyList<MediaCacheRecord> records;
+        try
+        {
+            records = mediaCacheStore.GetAllRecords();
+        }
+        catch
+        {
+            records = [];
+        }
+
+        if (records.Count == 0)
+        {
+            return (null, []);
+        }
+
+        var keys = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var byEntry = new Dictionary<string, IReadOnlyList<MediaCacheRecord>>(StringComparer.Ordinal);
+        foreach (var group in records
+            .Where(static record => !string.IsNullOrWhiteSpace(record.EntryId))
+            .GroupBy(static record => record.EntryId, StringComparer.Ordinal))
+        {
+            var list = (IReadOnlyList<MediaCacheRecord>)group.ToList();
+            byEntry[group.Key] = list;
+            foreach (var record in list)
+            {
+                foreach (var field in record.SchemaFields)
+                {
+                    if (!string.IsNullOrWhiteSpace(field.Key))
+                    {
+                        keys.Add(field.Key);
+                    }
+                }
+
+                foreach (var value in record.Metadata)
+                {
+                    if (!string.IsNullOrWhiteSpace(value.Key))
+                    {
+                        keys.Add(value.Key);
+                    }
+                }
+            }
+        }
+
+        AdvancedCatalogSearchService.MetadataLookup lookup = document =>
+        {
+            if (string.IsNullOrWhiteSpace(document.Id) || !byEntry.TryGetValue(document.Id, out var entryRecords))
+            {
+                return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var projected = MediaEntryMetadataProjection.Project(document, entryRecords);
+            var metadata = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in projected)
+            {
+                if (!string.IsNullOrWhiteSpace(field.Key) && !metadata.ContainsKey(field.Key))
+                {
+                    metadata[field.Key] = field.Value;
+                }
+            }
+
+            return metadata;
+        };
+        return (lookup, keys.ToArray());
+    }
+
+    private static IReadOnlyList<string> DiscoverCustomPropertyKeys(IReadOnlyList<CatalogDocument> entries)
+    {
+        var keys = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
+        {
+            foreach (var property in entry.Properties)
+            {
+                if (!string.IsNullOrWhiteSpace(property.Key))
+                {
+                    keys.Add(property.Key);
+                }
+            }
+        }
+
+        return keys.ToArray();
+    }
+
+    private static IReadOnlyList<string> DiscoverStatusValues(IReadOnlyList<CatalogDocument> entries)
+    {
+        var values = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.Status))
+            {
+                values.Add(entry.Status);
+            }
+        }
+
+        return values.ToArray();
+    }
 
     private IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
@@ -2052,6 +2215,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
         NavigateToParentFolderCommand.NotifyCanExecuteChanged();
+        RefreshCollectionsMenuItems();
+        ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
     }
 
@@ -2126,6 +2291,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+        RefreshCollectionsMenuItems();
+        ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
@@ -2160,6 +2327,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+        RefreshCollectionsMenuItems();
+        ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -2306,7 +2475,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand }
+                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand },
+                    new MainMenuItemViewModel
+                        { Header = LocalizationService.Current.Get(TextKeys.AdvancedFind), Command = AdvancedFindCatalogCommand }
                 ]
             },
             new MainMenuItemViewModel
@@ -2588,6 +2759,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Key = "edit_status",
                 Header = LocalizationService.Current.Get(TextKeys.Status),
                 Items = BuildStatusMenuItems()
+            },
+            new MainMenuItemViewModel
+            {
+                Key = "edit_collections",
+                Header = LocalizationService.Current.Get(UiKeys.Collections),
+                Items = BuildCollectionsMenuItems()
             },
             Separator(),
             new MainMenuItemViewModel
@@ -2938,6 +3115,196 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }));
 
         return statusItems;
+    }
+
+    private bool IsCollectionMembershipEnabled() =>
+        collectionService is not null && GetSelectedBrowserItems().Count > 0;
+
+    /// <summary>
+    /// Tri-state collection toggle: when every selected entry already belongs
+    /// to the collection it is removed from all of them, otherwise it is added
+    /// to the entries missing it. Duplicate memberships are impossible.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsCollectionMembershipEnabled))]
+    private void ToggleCollectionForEntries(string? collectionId)
+    {
+        var targets = GetSelectedBrowserItems();
+        var service = collectionService;
+        if (service is null || catalogRepository is null || collectionRepository is null
+            || targets.Count == 0 || string.IsNullOrWhiteSpace(collectionId))
+        {
+            return;
+        }
+
+        var collection = service.GetRequired(collectionId);
+        if (collection.Kind != Documents.Enum.VirtualCollectionKind.Static)
+        {
+            return;
+        }
+
+        var oldById = targets.ToDictionary(
+            target => target.Id,
+            target => (IReadOnlyList<string>)service.GetEntryIds(target.Id));
+        var allMember = oldById.Values.All(ids => ids.Contains(collectionId, StringComparer.Ordinal));
+        var changes = new Dictionary<string, (IReadOnlyList<string> OldEntryIds, IReadOnlyList<string> NewEntryIds)>(StringComparer.Ordinal);
+        var affectedCount = 0;
+
+        foreach (var target in targets)
+        {
+            var oldIds = oldById[target.Id];
+            IReadOnlyList<string> newIds = allMember
+                ? oldIds.Where(id => !string.Equals(id, collectionId, StringComparison.Ordinal)).ToArray()
+                : oldIds.Contains(collectionId, StringComparer.Ordinal)
+                    ? oldIds
+                    : [.. oldIds, collectionId];
+            if (!oldIds.SequenceEqual(newIds, StringComparer.Ordinal))
+            {
+                service.SetEntryIds(target.Id, newIds);
+                changes[target.Id] = (oldIds, newIds);
+                affectedCount++;
+            }
+        }
+
+        if (changes.Count > 0)
+        {
+            foreach (var (entryId, (oldIds, newIds)) in changes)
+            {
+                undoManager?.RecordCollectionEntriesChanged(collectionRepository, collectionId, oldIds, newIds);
+            }
+        }
+
+        StatusText = allMember
+            ? LocalizationService.Current.Format(TextKeys.CollectionRemovedFrom, collection.Name, affectedCount)
+            : LocalizationService.Current.Format(TextKeys.CollectionAddedTo, collection.Name, affectedCount);
+
+        UpdateUndoRedoState();
+        IsDirtyDocument = true;
+        RefreshCollectionsMenuItems();
+        RefreshBrowserItemsForSelection();
+    }
+
+    /// <summary>
+    /// Builds the Collections context submenu with one tri-state toggle per
+    /// static collection (checked when all selected entries belong, partial
+    /// when only some do) plus new-collection and manager entries. Dynamic
+    /// collections are listed for navigation but cannot gain members.
+    /// </summary>
+    private IReadOnlyList<MainMenuItemViewModel> BuildCollectionsMenuItems()
+    {
+        var items = new List<MainMenuItemViewModel>();
+        if (collectionService is null)
+        {
+            items.Add(new MainMenuItemViewModel
+            {
+                Header = LocalizationService.Current.Get(UiKeys.Collections),
+                IsEnabled = false
+            });
+            return items;
+        }
+
+        foreach (var collection in collectionService.GetCollections())
+        {
+            if (collection.Kind != Documents.Enum.VirtualCollectionKind.Static)
+            {
+                items.Add(new MainMenuItemViewModel
+                {
+                    Header = collection.Name,
+                    Command = OpenCollectionsDialogCommand
+                });
+                continue;
+            }
+
+            var (assigned, total) = GetCollectionAssignmentCounts(collection.Id);
+            var icon = total == 0 || assigned == 0 ? "☐" : assigned == total ? "☑" : "◐";
+            items.Add(new MainMenuItemViewModel
+            {
+                Header = collection.Name,
+                Icon = icon,
+                Command = ToggleCollectionForEntriesCommand,
+                CommandParameter = collection.Id,
+                IsEnabled = total > 0
+            });
+        }
+
+        if (items.Count > 0)
+        {
+            items.Add(Separator());
+        }
+
+        items.Add(new MainMenuItemViewModel
+        {
+            Header = LocalizationService.Current.Get(UiKeys.NewCollection),
+            Command = CreateCollectionCommand
+        });
+        items.Add(new MainMenuItemViewModel
+        {
+            Header = LocalizationService.Current.Get(UiKeys.ManageCollections),
+            Command = OpenCollectionsDialogCommand
+        });
+        return items;
+    }
+
+    private (int Assigned, int Total) GetCollectionAssignmentCounts(string collectionId)
+    {
+        var targets = GetSelectedBrowserItems();
+        if (collectionService is null || targets.Count == 0)
+        {
+            return (0, 0);
+        }
+
+        var assigned = targets.Count(target =>
+            collectionService.GetEntryIds(target.Id).Contains(collectionId, StringComparer.Ordinal));
+        return (assigned, targets.Count);
+    }
+
+    private void RefreshCollectionsMenuItems()
+    {
+        var parent = browserContextMenuItems.FirstOrDefault(item => string.Equals(item.Key, "edit_collections", StringComparison.Ordinal));
+        parent?.Items = BuildCollectionsMenuItems();
+    }
+
+    [RelayCommand]
+    private void CreateCollection()
+    {
+        if (collectionService is null || collectionRepository is null)
+        {
+            return;
+        }
+
+        var created = collectionService.CreateCollection("Untitled collection");
+        undoManager?.RecordCollectionCreated(collectionRepository, created.Id, created.Name);
+        IsDirtyDocument = true;
+        UpdateUndoRedoState();
+        RefreshCollectionsMenuItems();
+    }
+
+    [RelayCommand]
+    private void OpenCollectionsDialog()
+    {
+        if (collectionService is null || collectionRepository is null || catalogRepository is null)
+        {
+            return;
+        }
+
+        var dialog = new CollectionsDialogViewModel(
+            collectionService,
+            undoManager,
+            catalogRepository,
+            collectionRepository,
+            onChanged: () =>
+            {
+                IsDirtyDocument = true;
+                UpdateUndoRedoState();
+                RefreshCollectionsMenuItems();
+                RefreshBrowserItemsForSelection();
+            },
+            navigate: NavigateToDocument);
+        CollectionsRequested?.Invoke(this, new CollectionsDialogRequestedEventArgs { Dialog = dialog });
+    }
+
+    private void NavigateToDocument(CatalogDocument document)
+    {
+        NavigateToFindResult(new CatalogFindResult(document, string.Empty, string.Empty));
     }
 
     private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()
