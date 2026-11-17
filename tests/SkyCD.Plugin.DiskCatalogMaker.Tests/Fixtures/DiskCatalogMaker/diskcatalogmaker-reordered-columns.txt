@@ -1,0 +1,4 @@
+Name,Date Modified,Size,Kind,Path
+Photos,2026-01-06 10:00:00,,Folder,/Volumes/Archive Disk 1/Photos
+vacation.jpg,2026-01-06 10:30:00,2.4 MB,JPEG image,/Volumes/Archive Disk 1/Photos/vacation.jpg
+readme.txt,2026-02-11 12:00:00,2048,Plain text,/Volumes/Backup 2026/readme.txt
