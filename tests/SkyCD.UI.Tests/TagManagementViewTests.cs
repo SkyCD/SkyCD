@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -299,18 +300,17 @@ public sealed class TagManagementViewTests : IDisposable
             CommandParameter = fixture.DramaTagId,
             IsEnabled = true
         };
-        var window = new Window { Width = 200, Height = 200, Content = menuItem };
+        var menu = new Menu();
+        menu.Items.Add(menuItem);
+        var window = new Window { Width = 200, Height = 200, Content = menu };
         window.Show();
         Dispatcher.UIThread.RunJobs();
-        menuItem.Focus();
+        Assert.True(menuItem.Focus());
         Dispatcher.UIThread.RunJobs();
+        Assert.Same(menuItem, window.FocusManager?.GetFocusedElement());
+        Assert.Equal([fixture.DramaTagId], fixture.Service.GetEntryTagIds("drama"));
 
-        menuItem.RaiseEvent(new Avalonia.Input.KeyEventArgs
-        {
-            RoutedEvent = InputElement.KeyDownEvent,
-            Source = menuItem,
-            Key = Key.Enter
-        });
+        window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
         Dispatcher.UIThread.RunJobs();
 
         Assert.Empty(fixture.Service.GetEntryTagIds("drama"));
