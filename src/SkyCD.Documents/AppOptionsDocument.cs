@@ -32,4 +32,6 @@ public sealed class AppOptionsDocument
 
     public bool IsMcpStatusIconVisible { get; set; } = true;
 
+    public bool IsBackgroundMediaSyncEnabled { get; set; }
+
 }

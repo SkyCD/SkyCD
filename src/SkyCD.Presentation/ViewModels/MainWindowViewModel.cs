@@ -32,11 +32,41 @@ using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
 using SkyCD.Presentation.Collections;
+using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private BackgroundMediaSyncService? backgroundMediaSync;
+
+    [ObservableProperty]
+    private bool isBackgroundMediaSyncEnabled;
+
+    partial void OnIsBackgroundMediaSyncEnabledChanged(bool value)
+    {
+        backgroundMediaSync?.Dispose();
+        backgroundMediaSync = null;
+        if (value && catalogRepository is not null && !isDisposed)
+        {
+            backgroundMediaSync = new BackgroundMediaSyncService(catalogRepository,
+                (documents, token) =>
+                {
+                    new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
+                        new ScanPublishOptions { CancellationToken = token }, undoManager?.History);
+                    IsDirtyDocument = true;
+                    UpdateUndoRedoState();
+                    RefreshTreeNodes();
+                    RefreshBrowserItemsForSelection();
+                }, () => !isDisposed && !IsProgressVisible);
+            backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
+            backgroundMediaSync.Start();
+        }
+        RebuildMenuItems();
+    }
+
+    [RelayCommand]
+    private void ToggleBackgroundMediaSync() => IsBackgroundMediaSyncEnabled = !IsBackgroundMediaSyncEnabled;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
     private bool previewArtifactReclaimPending;
@@ -330,6 +360,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (isDisposed) return;
         isDisposed = true;
+        backgroundMediaSync?.Dispose();
         localizationSubscription.Dispose();
 
         if (undoManager is not null)
@@ -2804,7 +2835,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var toolsMenuItems = new List<MainMenuItemViewModel>
         {
             new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand },
+            new MainMenuItemViewModel
+            {
+                Header = "Automatically sync mounted media",
+                Command = ToggleBackgroundMediaSyncCommand,
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = IsBackgroundMediaSyncEnabled
+            }
         };
 
         // Add plugin menu contributions to Tools menu
