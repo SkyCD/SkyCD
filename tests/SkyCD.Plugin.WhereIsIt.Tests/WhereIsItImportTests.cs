@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.WhereIsIt;
 using Xunit;
@@ -79,8 +80,8 @@ public class WhereIsItImportTests
         Assert.Equal(5, document.Summary.Files);
 
         Assert.Equal("volume:Backup", TextOf(byId["folder:Backup/Documents"], "parentId"));
-        Assert.Equal("folder:Backup/Documents", TextOf(byId["file:Backup/Documents/Projects/app.exe"], "parentId"));
-        Assert.Equal("folder:Backup/Documents/Projects/readme.txt", TextOf(byId["file:Backup/Documents/Projects/readme.txt"], "id"));
+        Assert.Equal("folder:Backup/Documents/Projects", TextOf(byId["file:Backup/Documents/Projects/app.exe"], "parentId"));
+        Assert.Equal("file:Backup/Documents/readme.txt", TextOf(byId["file:Backup/Documents/readme.txt"], "id"));
         Assert.Equal("volume:Backup", TextOf(byId["file:Backup/loose.iso"], "parentId"));
         Assert.Equal("volume:Photos", TextOf(byId["file:Photos/beach.png"], "parentId"));
 
@@ -97,7 +98,7 @@ public class WhereIsItImportTests
         var document = await ReadAsync("complete.xml");
         var byId = IndexById(document);
 
-        var readme = byId["file:Backup/Documents/Projects/readme.txt"];
+        var readme = byId["file:Backup/Documents/readme.txt"];
         Assert.Equal(512L, readme["size"]);
         var readmeProperties = PropertiesOf(readme);
         Assert.Equal("read me & more", Convert.ToString(readmeProperties["Description"], System.Globalization.CultureInfo.InvariantCulture));
@@ -151,15 +152,14 @@ public class WhereIsItImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("disk-kind.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "whereisit-xml-report",
             Source = source,
             FileName = "disk-kind.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("incompatible kind", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("incompatible kind", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -167,15 +167,14 @@ public class WhereIsItImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("demo-only.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "whereisit-xml-report",
             Source = source,
             FileName = "demo-only.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("no catalog entries", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no catalog entries", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -183,15 +182,14 @@ public class WhereIsItImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("malformed.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "whereisit-xml-report",
             Source = source,
             FileName = "malformed.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("malformed", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -199,15 +197,14 @@ public class WhereIsItImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("empty.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "whereisit-xml-report",
             Source = source,
             FileName = "empty.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("no catalog entries", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no catalog entries", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -215,15 +212,14 @@ public class WhereIsItImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("wrong-root.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "whereisit-xml-report",
             Source = source,
             FileName = "wrong-root.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("not a Where Is It", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a Where Is It", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -268,7 +264,7 @@ public class WhereIsItImportTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.ReadAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ReadAsync(
             new FileFormatReadRequest
             {
                 FormatId = "whereisit-xml-report",
