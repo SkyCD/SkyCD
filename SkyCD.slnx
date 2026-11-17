@@ -13,6 +13,7 @@
     </Folder>
     <Folder Name="/Plugins/samples/">
         <Project Path="Plugins/SkyCD.Plugin.Csv/SkyCD.Plugin.Csv.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.PlainText/SkyCD.Plugin.PlainText.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Html/SkyCD.Plugin.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Iso/SkyCD.Plugin.Iso.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj"/>
@@ -73,6 +74,7 @@
         <Project Path="tests/SkyCD.Logging.Tests/SkyCD.Logging.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Csv.Tests/SkyCD.Plugin.Csv.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.PlainText.Tests/SkyCD.Plugin.PlainText.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Html.Tests/SkyCD.Plugin.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Iso.Tests/SkyCD.Plugin.Iso.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Json.Tests/SkyCD.Plugin.Json.Tests.csproj"/>
