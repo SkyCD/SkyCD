@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic abeMeda 6.2+ style XML export fixture. The vendor schema is unpublished;
+     element/attribute variants here follow the abeMeda manual export descriptions and
+     NeoFinder shared catalog concepts. Real-export conformance is an open follow-up. -->
+<AbeMeda version="6.2" generator="abeMeda">
+  <Volume Name="Backup 2024" Kind="Media" Size="6000000" Created="2024-03-10 14:22:31" Comment="main backup" Label="Red">
+    <Folder Name="Documents" Path="D:\Documents" Created="2024-01-05 10:00:00" Modified="2024-02-06 11:30:00" Comment="docs folder">
+      <File Name="readme.txt" Size="512" Modified="2024-02-06 11:31:00" Comment="read me" Author="Admin" CustomRating="5" />
+      <File Name="sunset.jpg" Size="2450000" Modified="2024-02-07 11:31:00">
+        <Duration>00:00:00</Duration>
+        <Dimensions>1920x1080</Dimensions>
+        <Thumbnail>present</Thumbnail>
+      </File>
+      <Folder Name="Projects" Modified="2024-02-07 11:30:00">
+        <File Name="app.exe" Size="2048000" />
+        <File Name="readme.txt" Size="128" Comment="project notes" />
+      </Folder>
+    </Folder>
+    <Folder Name="Musik" Path="D:\Musik">
+      <File Name="Grüße.mp3" Size="4500000" Artist="Künstler" Album="Grüße" Duration="3:45" />
+    </Folder>
+    <File Name="loose.iso" Size="1024000" />
+  </Volume>
+  <Volume Name="Photos" Kind="CDRom" Label="Blue">
+    <File Name="beach.png" Size="1200000" Comment="summer" />
+  </Volume>
+</AbeMeda>
