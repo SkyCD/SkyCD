@@ -91,7 +91,6 @@ public sealed class AcpDescriptionClient
                 }
             }
             catch (InvalidOperationException) { }
-            catch (TimeoutException) { }
             finally
             {
                 process.Dispose();
@@ -102,7 +101,7 @@ public sealed class AcpDescriptionClient
 
     private static async Task DeleteWorkingDirectoryAsync(string workingDirectory)
     {
-        const int maxAttempts = 10;
+        const int maxAttempts = 20;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
@@ -110,15 +109,12 @@ public sealed class AcpDescriptionClient
                 Directory.Delete(workingDirectory, recursive: true);
                 return;
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException) { return; }
+            catch (IOException) when (attempt < maxAttempts)
             {
-                return;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                if (attempt == maxAttempts) return;
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
             }
+            catch (IOException) { return; }
         }
     }
 
