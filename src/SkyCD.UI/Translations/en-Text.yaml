@@ -161,3 +161,11 @@ text.FindMatchCount: "{0} matching entries."
 text.ScanCanceled: Scan canceled.
 
 text.ScanFailedItems: "Scan found {0} failed items. The catalog was not changed."
+text.Collections: "Collections"
+text.CollectionCreated: "Created collection {0}."
+text.CollectionRenamed: "Renamed collection to {0}."
+text.CollectionDeleted: "Deleted collection {0}."
+text.CollectionNameRequired: "Enter a collection name."
+text.CollectionCleaned: "Removed {0} missing references."
+text.CollectionAddedTo: "Added {1} items to {0}."
+text.CollectionRemovedFrom: "Removed {1} items from {0}."

@@ -1,0 +1,120 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.CollectionsWindow"
+        x:DataType="vm:CollectionsDialogViewModel"
+        Width="640"
+        Height="440"
+        MinWidth="560"
+        MinHeight="380"
+        WindowStartupLocation="CenterOwner"
+        CanMinimize="False"
+        ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
+        Title="{i18n:Translate {x:Static i18n:UiKeys.ManageCollections}}">
+
+    <Design.DataContext>
+        <vm:CollectionsDialogViewModel />
+    </Design.DataContext>
+
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="8"
+          RowDefinitions="Auto,*,Auto,Auto"
+          ColumnDefinitions="220,*,260"
+          RowSpacing="6"
+          ColumnSpacing="8">
+        <TextBlock Grid.Row="0"
+                   Grid.Column="0"
+                   Text="{i18n:Translate {x:Static i18n:UiKeys.Collections}}" />
+        <TextBlock Grid.Row="0"
+                   Grid.Column="2"
+                   Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}" />
+
+        <ListBox Grid.Row="1"
+                 Grid.Column="0"
+                 ItemsSource="{Binding Collections}"
+                 SelectedItem="{Binding SelectedCollection}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding EntryCount, StringFormat='({0})'}"
+                                   Opacity="0.7" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="1"
+                    Grid.Column="1"
+                    Spacing="6"
+                    VerticalAlignment="Top">
+            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" />
+            <TextBox Text="{Binding NewCollectionName}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                    Command="{Binding CreateCollectionCommand}" />
+            <TextBox Text="{Binding RenameTo}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}"
+                    Command="{Binding RenameCollectionCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}"
+                    Command="{Binding DeleteCollectionCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}"
+                    Command="{Binding RemoveMissingEntriesCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
+                    Command="{Binding NavigateToSelectedCommand}" />
+        </StackPanel>
+
+        <ListBox Grid.Row="1"
+                 Grid.Column="2"
+                 ItemsSource="{Binding Members}"
+                 SelectedItem="{Binding SelectedMember}"
+                 DoubleTapped="OnMembersDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Spacing="1">
+                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding FullPath}"
+                                   Opacity="0.7"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock Grid.Row="2"
+                   Grid.Column="0"
+                   Grid.ColumnSpan="3"
+                   Foreground="#B00000"
+                   Text="{Binding StatusText}"
+                   TextWrapping="Wrap" />
+
+        <Grid Grid.Row="3"
+              Grid.Column="0"
+              Grid.ColumnSpan="3"
+              HorizontalAlignment="Right">
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}"
+                    Width="72"
+                    Height="25"
+                    Click="OnCloseClicked" />
+        </Grid>
+    </Grid>
+</Window>
