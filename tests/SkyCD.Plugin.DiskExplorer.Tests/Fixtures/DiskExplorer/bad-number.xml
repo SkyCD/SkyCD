@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<REPORT Title="Bad">
+  <ITEM ItemType="Volume">
+    <NAME>V</NAME>
+    <ITEM ItemType="File">
+      <NAME>f.txt</NAME>
+      <SIZE>twelve</SIZE>
+    </ITEM>
+  </ITEM>
+</REPORT>
