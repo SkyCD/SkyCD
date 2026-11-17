@@ -154,10 +154,7 @@ public static class DiskExplorerHtmlExporter
         var itemType = ResolveItemType(node);
         writer.Write($"<div class=\"dx-item\" data-itemtype=\"{itemType}\"");
         writer.Write($" data-name=\"{HttpUtility.HtmlAttributeEncode(node.Name)}\"");
-        if (itemType is not ("Volume" or "CategoryFolder"))
-        {
-            writer.Write($" data-size=\"{node.Size.ToString(CultureInfo.InvariantCulture)}\"");
-        }
+        writer.Write($" data-size=\"{node.Size.ToString(CultureInfo.InvariantCulture)}\"");
 
         var date = PropertyText(node, "Date");
         if (!string.IsNullOrWhiteSpace(date))
