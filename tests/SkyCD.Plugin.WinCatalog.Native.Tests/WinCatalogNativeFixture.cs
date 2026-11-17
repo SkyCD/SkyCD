@@ -14,7 +14,7 @@ public static class WinCatalogNativeFixture
         var path = Path.Combine(Path.GetTempPath(), $"wincat-fixture-{Guid.NewGuid():N}.db");
         try
         {
-            using (var connection = new SqliteConnection($"Data Source={path}"))
+            using (var connection = new SqliteConnection($"Data Source={path};Pooling=false"))
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -66,7 +66,7 @@ public static class WinCatalogNativeFixture
         var path = Path.Combine(Path.GetTempPath(), $"wincat-unrelated-{Guid.NewGuid():N}.db");
         try
         {
-            using (var connection = new SqliteConnection($"Data Source={path}"))
+            using (var connection = new SqliteConnection($"Data Source={path};Pooling=false"))
             {
                 connection.Open();
                 using var command = connection.CreateCommand();
