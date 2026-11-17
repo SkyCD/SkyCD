@@ -28,7 +28,7 @@ public sealed class DiskExplorerPlugin : IFileFormatPluginCapability, IContentAw
     /// </summary>
     public bool CanHandleContent(Stream stream, string? fileName = null)
     {
-        if (!stream.CanRead)
+        if (!stream.CanRead || !stream.CanSeek)
         {
             return false;
         }
