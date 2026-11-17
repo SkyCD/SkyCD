@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using Avalonia.Input;
+using SkyCD.App.Converters;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
@@ -11,6 +14,8 @@ namespace SkyCD.App.Tests;
 
 public class MainWindowViewModelTests
 {
+    private readonly MenuHotKeyConverter gestureConverter = new();
+
     [Fact]
     public void Constructor_InitializesLegacyShellDefaults()
     {
@@ -1218,6 +1223,48 @@ public class MainWindowViewModelTests
 
         Assert.Equal("✓", SingleByKey(vm.TreeContextMenuItems, "sort_size").Icon);
         Assert.Equal("\u00A0", SingleByKey(vm.TreeContextMenuItems, "sort_name").Icon);
+    }
+
+    [Fact]
+    public void MenuItems_WithShortcut_SetBothHotKeyAndInputGesture()
+    {
+        var vm = CreateViewModel();
+
+        var shortcutItems = AllMenuItems(vm)
+            .Where(item => item.HotKey is not null || item.InputGesture is not null)
+            .ToList();
+
+        Assert.NotEmpty(shortcutItems);
+        // The menu theme binds HotKey (registers the key binding) and InputGesture (renders the
+        // shortcut text); an item declaring only one of them either does nothing or shows nothing.
+        Assert.All(shortcutItems, item =>
+        {
+            Assert.Equal(item.InputGesture, item.HotKey);
+            Assert.IsType<KeyGesture>(gestureConverter.Convert(item.HotKey, typeof(KeyGesture), null, CultureInfo.InvariantCulture));
+        });
+    }
+
+    [Fact]
+    public void TreeContextMenu_ListsAddAndDeleteOnceWithShortcuts()
+    {
+        var vm = CreateViewModel();
+
+        var add = Assert.Single(vm.TreeContextMenuItems, item => ReferenceEquals(item.Command, vm.AddItemCommand));
+        var delete = Assert.Single(vm.TreeContextMenuItems, item => ReferenceEquals(item.Command, vm.DeleteItemCommand));
+
+        Assert.Equal("F2", add.HotKey);
+        Assert.Equal("Delete", delete.HotKey);
+    }
+
+    private static IEnumerable<MainMenuItemViewModel> AllMenuItems(MainWindowViewModel vm)
+    {
+        return FlattenMenuItems(vm.FileMenuItems)
+            .Concat(FlattenMenuItems(vm.EditMenuItems))
+            .Concat(FlattenMenuItems(vm.ViewMenuItems))
+            .Concat(FlattenMenuItems(vm.ToolsMenuItems))
+            .Concat(FlattenMenuItems(vm.HelpMenuItems))
+            .Concat(FlattenMenuItems(vm.BrowserContextMenuItems))
+            .Concat(FlattenMenuItems(vm.TreeContextMenuItems));
     }
 
     private static MainMenuItemViewModel SingleByKey(
