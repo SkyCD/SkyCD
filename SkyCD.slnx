@@ -1,6 +1,7 @@
 <Solution>
     <Folder Name="/Plugins/"/>
     <Folder Name="/Plugins/functional/">
+        <Project Path="Plugins/SkyCD.Plugin.Access/SkyCD.Plugin.Access.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Video/SkyCD.Plugin.Video.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Audio/SkyCD.Plugin.Audio.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>

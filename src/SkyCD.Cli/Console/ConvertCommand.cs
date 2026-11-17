@@ -79,16 +79,8 @@ internal sealed class ConvertCommand : ICliPluginCapability
 
         var payload = readResult.Payload
                       ?? throw new CliSourcePayloadMissingException();
-        Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath) ?? Directory.GetCurrentDirectory());
-
-        await using var target = File.Create(fullOutputPath);
-        await fileFormatManager.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = resolvedOutputFormat,
-            Target = target,
-            FileName = Path.GetFileName(fullOutputPath),
-            Payload = payload
-        }, cancellationToken);
+        await fileFormatManager.WriteFileAsync(resolvedOutputFormat, fullOutputPath, payload,
+            cancellationToken: cancellationToken);
 
         if (jsonOutput)
         {
