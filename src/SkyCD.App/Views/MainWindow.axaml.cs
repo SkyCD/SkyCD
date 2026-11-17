@@ -119,6 +119,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
+            subscribedViewModel.CollectionsRequested -= OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
@@ -141,6 +142,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
+            subscribedViewModel.CollectionsRequested += OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
@@ -366,6 +368,11 @@ public partial class MainWindow : Window
         {
             await new CatalogFindWindow { DataContext = vm.CreateCatalogFindDialogViewModel() }.ShowDialog(this);
         }
+    }
+
+    private async void OnCollectionsRequested(object? sender, CollectionsDialogRequestedEventArgs e)
+    {
+        await new CollectionsWindow { DataContext = e.Dialog }.ShowDialog<bool?>(this);
     }
 
     private async void OnAdvancedFindRequested(object? sender, AdvancedFindDialogRequestedEventArgs e)
@@ -1818,6 +1825,9 @@ public partial class MainWindow : Window
                 "folder" => CatalogDocumentType.Folder,
                 "file" => CatalogDocumentType.File,
                 "media" => CatalogDocumentType.Media,
+                // Collection entries (e.g. Tellico items) are catalog objects, not
+                // filesystem files; they map to media rather than falling through.
+                "entry" => CatalogDocumentType.Media,
                 "networkfolder" => CatalogDocumentType.NetworkFolder,
                 "networkresource" => CatalogDocumentType.NetworkResource,
                 _ => CatalogDocumentType.Media

@@ -127,6 +127,16 @@ public static class UiKeys
     public const string DeleteTag = "core.ui.DeleteTag";
     public const string ShowItems = "core.ui.ShowItems";
     public const string AssignedItems = "core.ui.AssignedItems";
+    public const string Collections = "core.ui.Collections";
+    public const string ManageCollections = "core.ui.ManageCollections";
+    public const string NewCollection = "core.ui.NewCollection";
+    public const string CollectionName = "core.ui.CollectionName";
+    public const string RenameCollection = "core.ui.RenameCollection";
+    public const string DeleteCollection = "core.ui.DeleteCollection";
+    public const string RemoveMissing = "core.ui.RemoveMissing";
+    public const string MissingEntries = "core.ui.MissingEntries";
+    public const string GoToEntry = "core.ui.GoToEntry";
+    public const string CollectionMembers = "core.ui.CollectionMembers";
     public const string AdvancedFind = "core.ui.AdvancedFind";
     public const string AddFilter = "core.ui.AddFilter";
     public const string RemoveFilter = "core.ui.RemoveFilter";

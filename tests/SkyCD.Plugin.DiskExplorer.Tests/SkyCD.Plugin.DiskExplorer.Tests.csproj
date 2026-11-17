@@ -16,6 +16,18 @@
         <None Update="Fixtures\DiskExplorer\*.xml">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="Fixtures\DiskExplorer\*.tsv">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\DiskExplorer\*.csv">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\DiskExplorer\*.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\Html\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>

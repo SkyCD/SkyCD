@@ -2,6 +2,10 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: tag-soup HTML parsing for report import. No script execution; parsing only. -->
+        <PackageReference Include="AngleSharp" Version="1.10.4" />
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>

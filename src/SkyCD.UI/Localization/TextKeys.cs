@@ -182,4 +182,12 @@ public static class TextKeys
     public const string TagDeleted = "core.text.TagDeleted";
     public const string TagFilterMatchCount = "core.text.TagFilterMatchCount";
     public const string TagNameRequired = "core.text.TagNameRequired";
+    public const string Collections = "core.text.Collections";
+    public const string CollectionCreated = "core.text.CollectionCreated";
+    public const string CollectionRenamed = "core.text.CollectionRenamed";
+    public const string CollectionDeleted = "core.text.CollectionDeleted";
+    public const string CollectionNameRequired = "core.text.CollectionNameRequired";
+    public const string CollectionCleaned = "core.text.CollectionCleaned";
+    public const string CollectionAddedTo = "core.text.CollectionAddedTo";
+    public const string CollectionRemovedFrom = "core.text.CollectionRemovedFrom";
 }

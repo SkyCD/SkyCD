@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE collection [<!ENTITY xxe "boom">]>
+<collection type="GCmovies" version="1.6.1" items="1">
+  <item id="1" name="&xxe;" />
+</collection>

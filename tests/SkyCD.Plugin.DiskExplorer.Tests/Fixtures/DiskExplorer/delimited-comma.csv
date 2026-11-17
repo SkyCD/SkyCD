@@ -1,0 +1,4 @@
+volume,path,name,size,date,time,type,desc,itemtype
+Media1,Docs/Reports,file1.txt,1024,2024-01-05,09:15:00,Text,"Line one
+Line two, quoted",File
+Media1,Docs,Reports,,,2024-01-05,,,Folder
