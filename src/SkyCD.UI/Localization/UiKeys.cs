@@ -150,4 +150,13 @@ public static class UiKeys
     public const string SortDescending = "core.ui.SortDescending";
     public const string PreviousPage = "core.ui.PreviousPage";
     public const string NextPage = "core.ui.NextPage";
+    public const string SearchScopeAll = "core.ui.SearchScopeAll";
+    public const string Scope = "core.ui.Scope";
+    public const string Results = "core.ui.Results";
+    public const string SavedSearch = "core.ui.SavedSearch";
+    public const string SaveSearchName = "core.ui.SaveSearchName";
+    public const string SaveSearch = "core.ui.SaveSearch";
+    public const string LoadSearch = "core.ui.LoadSearch";
+    public const string UpdateSearch = "core.ui.UpdateSearch";
+    public const string RefreshResults = "core.ui.RefreshResults";
 }

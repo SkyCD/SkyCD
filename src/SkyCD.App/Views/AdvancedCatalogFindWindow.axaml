@@ -45,11 +45,13 @@
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" VerticalAlignment="Center" />
             <ComboBox ItemsSource="{Binding AvailableCombinations}"
                       SelectedItem="{Binding SelectedCombination}"
-                      MinWidth="90" />
+                      MinWidth="90"
+                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" />
             <ComboBox ItemsSource="{Binding AvailableScopeTypes}"
                       SelectedItem="{Binding SelectedScopeType}"
-                      PlaceholderText="All"
-                      MinWidth="110" />
+                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchScopeAll}}"
+                      MinWidth="110"
+                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Scope}}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddFilter}}"
                     Command="{Binding AddFilterCommand}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ClearFilters}}"
@@ -74,16 +76,20 @@
                 <DataTemplate x:DataType="vm:AdvancedCatalogFilterRowViewModel">
                     <Grid ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="8">
                         <ComboBox ItemsSource="{Binding Fields}"
-                                  SelectedItem="{Binding SelectedField}" />
+                                  SelectedItem="{Binding SelectedField}"
+                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterField}}" />
                         <ComboBox Grid.Column="1"
                                   ItemsSource="{Binding Operators}"
-                                  SelectedItem="{Binding SelectedOperator}" />
+                                  SelectedItem="{Binding SelectedOperator}"
+                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterOperator}}" />
                         <TextBox Grid.Column="2"
                                  Text="{Binding Key}"
-                                 IsVisible="{Binding IsKeyed}" />
+                                 IsVisible="{Binding IsKeyed}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}" />
                         <TextBox Grid.Column="3"
                                  Text="{Binding ValueText}"
-                                 IsEnabled="{Binding IsValueRequired}" />
+                                 IsEnabled="{Binding IsValueRequired}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Value}}" />
                         <Button Grid.Column="4"
                                 Content="{i18n:Translate {x:Static i18n:UiKeys.RemoveFilter}}"
                                 Command="{Binding $parent[Window].DataContext.RemoveFilterCommand}"
@@ -97,7 +103,8 @@
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SortBy}}" VerticalAlignment="Center" />
             <ComboBox ItemsSource="{Binding AvailableSortKeys}"
                       SelectedItem="{Binding SelectedSortKey}"
-                      MinWidth="110" />
+                      MinWidth="110"
+                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SortBy}}" />
             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SortDescending}}"
                       IsChecked="{Binding SortDescending}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PreviousPage}}"
@@ -109,6 +116,7 @@
 
         <ListBox Grid.Row="4" ItemsSource="{Binding Results}"
                  SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Results}}"
                  DoubleTapped="OnResultsDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:CatalogFindResult">
@@ -128,15 +136,18 @@
         <TextBlock Grid.Row="5" Text="{Binding StatusText}" TextWrapping="Wrap" />
 
         <WrapPanel Grid.Row="7" IsVisible="{Binding CanSaveSearch}">
-            <TextBox Width="150" Text="{Binding SavedSearchName}" PlaceholderText="Saved search name" />
-            <Button Content="Save search" Command="{Binding SaveSearchCommand}" />
-            <ComboBox Width="150" ItemsSource="{Binding SavedSearches}" SelectedItem="{Binding SelectedSavedSearch}">
+            <TextBox Width="150" Text="{Binding SavedSearchName}"
+                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SaveSearchName}}"
+                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SaveSearchName}}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SaveSearch}}" Command="{Binding SaveSearchCommand}" />
+            <ComboBox Width="150" ItemsSource="{Binding SavedSearches}" SelectedItem="{Binding SelectedSavedSearch}"
+                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <Button Content="Load search" Command="{Binding LoadSavedSearchCommand}" />
-            <Button Content="Update search" Command="{Binding UpdateSavedSearchCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.LoadSearch}}" Command="{Binding LoadSavedSearchCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.UpdateSearch}}" Command="{Binding UpdateSavedSearchCommand}" />
         </WrapPanel>
 
         <Grid Grid.Row="6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
