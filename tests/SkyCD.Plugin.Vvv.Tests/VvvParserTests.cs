@@ -163,7 +163,7 @@ public sealed class VvvParserTests
         using var source = new CancellationTokenSource();
         source.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => VvvParser.ParseAsync(stream, source.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => VvvParser.ParseAsync(stream, source.Token));
     }
 
     [Fact]
