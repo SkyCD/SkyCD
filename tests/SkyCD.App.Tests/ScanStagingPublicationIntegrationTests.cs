@@ -1,6 +1,9 @@
 using System;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Couchbase.Lite;
 using DryIoc;
@@ -65,6 +68,14 @@ public sealed class ScanStagingPublicationIntegrationTests : IDisposable
         }
     }
 
+    private TestDatabaseContext OpenRepositories()
+    {
+        var container = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(container);
+        var manager = container.Resolve<RepositoryManager>();
+        return new TestDatabaseContext(container, manager, (CatalogDocumentRepository)manager.For<CatalogDocument>());
+    }
+
     private TestDatabaseContext InitializeRepositories()
     {
         var container = new Container();
@@ -83,6 +94,98 @@ public sealed class ScanStagingPublicationIntegrationTests : IDisposable
         appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
 
         return new TestDatabaseContext(container, repositoryManager, catalogRepository);
+    }
+
+    private sealed class CancelDuringPublicationList(CancellationTokenSource cancellation) : IReadOnlyList<CatalogDocument>
+    {
+        private readonly CatalogDocument[] documents =
+        [
+            new() { Id = "cancel-first", Name = "First" },
+            new() { Id = "cancel-second", Name = "Second" }
+        ];
+
+        public int Count => documents.Length;
+        public CatalogDocument this[int index]
+        {
+            get
+            {
+                // Indexing occurs in the write loop; enumeration during classification does not cancel.
+                if (index == 1) cancellation.Cancel();
+                return documents[index];
+            }
+        }
+        public IEnumerator<CatalogDocument> GetEnumerator() => ((IEnumerable<CatalogDocument>)documents).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Fact]
+    public void CancellationDuringPublication_RollsBackEarlierChunksAfterReopen()
+    {
+        using (var setup = OpenRepositories())
+        {
+            using var cancellation = new CancellationTokenSource();
+            var documents = new CancelDuringPublicationList(cancellation);
+            var history = new UndoRedoHistory();
+            Assert.Throws<OperationCanceledException>(() => new CatalogScanPublisher().PublishDirect(
+                documents, setup.CatalogRepository,
+                new ScanPublishOptions { BatchSize = 1, CancellationToken = cancellation.Token }, history));
+            Assert.Empty(setup.CatalogRepository.GetAll());
+            Assert.False(history.CanUndo);
+        }
+        using var reopened = OpenRepositories();
+        Assert.Empty(reopened.CatalogRepository.GetAll());
+    }
+
+    [Fact]
+    public void PublicationFailure_AfterEarlierChunks_RollsBackInsertsAndUpdatesAfterReopen()
+    {
+        using (var setup = InitializeRepositories())
+        {
+            var repository = setup.CatalogRepository;
+            var before = repository.Get("music")!;
+            var update = new CatalogDocument
+            {
+                Id = "rescan-music",
+                Name = before.Name,
+                ParentId = before.ParentId,
+                Type = before.Type,
+                Size = 123
+            };
+            var inserted = new CatalogDocument { Id = "rollback-new", Name = "New", ParentId = "library" };
+            // Save rejects a blank ID after both preceding chunks have already been written.
+            var invalid = new CatalogDocument { Id = " ", Name = "Invalid", ParentId = "library" };
+            var history = new UndoRedoHistory();
+            Assert.Throws<CatalogScanPublicationException>(() => new CatalogScanPublisher().PublishDirect(
+                [update, inserted, invalid], repository, new ScanPublishOptions { BatchSize = 1 }, history));
+            Assert.Equal(before.Size, repository.Get("music")!.Size);
+            Assert.Null(repository.Get(inserted.Id));
+            Assert.False(history.CanUndo);
+        }
+
+        using var reopened = OpenRepositories();
+        Assert.Equal(340L, reopened.CatalogRepository.Get("music")!.ChildrenCount);
+        Assert.Equal(0L, reopened.CatalogRepository.Get("music")!.Size);
+        Assert.Null(reopened.CatalogRepository.Get("rollback-new"));
+    }
+
+    [Fact]
+    public void CanceledPublication_PreservesCatalogAndStagedSessionWithoutUndo()
+    {
+        using var setup = InitializeRepositories();
+        var repository = setup.CatalogRepository;
+        using var store = new CouchbaseScanStagingStore(repository.Collection.Database);
+        var publisher = new CatalogScanPublisher();
+        var session = publisher.StartSession(store);
+        publisher.StageDocuments(store, session.SessionId,
+            [new CatalogDocument { Id = "canceled-new", Name = "New", ParentId = "library" }]);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var history = new UndoRedoHistory();
+        Assert.Throws<OperationCanceledException>(() => publisher.Publish(store, session.SessionId, repository,
+            new ScanPublishOptions { CancellationToken = cancellation.Token }, history));
+        Assert.Null(repository.Get("canceled-new"));
+        Assert.NotNull(store.GetSession(session.SessionId));
+        Assert.False(history.CanUndo);
     }
 
     [Fact]

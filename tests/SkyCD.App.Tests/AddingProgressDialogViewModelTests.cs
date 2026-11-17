@@ -11,6 +11,33 @@ namespace SkyCD.App.Tests;
 public class AddingProgressDialogViewModelTests
 {
     [Fact]
+    public void CancelAction_CancelsFolderTraversalAndDisablesFurtherRequests()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"skycd-cancel-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var vm = new AddingProgressDialogViewModel { CanCancel = true };
+        try
+        {
+            var token = vm.CancellationToken;
+            Assert.True(vm.CancelCommand.CanExecute(null));
+            vm.CancelCommand.Execute(null);
+            Assert.True(token.IsCancellationRequested);
+            Assert.False(vm.CancelCommand.CanExecute(null));
+            Assert.True(vm.IsCancellationPending);
+            Assert.Throws<OperationCanceledException>(() => new FolderCatalogScanner().Scan(
+                new FolderScanOptions(directory), vm, token));
+            Assert.Equal(0, vm.ErrorCount);
+            Assert.DoesNotContain("Scanning complete", vm.GetFullLogText());
+        }
+        finally
+        {
+            vm.FinishCancellation();
+            Directory.Delete(directory);
+        }
+        Assert.False(vm.IsCancellationPending);
+    }
+
+    [Fact]
     public void Constructor_InitializesDefaultValues()
     {
         var vm = new AddingProgressDialogViewModel();

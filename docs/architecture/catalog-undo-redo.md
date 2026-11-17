@@ -119,12 +119,9 @@ Now:
 All strings ship in English and Lithuanian.
 
 **Atomicity.** A deletion is one action covering the whole subtree, applied in one batch. An import is one
-action covering every inserted and merged document. Note what is *not* atomic: `CatalogScanPublisher` writes
-in `BatchSize` (default 1000) chunks, and `InBatch` is not a transaction — it does not roll back on
-exception. A publication that fails in batch 3 of 10 leaves batches 1–2 written and records **no** undo
-entry, because the action is pushed only after the whole loop succeeds. That is the safe direction (never
-claim an undo that cannot fully reverse), and it is documented here rather than papered over; making
-publication itself all-or-nothing is a separate change to the publisher.
+action covering every inserted and merged document. Scan publication now writes all chunks inside one
+Couchbase Lite `InBatch` transaction. Failure or cooperative cancellation rolls back every document,
+including earlier chunks, and leaves undo history unchanged. An undo action is pushed only after commit.
 
 ## Preview artifacts and history
 

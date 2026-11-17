@@ -102,10 +102,13 @@
         </TabControl>
 
         <!-- Status Summary Footer -->
-        <TextBlock Grid.Row="1"
-                   Text="{Binding SummaryText}"
-                   FontSize="11"
-                   Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                   Margin="4,8,4,0" />
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+            <Button Grid.Column="1" Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                    Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" Margin="8,8,0,0" />
+            <TextBlock Text="{Binding SummaryText}"
+                       FontSize="11"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       Margin="4,8,4,0" />
+        </Grid>
     </Grid>
 </Window>

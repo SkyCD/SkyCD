@@ -615,7 +615,7 @@ public partial class MainWindow : Window
             loginVm.Password = string.Empty;
 
             var scanner = new FtpCatalogScanner();
-            var progressVm = new AddingProgressDialogViewModel();
+            var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -624,21 +624,36 @@ public partial class MainWindow : Window
 
             try
             {
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+                var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
+                progressVm.CancellationToken.ThrowIfCancellationRequested();
+                if (scanResult.Statistics.Failed > 0)
+                {
+                    vm.StatusText = LocalizationService.Current.Format(TextKeys.ScanFailedItems, scanResult.Statistics.Failed);
+                    progressVm.ReportError(vm.StatusText);
+                    return;
+                }
+                var scannedDocuments = scanResult.Documents;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 80);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
-                await Task.Delay(50);
+                await Task.Delay(50, progressVm.CancellationToken);
 
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 90);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
-                vm.AddImportedDocuments(scannedDocuments);
+                progressVm.CancellationToken.ThrowIfCancellationRequested();
+                vm.AddImportedDocuments(scannedDocuments, progressVm.CancellationToken);
+                progressVm.CanCancel = false;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (OperationCanceledException)
+            {
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.ScanCanceled);
+                progressVm.ReportInfo(vm.StatusText);
             }
             catch (Exception ex)
             {
@@ -648,6 +663,7 @@ public partial class MainWindow : Window
             }
             finally
             {
+                progressVm.FinishCancellation();
                 progressDialog.Close();
             }
 
@@ -690,7 +706,7 @@ public partial class MainWindow : Window
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider);
-            var progressVm = new AddingProgressDialogViewModel();
+            var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -699,21 +715,36 @@ public partial class MainWindow : Window
 
             try
             {
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+                var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
+                progressVm.CancellationToken.ThrowIfCancellationRequested();
+                if (scanResult.Statistics.Failed > 0)
+                {
+                    vm.StatusText = LocalizationService.Current.Format(TextKeys.ScanFailedItems, scanResult.Statistics.Failed);
+                    progressVm.ReportError(vm.StatusText);
+                    return;
+                }
+                var scannedDocuments = scanResult.Documents;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 60);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
-                await Task.Delay(50);
+                await Task.Delay(50, progressVm.CancellationToken);
 
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
-                vm.AddImportedDocuments(scannedDocuments);
+                progressVm.CancellationToken.ThrowIfCancellationRequested();
+                vm.AddImportedDocuments(scannedDocuments, progressVm.CancellationToken);
+                progressVm.CanCancel = false;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (OperationCanceledException)
+            {
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.ScanCanceled);
+                progressVm.ReportInfo(vm.StatusText);
             }
             catch (Exception ex)
             {
@@ -722,6 +753,7 @@ public partial class MainWindow : Window
             }
             finally
             {
+                progressVm.FinishCancellation();
                 progressDialog.Close();
             }
             return;
@@ -746,7 +778,7 @@ public partial class MainWindow : Window
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
 
             var scanner = new FolderCatalogScanner();
-            var progressVm = new AddingProgressDialogViewModel();
+            var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -755,21 +787,36 @@ public partial class MainWindow : Window
 
             try
             {
-                var scannedDocuments = await Task.Run(() => scanner.Scan(scanOptions, progressVm));
+                var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
+                progressVm.CancellationToken.ThrowIfCancellationRequested();
+                if (scanResult.Statistics.Failed > 0)
+                {
+                    vm.StatusText = LocalizationService.Current.Format(TextKeys.ScanFailedItems, scanResult.Statistics.Failed);
+                    progressVm.ReportError(vm.StatusText);
+                    return;
+                }
+                var scannedDocuments = scanResult.Documents;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications), stagePercentage: 100, overallPercentage: 60);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications));
-                await Task.Delay(50);
+                await Task.Delay(50, progressVm.CancellationToken);
 
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
-                vm.AddImportedDocuments(scannedDocuments);
+                progressVm.CancellationToken.ThrowIfCancellationRequested();
+                vm.AddImportedDocuments(scannedDocuments, progressVm.CancellationToken);
+                progressVm.CanCancel = false;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+            }
+            catch (OperationCanceledException)
+            {
+                vm.StatusText = LocalizationService.Current.Get(TextKeys.ScanCanceled);
+                progressVm.ReportInfo(vm.StatusText);
             }
             catch (Exception ex)
             {
@@ -778,6 +825,7 @@ public partial class MainWindow : Window
             }
             finally
             {
+                progressVm.FinishCancellation();
                 progressDialog.Close();
             }
             return;

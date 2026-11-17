@@ -10,6 +10,14 @@ public partial class AddingProgressWindow : Window
     public AddingProgressWindow()
     {
         InitializeComponent();
+        Closing += (_, e) =>
+        {
+            if (DataContext is AddingProgressDialogViewModel vm && (vm.CanCancel || vm.IsCancellationPending))
+            {
+                vm.Cancel();
+                e.Cancel = true;
+            }
+        };
     }
 
     private async void OnCopyLogClicked(object? sender, RoutedEventArgs e)

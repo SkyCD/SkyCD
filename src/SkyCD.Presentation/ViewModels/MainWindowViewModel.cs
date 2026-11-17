@@ -930,8 +930,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return result;
     }
 
-    public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents)
+    public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents) =>
+        AddImportedDocuments(documents, CancellationToken.None);
+
+    public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (documents is null || documents.Count == 0)
         {
             return;
@@ -940,7 +944,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (catalogRepository is not null)
         {
             var publisher = new CatalogScanPublisher();
-            publisher.PublishDirect(documents, catalogRepository, new ScanPublishOptions(), undoManager?.History);
+            publisher.PublishDirect(documents, catalogRepository, new ScanPublishOptions { CancellationToken = cancellationToken }, undoManager?.History);
         }
         else if (inMemoryCatalogEntries is not null)
         {

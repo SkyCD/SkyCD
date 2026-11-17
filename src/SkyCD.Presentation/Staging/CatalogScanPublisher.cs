@@ -202,6 +202,8 @@ public sealed class CatalogScanPublisher(CatalogEntryMerger? entryMerger = null)
         ScanPublishOptions options,
         UndoRedoHistory? undoHistory)
     {
+        options.CancellationToken.ThrowIfCancellationRequested();
+
         if (documents.Count == 0)
         {
             return new ScanPublishResult
@@ -243,18 +245,27 @@ public sealed class CatalogScanPublisher(CatalogEntryMerger? entryMerger = null)
 
         try
         {
-            var batchSize = Math.Max(1, options.BatchSize);
-            for (var i = 0; i < mergedDocuments.Count; i += batchSize)
+            // Keep every chunk in one transaction so later failures roll back earlier writes.
+            repository.Collection.Database.InBatch(() =>
             {
-                var chunk = mergedDocuments.Skip(i).Take(batchSize).ToList();
-                repository.Collection.Database.InBatch(() =>
+                var batchSize = Math.Max(1, options.BatchSize);
+                for (var i = 0; i < mergedDocuments.Count;)
                 {
-                    foreach (var doc in chunk)
+                    options.CancellationToken.ThrowIfCancellationRequested();
+                    var end = i + Math.Min(batchSize, mergedDocuments.Count - i);
+                    for (; i < end; i++)
                     {
+                        options.CancellationToken.ThrowIfCancellationRequested();
+                        var doc = mergedDocuments[i];
                         repository.Save(doc.Id, doc);
                     }
-                });
-            }
+                }
+                options.CancellationToken.ThrowIfCancellationRequested();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

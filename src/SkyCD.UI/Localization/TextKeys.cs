@@ -113,6 +113,8 @@ public static class TextKeys
     public const string PreparingDatabaseForModifications = "core.text.PreparingDatabaseForModifications";
     public const string Threads = "core.text.Threads";
     public const string NotFoundExpectedAtOr = "core.text.NotFoundExpectedAtOr";
+    public const string ScanFailedItems = "core.text.ScanFailedItems";
+    public const string ScanCanceled = "core.text.ScanCanceled";
     public const string LoginCanceled = "core.text.LoginCanceled";
     public const string OpenCatalog = "core.text.OpenCatalog";
     public const string OpenFolder = "core.text.OpenFolder";
