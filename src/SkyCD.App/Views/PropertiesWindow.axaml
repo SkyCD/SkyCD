@@ -11,9 +11,7 @@
         Height="426"
         MinWidth="411"
         MinHeight="426"
-        MaxWidth="411"
-        MaxHeight="426"
-        CanResize="False"
+        CanResize="True"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -27,9 +25,10 @@
     <Grid RowDefinitions="*,Auto" Margin="0">
         <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
-                <Grid Margin="10,8,10,10" RowDefinitions="Auto,Auto,Auto,*" ColumnDefinitions="32,8,*">
-                    <Border Width="32"
-                            Height="32"
+                <Grid Margin="10,8,10,10" RowDefinitions="Auto,Auto,Auto,*" ColumnDefinitions="Auto,8,*">
+                    <Border Grid.RowSpan="2"
+                            Width="{Binding #NameFields.Bounds.Height}"
+                            Height="{Binding #NameFields.Bounds.Height}"
                             BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                             BorderThickness="1"
                             VerticalAlignment="Top"
@@ -40,11 +39,13 @@
                                VerticalAlignment="Center" />
                     </Border>
 
-                    <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.NameLabel}}" VerticalAlignment="Top" />
-                    <TextBox Grid.Column="2"
-                             Grid.Row="1"
-                             Margin="0,2,0,0"
-                             Text="{Binding Name}" />
+                    <StackPanel x:Name="NameFields"
+                                Grid.RowSpan="2"
+                                Grid.Column="2"
+                                Spacing="2">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NameLabel}}" VerticalAlignment="Top" />
+                        <TextBox Text="{Binding Name}" />
+                    </StackPanel>
 
                     <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Margin="0,12,0,4" Text="{i18n:Translate {x:Static i18n:UiKeys.CommentsLabel}}"
                                VerticalAlignment="Top" />
