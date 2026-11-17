@@ -2,6 +2,7 @@
     <Folder Name="/Plugins/"/>
     <Folder Name="/Plugins/functional/">
         <Project Path="Plugins/SkyCD.Plugin.AiDescription/SkyCD.Plugin.AiDescription.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Accounts/SkyCD.Plugin.Accounts.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Video/SkyCD.Plugin.Video.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Audio/SkyCD.Plugin.Audio.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>
@@ -67,6 +68,7 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/SkyCD.Acp.FakeAgent/SkyCD.Acp.FakeAgent.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Accounts.Tests/SkyCD.Plugin.Accounts.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Video.Tests/SkyCD.Plugin.Video.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Audio.Tests/SkyCD.Plugin.Audio.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Image.Tests/SkyCD.Plugin.Image.Tests.csproj"/>

@@ -525,7 +525,7 @@ public sealed class CliHost(
         CancellationToken cancellationToken)
     {
         var executionResult = await ExecuteWithTimeoutAsync(
-            token => InvokeContributionCommandAsync(consoleRedirectLock, stdout, stderr, command, pluginArgs, token),
+            token => InvokeContributionCommandAsync(consoleRedirectLock, stdout, stderr, command, pluginArgs, jsonOutput, token),
             cancellationToken);
 
         if (!executionResult.Success)
@@ -556,10 +556,12 @@ public sealed class CliHost(
         TextWriter stderr,
         RegisteredCliContribution command,
         IReadOnlyList<string> pluginArgs,
+        bool jsonOutput,
         CancellationToken cancellationToken)
     {
         try
         {
+            ApplyJsonOutput(command.CommandInstance, jsonOutput);
             var runnerType = typeof(AppRunner<>).MakeGenericType(command.CommandInstance.GetType());
             var runner = Activator.CreateInstance(runnerType, new AppSettings(), new Resources())
                          ?? throw new CliRunnerCreationException(command.CommandPath);
@@ -680,6 +682,17 @@ public sealed class CliHost(
     {
         return writer is StringWriter stringWriter
                && stringWriter.GetStringBuilder().Length > 0;
+    }
+
+    /// <summary>
+    /// Enables JSON output on commands that opt into structured output.
+    /// </summary>
+    internal static void ApplyJsonOutput(object commandInstance, bool jsonOutput)
+    {
+        if (jsonOutput && commandInstance is ISupportsJsonOutput jsonCapable)
+        {
+            jsonCapable.JsonOutput = true;
+        }
     }
 
     private sealed record ContributionCommandExecutionResult(
