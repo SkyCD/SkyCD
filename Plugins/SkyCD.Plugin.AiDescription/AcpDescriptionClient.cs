@@ -50,7 +50,7 @@ public sealed class AcpDescriptionClient
         };
         foreach (var argument in options.Arguments) start.ArgumentList.Add(argument);
         foreach (var pair in options.Environment) start.Environment[pair.Key] = pair.Value;
-        using var process = new Process { StartInfo = start };
+        var process = new Process { StartInfo = start };
         AcpDescriptionClient? client = null;
         try
         {
@@ -91,7 +91,34 @@ public sealed class AcpDescriptionClient
                 }
             }
             catch (InvalidOperationException) { }
-            try { Directory.Delete(workingDirectory, recursive: true); } catch (IOException) { }
+            catch (TimeoutException) { }
+            finally
+            {
+                process.Dispose();
+                await DeleteWorkingDirectoryAsync(workingDirectory);
+            }
+        }
+    }
+
+    private static async Task DeleteWorkingDirectoryAsync(string workingDirectory)
+    {
+        const int maxAttempts = 10;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                Directory.Delete(workingDirectory, recursive: true);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                if (attempt == maxAttempts) return;
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+            }
         }
     }
 
