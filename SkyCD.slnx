@@ -55,6 +55,7 @@
         <Project Path="Plugins/SkyCD.Plugin.NeoFinder.Text/SkyCD.Plugin.NeoFinder.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.BrokenX/SkyCD.Plugin.BrokenX.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Native/SkyCD.Plugin.WinCatalog.Native.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.CdCatalogExpert/SkyCD.Plugin.CdCatalogExpert.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.DiskCatalogMaker/SkyCD.Plugin.DiskCatalogMaker.csproj"/>
     </Folder>
     <Folder Name="/src/">
@@ -129,6 +130,7 @@
         <Project Path="tests/SkyCD.Plugin.NeoFinder.Text.Tests/SkyCD.Plugin.NeoFinder.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.BrokenX.Tests/SkyCD.Plugin.BrokenX.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Native.Tests/SkyCD.Plugin.WinCatalog.Native.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.CdCatalogExpert.Tests/SkyCD.Plugin.CdCatalogExpert.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskCatalogMaker.Tests/SkyCD.Plugin.DiskCatalogMaker.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
