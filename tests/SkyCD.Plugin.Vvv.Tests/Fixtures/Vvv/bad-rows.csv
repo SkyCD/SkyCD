@@ -1,0 +1,4 @@
+"Volume","Path","Name","Size","Ext","Last modified","Description"
+"CD1","/","bad.txt",notanumber,"txt","","bad size"
+"CD1","/","good.txt",10,"txt","",""
+"CD1","/","",20,"txt","","no name"
