@@ -183,6 +183,7 @@ public sealed class KatalogFixtureBuilder : IDisposable
         Execute(connection, $"INSERT INTO parameter (parameter_name, parameter_type, parameter_value1) VALUES ('version', 'collection', '{version}')");
         Execute(connection, "INSERT INTO device VALUES (1, 0, 'Docs', 'Catalog', 7, '/docs')");
         Execute(connection, "INSERT INTO catalog VALUES (7, '/backups/docs.idx')");
+        Execute(connection, "INSERT INTO file VALUES (7, 'readme.txt', '/', 42, '2024-01-01', '/readme.txt')");
         return path;
     }
 

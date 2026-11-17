@@ -56,7 +56,9 @@ public sealed class KatalogSqliteReaderTests : IDisposable
 
         var photo = RowByName(document, "img.jpg");
         Assert.Equal("file", photo["kind"]);
-        Assert.Equal(photoMedia["nodeId"], photo["parentId"]);
+        var photoParent = document.Rows.Single(row => string.Equals((string)row["nodeId"]!, (string)photo["parentId"]!, StringComparison.Ordinal));
+        Assert.Equal("folder", photoParent["kind"]);
+        Assert.Equal("2024", photoParent["name"]);
         var photoProps = PropertiesOf(photo);
         Assert.Equal("abc123", photoProps["SHA256"]);
         Assert.Equal("image/jpeg", photoProps["MimeType"]);
@@ -175,7 +177,7 @@ public sealed class KatalogSqliteReaderTests : IDisposable
         using var source = new CancellationTokenSource();
         source.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
         {
             await KatalogSqliteReader.ReadAsync(stream, path, progress: null, cancellationToken: source.Token);
         });

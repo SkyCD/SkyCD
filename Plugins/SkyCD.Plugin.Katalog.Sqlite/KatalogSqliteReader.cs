@@ -146,16 +146,16 @@ public static class KatalogSqliteReader
                 diagnostics.Add($"Schema version '{schemaVersion}' is not a recognized version number; proceeding with column-tolerant reads.");
             }
 
-            var devices = await ReadDevicesAsync(connection, cancellationToken);
+            var devices = await ReadDevicesAsync(connection, columns[KatalogSqliteSchema.DeviceTable], cancellationToken);
             progress?.Report(50);
             var storages = hasStorage
                 ? await ReadStoragesAsync(connection, columns[KatalogSqliteSchema.StorageTable], cancellationToken)
                 : [];
             progress?.Report(60);
-            var tags = await ReadTagsAsync(connection, cancellationToken);
+            var tags = await ReadTagsAsync(connection, columns[KatalogSqliteSchema.TagTable], cancellationToken);
             progress?.Report(70);
             var availableFileColumns = columns[KatalogSqliteSchema.FileTable];
-            var catalogs = await ReadCatalogsAsync(connection, devices, availableFileColumns, cancellationToken);
+            var catalogs = await ReadCatalogsAsync(connection, devices, columns, availableFileColumns, cancellationToken);
             progress?.Report(80);
 
             if (catalogs.Count == 0)
@@ -317,16 +317,35 @@ public static class KatalogSqliteReader
     }
 
     private static async Task<List<KatalogDeviceRecord>> ReadDevicesAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
+        SqliteConnection connection, HashSet<string> available, CancellationToken cancellationToken)
     {
-        var devices = new List<KatalogDeviceRecord>();
+        var select = new List<string>
+        {
+            "device_id", "device_parent_id", "device_name", "device_type", "device_external_id", "device_path"
+        };
+        foreach (var optional in new[]
+            {
+                "device_total_file_size", "device_total_file_count", "device_total_space",
+                "device_free_space", "device_active", "device_group_id", "device_date_updated",
+                "device_order", "device_comment"
+            })
+        {
+            if (available.Contains(optional))
+            {
+                select.Add(optional);
+            }
+        }
+
         using var command = connection.CreateCommand();
-        command.CommandText =
-            "SELECT device_id, device_parent_id, device_name, device_type, device_external_id, " +
-            "device_path, device_total_file_size, device_total_file_count, device_total_space, " +
-            "device_free_space, device_active, device_group_id, device_date_updated, device_order, " +
-            "device_comment FROM device ORDER BY device_id";
+        command.CommandText = $"SELECT {string.Join(", ", select)} FROM device ORDER BY device_id";
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var index = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < select.Count; i++)
+        {
+            index[select[i]] = i;
+        }
+
+        var devices = new List<KatalogDeviceRecord>();
         var rows = 0;
         while (await reader.ReadAsync(cancellationToken))
         {
@@ -337,25 +356,37 @@ public static class KatalogSqliteReader
 
             devices.Add(new KatalogDeviceRecord
             {
-                DeviceId = ReadInt(reader, 0),
-                ParentId = ReadInt(reader, 1),
-                Name = ReadText(reader, 2),
-                Type = ReadText(reader, 3),
-                ExternalId = ReadInt(reader, 4),
-                Path = ReadText(reader, 5),
-                TotalFileSize = ReadLong(reader, 6),
-                TotalFileCount = ReadLong(reader, 7),
-                TotalSpace = ReadLong(reader, 8),
-                FreeSpace = ReadLong(reader, 9),
-                Active = ReadLong(reader, 10) != 0,
-                GroupId = ReadInt(reader, 11),
-                DateUpdated = ReadText(reader, 12),
-                Order = ReadInt(reader, 13),
-                Comment = ReadText(reader, 14)
+                DeviceId = ReadDeviceInt(reader, index, "device_id"),
+                ParentId = ReadDeviceInt(reader, index, "device_parent_id"),
+                Name = ReadDeviceText(reader, index, "device_name"),
+                Type = ReadDeviceText(reader, index, "device_type"),
+                ExternalId = ReadDeviceInt(reader, index, "device_external_id"),
+                Path = ReadDeviceText(reader, index, "device_path"),
+                TotalFileSize = ReadDeviceLong(reader, index, "device_total_file_size"),
+                TotalFileCount = ReadDeviceLong(reader, index, "device_total_file_count"),
+                TotalSpace = ReadDeviceLong(reader, index, "device_total_space"),
+                FreeSpace = ReadDeviceLong(reader, index, "device_free_space"),
+                Active = ReadDeviceLong(reader, index, "device_active") != 0,
+                GroupId = ReadDeviceInt(reader, index, "device_group_id"),
+                DateUpdated = ReadDeviceText(reader, index, "device_date_updated"),
+                Order = ReadDeviceInt(reader, index, "device_order"),
+                Comment = ReadDeviceText(reader, index, "device_comment")
             });
         }
 
         return devices;
+    }
+
+    private static string ReadDeviceText(SqliteDataReader reader, Dictionary<string, int> index, string column) =>
+        index.TryGetValue(column, out var ordinal) ? ReadText(reader, ordinal) : string.Empty;
+
+    private static long ReadDeviceLong(SqliteDataReader reader, Dictionary<string, int> index, string column) =>
+        index.TryGetValue(column, out var ordinal) ? ReadLong(reader, ordinal) : 0;
+
+    private static int ReadDeviceInt(SqliteDataReader reader, Dictionary<string, int> index, string column)
+    {
+        var value = ReadDeviceLong(reader, index, column);
+        return value > int.MaxValue ? int.MaxValue : (int)value;
     }
 
     private static async Task<List<KatalogStorageRecord>> ReadStoragesAsync(
@@ -478,12 +509,29 @@ public static class KatalogSqliteReader
     }
 
     private static async Task<List<KatalogTagRecord>> ReadTagsAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
+        SqliteConnection connection, HashSet<string> available, CancellationToken cancellationToken)
     {
+        var select = new List<string> { "ID", "name", "path" };
+        foreach (var optional in new[] { "type", "date_time" })
+        {
+            if (available.Contains(optional))
+            {
+                select.Add(optional);
+            }
+        }
+
         var tags = new List<KatalogTagRecord>();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT ID, name, path, type, date_time FROM tag";
+        command.CommandText = $"SELECT {string.Join(", ", select)} FROM tag";
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var index = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < select.Count; i++)
+        {
+            index[select[i]] = i;
+        }
+
+        string Text(string column) =>
+            index.TryGetValue(column, out var ordinal) ? ReadText(reader, ordinal) : string.Empty;
         var rows = 0;
         while (await reader.ReadAsync(cancellationToken))
         {
@@ -494,11 +542,11 @@ public static class KatalogSqliteReader
 
             tags.Add(new KatalogTagRecord
             {
-                Id = ReadInt(reader, 0),
-                Name = ReadText(reader, 1),
-                Path = ReadText(reader, 2),
-                Type = ReadText(reader, 3),
-                DateTime = ReadText(reader, 4)
+                Id = ReadInt(reader, index["ID"]),
+                Name = Text("name"),
+                Path = Text("path"),
+                Type = Text("type"),
+                DateTime = Text("date_time")
             });
         }
 
@@ -508,6 +556,7 @@ public static class KatalogSqliteReader
     private static async Task<List<KatalogIdxCatalog>> ReadCatalogsAsync(
         SqliteConnection connection,
         List<KatalogDeviceRecord> devices,
+        Dictionary<string, HashSet<string>> columns,
         HashSet<string> availableFileColumns,
         CancellationToken cancellationToken)
     {
@@ -520,18 +569,39 @@ public static class KatalogSqliteReader
             }
         }
 
+        var select = new List<string> { "catalog_id", "catalog_file_path" };
+        foreach (var optional in new[]
+            {
+                "catalog_date_updated", "catalog_include_hidden", "catalog_file_type",
+                "catalog_include_symblinks", "catalog_is_full_device", "catalog_date_loaded",
+                "catalog_include_metadata", "catalog_include_checksum", "catalog_app_version",
+                "catalog_include_sub_dir"
+            })
+        {
+            if (columns[KatalogSqliteSchema.CatalogTable].Contains(optional))
+            {
+                select.Add(optional);
+            }
+        }
+
         var catalogs = new List<KatalogIdxCatalog>();
         using var command = connection.CreateCommand();
-        command.CommandText =
-            "SELECT catalog_id, catalog_file_path, catalog_date_updated, catalog_include_hidden, " +
-            "catalog_file_type, catalog_include_symblinks, catalog_is_full_device, catalog_date_loaded, " +
-            "catalog_include_metadata, catalog_include_checksum, catalog_app_version, catalog_include_sub_dir " +
-            "FROM catalog ORDER BY catalog_id";
+        command.CommandText = $"SELECT {string.Join(", ", select)} FROM catalog ORDER BY catalog_id";
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var index = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < select.Count; i++)
+        {
+            index[select[i]] = i;
+        }
+
+        string Text(string column) =>
+            index.TryGetValue(column, out var ordinal) ? ReadText(reader, ordinal) : string.Empty;
+        bool Flag(string column) =>
+            index.TryGetValue(column, out var ordinal) && !reader.IsDBNull(ordinal) && IsTrueValue(reader.GetValue(ordinal));
         while (await reader.ReadAsync(cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var catalogId = ReadInt(reader, 0);
+            var catalogId = ReadInt(reader, index["catalog_id"]);
             ownerByCatalogId.TryGetValue(catalogId, out var owner);
 
             var catalogName = owner?.Name;
@@ -544,23 +614,31 @@ public static class KatalogSqliteReader
             {
                 CatalogId = catalogId,
                 CatalogName = string.IsNullOrWhiteSpace(catalogName) ? $"Catalog_{catalogId}" : catalogName.Trim(),
-                AppVersion = ReadText(reader, 10),
+                AppVersion = Text("catalog_app_version"),
                 SourcePath = owner?.Path ?? string.Empty,
                 FileCount = owner?.TotalFileCount ?? 0,
                 TotalFileSize = owner?.TotalFileSize ?? 0,
-                IncludeHidden = IsTrue(reader, 3),
-                FileType = ReadText(reader, 4),
-                IncludeSymlinks = IsTrue(reader, 5),
-                IncludeSubDir = IsTrue(reader, 11),
-                IsFullDevice = IsTrue(reader, 6),
-                IncludeMetadata = ReadText(reader, 8),
-                IncludeChecksum = ReadText(reader, 9),
-                FilePath = ReadText(reader, 1)
+                IncludeHidden = Flag("catalog_include_hidden"),
+                FileType = Text("catalog_file_type"),
+                IncludeSymlinks = Flag("catalog_include_symblinks"),
+                IncludeSubDir = Flag("catalog_include_sub_dir"),
+                IsFullDevice = Flag("catalog_is_full_device"),
+                IncludeMetadata = Text("catalog_include_metadata"),
+                IncludeChecksum = Text("catalog_include_checksum"),
+                FilePath = Text("catalog_file_path")
             });
         }
 
         return catalogs;
     }
+
+    private static bool IsTrueValue(object? value) => value switch
+    {
+        long number => number != 0,
+        int number => number != 0,
+        string text => text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1",
+        _ => false
+    };
 
     private static async Task<string> ReadCatalogNameFallbackAsync(
         SqliteConnection connection, int catalogId, CancellationToken cancellationToken)
@@ -570,23 +648,6 @@ public static class KatalogSqliteReader
         command.Parameters.AddWithValue("$id", catalogId);
         var value = await command.ExecuteScalarAsync(cancellationToken);
         return value is null or DBNull ? string.Empty : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-    }
-
-    private static bool IsTrue(SqliteDataReader reader, int ordinal)
-    {
-        if (reader.IsDBNull(ordinal))
-        {
-            return false;
-        }
-
-        var value = reader.GetValue(ordinal);
-        return value switch
-        {
-            long number => number != 0,
-            int number => number != 0,
-            string text => text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1",
-            _ => false
-        };
     }
 
     private static async Task ReadCatalogFilesAsync(
