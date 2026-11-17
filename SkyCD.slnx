@@ -2,6 +2,9 @@
     <Folder Name="/Plugins/"/>
     <Folder Name="/Plugins/functional/">
         <Project Path="Plugins/SkyCD.Plugin.AiDescription/SkyCD.Plugin.AiDescription.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Accounts/SkyCD.Plugin.Accounts.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Accounts.JetBrains/SkyCD.Plugin.Accounts.JetBrains.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Accounts.Microsoft365/SkyCD.Plugin.Accounts.Microsoft365.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Video/SkyCD.Plugin.Video.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Audio/SkyCD.Plugin.Audio.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>
@@ -53,6 +56,7 @@
         <Project Path="Plugins/SkyCD.Plugin.BrokenX/SkyCD.Plugin.BrokenX.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Native/SkyCD.Plugin.WinCatalog.Native.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCatalogExpert/SkyCD.Plugin.CdCatalogExpert.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.DiskCatalogMaker/SkyCD.Plugin.DiskCatalogMaker.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -70,6 +74,7 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/SkyCD.Acp.FakeAgent/SkyCD.Acp.FakeAgent.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Accounts.Tests/SkyCD.Plugin.Accounts.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Video.Tests/SkyCD.Plugin.Video.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Audio.Tests/SkyCD.Plugin.Audio.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Image.Tests/SkyCD.Plugin.Image.Tests.csproj"/>
@@ -126,6 +131,7 @@
         <Project Path="tests/SkyCD.Plugin.BrokenX.Tests/SkyCD.Plugin.BrokenX.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Native.Tests/SkyCD.Plugin.WinCatalog.Native.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCatalogExpert.Tests/SkyCD.Plugin.CdCatalogExpert.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.DiskCatalogMaker.Tests/SkyCD.Plugin.DiskCatalogMaker.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>
