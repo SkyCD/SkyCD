@@ -117,6 +117,16 @@ public static class UiKeys
     public const string Find = "core.ui.Find";
     public const string Location = "core.ui.Location";
     public const string OpenResult = "core.ui.OpenResult";
+    public const string Tags = "core.ui.Tags";
+    public const string ManageTags = "core.ui.ManageTags";
+    public const string NewTag = "core.ui.NewTag";
+    public const string TagName = "core.ui.TagName";
+    public const string RenameTag = "core.ui.RenameTag";
+    public const string MergeTags = "core.ui.MergeTags";
+    public const string MergeInto = "core.ui.MergeInto";
+    public const string DeleteTag = "core.ui.DeleteTag";
+    public const string ShowItems = "core.ui.ShowItems";
+    public const string AssignedItems = "core.ui.AssignedItems";
     public const string Collections = "core.ui.Collections";
     public const string ManageCollections = "core.ui.ManageCollections";
     public const string NewCollection = "core.ui.NewCollection";

@@ -109,6 +109,55 @@ namespace SkyCD.Presentation.UndoRedo
             _history.PushAction(new Actions.ChangeTagsBatchAction(_catalogRepository, changes));
         }
 
+        public void RecordTagCreated(
+            TagDocumentRepository tagRepository,
+            CatalogDocumentRepository catalogRepository,
+            string tagId,
+            string tagName)
+        {
+            if (tagRepository == null || catalogRepository == null) return;
+            if (string.IsNullOrWhiteSpace(tagId)) return;
+            _history.PushAction(new Actions.CreateTagAction(catalogRepository, tagRepository, tagId, tagName ?? string.Empty));
+        }
+
+        public void RecordTagRenamed(TagDocumentRepository tagRepository, string tagId, string oldName, string newName)
+        {
+            if (tagRepository == null) return;
+            if (string.IsNullOrWhiteSpace(tagId)) return;
+            if (string.Equals(oldName, newName, StringComparison.Ordinal)) return;
+            _history.PushAction(new Actions.RenameTagAction(tagRepository, tagId, oldName ?? string.Empty, newName ?? string.Empty));
+        }
+
+        public void RecordTagDeleted(
+            CatalogDocumentRepository catalogRepository,
+            TagDocumentRepository tagRepository,
+            string tagId,
+            string tagName,
+            IReadOnlyDictionary<string, IReadOnlyList<string>> affectedOldTagIds)
+        {
+            if (catalogRepository == null || tagRepository == null) return;
+            if (string.IsNullOrWhiteSpace(tagId)) return;
+            _history.PushAction(new Actions.DeleteTagAction(
+                catalogRepository, tagRepository, tagId, tagName ?? string.Empty,
+                affectedOldTagIds ?? new Dictionary<string, IReadOnlyList<string>>()));
+        }
+
+        public void RecordTagsMerged(
+            CatalogDocumentRepository catalogRepository,
+            TagDocumentRepository tagRepository,
+            string sourceTagId,
+            string sourceTagName,
+            string targetTagId,
+            IReadOnlyDictionary<string, IReadOnlyList<string>> affectedOldTagIds)
+        {
+            if (catalogRepository == null || tagRepository == null) return;
+            if (string.IsNullOrWhiteSpace(sourceTagId) || string.IsNullOrWhiteSpace(targetTagId)) return;
+            if (string.Equals(sourceTagId, targetTagId, StringComparison.Ordinal)) return;
+            _history.PushAction(new Actions.MergeTagsAction(
+                catalogRepository, tagRepository, sourceTagId, sourceTagName ?? string.Empty, targetTagId,
+                affectedOldTagIds ?? new Dictionary<string, IReadOnlyList<string>>()));
+        }
+
         public void RecordCollectionCreated(
             VirtualCollectionDocumentRepository collectionRepository,
             string collectionId,

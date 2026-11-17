@@ -61,6 +61,17 @@
                                    PropertyHeader="{i18n:Translate {x:Static i18n:UiKeys.Property}}"
                                    ValueHeader="{i18n:Translate {x:Static i18n:UiKeys.Value}}" />
             </TabItem>
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Tags}}" IsVisible="{Binding HasTagsTab}">
+                <ScrollViewer Margin="8">
+                    <ItemsControl ItemsSource="{Binding TagAssignments}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TagAssignmentViewModel">
+                                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsAssigned, Mode=TwoWay}" Margin="0,2,0,2" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" IsVisible="{Binding HasCustomProperties}">
                 <ScrollViewer Margin="8">
                     <ItemsControl ItemsSource="{Binding CustomProperties}">

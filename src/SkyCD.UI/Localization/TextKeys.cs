@@ -173,6 +173,15 @@ public static class TextKeys
     public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
+    public const string Tags = "core.text.Tags";
+    public const string TagAddedToItems = "core.text.TagAddedToItems";
+    public const string TagRemovedFromItems = "core.text.TagRemovedFromItems";
+    public const string TagCreated = "core.text.TagCreated";
+    public const string TagRenamed = "core.text.TagRenamed";
+    public const string TagMerged = "core.text.TagMerged";
+    public const string TagDeleted = "core.text.TagDeleted";
+    public const string TagFilterMatchCount = "core.text.TagFilterMatchCount";
+    public const string TagNameRequired = "core.text.TagNameRequired";
     public const string Collections = "core.text.Collections";
     public const string CollectionCreated = "core.text.CollectionCreated";
     public const string CollectionRenamed = "core.text.CollectionRenamed";

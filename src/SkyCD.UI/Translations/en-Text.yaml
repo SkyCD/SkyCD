@@ -171,6 +171,15 @@ text.AdvancedFilterOneOfRequired: "OneOf requires at least one semicolon-separat
 text.ScanCanceled: Scan canceled.
 
 text.ScanFailedItems: "Scan found {0} failed items. The catalog was not changed."
+text.Tags: "Tags"
+text.TagAddedToItems: "Added tag {0} to {1} items."
+text.TagRemovedFromItems: "Removed tag {0} from {1} items."
+text.TagCreated: "Created tag {0}."
+text.TagRenamed: "Renamed tag to {0}."
+text.TagMerged: "Merged tag {0} into {1}."
+text.TagDeleted: "Deleted tag {0}."
+text.TagFilterMatchCount: "{0} entries tagged {1}."
+text.TagNameRequired: "Enter a tag name."
 text.Collections: "Collections"
 text.CollectionCreated: "Created collection {0}."
 text.CollectionRenamed: "Renamed collection to {0}."
