@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic minimal GCbooks-model fixture. -->
+<collection type="GCbooks" version="1.6.1" items="1">
+  <information name="Bedside Books" />
+  <item id="b1" title="The Hobbit">
+    <description>Bilbo leaves the Shire.</description>
+    <secrets>First edition dust jacket notes.</secrets>
+  </item>
+</collection>
