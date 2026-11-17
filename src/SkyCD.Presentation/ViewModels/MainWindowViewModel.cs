@@ -28,6 +28,7 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
+using SkyCD.Presentation.Tags;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -38,6 +39,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly CatalogUndoManager? undoManager;
+    private readonly CatalogTagService? tagService;
+    private readonly TagDocumentRepository? tagRepository;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
@@ -86,6 +89,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? FindCatalogRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
+    public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
     public event EventHandler? ExitRequested;
     public event EventHandler? FocusBrowserRequested;
     public event EventHandler? FocusTreeRequested;
@@ -119,12 +123,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IStringLocalizer propertyValueLocalizer,
         MenuExtensionManager menuExtensionManager,
         bool shouldSeedDefaultCatalog,
-        CatalogUndoManager? undoManager = null)
+        CatalogUndoManager? undoManager = null,
+        TagDocumentRepository? tagDocuments = null)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.undoManager = undoManager;
+        this.tagRepository = tagDocuments;
+        this.tagService = tagDocuments is not null
+            ? new CatalogTagService(this.catalogRepository, tagDocuments)
+            : null;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
@@ -172,7 +181,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new PropertyValueLocalizer(),
             CreateEmptyMenuExtensionManager(),
             RegisterAppStart(repositoryManager),
-            new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()))
+            new CatalogUndoManager((CatalogDocumentRepository)repositoryManager.For<CatalogDocument>()),
+            (TagDocumentRepository)repositoryManager.For<TagDocument>())
     {
     }
 
@@ -726,6 +736,24 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                             document.Properties[property.Key] = property.Value;
                         }
                         catalogRepository?.Save(document.Id, document);
+                    }
+                }
+                if (dialog.HasTagsTab && tagService is not null && catalogRepository is not null
+                    && !isTreeProperties && SelectedBrowserItem is not null)
+                {
+                    var oldTagIds = tagService.GetEntryTagIds(SelectedBrowserItem.Id);
+                    var newTagIds = dialog.GetAssignedTagIds();
+                    if (!oldTagIds.SequenceEqual(newTagIds, StringComparer.Ordinal))
+                    {
+                        tagService.SetEntryTags(SelectedBrowserItem.Id, newTagIds);
+                        var changed = catalogRepository.Get(SelectedBrowserItem.Id);
+                        if (changed is not null)
+                        {
+                            undoManager?.RecordTagsChange(changed, oldTagIds, newTagIds);
+                        }
+
+                        RefreshBrowserItemsForSelection();
+                        RefreshTagsMenuItems();
                     }
                 }
                 if (!isTreeProperties)
@@ -1716,6 +1744,105 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshBrowserItemsForSelection();
     }
 
+    private bool IsTaggingEnabled() =>
+        tagService is not null && GetSelectedBrowserItems().Count > 0;
+
+    /// <summary>
+    /// Tri-state bulk tag toggle: when every selected entry already carries the
+    /// tag it is removed from all of them, otherwise it is added to the entries
+    /// missing it. Unrelated tags are never touched.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsTaggingEnabled))]
+    private void ToggleTagForEntries(string? tagId)
+    {
+        var targets = GetSelectedBrowserItems();
+        if (tagService is null || targets.Count == 0 || string.IsNullOrWhiteSpace(tagId))
+        {
+            return;
+        }
+
+        var tagName = tagService.GetTags()
+            .FirstOrDefault(tag => string.Equals(tag.Id, tagId, StringComparison.Ordinal))?.Name ?? tagId;
+        var oldById = targets.ToDictionary(
+            target => target.Id,
+            target => (IReadOnlyList<string>)tagService.GetEntryTagIds(target.Id));
+        var allAssigned = oldById.Values.All(ids => ids.Contains(tagId, StringComparer.Ordinal));
+        var changes = new Dictionary<string, (IReadOnlyList<string> OldTagIds, IReadOnlyList<string> NewTagIds)>(StringComparer.Ordinal);
+        var affectedCount = 0;
+
+        foreach (var target in targets)
+        {
+            var oldIds = oldById[target.Id];
+            IReadOnlyList<string> newIds = allAssigned
+                ? oldIds.Where(id => !string.Equals(id, tagId, StringComparison.Ordinal)).ToArray()
+                : oldIds.Contains(tagId, StringComparer.Ordinal)
+                    ? oldIds
+                    : [.. oldIds, tagId];
+            if (!oldIds.SequenceEqual(newIds, StringComparer.Ordinal))
+            {
+                tagService.SetEntryTags(target.Id, newIds);
+                changes[target.Id] = (oldIds, newIds);
+                affectedCount++;
+            }
+        }
+
+        if (changes.Count > 0)
+        {
+            undoManager?.RecordTagsBatchChange(changes);
+        }
+
+        StatusText = allAssigned
+            ? LocalizationService.Current.Format(TextKeys.TagRemovedFromItems, tagName, affectedCount)
+            : LocalizationService.Current.Format(TextKeys.TagAddedToItems, tagName, affectedCount);
+
+        UpdateUndoRedoState();
+        IsDirtyDocument = true;
+        RefreshTagsMenuItems();
+        RefreshBrowserItemsForSelection();
+    }
+
+    private (int Assigned, int Total) GetTagAssignmentCounts(string tagId)
+    {
+        var targets = GetSelectedBrowserItems();
+        if (tagService is null || targets.Count == 0)
+        {
+            return (0, 0);
+        }
+
+        var assigned = targets.Count(target =>
+            tagService.GetEntryTagIds(target.Id).Contains(tagId, StringComparer.Ordinal));
+        return (assigned, targets.Count);
+    }
+
+    [RelayCommand]
+    private void OpenTagsDialog()
+    {
+        if (tagService is null || tagRepository is null || catalogRepository is null)
+        {
+            return;
+        }
+
+        var dialog = new TagsDialogViewModel(
+            tagService,
+            undoManager,
+            catalogRepository,
+            tagRepository,
+            onChanged: () =>
+            {
+                IsDirtyDocument = true;
+                UpdateUndoRedoState();
+                RefreshTagsMenuItems();
+                RefreshBrowserItemsForSelection();
+            },
+            navigate: NavigateToDocument);
+        TagsRequested?.Invoke(this, new TagsDialogRequestedEventArgs { Dialog = dialog });
+    }
+
+    private void NavigateToDocument(CatalogDocument document)
+    {
+        NavigateToFindResult(new CatalogFindResult(document, string.Empty, string.Empty));
+    }
+
     public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
     {
         CurrentViewMode = viewMode;
@@ -1842,6 +1969,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 comments,
                 infoProperties,
                 propertyValueLocalizer);
+            if (tagService is not null)
+            {
+                dialog.InitializeTags(
+                    tagService.GetTags().Select(tag => (tag.Id, tag.Name)),
+                    tagService.GetEntryTagIds(SelectedBrowserItem.Id));
+            }
+
             return true;
         }
 
@@ -2126,6 +2260,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+        ToggleTagForEntriesCommand.NotifyCanExecuteChanged();
+        RefreshTagsMenuItems();
     }
 
     partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
@@ -2160,6 +2296,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
         ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+        ToggleTagForEntriesCommand.NotifyCanExecuteChanged();
+        RefreshTagsMenuItems();
     }
 
     /// <summary>
@@ -2592,6 +2730,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Separator(),
             new MainMenuItemViewModel
             {
+                Key = "edit_tags",
+                Header = LocalizationService.Current.Get(UiKeys.Tags),
+                Items = BuildTagsMenuItems()
+            },
+            new MainMenuItemViewModel
+            {
                 Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
@@ -2938,6 +3082,57 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }));
 
         return statusItems;
+    }
+
+    /// <summary>
+    /// Builds the Tags context submenu with one tri-state toggle per reusable
+    /// tag (checked when all selected entries carry it, partial when only
+    /// some do) plus the manager dialog entry.
+    /// </summary>
+    private IReadOnlyList<MainMenuItemViewModel> BuildTagsMenuItems()
+    {
+        var items = new List<MainMenuItemViewModel>();
+        if (tagService is null)
+        {
+            items.Add(new MainMenuItemViewModel
+            {
+                Header = LocalizationService.Current.Get(UiKeys.Tags),
+                IsEnabled = false
+            });
+            return items;
+        }
+
+        foreach (var tag in tagService.GetTags())
+        {
+            var (assigned, total) = GetTagAssignmentCounts(tag.Id);
+            var icon = total == 0 || assigned == 0 ? "☐" : assigned == total ? "☑" : "◐";
+            items.Add(new MainMenuItemViewModel
+            {
+                Header = tag.Name,
+                Icon = icon,
+                Command = ToggleTagForEntriesCommand,
+                CommandParameter = tag.Id,
+                IsEnabled = total > 0
+            });
+        }
+
+        if (items.Count > 0)
+        {
+            items.Add(Separator());
+        }
+
+        items.Add(new MainMenuItemViewModel
+        {
+            Header = LocalizationService.Current.Get(UiKeys.ManageTags),
+            Command = OpenTagsDialogCommand
+        });
+        return items;
+    }
+
+    private void RefreshTagsMenuItems()
+    {
+        var parent = browserContextMenuItems.FirstOrDefault(item => string.Equals(item.Key, "edit_tags", StringComparison.Ordinal));
+        parent?.Items = BuildTagsMenuItems();
     }
 
     private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()

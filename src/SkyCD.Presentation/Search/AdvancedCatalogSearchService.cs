@@ -198,9 +198,12 @@ public static class AdvancedCatalogSearchService
 
     private static bool MatchCustomProperty(CatalogDocument document, AdvancedCatalogPredicate predicate)
     {
-        if (!document.Properties.TryGetValue(predicate.Key!, out var raw))
+        // A missing key and an empty (or all-missing) value are equivalent here:
+        // persistence layers may drop empty collections, so both count as missing
+        // and both satisfy NotEquals.
+        if (!document.Properties.TryGetValue(predicate.Key!, out var raw) || IsMissingValue(raw))
         {
-            return predicate.Operator == AdvancedCatalogOperator.IsMissing;
+            return predicate.Operator is AdvancedCatalogOperator.IsMissing or AdvancedCatalogOperator.NotEquals;
         }
 
         return MatchStoredValue(raw, unit: null, predicate);
@@ -230,6 +233,11 @@ public static class AdvancedCatalogSearchService
 
     private static bool MatchStoredValue(object? raw, string? unit, AdvancedCatalogPredicate predicate)
     {
+        if (raw is System.Collections.IEnumerable sequence && raw is not string)
+        {
+            return MatchSequence(sequence, unit, predicate);
+        }
+
         if (IsMissingValue(raw))
         {
             return predicate.Operator == AdvancedCatalogOperator.IsMissing;
@@ -256,6 +264,45 @@ public static class AdvancedCatalogSearchService
         }
 
         return MatchText(Convert.ToString(raw, CultureInfo.InvariantCulture), predicate);
+    }
+
+    /// <summary>
+    /// Matches multi-value properties (such as the tag id list): an empty or
+    /// all-missing sequence counts as missing, and also as not equal to any
+    /// value. Otherwise any present item may satisfy the predicate, while
+    /// NotEquals holds when no present item is equal.
+    /// </summary>
+    private static bool MatchSequence(System.Collections.IEnumerable sequence, string? unit, AdvancedCatalogPredicate predicate)
+    {
+        var items = new List<object?>();
+        foreach (var item in sequence)
+        {
+            items.Add(item);
+        }
+
+        if (items.All(IsMissingValue))
+        {
+            return predicate.Operator is AdvancedCatalogOperator.IsMissing or AdvancedCatalogOperator.NotEquals;
+        }
+
+        if (predicate.Operator == AdvancedCatalogOperator.IsMissing)
+        {
+            return false;
+        }
+
+        if (predicate.Operator == AdvancedCatalogOperator.IsPresent)
+        {
+            return true;
+        }
+
+        if (predicate.Operator == AdvancedCatalogOperator.NotEquals)
+        {
+            return !items.Any(item => !IsMissingValue(item) &&
+                MatchStoredValue(item, ExtractUnit(item) ?? unit, predicate with { Operator = AdvancedCatalogOperator.Equals }));
+        }
+
+        return items.Any(item => !IsMissingValue(item) &&
+            MatchStoredValue(item, ExtractUnit(item) ?? unit, predicate));
     }
 
     private static bool MatchType(CatalogDocumentType type, AdvancedCatalogPredicate predicate)

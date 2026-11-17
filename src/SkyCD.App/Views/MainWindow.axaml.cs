@@ -121,6 +121,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
+            subscribedViewModel.TagsRequested -= OnTagsRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
@@ -141,6 +142,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
+            subscribedViewModel.TagsRequested += OnTagsRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
@@ -1117,6 +1119,15 @@ public partial class MainWindow : Window
 
         var accepted = await dialog.ShowDialog<bool?>(this);
         e.Complete(accepted == true, e.Dialog.Comments);
+    }
+
+    private async void OnTagsRequested(object? sender, TagsDialogRequestedEventArgs e)
+    {
+        var dialog = new TagsWindow
+        {
+            DataContext = e.Dialog
+        };
+        await dialog.ShowDialog(this);
     }
 
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)

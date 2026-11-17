@@ -35,6 +35,9 @@ public partial class PropertiesDialogViewModel : ObservableObject
     public System.Collections.ObjectModel.ObservableCollection<CustomPropertyItemViewModel> CustomProperties { get; } = [];
     public bool HasCustomProperties => CustomProperties.Count > 0;
 
+    public System.Collections.ObjectModel.ObservableCollection<TagAssignmentViewModel> TagAssignments { get; } = [];
+    public bool HasTagsTab => TagAssignments.Count > 0;
+
     public void ApplyCustomPropertyDefaults(IEnumerable<SkyCD.Documents.CustomPropertyDocument>? properties)
     {
         CustomProperties.Clear();
@@ -72,6 +75,32 @@ public partial class PropertiesDialogViewModel : ObservableObject
         }
         return result;
     }
+
+    /// <summary>
+    /// Lists every reusable tag with the entry's current assignments checked.
+    /// Call <see cref="GetAssignedTagIds"/> on confirm; Cancel leaves the
+    /// entry untouched because assignment state lives only in this view model.
+    /// </summary>
+    public void InitializeTags(
+        IEnumerable<(string TagId, string Name)> allTags,
+        IEnumerable<string> assignedTagIds)
+    {
+        TagAssignments.Clear();
+        var assigned = new HashSet<string>(assignedTagIds ?? [], StringComparer.Ordinal);
+        foreach (var (tagId, name) in allTags ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(tagId))
+            {
+                continue;
+            }
+
+            TagAssignments.Add(new TagAssignmentViewModel(tagId, name ?? tagId, assigned: assigned.Contains(tagId)));
+        }
+        OnPropertyChanged(nameof(HasTagsTab));
+    }
+
+    public IReadOnlyList<string> GetAssignedTagIds() =>
+        TagAssignments.Where(item => item.IsAssigned).Select(item => item.TagId).ToArray();
 
     public string ObjectKey { get; }
 
