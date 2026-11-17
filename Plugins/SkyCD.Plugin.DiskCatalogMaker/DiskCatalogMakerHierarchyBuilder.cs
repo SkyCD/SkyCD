@@ -64,8 +64,7 @@ public static class DiskCatalogMakerHierarchyBuilder
         var importedRecordsCount = 0;
 
         var nodesById = new Dictionary<string, Dictionary<string, object?>>(StringComparer.Ordinal);
-        var explicitFolderPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var synthesizedFolderPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var synthesizedFolderPaths = new HashSet<string>(StringComparer.Ordinal);
 
         for (var rowIndex = 1; rowIndex < rawRows.Count; rowIndex++)
         {
@@ -82,7 +81,6 @@ public static class DiskCatalogMakerHierarchyBuilder
                     rowIndex,
                     columnMap,
                     nodesById,
-                    explicitFolderPaths,
                     synthesizedFolderPaths);
 
                 importedRecordsCount++;
@@ -117,7 +115,6 @@ public static class DiskCatalogMakerHierarchyBuilder
         int rowIndex,
         Dictionary<DiskCatalogMakerColumn, int> columnMap,
         Dictionary<string, Dictionary<string, object?>> nodesById,
-        HashSet<string> explicitFolderPaths,
         HashSet<string> synthesizedFolderPaths)
     {
         var path = GetValue(row, columnMap, DiskCatalogMakerColumn.Path);
@@ -138,7 +135,9 @@ public static class DiskCatalogMakerHierarchyBuilder
         }
 
         var trimmedPath = path.Trim();
-        var isExplicitFolder = IsFolderKind(kindText) || trimmedPath.EndsWith('/');
+        var isHfsPath = !trimmedPath.Contains('/') && trimmedPath.Contains(':');
+        var isExplicitFolder = IsFolderKind(kindText) || trimmedPath.EndsWith('/') ||
+            (isHfsPath && trimmedPath.EndsWith(':'));
 
         // Determine media name and relative folder segments from the macOS path
         var segments = SplitMacPath(trimmedPath);
@@ -151,6 +150,11 @@ public static class DiskCatalogMakerHierarchyBuilder
         if (!string.IsNullOrWhiteSpace(disk))
         {
             mediaName = disk.Trim();
+            if (trimmedPath.StartsWith('/') || (isHfsPath && !trimmedPath.StartsWith(':') &&
+                    segments[0].Equals(mediaName, StringComparison.Ordinal)))
+            {
+                segments.RemoveAt(0);
+            }
         }
         else
         {
@@ -159,13 +163,20 @@ public static class DiskCatalogMakerHierarchyBuilder
         }
 
         var preferredName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        var isMediaRoot = segments.Count == 0 &&
+            (preferredName is null || preferredName.Equals(mediaName, StringComparison.Ordinal));
         string leafName;
         List<string> folderSegments;
 
-        if (isExplicitFolder)
+        if (isMediaRoot)
+        {
+            leafName = mediaName;
+            folderSegments = [];
+        }
+        else if (isExplicitFolder)
         {
             if (!string.IsNullOrWhiteSpace(preferredName) &&
-                (segments.Count == 0 || !segments[^1].Equals(preferredName, StringComparison.OrdinalIgnoreCase)))
+                (segments.Count == 0 || !segments[^1].Equals(preferredName, StringComparison.Ordinal)))
             {
                 segments.Add(preferredName);
             }
@@ -180,7 +191,7 @@ public static class DiskCatalogMakerHierarchyBuilder
         else
         {
             if (segments.Count > 0 && !string.IsNullOrWhiteSpace(preferredName) &&
-                segments[^1].Equals(preferredName, StringComparison.OrdinalIgnoreCase))
+                segments[^1].Equals(preferredName, StringComparison.Ordinal))
             {
                 leafName = segments[^1];
                 segments.RemoveAt(segments.Count - 1);
@@ -219,6 +230,13 @@ public static class DiskCatalogMakerHierarchyBuilder
             };
         }
 
+        if (isMediaRoot)
+        {
+            nodesById[mediaId]["sizeBytes"] = ParseSize(sizeText).ToString(CultureInfo.InvariantCulture);
+            nodesById[mediaId]["properties"] = BuildProperties(path, createdText, modifiedText, kindText, creator, typeCode, comments, label, disk);
+            return;
+        }
+
         // 2. Ensure intermediate folders exist
         var currentParentId = mediaId;
         var currentPath = mediaName;
@@ -250,7 +268,6 @@ public static class DiskCatalogMakerHierarchyBuilder
         {
             var folderPath = $"{currentPath}/{leafName}";
             var folderId = EncodeNodeId($"folder:{folderPath}");
-            explicitFolderPaths.Add(folderPath);
             synthesizedFolderPaths.Remove(folderPath);
 
             var folderProperties = BuildProperties(path, createdText, modifiedText, kindText, creator, typeCode, comments, label, disk);
@@ -350,7 +367,7 @@ public static class DiskCatalogMakerHierarchyBuilder
             parts = string.IsNullOrWhiteSpace(trimmed) ? [] : [trimmed];
         }
 
-        if (parts.Count >= 2 && parts[0].Equals("Volumes", StringComparison.OrdinalIgnoreCase))
+        if (parts.Count >= 2 && trimmed.StartsWith("/Volumes/", StringComparison.Ordinal))
         {
             parts.RemoveAt(0);
         }

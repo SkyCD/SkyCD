@@ -11,6 +11,7 @@ using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Csv;
 using SkyCD.Plugin.DiskExplorer.Delimited;
 using SkyCD.Plugin.Host.Menu;
@@ -136,6 +137,35 @@ public sealed class DiskCatalogMakerIntegrationTests
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    [Theory]
+    [InlineData("/Volumes/Disk/", "/Volumes/Disk/Docs/", "/Volumes/Disk/Docs/readme.txt")]
+    [InlineData("Disk:", "Disk:Docs:", "Disk:Docs:readme.txt")]
+    public async Task ReadAsync_AbsolutePathsWithDiskColumn_PersistWithoutDuplicateFolders(
+        string rootPath, string folderPath, string filePath)
+    {
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+            "Name\tPath\tKind\tDisk\n" +
+            $"Disk\t{rootPath}\tFolder\tDisk\n" +
+            $"Docs\t{folderPath}\t\tDisk\n" +
+            $"readme.txt\t{filePath}\tPlain text\tDisk\n"));
+        var result = await new DiskCatalogMakerPlugin().ReadAsync(
+            new FileFormatReadRequest
+            {
+                FormatId = "diskcatalogmaker-text",
+                Source = stream
+            });
+
+        Assert.True(result.Success, result.Error);
+        var documents = Extract(result.Payload!);
+        Assert.Equal(3, documents.Count);
+        var media = Assert.Single(documents, entry => entry.ParentId is null);
+        var folder = Assert.Single(documents, entry => entry.Name == "Docs");
+        var file = Assert.Single(documents, entry => entry.Name == "readme.txt");
+        Assert.Equal(media.Id, folder.ParentId);
+        Assert.Equal(folder.Id, file.ParentId);
+        Persist(documents, vm => Assert.Single(vm.TreeNodes));
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)

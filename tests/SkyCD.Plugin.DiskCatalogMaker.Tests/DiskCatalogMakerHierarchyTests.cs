@@ -294,8 +294,83 @@ public sealed class DiskCatalogMakerHierarchyTests
             ["ClassicDisk", "System Folder", "Finder"],
             DiskCatalogMakerHierarchyBuilder.SplitMacPath("ClassicDisk:System Folder:Finder"));
         Assert.Equal(
+            ["Volumes", "Docs", "a.txt"],
+            DiskCatalogMakerHierarchyBuilder.SplitMacPath("Volumes/Docs/a.txt"));
+        Assert.Equal(
+            ["Volumes", "Docs", "a.txt"],
+            DiskCatalogMakerHierarchyBuilder.SplitMacPath("Volumes:Docs:a.txt"));
+        Assert.Equal(
             ["Disk", "Photos"],
             DiskCatalogMakerHierarchyBuilder.SplitMacPath("/Volumes/Disk/Photos/"));
+    }
+
+    [Theory]
+    [InlineData("/Volumes/Disk/Docs/", "/Volumes/Disk/Docs/readme.txt")]
+    [InlineData("Disk:Docs:", "Disk:Docs:readme.txt")]
+    [InlineData(":Docs:", ":Docs:readme.txt")]
+    public void Build_ExplicitDiskWithAbsoluteOrRelativePaths_DoesNotDuplicateMedia(string folderPath, string filePath)
+    {
+        var document = DiskCatalogMakerHierarchyBuilder.Build(
+            [["Name", "Path", "Kind", "Disk"],
+             ["Docs", folderPath, "", "Disk"],
+             ["readme.txt", filePath, "Plain text", "Disk"]], '\t');
+
+        var media = Assert.Single(document.Rows, row => Equals(row["kind"], "media"));
+        var folder = Assert.Single(document.Rows, row => Equals(row["kind"], "folder"));
+        var file = Assert.Single(document.Rows, row => Equals(row["kind"], "file"));
+        Assert.Equal("Docs", folder["name"]);
+        Assert.Equal(media["nodeId"], folder["parentId"]);
+        Assert.Equal(folder["nodeId"], file["parentId"]);
+        Assert.False(document.Summary.IsPartialReport);
+    }
+
+    [Theory]
+    [InlineData("/Volumes/Disk/")]
+    [InlineData("Disk:")]
+    public void Build_VolumeRow_UpdatesMediaWithoutCreatingDuplicateFolder(string rootPath)
+    {
+        var document = DiskCatalogMakerHierarchyBuilder.Build(
+            [["Name", "Path", "Size", "Kind", "Comments"],
+             ["Disk", rootPath, "4096", "Folder", "Archive"],
+             ["readme.txt", rootPath + "readme.txt", "1", "Plain text", ""]], '\t');
+
+        Assert.Equal(2, document.Rows.Count);
+        var media = Assert.Single(document.Rows, row => Equals(row["kind"], "media"));
+        var file = Assert.Single(document.Rows, row => Equals(row["kind"], "file"));
+        Assert.Equal(media["nodeId"], file["parentId"]);
+        Assert.Equal("4096", media["sizeBytes"]);
+        var properties = Assert.IsType<Dictionary<string, object?>>(media["properties"]);
+        Assert.Equal("Archive", properties["Comments"]);
+        Assert.False(document.Summary.IsPartialReport);
+    }
+
+    [Fact]
+    public void Build_CaseDistinctFolders_TracksMissingFoldersSeparately()
+    {
+        var document = DiskCatalogMakerHierarchyBuilder.Build(
+            [["Name", "Path", "Kind"],
+             ["a.txt", "/Volumes/Disk/docs/a.txt", "Plain text"],
+             ["Docs", "/Volumes/Disk/Docs", "Folder"]], '\t');
+
+        Assert.Equal(2, document.Rows.Count(row => Equals(row["kind"], "folder")));
+        Assert.True(document.Summary.IsPartialReport);
+    }
+
+    [Fact]
+    public void Build_CaseDistinctLeafAndParentNames_PreservesParentFolder()
+    {
+        var document = DiskCatalogMakerHierarchyBuilder.Build(
+            [["Name", "Path", "Kind"],
+             ["DOCS", "/Volumes/Disk/docs", "Folder"],
+             ["README", "/Volumes/Disk/docs/DOCS/readme", "Plain text"]], '\t');
+
+        var parent = Assert.Single(document.Rows, row => Equals(row["name"], "docs"));
+        var folder = Assert.Single(document.Rows, row => Equals(row["name"], "DOCS"));
+        var fileParent = Assert.Single(document.Rows, row => Equals(row["name"], "readme"));
+        var file = Assert.Single(document.Rows, row => Equals(row["kind"], "file"));
+        Assert.Equal(parent["nodeId"], folder["parentId"]);
+        Assert.Equal(folder["nodeId"], fileParent["parentId"]);
+        Assert.Equal(fileParent["nodeId"], file["parentId"]);
     }
 
     [Fact]
