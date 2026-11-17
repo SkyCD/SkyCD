@@ -421,9 +421,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsDeleteEnabled => CanDeleteItem(null);
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     private bool _canUndo;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
     private bool _canRedo;
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
@@ -922,42 +924,56 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                if (selectedId is not null && dialog.HasCustomProperties)
+                RunCatalogEdit(LocalizationService.Current.Get(TextKeys.Properties), () =>
                 {
-                    var document = catalogRepository?.Get(selectedId)
-                        ?? inMemoryCatalogEntries?.FirstOrDefault(item => item.Id == selectedId);
-                    if (document is not null)
+                    if (selectedId is not null)
                     {
-                        foreach (var property in dialog.GetProperties())
+                        var document = catalogRepository?.Get(selectedId)
+                            ?? inMemoryCatalogEntries?.FirstOrDefault(item => item.Id == selectedId);
+                        if (document is not null)
                         {
-                            document.Properties[property.Key] = property.Value;
+                            var previous = new PropertiesCollection(document.Properties);
+                            var properties = dialog.GetProperties();
+                            foreach (var property in dialog.CustomProperties)
+                            {
+                                document.Properties[property.Name] = properties[property.Name];
+                            }
+                            if (comments.Length > 0 || document.Properties.ContainsKey("Comment"))
+                            {
+                                document.Properties["Comment"] = comments;
+                            }
+                            catalogRepository?.Save(document.Id, document);
+                            foreach (var key in previous.Keys.Union(document.Properties.Keys))
+                            {
+                                previous.TryGetValue(key, out var oldValue);
+                                document.Properties.TryGetValue(key, out var newValue);
+                                undoManager?.RecordPropertyChange(document, key, oldValue, newValue);
+                            }
                         }
-                        catalogRepository?.Save(document.Id, document);
                     }
-                }
-                if (dialog.HasTagsTab && tagService is not null && catalogRepository is not null
-                    && !isTreeProperties && SelectedBrowserItem is not null)
-                {
-                    var oldTagIds = tagService.GetEntryTagIds(SelectedBrowserItem.Id);
-                    var newTagIds = dialog.GetAssignedTagIds();
-                    if (!oldTagIds.SequenceEqual(newTagIds, StringComparer.Ordinal))
+                    if (dialog.HasTagsTab && tagService is not null && catalogRepository is not null
+                        && !isTreeProperties && selectedId is not null)
                     {
-                        tagService.SetEntryTags(SelectedBrowserItem.Id, newTagIds);
-                        var changed = catalogRepository.Get(SelectedBrowserItem.Id);
-                        if (changed is not null)
+                        var oldTagIds = tagService.GetEntryTagIds(selectedId);
+                        var newTagIds = dialog.GetAssignedTagIds();
+                        if (!oldTagIds.SequenceEqual(newTagIds, StringComparer.Ordinal))
                         {
-                            undoManager?.RecordTagsChange(changed, oldTagIds, newTagIds);
-                        }
+                            tagService.SetEntryTags(selectedId, newTagIds);
+                            var changed = catalogRepository.Get(selectedId);
+                            if (changed is not null)
+                            {
+                                undoManager?.RecordTagsChange(changed, oldTagIds, newTagIds);
+                            }
 
-                        RefreshBrowserItemsForSelection();
-                        RefreshTagsMenuItems();
+                            RefreshBrowserItemsForSelection();
+                            RefreshTagsMenuItems();
+                        }
                     }
-                }
-                if (!isTreeProperties)
-                {
-                    ApplyBrowserItemRenameIfNeeded(dialog);
-                }
-                commentsByObjectKey[dialog.ObjectKey] = comments;
+                    ApplyBrowserItemRenameIfNeeded(dialog, selectedId);
+                    commentsByObjectKey[dialog.ObjectKey] = comments;
+                });
+                UpdateUndoRedoState();
+                RefreshBrowserItemsForSelection();
                 IsDirtyDocument = true;
                 StatusText = DefaultStatusText;
             }
@@ -977,6 +993,28 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CanRedo = undoManager?.CanRedo ?? false;
     }
 
+    private void RunCatalogEdit(string displayName, Action apply)
+    {
+        undoManager?.BeginTransaction(displayName);
+        try
+        {
+            if (catalogRepository is not null)
+            {
+                catalogRepository.Collection.Database.InBatch(apply);
+            }
+            else
+            {
+                apply();
+            }
+            undoManager?.CommitTransaction();
+        }
+        catch
+        {
+            undoManager?.RollbackTransaction();
+            throw;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
@@ -986,6 +1024,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var actionName = undoManager.UndoActionName;
+        var selectedIds = GetSelectedBrowserItems().Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         try
         {
             await undoManager.UndoAsync();
@@ -999,9 +1038,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Restored records are different instances from whatever the browser still holds, and redo replays
-        // captured ids rather than the live selection. Dropping the selection here is what stops a following
-        // delete or redo from acting on a detached object that merely shares a name.
+        // Rebind the logical selection to fresh repository instances after replay.
         SelectedBrowserItem = null;
         SelectedBrowserItems = new List<CatalogDocument>();
 
@@ -1009,6 +1046,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTreeNodes();
         RevealRestoredTreeNode();
         RefreshBrowserItemsForSelection();
+        RestoreHistorySelection(selectedIds);
+        RefreshTagsMenuItems();
+        RefreshCollectionsMenuItems();
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.UndoCompleted, actionName ?? string.Empty);
     }
@@ -1022,6 +1062,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var actionName = undoManager.RedoActionName;
+        var selectedIds = GetSelectedBrowserItems().Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         try
         {
             await undoManager.RedoAsync();
@@ -1039,8 +1080,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
+        RestoreHistorySelection(selectedIds);
+        RefreshTagsMenuItems();
+        RefreshCollectionsMenuItems();
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.RedoCompleted, actionName ?? string.Empty);
+    }
+
+    private void RestoreHistorySelection(IReadOnlySet<string> selectedIds)
+    {
+        var selected = BrowserItems.Where(item => selectedIds.Contains(item.Id)).ToList();
+        SelectedBrowserItems = selected;
+        SelectedBrowserItem = selected.FirstOrDefault();
     }
 
     /// <summary>
@@ -1868,74 +1919,84 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         // Record old statuses for undo
         var oldStatuses = targets.ToDictionary(t => t, t => t.Status);
-
-        if (status is null)
+        var oldProperties = targets.ToDictionary(t => t.Id, t => new PropertiesCollection(t.Properties));
+        RunCatalogEdit(LocalizationService.Current.Get(TextKeys.Status), () =>
         {
-            foreach (var target in targets)
-            {
-                target.Status = null;
-                target.Properties.Remove(ItemStatusNamePropertyKey);
-                target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
-                target.Properties.Remove(ItemStatusIconColorPropertyKey);
-                target.Properties.Remove(ItemStatusIconTextPropertyKey);
-            }
 
-            StatusText = targets.Count == 1
-                ? LocalizationService.Current.Format(TextKeys.ClearedStatusFor, targets[0].Name)
-                : LocalizationService.Current.Format(TextKeys.ClearedStatusForItems, targets.Count);
-        }
-        else
-        {
-            var applicableTargets = targets
-                .Where(target => IsStatusApplicableToItem(status, target))
-                .ToArray();
-            foreach (var target in applicableTargets)
+            if (status is null)
             {
-                target.Status = status.Name;
-                target.Properties[ItemStatusNamePropertyKey] = status.Name;
-                target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
-                target.Properties[ItemStatusIconColorPropertyKey] =
-                    string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
-                target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
-            }
-
-            StatusText = applicableTargets.Length == 0
-                ? LocalizationService.Current.Format(TextKeys.StatusIsNotSupportedForSelectedItemTypes, status.Name)
-                : applicableTargets.Length == 1
-                    ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
-                    : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
-
-            // Record status changes for undo
-            foreach (var target in applicableTargets)
-            {
-                if (oldStatuses.TryGetValue(target, out var oldStatus))
+                foreach (var target in targets)
                 {
-                    undoManager?.RecordStatusChange(target, oldStatus, status.Name);
+                    target.Status = null;
+                    target.Properties.Remove(ItemStatusNamePropertyKey);
+                    target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
+                    target.Properties.Remove(ItemStatusIconColorPropertyKey);
+                    target.Properties.Remove(ItemStatusIconTextPropertyKey);
+                }
+
+                StatusText = targets.Count == 1
+                    ? LocalizationService.Current.Format(TextKeys.ClearedStatusFor, targets[0].Name)
+                    : LocalizationService.Current.Format(TextKeys.ClearedStatusForItems, targets.Count);
+            }
+            else
+            {
+                var applicableTargets = targets
+                    .Where(target => IsStatusApplicableToItem(status, target))
+                    .ToArray();
+                foreach (var target in applicableTargets)
+                {
+                    target.Status = status.Name;
+                    target.Properties[ItemStatusNamePropertyKey] = status.Name;
+                    target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
+                    target.Properties[ItemStatusIconColorPropertyKey] =
+                        string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
+                    target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
+                }
+
+                StatusText = applicableTargets.Length == 0
+                    ? LocalizationService.Current.Format(TextKeys.StatusIsNotSupportedForSelectedItemTypes, status.Name)
+                    : applicableTargets.Length == 1
+                        ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
+                        : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
+
+                // Record status changes for undo
+                foreach (var target in applicableTargets)
+                {
+                    if (oldStatuses.TryGetValue(target, out var oldStatus))
+                    {
+                        undoManager?.RecordStatusChange(target, oldStatus, status.Name);
+                    }
                 }
             }
-        }
 
-        // Record status clears for undo
-        if (status is null)
-        {
-            foreach (var target in targets)
+            // Record status clears for undo
+            if (status is null)
             {
-                if (oldStatuses.TryGetValue(target, out var oldStatus) && oldStatus != null)
+                foreach (var target in targets)
                 {
-                    undoManager?.RecordStatusChange(target, oldStatus, null);
+                    if (oldStatuses.TryGetValue(target, out var oldStatus) && oldStatus != null)
+                    {
+                        undoManager?.RecordStatusChange(target, oldStatus, null);
+                    }
                 }
             }
-        }
 
-        // Save changes to repository
-        if (catalogRepository is not null)
-        {
-            foreach (var target in targets)
+            // Save changes to repository
+            if (catalogRepository is not null)
             {
-                catalogRepository.Save(target.Id, target);
+                foreach (var target in targets)
+                {
+                    catalogRepository.Save(target.Id, target);
+                    foreach (var key in oldProperties[target.Id].Keys.Union(target.Properties.Keys))
+                    {
+                        oldProperties[target.Id].TryGetValue(key, out var oldValue);
+                        target.Properties.TryGetValue(key, out var newValue);
+                        undoManager?.RecordPropertyChange(target, key, oldValue, newValue);
+                    }
+                }
             }
-        }
 
+        });
         UpdateUndoRedoState();
         IsDirtyDocument = true;
         RefreshBrowserItemsForSelection();
@@ -2141,7 +2202,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (ActivePane == ActivePane.Tree && SelectedTreeNode is not null)
         {
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
-            var comments = GetObjectComments(objectKey);
+            var comments = GetObjectComments(objectKey, SelectedTreeNode.Key);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -2156,7 +2217,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (SelectedBrowserItem is not null)
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
-            var comments = GetObjectComments(objectKey);
+            var comments = GetObjectComments(objectKey, SelectedBrowserItem.Id);
             var infoProperties = GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
 
             dialog = new PropertiesDialogViewModel(
@@ -2179,7 +2240,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (SelectedTreeNode is not null)
         {
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
-            var comments = GetObjectComments(objectKey);
+            var comments = GetObjectComments(objectKey, SelectedTreeNode.Key);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -2195,8 +2256,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return false;
     }
 
-    private string GetObjectComments(string objectKey)
+    private string GetObjectComments(string objectKey, string documentId)
     {
+        if (catalogRepository?.Get(documentId) is { } document)
+        {
+            return document.Properties.TryGetValue("Comment", out var comment) ? comment?.ToString() ?? string.Empty : string.Empty;
+        }
         return commentsByObjectKey.TryGetValue(objectKey, out var comments)
             ? comments
             : string.Empty;
@@ -2325,8 +2390,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal));
     }
 
-    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
+    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog, string? selectedId)
     {
+        var requestedName = dialog.Name.Trim();
+        if (selectedId is not null && catalogRepository?.Get(selectedId) is { } stored)
+        {
+            if (requestedName.Length == 0 || requestedName == stored.Name)
+            {
+                return;
+            }
+            catalogRepository.Save(stored.Id, new CatalogDocument
+            {
+                Id = stored.Id,
+                Name = requestedName,
+                ParentId = stored.ParentId,
+                Type = stored.Type,
+                Size = stored.Size,
+                ChildrenCount = stored.ChildrenCount,
+                ContentsState = stored.ContentsState,
+                Status = stored.Status,
+                Properties = new PropertiesCollection(stored.Properties)
+            });
+            undoManager?.RecordRename(stored, stored.Name, requestedName);
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+            SelectedBrowserItem = BrowserItems.FirstOrDefault(item => item.Id == stored.Id);
+            return;
+        }
         if (SelectedBrowserItem is null || SelectedTreeNode is null)
         {
             return;
@@ -2334,7 +2424,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var nodeKey = SelectedTreeNode.Key;
         var currentDisplayName = SelectedBrowserItem.Name;
-        var requestedName = dialog.Name.Trim();
         if (string.IsNullOrWhiteSpace(requestedName) ||
             requestedName.Equals(currentDisplayName, StringComparison.Ordinal))
         {
@@ -2630,8 +2719,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.Edit),
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), HotKey = "Ctrl+Z", Command = UndoCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), HotKey = "Ctrl+Y", Command = RedoCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), InputGesture = OperatingSystem.IsMacOS() ? "Meta+Z" : "Ctrl+Z", Command = UndoCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), InputGesture = OperatingSystem.IsMacOS() ? "Meta+Shift+Z" : "Ctrl+Y", Command = RedoCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },

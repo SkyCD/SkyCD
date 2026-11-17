@@ -322,7 +322,7 @@ public partial class MainWindow : Window
                 }
             }
         }
-        else if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control)
+        else if (e.Key == Key.Z && e.KeyModifiers == (OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control))
         {
             var focused = GetFocusedElement();
             if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
@@ -337,7 +337,8 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
         }
-        else if (e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control)
+        else if ((e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control && !OperatingSystem.IsMacOS())
+            || (e.Key == Key.Z && e.KeyModifiers == ((OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control) | KeyModifiers.Shift)))
         {
             var focused = GetFocusedElement();
             if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||

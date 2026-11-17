@@ -13,6 +13,8 @@ public sealed partial class MainMenuItemViewModel : ObservableObject
 
     public string? HotKey { get; init; }
 
+    public string? InputGesture { get; init; }
+
     public ICommand? Command { get; init; }
 
     public object? CommandParameter { get; init; }

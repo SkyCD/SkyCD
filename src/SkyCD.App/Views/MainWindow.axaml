@@ -34,6 +34,8 @@
                     Value="{ReflectionBinding DataContext.Header, RelativeSource={RelativeSource Self}}" />
             <Setter Property="HotKey"
                     Value="{ReflectionBinding DataContext.HotKey, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuHotKeyConverter}}" />
+            <Setter Property="InputGesture"
+                    Value="{ReflectionBinding DataContext.InputGesture, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuHotKeyConverter}}" />
             <Setter Property="Icon"
                     Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuIconConverter}}" />
             <Setter Property="Command"
