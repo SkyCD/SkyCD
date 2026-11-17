@@ -275,7 +275,7 @@ public sealed class CollectionAssignmentTests : IDisposable
             VirtualCollectionService.SerializeQuery(query),
             VirtualCollectionService.SerializeQuery(reloaded));
         Assert.Equal("concert", reloaded.Root.Predicates.Single().Value?.ToString());
-        Assert.Throws<InvalidOperationException>(() => reopened.Service.GetDynamicQuery("missing"));
+        Assert.Throws<CollectionNotFoundException>(() => reopened.Service.GetDynamicQuery("missing"));
     }
 
     [Fact]
