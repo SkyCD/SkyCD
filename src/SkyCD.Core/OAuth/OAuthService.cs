@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -8,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AsyncKeyedLock;
 using SkyCD.Plugin.Abstractions.OAuth;
 
 namespace SkyCD.Core.OAuth;
@@ -18,7 +18,10 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
     private readonly IOAuthTokenStore _tokenStore = tokenStore;
     private readonly IOAuthBrowser _browser = browser;
     private readonly TimeProvider _clock = clock;
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
+    // Entries are reference-counted and removed once no caller holds or awaits them.
+    private readonly AsyncKeyedLocker<string> _locks = new(StringComparer.Ordinal);
+
+    internal int LockCount => _locks.Index.Count;
 
     public IOAuthService ForPlugin(string pluginId)
     {
@@ -32,92 +35,82 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
         {
             var key = Namespace(provider);
             ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
-            var gate = owner._locks.GetOrAdd(key + ":" + accountId, static _ => new SemaphoreSlim(1));
-            await gate.WaitAsync(cancellationToken);
-            try
+            using var gate = await owner.LockAsync(key, accountId, cancellationToken);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromMinutes(5));
+            var verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
+            var state = Base64Url(RandomNumberGenerator.GetBytes(32));
+            Uri? redirectUri = null;
+            var callback = await owner._browser.AuthorizeAsync(redirect =>
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(TimeSpan.FromMinutes(5));
-                var verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
-                var state = Base64Url(RandomNumberGenerator.GetBytes(32));
-                Uri? redirectUri = null;
-                var callback = await owner._browser.AuthorizeAsync(redirect =>
+                redirectUri = redirect;
+                var parameters = new Dictionary<string, string>
                 {
-                    redirectUri = redirect;
-                    var parameters = new Dictionary<string, string>
-                    {
-                        ["response_type"] = "code",
-                        ["client_id"] = provider.ClientId,
-                        ["redirect_uri"] = redirect.AbsoluteUri,
-                        ["scope"] = string.Join(' ', provider.Scopes),
-                        ["state"] = state,
-                        ["code_challenge"] = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))),
-                        ["code_challenge_method"] = "S256"
-                    };
-                    foreach (var parameter in provider.AuthorizationParameters)
-                        parameters.Add(parameter.Key, parameter.Value);
-                    return new Uri(provider.AuthorizationEndpoint.AbsoluteUri + "?" + string.Join('&',
-                        parameters.Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value))));
-                }, provider.RedirectPort, timeout.Token);
-
-                if (redirectUri is null || callback.GetLeftPart(UriPartial.Path) != redirectUri.GetLeftPart(UriPartial.Path)
-                    || !string.IsNullOrEmpty(callback.Fragment))
-                    throw new OAuthException(OAuthFailure.InvalidCallback);
-                var values = ParseQuery(callback.Query);
-                if (!values.TryGetValue("state", out var actualState) || actualState != state)
-                    throw new OAuthException(OAuthFailure.InvalidCallback);
-                if (values.ContainsKey("error"))
-                    throw new OAuthException(OAuthFailure.AuthorizationDenied);
-                if (!values.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
-                    throw new OAuthException(OAuthFailure.InvalidCallback);
-
-                var session = await owner.RequestTokensAsync(provider, accountId, new Dictionary<string, string>
-                {
-                    ["grant_type"] = "authorization_code",
+                    ["response_type"] = "code",
                     ["client_id"] = provider.ClientId,
-                    ["code"] = code,
-                    ["redirect_uri"] = redirectUri.AbsoluteUri,
-                    ["code_verifier"] = verifier
-                }, null, timeout.Token);
-                await owner._tokenStore.WriteAsync(key, session, timeout.Token);
-            }
-            finally { gate.Release(); }
+                    ["redirect_uri"] = redirect.AbsoluteUri,
+                    ["scope"] = string.Join(' ', provider.Scopes),
+                    ["state"] = state,
+                    ["code_challenge"] = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))),
+                    ["code_challenge_method"] = "S256"
+                };
+                foreach (var parameter in provider.AuthorizationParameters)
+                    parameters.Add(parameter.Key, parameter.Value);
+                return new Uri(provider.AuthorizationEndpoint.AbsoluteUri + "?" + string.Join('&',
+                    parameters.Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value))));
+            }, provider.RedirectPort, timeout.Token);
+
+            if (redirectUri is null || callback.GetLeftPart(UriPartial.Path) != redirectUri.GetLeftPart(UriPartial.Path)
+                || !string.IsNullOrEmpty(callback.Fragment))
+                throw new OAuthException(OAuthFailure.InvalidCallback);
+            var values = ParseQuery(callback.Query);
+            if (!values.TryGetValue("state", out var actualState) || actualState != state)
+                throw new OAuthException(OAuthFailure.InvalidCallback);
+            if (values.ContainsKey("error"))
+                throw new OAuthException(OAuthFailure.AuthorizationDenied);
+            if (!values.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
+                throw new OAuthException(OAuthFailure.InvalidCallback);
+
+            var session = await owner.RequestTokensAsync(provider, accountId, new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = provider.ClientId,
+                ["code"] = code,
+                ["redirect_uri"] = redirectUri.AbsoluteUri,
+                ["code_verifier"] = verifier
+            }, null, timeout.Token);
+            await owner._tokenStore.WriteAsync(key, session, timeout.Token);
         }
 
         public async Task<string> GetAccessTokenAsync(OAuthProvider provider, string accountId, CancellationToken cancellationToken = default)
         {
             var key = Namespace(provider);
             ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
-            var gate = owner._locks.GetOrAdd(key + ":" + accountId, static _ => new SemaphoreSlim(1));
-            await gate.WaitAsync(cancellationToken);
+            using var gate = await owner.LockAsync(key, accountId, cancellationToken);
+            var session = await owner._tokenStore.ReadAsync(key, accountId, cancellationToken)
+                ?? throw new OAuthException(OAuthFailure.LoginRequired);
+            if (session.ExpiresAt > owner._clock.GetUtcNow().AddSeconds(60))
+                return session.AccessToken;
+            if (string.IsNullOrEmpty(session.RefreshToken) && session.ExpiresAt > owner._clock.GetUtcNow())
+                return session.AccessToken;
+            if (string.IsNullOrEmpty(session.RefreshToken))
+                throw new OAuthException(OAuthFailure.LoginRequired);
             try
             {
-                var session = await owner._tokenStore.ReadAsync(key, accountId, cancellationToken)
-                    ?? throw new OAuthException(OAuthFailure.LoginRequired);
-                if (session.ExpiresAt > owner._clock.GetUtcNow().AddSeconds(60))
-                    return session.AccessToken;
-                if (string.IsNullOrEmpty(session.RefreshToken) && session.ExpiresAt > owner._clock.GetUtcNow())
-                    return session.AccessToken;
-                if (string.IsNullOrEmpty(session.RefreshToken))
-                    throw new OAuthException(OAuthFailure.LoginRequired);
-                try
+                session = await owner.RequestTokensAsync(provider, accountId, new Dictionary<string, string>
                 {
-                    session = await owner.RequestTokensAsync(provider, accountId, new Dictionary<string, string>
-                    {
-                        ["grant_type"] = "refresh_token",
-                        ["client_id"] = provider.ClientId,
-                        ["refresh_token"] = session.RefreshToken
-                    }, session.RefreshToken, cancellationToken);
-                }
-                catch (OAuthException exception) when (exception.Failure == OAuthFailure.LoginRequired)
-                {
-                    await owner._tokenStore.DeleteAsync(key, accountId, cancellationToken);
-                    throw;
-                }
-                await owner._tokenStore.WriteAsync(key, session, cancellationToken);
-                return session.AccessToken;
+                    ["grant_type"] = "refresh_token",
+                    ["client_id"] = provider.ClientId,
+                    ["refresh_token"] = session.RefreshToken
+                }, session.RefreshToken, cancellationToken);
             }
-            finally { gate.Release(); }
+            catch (OAuthException exception) when (exception.Failure == OAuthFailure.LoginRequired)
+            {
+                await owner._tokenStore.DeleteAsync(key, accountId, cancellationToken);
+                throw;
+            }
+            await owner._tokenStore.WriteAsync(key, session, cancellationToken);
+            return session.AccessToken;
         }
 
         public Task<IReadOnlyList<string>> GetAccountsAsync(OAuthProvider provider, CancellationToken cancellationToken = default)
@@ -127,10 +120,8 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
         {
             var key = Namespace(provider);
             ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
-            var gate = owner._locks.GetOrAdd(key + ":" + accountId, static _ => new SemaphoreSlim(1));
-            await gate.WaitAsync(cancellationToken);
-            try { await owner._tokenStore.DeleteAsync(key, accountId, cancellationToken); }
-            finally { gate.Release(); }
+            using var gate = await owner.LockAsync(key, accountId, cancellationToken);
+            await owner._tokenStore.DeleteAsync(key, accountId, cancellationToken);
         }
 
         private string Namespace(OAuthProvider provider)
@@ -156,6 +147,9 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
             })));
         }
     }
+
+    private ValueTask<IDisposable> LockAsync(string namespaceId, string accountId, CancellationToken cancellationToken)
+        => _locks.LockAsync(namespaceId + ":" + accountId, cancellationToken);
 
     private async Task<OAuthSession> RequestTokensAsync(OAuthProvider provider, string accountId,
         Dictionary<string, string> fields, string? previousRefreshToken, CancellationToken cancellationToken)
