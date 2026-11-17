@@ -199,13 +199,16 @@ public static class DiskExplorerDelimitedExporter
     private static string FormatField(string value, DiskExplorerDelimitedExportRequest request)
     {
         var guarded = value;
+        var wasGuarded = false;
         if (request.GuardFormulas && !request.RawCompatibility
             && value.Length > 0 && ("=+-@".Contains(value[0], StringComparison.Ordinal)))
         {
             guarded = "'" + value;
+            wasGuarded = true;
         }
 
-        if (guarded.Contains(request.Separator, StringComparison.Ordinal)
+        if (wasGuarded
+            || guarded.Contains(request.Separator, StringComparison.Ordinal)
             || guarded.Contains('"')
             || guarded.Contains('\r')
             || guarded.Contains('\n'))

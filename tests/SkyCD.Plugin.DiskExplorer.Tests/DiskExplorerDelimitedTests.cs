@@ -9,6 +9,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.DiskExplorer;
 using SkyCD.Plugin.DiskExplorer.Delimited;
 using SkyCD.Plugin.DiskExplorer.Delimited.Exceptions;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -160,15 +161,14 @@ public sealed class DiskExplorerDelimitedTests
     {
         var service = new FileFormatManager([new DiskExplorerDelimitedPlugin()]);
         await using var source = File.OpenRead(FixturePath("delimited-noheader.csv"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-delimited",
             Source = source,
             FileName = "delimited-noheader.csv"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("header", result.Error);
+        Assert.Contains("header", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -176,15 +176,14 @@ public sealed class DiskExplorerDelimitedTests
     {
         var service = new FileFormatManager([new DiskExplorerDelimitedPlugin()]);
         await using var source = File.OpenRead(FixturePath("delimited-inconsistent.csv"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-delimited",
             Source = source,
             FileName = "delimited-inconsistent.csv"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("expected 2", result.Error);
+        Assert.Contains("expected 2", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -192,15 +191,14 @@ public sealed class DiskExplorerDelimitedTests
     {
         var service = new FileFormatManager([new DiskExplorerDelimitedPlugin()]);
         await using var source = File.OpenRead(FixturePath("delimited-header-only.tsv"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-delimited",
             Source = source,
             FileName = "delimited-header-only.tsv"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("no entries", result.Error);
+        Assert.Contains("no entries", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -290,7 +288,7 @@ public sealed class DiskExplorerDelimitedTests
         Assert.True(write.Success, write.Error);
 
         var bytes = target.ToArray();
-        var text = Encoding.GetEncoding("windows-1252").GetString(bytes);
+        var text = System.Text.CodePagesEncodingProvider.Instance.GetEncoding("windows-1252")!.GetString(bytes);
         Assert.StartsWith("NAME,DESC\r\n", text);
         Assert.Contains("\"'=cmd", text);
     }
