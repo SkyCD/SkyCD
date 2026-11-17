@@ -49,6 +49,7 @@
         <Project Path="Plugins/SkyCD.Plugin.WhereIsIt/SkyCD.Plugin.WhereIsIt.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.DiskExplorer/SkyCD.Plugin.DiskExplorer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vvv/SkyCD.Plugin.Vvv.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.NeoFinder.Text/SkyCD.Plugin.NeoFinder.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.BrokenX/SkyCD.Plugin.BrokenX.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Native/SkyCD.Plugin.WinCatalog.Native.csproj"/>
     </Folder>
@@ -120,6 +121,7 @@
         <Project Path="tests/SkyCD.Plugin.WhereIsIt.Tests/SkyCD.Plugin.WhereIsIt.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskExplorer.Tests/SkyCD.Plugin.DiskExplorer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Vvv.Tests/SkyCD.Plugin.Vvv.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.NeoFinder.Text.Tests/SkyCD.Plugin.NeoFinder.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.BrokenX.Tests/SkyCD.Plugin.BrokenX.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Native.Tests/SkyCD.Plugin.WinCatalog.Native.Tests.csproj"/>
     </Folder>
