@@ -28,15 +28,37 @@ public static class GCstarRecognizer
     /// </summary>
     public static bool IsGCstarCollection(Stream stream)
     {
+        var position = stream.CanSeek ? stream.Position : 0L;
         try
         {
-            using var streamReader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
-            using var reader = XmlReader.Create(streamReader, GCstarParser.CreateSecureSettings());
-            return Scan(reader);
+            using (var streamReader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
+            using (var reader = XmlReader.Create(streamReader, GCstarParser.CreateSecureSettings()))
+            {
+                return Scan(reader);
+            }
         }
         catch
         {
             return false;
+        }
+        finally
+        {
+            if (stream.CanSeek)
+            {
+                try
+                {
+                    stream.Position = position;
+                }
+                catch (IOException)
+                {
+                }
+                catch (NotSupportedException)
+                {
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
         }
     }
 
