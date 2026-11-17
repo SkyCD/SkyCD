@@ -57,6 +57,7 @@
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="Saved search" IsVisible="{Binding IsDynamic}" Opacity="0.7" />
                         <TextBlock Text="{Binding EntryCount, StringFormat='({0})'}"
                                    Opacity="0.7" />
                     </StackPanel>
@@ -81,6 +82,7 @@
                     Command="{Binding RemoveMissingEntriesCommand}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
                     Command="{Binding NavigateToSelectedCommand}" />
+            <Button Content="Refresh results" Command="{Binding RefreshResultsCommand}" />
         </StackPanel>
 
         <ListBox Grid.Row="1"

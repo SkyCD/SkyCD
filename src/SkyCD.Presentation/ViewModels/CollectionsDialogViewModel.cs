@@ -22,6 +22,31 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     private readonly VirtualCollectionDocumentRepository? collectionRepository;
     private readonly Action? onChanged;
     private readonly Action<CatalogDocument>? navigate;
+    private global::Couchbase.Lite.ListenerToken? catalogListener;
+
+    public void WatchCatalogChanges(Action<Action> dispatch)
+    {
+        StopWatchingCatalogChanges();
+        if (catalogRepository is not null)
+        {
+            catalogListener = catalogRepository.Collection.AddChangeListener((_, _) => dispatch(() =>
+            {
+                if (catalogListener is not null)
+                {
+                    RefreshCollections();
+                }
+            }));
+        }
+    }
+
+    public void StopWatchingCatalogChanges()
+    {
+        if (catalogListener is { } listener)
+        {
+            catalogRepository?.Collection.RemoveChangeListener(listener);
+            catalogListener = null;
+        }
+    }
 
     public CollectionsDialogViewModel(
         VirtualCollectionService? service = null,
@@ -113,7 +138,15 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
 
         if (collection.Kind == VirtualCollectionKind.Dynamic)
         {
-            return (service.ResolveEntries(collection.Id, out _).Count, 0, 0);
+            try
+            {
+                return (service.ResolveEntries(collection.Id, out _).Count, 0, 0);
+            }
+            catch (InvalidOperationException exception)
+            {
+                StatusText = exception.Message;
+                return (0, 0, 0);
+            }
         }
 
         var total = collection.EntryIds.Count;
@@ -140,7 +173,17 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
             return;
         }
 
-        var resolved = service.ResolveEntries(current.Id, out var missing);
+        IReadOnlyList<CatalogDocument> resolved;
+        int missing;
+        try
+        {
+            resolved = service.ResolveEntries(current.Id, out missing);
+        }
+        catch (InvalidOperationException exception)
+        {
+            StatusText = exception.Message;
+            return;
+        }
         UnavailableCount = missing;
         HasMissingMembers = missing > 0;
         foreach (var entry in resolved)
@@ -268,7 +311,8 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
             Id = current.Id,
             Name = current.Name,
             Kind = current.Kind,
-            EntryIds = service.GetEntryIds(current.Id).ToList()
+            EntryIds = service.GetEntryIds(current.Id).ToList(),
+            SavedQueryJson = service.GetRequired(current.Id).SavedQueryJson
         };
 
         try
@@ -301,6 +345,9 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         SelectCollection(SelectedCollection.Id);
         Changed();
     }
+
+    [RelayCommand]
+    private void RefreshResults() => RefreshCollections();
 
     private bool CanNavigate() => navigate is not null && SelectedMember is not null;
 

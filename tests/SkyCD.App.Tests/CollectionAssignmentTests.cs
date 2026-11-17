@@ -279,6 +279,63 @@ public sealed class CollectionAssignmentTests : IDisposable
     }
 
     [Fact]
+    public void SavedSearch_RefreshesMatchingEntriesAndPersistsUpdates()
+    {
+        string id;
+        using (var stack = CreateStack())
+        {
+            stack.Catalog.Save("first", Entry("first"));
+            var collection = stack.Service.CreateDynamicCollection("Live", NameContainsQuery("first"));
+            id = collection.Id;
+            Assert.Single(stack.Service.ResolveEntries(id, out _));
+            stack.Catalog.Save("first-new", Entry("first-new"));
+            Assert.Equal(2, stack.Service.ResolveEntries(id, out _).Count);
+            var edited = new CatalogDocument { Id = "first", Name = "other" };
+            stack.Catalog.Save("first", edited);
+            Assert.Equal("first-new", stack.Service.ResolveEntries(id, out _).Single().Id);
+            stack.Service.UpdateDynamicCollection(id, NameContainsQuery("other") with
+            {
+                SortKey = SkyCD.Presentation.ViewModels.AdvancedFindSortKey.Name,
+                SortDescending = true
+            });
+            stack.Service.RenameCollection(id, "Renamed");
+        }
+
+        using var reopened = CreateStack();
+        Assert.Equal("Renamed", reopened.Service.GetRequired(id).Name);
+        Assert.True(reopened.Service.GetDynamicQuery(id).SortDescending);
+        Assert.Equal("first", reopened.Service.ResolveEntries(id, out _).Single().Id);
+        Assert.Empty(reopened.Service.GetEntryIds(id));
+        reopened.Service.DeleteCollection(id);
+        Assert.Null(reopened.Collections.Get(id));
+        Assert.NotNull(reopened.Catalog.Get("first"));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("not json")]
+    [InlineData("{\"version\":0}")]
+    [InlineData("{\"version\":2}")]
+    [InlineData("{\"version\":1,\"root\":null}")]
+    [InlineData("{\"version\":1,\"scope\":null}")]
+    public void SavedSearch_RejectsCorruptAndUnsupportedDefinitions(string json)
+    {
+        Assert.ThrowsAny<InvalidOperationException>(() => VirtualCollectionService.DeserializeQuery(json));
+    }
+
+    [Fact]
+    public void SavedSearch_MissingScopeDoesNotWidenResults()
+    {
+        using var stack = CreateStack();
+        stack.Catalog.Save("file", Entry("file"));
+        var collection = stack.Service.CreateDynamicCollection("Scoped", NameContainsQuery("file") with
+        {
+            Scope = new CatalogQueryScope { RootId = "missing" }
+        });
+        Assert.Empty(stack.Service.ResolveEntries(collection.Id, out _));
+    }
+
+    [Fact]
     public async Task MembershipChanges_UndoAndRedoThroughHistory()
     {
         using var stack = CreateStack();

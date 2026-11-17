@@ -142,7 +142,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             : null;
         this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
         this.collectionService = this.collectionRepository is not null
-            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository)
+            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup)
             : null;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
@@ -601,7 +601,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             lookup,
             metadataKeys,
             DiscoverCustomPropertyKeys(entries),
-            DiscoverStatusValues(entries));
+            DiscoverStatusValues(entries),
+            collectionService,
+            () =>
+            {
+                IsDirtyDocument = true;
+                RefreshCollectionsMenuItems();
+            });
     }
 
     private (AdvancedCatalogSearchService.MetadataLookup? Lookup, IReadOnlyList<string> Keys) BuildAdvancedFindMetadata()

@@ -22,12 +22,14 @@ public partial class CollectionsWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            subscribedViewModel.StopWatchingCatalogChanges();
         }
 
         subscribedViewModel = (sender as CollectionsWindow)?.DataContext as CollectionsDialogViewModel;
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            subscribedViewModel.WatchCatalogChanges(action => Avalonia.Threading.Dispatcher.UIThread.Post(action));
         }
     }
 
@@ -36,6 +38,7 @@ public partial class CollectionsWindow : Window
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            subscribedViewModel.StopWatchingCatalogChanges();
             subscribedViewModel = null;
         }
     }

@@ -15,6 +15,10 @@ public sealed record AdvancedCatalogQuery
 
     public int Version { get; init; } = CurrentVersion;
 
+    public SkyCD.Presentation.ViewModels.AdvancedFindSortKey SortKey { get; init; }
+
+    public bool SortDescending { get; init; }
+
     public CatalogQueryScope Scope { get; init; } = new();
 
     public CatalogQueryGroup Root { get; init; } = new();

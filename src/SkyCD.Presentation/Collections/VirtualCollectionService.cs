@@ -27,13 +27,16 @@ public sealed class VirtualCollectionService
 
     private readonly CatalogDocumentRepository catalogRepository;
     private readonly VirtualCollectionDocumentRepository collectionRepository;
+    private readonly Func<AdvancedCatalogSearchService.MetadataLookup?>? metadataLookupFactory;
 
     public VirtualCollectionService(
         CatalogDocumentRepository catalogRepository,
-        VirtualCollectionDocumentRepository collectionRepository)
+        VirtualCollectionDocumentRepository collectionRepository,
+        Func<AdvancedCatalogSearchService.MetadataLookup?>? metadataLookupFactory = null)
     {
         this.catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
         this.collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        this.metadataLookupFactory = metadataLookupFactory;
     }
 
     public IReadOnlyList<VirtualCollectionDocument> GetCollections() =>
@@ -195,6 +198,18 @@ public sealed class VirtualCollectionService
         return collection;
     }
 
+    public void UpdateDynamicCollection(string collectionId, AdvancedCatalogQuery query)
+    {
+        var collection = GetRequired(collectionId);
+        if (collection.Kind != VirtualCollectionKind.Dynamic)
+        {
+            throw new SavedSearchException();
+        }
+
+        collection.SavedQueryJson = SerializeQuery(query);
+        collectionRepository.Save(collection.Id, collection);
+    }
+
     public AdvancedCatalogQuery GetDynamicQuery(string collectionId)
     {
         var collection = GetRequired(collectionId);
@@ -226,13 +241,13 @@ public sealed class VirtualCollectionService
     {
         if (string.IsNullOrWhiteSpace(collection.SavedQueryJson))
         {
-            return [];
+            throw new SavedSearchException();
         }
 
         var query = DeserializeQuery(collection.SavedQueryJson);
         var index = new CatalogSearchIndex();
         index.Rebuild(catalogRepository.GetAll());
-        var matches = AdvancedCatalogSearchService.Search(index, query);
+        var matches = AdvancedCatalogSearchService.Search(index, query, metadataLookupFactory?.Invoke());
         var resolved = new List<CatalogDocument>(matches.Count);
         foreach (var match in matches)
         {
@@ -245,31 +260,41 @@ public sealed class VirtualCollectionService
     public static string SerializeQuery(AdvancedCatalogQuery query)
     {
         ArgumentNullException.ThrowIfNull(query);
-        if (query.Version > AdvancedCatalogQuery.CurrentVersion)
-        {
-            throw new InvalidOperationException($"Unsupported query version {query.Version}.");
-        }
+        AdvancedCatalogSearchService.Validate(query);
 
         return JsonSerializer.Serialize(query, QueryJsonOptions);
     }
 
     public static AdvancedCatalogQuery DeserializeQuery(string json)
     {
-        var query = JsonSerializer.Deserialize<AdvancedCatalogQuery>(json, QueryJsonOptions)
-            ?? throw new InvalidOperationException("Saved search is not a valid query document.");
-        if (query.Version > AdvancedCatalogQuery.CurrentVersion)
+        try
         {
-            throw new InvalidOperationException($"Unsupported query version {query.Version}.");
-        }
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || !document.RootElement.TryGetProperty("version", out _)
+                || !document.RootElement.TryGetProperty("root", out _)
+                || !document.RootElement.TryGetProperty("scope", out _))
+            {
+                throw new SavedSearchException();
+            }
 
-        return NormalizeQueryValues(query);
+            var query = JsonSerializer.Deserialize<AdvancedCatalogQuery>(json, QueryJsonOptions)
+                ?? throw new SavedSearchException();
+            query = NormalizeQueryValues(query);
+            AdvancedCatalogSearchService.Validate(query);
+            return query;
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or NullReferenceException)
+        {
+            throw new SavedSearchException();
+        }
     }
 
     private static AdvancedCatalogQuery NormalizeQueryValues(AdvancedCatalogQuery query) =>
         query with
         {
             Root = NormalizeGroup(query.Root),
-            Take = query.Take <= 0 ? 200 : query.Take
+            Take = query.Take
         };
 
     private static CatalogQueryGroup NormalizeGroup(CatalogQueryGroup group) =>
