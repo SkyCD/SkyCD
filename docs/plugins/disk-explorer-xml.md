@@ -17,7 +17,10 @@ XML 1.0, UTF-8, root `REPORT` with a `Title` attribute:
 ```
 
 Detection requires the exact `REPORT` root plus report shape (a title or an `ITEM`
-carrying `ItemType`), so unrelated `.xml` files are never claimed.
+carrying `ItemType`), so unrelated `.xml` files are never claimed. Where Is It?
+reports share the `REPORT`/`ITEM` shape but carry their own markers (`DISK_NAME`,
+`EXT`, `CRC`, `CATEGORY`, `FLAG`, …); any such marker disqualifies the Disk
+Explorer claim, and those files belong to the dedicated Where Is It? profile.
 
 ## Items
 

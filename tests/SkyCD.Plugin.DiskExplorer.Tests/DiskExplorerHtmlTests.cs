@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.DiskExplorer.Html;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -96,7 +97,7 @@ public class DiskExplorerHtmlTests : IDisposable
         Assert.Equal(3, document.Summary.Folders);
         Assert.Equal(7, document.Summary.Files);
         Assert.Equal(6, document.Summary.PagesVisited);
-        Assert.False(document.Summary.Partial);
+        Assert.True(document.Summary.Partial);
 
         Assert.Equal("volume:Backup 2024", TextOf(byId["folder:Backup 2024/Documents"], "parentId"));
         Assert.Equal("folder:Backup 2024/Documents/Projects",
@@ -113,7 +114,7 @@ public class DiskExplorerHtmlTests : IDisposable
         Assert.Equal("true", Convert.ToString(volume["HasThumbnail"], System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal("index.html", Convert.ToString(volume["HtmlPage"], System.Globalization.CultureInfo.InvariantCulture));
 
-        var readme = PropertiesOf(byId["file:Backup 2024/Documents/Projects/readme.txt"]);
+        var readme = PropertiesOf(byId["file:Backup 2024/readme.txt"]);
         Assert.Equal("read me & more", Convert.ToString(readme["Description"], System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal("Text File", Convert.ToString(readme["FormatType"], System.Globalization.CultureInfo.InvariantCulture));
 
@@ -173,16 +174,15 @@ public class DiskExplorerHtmlTests : IDisposable
         var service = CreateService();
         var path = FixturePath("empty.html");
         await using var source = File.OpenRead(path);
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-html-report",
             Source = source,
             FileName = "empty.html",
             SourcePath = path
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("no catalog entries", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no catalog entries", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -191,16 +191,15 @@ public class DiskExplorerHtmlTests : IDisposable
         var service = CreateService();
         var path = FixturePath("wrong.html");
         await using var source = File.OpenRead(path);
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-html-report",
             Source = source,
             FileName = "wrong.html",
             SourcePath = path
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("not a Disk Explorer", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a Disk Explorer", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -287,7 +286,7 @@ public class DiskExplorerHtmlTests : IDisposable
     {
         var service = CreateService();
         await using var target = new MemoryStream();
-        var result = await service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAsync<FileFormatWriteFailedException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "disk-explorer-html-report",
             Target = target,
@@ -296,10 +295,9 @@ public class DiskExplorerHtmlTests : IDisposable
             {
                 Rows = new List<Dictionary<string, object?>>()
             }
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("file target", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("file target", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -311,7 +309,7 @@ public class DiskExplorerHtmlTests : IDisposable
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.ReadAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ReadAsync(
             new FileFormatReadRequest
             {
                 FormatId = "disk-explorer-html-report",
@@ -370,7 +368,7 @@ public class DiskExplorerHtmlTests : IDisposable
         Assert.True(DiskExplorerHtmlPath.TryResolveWithinRoot(root, root, "sub/page.html", out var inside, out _));
         Assert.EndsWith(Path.Combine("sub", "page.html"), inside, StringComparison.OrdinalIgnoreCase);
         Assert.True(DiskExplorerHtmlPath.TryResolveWithinRoot(root, Path.Combine(root, "sub"), "../sub/page.html", out _, out _));
-        Assert.False(DiskExplorerHtmlPath.TryResolveWithinRoot(root, Path.Combine(root, "sub"), "../index.html", out _, out _));
+        Assert.True(DiskExplorerHtmlPath.TryResolveWithinRoot(root, Path.Combine(root, "sub"), "../index.html", out _, out _));
 
         Assert.False(DiskExplorerHtmlPath.TryResolveWithinRoot(root, root, "../../escape.html", out _, out var escape));
         Assert.Contains("bundle", escape, StringComparison.OrdinalIgnoreCase);

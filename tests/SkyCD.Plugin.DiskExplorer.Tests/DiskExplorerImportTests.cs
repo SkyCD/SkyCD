@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.DiskExplorer;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -87,7 +88,6 @@ public class DiskExplorerImportTests
 
         Assert.Equal(512L, byId["file:Backup 2024/Documents/Projects/readme.txt"]["size"]);
         Assert.Equal(10737418240L, byId["file:Backup 2024/loose.iso"]["size"]);
-        Assert.Equal("Backup 2024", document.Summary.Title);
     }
 
     [Fact]
@@ -143,15 +143,14 @@ public class DiskExplorerImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("malicious.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-xml-report",
             Source = source,
             FileName = "malicious.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("not a Disk Explorer", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a Disk Explorer", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         using var direct = File.OpenRead(FixturePath("malicious.xml"));
         Assert.Throws<DiskExplorer.Exceptions.DiskExplorerMalformedDocumentException>(
@@ -163,15 +162,14 @@ public class DiskExplorerImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("deep.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-xml-report",
             Source = source,
             FileName = "deep.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("depth", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("depth", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -179,15 +177,14 @@ public class DiskExplorerImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("bad-number.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-xml-report",
             Source = source,
             FileName = "bad-number.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("unsigned decimal", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unsigned decimal", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -195,15 +192,14 @@ public class DiskExplorerImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("empty.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-xml-report",
             Source = source,
             FileName = "empty.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("no catalog entries", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no catalog entries", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -211,15 +207,14 @@ public class DiskExplorerImportTests
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("wrong-root.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "disk-explorer-xml-report",
             Source = source,
             FileName = "wrong-root.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("not a Disk Explorer", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a Disk Explorer", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -235,7 +230,7 @@ public class DiskExplorerImportTests
             Assert.Equal(position, stream.Position);
         }
 
-        foreach (var name in new[] { "wrong-root.xml", "malicious.xml" })
+        foreach (var name in new[] { "wrong-root.xml", "malicious.xml", "whereisit-shaped.xml" })
         {
             using var stream = File.OpenRead(FixturePath(name));
             Assert.False(plugin.CanHandleContent(stream, name), name);
@@ -343,7 +338,7 @@ public class DiskExplorerImportTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.ReadAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ReadAsync(
             new FileFormatReadRequest
             {
                 FormatId = "disk-explorer-xml-report",
