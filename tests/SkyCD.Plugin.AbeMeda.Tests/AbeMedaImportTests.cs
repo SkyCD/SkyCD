@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.AbeMeda;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -157,51 +158,48 @@ public class AbeMedaImportTests
     }
 
     [Fact]
-    public async Task MalformedXml_ReturnsMalformedDiagnostic()
+    public async Task MalformedXml_ThrowsReadFailedWithDiagnostic()
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("malformed.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "abemeda-xml",
             Source = source,
             FileName = "malformed.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("malformed", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task EmptyExport_ReturnsEmptyDiagnostic()
+    public async Task EmptyExport_ThrowsReadFailedWithDiagnostic()
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("empty.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "abemeda-xml",
             Source = source,
             FileName = "empty.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("no catalog entries", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no catalog entries", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task WrongRoot_ReturnsUnsupportedDiagnostic()
+    public async Task WrongRoot_ThrowsReadFailedWithDiagnostic()
     {
         var service = CreateService();
         await using var source = File.OpenRead(FixturePath("wrong-root.xml"));
-        var result = await service.ReadAsync(new FileFormatReadRequest
+        var exception = await Assert.ThrowsAsync<FileFormatReadFailedException>(() => service.ReadAsync(new FileFormatReadRequest
         {
             FormatId = "abemeda-xml",
             Source = source,
             FileName = "wrong-root.xml"
-        });
+        }));
 
-        Assert.False(result.Success);
-        Assert.Contains("not a supported", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a supported", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -226,9 +224,32 @@ public class AbeMedaImportTests
             System.Text.Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><WinCatalog version=\"2024\"><Disk Name=\"D\" /></WinCatalog>"));
         Assert.False(plugin.CanHandleContent(wincatalog, "other.xml"));
 
-        using var nonSeekable = new NonSeekableStream(new MemoryStream(
-            System.Text.Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><AbeMeda />")));
+        using var content = new MemoryStream(
+            System.Text.Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><AbeMeda />"));
+        using var nonSeekable = new NonSeekableStream(content);
         Assert.False(plugin.CanHandleContent(nonSeekable, "x.xml"));
+        Assert.Equal(0, content.Position);
+        Assert.True(content.CanRead);
+    }
+
+    [Fact]
+    public async Task NonSeekableSource_ImportsAfterContentDetection()
+    {
+        var plugin = new AbeMedaPlugin();
+        await using var content = File.OpenRead(FixturePath("nested-two-volumes.xml"));
+        await using var source = new NonSeekableStream(content);
+
+        Assert.False(plugin.CanHandleContent(source, "export.xml"));
+        var result = await CreateService().ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "abemeda-xml",
+            Source = source,
+            FileName = "export.xml"
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal(12, Assert.IsType<AbeMedaReportDocument>(result.Payload).Rows.Count);
+        Assert.True(content.CanRead);
     }
 
     [Fact]
@@ -239,7 +260,7 @@ public class AbeMedaImportTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.ReadAsync(
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ReadAsync(
             new FileFormatReadRequest
             {
                 FormatId = "abemeda-xml",
@@ -247,6 +268,8 @@ public class AbeMedaImportTests
                 FileName = "nested-two-volumes.xml"
             },
             cancelled.Token));
+
+        Assert.Equal(cancelled.Token, exception.CancellationToken);
     }
 
     [Fact]

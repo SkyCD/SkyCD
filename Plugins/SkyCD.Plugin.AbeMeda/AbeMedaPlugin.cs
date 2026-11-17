@@ -29,7 +29,7 @@ public sealed class AbeMedaPlugin : IFileFormatPluginCapability, IContentAwareFi
     /// </summary>
     public bool CanHandleContent(Stream stream, string? fileName = null)
     {
-        if (!stream.CanRead)
+        if (!stream.CanRead || !stream.CanSeek)
         {
             return false;
         }
