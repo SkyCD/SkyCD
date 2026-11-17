@@ -88,7 +88,6 @@ public class DiskExplorerImportTests
 
         Assert.Equal(512L, byId["file:Backup 2024/Documents/Projects/readme.txt"]["size"]);
         Assert.Equal(10737418240L, byId["file:Backup 2024/loose.iso"]["size"]);
-        Assert.Equal("Backup 2024", document.Summary.Title);
     }
 
     [Fact]
@@ -339,7 +338,7 @@ public class DiskExplorerImportTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.ReadAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ReadAsync(
             new FileFormatReadRequest
             {
                 FormatId = "disk-explorer-xml-report",

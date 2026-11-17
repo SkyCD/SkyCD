@@ -346,6 +346,12 @@ public static class DiskExplorerParser
         }
 
         var frame = frames.Pop();
+        if (DiskExplorerNames.IsThumbnailName(frame.LocalName))
+        {
+            RecordUnsupported(frame.LocalName, unsupportedFields, unsupportedSeen);
+            return;
+        }
+
         if (frame.IsField)
         {
             var value = frame.TextValue();
