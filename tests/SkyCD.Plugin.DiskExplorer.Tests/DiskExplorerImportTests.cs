@@ -235,7 +235,7 @@ public class DiskExplorerImportTests
             Assert.Equal(position, stream.Position);
         }
 
-        foreach (var name in new[] { "wrong-root.xml", "malicious.xml" })
+        foreach (var name in new[] { "wrong-root.xml", "malicious.xml", "whereisit-shaped.xml" })
         {
             using var stream = File.OpenRead(FixturePath(name));
             Assert.False(plugin.CanHandleContent(stream, name), name);

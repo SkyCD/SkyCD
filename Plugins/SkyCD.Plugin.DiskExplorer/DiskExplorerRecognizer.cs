@@ -10,12 +10,20 @@ namespace SkyCD.Plugin.DiskExplorer;
 /// Content-aware recognizer for Disk Explorer Professional XML reports. Recognition
 /// requires the exact <c>REPORT</c> root plus report shape (a title or an
 /// <c>ITEM</c> element carrying <c>ItemType</c>), so unrelated XML files sharing the
-/// .xml extension are never claimed. The scan is bounded.
+/// .xml extension are never claimed. Where Is It? shares the <c>REPORT</c>/<c>ITEM</c>
+/// shape but carries its own markers (<c>DISK_NAME</c>, <c>EXT</c>, <c>CRC</c>, …);
+/// any such marker disqualifies the Disk Explorer claim. The scan is bounded.
 /// </summary>
 public static class DiskExplorerRecognizer
 {
     private const int ElementScanBudget = 512;
     private const int DepthScanLimit = 16;
+
+    private static readonly HashSet<string> WhereIsItMarkers = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DISK_NAME", "DISK_TYPE", "DISK_NUM", "DISK_LOCATION",
+        "EXT", "CRC", "CATEGORY", "FLAG"
+    };
 
     public static bool IsDiskExplorerXml(Stream stream)
     {
@@ -45,6 +53,11 @@ public static class DiskExplorerRecognizer
                 continue;
             }
 
+            if (WhereIsItMarkers.Contains(reader.LocalName))
+            {
+                return false;
+            }
+
             if (rootName is null)
             {
                 rootName = reader.LocalName;
@@ -66,11 +79,6 @@ public static class DiskExplorerRecognizer
 
                     reader.MoveToElement();
                 }
-
-                if (hasTitle)
-                {
-                    return true;
-                }
             }
             else if (reader.LocalName.Equals(DiskExplorerNames.ItemElement, StringComparison.Ordinal)
                 && reader.HasAttributes)
@@ -85,10 +93,6 @@ public static class DiskExplorerRecognizer
                 }
 
                 reader.MoveToElement();
-                if (hasTypedItem)
-                {
-                    return true;
-                }
             }
 
             if (reader.Depth >= DepthScanLimit || --remainingElements <= 0)
@@ -97,6 +101,6 @@ public static class DiskExplorerRecognizer
             }
         }
 
-        return false;
+        return rootName is not null && (hasTitle || hasTypedItem);
     }
 }
