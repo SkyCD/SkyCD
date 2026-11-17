@@ -625,6 +625,87 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         Assert.True(File.Exists(context.SourceFile));
     }
 
+    [Fact]
+    public async Task AcceptedProperties_AreOneDurableUndoStepAndKeepLogicalSelection()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        using var viewModel = context.CreateViewModel();
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
+        viewModel.ActivePane = ActivePane.Browser;
+        viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "interstellar");
+        PropertiesDialogRequestedEventArgs? request = null;
+        viewModel.PropertiesRequested += (_, args) => request = args;
+        viewModel.OpenPropertiesCommand.Execute(null);
+        Assert.NotNull(request);
+        request.Dialog.Name = "Renamed.mkv";
+        request.Dialog.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = "Director", DefaultValue = "" }]);
+        request.Dialog.CustomProperties.Single().DefaultValue = "Villeneuve";
+        request.Complete(true, "Offline comment");
+
+        Assert.Equal(1, viewModel.UndoManager!.History.UndoCount);
+        Assert.Equal("Renamed.mkv", context.Catalog.Get("interstellar")!.Name);
+        Assert.Equal("Offline comment", context.Catalog.Get("interstellar")!.Properties["Comment"]);
+        Assert.Equal("Villeneuve", context.Catalog.Get("interstellar")!.Properties["Director"]);
+        Assert.True(viewModel.UndoCommand.CanExecute(null));
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+        Assert.Equal("Interstellar.mkv", context.Catalog.Get("interstellar")!.Name);
+        Assert.False(context.Catalog.Get("interstellar")!.Properties.ContainsKey("Comment"));
+        Assert.Equal("Nolan", context.Catalog.Get("interstellar")!.Properties["Director"]);
+        Assert.Equal("interstellar", viewModel.SelectedBrowserItem?.Id);
+        Assert.True(viewModel.RedoCommand.CanExecute(null));
+        await viewModel.RedoCommand.ExecuteAsync(null);
+        using var reopened = new TestContext();
+        Assert.Equal("Renamed.mkv", reopened.Catalog.Get("interstellar")!.Name);
+        Assert.Equal("Offline comment", reopened.Catalog.Get("interstellar")!.Properties["Comment"]);
+        Assert.Equal("Villeneuve", reopened.Catalog.Get("interstellar")!.Properties["Director"]);
+    }
+
+    [Fact]
+    public void CanceledProperties_LeaveStorageAndHistoryUntouched()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        using var viewModel = context.CreateViewModel();
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
+        viewModel.ActivePane = ActivePane.Browser;
+        viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "interstellar");
+        viewModel.PropertiesRequested += (_, args) =>
+        {
+            args.Dialog.Name = "Canceled";
+            args.Complete(false, "Canceled");
+        };
+        viewModel.OpenPropertiesCommand.Execute(null);
+        Assert.False(viewModel.CanUndo);
+        Assert.Equal("Interstellar.mkv", context.Catalog.Get("interstellar")!.Name);
+        Assert.False(context.Catalog.Get("interstellar")!.Properties.ContainsKey("Comment"));
+    }
+
+    [Fact]
+    public async Task BulkStatusClear_UndoesStatusAndBadgePropertiesInOneStep()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        var original = context.Catalog.Get("interstellar")!;
+        original.Properties["StatusIconGlyph"] = "film";
+        context.Catalog.Save(original.Id, original);
+        using var viewModel = context.CreateViewModel();
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
+        viewModel.ActivePane = ActivePane.Browser;
+        viewModel.SelectedBrowserItems = viewModel.BrowserItems.ToList();
+        viewModel.ApplyBrowserItemStatusCommand.Execute(null);
+        Assert.Equal(1, viewModel.UndoManager!.History.UndoCount);
+        Assert.Null(context.Catalog.Get("interstellar")!.Status);
+        await viewModel.UndoCommand.ExecuteAsync(null);
+        Assert.Equal("Watched", context.Catalog.Get("interstellar")!.Status);
+        Assert.Equal("film", context.Catalog.Get("interstellar")!.Properties["StatusIconGlyph"]);
+        Assert.False(viewModel.CanUndo);
+        await viewModel.RedoCommand.ExecuteAsync(null);
+        using var reopened = context.CreateViewModel();
+        Assert.Null(context.Catalog.Get("interstellar")!.Status);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static void SavePreviewArtifact(IMediaCacheStore store, string entryId)
