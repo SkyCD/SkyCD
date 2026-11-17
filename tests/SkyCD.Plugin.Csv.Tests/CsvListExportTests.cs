@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Csv;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -212,14 +213,14 @@ public class CsvListExportTests
         Assert.Contains((byte)0xE9, latinBytes);
 
         await using var badTarget = new MemoryStream();
-        var badResult = await service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAsync<FileFormatWriteFailedException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-csv-list",
             Target = badTarget,
             Payload = new CsvListExportRequest { Rows = Rows(), EncodingName = "ebcdic" }
-        });
-        Assert.False(badResult.Success);
-        Assert.Contains("encoding", badResult.Error, StringComparison.OrdinalIgnoreCase);
+        }));
+        Assert.Contains("encoding", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, badTarget.Length);
     }
 
     [Fact]
@@ -238,13 +239,14 @@ public class CsvListExportTests
         Assert.Contains("a;b\t\"x\ty\"", SplitLines(tab.TrimStart('\uFEFF'))[1]);
 
         await using var badTarget = new MemoryStream();
-        var badResult = await service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAsync<FileFormatWriteFailedException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-csv-list",
             Target = badTarget,
             Payload = new CsvListExportRequest { Rows = Rows(), Separator = '"' }
-        });
-        Assert.False(badResult.Success);
+        }));
+        Assert.Contains("separator", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, badTarget.Length);
     }
 
     [Fact]
@@ -261,7 +263,7 @@ public class CsvListExportTests
     }
 
     [Fact]
-    public async Task UnicodeAndMultiline_RoundTripThroughReader()
+    public async Task UnicodeAndMultiline_RoundTripThroughCsvParser()
     {
         var service = CreateService();
         var rows = new List<Dictionary<string, object?>>
@@ -271,16 +273,15 @@ public class CsvListExportTests
         var text = await ExportToStringAsync(service,
             new CsvListExportRequest { Rows = rows });
 
-        await using var source = new MemoryStream(Encoding.UTF8.GetBytes(text));
-        var readResult = await service.ReadAsync(new FileFormatReadRequest
-        {
-            FormatId = "skycd-csv",
-            Source = source
-        });
+        using var reader = new StringReader(text.TrimStart('\uFEFF'));
+        var parsed = await CsvParser.ReadCsvAsync(reader);
 
-        Assert.True(readResult.Success);
-        Assert.Contains("夏祭り.mp3", text);
-        Assert.Contains("\"Expósito\nlínea 2\"", text);
+        Assert.Equal(',', parsed.Delimiter);
+        Assert.Equal(CsvListExportPlugin.DefaultColumns, parsed.Rows[0]);
+        var row = Assert.Single(parsed.Rows.Skip(1));
+        Assert.Equal(
+            new[] { "夏祭り.mp3", "祭 / 夏祭り.mp3", "file", "4500000", "2024-07-01T10:00:00.0000000+00:00", "Expósito\nlínea 2", "祭" },
+            row);
     }
 
     [Fact]
