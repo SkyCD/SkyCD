@@ -55,7 +55,7 @@ public sealed class TellicoParserTests
         var second = collection.Entries[1]!;
         Assert.Equal("Neuromancer", second.Fields["title"]);
         Assert.Equal("false", second.Fields["read"]);
-        Assert.Equal("kept verbatim", second.Fields["Tellico.unknown_field"]);
+        Assert.Equal("kept verbatim", second.ExtraFields["Tellico.unknown_field"]);
         Assert.Contains("Tellico.unknown_field", collection.UnsupportedFields);
     }
 
