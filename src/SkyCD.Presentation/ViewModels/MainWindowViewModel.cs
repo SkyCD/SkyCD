@@ -2740,13 +2740,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.File),
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", Command = NewCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", InputGesture = "Ctrl+N", Command = NewCatalogCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", Command = OpenCatalogCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.OpenFolder), HotKey = "Ctrl+Shift+O", Command = OpenCatalogFolderCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", Command = SaveCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", InputGesture = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.OpenFolder), InputGesture = "Ctrl+Shift+O", Command = OpenCatalogFolderCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), InputGesture = "Ctrl+S", Command = SaveCatalogCommand },
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", Command = SaveCatalogAsCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), InputGesture = "F12", Command = SaveCatalogAsCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand },
                     Separator(),
@@ -2761,8 +2761,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), InputGesture = OperatingSystem.IsMacOS() ? "Meta+Z" : "Ctrl+Z", Command = UndoCommand },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), InputGesture = OperatingSystem.IsMacOS() ? "Meta+Shift+Z" : "Ctrl+Y", Command = RedoCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), InputGesture = "F2", Command = AddItemCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), InputGesture = "Delete", Command = DeleteItemCommand },
                     new MainMenuItemViewModel
                     {
                         Key = "edit_status",
@@ -2772,10 +2772,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.Find), InputGesture = "Ctrl+F", Command = FindCatalogCommand },
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.AdvancedFind), Command = AdvancedFindCatalogCommand }
                 ]
@@ -2807,7 +2807,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                             CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
                         ]
                     },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), HotKey = "F5", Command = RefreshCommand }
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), InputGesture = "F5", Command = RefreshCommand }
                 ]
             },
             new MainMenuItemViewModel
@@ -2837,7 +2837,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var toolsMenuItems = new List<MainMenuItemViewModel>
         {
             new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand },
+                { Header = LocalizationService.Current.Get(TextKeys.Options), InputGesture = "Ctrl+Alt+O", Command = OpenOptionsCommand },
             new MainMenuItemViewModel
             {
                 Header = "Automatically sync mounted media",
@@ -3131,8 +3131,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "list" },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), InputGesture = "F2", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
@@ -3178,10 +3178,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "tree" },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), InputGesture = "F2", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "tree" },
             Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", Command = PasteCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", Command = CutCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), InputGesture = "Ctrl+C", Command = CopyCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), InputGesture = "Ctrl+V", Command = PasteCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
@@ -3744,3 +3746,4 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private static string ResolveMenuStatusIconText(string iconGlyphKey) => iconGlyphKey;
 }
+
