@@ -4,8 +4,10 @@ The assembly-discovered `skycd-access-list` capability is export-only for `.mdb`
 It creates a Jet 4-compatible database with one user table, `ItemList`, without
 requiring Microsoft Access or a legacy catalog application. Windows must have
 ADOX/ADO and a Jet or ACE OLE DB provider matching the SkyCD process architecture.
-The plugin tries registered ACE 16, ACE 12, then Jet 4 providers. No native runtime
-is bundled and no additional NuGet packages are required.
+The plugin tries activating ACE 16, ACE 12, then Jet 4 providers.
+COM type lookup alone is insufficient: stale or mismatched registrations can
+resolve successfully but fail activation. ADOX and ADO classes must also activate.
+No native runtime is bundled and no additional NuGet packages are required.
 
 `AccessListExportRequest` carries the visible rows in insertion order and selected
 `AccessListColumn` values in column order. Each column has its source key and

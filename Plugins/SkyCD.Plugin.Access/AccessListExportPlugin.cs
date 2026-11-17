@@ -28,7 +28,7 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!OperatingSystem.IsWindows()) throw new AccessExportProviderUnavailableException();
-            var provider = FindProvider();
+            var provider = FindAvailableProvider() ?? throw new AccessExportProviderUnavailableException();
             var export = request.Payload as AccessListExportRequest ?? new AccessListExportRequest { Rows = CoerceRows(request.Payload) };
             var directory = request.Target is FileStream file
                 ? Path.GetDirectoryName(Path.GetFullPath(file.Name))! : Path.GetTempPath();
@@ -97,14 +97,29 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability
         throw new ArgumentException("Access export requires ordered catalog-list rows.", nameof(payload));
     }
 
-    [SupportedOSPlatform("windows")]
-    private static string FindProvider()
+    public static string? FindAvailableProvider()
     {
-        if (Type.GetTypeFromProgID("ADOX.Catalog") is null || Type.GetTypeFromProgID("ADODB.Command") is null)
-            throw new AccessExportProviderUnavailableException();
+        if (!OperatingSystem.IsWindows()) return null;
+        if (!CanActivate("ADOX.Catalog") || !CanActivate("ADODB.Command") || !CanActivate("ADODB.Connection"))
+            return null;
         foreach (var provider in new[] { "Microsoft.ACE.OLEDB.16.0", "Microsoft.ACE.OLEDB.12.0", "Microsoft.Jet.OLEDB.4.0" })
-            if (Type.GetTypeFromProgID(provider) is not null) return provider;
-        throw new AccessExportProviderUnavailableException();
+            if (CanActivate(provider)) return provider;
+        return null;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool CanActivate(string progId)
+    {
+        object? instance = null;
+        try
+        {
+            var type = Type.GetTypeFromProgID(progId);
+            if (type is null) return false;
+            instance = Activator.CreateInstance(type);
+            return instance is not null;
+        }
+        catch (COMException) { return false; }
+        finally { Release(instance); }
     }
 
     [SupportedOSPlatform("windows")]
@@ -134,7 +149,6 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability
             dynamic connection = connectionObject;
             operation = "creating the ItemList table";
             connection.Execute($"CREATE TABLE [ItemList] ({string.Join(", ", names.Select(name => $"[{name}] TEXT(255) NOT NULL"))})");
-            // Jet TEXT NOT NULL accepts empty strings only when this column property is enabled.
             foreach (var name in names)
             {
                 operation = $"allowing empty text in column '{name}'";
@@ -145,12 +159,12 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability
             commandObject = Activator.CreateInstance(Type.GetTypeFromProgID("ADODB.Command")!);
             dynamic command = commandObject!;
             command.ActiveConnection = connection;
-            command.CommandType = 1; // adCmdText
+            command.CommandType = 1;
             command.CommandText = $"INSERT INTO [ItemList] ({string.Join(", ", names.Select(name => $"[{name}]"))}) VALUES ({string.Join(", ", names.Select(_ => "?"))})";
             for (var index = 0; index < names.Count; index++)
             {
                 operation = $"creating parameter '{names[index]}'";
-                object parameter = command.CreateParameter($"p{index}", 202, 1, 255); // adVarWChar, adParamInput
+                object parameter = command.CreateParameter($"p{index}", 202, 1, 255);
                 command.Parameters.Append(parameter);
                 parameters.Add(parameter);
             }

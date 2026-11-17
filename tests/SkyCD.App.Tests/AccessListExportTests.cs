@@ -60,6 +60,22 @@ public sealed class AccessListExportTests
         finally { Directory.Delete(directory, true); }
     }
 
+    [Fact]
+    public async Task UnavailableProvider_ReturnsActionableErrorWithoutWritingToTarget()
+    {
+        if (AccessListExportPlugin.FindAvailableProvider() is not null) return;
+        await using var target = new MemoryStream();
+        var result = await new AccessListExportPlugin().WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = "skycd-access-list",
+            Target = target,
+            Payload = new AccessListExportRequest { Rows = [] }
+        });
+        Assert.False(result.Success);
+        Assert.Equal(new AccessExportProviderUnavailableException().Message, result.Error);
+        Assert.Equal(0, target.Length);
+    }
+
     private sealed class FailingWriter : IFileFormatPluginCapability
     {
         public FileFormatDescriptor SupportedFormat => new("fail", "Failing", [".mdb"], [], false, true);
@@ -94,12 +110,11 @@ public sealed class AccessListExportTests
             var manager = new FileFormatManager([new AccessListExportPlugin()]);
             await manager.WriteFileAsync("skycd-access-list", path, request);
             Assert.Single(Directory.GetFiles(directory));
-            var provider = new[] { "Microsoft.ACE.OLEDB.16.0", "Microsoft.ACE.OLEDB.12.0", "Microsoft.Jet.OLEDB.4.0" }
-                .First(name => Type.GetTypeFromProgID(name) is not null);
+            var provider = AccessListExportPlugin.FindAvailableProvider();
             connectionObject = Activator.CreateInstance(Type.GetTypeFromProgID("ADODB.Connection")!);
             dynamic connection = connectionObject!;
             connection.Open($"Provider={provider};Data Source={path};");
-            object schemaObject = connection.OpenSchema(20); // adSchemaTables
+            object schemaObject = connection.OpenSchema(20);
             dynamic schema = schemaObject;
             var tables = new List<string>();
             while (!(bool)schema.EOF)
@@ -197,10 +212,7 @@ public sealed class AccessProviderFactAttribute : FactAttribute
 {
     public AccessProviderFactAttribute()
     {
-        if (!OperatingSystem.IsWindows()
-            || Type.GetTypeFromProgID("ADOX.Catalog") is null
-            || !new[] { "Microsoft.ACE.OLEDB.16.0", "Microsoft.ACE.OLEDB.12.0", "Microsoft.Jet.OLEDB.4.0" }
-                .Any(name => OperatingSystem.IsWindows() && Type.GetTypeFromProgID(name) is not null))
+        if (AccessListExportPlugin.FindAvailableProvider() is null)
             Skip = "Requires Windows and a matching Jet/ACE runtime provider; Microsoft Access is not required.";
     }
 }
