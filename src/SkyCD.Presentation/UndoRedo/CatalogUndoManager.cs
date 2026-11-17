@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Documents.Repository;
 using SkyCD.Documents;
@@ -92,6 +93,20 @@ namespace SkyCD.Presentation.UndoRedo
             if (propertyName == null) throw new ArgumentNullException(nameof(propertyName));
             if (Equals(oldValue, newValue)) return;
             _history.PushAction(new Actions.ChangePropertyAction(_catalogRepository, document.Id, propertyName, oldValue, newValue));
+        }
+
+        public void RecordTagsChange(CatalogDocument document, IReadOnlyList<string> oldTagIds, IReadOnlyList<string> newTagIds)
+        {
+            if (document == null) return;
+            if (oldTagIds is null || newTagIds is null) return;
+            if (oldTagIds.SequenceEqual(newTagIds, StringComparer.Ordinal)) return;
+            _history.PushAction(new Actions.ChangeTagsAction(_catalogRepository, document.Id, oldTagIds, newTagIds));
+        }
+
+        public void RecordTagsBatchChange(IReadOnlyDictionary<string, (IReadOnlyList<string> OldTagIds, IReadOnlyList<string> NewTagIds)> changes)
+        {
+            if (changes == null || changes.Count == 0) return;
+            _history.PushAction(new Actions.ChangeTagsBatchAction(_catalogRepository, changes));
         }
 
         /// <summary>
