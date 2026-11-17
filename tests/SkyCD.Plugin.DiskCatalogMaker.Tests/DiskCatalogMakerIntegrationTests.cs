@@ -103,6 +103,41 @@ public sealed class DiskCatalogMakerIntegrationTests
         Assert.True(count > 0);
     }
 
+    [Fact]
+    public async Task LoadAsync_ControlCharactersAndPercentEscapes_PersistDistinctlyWithParentLinks()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "skycd-diskcatalogmaker-input-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var fixturePath = Path.Combine(directory, "control-characters.txt");
+            await File.WriteAllTextAsync(fixturePath,
+                "Name\tPath\tSize\tKind\n" +
+                "\"Folder\tOne\"\t\"/Volumes/Disk/Folder\tOne\"\t\tFolder\n" +
+                "\"notes\t2026.txt\"\t\"/Volumes/Disk/Folder\tOne/notes\t2026.txt\"\t1\tPlain text\n" +
+                "notes%092026.txt\t\"/Volumes/Disk/Folder\tOne/notes%092026.txt\"\t2\tPlain text\n");
+            var service = new CatalogLoadService(new FileFormatManager([new DiskCatalogMakerPlugin()]));
+            var count = await service.LoadAsync(fixturePath, (payload, _) =>
+            {
+                var documents = Extract(payload!);
+                Assert.Equal(documents.Count, documents.Select(entry => entry.Id).Distinct().Count());
+                var folder = Assert.Single(documents, entry => entry.Name == "Folder\tOne");
+                var tabbedFile = Assert.Single(documents, entry => entry.Name == "notes\t2026.txt");
+                var escapedFile = Assert.Single(documents, entry => entry.Name == "notes%092026.txt");
+                Assert.Equal(folder.Id, tabbedFile.ParentId);
+                Assert.Equal(folder.Id, escapedFile.ParentId);
+                Assert.All(documents, entry => Assert.DoesNotContain(entry.Id, char.IsControl));
+                Persist(documents);
+                return documents.Count;
+            }, new Progress<int>());
+            Assert.Equal(4, count);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
     {
         var method = typeof(MainWindow).GetMethod("ExtractCatalogEntries", BindingFlags.NonPublic | BindingFlags.Static)!;

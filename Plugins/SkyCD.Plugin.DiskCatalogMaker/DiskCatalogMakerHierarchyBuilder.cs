@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using SkyCD.Plugin.DiskCatalogMaker.Exceptions;
 
@@ -204,7 +205,7 @@ public static class DiskCatalogMakerHierarchyBuilder
         }
 
         // 1. Ensure media root exists
-        var mediaId = $"media:{mediaName}";
+        var mediaId = EncodeNodeId($"media:{mediaName}");
         if (!nodesById.ContainsKey(mediaId))
         {
             nodesById[mediaId] = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
@@ -225,7 +226,7 @@ public static class DiskCatalogMakerHierarchyBuilder
         {
             var folderName = folderSegments[i];
             currentPath = $"{currentPath}/{folderName}";
-            var folderId = $"folder:{currentPath}";
+            var folderId = EncodeNodeId($"folder:{currentPath}");
 
             if (!nodesById.ContainsKey(folderId))
             {
@@ -248,7 +249,7 @@ public static class DiskCatalogMakerHierarchyBuilder
         if (isExplicitFolder)
         {
             var folderPath = $"{currentPath}/{leafName}";
-            var folderId = $"folder:{folderPath}";
+            var folderId = EncodeNodeId($"folder:{folderPath}");
             explicitFolderPaths.Add(folderPath);
             synthesizedFolderPaths.Remove(folderPath);
 
@@ -266,7 +267,7 @@ public static class DiskCatalogMakerHierarchyBuilder
         }
         else
         {
-            var fileId = $"file:{currentPath}/{leafName}";
+            var fileId = EncodeNodeId($"file:{currentPath}/{leafName}");
             var fileProperties = BuildProperties(path, createdText, modifiedText, kindText, creator, typeCode, comments, label, disk);
 
             nodesById[fileId] = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
@@ -279,6 +280,24 @@ public static class DiskCatalogMakerHierarchyBuilder
                 ["properties"] = fileProperties
             };
         }
+    }
+
+    private static string EncodeNodeId(string value)
+    {
+        var encoded = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            if (character is '%' or <= '\u001F' or '\u007F')
+            {
+                encoded.Append('%').Append(((int)character).ToString("X2", CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                encoded.Append(character);
+            }
+        }
+
+        return encoded.ToString();
     }
 
     private static Dictionary<string, object?> BuildProperties(
