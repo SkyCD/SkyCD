@@ -85,6 +85,23 @@ public sealed class WinCatalogCsvIntegrationTests
         Assert.True(count > 0);
     }
 
+    [Theory]
+    [InlineData("wincatalog-ansi-1252.csv")]
+    [InlineData("wincatalog-real-export-2026-utf8.csv")]
+    public async Task LoadAsync_AccentedNames_PersistAndReopen(string fixture)
+    {
+        var manager = new FileFormatManager([new CsvCatalogPlugin(), new WinCatalogCsvPlugin()]);
+        var service = new CatalogLoadService(manager);
+        var count = await service.LoadAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "WinCatalogCsv", fixture), (payload, _) =>
+        {
+            var documents = Extract(payload!);
+            Assert.Contains(documents, entry => entry.Name == "crème brûlée.txt");
+            Persist(documents);
+            return documents.Count;
+        }, new Progress<int>());
+        Assert.True(count > 0);
+    }
+
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
     {
         var method = typeof(MainWindow).GetMethod("ExtractCatalogEntries", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -104,6 +121,10 @@ public sealed class WinCatalogCsvIntegrationTests
                 collection.Save(document);
             }
 
+            database.Close();
+            using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+            collection = reopened.GetDefaultCollection();
+
             foreach (var entry in documents)
             {
                 using var saved = collection.GetDocument(entry.Id);
@@ -113,6 +134,10 @@ public sealed class WinCatalogCsvIntegrationTests
                 Assert.Equal(entry.ParentId, restored.ParentId);
                 Assert.Equal(entry.Size, restored.Size);
                 Assert.Equal(entry.Type, restored.Type);
+                foreach (var property in entry.Properties)
+                {
+                    Assert.Equal(property.Value?.ToString(), restored.Properties[property.Key]?.ToString());
+                }
             }
 
             var repository = new CatalogDocumentRepository();

@@ -15,7 +15,8 @@ public static class WinCatalogHierarchyBuilder
 {
     public static WinCatalogCsvReportDocument Build(
         List<List<string>> rawRows,
-        char delimiter)
+        char delimiter,
+        WinCatalogCsvEncodingProfile? encodingProfile = null)
     {
         if (rawRows.Count == 0)
         {
@@ -100,7 +101,8 @@ public static class WinCatalogHierarchyBuilder
             SkippedReasons: skippedReasons,
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
-            DetectedColumns: headerRow);
+            DetectedColumns: headerRow,
+            DetectedEncoding: encodingProfile?.DisplayName ?? WinCatalogCsvEncodingProfile.Unknown.DisplayName);
 
         var rowsList = nodesById.Values.ToList();
         return new WinCatalogCsvReportDocument(rowsList, summary);
@@ -174,6 +176,13 @@ public static class WinCatalogHierarchyBuilder
             var preferredName = !string.IsNullOrWhiteSpace(filename) ? filename.Trim() : name?.Trim();
             if (isExplicitFolder)
             {
+                // Vendor reports put the containing catalog folder in Catalog path.
+                if (!string.IsNullOrWhiteSpace(preferredName) &&
+                    (parts.Count == 0 || !parts[^1].Equals(preferredName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    parts.Add(preferredName);
+                }
+
                 folderSegments = parts;
                 leafName = folderSegments.Count > 0 ? folderSegments[^1] : (preferredName ?? mediaName);
                 if (folderSegments.Count > 0)
@@ -243,6 +252,13 @@ public static class WinCatalogHierarchyBuilder
             var preferredName = !string.IsNullOrWhiteSpace(filename) ? filename.Trim() : name?.Trim();
             if (isExplicitFolder)
             {
+                // Vendor reports put the containing catalog folder in Catalog path.
+                if (!string.IsNullOrWhiteSpace(preferredName) &&
+                    (parts.Count == 0 || !parts[^1].Equals(preferredName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    parts.Add(preferredName);
+                }
+
                 folderSegments = parts;
                 leafName = folderSegments.Count > 0 ? folderSegments[^1] : (preferredName ?? mediaName);
                 if (folderSegments.Count > 0)
@@ -478,7 +494,7 @@ public static class WinCatalogHierarchyBuilder
     {
         if (string.IsNullOrWhiteSpace(type)) return false;
         var lower = type.Trim().ToLowerInvariant();
-        return lower is "folder" or "directory" or "ordner" or "dossier" or "carpeta" or "папка" or "cartella";
+        return lower is "file folder" or "folder" or "directory" or "ordner" or "dossier" or "carpeta" or "папка" or "cartella";
     }
 
     private static string? GetValue(List<string> row, Dictionary<WinCatalogCsvColumn, int> map, WinCatalogCsvColumn col)

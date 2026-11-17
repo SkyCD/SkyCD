@@ -30,6 +30,10 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
     /// Inspects the stream content to verify if it represents a WinCatalog CSV report.
     /// Preserves the stream position.
     /// </summary>
+    /// <remarks>
+    /// The report is decoded with the same profile resolution the import uses, so a report is never recognised
+    /// under one encoding and imported under another.
+    /// </remarks>
     public bool CanHandleContent(Stream stream, string? fileName = null)
     {
         if (!stream.CanRead)
@@ -40,19 +44,16 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
         var initialPosition = stream.CanSeek ? stream.Position : -1;
         try
         {
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
-                bufferSize: 4096, leaveOpen: true);
-
-            string? headerLine = null;
-            while ((headerLine = reader.ReadLine()) is not null)
+            var data = ReadAllBytes(stream);
+            var profile = WinCatalogCsvEncodingDetector.Detect(data);
+            if (profile.Kind == WinCatalogCsvEncodingKind.Unknown)
             {
-                if (!string.IsNullOrWhiteSpace(headerLine))
-                {
-                    break;
-                }
+                return false;
             }
 
-            if (string.IsNullOrWhiteSpace(headerLine))
+            var text = profile.Decode(data);
+            var headerLine = ReadFirstNonEmptyLine(text);
+            if (headerLine is null)
             {
                 return false;
             }
@@ -135,10 +136,18 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
     {
         try
         {
-            using var reader = new StreamReader(request.Source, Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            var data = await ReadAllBytesAsync(request.Source, cancellationToken);
+            var profile = WinCatalogCsvEncodingDetector.Detect(data);
+            if (profile.Kind == WinCatalogCsvEncodingKind.Unknown)
+            {
+                throw new WinCatalogUnsupportedEncodingException();
+            }
 
             request.Progress?.Report(10);
+
+            var text = profile.Decode(data);
+
+            using var reader = new StringReader(text);
             var parseResult = await CsvParser.ReadCsvAsync(reader, null, cancellationToken);
             request.Progress?.Report(50);
 
@@ -147,13 +156,21 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
                 throw new WinCatalogCorruptHeaderException();
             }
 
-            var document = WinCatalogHierarchyBuilder.Build(parseResult.Rows, parseResult.Delimiter);
+            var document = WinCatalogHierarchyBuilder.Build(parseResult.Rows, parseResult.Delimiter, profile);
             request.Progress?.Report(100);
 
             return new FileFormatReadResult
             {
                 Success = true,
                 Payload = document
+            };
+        }
+        catch (DecoderFallbackException)
+        {
+            return new FileFormatReadResult
+            {
+                Success = false,
+                Error = new WinCatalogUnsupportedEncodingException().Message
             };
         }
         catch (Exception exception)
@@ -175,5 +192,33 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
             Success = false,
             Error = "WinCatalog CSV export is not supported. Format is read-only."
         });
+    }
+
+    private static string? ReadFirstNonEmptyLine(string text)
+    {
+        using var reader = new StringReader(text);
+        while (reader.ReadLine() is { } line)
+        {
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                return line;
+            }
+        }
+
+        return null;
+    }
+
+    private static byte[] ReadAllBytes(Stream stream)
+    {
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
+    }
+
+    private static async Task<byte[]> ReadAllBytesAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, cancellationToken);
+        return buffer.ToArray();
     }
 }
