@@ -13,4 +13,5 @@ public sealed record WinCatalogCsvImportSummary(
     IReadOnlyList<string> SkippedReasons,
     IReadOnlyList<string> UnsupportedFields,
     char DetectedDelimiter,
-    IReadOnlyList<string> DetectedColumns);
+    IReadOnlyList<string> DetectedColumns,
+    string DetectedEncoding);

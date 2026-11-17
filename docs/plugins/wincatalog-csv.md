@@ -1,38 +1,27 @@
-# WinCatalog CSV Report Import Plugin
+# WinCatalog CSV report import
 
-## Overview
-The `wincatalog-csv` plugin provides import-only support for CSV reports exported by **WinCatalog** (tested with WinCatalog 2024 through 2026 Professional).
+The `wincatalog-csv` plugin imports CSV reports. A genuine English report from **WinCatalog 2026.3.1.805** is covered by the test suite. Other version and locale support has not been established with genuine exports; localized header aliases are exercised using synthetic fixtures.
 
-## User Export Instructions in WinCatalog
-To generate an export compatible with SkyCD:
-1. Open WinCatalog and open your catalog file.
-2. Click the **Catalog** application menu button (top-left, next to the Ribbon toolbar) and select **Reports** (or click **Reports** on the Ribbon).
-3. Under **Report type**, choose **CSV (Comma-Separated Values)**.
-4. Under **Data source**:
-   - Choose **Custom Set of Folders** to export the entire catalog or selected media/folders.
-   - Or choose **Search Results** to export a filtered subset.
-5. In **Columns** (the gear icon / column selection dialog):
-   - **Essential columns**: Ensure that either **Catalog Path** (or **File Path**) and **Name** (or **Filename**) are selected. Hierarchy cannot be reconstructed if path information is omitted.
-   - **Recommended columns**: Include **Disk** (or **Volume Label**) so storage media roots are recovered cleanly.
-   - **Supported metadata columns**: **Size**, **Type**, **Date Modified**, **Date Created**, **Comments**, **Tags**, **Rating**, **MD5**, **SHA256**, **CRC32**, **Blake2**, **Physical Location**.
-6. Delimiter & Number Settings:
-   - Delimiters: Comma (`,`), Semicolon (`;`), and Tab (`\t`) are supported automatically.
-   - Encodings: UTF-8 (with or without BOM) and UTF-16 are supported.
-   - Size units: Raw bytes, formatted numbers with thousand separators (e.g., `1,048,576`), or unit strings (e.g., `12.5 MB` or European `12,5 MB`) are supported.
-7. Click **Save Report** and save the file with the `.csv` extension.
+In WinCatalog, create a CSV report using Reports. Include **Catalog path** or **File path** so SkyCD can recover hierarchy. Include **Filename** or **Name**, and preferably **Disk** or **Volume Label**. Exact UI labels may vary by version. In SkyCD, open the resulting `.csv` file with **File -> Open**.
 
-## User Import Instructions in SkyCD
-1. In SkyCD, choose **File -> Open...** (or run `skycd open <path.csv>` via CLI).
-2. Select your exported `.csv` file.
-3. Content-aware detection automatically recognizes the WinCatalog report schema without confusing it with generic CSV files.
-4. The media roots, directory hierarchy, files, sizes, and metadata are imported into the SkyCD catalog.
+## Encoding profiles
 
-## Supported Versions & Locales
-- **Software**: WinCatalog 2024, 2025, 2026 Professional.
-- **Languages**: English, German (`Katalogpfad`, `Datenträger`), Russian (`Путь в каталоге`, `Диск`), French (`Chemin du catalogue`), Spanish (`Ruta del catálogo`), Italian (`Percorso catalogo`).
-- **Encodings**: UTF-8 with BOM, standard UTF-8, ANSI/Windows-1252.
+Recognition and import use the same strict decoding policy:
 
-## Known Loss of Information
-- **Thumbnails and Icons**: WinCatalog does not embed thumbnail images or icon binary data into CSV reports; these cannot be imported.
-- **Fields Absent from Source**: Only fields included during the WinCatalog export can be recovered. Omitted columns will not have metadata in SkyCD.
-- **Search Result Exports**: In search-result exports without explicit folder rows, intermediate folder structures are automatically synthesized from paths.
+1. A BOM selects UTF-8 or UTF-16 LE/BE. Malformed data under that declared encoding is rejected, without trying a different code page.
+2. Without a BOM, an alternating NUL pattern in the leading ASCII header identifies UTF-16 LE/BE.
+3. Otherwise valid UTF-8 takes precedence.
+4. If UTF-8 is invalid, Windows-1252 is accepted only when none of its undefined bytes (81, 8D, 8F, 90, 9D hexadecimal) occur.
+5. UTF-32 BOMs and unsupported/invalid input are rejected. No lossy replacement-character decoding is used.
+
+No-BOM code pages cannot be identified unambiguously. The fallback is specifically Windows-1252, not a promise to support every Windows ANSI code page. Other legacy code pages must be converted using their known source encoding. `DetectedEncoding` in the import summary records the selected profile.
+
+UTF-8 with/without BOM, UTF-16 LE/BE with/without BOM and Windows-1252 are tested. The genuine export is UTF-8 without BOM; its exporter encoding setting was not recorded. See the [fixture provenance](../../tests/SkyCD.Plugin.WinCatalog.Csv.Tests/Fixtures/WinCatalogCsv/README.md).
+
+## Columns and partial reports
+
+Comma, semicolon and tab delimiters are detected automatically. Columns may be reordered. Supported metadata includes sizes, dates, comments, tags, ratings, individual checksum fields and physical location; absent fields cannot be recovered. Unknown columns are listed in `UnsupportedFields`.
+
+A report without either path column fails with a descriptive missing-path error. Media roots come from Disk/Volume Label where available, or catalog/physical paths. A report with no usable media identity cannot reproduce the original media grouping; generic roots may be used. Include media columns for reliable recovery.
+
+Missing intermediate folders are synthesized. Such reports, and reports with skipped malformed rows, are marked partial in the import summary. CSV does not carry thumbnails or embedded file contents. This plugin is read-only and does not implement CSV export or native WinCatalog catalog import.

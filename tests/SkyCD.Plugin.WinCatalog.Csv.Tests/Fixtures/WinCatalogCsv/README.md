@@ -1,67 +1,31 @@
-# WinCatalog CSV Report Fixtures
+# WinCatalog CSV report fixtures
 
-These fixtures represent synthetic and sanitized redistributable reports exported from **WinCatalog 2024 / 2026 Professional** via the **Reports** feature (**Catalog -> Reports -> CSV Report**).
+All fixtures except `wincatalog-real-export-2026-utf8.csv` are synthetic test data authored for this repository and distributed under its license. They are not evidence of vendor version or locale compatibility.
 
-## Export Configuration & Profiles
+## Genuine export
 
-### 1. `wincatalog-standard-en.csv`
-- **Application**: WinCatalog 2026 Professional (v26.1)
-- **Language**: English
-- **Data Source**: Custom Set of Folders (Complete export)
-- **Delimiter**: Comma (`,`)
-- **Encoding**: UTF-8 without BOM
-- **Columns**: `Disk,Catalog Path,Name,Size,Type,Modified,Comments,Tags,Rating,MD5,SHA256`
-- **Features Tested**:
-  - Multiple storage media (`Archive Disk 1`, `Archive Disk 2`)
-  - Duplicate filenames in distinct directories and distinct media (e.g., `readme.txt`)
-  - Quoted fields with embedded commas, quotes, and multiline comments
-  - Checksums (MD5, SHA256) and star ratings (1-5)
+`wincatalog-real-export-2026-utf8.csv` was captured using WinCatalog **2026.3.1.805**, English UI, on 2026-11-17. The contributor confirmed the version, UI language and permission to redistribute this sample under the repository license. The catalog contains purpose-created sample files, accented folder/file names and comments; it contains no bundled vendor catalog data or application code.
 
-### 2. `wincatalog-localized-de.csv`
-- **Application**: WinCatalog 2024 Professional
-- **Language**: German (Deutsch)
-- **Data Source**: Custom Set of Folders
-- **Delimiter**: Semicolon (`;`)
-- **Encoding**: UTF-8 without BOM
-- **Columns**: `Datenträger;Katalogpfad;Dateiname;Dateigröße;Dateityp;Änderungsdatum;Kommentare;Schlagwörter;Bewertung;Prüfsumme MD5`
-- **Features Tested**:
-  - Localized German header names
-  - Semicolon separator with European decimal separators (e.g. `12,5 MB`, `1.048.576`)
-  - Multiple folders and duplicate file titles
+- Separator: comma; quoted header and fields.
+- Encoding: UTF-8 without BOM, verified from the fixture bytes. The selected exporter encoding setting was not recorded.
+- Selected columns: the complete header in the fixture is the authoritative list (Name, Comments, Type, Size, File path, Id, Tags associated, Created, Modified, Disk, disk details, Filename, Catalog path, Serial number, Physical location, checksums, ID3, Exif and media fields, and Sample Field).
+- `Catalog path` describes the containing catalog folder. Folder rows use `File folder` and supply the folder name separately.
+- Newlines in exported comments appear as literal `\n`; the importer preserves that text.
+- CSV is a report interchange format, not proof of native catalog or CSV input support in WinCatalog.
 
-### 3. `wincatalog-filepath-partial.csv`
-- **Application**: WinCatalog 2026 Professional
-- **Language**: English
-- **Data Source**: Search Results (Partial subset export)
-- **Delimiter**: Comma (`,`)
-- **Encoding**: UTF-8
-- **Columns**: `File Path,Filename,Size,Modified,Disk`
-- **Features Tested**:
-  - Physical file paths (`D:\...`, `\\StorageServer\Shares\...`)
-  - Subset export where intermediate directories are missing from the row list and must be synthesized
-  - Identification of partial report status
+## Synthetic fixtures
 
-### 4. `wincatalog-malformed-rows.csv`
-- **Application**: WinCatalog 2026 test suite
-- **Features Tested**:
-  - Valid rows mixed with malformed records (missing paths, corrupt delimiter balance)
-  - Verification that valid rows are imported while malformed rows are counted and recorded in summary
+| File | Coverage |
+| --- | --- |
+| `wincatalog-standard-en.csv` | UTF-8, comma, multiple media, duplicate names and metadata |
+| `wincatalog-localized-de.csv` | UTF-8, semicolon, German header aliases and number formats |
+| `wincatalog-filepath-partial.csv` | File paths, synthesized directories, partial report |
+| `wincatalog-malformed-rows.csv` | Skipped invalid rows and summary diagnostics |
+| `wincatalog-missing-essential-path.csv` | Missing essential path column diagnostic |
+| `wincatalog-utf8-bom.csv` | UTF-8 BOM and Cyrillic names |
+| `wincatalog-ansi-1252.csv` | No-BOM Windows-1252 names, paths and comments |
+| `wincatalog-invalid-encoding.csv` | Unsupported/invalid bytes |
+| `wincatalog-quoted-fields.csv` | Quoted separators, quotes and multiline comments |
+| `wincatalog-reordered-columns.csv` | Reordered headers and accented names |
 
-### 5. `wincatalog-missing-essential-path.csv`
-- **Application**: WinCatalog 2026 test suite
-- **Columns**: `Name,Size,Type,Modified,Comments`
-- **Features Tested**:
-  - Rejection with descriptive `WinCatalogMissingPathColumnException` when neither `Catalog Path` nor `File Path` is present
-
-### 6. `wincatalog-utf8-bom.csv`
-- **Application**: WinCatalog 2026 Professional
-- **Language**: Russian (Русский)
-- **Encoding**: UTF-8 with Byte Order Mark (BOM)
-- **Columns**: `Диск,Путь в каталоге,Имя,Размер,Изменен,Комментарии`
-- **Features Tested**:
-  - BOM handling and Unicode Cyrillic filenames and directory names
-
-## Hierarchy & Media Recovery Rules
-1. **Media Identification**: Resolved from the `Disk` / `Volume Label` column when present. When absent, resolved from the root level of `Catalog Path` (e.g. `Catalog\<MediaName>\...`) or drive letter / UNC share of `File Path`.
-2. **Directory & File Hierarchy**: Derived from path segments. WinCatalog escape codes (`{@slash}`, `{@dslash}`, `{@semicolon}`) are converted to real characters.
-3. **Loss of Information**: Thumbnails and embedded file contents are not stored in CSV reports and cannot be imported. Unsupported custom user fields are recorded in `UnsupportedFields` summary.
+UTF-16 LE/BE with and without BOM, malformed declared encodings and nonzero stream positions are also generated directly in encoding regression tests.

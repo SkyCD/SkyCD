@@ -1,0 +1,5 @@
+Disk,Catalog Path,Name,Size,Type,Modified,Comments
+"Archive Disk","Catalog\Archive Disk\Café Notes","Café Notes",7,File folder,2026-03-01 10:15:00,"Ordner Müller – already sorted"
+"Archive Disk","Catalog\Archive Disk\Café Notes\crème brûlée.txt","crème brûlée.txt",1024,File,2026-03-01 10:16:00,"Commentaire déjà vu — naïve"
+"Archive Disk","Catalog\Archive Disk\naïve.txt","naïve.txt",2048,File,2026-03-01 10:17:00,"Grüße aus Köln"
+"Archive Disk","Catalog\Archive Disk\Ordner Müller","Ordner Müller",9,File folder,2026-03-01 10:18:00,""
