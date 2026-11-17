@@ -157,3 +157,7 @@ text.FindEmptyQuery: "Enter text to search the entire catalog."
 text.FindSearching: "Searching..."
 text.FindNoMatches: "No matching catalog entries."
 text.FindMatchCount: "{0} matching entries."
+
+text.ScanCanceled: Scan canceled.
+
+text.ScanFailedItems: "Scan found {0} failed items. The catalog was not changed."

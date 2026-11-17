@@ -78,3 +78,26 @@ statistics infrastructure to remote listings. The traversal policy is supplied t
 FTP listings carry no hidden/system attributes, so `HiddenSystemFilePolicy` only applies to
 local folder and media scans. `ExclusionPatterns` apply to remote entry names as well and are
 matched case-sensitively, because remote path casing is server-defined.
+
+## Cancellation and publication
+
+Folder, media and FTP add-to-list dialogs expose a keyboard-accessible, localized Cancel action.
+Closing an active scan requests cancellation and keeps the dialog open until the worker exits. The
+same token reaches traversal, retries and metadata extraction. Cancellation during the preparation
+step also prevents publication and reports a canceled outcome rather than success or an error.
+If traversal reports failed child items, the dialogs discard the captured scan and report the failed
+count; they preserve the previous catalog. Intentional exclusions and cycle skips do not prevent publication.
+
+Scanners capture results outside the visible catalog. Publication writes every chunk inside one
+Couchbase Lite transaction; `BatchSize` controls iteration chunks, not commit boundaries. A failure
+rolls back all inserted and updated entries, including earlier chunks. `ScanPublishOptions.CancellationToken`
+is checked before publication, between documents and before transaction completion. Cancellation
+before commit rolls back; once commit succeeds the published scan remains successful. Undo is recorded
+only after commit, as one operation subject to the existing history budget.
+
+The UI publishes on its UI thread and disables cancellation once publication finishes. Large scans
+still materialize their documents in memory and hold one database transaction during publication;
+chunk size does not cap memory usage. Native synchronous filesystem calls and noncooperative plugin
+calls cannot be interrupted until they return. Existing catalog schemas and public scanner signatures
+are unchanged. Explicit partial publication through `CancelSession`/`FailSession` marks retained entries
+incomplete and stores an error summary; ordinary dialog cancellation discards captured results.

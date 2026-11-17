@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Threading;
 using Avalonia;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +13,33 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AddingProgressDialogViewModel : ObservableObject, IOperationProgress
 {
+    private readonly CancellationTokenSource cancellationSource = new();
+    private bool cancellationFinished;
+
+    public bool IsCancellationPending => !cancellationFinished && cancellationSource.IsCancellationRequested;
+
+    public CancellationToken CancellationToken => cancellationSource.Token;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    private bool canCancel;
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    public void Cancel()
+    {
+        if (!CanCancel) return;
+        CanCancel = false;
+        cancellationSource.Cancel();
+        ReportInfo(LocalizationService.Current.Get(TextKeys.ScanCanceled));
+    }
+
+    public void FinishCancellation()
+    {
+        CanCancel = false;
+        cancellationFinished = true;
+        cancellationSource.Dispose();
+    }
+
     private readonly object gate = new();
     private string? currentStage;
 
