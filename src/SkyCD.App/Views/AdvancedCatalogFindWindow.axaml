@@ -1,0 +1,138 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.AdvancedCatalogFindWindow"
+        x:DataType="vm:AdvancedCatalogFindDialogViewModel"
+        Width="760" Height="580" MinWidth="640" MinHeight="440"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
+        Title="{i18n:Translate {x:Static i18n:UiKeys.AdvancedFind}}">
+
+    <Design.DataContext>
+        <vm:AdvancedCatalogFindDialogViewModel />
+    </Design.DataContext>
+
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="12" RowDefinitions="Auto,Auto,170,Auto,*,Auto,Auto" RowSpacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding AvailableCombinations}"
+                      SelectedItem="{Binding SelectedCombination}"
+                      MinWidth="90" />
+            <ComboBox ItemsSource="{Binding AvailableScopeTypes}"
+                      SelectedItem="{Binding SelectedScopeType}"
+                      PlaceholderText="All"
+                      MinWidth="110" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddFilter}}"
+                    Command="{Binding AddFilterCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ClearFilters}}"
+                    Command="{Binding ClearFiltersCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ResetFilters}}"
+                    Command="{Binding ResetFiltersCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
+                    Command="{Binding SearchCommand}" IsDefault="True" MinWidth="90" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                    Command="{Binding CancelSearchCommand}" MinWidth="90" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="8">
+            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FilterField}}" Opacity="0.7" />
+            <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.FilterOperator}}" Opacity="0.7" />
+            <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}" Opacity="0.7" />
+            <TextBlock Grid.Column="3" Text="{i18n:Translate {x:Static i18n:UiKeys.Value}}" Opacity="0.7" />
+        </Grid>
+
+        <ListBox Grid.Row="2" ItemsSource="{Binding Filters}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:AdvancedCatalogFilterRowViewModel">
+                    <Grid ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="8">
+                        <ComboBox ItemsSource="{Binding Fields}"
+                                  SelectedItem="{Binding SelectedField}" />
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding Operators}"
+                                  SelectedItem="{Binding SelectedOperator}" />
+                        <TextBox Grid.Column="2"
+                                 Text="{Binding Key}"
+                                 IsVisible="{Binding IsKeyed}" />
+                        <TextBox Grid.Column="3"
+                                 Text="{Binding ValueText}"
+                                 IsEnabled="{Binding IsValueRequired}" />
+                        <Button Grid.Column="4"
+                                Content="{i18n:Translate {x:Static i18n:UiKeys.RemoveFilter}}"
+                                Command="{Binding $parent[Window].DataContext.RemoveFilterCommand}"
+                                CommandParameter="{Binding}" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SortBy}}" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding AvailableSortKeys}"
+                      SelectedItem="{Binding SelectedSortKey}"
+                      MinWidth="110" />
+            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SortDescending}}"
+                      IsChecked="{Binding SortDescending}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PreviousPage}}"
+                    Command="{Binding PreviousPageCommand}" />
+            <TextBlock Text="{Binding PageLabel}" VerticalAlignment="Center" MinWidth="90" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.NextPage}}"
+                    Command="{Binding NextPageCommand}" />
+        </StackPanel>
+
+        <ListBox Grid.Row="4" ItemsSource="{Binding Results}"
+                 SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                 DoubleTapped="OnResultsDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:CatalogFindResult">
+                    <Grid Margin="4,3" ColumnDefinitions="2*,4*,Auto,Auto" ColumnSpacing="12">
+                        <TextBlock Text="{Binding Document.Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding FullPath}" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Document.DisplayType}" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <TextBlock Grid.Column="3" Text="{Binding Document.Status}" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock Grid.Row="5" Text="{Binding StatusText}" TextWrapping="Wrap" />
+
+        <Grid Grid.Row="6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Button Grid.Column="1" MinWidth="90"
+                    Content="{i18n:Translate {x:Static i18n:UiKeys.OpenResult}}"
+                    Command="{Binding NavigateToResultCommand}" CommandParameter="{Binding SelectedResult}" />
+            <Button Grid.Column="2" MinWidth="90" IsCancel="True"
+                    Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" Click="OnCloseClicked" />
+        </Grid>
+    </Grid>
+</Window>

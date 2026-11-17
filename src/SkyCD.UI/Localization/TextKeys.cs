@@ -157,6 +157,16 @@ public static class TextKeys
     public const string FindSearching = "core.text.FindSearching";
     public const string FindNoMatches = "core.text.FindNoMatches";
     public const string FindMatchCount = "core.text.FindMatchCount";
+    public const string AdvancedFind = "core.text.AdvancedFind";
+    public const string AdvancedFindHint = "core.text.AdvancedFindHint";
+    public const string AdvancedFindInvalid = "core.text.AdvancedFindInvalid";
+    public const string AdvancedFindCancelled = "core.text.AdvancedFindCancelled";
+    public const string AdvancedFindPageStatus = "core.text.AdvancedFindPageStatus";
+    public const string AdvancedFindFailed = "core.text.AdvancedFindFailed";
+    public const string AdvancedFindTruncated = "core.text.AdvancedFindTruncated";
+    public const string AdvancedFilterKeyRequired = "core.text.AdvancedFilterKeyRequired";
+    public const string AdvancedFilterValueRequired = "core.text.AdvancedFilterValueRequired";
+    public const string AdvancedFilterOneOfRequired = "core.text.AdvancedFilterOneOfRequired";
     public const string OnlyFileTransferProtocolCurrentlyIsSupported = "core.text.OnlyFileTransferProtocolCurrentlyIsSupported";
     public const string FtpAuthenticationFailed = "core.text.FtpAuthenticationFailed";
     public const string FtpConnectionFailed = "core.text.FtpConnectionFailed";

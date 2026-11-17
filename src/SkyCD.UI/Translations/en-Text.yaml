@@ -157,6 +157,16 @@ text.FindEmptyQuery: "Enter text to search the entire catalog."
 text.FindSearching: "Searching..."
 text.FindNoMatches: "No matching catalog entries."
 text.FindMatchCount: "{0} matching entries."
+text.AdvancedFind: "Advanced find..."
+text.AdvancedFindHint: "Add filters and choose Search, or search with no filters to list everything."
+text.AdvancedFindInvalid: "Filter {0}: {1}"
+text.AdvancedFindCancelled: "Search cancelled."
+text.AdvancedFindPageStatus: "Showing {0}–{1} of {2} matches."
+text.AdvancedFindFailed: "Search failed: {0}"
+text.AdvancedFindTruncated: "Only the first {0} matches are shown."
+text.AdvancedFilterKeyRequired: "A key is required for custom property and metadata filters."
+text.AdvancedFilterValueRequired: "A comparison value is required for this operator."
+text.AdvancedFilterOneOfRequired: "OneOf requires at least one semicolon-separated value."
 
 text.ScanCanceled: Scan canceled.
 

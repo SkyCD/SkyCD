@@ -127,4 +127,17 @@ public static class UiKeys
     public const string MissingEntries = "core.ui.MissingEntries";
     public const string GoToEntry = "core.ui.GoToEntry";
     public const string CollectionMembers = "core.ui.CollectionMembers";
+    public const string AdvancedFind = "core.ui.AdvancedFind";
+    public const string AddFilter = "core.ui.AddFilter";
+    public const string RemoveFilter = "core.ui.RemoveFilter";
+    public const string ClearFilters = "core.ui.ClearFilters";
+    public const string ResetFilters = "core.ui.ResetFilters";
+    public const string FilterField = "core.ui.FilterField";
+    public const string FilterOperator = "core.ui.FilterOperator";
+    public const string FilterKey = "core.ui.FilterKey";
+    public const string MatchMode = "core.ui.MatchMode";
+    public const string SortBy = "core.ui.SortBy";
+    public const string SortDescending = "core.ui.SortDescending";
+    public const string PreviousPage = "core.ui.PreviousPage";
+    public const string NextPage = "core.ui.NextPage";
 }
