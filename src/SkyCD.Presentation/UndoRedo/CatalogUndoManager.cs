@@ -109,6 +109,51 @@ namespace SkyCD.Presentation.UndoRedo
             _history.PushAction(new Actions.ChangeTagsBatchAction(_catalogRepository, changes));
         }
 
+        public void RecordCollectionCreated(
+            VirtualCollectionDocumentRepository collectionRepository,
+            string collectionId,
+            string name)
+        {
+            if (collectionRepository == null) return;
+            if (string.IsNullOrWhiteSpace(collectionId)) return;
+            _history.PushAction(new Actions.CreateVirtualCollectionAction(collectionRepository, collectionId, name ?? string.Empty));
+        }
+
+        public void RecordCollectionRenamed(
+            VirtualCollectionDocumentRepository collectionRepository,
+            string collectionId,
+            string oldName,
+            string newName)
+        {
+            if (collectionRepository == null) return;
+            if (string.IsNullOrWhiteSpace(collectionId)) return;
+            if (string.Equals(oldName, newName, StringComparison.Ordinal)) return;
+            _history.PushAction(new Actions.RenameVirtualCollectionAction(collectionRepository, collectionId, oldName ?? string.Empty, newName ?? string.Empty));
+        }
+
+        public void RecordCollectionDeleted(
+            VirtualCollectionDocumentRepository collectionRepository,
+            VirtualCollectionDocument snapshot)
+        {
+            if (collectionRepository == null || snapshot == null) return;
+            if (string.IsNullOrWhiteSpace(snapshot.Id)) return;
+            _history.PushAction(new Actions.DeleteVirtualCollectionAction(collectionRepository, snapshot));
+        }
+
+        public void RecordCollectionEntriesChanged(
+            VirtualCollectionDocumentRepository collectionRepository,
+            string collectionId,
+            IReadOnlyList<string> oldEntryIds,
+            IReadOnlyList<string> newEntryIds)
+        {
+            if (collectionRepository == null) return;
+            if (string.IsNullOrWhiteSpace(collectionId)) return;
+            var oldIds = oldEntryIds ?? [];
+            var newIds = newEntryIds ?? [];
+            if (oldIds.SequenceEqual(newIds, StringComparer.Ordinal)) return;
+            _history.PushAction(new Actions.ChangeCollectionEntriesAction(collectionRepository, collectionId, oldIds, newIds));
+        }
+
         /// <summary>
         /// Records a deletion. <paramref name="documents"/> must be the complete removed subtree, not just the
         /// selection, because undo restores exactly what is handed in and anything missing stays deleted.

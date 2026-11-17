@@ -1,0 +1,2 @@
+VOLUME|NAME|SIZE|SHELF
+Media1|loose.txt|10|A-42

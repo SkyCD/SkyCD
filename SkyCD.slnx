@@ -13,6 +13,7 @@
     </Folder>
     <Folder Name="/Plugins/samples/">
         <Project Path="Plugins/SkyCD.Plugin.Csv/SkyCD.Plugin.Csv.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.PlainText/SkyCD.Plugin.PlainText.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Html/SkyCD.Plugin.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Iso/SkyCD.Plugin.Iso.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj"/>
@@ -33,6 +34,7 @@
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Csv/SkyCD.Plugin.WinCatalog.Csv.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Katalog.CsvIdx/SkyCD.Plugin.Katalog.CsvIdx.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Tellico/SkyCD.Plugin.Tellico.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Katalog.Sqlite/SkyCD.Plugin.Katalog.Sqlite.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Cathy/SkyCD.Plugin.Cathy.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdPlayer.Ini/SkyCD.Plugin.CdPlayer.Ini.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCat.Hcf/SkyCD.Plugin.CdCat.Hcf.csproj"/>
@@ -42,6 +44,7 @@
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Xml/SkyCD.Plugin.WinCatalog.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.AbeMeda/SkyCD.Plugin.AbeMeda.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.EasyDiskCatalog/SkyCD.Plugin.EasyDiskCatalog.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.WhereIsIt/SkyCD.Plugin.WhereIsIt.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.DiskExplorer/SkyCD.Plugin.DiskExplorer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vvv/SkyCD.Plugin.Vvv.csproj"/>
     </Folder>
@@ -74,6 +77,7 @@
         <Project Path="tests/SkyCD.Logging.Tests/SkyCD.Logging.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Csv.Tests/SkyCD.Plugin.Csv.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.PlainText.Tests/SkyCD.Plugin.PlainText.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Html.Tests/SkyCD.Plugin.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Iso.Tests/SkyCD.Plugin.Iso.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Json.Tests/SkyCD.Plugin.Json.Tests.csproj"/>
@@ -97,6 +101,7 @@
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Csv.Tests/SkyCD.Plugin.WinCatalog.Csv.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Katalog.CsvIdx.Tests/SkyCD.Plugin.Katalog.CsvIdx.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Tellico.Tests/SkyCD.Plugin.Tellico.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Katalog.Sqlite.Tests/SkyCD.Plugin.Katalog.Sqlite.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Cathy.Tests/SkyCD.Plugin.Cathy.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdPlayer.Ini.Tests/SkyCD.Plugin.CdPlayer.Ini.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCat.Hcf.Tests/SkyCD.Plugin.CdCat.Hcf.Tests.csproj"/>
@@ -106,6 +111,7 @@
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Xml.Tests/SkyCD.Plugin.WinCatalog.Xml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.AbeMeda.Tests/SkyCD.Plugin.AbeMeda.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.EasyDiskCatalog.Tests/SkyCD.Plugin.EasyDiskCatalog.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.WhereIsIt.Tests/SkyCD.Plugin.WhereIsIt.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskExplorer.Tests/SkyCD.Plugin.DiskExplorer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Vvv.Tests/SkyCD.Plugin.Vvv.Tests.csproj"/>
     </Folder>

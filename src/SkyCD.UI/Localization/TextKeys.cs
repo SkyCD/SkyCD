@@ -173,4 +173,12 @@ public static class TextKeys
     public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
+    public const string Collections = "core.text.Collections";
+    public const string CollectionCreated = "core.text.CollectionCreated";
+    public const string CollectionRenamed = "core.text.CollectionRenamed";
+    public const string CollectionDeleted = "core.text.CollectionDeleted";
+    public const string CollectionNameRequired = "core.text.CollectionNameRequired";
+    public const string CollectionCleaned = "core.text.CollectionCleaned";
+    public const string CollectionAddedTo = "core.text.CollectionAddedTo";
+    public const string CollectionRemovedFrom = "core.text.CollectionRemovedFrom";
 }
