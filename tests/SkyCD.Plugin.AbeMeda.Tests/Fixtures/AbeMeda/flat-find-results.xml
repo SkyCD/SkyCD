@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic flat find-results style export: items carry full paths, no nesting. -->
+<NeoFinder version="8.0">
+  <File FullPath="Backup 2024/Documents/readme.txt" Name="readme.txt" Size="512" Modified="2024-02-06 11:31:00" Comment="read me" />
+  <File FullPath="Backup 2024/Documents/Projects/app.exe" Name="app.exe" Size="2048000" />
+  <File FullPath="Backup 2024/loose.iso" Name="loose.iso" Size="1024000" Kind="Image" />
+</NeoFinder>
