@@ -65,11 +65,8 @@ public static class AdvancedCatalogSearchService
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var ordered = matches
-            .OrderBy(match => match.SortPath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(match => match.Result.Document.Id, StringComparer.Ordinal)
-            .Select(match => match.Result)
-            .ToList();
+        var ordered = AdvancedCatalogFindDialogViewModel.SortMatches(
+            matches.Select(match => match.Result).ToArray(), query.SortKey, query.SortDescending);
 
         var take = Math.Clamp(query.Take <= 0 ? 200 : query.Take, 1, MaxTake);
         var skip = Math.Max(0, query.Skip);
@@ -92,6 +89,12 @@ public static class AdvancedCatalogSearchService
                 AdvancedCatalogQuery.CurrentVersion);
         }
 
+        if (query.Scope is null || !Enum.IsDefined(query.SortKey)
+            || query.Scope.Types?.Any(type => !Enum.IsDefined(type)) == true)
+        {
+            throw new AdvancedCatalogQueryException("Query scope or sort settings are invalid.");
+        }
+
         if (query.Skip < 0)
         {
             throw new AdvancedCatalogQueryException("Skip must be zero or positive, but was '{0}'.", query.Skip);
@@ -111,8 +114,16 @@ public static class AdvancedCatalogSearchService
     private static void ValidateGroup(CatalogQueryGroup group)
     {
         ArgumentNullException.ThrowIfNull(group);
+        if (!Enum.IsDefined(group.Combination) || group.Predicates is null || group.Groups is null)
+        {
+            throw new AdvancedCatalogQueryException("Query group is invalid.");
+        }
         foreach (var predicate in group.Predicates)
         {
+            if (predicate is null || !Enum.IsDefined(predicate.Field) || !Enum.IsDefined(predicate.Operator))
+            {
+                throw new AdvancedCatalogQueryException("Query predicate is invalid.");
+            }
             predicate.Validate();
         }
 

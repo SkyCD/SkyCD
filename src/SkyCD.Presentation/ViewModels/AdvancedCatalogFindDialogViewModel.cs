@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Search;
+using SkyCD.Presentation.Collections;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -34,7 +35,9 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     AdvancedCatalogSearchService.MetadataLookup? metadataLookup = null,
     IReadOnlyList<string>? metadataKeys = null,
     IReadOnlyList<string>? customPropertyKeys = null,
-    IReadOnlyList<string>? statusValues = null)
+    IReadOnlyList<string>? statusValues = null,
+    VirtualCollectionService? savedSearchService = null,
+    Action? onSavedSearchChanged = null)
     : ObservableObject, IDisposable
 {
     public const int PageSize = 100;
@@ -47,6 +50,101 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     private int searchGeneration;
     private IReadOnlyList<CatalogFindResult> allMatches = [];
     private bool disposed;
+    private CatalogQueryScope loadedScope = new();
+
+    public IReadOnlyList<VirtualCollectionDocument> SavedSearches => savedSearchService?.GetCollections()
+        .Where(collection => collection.Kind == VirtualCollectionKind.Dynamic).ToArray() ?? [];
+
+    public bool CanSaveSearch => savedSearchService is not null;
+
+    [ObservableProperty]
+    private VirtualCollectionDocument? selectedSavedSearch;
+
+    [ObservableProperty]
+    private string savedSearchName = string.Empty;
+
+    [RelayCommand]
+    private void LoadSavedSearch()
+    {
+        if (savedSearchService is null || SelectedSavedSearch is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var query = savedSearchService.GetDynamicQuery(SelectedSavedSearch.Id);
+            if (query.Root.Groups.Count != 0 || query.Scope.Types?.Count > 1)
+            {
+                throw new SavedSearchException();
+            }
+
+            Filters.Clear();
+            foreach (var predicate in query.Root.Predicates)
+            {
+                Filters.Add(new AdvancedCatalogFilterRowViewModel
+                {
+                    SelectedField = predicate.Field,
+                    SelectedOperator = predicate.Operator,
+                    Key = predicate.Key ?? string.Empty,
+                    ValueText = predicate.Operator == AdvancedCatalogOperator.OneOf
+                        ? string.Join(';', predicate.Values ?? [])
+                        : Convert.ToString(predicate.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
+                });
+            }
+
+            loadedScope = query.Scope;
+            SelectedScopeType = query.Scope.Types is { Count: > 0 } ? query.Scope.Types[0] : null;
+            SelectedCombination = query.Root.Combination;
+            SelectedSortKey = query.SortKey;
+            SortDescending = query.SortDescending;
+            SavedSearchName = SelectedSavedSearch.Name;
+            ClearResults();
+        }
+        catch (InvalidOperationException exception)
+        {
+            StatusText = exception.Message;
+        }
+    }
+
+    [RelayCommand]
+    private void SaveSearch() => PersistSearch(false);
+
+    [RelayCommand]
+    private void UpdateSavedSearch() => PersistSearch(true);
+
+    private void PersistSearch(bool update)
+    {
+        if (savedSearchService is null)
+        {
+            return;
+        }
+
+        if (!TryBuildQuery(out var query, out var error))
+        {
+            StatusText = error ?? string.Empty;
+            return;
+        }
+
+        try
+        {
+            if (update && SelectedSavedSearch is { } selected)
+            {
+                savedSearchService.UpdateDynamicCollection(selected.Id, query);
+            }
+            else if (!update)
+            {
+                savedSearchService.CreateDynamicCollection(SavedSearchName, query);
+            }
+
+            OnPropertyChanged(nameof(SavedSearches));
+            onSavedSearchChanged?.Invoke();
+        }
+        catch (InvalidOperationException exception)
+        {
+            StatusText = exception.Message;
+        }
+    }
 
     public ObservableCollection<AdvancedCatalogFilterRowViewModel> Filters { get; } = [];
 
@@ -224,6 +322,7 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     [RelayCommand]
     private void ResetFilters()
     {
+        loadedScope = new();
         Filters.Clear();
         Filters.Add(new AdvancedCatalogFilterRowViewModel());
         SelectedCombination = CatalogQueryCombination.All;
@@ -304,7 +403,9 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             : null;
         query = new AdvancedCatalogQuery
         {
-            Scope = new CatalogQueryScope { Types = types },
+            Scope = loadedScope with { Types = types },
+            SortKey = SelectedSortKey,
+            SortDescending = SortDescending,
             Root = new CatalogQueryGroup
             {
                 Combination = SelectedCombination,
@@ -333,7 +434,7 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
         ApplyPage();
     }
 
-    private static IReadOnlyList<CatalogFindResult> SortMatches(
+    internal static IReadOnlyList<CatalogFindResult> SortMatches(
         IReadOnlyList<CatalogFindResult> matches,
         AdvancedFindSortKey sortKey,
         bool descending)

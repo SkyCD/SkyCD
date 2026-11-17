@@ -40,7 +40,7 @@
         </Style>
     </Window.Styles>
 
-    <Grid Margin="12" RowDefinitions="Auto,Auto,170,Auto,*,Auto,Auto" RowSpacing="8">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,170,Auto,*,Auto,Auto,Auto" RowSpacing="8">
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" VerticalAlignment="Center" />
             <ComboBox ItemsSource="{Binding AvailableCombinations}"
@@ -126,6 +126,18 @@
         </ListBox>
 
         <TextBlock Grid.Row="5" Text="{Binding StatusText}" TextWrapping="Wrap" />
+
+        <WrapPanel Grid.Row="7" IsVisible="{Binding CanSaveSearch}">
+            <TextBox Width="150" Text="{Binding SavedSearchName}" PlaceholderText="Saved search name" />
+            <Button Content="Save search" Command="{Binding SaveSearchCommand}" />
+            <ComboBox Width="150" ItemsSource="{Binding SavedSearches}" SelectedItem="{Binding SelectedSavedSearch}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="Load search" Command="{Binding LoadSavedSearchCommand}" />
+            <Button Content="Update search" Command="{Binding UpdateSavedSearchCommand}" />
+        </WrapPanel>
 
         <Grid Grid.Row="6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
             <Button Grid.Column="1" MinWidth="90"
