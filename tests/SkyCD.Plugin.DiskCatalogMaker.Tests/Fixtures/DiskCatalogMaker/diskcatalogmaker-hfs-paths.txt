@@ -1,0 +1,4 @@
+Name	Path	Size	Kind	Date Modified	Disk
+System Folder	System Folder		Folder	01/10/2026 09:00:00	ClassicDisk
+Finder	System Folder:Finder	256 KB	Application	01/15/2026 09:00:00	ClassicDisk
+readme.txt	Documents/readme.txt	100	Plain text	2026-02-11 12:00:00	ModernDisk

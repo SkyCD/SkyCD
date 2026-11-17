@@ -1,0 +1,2 @@
+Name	Size	Kind
+orphan.txt	100	Plain text

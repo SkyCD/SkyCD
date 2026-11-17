@@ -1,0 +1,13 @@
+Name	Path	Size	Kind	Date Modified	Date Created	Creator	Type Code	Comments	Label
+Photos	/Volumes/Archive Disk 1/Photos		Folder	2026-01-06 10:00:00	2025-12-01 09:00:00			Family photos	Red
+Documents	/Volumes/Archive Disk 1/Documents		Folder	2026-01-05 11:00:00	2025-11-20 08:00:00			Work documents	None
+"vacation, beach.jpg"	"/Volumes/Archive Disk 1/Photos/vacation, beach.jpg"	2.4 MB	JPEG image	01/06/2026 10:30:00	12/20/2025 08:15:00	8BIM	JPEG	Summer trip	Blue
+"notes	2026.txt"	"/Volumes/Archive Disk 1/Photos/notes	2026.txt"	512	Plain text	2026-02-01 12:00:00	2026-01-15 09:30:00	TEXT	TEXT	Trip notes with a tab in the name	None
+2026	/Volumes/Archive Disk 1/Photos/2026		Folder	2026-03-01 09:00:00	2026-02-20 09:00:00			Sorted selects	None
+ski-trip.jpg	/Volumes/Archive Disk 1/Photos/2026/ski-trip.jpg	1048576	JPEG image	2026-03-02 18:45:00	2026-02-25 07:00:00	8BIM	JPEG		None
+readme.txt	/Volumes/Archive Disk 1/Documents/readme.txt	1024	Plain text	2026-01-04 16:20:00	2025-11-20 08:05:00	TEXT	TEXT	How this archive is organized	None
+résumé.pdf	/Volumes/Archive Disk 1/Documents/résumé.pdf	96 KB	PDF document	2026-01-03 14:00:00	2025-10-10 10:10:10	CARO	PDF 	déjà vu — naïve	None
+Music	/Volumes/Backup 2026/Music		Folder	2026-02-10 20:00:00	2026-01-01 00:00:00			Rips	None
+song.mp3	/Volumes/Backup 2026/Music/song.mp3	4.7 MB	MP3 audio	02/10/2026 20:05:00	01/01/2026 00:01:00	TVOD	MP3 	None	None
+写真.jpg	/Volumes/Backup 2026/写真.jpg	768 KB	JPEG image	2026-02-12 08:00:00	2026-02-11 19:30:00	8BIM	JPEG	京都	Red
+readme.txt	/Volumes/Backup 2026/readme.txt	2048	Plain text	2026-02-11 12:00:00	2026-01-02 09:00:00	TEXT	TEXT	Backup disk notes	None

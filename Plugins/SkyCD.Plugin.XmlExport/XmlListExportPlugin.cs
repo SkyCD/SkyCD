@@ -175,7 +175,7 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
 
         XmlExport.ValidateText(identity, column, text);
         await writer.WriteStartElementAsync(null, element, null);
-        if (!element.Equals(column, StringComparison.Ordinal))
+        if (canonical is null && !element.Equals(column, StringComparison.Ordinal))
         {
             XmlExport.ValidateText(identity, column, column);
             await writer.WriteAttributeStringAsync(null, "Label", null, column);

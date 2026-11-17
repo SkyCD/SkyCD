@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Schema;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.XmlExport;
 using Xunit;
@@ -99,21 +100,19 @@ public class XmlExportTests
         var service = CreateService();
         await using var source = new MemoryStream(Encoding.UTF8.GetBytes("<ItemList/>"));
 
-        var catalogError = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<FileFormatNotReadableException>(() =>
             service.ReadAsync(new FileFormatReadRequest
             {
                 FormatId = "skycd-xml-catalog",
                 Source = source
             }));
-        Assert.Contains("write-only", catalogError.Message, StringComparison.OrdinalIgnoreCase);
 
-        var listError = await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<FileFormatNotReadableException>(() =>
             service.ReadAsync(new FileFormatReadRequest
             {
                 FormatId = "skycd-xml-list",
                 Source = source
             }));
-        Assert.Contains("write-only", listError.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
