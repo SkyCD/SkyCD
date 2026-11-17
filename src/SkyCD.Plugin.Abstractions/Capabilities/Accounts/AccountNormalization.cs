@@ -2,12 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SkyCD.Plugin.Accounts;
-
-/// <summary>
-/// Shared normalization helpers for account sync providers.
-/// </summary>
-internal static class AccountNormalization
+namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+public static class AccountNormalization
 {
     public static string Slug(string value)
     {

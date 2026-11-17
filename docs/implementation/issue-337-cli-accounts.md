@@ -1,48 +1,23 @@
 # Issue #337: Expose ownership/account features through existing SkyCD CLI system
 
-## Summary
+The shared `SkyCD.Plugin.Accounts` plugin provides `sync <provider-id>`,
+`list licenses`, `list subscriptions`, and `export inventory`, backed by an atomic
+JSON store. Human output and global `--json` use the existing CLI dispatch system.
 
-Implemented ownership/account CLI features as plugin-defined commands plus a
-small host contract for structured output. No network access and no vendor
-APIs: everything works offline against a local JSON account store.
+Account providers implement `IAccountSyncProvider : IPluginCapability` from
+`SkyCD.Plugin.Abstractions`. Shared license, subscription, and import contracts
+also live in the abstractions package. JetBrains and Microsoft 365 are separate
+plugin assemblies depending only on that package. The CLI host passes enabled,
+discovered providers to account command consumers; provider IDs are resolved at
+execution time. Missing and duplicate provider IDs return exit code 2 without
+changing the store. No vendor types or command registrations are required in the
+host or shared accounts plugin.
 
-## New plugin: `Plugins/SkyCD.Plugin.Accounts`
+Sync currently normalizes optional offline JSON imports; it does not connect to
+vendor APIs. `IAccountConnector` remains the separate account connection capability.
+Status is derived at read time. Imports replace matching IDs and leave other
+records unchanged. See `docs/plugins/accounts.md` for SDK and installation details.
 
-- Commands (all `ICliPluginCapability`, discovered by assembly scan):
-  `sync jetbrains`, `sync microsoft365`, `list licenses`,
-  `list subscriptions`, `export inventory`. Routing reuses the existing
-  longest-prefix registry plus CommandDotNet nested dispatch.
-- `AccountStore` — atomic JSON-file store (temp file + move) with a
-  well-known default path and a `--store` override for isolation.
-- `JetBrainsSyncProvider` / `Microsoft365SyncProvider` — normalize
-  product codes / SKU part numbers to display names (unknown values pass
-  through), classify licenses vs subscriptions, assign deterministic IDs,
-  dedupe by ID with add/update counts.
-- Sync merges `--from` import files (validated schema) and refreshes
-  `LastSyncedUtc` per provider; statuses derive at read time and are never
-  stored. `export inventory` writes versioned JSON to stdout or `--out`.
-- Human tables by default; `--json` on `sync`/`list` for script-consumable
-  output; exit codes 0/2/3 follow `CliExitCodes`.
-
-## Host change: `src/SkyCD.Cli`, `src/SkyCD.Plugin.Abstractions`
-
-- New `ISupportsJsonOutput` contract in the abstractions package.
-- `CliHost` sets it on resolved command instances before dispatch (internal
-  `ApplyJsonOutput` helper), so the global `--json` flag — which the host
-  strips before dispatch — now reaches plugin commands. Commands without the
-  contract are unaffected, and the host fallback for silent commands is
-  unchanged.
-
-## Tests
-
-- `tests/SkyCD.Plugin.Accounts.Tests` — store round-trip/missing/upsert,
-  provider code maps and deterministic IDs, command flows (human + JSON,
-  invalid input exit codes, stdout/file export) with isolated temp stores and
-  serialized console capture.
-- `tests/SkyCD.Cli.Tests/CliJsonOutputTests.cs` — JSON flag propagation and
-  nested command-path registration contracts.
-
-## Docs
-
-- `docs/plugins/accounts.md` — commands, store location, import schema,
-  sync semantics, scope limits.
+Tests cover storage, normalization, CLI human/JSON output, invalid imports,
+provider discovery and enablement, third-party provider dispatch, and missing or
+ambiguous provider IDs. CLI tests cover host capability binding and JSON output.

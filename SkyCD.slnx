@@ -3,6 +3,8 @@
     <Folder Name="/Plugins/functional/">
         <Project Path="Plugins/SkyCD.Plugin.AiDescription/SkyCD.Plugin.AiDescription.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Accounts/SkyCD.Plugin.Accounts.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Accounts.JetBrains/SkyCD.Plugin.Accounts.JetBrains.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Accounts.Microsoft365/SkyCD.Plugin.Accounts.Microsoft365.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Video/SkyCD.Plugin.Video.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Audio/SkyCD.Plugin.Audio.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>

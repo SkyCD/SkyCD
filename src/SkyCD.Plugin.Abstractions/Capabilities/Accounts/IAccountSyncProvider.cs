@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace SkyCD.Plugin.Accounts;
+namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
-/// <summary>
-/// A raw ownership record awaiting provider normalization (for example from <c>--from</c> files).
-/// </summary>
 public sealed record ImportedAccountRow
 {
     public string? Product { get; init; }
@@ -16,10 +12,7 @@ public sealed record ImportedAccountRow
     public string? Notes { get; init; }
 }
 
-/// <summary>
-/// Normalizes provider records into canonical store records with deterministic IDs.
-/// </summary>
-public interface IAccountSyncProvider
+public interface IAccountSyncProvider : IPluginCapability
 {
     string ProviderId { get; }
     string DisplayName { get; }

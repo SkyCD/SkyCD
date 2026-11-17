@@ -1,54 +1,38 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
 namespace SkyCD.Plugin.Accounts;
 
-/// <summary>
-/// Plugin-defined <c>sync</c> commands: <c>sync jetbrains</c> and <c>sync microsoft365</c>.
-/// </summary>
 [Command("sync")]
-public sealed class AccountsSyncCommand : ICliPluginCapability
-{
-    [Subcommand] public JetBrainsSyncCommand JetBrains { get; } = new();
-    [Subcommand] public Microsoft365SyncCommand Microsoft365 { get; } = new();
-}
-
-/// <summary>
-/// Syncs JetBrains license records into the local account store.
-/// </summary>
-[Command("jetbrains")]
-public sealed class JetBrainsSyncCommand : ICliPluginCapability, ISupportsJsonOutput
+public sealed class AccountsSyncCommand : ICliPluginCapability, ISupportsJsonOutput, IAccountSyncProviderConsumer
 {
     public bool JsonOutput { get; set; }
 
+    public IReadOnlyList<IAccountSyncProvider> Providers { get; set; } = [];
+
     [DefaultCommand]
-    public Task<int> Execute(
+    public async Task<int> Execute(
+        string providerId,
         [Option("from")] string? fromFile = null,
         [Option("store")] string? storePath = null)
     {
-        return AccountsCliOperations.SyncAsync(
-            new JetBrainsSyncProvider(), fromFile, storePath, JsonOutput, Console.Out, Console.Error);
-    }
-}
+        var matches = Providers.Where(provider =>
+            string.Equals(provider.ProviderId, providerId, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (matches.Length != 1)
+        {
+            await Console.Error.WriteLineAsync(matches.Length == 0
+                ? $"Account provider '{providerId}' is not installed or enabled. Available providers: {string.Join(", ", Providers.Select(provider => provider.ProviderId).OrderBy(id => id, StringComparer.OrdinalIgnoreCase))}."
+                : $"Multiple installed account plugins declare provider ID '{providerId}'. Disable the conflicting plugin.");
+            return 2;
+        }
 
-/// <summary>
-/// Syncs Microsoft 365 subscription records into the local account store.
-/// </summary>
-[Command("microsoft365")]
-public sealed class Microsoft365SyncCommand : ICliPluginCapability, ISupportsJsonOutput
-{
-    public bool JsonOutput { get; set; }
-
-    [DefaultCommand]
-    public Task<int> Execute(
-        [Option("from")] string? fromFile = null,
-        [Option("store")] string? storePath = null)
-    {
-        return AccountsCliOperations.SyncAsync(
-            new Microsoft365SyncProvider(), fromFile, storePath, JsonOutput, Console.Out, Console.Error);
+        return await AccountsCliOperations.SyncAsync(
+            matches[0], fromFile, storePath, JsonOutput, Console.Out, Console.Error);
     }
 }
 

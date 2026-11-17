@@ -1,10 +1,7 @@
 using System;
 
-namespace SkyCD.Plugin.Accounts;
+namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
-/// <summary>
-/// A software license record (perpetual or term).
-/// </summary>
 public sealed record LicenseRecord
 {
     public required string Id { get; init; }
@@ -14,9 +11,6 @@ public sealed record LicenseRecord
     public DateTimeOffset? ExpiresUtc { get; init; }
     public string? Notes { get; init; }
 
-    /// <summary>
-    /// Derives the license status at the given moment without mutating the record.
-    /// </summary>
     public string EvaluateStatus(DateTimeOffset asOf)
     {
         if (ExpiresUtc is null)
@@ -33,9 +27,6 @@ public sealed record LicenseRecord
     }
 }
 
-/// <summary>
-/// A subscription record (recurring service entitlement).
-/// </summary>
 public sealed record SubscriptionRecord
 {
     public required string Id { get; init; }
@@ -45,9 +36,6 @@ public sealed record SubscriptionRecord
     public DateTimeOffset? RenewsUtc { get; init; }
     public string? Notes { get; init; }
 
-    /// <summary>
-    /// Derives the subscription status at the given moment without mutating the record.
-    /// </summary>
     public string EvaluateStatus(DateTimeOffset asOf)
     {
         if (RenewsUtc is null)

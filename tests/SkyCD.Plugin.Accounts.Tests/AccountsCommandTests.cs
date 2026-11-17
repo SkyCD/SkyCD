@@ -1,3 +1,6 @@
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.Plugin.Accounts.JetBrains;
+using SkyCD.Plugin.Accounts.Microsoft365;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -23,7 +26,7 @@ public sealed class AccountsCommandTests
             """);
 
         var (exitCode, output) = await RunAsync(() =>
-            new JetBrainsSyncCommand().Execute(fromFile: importPath, storePath: storePath));
+            new AccountsSyncCommand { Providers = [new JetBrainsSyncProvider()] }.Execute("jetbrains", fromFile: importPath, storePath: storePath));
 
         Assert.Equal(0, exitCode);
         Assert.Contains("2 added", output, StringComparison.Ordinal);
@@ -39,9 +42,9 @@ public sealed class AccountsCommandTests
     {
         var directory = TempDirectory();
         var storePath = Path.Combine(directory, "accounts.json");
-        var command = new JetBrainsSyncCommand { JsonOutput = true };
+        var command = new AccountsSyncCommand { JsonOutput = true, Providers = [new JetBrainsSyncProvider()] };
 
-        var (exitCode, output) = await RunAsync(() => command.Execute(storePath: storePath));
+        var (exitCode, output) = await RunAsync(() => command.Execute("jetbrains", storePath: storePath));
 
         Assert.Equal(0, exitCode);
         using var document = JsonDocument.Parse(output);
@@ -52,7 +55,7 @@ public sealed class AccountsCommandTests
     [Fact]
     public async Task Sync_MissingImportFile_ReturnsInvalidArguments()
     {
-        var (exitCode, _) = await RunAsync(() => new Microsoft365SyncCommand().Execute(
+        var (exitCode, _) = await RunAsync(() => new AccountsSyncCommand { Providers = [new Microsoft365SyncProvider()] }.Execute("microsoft365",
             fromFile: Path.Combine(TempDirectory(), "missing.json"),
             storePath: Path.Combine(TempDirectory(), "accounts.json")));
         Assert.Equal(2, exitCode);
@@ -65,7 +68,7 @@ public sealed class AccountsCommandTests
         var importPath = Path.Combine(directory, "bad.json");
         await File.WriteAllTextAsync(importPath, """[{ "seats": 1 }]""");
 
-        var (exitCode, _) = await RunAsync(() => new JetBrainsSyncCommand().Execute(
+        var (exitCode, _) = await RunAsync(() => new AccountsSyncCommand { Providers = [new JetBrainsSyncProvider()] }.Execute("jetbrains",
             fromFile: importPath,
             storePath: Path.Combine(directory, "accounts.json")));
         Assert.Equal(2, exitCode);
@@ -133,11 +136,11 @@ public sealed class AccountsCommandTests
         await File.WriteAllTextAsync(importPath, """
             [{ "product": "II", "seats": 1, "expiresUtc": "2030-01-01T00:00:00Z" }]
             """);
-        await new JetBrainsSyncCommand().Execute(fromFile: importPath, storePath: storePath);
+        await new AccountsSyncCommand { Providers = [new JetBrainsSyncProvider()] }.Execute("jetbrains", fromFile: importPath, storePath: storePath);
         await File.WriteAllTextAsync(importPath, """
             [{ "product": "SPE_E5", "seats": 5, "renewsUtc": "2030-06-01T00:00:00Z" }]
             """);
-        await new Microsoft365SyncCommand().Execute(fromFile: importPath, storePath: storePath);
+        await new AccountsSyncCommand { Providers = [new Microsoft365SyncProvider()] }.Execute("microsoft365", fromFile: importPath, storePath: storePath);
         return storePath;
     }
 

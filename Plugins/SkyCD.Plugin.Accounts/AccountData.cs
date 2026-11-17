@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
 namespace SkyCD.Plugin.Accounts;
 

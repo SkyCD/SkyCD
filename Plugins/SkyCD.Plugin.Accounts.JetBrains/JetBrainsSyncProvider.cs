@@ -1,14 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
-namespace SkyCD.Plugin.Accounts;
-
-/// <summary>
-/// Normalizes JetBrains account records. JetBrains products are commonly referenced by short
-/// product codes; known codes map to display names and unknown values pass through unchanged.
-/// JetBrains records are managed as licenses.
-/// </summary>
+namespace SkyCD.Plugin.Accounts.JetBrains;
 public sealed class JetBrainsSyncProvider : IAccountSyncProvider
 {
     public string ProviderId => "jetbrains";

@@ -1,14 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
-namespace SkyCD.Plugin.Accounts;
-
-/// <summary>
-/// Normalizes Microsoft 365 account records. Microsoft products are commonly referenced by SKU
-/// part numbers; known SKUs map to display names and unknown values pass through unchanged.
-/// Microsoft 365 records are managed as subscriptions.
-/// </summary>
+namespace SkyCD.Plugin.Accounts.Microsoft365;
 public sealed class Microsoft365SyncProvider : IAccountSyncProvider
 {
     public string ProviderId => "microsoft365";

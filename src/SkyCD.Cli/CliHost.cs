@@ -21,6 +21,7 @@ using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -113,7 +114,9 @@ public sealed class CliHost(
         using var registry = new CliContributionRegistry();
         var pluginCapabilities = discoveredPlugins
             .SelectMany(static plugin => plugin.Capabilities)
-            .OfType<ICliPluginCapability>();
+            .OfType<ICliPluginCapability>().ToArray();
+        ApplyAccountProviders(pluginCapabilities, discoveredPlugins
+            .SelectMany(static plugin => plugin.Capabilities).OfType<IAccountSyncProvider>().ToArray());
         registry.Register(GetSystemCapabilities().Concat(pluginCapabilities));
 
         // Do not fail built-in CLI command execution when optional plugin CLI
@@ -562,12 +565,7 @@ public sealed class CliHost(
         try
         {
             ApplyJsonOutput(command.CommandInstance, jsonOutput);
-            var runnerType = typeof(AppRunner<>).MakeGenericType(command.CommandInstance.GetType());
-            var runner = Activator.CreateInstance(runnerType, new AppSettings(), new Resources())
-                         ?? throw new CliRunnerCreationException(command.CommandPath);
-
-            var runMethod = runner.GetType().GetMethod("Run", [typeof(string[])])
-                            ?? throw new CliRunnerMethodResolutionException(command.CommandPath);
+            var runner = CreateContributionRunner(command.CommandInstance);
 
             var canonicalPluginArgs = CanonicalizeCommandTokens(command.CommandInstance.GetType(), pluginArgs);
             var normalizedArgs = NormalizeSystemRunnerArgs(canonicalPluginArgs);
@@ -581,7 +579,7 @@ public sealed class CliHost(
                     {
                         System.Console.SetOut(TextWriter.Synchronized(stdout));
                         System.Console.SetError(TextWriter.Synchronized(stderr));
-                        return (int)(runMethod.Invoke(runner, [normalizedArgs]) ?? (int)CliExitCodes.Success);
+                        return runner.Run(normalizedArgs);
                     }
                     finally
                     {
@@ -684,9 +682,20 @@ public sealed class CliHost(
                && stringWriter.GetStringBuilder().Length > 0;
     }
 
-    /// <summary>
-    /// Enables JSON output on commands that opt into structured output.
-    /// </summary>
+    internal static AppRunner CreateContributionRunner(object commandInstance) =>
+        new AppRunner(commandInstance.GetType(), new AppSettings(), new Resources())
+            .UseDependencyResolver(new CliContributionDependencyResolver(commandInstance));
+
+    internal static void ApplyAccountProviders(
+        IEnumerable<ICliPluginCapability> commands,
+        IReadOnlyList<IAccountSyncProvider> providers)
+    {
+        foreach (var consumer in commands.OfType<IAccountSyncProviderConsumer>())
+        {
+            consumer.Providers = providers;
+        }
+    }
+
     internal static void ApplyJsonOutput(object commandInstance, bool jsonOutput)
     {
         if (jsonOutput && commandInstance is ISupportsJsonOutput jsonCapable)
