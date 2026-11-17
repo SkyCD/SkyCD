@@ -119,6 +119,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
+            subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
@@ -140,6 +141,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
+            subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
@@ -364,6 +366,11 @@ public partial class MainWindow : Window
         {
             await new CatalogFindWindow { DataContext = vm.CreateCatalogFindDialogViewModel() }.ShowDialog(this);
         }
+    }
+
+    private async void OnAdvancedFindRequested(object? sender, AdvancedFindDialogRequestedEventArgs e)
+    {
+        await new AdvancedCatalogFindWindow { DataContext = e.Dialog }.ShowDialog<bool?>(this);
     }
 
     private IInputElement? GetFocusedElement()

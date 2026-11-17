@@ -26,6 +26,7 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.Presentation.Search;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
@@ -88,6 +89,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
+    public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
@@ -539,6 +541,121 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public CatalogFindDialogViewModel CreateCatalogFindDialogViewModel() =>
         new(GetAllCatalogEntries(), NavigateToFindResult, searchFieldProvider);
+
+    [RelayCommand]
+    private void AdvancedFindCatalog() => AdvancedFindRequested?.Invoke(
+        this, new AdvancedFindDialogRequestedEventArgs { Dialog = CreateAdvancedCatalogFindDialogViewModel() });
+
+    public AdvancedCatalogFindDialogViewModel CreateAdvancedCatalogFindDialogViewModel()
+    {
+        var entries = GetAllCatalogEntries();
+        var (lookup, metadataKeys) = BuildAdvancedFindMetadata();
+        return new AdvancedCatalogFindDialogViewModel(
+            entries,
+            NavigateToFindResult,
+            lookup,
+            metadataKeys,
+            DiscoverCustomPropertyKeys(entries),
+            DiscoverStatusValues(entries));
+    }
+
+    private (AdvancedCatalogSearchService.MetadataLookup? Lookup, IReadOnlyList<string> Keys) BuildAdvancedFindMetadata()
+    {
+        IReadOnlyList<MediaCacheRecord> records;
+        try
+        {
+            records = mediaCacheStore.GetAllRecords();
+        }
+        catch
+        {
+            records = [];
+        }
+
+        if (records.Count == 0)
+        {
+            return (null, []);
+        }
+
+        var keys = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var byEntry = new Dictionary<string, IReadOnlyList<MediaCacheRecord>>(StringComparer.Ordinal);
+        foreach (var group in records
+            .Where(static record => !string.IsNullOrWhiteSpace(record.EntryId))
+            .GroupBy(static record => record.EntryId, StringComparer.Ordinal))
+        {
+            var list = (IReadOnlyList<MediaCacheRecord>)group.ToList();
+            byEntry[group.Key] = list;
+            foreach (var record in list)
+            {
+                foreach (var field in record.SchemaFields)
+                {
+                    if (!string.IsNullOrWhiteSpace(field.Key))
+                    {
+                        keys.Add(field.Key);
+                    }
+                }
+
+                foreach (var value in record.Metadata)
+                {
+                    if (!string.IsNullOrWhiteSpace(value.Key))
+                    {
+                        keys.Add(value.Key);
+                    }
+                }
+            }
+        }
+
+        AdvancedCatalogSearchService.MetadataLookup lookup = document =>
+        {
+            if (string.IsNullOrWhiteSpace(document.Id) || !byEntry.TryGetValue(document.Id, out var entryRecords))
+            {
+                return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var projected = MediaEntryMetadataProjection.Project(document, entryRecords);
+            var metadata = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in projected)
+            {
+                if (!string.IsNullOrWhiteSpace(field.Key) && !metadata.ContainsKey(field.Key))
+                {
+                    metadata[field.Key] = field.Value;
+                }
+            }
+
+            return metadata;
+        };
+        return (lookup, keys.ToArray());
+    }
+
+    private static IReadOnlyList<string> DiscoverCustomPropertyKeys(IReadOnlyList<CatalogDocument> entries)
+    {
+        var keys = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
+        {
+            foreach (var property in entry.Properties)
+            {
+                if (!string.IsNullOrWhiteSpace(property.Key))
+                {
+                    keys.Add(property.Key);
+                }
+            }
+        }
+
+        return keys.ToArray();
+    }
+
+    private static IReadOnlyList<string> DiscoverStatusValues(IReadOnlyList<CatalogDocument> entries)
+    {
+        var values = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.Status))
+            {
+                values.Add(entry.Status);
+            }
+        }
+
+        return values.ToArray();
+    }
 
     private IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
@@ -2479,7 +2596,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand }
+                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand },
+                    new MainMenuItemViewModel
+                        { Header = LocalizationService.Current.Get(TextKeys.AdvancedFind), Command = AdvancedFindCatalogCommand }
                 ]
             },
             new MainMenuItemViewModel
