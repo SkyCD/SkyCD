@@ -32,6 +32,7 @@
         <Project Path="Plugins/SkyCD.Plugin.WebBrowser/SkyCD.Plugin.WebBrowser.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Csv/SkyCD.Plugin.WinCatalog.Csv.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Katalog.CsvIdx/SkyCD.Plugin.Katalog.CsvIdx.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Tellico/SkyCD.Plugin.Tellico.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Cathy/SkyCD.Plugin.Cathy.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdPlayer.Ini/SkyCD.Plugin.CdPlayer.Ini.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCat.Hcf/SkyCD.Plugin.CdCat.Hcf.csproj"/>
@@ -92,6 +93,7 @@
         <Project Path="tests/SkyCD.Plugin.WebBrowser.Tests/SkyCD.Plugin.WebBrowser.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Csv.Tests/SkyCD.Plugin.WinCatalog.Csv.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Katalog.CsvIdx.Tests/SkyCD.Plugin.Katalog.CsvIdx.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Tellico.Tests/SkyCD.Plugin.Tellico.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Cathy.Tests/SkyCD.Plugin.Cathy.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdPlayer.Ini.Tests/SkyCD.Plugin.CdPlayer.Ini.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCat.Hcf.Tests/SkyCD.Plugin.CdCat.Hcf.Tests.csproj"/>
