@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.PlainText;
+using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 
@@ -160,7 +161,7 @@ public class PlainTextListExportTests
                 Layout = PlainTextListLayout.TabDelimited
             });
         var lines = SplitLines(text.TrimStart('\uFEFF'));
-        Assert.Equal("a;b\t1234567\t2024-01-05T10:01:00.0000000Z", lines[1]);
+        Assert.Equal("a;b\t1234567\t2024-01-05T10:01:00.0000000+00:00", lines[1]);
     }
 
     [Fact]
@@ -187,14 +188,13 @@ public class PlainTextListExportTests
         Assert.Contains((byte)0xE9, await RawAsync(new PlainTextListExportRequest { Rows = Rows(), EncodingName = "windows-1252" }));
 
         await using var badTarget = new MemoryStream();
-        var badResult = await service.WriteAsync(new FileFormatWriteRequest
+        var exception = await Assert.ThrowsAsync<FileFormatWriteFailedException>(() => service.WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-txt-list",
             Target = badTarget,
             Payload = new PlainTextListExportRequest { Rows = Rows(), EncodingName = "ebcdic" }
-        });
-        Assert.False(badResult.Success);
-        Assert.Contains("encoding", badResult.Error, StringComparison.OrdinalIgnoreCase);
+        }));
+        Assert.Contains("encoding", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public class PlainTextListExportTests
             new PlainTextListExportRequest { Rows = rows, Columns = ["Name", "NoSuchColumn"] });
         var lines = SplitLines(text.TrimStart('\uFEFF'));
 
-        Assert.Equal("a.txt  ", lines[2].TrimEnd());
+        Assert.Equal("a.txt" + new string(' ', 14), lines[2]);
     }
 
     [Fact]
@@ -364,7 +364,7 @@ public class PlainTextListExportTests
         var lines = SplitLines(Encoding.UTF8.GetString(target.ToArray()).TrimStart('\uFEFF'));
         Assert.Equal(5000, lines.Count(line => line.Length > 0));
         Assert.StartsWith("file-0000", lines[0]);
-        Assert.Equal(17, lines[0].Length);
+        Assert.Equal("file-0000.txt          0", lines[0]);
         Assert.StartsWith("file-4999", lines[4999]);
 
         await using var cancelledTarget = new MemoryStream();
