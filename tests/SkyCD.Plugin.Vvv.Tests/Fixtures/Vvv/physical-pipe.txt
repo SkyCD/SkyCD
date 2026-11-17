@@ -1,0 +1,3 @@
+"Volume"|"Path"|"Name"|"Size"|"Ext"|"Last modified"|"Description"
+"CD1"|"/"|"same.txt"|100|"txt"|"2024-01-01 00:00:00"|"First"
+"CD2"|"/"|"same.txt"|200|"txt"|"2024-01-02 00:00:00"|"Second"
