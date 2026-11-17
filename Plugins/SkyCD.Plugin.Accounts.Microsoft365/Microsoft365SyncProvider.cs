@@ -4,6 +4,7 @@ using System.Linq;
 using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
 namespace SkyCD.Plugin.Accounts.Microsoft365;
+
 public sealed class Microsoft365SyncProvider : IAccountSyncProvider
 {
     public string ProviderId => "microsoft365";

@@ -1,8 +1,11 @@
+#pragma warning disable CS1591
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+
 public static class AccountNormalization
 {
     public static string Slug(string value)

@@ -4,6 +4,7 @@ using System.Linq;
 using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 
 namespace SkyCD.Plugin.Accounts.JetBrains;
+
 public sealed class JetBrainsSyncProvider : IAccountSyncProvider
 {
     public string ProviderId => "jetbrains";

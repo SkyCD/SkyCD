@@ -30,6 +30,21 @@ Assembly metadata and implemented capability types provide discovery information
 no plugin manifest is needed. The existing `IAccountConnector` capability remains
 available for account connection; offline normalization does not imply a login.
 
+## Shared SDK contracts
+
+Public account contracts are documented here. Their source files suppress only
+CS1591 (missing XML documentation) locally; other compiler diagnostics remain
+subject to the existing CI warning-as-error policy.
+
+| Contract | Members and behavior |
+| --- | --- |
+| `IAccountSyncProvider` | `ProviderId` is a unique, case-insensitive routing ID; `DisplayName` is the human-readable provider name. `NormalizeLicenses` and `NormalizeSubscriptions` convert imported rows to canonical records. Unsupported record kinds return an empty list. |
+| `IAccountSyncProviderConsumer` | The host sets `Providers` to the account sync capabilities from enabled, discovered plugins before CLI execution. |
+| `ImportedAccountRow` | `Product`, `Seats` (default 1), optional `ExpiresUtc`, optional `RenewsUtc`, and optional `Notes` describe an imported entitlement. |
+| `LicenseRecord` | Required `Id`, `Provider`, and `Product`; `Seats` defaults to 1. Optional `ExpiresUtc` and `Notes` describe a license. `EvaluateStatus(asOf)` returns `no-expiry`, `expired`, `expiring` (within 30 days), or `active`. |
+| `SubscriptionRecord` | Required `Id`, `Provider`, and `Product`; `Seats` defaults to 1. Optional `RenewsUtc` and `Notes` describe a subscription. `EvaluateStatus(asOf)` returns `no-renewal`, `expired`, `expiring` (within 30 days), or `active`. |
+| `AccountNormalization` | `Slug(value)` trims and lowercases product text and normalizes separators. `BuildId(providerId, kind, product)` creates a deterministic identifier. `ResolveName(product, codeMap, fallbackKind)` maps known product codes and preserves unknown names. |
+
 ## Commands
 
 All commands accept `--store <accounts.json>` to select the account database
