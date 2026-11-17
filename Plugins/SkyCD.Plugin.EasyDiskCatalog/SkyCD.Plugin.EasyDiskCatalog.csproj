@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Isolated legacy-codec support: reads pre-2020 System.Data.SQLite RC4 databases.
+             Referenced only by this plugin; provides cross-platform sqlite3mc native libraries. -->
+        <PackageReference Include="SQLite3MC.PCLRaw.bundle" Version="2.7.1" />
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+</Project>
