@@ -152,6 +152,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
+            subscribedViewModel.IsBackgroundMediaSyncEnabled = LoadAppOptions().IsBackgroundMediaSyncEnabled;
             UpdateWindowTitle();
         }
     }
@@ -163,6 +164,13 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainWindowViewModel.IsBackgroundMediaSyncEnabled)
+            && sender is MainWindowViewModel viewModel)
+        {
+            var options = LoadAppOptions();
+            options.IsBackgroundMediaSyncEnabled = viewModel.IsBackgroundMediaSyncEnabled;
+            SaveAppOptions(options);
+        }
         if (e.PropertyName is nameof(MainWindowViewModel.IsDirtyDocument) or nameof(MainWindowViewModel.CurrentCatalogPath))
         {
             UpdateWindowTitle();
