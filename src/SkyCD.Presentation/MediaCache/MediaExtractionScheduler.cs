@@ -399,7 +399,7 @@ public sealed class MediaExtractionScheduler
                 continue;
             }
 
-            var isCurrent = identityKeys.Contains(record.CreateIdentityKey()) &&
+            var isCurrent = (identityKeys.Contains(record.CreateIdentityKey()) || record.Capability == "generated-description") &&
                             (currentFingerprint is null ||
                              string.Equals(record.Fingerprint, currentFingerprint, StringComparison.Ordinal));
 

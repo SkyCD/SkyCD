@@ -32,6 +32,7 @@ using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
 using SkyCD.Presentation.Collections;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -360,6 +361,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (isDisposed) return;
         isDisposed = true;
+        pluginCommandCancellation?.Cancel();
         backgroundMediaSync?.Dispose();
         localizationSubscription.Dispose();
 
@@ -2882,7 +2884,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             };
 
             var result = await menuExtensionManager.ExecuteAsync(commandId, context,
-                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), cancellation.Token);
+                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan
+                    : commandId == "ai-description.generate" ? TimeSpan.FromMinutes(6) : TimeSpan.FromSeconds(30), cancellation.Token);
 
             if (result.TimedOut)
             {
@@ -2902,10 +2905,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         finally { pluginCommandCancellation = null; }
     }
 
-    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi
+    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi, IDescriptionHostApi
     {
         private readonly string? rootId = viewModel.TreeNodes.FirstOrDefault()?.Key;
         private readonly string? catalogPath = viewModel.CurrentCatalogPath;
+        private readonly string? descriptionEntryId = viewModel.GetSelectedBrowserItems() is { Count: 1 } selected ? selected[0].Id : null;
+
+        public Task<DescriptionContext> GetDescriptionContextAsync(DescriptionContextOptions options, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (viewModel.isDisposed || catalogPath != viewModel.CurrentCatalogPath || descriptionEntryId is null || viewModel.catalogRepository is null)
+                throw new DescriptionContextChangedException();
+            return Task.FromResult(new CatalogDescriptionService(viewModel.catalogRepository, viewModel.mediaCacheStore).Build(descriptionEntryId, options));
+        }
+
+        public async Task SaveGeneratedDescriptionAsync(DescriptionContext context, GeneratedDescription description, CancellationToken cancellationToken)
+        {
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (viewModel.isDisposed || catalogPath != viewModel.CurrentCatalogPath || descriptionEntryId != context.EntryId || viewModel.catalogRepository is null)
+                    throw new DescriptionContextChangedException();
+                new CatalogDescriptionService(viewModel.catalogRepository, viewModel.mediaCacheStore).Save(context, description);
+                viewModel.IsDirtyDocument = true;
+                viewModel.RefreshBrowserItemsForSelection();
+            });
+        }
 
         public async Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files, CancellationToken cancellationToken = default)
         {
