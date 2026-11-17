@@ -42,6 +42,7 @@
         <Project Path="Plugins/SkyCD.Plugin.AbeMeda/SkyCD.Plugin.AbeMeda.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.EasyDiskCatalog/SkyCD.Plugin.EasyDiskCatalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WhereIsIt/SkyCD.Plugin.WhereIsIt.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.DiskExplorer/SkyCD.Plugin.DiskExplorer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vvv/SkyCD.Plugin.Vvv.csproj"/>
     </Folder>
     <Folder Name="/src/">
@@ -105,6 +106,7 @@
         <Project Path="tests/SkyCD.Plugin.AbeMeda.Tests/SkyCD.Plugin.AbeMeda.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.EasyDiskCatalog.Tests/SkyCD.Plugin.EasyDiskCatalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WhereIsIt.Tests/SkyCD.Plugin.WhereIsIt.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.DiskExplorer.Tests/SkyCD.Plugin.DiskExplorer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Vvv.Tests/SkyCD.Plugin.Vvv.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
