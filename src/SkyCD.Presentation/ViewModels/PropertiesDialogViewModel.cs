@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
+using SkyCD.Formatting;
 using SkyCD.Presentation.MediaCache;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -175,7 +176,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
         var culture = CultureInfo.CurrentUICulture;
         foreach (var (key, value) in infoProperties)
         {
-            normalizedDisplay[key] = NormalizeDisplayValue(value, localizer, culture);
+            normalizedDisplay[key] = NormalizeDisplayValue(key, value, localizer, culture);
         }
 
         return new PropertiesCollection(normalizedDisplay.ToDictionary(
@@ -185,6 +186,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
     }
 
     private static string NormalizeDisplayValue(
+        string key,
         object? value,
         IStringLocalizer localizer,
         CultureInfo culture)
@@ -196,6 +198,16 @@ public partial class PropertiesDialogViewModel : ObservableObject
         if (value is null)
         {
             return unknownText;
+        }
+
+        if ((key.EndsWith("Size", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(key, "sizeBytes", StringComparison.OrdinalIgnoreCase)) &&
+            value is string or byte or sbyte or short or ushort or int or uint or long or ulong &&
+            Convert.ToString(value, CultureInfo.InvariantCulture) is { } rawValue &&
+            rawValue.All(char.IsAsciiDigit) &&
+            ulong.TryParse(rawValue, NumberStyles.None, CultureInfo.InvariantCulture, out var bytes))
+        {
+            return $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({bytes.ToString("N0", culture)} bytes)";
         }
 
         if (value is bool boolValue)
