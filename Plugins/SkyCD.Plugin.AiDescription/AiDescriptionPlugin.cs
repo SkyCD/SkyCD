@@ -13,6 +13,7 @@ namespace SkyCD.Plugin.AiDescription;
 public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescriptionCapability
 {
     public const string CommandId = "ai-description.generate";
+    public const string RegistryCommandId = "ai-description.registry";
     public const string PluginVersion = "1.0.0";
     private readonly string configurationPath;
     private readonly Func<DescriptionAgentOptions, DescriptionContext, CancellationToken, Task<GeneratedDescription>> generate;
@@ -34,10 +35,18 @@ public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescr
 
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
         [new(CommandId, "Generate AI description for selected file", "Tools", Order: 140),
-         new("ai-description.configuration", "AI description configuration", "Tools", Order: 141)];
+         new("ai-description.configuration", "AI description configuration", "Tools", Order: 141),
+         new(RegistryCommandId, "Browse cached ACP agent registry", "Tools", Order: 142)];
 
     public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context, CancellationToken cancellationToken = default)
     {
+        if (commandId == RegistryCommandId)
+        {
+            if (context.HostApi is not IHostCommandApi registryHost)
+                throw new DescriptionAgentException("the host cannot display ACP registry information");
+            await BrowseRegistryAsync(registryHost, cancellationToken);
+            return;
+        }
         if (context.HostApi is not IDescriptionHostApi host)
             throw new DescriptionAgentException("select a catalog file in a host supporting explicit description generation");
         if (!File.Exists(configurationPath))
@@ -48,7 +57,7 @@ public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescr
         }
         if (commandId == "ai-description.configuration")
         {
-            await host.NotifyAsync($"Configure the installed ACP executable, model, language, prompt, limits, permitted sources and processing destination in {configurationPath}. Generation is disabled by default; no agent is installed automatically.", cancellationToken);
+            await host.NotifyAsync($"Configure the installed ACP executable, arguments, environment, optional AuthMethodId, model, language, prompt, limits, permitted sources and processing destination in {configurationPath}. Optionally download {AcpAgentRegistry.OfficialIndexUrl} to {Path.Combine(Path.GetDirectoryName(configurationPath)!, AcpAgentRegistry.FileName)} for offline browsing. Generation is disabled by default; no agent is installed automatically.", cancellationToken);
             return;
         }
         if (commandId != CommandId) return;
@@ -66,6 +75,28 @@ public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescr
         var options = await LoadOptionsAsync(cancellationToken);
         return await generate(options, context, cancellationToken);
     }
+
+    private async Task BrowseRegistryAsync(IHostCommandApi host, CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(Path.GetDirectoryName(configurationPath)!, AcpAgentRegistry.FileName);
+        if (!File.Exists(path))
+        {
+            await host.NotifyAsync($"No cached ACP registry at {path}. Download {AcpAgentRegistry.OfficialIndexUrl} manually to browse agents offline. SkyCD never downloads, installs or launches registry entries automatically.", cancellationToken);
+            return;
+        }
+        var registry = AcpAgentRegistry.Load(path);
+        if (registry.Agents.Count == 0)
+        {
+            await host.NotifyAsync($"The cached ACP registry at {path} contains no supported entries. Configure an installed agent manually in {configurationPath}.", cancellationToken);
+            return;
+        }
+        var listed = string.Join("; ", registry.Agents.Select(agent =>
+            $"{Shorten(agent.Name, 40)} ({Shorten(agent.Id, 40)}) {agent.Version} [{string.Join('/', agent.Distributions)}]"));
+        if (listed.Length > 3000) listed = listed[..3000] + "; ...";
+        await host.NotifyAsync($"Cached ACP registry: {registry.Agents.Count} agents. {listed}. Browsing never installs or launches an agent; configure an installed executable in {configurationPath}.", cancellationToken);
+    }
+
+    private static string Shorten(string value, int limit) => value.Length <= limit ? value : value[..limit];
 
     private async Task<DescriptionAgentOptions> LoadOptionsAsync(CancellationToken cancellationToken)
     {

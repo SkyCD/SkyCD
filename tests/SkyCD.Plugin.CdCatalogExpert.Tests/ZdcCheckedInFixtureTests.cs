@@ -62,7 +62,7 @@ public sealed class ZdcCheckedInFixtureTests
     public void Read_SampleFixture_RewritesByteIdentical()
     {
         var bytes = File.ReadAllBytes(FixturePath("sample.zdc"));
-        using var stream = ZdcFixture.StreamOf(bytes);
+        using var stream = new MemoryStream(bytes, writable: false);
         var restored = ZdcReader.Read(stream);
         Assert.Equal(bytes, ZdcFixture.Serialize(restored));
     }

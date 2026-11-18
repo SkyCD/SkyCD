@@ -10,6 +10,7 @@ public sealed record DescriptionAgentOptions
     public string Executable { get; init; } = string.Empty;
     public IReadOnlyList<string> Arguments { get; init; } = [];
     public IReadOnlyDictionary<string, string> Environment { get; init; } = new Dictionary<string, string>();
+    public string? AuthMethodId { get; init; }
     public string? Model { get; init; }
     public string Language { get; init; } = "English";
     public string Prompt { get; init; } = "Write a concise factual description of this file. Do not invent facts.";
@@ -29,7 +30,8 @@ public sealed record DescriptionAgentOptions
             || Arguments.Count > 128 || Environment.Count > 64
             || MaxOutputCharacters is < 1 or > 8000 || TimeoutSeconds is < 1 or > 300
             || Prompt.Length > 8000 || PromptVersion is null || PromptVersion.Length > 128
-            || Model?.Length > 256 || string.IsNullOrWhiteSpace(Language) || Language.Length > 100
+            || Model?.Length > 256 || AuthMethodId?.Length > 128
+            || string.IsNullOrWhiteSpace(Language) || Language.Length > 100
             || ProcessingDestination is not ("unknown" or "local-inference" or "cloud"))
             throw new DescriptionAgentException("invalid language, prompt, destination or generation limits in configuration");
     }

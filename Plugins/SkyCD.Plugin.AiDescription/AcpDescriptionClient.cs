@@ -23,6 +23,7 @@ public sealed class AcpDescriptionClient
     private int available;
     private int requestId;
     private string? sessionId;
+    private IReadOnlyList<AuthMethod> authMethods = [];
 
     public AcpDescriptionClient(TextReader input, TextWriter output, int maximumOutput)
     {
@@ -124,17 +125,53 @@ public sealed class AcpDescriptionClient
         while (await reader.ReadAsync(scratch.AsMemory(), cancellationToken) > 0) { }
     }
 
+    private static IReadOnlyList<AuthMethod> ReadAuthMethods(JsonElement initialized)
+    {
+        if (!initialized.TryGetProperty("authMethods", out var methods) || methods.ValueKind != JsonValueKind.Array)
+            return [];
+        var parsed = new List<AuthMethod>();
+        foreach (var method in methods.EnumerateArray())
+        {
+            if (parsed.Count >= 16) break;
+            if (method.ValueKind != JsonValueKind.Object
+                || !method.TryGetProperty("id", out var idValue) || idValue.ValueKind != JsonValueKind.String
+                || idValue.GetString() is not { } id || string.IsNullOrWhiteSpace(id) || id.Length > 128) continue;
+            var name = method.TryGetProperty("name", out var nameValue) && nameValue.ValueKind == JsonValueKind.String
+                && nameValue.GetString() is { } nameText && !string.IsNullOrWhiteSpace(nameText)
+                ? (nameText.Length <= 128 ? nameText : nameText[..128]) : "unnamed";
+            var type = method.TryGetProperty("type", out var typeValue) && typeValue.ValueKind == JsonValueKind.String
+                && typeValue.GetString() is { } typeText && !string.IsNullOrWhiteSpace(typeText) ? typeText : "agent";
+            parsed.Add(new AuthMethod(id, name, type));
+        }
+        return parsed;
+    }
+
+    private string DescribeAuthMethods() => authMethods.Count == 0
+        ? "no authentication method advertised"
+        : string.Join(", ", authMethods.Select(method => $"{method.Id} ({method.Name}, {method.Type})"));
+
+    private sealed record AuthMethod(string Id, string Name, string Type);
+
     public async Task<GeneratedDescription> DescribeAsync(DescriptionAgentOptions options, DescriptionContext context,
         string workingDirectory, CancellationToken cancellationToken)
     {
         var initialized = await RequestAsync("initialize", new
         {
             protocolVersion = 1,
-            clientCapabilities = new { fs = new { readTextFile = false, writeTextFile = false }, terminal = false },
+            clientCapabilities = new { fs = new { readTextFile = false, writeTextFile = false }, terminal = false, auth = new { terminal = false } },
             clientInfo = new { name = "skycd-description", version = AiDescriptionPlugin.PluginVersion }
         }, cancellationToken);
         if (!initialized.TryGetProperty("protocolVersion", out var version) || version.GetInt32() != 1)
             throw new DescriptionAgentException("the agent selected an unsupported ACP protocol version");
+        authMethods = ReadAuthMethods(initialized);
+        if (!string.IsNullOrWhiteSpace(options.AuthMethodId))
+        {
+            var method = authMethods.FirstOrDefault(candidate => candidate.Id == options.AuthMethodId)
+                ?? throw new DescriptionAgentException("the configured ACP authentication method is not advertised by this agent");
+            if (method.Type != "agent")
+                throw new DescriptionAgentException("only agent-managed ACP authentication is supported; complete terminal or other interactive sign-in manually and clear AuthMethodId");
+            await RequestAsync("authenticate", new { methodId = method.Id }, cancellationToken);
+        }
         var capabilities = initialized.TryGetProperty("agentCapabilities", out var caps)
             && caps.TryGetProperty("promptCapabilities", out var promptCaps) ? promptCaps : default;
         bool Supports(string name) => capabilities.ValueKind == JsonValueKind.Object
@@ -253,6 +290,8 @@ public sealed class AcpDescriptionClient
             if (root.TryGetProperty("error", out var error))
             {
                 var code = error.TryGetProperty("code", out var errorCode) ? errorCode.GetInt32() : 0;
+                if (code == -32000)
+                    throw new DescriptionAgentException($"the agent requires authentication ({DescribeAuthMethods()}); complete its documented sign-in or configure AuthMethodId");
                 throw new DescriptionAgentException($"ACP request '{method}' failed (code {code}); verify agent authentication and configuration");
             }
             return root.GetProperty("result").Clone();
