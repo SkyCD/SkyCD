@@ -3792,36 +3792,41 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var oldById = targets.ToDictionary(
-            target => target.Id,
-            target => (IReadOnlyList<string>)service.GetEntryIds(target.Id));
-        var allMember = oldById.Values.All(ids => ids.Contains(collectionId, StringComparer.Ordinal));
-        var changes = new Dictionary<string, (IReadOnlyList<string> OldEntryIds, IReadOnlyList<string> NewEntryIds)>(StringComparer.Ordinal);
-        var affectedCount = 0;
-
-        foreach (var target in targets)
+        var targetIds = targets
+            .Select(static target => target.Id)
+            .Where(static id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (targetIds.Length == 0)
         {
-            var oldIds = oldById[target.Id];
-            IReadOnlyList<string> newIds = allMember
-                ? oldIds.Where(id => !string.Equals(id, collectionId, StringComparison.Ordinal)).ToArray()
-                : oldIds.Contains(collectionId, StringComparer.Ordinal)
-                    ? oldIds
-                    : [.. oldIds, collectionId];
-            if (!oldIds.SequenceEqual(newIds, StringComparer.Ordinal))
-            {
-                service.SetEntryIds(target.Id, newIds);
-                changes[target.Id] = (oldIds, newIds);
-                affectedCount++;
-            }
+            return;
         }
 
-        if (changes.Count > 0)
+        var oldIds = service.GetEntryIds(collectionId);
+        var memberIds = new HashSet<string>(oldIds, StringComparer.Ordinal);
+        var allMember = targetIds.All(memberIds.Contains);
+        var affectedCount = allMember
+            ? targetIds.Length
+            : targetIds.Count(id => !memberIds.Contains(id));
+        if (affectedCount == 0)
         {
-            foreach (var (entryId, (oldIds, newIds)) in changes)
-            {
-                undoManager?.RecordCollectionEntriesChanged(collectionRepository, collectionId, oldIds, newIds);
-            }
+            return;
         }
+
+        if (allMember)
+        {
+            service.RemoveEntries(collectionId, targetIds);
+        }
+        else
+        {
+            service.AddEntries(collectionId, targetIds);
+        }
+
+        undoManager?.RecordCollectionEntriesChanged(
+            collectionRepository,
+            collectionId,
+            oldIds,
+            service.GetEntryIds(collectionId));
 
         StatusText = allMember
             ? LocalizationService.Current.Format(TextKeys.CollectionRemovedFrom, collection.Name, affectedCount)
@@ -3902,8 +3907,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return (0, 0);
         }
 
-        var assigned = targets.Count(target =>
-            collectionService.GetEntryIds(target.Id).Contains(collectionId, StringComparer.Ordinal));
+        var memberIds = new HashSet<string>(collectionService.GetEntryIds(collectionId), StringComparer.Ordinal);
+        var assigned = targets.Count(target => memberIds.Contains(target.Id));
         return (assigned, targets.Count);
     }
 
