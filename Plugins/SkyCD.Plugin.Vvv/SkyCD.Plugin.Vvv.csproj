@@ -3,6 +3,12 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
         <ProjectReference Include="..\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.3.4"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Vvv.Tests"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
