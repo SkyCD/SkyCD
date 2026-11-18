@@ -144,5 +144,7 @@
         <Project Path="tests/SkyCD.Plugin.Adc.Tests/SkyCD.Plugin.Adc.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.SmartCdCatalogPro.Tests/SkyCD.Plugin.SmartCdCatalogPro.Tests.csproj"/>
     </Folder>
-    <Folder Name="/tools/"/>
+    <Folder Name="/tools/">
+        <Project Path="tools/SkyCD.TestLogger/SkyCD.TestLogger.csproj"/>
+    </Folder>
 </Solution>
