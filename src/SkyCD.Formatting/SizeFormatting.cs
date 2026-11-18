@@ -18,6 +18,19 @@ public static class SizeFormatting
             : text;
     }
 
+    public static string FormatBytes(ulong bytes, string format = "0.##", bool removeSpace = false)
+    {
+        if (bytes <= long.MaxValue)
+        {
+            return FormatBytes((long)bytes, format, removeSpace);
+        }
+
+        var text = ((double)bytes).Bytes().Humanize(format);
+        return removeSpace
+            ? text.Replace(" ", string.Empty, StringComparison.Ordinal)
+            : text;
+    }
+
     public static string FormatAboutDialogBytes(long bytes)
     {
         return Math.Abs(bytes) < 1024

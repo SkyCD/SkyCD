@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Headless.XUnit;
@@ -82,6 +83,28 @@ public class ControlsContractTests
         finally
         {
             window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void PropertiesList_DisplaysFormattedSizesAndPreservesOtherValues()
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            var source = new PropertiesCollection { ["Size"] = "1536", ["FileSize"] = "1.5 MB", ["Attributes"] = "32" };
+            var vm = new PropertiesDialogViewModel("key", "name", "icon", "", source);
+            var list = new PropertiesList { PropertiesData = vm.InfoProperties };
+
+            Assert.Contains(list.PropertiesRows, row => row.Key == "Size" && row.Value == "1.5 KB (1,536 bytes)");
+            Assert.Contains(list.PropertiesRows, row => row.Key == "FileSize" && row.Value == "1.5 MB");
+            Assert.Contains(list.PropertiesRows, row => row.Key == "Attributes" && row.Value == "32");
+            Assert.Equal("1536", vm.GetProperties()["Size"]);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
         }
     }
 

@@ -88,9 +88,11 @@ public class PropertiesDialogViewModelTests
             ["Attributes"] = "ReadOnly"
         };
         var culture = CultureInfo.GetCultureInfo("en-US");
-        var previous = CultureInfo.CurrentUICulture;
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
         try
         {
+            CultureInfo.CurrentCulture = culture;
             CultureInfo.CurrentUICulture = culture;
             var vm = new PropertiesDialogViewModel("key", "item", "icon", "general comment", source);
 
@@ -100,7 +102,7 @@ public class PropertiesDialogViewModelTests
             Assert.Equal("imported comments", vm.InfoProperties["Comments"]);
             Assert.Equal(new DateTime(2016, 6, 5, 16, 49, 14).ToString("G", culture), vm.InfoProperties["Created"]);
             Assert.Equal(@"C:\item", vm.InfoProperties["FullName"]);
-            Assert.Equal("1024", vm.InfoProperties["Size"]);
+            Assert.Equal("1 KB (1,024 bytes)", vm.InfoProperties["Size"]);
             Assert.Equal("item", vm.GetProperties()["Name"]);
             Assert.Equal("directory", vm.GetProperties()["RealDirectoryName"]);
             Assert.Equal("general comment", vm.GetProperties()["Comment"]);
@@ -108,7 +110,8 @@ public class PropertiesDialogViewModelTests
         }
         finally
         {
-            CultureInfo.CurrentUICulture = previous;
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
         }
     }
 
@@ -190,6 +193,151 @@ public class PropertiesDialogViewModelTests
             }));
 
         Assert.Equal(["Alpha", "Middle", "Zeta"], vm.InfoProperties.Keys);
+    }
+
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(512L)]
+    [InlineData(1024L)]
+    [InlineData(1536L)]
+    [InlineData(1048576L)]
+    [InlineData(503206458L)]
+    public void Constructor_FormatsSizesLikeBrowserAndPreservesRawValues(long bytes)
+    {
+        var culture = CultureInfo.GetCultureInfo("en-US");
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+            var document = new CatalogDocument { Size = bytes, Properties = new PropertiesCollection { ["Size"] = bytes.ToString(CultureInfo.InvariantCulture) } };
+            var vm = new PropertiesDialogViewModel("key", "name", "icon", "", document.Properties);
+
+            Assert.Equal($"{document.DisplaySize} ({bytes.ToString("N0", culture)} bytes)", vm.InfoProperties["Size"]);
+            Assert.Equal(bytes.ToString(CultureInfo.InvariantCulture), vm.GetProperties()["Size"]);
+            Assert.Equal(bytes.ToString(CultureInfo.InvariantCulture), document.Properties["Size"]);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
+
+    [Theory]
+    [InlineData("Size")]
+    [InlineData("sIzE")]
+    [InlineData("FileSize")]
+    [InlineData("sizeBytes")]
+    [InlineData("SIZEBYTES")]
+    [InlineData("DedLogicalSize")]
+    [InlineData("DedAggregateSize")]
+    [InlineData("TotalFileSize")]
+    public void Constructor_RecognizesSizeKeys(string key)
+    {
+        var vm = CreateWithCulture("1536", CultureInfo.GetCultureInfo("en-US"), key);
+
+        Assert.Equal("1.5 KB (1,536 bytes)", vm.InfoProperties[key]);
+        Assert.Equal("1536", vm.GetProperties()[key]);
+    }
+
+    [Theory]
+    [InlineData(1536)]
+    [InlineData(1536L)]
+    [InlineData(1536UL)]
+    public void Constructor_FormatsTypedIntegerSizesWithoutChangingTheirTypes(object value)
+    {
+        var vm = CreateWithCulture(value, CultureInfo.GetCultureInfo("en-US"), "Size");
+
+        Assert.Equal("1.5 KB (1,536 bytes)", vm.InfoProperties["Size"]);
+        Assert.Equal(value, vm.GetProperties()["Size"]);
+        Assert.Equal(value.GetType(), vm.GetProperties()["Size"]!.GetType());
+    }
+
+    [Theory]
+    [InlineData(9223372036854775808UL)]
+    [InlineData(ulong.MaxValue)]
+    [InlineData("18446744073709551615")]
+    public void Constructor_FormatsSizesBeyondLongMaxWithoutOverflow(object value)
+    {
+        var culture = CultureInfo.GetCultureInfo("en-US");
+        var vm = CreateWithCulture(value, culture, "Size");
+        var bytes = ulong.Parse(Convert.ToString(value, CultureInfo.InvariantCulture)!, CultureInfo.InvariantCulture);
+        var display = Assert.IsType<string>(vm.InfoProperties["Size"]);
+
+        Assert.EndsWith($" ({bytes.ToString("N0", culture)} bytes)", display, StringComparison.Ordinal);
+        Assert.DoesNotContain("-", display, StringComparison.Ordinal);
+        Assert.Equal(value, vm.GetProperties()["Size"]);
+    }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("+1")]
+    [InlineData("1e3")]
+    [InlineData("1.5 MB")]
+    [InlineData("1,536")]
+    [InlineData("1-5")]
+    [InlineData(" 1536")]
+    [InlineData("1536 ")]
+    [InlineData("1536\0")]
+    [InlineData("18446744073709551616")]
+    [InlineData("arbitrary text")]
+    public void Constructor_LeavesInvalidSizeValuesUnchanged(string value)
+    {
+        var vm = CreateWithCulture(value, CultureInfo.GetCultureInfo("en-US"), "Size");
+
+        Assert.Equal(value, vm.InfoProperties["Size"]);
+        Assert.Equal(value, vm.GetProperties()["Size"]);
+    }
+
+    [Fact]
+    public void Constructor_LeavesNegativeAndFloatingPointSizesUnchanged()
+    {
+        var values = new PropertiesCollection { ["FileSize"] = -1L, ["Size"] = 1536.0 };
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "", values);
+
+        Assert.Equal("-1", vm.InfoProperties["FileSize"]);
+        Assert.Equal(1536.0.ToString(), vm.InfoProperties["Size"]);
+        Assert.Equal(-1L, vm.GetProperties()["FileSize"]);
+        Assert.Equal(1536.0, vm.GetProperties()["Size"]);
+    }
+
+    [Theory]
+    [InlineData("Attributes")]
+    [InlineData("SizeInBytes")]
+    [InlineData("sizeBytesExtra")]
+    public void Constructor_LeavesOtherNumericPropertiesUnchanged(string key)
+    {
+        var vm = CreateWithCulture("1536", CultureInfo.GetCultureInfo("en-US"), key);
+
+        Assert.Equal("1536", vm.InfoProperties[key]);
+        Assert.Equal("1536", vm.GetProperties()[key]);
+    }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("lt-LT")]
+    public void Constructor_GroupsExactByteCountWithUiCulture(string cultureName)
+    {
+        var culture = CultureInfo.GetCultureInfo(cultureName);
+        var vm = CreateWithCulture("503206458", culture, "Size");
+
+        Assert.EndsWith($" ({503206458L.ToString("N0", culture)} bytes)", Assert.IsType<string>(vm.InfoProperties["Size"]), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CustomPropertyEditing_PreservesRawSizeUntilEdited()
+    {
+        var source = new PropertiesCollection { ["Size"] = 1536L };
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "", source);
+        vm.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = "Size", DefaultValue = "default" }]);
+
+        Assert.Equal("1536", vm.CustomProperties[0].DefaultValue);
+        Assert.Equal(1536L, vm.GetProperties()["Size"]);
+        vm.CustomProperties[0].DefaultValue = "2048";
+        Assert.Equal("2048", vm.GetProperties()["Size"]);
+        Assert.Equal(1536L, source["Size"]);
     }
 
     [Theory]
@@ -298,13 +446,13 @@ public class PropertiesDialogViewModelTests
         Assert.Equal(timestamp, source["Created"]);
     }
 
-    private static PropertiesDialogViewModel CreateWithCulture(object value, CultureInfo culture)
+    private static PropertiesDialogViewModel CreateWithCulture(object value, CultureInfo culture, string key = "Value")
     {
         var previous = CultureInfo.CurrentUICulture;
         try
         {
             CultureInfo.CurrentUICulture = culture;
-            return new PropertiesDialogViewModel("key", "name", "icon", "", new PropertiesCollection { ["Value"] = value });
+            return new PropertiesDialogViewModel("key", "name", "icon", "", new PropertiesCollection { [key] = value });
         }
         finally
         {

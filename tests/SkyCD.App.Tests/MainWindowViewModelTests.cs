@@ -946,6 +946,41 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void OpenPropertiesCommand_SizeMatchesBrowserAndRemainsRawAfterAccepting()
+    {
+        const string rawSize = "503206458";
+        var document = new CatalogDocument
+        {
+            Id = "file",
+            Name = "file.bin",
+            ParentId = "library",
+            Type = CatalogDocumentType.File,
+            Size = 503206458,
+            Properties = new() { ["Size"] = rawSize, ["Attributes"] = "32" }
+        };
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog([
+            new CatalogDocument { Id = "library", Name = "Library", Type = CatalogDocumentType.Folder },
+            document
+        ]);
+        vm.SelectedBrowserItem = vm.BrowserItems.Single(item => item.Id == "file");
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal($"{document.DisplaySize} ({document.Size.ToString("N0", CultureInfo.CurrentUICulture)} bytes)", request!.Dialog.InfoProperties["Size"]);
+        Assert.Equal("32", request.Dialog.InfoProperties["Attributes"]);
+        Assert.Equal(rawSize, request.Dialog.GetProperties()["Size"]);
+        request.Complete(true, request.Dialog.Comments);
+        request = null;
+        vm.OpenPropertiesCommand.Execute(null);
+        Assert.NotNull(request);
+        Assert.Equal(rawSize, request!.Dialog.GetProperties()["Size"]);
+        Assert.Equal(rawSize, document.Properties["Size"]);
+    }
+
+    [Fact]
     public void OpenPropertiesCommand_FolderItem_HidesInfoTab()
     {
         var vm = CreateViewModel();

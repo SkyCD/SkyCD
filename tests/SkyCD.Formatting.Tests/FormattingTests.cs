@@ -16,6 +16,17 @@ public class FormattingTests
         Assert.Equal("1.5KB", withoutSpace);
     }
 
+    [Fact]
+    public void FormatBytes_UnsignedValuesAboveLongMax_DoNotOverflow()
+    {
+        var text = SizeFormatting.FormatBytes(ulong.MaxValue);
+
+        Assert.NotEmpty(text);
+        Assert.DoesNotContain("-", text);
+        Assert.NotEqual("0 B", text);
+        Assert.Equal(text.Replace(" ", string.Empty, StringComparison.Ordinal), SizeFormatting.FormatBytes(ulong.MaxValue, removeSpace: true));
+    }
+
     [Theory]
     [InlineData(1000, "1000 B")]
     [InlineData(1024, "1.0 KB")]
