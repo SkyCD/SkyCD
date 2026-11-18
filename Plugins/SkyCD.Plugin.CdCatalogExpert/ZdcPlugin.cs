@@ -25,21 +25,28 @@ public sealed class ZdcPlugin : IFileFormatPluginCapability, IContentAwareFileFo
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
-            FormatId: "cdcatalogexpert-zdc",
-            DisplayName: "CD Catalog Expert Catalog (*.zdc)",
+            FormatId: "cd-catalog-expert-zdc",
+            DisplayName: "CD Catalog Expert 9.x Catalog",
             Extensions: [".zdc"],
             MimeTypes: ["application/x-cdcatalogexpert-catalog"],
             CanRead: true,
             CanWrite: true);
 
     /// <summary>
-    /// Claims a stream only when it carries both container magics, the ZDC
-    /// chunk size, and a chunk-aligned length. The extension alone never
-    /// claims a file. Preserves the stream position.
+    /// Claims a stream only when the file name carries the <c>.zdc</c>
+    /// extension and the content starts with the <c>AAMVHFSS</c> container
+    /// signature (plus the profile magic, chunk size, and chunk-aligned
+    /// length). Preserves the stream position.
     /// </summary>
     public bool CanHandleContent(Stream stream, string? fileName = null)
     {
         if (!stream.CanRead)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fileName) &&
+            !string.Equals(Path.GetExtension(fileName), ".zdc", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -110,11 +117,16 @@ public sealed class ZdcPlugin : IFileFormatPluginCapability, IContentAwareFileFo
         {
             request.Progress?.Report(10);
             var database = await Task.Run(() => ZdcReader.Read(request.Source, cancellationToken), cancellationToken);
-            request.Progress?.Report(60);
+            request.Progress?.Report(50);
+
+            var parsed = await Task.Run(
+                () => ZdcCatalogParser.Read(database, cancellationToken),
+                cancellationToken);
+            request.Progress?.Report(80);
 
             var fileStem = Path.GetFileNameWithoutExtension(
                 request.FileName ?? request.SourcePath ?? "CD Catalog Expert");
-            var document = ZdcReportBuilder.Build(database, fileStem, database.Members.Count);
+            var document = ZdcCatalogMapper.BuildRows(parsed, database, fileStem);
             request.Progress?.Report(100);
 
             return new FileFormatReadResult
@@ -145,7 +157,10 @@ public sealed class ZdcPlugin : IFileFormatPluginCapability, IContentAwareFileFo
         {
             var rows = ResolveRows(request.Payload);
             request.Progress?.Report(20);
-            var database = await Task.Run(() => ZdcReportBuilder.ToDatabase(rows), cancellationToken);
+            var fileStem = Path.GetFileNameWithoutExtension(request.FileName ?? string.Empty);
+            var database = await Task.Run(
+                () => ZdcCatalogMapper.ToDatabase(rows, fileStem),
+                cancellationToken);
             request.Progress?.Report(60);
             await Task.Run(() => ZdcWriter.Write(request.Target, database, cancellationToken), cancellationToken);
             request.Progress?.Report(100);

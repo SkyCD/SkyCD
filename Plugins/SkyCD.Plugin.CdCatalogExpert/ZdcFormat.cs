@@ -142,4 +142,19 @@ public static class ZdcFormat
 
     /// <summary>Maximum total container bytes read from a stream.</summary>
     public const long MaxContainerBytes = 256L * 1024 * 1024;
+
+    /// <summary>Maximum nesting depth accepted in catalog XML members.</summary>
+    public const int MaxXmlDepth = 64;
+
+    /// <summary>Maximum element count accepted in one catalog XML member.</summary>
+    public const int MaxXmlElements = 2_000_000;
+
+    /// <summary>Maximum attributes accepted on one catalog XML element.</summary>
+    public const int MaxAttributesPerElement = 64;
+
+    /// <summary>Maximum character count accepted for one attribute/text value.</summary>
+    public const int MaxXmlTextLength = 4 * 1024 * 1024;
+
+    /// <summary>Maximum characters accepted for one catalog XML document.</summary>
+    public const long MaxXmlDocumentCharacters = 256L * 1024 * 1024;
 }

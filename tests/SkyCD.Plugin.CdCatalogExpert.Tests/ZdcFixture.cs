@@ -10,25 +10,27 @@ namespace SkyCD.Plugin.CdCatalogExpert.Tests;
 /// <summary>
 /// Builds license-safe ZDC fixtures at runtime: synthetic containers
 /// serialized with the plugin writer, plus byte-level mutations for malformed
-/// inputs. The redistributable <c>sample.zdc</c> fixture is checked into
-/// <c>Fixtures/</c> instead (see <c>Fixtures/README.md</c>).
+/// inputs. The redistributable fixtures are checked into <c>Fixtures/</c>.
 /// </summary>
 public static class ZdcFixture
 {
     public const string DiscGuidA = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
     public const string DiscGuidB = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
     public const string DiscGuidC = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+    public const string FormatId = "cd-catalog-expert-zdc";
+
+    private static readonly Encoding Windows1252 = CreateWindows1252();
 
     public static ZdcMember IndexMember(string xmlPayload) => new()
     {
         FileName = ZdcFormat.IndexMemberName,
-        Payload = Encoding.ASCII.GetBytes(xmlPayload)
+        Payload = EncodeXml(xmlPayload)
     };
 
     public static ZdcMember DiscMember(string guid, string xmlPayload, uint fileType = 0, uint entryType = 0) => new()
     {
         FileName = $"{guid}.xml",
-        Payload = Encoding.ASCII.GetBytes(xmlPayload),
+        Payload = EncodeXml(xmlPayload),
         FileType = fileType,
         EntryType = entryType,
         TimestampA = 100,
@@ -41,6 +43,14 @@ public static class ZdcFixture
         FileName = $"{guid}.jpg",
         Payload = jpeg
     };
+
+    public static byte[] EncodeXml(string text) => Windows1252.GetBytes(text);
+
+    private static Encoding CreateWindows1252()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+    }
 
     public static byte[] MinimalJpeg(int fillerBytes = 64)
     {
@@ -60,26 +70,47 @@ public static class ZdcFixture
     public static string IndexXml(params string[] discGuids)
     {
         var builder = new StringBuilder();
-        builder.Append("<?xml version=\"1.0\"?><catalog>");
+        builder.Append("<?xml version=\"1.0\" encoding=\"windows-1252\"?><Z N=\"Catalog\">");
         foreach (var guid in discGuids)
         {
-            builder.Append($"<disc id=\"{guid}\"/>");
+            builder.Append($"<L N=\"Disc {guid[..8]}\" F=\"{{{guid}}}\"/>");
         }
 
-        builder.Append("</catalog>");
+        builder.Append("</Z>");
         return builder.ToString();
     }
 
     public static string DiscXml(string guid) =>
-        $"<?xml version=\"1.0\"?><disc id=\"{guid}\"><volume label=\"DISC-{guid[..8]}\"/></disc>";
+        $"<?xml version=\"1.0\" encoding=\"windows-1252\"?><R><F N=\"file-{guid[..8]}.txt\" S=\"12\"/></R>";
 
     public static ZdcDatabase SampleDatabase() => new()
     {
         Members =
         {
-            IndexMember(IndexXml(DiscGuidA, DiscGuidB)),
-            DiscMember(DiscGuidA, DiscXml(DiscGuidA)),
-            DiscMember(DiscGuidB, DiscXml(DiscGuidB), fileType: 1, entryType: 2),
+            IndexMember(
+                "<?xml version=\"1.0\" encoding=\"windows-1252\"?>"
+                + "<Z N=\"Sample Catalog\" D=\"A sample catalog\">"
+                + "<G N=\"Games\" C=\"1700000000\">"
+                + $"<L N=\"Disc A\" F=\"{{{DiscGuidA}}}\" P=\"D:\\\" C=\"1700000001\" M=\"1700000002\" "
+                + "D=\"Disc A description\" V=\"DISCA\" I=\"CDFS\" T=\"2\" E=\"-123456\" K=\"700000000\" R=\"1000\" "
+                + "O=\"1\" SO_A=\"1\" SO_B=\"0\" SO_C=\"1\" SO_D=\"0\" SO_E=\"1\" SO_F=\"0\" SO_G=\"1\" "
+                + "W=\"games, retro\" DS=\"Shelf 1\" DI=\"IDX-1\" DB=\"0001234567890\" DR=\"5\" "
+                + $"G=\"{DiscGuidA}.jpg\"/>"
+                + $"<L N=\"Disc B\" F=\"{{{DiscGuidB}}}\" V=\"DISCB\" I=\"UDF\" T=\"3\" E=\"7\" K=\"-1\" R=\"-1\"/>"
+                + "</G>"
+                + "</Z>"),
+            DiscMember(
+                DiscGuidA,
+                "<?xml version=\"1.0\" encoding=\"windows-1252\"?>"
+                + "<R><D N=\"Folder\" A=\"16\" M=\"1700000003\" C=\"1700000004\" B=\"1700000005\" "
+                + "D=\"Folder description\" W=\"folder\">"
+                + "<F N=\"readme.txt\" S=\"5\" A=\"32\" M=\"1700000006\" D=\"Read me\"/>"
+                + "</D><D N=\"Empty\"/></R>"),
+            DiscMember(
+                DiscGuidB,
+                $"<?xml version=\"1.0\" encoding=\"windows-1252\"?><R><F N=\"file-{DiscGuidB[..8]}.txt\" S=\"12\"/></R>",
+                fileType: 1,
+                entryType: 2),
             CoverMember(DiscGuidA, MinimalJpeg())
         }
     };
@@ -114,7 +145,7 @@ public static class ZdcFixture
         return new FileFormatReadRequest
         {
             Source = source,
-            FormatId = "cdcatalogexpert-zdc",
+            FormatId = FormatId,
             FileName = fileName,
             SourcePath = fileName
         };
