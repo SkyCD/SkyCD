@@ -15,6 +15,13 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class PropertiesDialogViewModel : ObservableObject
 {
+    private static readonly HashSet<string> HiddenInfoPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Name",
+        "RealDirectoryName",
+        "Comment"
+    };
+
     private static readonly Regex TimestampPattern = new(
         @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,7})?(?<offset>Z|[+-][0-9]{2}:[0-9]{2})?\z",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
@@ -176,7 +183,10 @@ public partial class PropertiesDialogViewModel : ObservableObject
         var culture = CultureInfo.CurrentUICulture;
         foreach (var (key, value) in infoProperties)
         {
-            normalizedDisplay[key] = NormalizeDisplayValue(key, value, localizer, culture);
+            if (!HiddenInfoPropertyKeys.Contains(key))
+            {
+                normalizedDisplay[key] = NormalizeDisplayValue(key, value, localizer, culture);
+            }
         }
 
         return new PropertiesCollection(normalizedDisplay.ToDictionary(

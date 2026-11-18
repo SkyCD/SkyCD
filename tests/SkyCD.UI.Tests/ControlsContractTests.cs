@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -90,6 +91,46 @@ public class ControlsContractTests
             cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.False(viewModel.DialogAccepted);
             Assert.Equal(42, source["Existing"]);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void PropertiesList_BindsFilteredRowsAndHidesEmptyTab()
+    {
+        var vm = new PropertiesDialogViewModel("key", "item", "icon", "note", new PropertiesCollection
+        {
+            ["nAmE"] = "item",
+            ["RealDirectoryName"] = "directory",
+            ["Comment"] = "note",
+            ["Comments"] = "imported note",
+            ["FullName"] = "/item"
+        });
+        var list = new PropertiesList();
+        var tab = new TabItem { Content = list, DataContext = vm };
+        using var listBinding = list.Bind(PropertiesList.PropertiesDataProperty, new Binding(nameof(vm.InfoProperties)));
+        using var tabBinding = tab.Bind(TabItem.IsVisibleProperty, new Binding(nameof(vm.HasInfoTab)));
+        var window = new Window { Content = tab };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(tab.IsVisible);
+            Assert.Collection(list.PropertiesRows,
+                row => { Assert.Equal("Comments", row.Key); Assert.Equal("imported note", row.Value); },
+                row => { Assert.Equal("FullName", row.Key); Assert.Equal("/item", row.Value); });
+
+            tab.DataContext = new PropertiesDialogViewModel("key", "item", "icon", "note", new PropertiesCollection
+            {
+                ["Name"] = "item",
+                ["Comment"] = "note"
+            });
+            Dispatcher.UIThread.RunJobs();
+            Assert.Empty(list.PropertiesRows);
+            Assert.False(tab.IsVisible);
         }
         finally
         {

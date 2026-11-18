@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia.Input;
 using SkyCD.App.Converters;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -1013,6 +1015,62 @@ public class MainWindowViewModelTests
         Assert.Empty(request.Dialog.InfoProperties);
     }
 
+    [Theory]
+    [InlineData(CatalogDocumentType.File, false)]
+    [InlineData(CatalogDocumentType.Folder, false)]
+    [InlineData(CatalogDocumentType.NetworkFolder, false)]
+    [InlineData(CatalogDocumentType.Media, false)]
+    [InlineData(CatalogDocumentType.Folder, true)]
+    public void OpenPropertiesCommand_ShowsGeneralFieldsWithoutDuplicatingInfoRows(CatalogDocumentType type, bool tree)
+    {
+        var entry = new CatalogDocument
+        {
+            Id = tree ? "root" : "entry",
+            ParentId = tree ? null : "root",
+            Name = "Item",
+            Type = type,
+            Properties = new SkyCD.Documents.Collections.PropertiesCollection
+            {
+                ["nAmE"] = "Stored name",
+                ["RealDirectoryName"] = "Stored directory",
+                ["cOmMeNt"] = "Imported comment",
+                ["Comments"] = "Other comment",
+                ["FullName"] = "/item"
+            }
+        };
+        var root = new CatalogDocument { Id = "root", Name = "Root", Type = CatalogDocumentType.Folder };
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(tree ? [entry] : [root, entry]);
+        vm.SelectedTreeNode = vm.TreeNodes.Single(node => node.Key == "root");
+        vm.ActivePane = tree ? ActivePane.Tree : ActivePane.Browser;
+        if (!tree)
+        {
+            vm.SelectedBrowserItem = vm.BrowserItems.Single(item => item.Id == "entry");
+        }
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal("Item", request.Dialog.Name);
+        Assert.Equal("Imported comment", request.Dialog.Comments);
+        Assert.Equal(["Comments", "FullName"], request.Dialog.InfoProperties.Keys);
+        Assert.Equal("Stored name", request.Dialog.GetProperties()["Name"]);
+        Assert.Equal("Stored directory", request.Dialog.GetProperties()["RealDirectoryName"]);
+        request.Complete(false, "Canceled comment");
+        Assert.Equal("Imported comment", entry.Properties["Comment"]);
+
+        request = null;
+        vm.OpenPropertiesCommand.Execute(null);
+        Assert.NotNull(request);
+        Assert.Equal("Imported comment", request.Dialog.Comments);
+        request.Complete(true, request.Dialog.Comments);
+        Assert.Equal("Stored name", entry.Properties["Name"]);
+        Assert.Equal("Stored directory", entry.Properties["RealDirectoryName"]);
+        Assert.Equal("Imported comment", entry.Properties["Comment"]);
+        Assert.Equal("Other comment", entry.Properties["Comments"]);
+    }
+
     [Fact]
     public void OpenPropertiesCommand_TreeActive_UsesTreeNodeInsteadOfBrowserItem()
     {
@@ -1277,6 +1335,47 @@ public class MainWindowViewModelTests
             Assert.Equal(item.InputGesture, item.HotKey);
             Assert.IsType<KeyGesture>(gestureConverter.Convert(item.HotKey, typeof(KeyGesture), null, CultureInfo.InvariantCulture));
         });
+    }
+
+    [Fact]
+    public void FileMenu_OffersOnlyCatalogFileOperations()
+    {
+        var vm = CreateViewModel();
+        var localization = LocalizationService.Current;
+
+        ICommand?[] expectedCommands =
+        [
+            vm.NewCatalogCommand,
+            vm.OpenCatalogCommand,
+            vm.SaveCatalogCommand,
+            vm.SaveCatalogAsCommand,
+            vm.OpenPropertiesCommand,
+            vm.ExitApplicationCommand
+        ];
+        var commands = vm.FileMenuItems
+            .Where(item => item.Command is not null)
+            .Select(item => item.Command)
+            .ToArray();
+        Assert.Equal(expectedCommands, commands);
+
+        string[] expectedHeaders =
+        [
+            localization.Get(TextKeys.New),
+            localization.Get(TextKeys.Open),
+            localization.Get(TextKeys.Save),
+            localization.Get(TextKeys.SaveAs),
+            localization.Get(TextKeys.Properties),
+            localization.Get(TextKeys.Exit)
+        ];
+        var headers = vm.FileMenuItems
+            .Where(item => item.Header != "-")
+            .Select(item => item.Header)
+            .ToArray();
+        Assert.Equal(expectedHeaders, headers);
+
+        Assert.DoesNotContain(
+            AllMenuItems(vm),
+            item => item.HotKey == "Ctrl+Shift+O" || item.InputGesture == "Ctrl+Shift+O");
     }
 
     [Fact]
