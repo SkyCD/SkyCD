@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 using FluentFTP;
 
 namespace SkyCD.Presentation.Scanning;
@@ -121,28 +120,8 @@ public static class FtpRemoteListingMapper
             return null;
         }
 
-        // The octal mode is a number: it is formatted in octal, never through the culture of the
-        // machine (which would print "1100101" for 755 on some systems).
-        return SymbolicMode(Octal(item.Chmod));
-    }
-
-    /// <summary>Formats a permission mode as octal ("755") without consulting the machine culture.</summary>
-    internal static string Octal(int mode)
-    {
-        if (mode <= 0)
-        {
-            return "0";
-        }
-
-        var digits = new StringBuilder();
-        var value = mode;
-        while (value > 0)
-        {
-            digits.Insert(0, (char)('0' + (value & 7)));
-            value >>= 3;
-        }
-
-        return digits.ToString();
+        // FluentFTP stores octal digits as an integer (755 rather than 493).
+        return SymbolicMode(item.Chmod.ToString(CultureInfo.InvariantCulture));
     }
 
     /// <summary>Converts an octal mode (for example "755") to "rwxr-xr-x".</summary>

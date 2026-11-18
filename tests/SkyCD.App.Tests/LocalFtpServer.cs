@@ -144,6 +144,15 @@ internal sealed class LocalFtpServer : IDisposable
                         authenticated = Accepts(pendingUser, argument);
                         writer.WriteLine(authenticated ? "230 Logged in" : "530 Login incorrect");
                         break;
+                    case "PWD":
+                        writer.WriteLine("257 \"/\" is the current directory");
+                        break;
+                    case "MDTM":
+                        var timestampPath = ToLocal(argument);
+                        writer.WriteLine(File.Exists(timestampPath) || Directory.Exists(timestampPath)
+                            ? "213 " + File.GetLastWriteTimeUtc(timestampPath).ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture)
+                            : "550 Not found");
+                        break;
                     case "SYST":
                         writer.WriteLine("215 UNIX Type: L8");
                         break;
@@ -153,6 +162,7 @@ internal sealed class LocalFtpServer : IDisposable
                         writer.WriteLine(" EPSV");
                         writer.WriteLine(" PASV");
                         writer.WriteLine(" UTF8");
+                        writer.WriteLine(" MDTM");
                         writer.WriteLine("211 End");
                         break;
                     case "OPTS":
@@ -277,7 +287,7 @@ internal sealed class LocalFtpServer : IDisposable
     /// </summary>
     private bool ShouldDropConnection() =>
         dropConnectionAfterListings != int.MaxValue &&
-        Volatile.Read(ref listingsServed) >= dropConnectionAfterListings;
+        Volatile.Read(ref listingsServed) == dropConnectionAfterListings;
 
     private static TcpClient AcceptData(TcpListener passive)
     {

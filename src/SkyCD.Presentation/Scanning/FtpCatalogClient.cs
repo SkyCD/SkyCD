@@ -71,9 +71,9 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
             DataConnectionReadTimeout = TransferTimeoutSeconds * 1000,
             DataConnectionWriteTimeout = TransferTimeoutSeconds * 1000,
 
-            // The catalog scan owns the bounded retry and the reconnect (#433): the transport must
-            // never repeat a command behind its back, or a reconnect would not be observable.
-            RetryAttempts = 0,
+            // FluentFTP requires at least one attempt for upload/download verification.
+            // The catalog traversal owns its own bounded retry and reconnect policy (#433).
+            RetryAttempts = 1,
 
             // Listing times are normalized to UTC rather than the machine's time zone.
             TimeConversion = FtpDate.UTC,
@@ -93,7 +93,7 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
     /// it parsed without them. That costs one round trip per entry, but the catalog must keep the
     /// timestamps the server reports instead of a rounded-down one.
     /// </summary>
-    public static FtpListOption ListingOptions => FtpListOption.Auto | FtpListOption.SizeModify;
+    public static FtpListOption ListingOptions => FtpListOption.ForceList | FtpListOption.SizeModify;
 
     /// <summary>Maps a connect failure onto the SkyCD FTP exception semantics.</summary>
     internal static Exception TranslateConnectFailure(
@@ -103,7 +103,7 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (exception is FtpAuthenticationException)
+        if (exception is FluentFTP.Exceptions.FtpAuthenticationException)
         {
             return new FtpAuthenticationException(LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed));
         }
@@ -120,7 +120,7 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (exception is FtpAuthenticationException)
+        if (exception is FluentFTP.Exceptions.FtpAuthenticationException)
         {
             return new FtpAuthenticationException(LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed));
         }
@@ -240,6 +240,11 @@ internal sealed class FtpRemoteSession : IFtpRemoteSession
             }
 
             listing = client.GetListing(normalized, options);
+            // FluentFTP absorbs 550 replies as empty listings; the catalog must report them.
+            if (listing.Length == 0 && !client.LastReply.Success)
+            {
+                throw new FtpCommandException(client.LastReply);
+            }
         }
         catch (OperationCanceledException)
         {

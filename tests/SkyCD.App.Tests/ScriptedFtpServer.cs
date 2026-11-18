@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -210,6 +211,7 @@ internal sealed class ScriptedFtpServer : IDisposable
                             }
 
                             await writer.WriteLineAsync(" UTF8");
+                            await writer.WriteLineAsync(" MDTM");
                             await writer.WriteLineAsync("211 End");
                             break;
 
@@ -221,6 +223,14 @@ internal sealed class ScriptedFtpServer : IDisposable
 
                         case "SYST":
                             await writer.WriteLineAsync("215 UNIX Type: L8");
+                            break;
+
+                        case "MDTM":
+                            var itemPath = Normalize(argument);
+                            var stamp = Directories.Values.SelectMany(directory => directory.Files)
+                                .FirstOrDefault(file => itemPath.EndsWith("/" + file.Name, StringComparison.Ordinal))?.ModifiedUtc
+                                ?? Directories.GetValueOrDefault(itemPath)?.ModifiedUtc;
+                            await writer.WriteLineAsync(stamp is null ? "550 not found" : "213 " + stamp.Value.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture));
                             break;
 
                         case "PWD":
@@ -305,6 +315,10 @@ internal sealed class ScriptedFtpServer : IDisposable
 
         if (DropListings.Contains(path))
         {
+            if (path != "/")
+            {
+                DropListings.Remove(path);
+            }
             // Announce the transfer, then drop the control connection mid-listing.
             await writer.WriteLineAsync("150 opening data connection");
             await writer.FlushAsync();

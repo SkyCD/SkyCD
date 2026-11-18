@@ -104,7 +104,7 @@ public sealed class FtpCatalogTransportTests
         Assert.Equal(Stamp.ToString("O"), readme.Properties["FileDateTime"]);
 
         Assert.Contains(server.Commands, command => command.StartsWith("LIST", StringComparison.OrdinalIgnoreCase));
-        Assert.False(server.SawPasswordInCommand);
+        Assert.DoesNotContain(server.Commands, command => !command.StartsWith("PASS ", StringComparison.Ordinal) && command.Contains(server.Password, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -298,7 +298,8 @@ public sealed class FtpCatalogTransportTests
 
         var scanner = new FtpCatalogScanner(new FtpCatalogConnector());
         var options = Options(server.Port, traversal: new ScanTraversalOptions { MaxRetries = 50, RetryDelay = TimeSpan.FromMilliseconds(20) });
-        cancellation.CancelAfter(TimeSpan.FromMilliseconds(5));
+        server.DropListings.Add("/");
+        cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
 
         Assert.ThrowsAny<OperationCanceledException>(() =>
             scanner.ScanDetailed(options, cancellationToken: cancellation.Token));
@@ -323,12 +324,12 @@ public sealed class FtpCatalogTransportTests
     {
         var config = FtpCatalogConnector.CreateConfig();
 
-        Assert.Equal(0, config.RetryAttempts);
+        Assert.Equal(1, config.RetryAttempts);
         Assert.Equal(FluentFTP.FtpDate.UTC, config.TimeConversion);
         Assert.Equal(FluentFTP.FtpEncryptionMode.None, config.EncryptionMode);
         Assert.Equal(FluentFTP.FtpDataConnectionType.AutoPassive, config.DataConnectionType);
         Assert.Equal(FluentFTP.FtpParser.Auto, config.ListingParser);
-        Assert.Equal(FluentFTP.FtpListOption.ForceList, FtpCatalogConnector.ListingOptions);
+        Assert.Equal(FluentFTP.FtpListOption.ForceList | FluentFTP.FtpListOption.SizeModify, FtpCatalogConnector.ListingOptions);
         Assert.Equal(20_000, config.ReadTimeout);
         Assert.Equal(15_000, config.ConnectTimeout);
     }

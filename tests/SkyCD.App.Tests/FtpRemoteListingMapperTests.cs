@@ -78,7 +78,7 @@ public sealed class FtpRemoteListingMapperTests
     {
         var listing = new FtpListItem[]
         {
-            new FtpListItem { Name = "script.sh", Type = FtpObjectType.File, Size = 1, Modified = Stamp, Chmod = Convert.ToInt32("755", 8) },
+            new FtpListItem { Name = "script.sh", Type = FtpObjectType.File, Size = 1, Modified = Stamp, Chmod = 755 },
         };
 
         var entry = Assert.Single(FtpRemoteListingMapper.Map(listing, "/"));
