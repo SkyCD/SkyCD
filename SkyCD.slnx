@@ -59,6 +59,7 @@
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Native/SkyCD.Plugin.WinCatalog.Native.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.CdCatalogExpert/SkyCD.Plugin.CdCatalogExpert.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.DiskCatalogMaker/SkyCD.Plugin.DiskCatalogMaker.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Adc/SkyCD.Plugin.Adc.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -136,6 +137,7 @@
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Native.Tests/SkyCD.Plugin.WinCatalog.Native.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.CdCatalogExpert.Tests/SkyCD.Plugin.CdCatalogExpert.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskCatalogMaker.Tests/SkyCD.Plugin.DiskCatalogMaker.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Adc.Tests/SkyCD.Plugin.Adc.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/"/>
 </Solution>
