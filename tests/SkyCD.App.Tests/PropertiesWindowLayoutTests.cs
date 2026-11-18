@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Xml.Linq;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -25,15 +26,18 @@ public class PropertiesWindowLayoutTests
     }
 
     [Fact]
-    public void Dialog_IsResizableWithoutFixedMaximum()
+    public void Dialog_IsFixedSizeAndCenteredOnOwner()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
+        var window = XDocument.Parse(xaml).Root!;
 
-        Assert.Contains("CanResize=\"True\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("MaxWidth=\"411\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("MaxHeight=\"426\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinWidth=\"411\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinHeight=\"426\"", xaml, StringComparison.Ordinal);
+        Assert.Equal("411", (string?)window.Attribute("Width"));
+        Assert.Equal("426", (string?)window.Attribute("Height"));
+        Assert.Equal("False", (string?)window.Attribute("CanResize"));
+        Assert.Equal("False", (string?)window.Attribute("CanMinimize"));
+        Assert.Equal("CenterOwner", (string?)window.Attribute("WindowStartupLocation"));
+        Assert.Null(window.Attribute("MinWidth"));
+        Assert.Null(window.Attribute("MinHeight"));
     }
 
     [Fact]
@@ -44,11 +48,28 @@ public class PropertiesWindowLayoutTests
         Assert.Contains("<TabControl", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.General}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.Properties}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.Tags}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding Name}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("RtfText=\"{Binding Comments, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsDefault=\"True\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding ConfirmCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsCancel=\"True\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"OnCancelClicked\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Tags", "TagAssignments")]
+    [InlineData("CustomProperties", "CustomProperties")]
+    public void Dialog_DynamicTabContentsAreScrollable(string header, string binding)
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
+        XNamespace avalonia = "https://github.com/avaloniaui";
+        var tab = Assert.Single(XDocument.Parse(xaml).Descendants(avalonia + "TabItem"),
+            item => ((string?)item.Attribute("Header"))?.Contains("UiKeys." + header + "}}", StringComparison.Ordinal) == true);
+        var scrollViewer = Assert.Single(tab.Elements(avalonia + "ScrollViewer"));
+
+        Assert.Contains("{Binding " + binding + "}", scrollViewer.ToString(), StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] parts)
