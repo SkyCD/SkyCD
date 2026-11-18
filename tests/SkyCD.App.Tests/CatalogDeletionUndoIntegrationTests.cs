@@ -663,6 +663,56 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void Properties_HideGeneralFieldsAndPreserveStoredValuesAcrossRename()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+        var entry = context.Catalog.Get("interstellar")!;
+        entry.Properties["Name"] = "Original name";
+        entry.Properties["RealDirectoryName"] = "Original directory";
+        entry.Properties["Comment"] = "Original comment";
+        entry.Properties["Comments"] = "Imported comments";
+        entry.Properties["FullName"] = "/movies/interstellar.mkv";
+        context.Catalog.Save(entry.Id, entry);
+        using var viewModel = context.CreateViewModel();
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
+        viewModel.ActivePane = ActivePane.Browser;
+        viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == entry.Id);
+        PropertiesDialogRequestedEventArgs? request = null;
+        viewModel.PropertiesRequested += (_, args) => request = args;
+
+        viewModel.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal("Original comment", request.Dialog.Comments);
+        Assert.False(request.Dialog.InfoProperties.ContainsKey("Name"));
+        Assert.False(request.Dialog.InfoProperties.ContainsKey("RealDirectoryName"));
+        Assert.False(request.Dialog.InfoProperties.ContainsKey("Comment"));
+        Assert.Equal("Imported comments", request.Dialog.InfoProperties["Comments"]);
+        Assert.Equal("/movies/interstellar.mkv", request.Dialog.InfoProperties["FullName"]);
+        request.Dialog.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = "name", DefaultValue = "fallback" }]);
+        Assert.Equal("Original name", Assert.Single(request.Dialog.CustomProperties).DefaultValue);
+        request.Dialog.Name = "Renamed.mkv";
+        request.Complete(false, "Canceled comment");
+        Assert.Equal("Interstellar.mkv", context.Catalog.Get(entry.Id)!.Name);
+        Assert.Equal("Original comment", context.Catalog.Get(entry.Id)!.Properties["Comment"]);
+
+        request = null;
+        viewModel.OpenPropertiesCommand.Execute(null);
+        Assert.NotNull(request);
+        request.Dialog.Name = "Renamed.mkv";
+        request.Complete(true, request.Dialog.Comments);
+        using var reopened = new TestContext();
+        var saved = reopened.Catalog.Get(entry.Id)!;
+        Assert.Equal("Renamed.mkv", saved.Name);
+        Assert.Equal("Original name", saved.Properties["Name"]);
+        Assert.Equal("Original directory", saved.Properties["RealDirectoryName"]);
+        Assert.Equal("Original comment", saved.Properties["Comment"]);
+        Assert.Equal("Imported comments", saved.Properties["Comments"]);
+        Assert.Equal("/movies/interstellar.mkv", saved.Properties["FullName"]);
+    }
+
+    [Fact]
     public void CanceledProperties_LeaveStorageAndHistoryUntouched()
     {
         using var context = new TestContext();

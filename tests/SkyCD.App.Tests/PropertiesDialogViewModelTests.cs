@@ -53,6 +53,84 @@ public class PropertiesDialogViewModelTests
         Assert.False(vm.HasInfoTab);
     }
 
+    [Theory]
+    [InlineData("Name")]
+    [InlineData("name")]
+    [InlineData("NaMe")]
+    [InlineData("RealDirectoryName")]
+    [InlineData("realdirectoryname")]
+    [InlineData("rEaLdIrEcToRyNaMe")]
+    [InlineData("Comment")]
+    [InlineData("cOmMeNt")]
+    public void Constructor_HidesGeneralTabPropertiesWithoutChangingStoredValues(string key)
+    {
+        var source = new PropertiesCollection { [key] = "original" };
+        var vm = new PropertiesDialogViewModel("key", "display name", "icon", "original", source);
+
+        Assert.Empty(vm.InfoProperties);
+        Assert.False(vm.HasInfoTab);
+        Assert.Equal("original", vm.GetProperties()[key]);
+        Assert.Equal("original", source[key]);
+    }
+
+    [Fact]
+    public void Constructor_RetainsOtherPropertiesAndTheirFormatting()
+    {
+        var source = new PropertiesCollection
+        {
+            ["Name"] = "item",
+            ["RealDirectoryName"] = "directory",
+            ["Comment"] = "general comment",
+            ["Comments"] = "imported comments",
+            ["FullName"] = @"C:\item",
+            ["Size"] = 1024,
+            ["Created"] = "2016-06-05T16:49:14",
+            ["Attributes"] = "ReadOnly"
+        };
+        var culture = CultureInfo.GetCultureInfo("en-US");
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = culture;
+            var vm = new PropertiesDialogViewModel("key", "item", "icon", "general comment", source);
+
+            Assert.True(vm.HasInfoTab);
+            Assert.Equal(["Attributes", "Comments", "Created", "FullName", "Size"], vm.InfoProperties.Keys);
+            Assert.Equal("ReadOnly", vm.InfoProperties["Attributes"]);
+            Assert.Equal("imported comments", vm.InfoProperties["Comments"]);
+            Assert.Equal(new DateTime(2016, 6, 5, 16, 49, 14).ToString("G", culture), vm.InfoProperties["Created"]);
+            Assert.Equal(@"C:\item", vm.InfoProperties["FullName"]);
+            Assert.Equal("1024", vm.InfoProperties["Size"]);
+            Assert.Equal("item", vm.GetProperties()["Name"]);
+            Assert.Equal("directory", vm.GetProperties()["RealDirectoryName"]);
+            Assert.Equal("general comment", vm.GetProperties()["Comment"]);
+            Assert.Equal(1024, vm.GetProperties()["Size"]);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
+    [Theory]
+    [InlineData("Name", "nAmE")]
+    [InlineData("RealDirectoryName", "realdirectoryname")]
+    [InlineData("Comment", "comment")]
+    public void CustomPropertyDefaults_UseHiddenRawValuesAndPreserveEditSemantics(string storedKey, string configuredKey)
+    {
+        var source = new PropertiesCollection { [storedKey] = "original" };
+        var vm = new PropertiesDialogViewModel("key", "display name", "icon", "original", source);
+        vm.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = configuredKey, DefaultValue = "fallback" }]);
+
+        var custom = Assert.Single(vm.CustomProperties);
+        Assert.Equal(storedKey, custom.Name);
+        Assert.Equal("original", custom.DefaultValue);
+        Assert.Equal("original", vm.GetProperties()[storedKey]);
+        custom.DefaultValue = "edited";
+        Assert.Equal("edited", vm.GetProperties()[storedKey]);
+        Assert.Equal("original", source[storedKey]);
+    }
+
     [Fact]
     public void Comments_CanBeModified()
     {

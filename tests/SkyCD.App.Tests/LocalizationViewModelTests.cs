@@ -57,8 +57,8 @@ public sealed class LocalizationViewModelTests : IDisposable
         var english = CultureInfo.GetCultureInfo("en-US");
         var lithuanian = CultureInfo.GetCultureInfo("lt-LT");
         LocalizationService.Current.SetCulture(english);
-        var source = new PropertiesCollection { ["Created"] = timestamp };
-        var vm = new PropertiesDialogViewModel("key", "Name", "file", "", source);
+        var source = new PropertiesCollection { ["Created"] = timestamp, ["nAmE"] = "Name", ["comment"] = "Note" };
+        var vm = new PropertiesDialogViewModel("key", "Name", "file", "Note", source);
         var notifications = new List<string?>();
         vm.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
         Assert.Equal(date.ToString("G", english), vm.InfoProperties["Created"]);
@@ -66,7 +66,11 @@ public sealed class LocalizationViewModelTests : IDisposable
         LocalizationService.Current.SetCulture(lithuanian);
 
         Assert.Equal(date.ToString("G", lithuanian), vm.InfoProperties["Created"]);
+        Assert.False(vm.InfoProperties.ContainsKey("Name"));
+        Assert.False(vm.InfoProperties.ContainsKey("Comment"));
         Assert.Contains(nameof(PropertiesDialogViewModel.InfoProperties), notifications);
+        Assert.Equal("Name", vm.GetProperties()["Name"]);
+        Assert.Equal("Note", vm.GetProperties()["Comment"]);
         Assert.Equal(timestamp, vm.GetProperties()["Created"]);
         Assert.Equal(timestamp, source["Created"]);
     }
