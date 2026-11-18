@@ -157,7 +157,6 @@ public partial class MainWindow : Window
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
             subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
-            subscribedViewModel.IsScanHashingEnabled = appOptions.IsScanHashingEnabled;
             UpdateWindowTitle();
         }
     }
@@ -174,13 +173,6 @@ public partial class MainWindow : Window
         {
             var options = LoadAppOptions();
             options.IsBackgroundMediaSyncEnabled = viewModel.IsBackgroundMediaSyncEnabled;
-            SaveAppOptions(options);
-        }
-        if (e.PropertyName == nameof(MainWindowViewModel.IsScanHashingEnabled)
-            && sender is MainWindowViewModel hashingViewModel)
-        {
-            var options = LoadAppOptions();
-            options.IsScanHashingEnabled = hashingViewModel.IsScanHashingEnabled;
             SaveAppOptions(options);
         }
         if (e.PropertyName is nameof(MainWindowViewModel.IsDirtyDocument) or nameof(MainWindowViewModel.CurrentCatalogPath))

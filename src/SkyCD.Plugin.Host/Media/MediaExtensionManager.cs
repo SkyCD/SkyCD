@@ -31,6 +31,9 @@ public sealed class MediaExtensionManager
         slots = new SemaphoreSlim(this.limits.Concurrency);
     }
 
+    public bool HasOptInMetadataProviders => providers.Any(provider =>
+        provider.Capability is IMediaMetadataCapability metadata && metadata.Descriptor.IsOptIn);
+
     /// <summary>The factory must return a new readable stream; the host owns and disposes it.</summary>
     /// <summary>
     /// Runs matching providers. A per-call <paramref name="limits"/> override exists for explicit operations
@@ -86,7 +89,8 @@ public sealed class MediaExtensionManager
     /// order <see cref="ProcessAsync"/> uses. Lets a host decide whether cached results are still current
     /// without executing any plugin.
     /// </summary>
-    public IReadOnlyList<MediaProviderIdentity> ResolveProviders(MediaItem item)
+    public IReadOnlyList<MediaProviderIdentity> ResolveProviders(MediaItem item,
+        MediaProviderSelection selection = MediaProviderSelection.All)
     {
         ArgumentNullException.ThrowIfNull(item);
 
@@ -94,7 +98,7 @@ public sealed class MediaExtensionManager
         foreach (var provider in OrderedProviders())
         {
             var descriptor = ResolveDescriptor(provider.Capability);
-            if (descriptor is null || !Matches(descriptor, item))
+            if (descriptor is null || !IsSelected(provider, item, selection))
             {
                 continue;
             }

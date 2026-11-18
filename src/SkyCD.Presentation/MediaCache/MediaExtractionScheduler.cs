@@ -60,15 +60,16 @@ public sealed class MediaExtractionScheduler
 
         var now = timeProvider.GetUtcNow();
         var existing = store.GetRecordsForEntry(request.EntryId);
-        var identities = manager.ResolveProviders(request.Item);
-        var identityKeys = identities.Select(IdentityKey).ToHashSet(StringComparer.Ordinal);
+        var allIdentities = manager.ResolveProviders(request.Item);
+        var identities = manager.ResolveProviders(request.Item, request.ProviderSelection);
+        var identityKeys = allIdentities.Select(IdentityKey).ToHashSet(StringComparer.Ordinal);
 
         var ownsBatch = request.BatchId is null;
         var batchId = request.BatchId ?? store.BeginBatch().BatchId;
 
         try
         {
-            if (identities.Count == 0)
+            if (allIdentities.Count == 0)
             {
                 var marker = PlanUnsupportedMarker(request, existing, now);
                 return StageAndPublish(request, batchId, ownsBatch, existing, identityKeys, now,

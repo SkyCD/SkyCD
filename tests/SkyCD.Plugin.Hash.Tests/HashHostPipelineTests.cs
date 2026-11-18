@@ -8,6 +8,10 @@ using SkyCD.Documents;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.Presentation.Scanning;
+using SkyCD.Presentation.Staging;
+using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
 
@@ -128,9 +132,160 @@ public sealed class HashHostPipelineTests : IDisposable
         Assert.Equal("ok", Assert.Single(resolver.Resolve(entry).Fields).Value);
 
         capability.Fail = true;
-        var refreshFailure = await service.ComputeAsync(entry, [entry]);
-        Assert.False(refreshFailure.Stored);
+        Assert.True((await service.ComputeAsync(entry, [entry])).Stored);
+        var refresh = MediaExtractionRequest.ForCatalogEntry(entry, token => OpenReadAsync(path, token), [entry],
+            forceRefresh: true, providerSelection: MediaProviderSelection.OptInOnly);
+        var refreshFailure = await new MediaExtractionScheduler(CreateManager(capability), store).ProcessAsync(refresh);
+        Assert.True(refreshFailure.SourceUnavailable);
         Assert.Equal("ok", Assert.Single(resolver.Resolve(entry).Fields).Value);
+    }
+
+    [Fact]
+    public async Task PublishedScans_QueueHashingWithoutBlocking_AndStoreAllHashValues()
+    {
+        WriteFile("first.bin", 4096);
+        var scanned = new FolderCatalogScanner().Scan(new FolderScanOptions(directory));
+        var first = Assert.Single(scanned, entry => entry.Type == SkyCD.Documents.Enum.CatalogDocumentType.File);
+        var second = CreateEntry(WriteFile("second.bin", 2048));
+        var capability = new CountingHashCapability(block: true);
+        using var store = MediaCacheStore.Create();
+        using var viewModel = MainWindowViewModel.CreateForInMemoryCatalog([], mediaCacheStore: store);
+        viewModel.RefreshMediaServices(CreateManager(capability));
+        using var staging = new InMemoryScanStagingStore();
+        var session = staging.CreateSession();
+        staging.StageDocuments(session.SessionId, scanned);
+        var finished = WaitForCompletions(viewModel, 2);
+
+        var result = viewModel.PublishStagedScan(staging, session.SessionId);
+        await capability.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.NotNull(result);
+        Assert.True(viewModel.IsProgressVisible);
+        Assert.Empty(store.GetRecordsForEntry(first.Id));
+        viewModel.AddImportedDocuments([second]);
+        capability.Release();
+        await finished.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(2, capability.Calls);
+        foreach (var entry in new[] { first, second })
+        {
+            var record = Assert.Single(store.GetRecordsForEntry(entry.Id));
+            Assert.Equal(MediaCacheRecordState.Captured, record.State);
+            Assert.Equal(new[] { "ed2k", "sha256", "tth" },
+                record.Metadata.Select(value => value.Key).OrderBy(key => key, StringComparer.Ordinal));
+            Assert.All(record.Metadata, value => Assert.False(string.IsNullOrWhiteSpace(value.Text)));
+        }
+        Assert.False(viewModel.IsProgressVisible);
+    }
+
+    [Fact]
+    public void NoOptInProvider_ProducesNoHashingStatusOrMenuItems()
+    {
+        var first = CreateEntry(WriteFile("unavailable.bin", 128));
+        var second = CreateEntry(WriteFile("disabled.bin", 128));
+        var capability = new CountingHashCapability();
+        using var store = MediaCacheStore.Create();
+        using var viewModel = MainWindowViewModel.CreateForInMemoryCatalog([], mediaCacheStore: store);
+        var statuses = new List<string>();
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MainWindowViewModel.StatusText)) statuses.Add(viewModel.StatusText);
+        };
+        viewModel.RefreshMediaServices(new MediaExtensionManager([new MediaProvider("standard", "1", new StandardCapability())]));
+
+        viewModel.AddImportedDocuments([first]);
+        viewModel.RefreshMediaServices(CreateManager(capability));
+        viewModel.RefreshMediaServices(new MediaExtensionManager([]));
+        viewModel.AddImportedDocuments([second]);
+
+        Assert.False(viewModel.IsProgressVisible);
+        Assert.Equal(0, capability.Calls);
+        Assert.Empty(store.GetAllRecords());
+        Assert.DoesNotContain(statuses, status => status.Contains("hash", StringComparison.OrdinalIgnoreCase));
+        foreach (var item in viewModel.ToolsMenuItems.Concat(viewModel.BrowserContextMenuItems))
+        {
+            Assert.NotEqual("compute_hashes", item.Key);
+            Assert.DoesNotContain("hash", item.Header ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public async Task CachedHashes_AreReusedWithOtherProviders_WithoutRereading()
+    {
+        var path = WriteFile("cached.bin", 4096);
+        var entry = CreateEntry(path);
+        var hash = new CountingHashCapability();
+        var standard = new StandardCapability();
+        var manager = new MediaExtensionManager([
+            new MediaProvider("skycd.hash", "1", hash),
+            new MediaProvider("standard", "1", standard)]);
+        using var store = MediaCacheStore.Create();
+        var scheduler = new MediaExtractionScheduler(manager, store);
+        var request = MediaExtractionRequest.ForCatalogEntry(entry, token => OpenReadAsync(path, token), [entry]);
+
+        await scheduler.ProcessAsync(request);
+        var service = new MediaHashService(manager, store);
+        Assert.True(service.CanHash);
+        Assert.True((await service.ComputeAsync(entry, [entry])).Stored);
+        Assert.True((await service.ComputeAsync(entry, [entry])).Stored);
+        Assert.True((await scheduler.ProcessAsync(request)).Reused);
+
+        Assert.Equal(1, hash.Calls);
+        Assert.Equal(1, standard.Calls);
+        Assert.Equal(2, store.GetRecordsForEntry(entry.Id).Count);
+        Assert.All(store.GetRecordsForEntry(entry.Id), record => Assert.Equal(MediaCacheRecordState.Captured, record.State));
+    }
+
+    private static Task WaitForCompletions(MainWindowViewModel viewModel, int expected)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var count = 0;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MainWindowViewModel.StatusText) &&
+                viewModel.StatusText == LocalizationService.Current.Format(TextKeys.HashComputeCompleted, 1, 1, 0) &&
+                ++count == expected)
+            {
+                completion.TrySetResult();
+            }
+        };
+        return completion.Task;
+    }
+
+    private sealed class CountingHashCapability(bool block = false) : IMediaMetadataCapability
+    {
+        private readonly HashMetadataPlugin inner = new();
+        private readonly TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int calls;
+
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls => Volatile.Read(ref calls);
+        public MediaDescriptor Descriptor => inner.Descriptor;
+        public void Release() => gate.TrySetResult();
+
+        public async Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
+            IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            Started.TrySetResult();
+            if (block) await gate.Task.WaitAsync(cancellationToken);
+            return await inner.ExtractAsync(item, source, progress, cancellationToken);
+        }
+    }
+
+    private sealed class StandardCapability : IMediaMetadataCapability
+    {
+        public int Calls { get; private set; }
+        public MediaDescriptor Descriptor { get; } = new(["*"], ["*"],
+            new MediaMetadataSchema("skycd.test.standard", 1,
+                [new MediaMetadataField("standard", MediaMetadataType.Text)]), Priority: 0);
+
+        public Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
+            IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(new MediaExtractionResult(
+                [new MediaMetadataValue("standard", MediaMetadataType.Text, Text: "ok")]));
+        }
     }
 
     private MediaExtensionManager CreateManager(IMediaMetadataCapability capability) =>

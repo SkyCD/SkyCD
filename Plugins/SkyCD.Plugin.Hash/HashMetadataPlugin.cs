@@ -6,11 +6,6 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.Plugin.Hash;
 
-/// <summary>
-/// Computes interoperable P2P file identifiers for any source. The provider is opt-in: the host runs it
-/// only for an explicit compute request, so opening a preview or scanning never starts a full-file read
-/// unless the user asked for it.
-/// </summary>
 public sealed class HashMetadataPlugin : IMediaMetadataCapability
 {
     public MediaDescriptor Descriptor => new(

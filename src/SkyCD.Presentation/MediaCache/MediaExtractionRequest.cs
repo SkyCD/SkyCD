@@ -33,8 +33,8 @@ public sealed class MediaExtractionRequest
     public bool ForceRefresh { get; init; }
 
     /// <summary>
-    /// Which matching providers this pass may execute. The default keeps opt-in providers, such as
-    /// whole-file hashing, out of implicit extraction; an explicit compute request selects them instead.
+    /// Which matching providers this pass may execute. The default keeps whole-file hashing out of
+    /// implicit extraction; scan publication selects opt-in providers separately.
     /// </summary>
     public SkyCD.Plugin.Host.Media.MediaProviderSelection ProviderSelection { get; init; } =
         SkyCD.Plugin.Host.Media.MediaProviderSelection.Standard;

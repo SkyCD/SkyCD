@@ -11,11 +11,6 @@ using SkyCD.Plugin.Host.Media;
 
 namespace SkyCD.Presentation.MediaCache;
 
-/// <summary>
-/// Explicitly computes whole-file hashes for catalogued files. Hashing is opt-in by design: it opens the
-/// original only when the user asks for it (or enabled hashing during scans) and never as a side effect of
-/// selecting an entry.
-/// </summary>
 public sealed class MediaHashService
 {
     /// <summary>Catalog property holding the absolute path recorded by the scanner.</summary>
@@ -33,7 +28,10 @@ public sealed class MediaHashService
 
         this.timeProvider = timeProvider ?? TimeProvider.System;
         scheduler = new MediaExtractionScheduler(manager, store, this.timeProvider);
+        CanHash = manager.HasOptInMetadataProviders;
     }
+
+    public bool CanHash { get; }
 
     /// <summary>
     /// Hashes one file and stores the result. A missing, changed or unreadable source leaves previously
@@ -80,7 +78,6 @@ public sealed class MediaHashService
             entry,
             token => OpenReadAsync(path, token),
             catalog,
-            forceRefresh: true,
             providerSelection: MediaProviderSelection.OptInOnly);
 
         var limits = new MediaExecutionLimits(
@@ -148,7 +145,7 @@ public enum MediaHashSkipReason
     Failed
 }
 
-/// <summary>Result of one explicit hash request.</summary>
+/// <summary>Result of one hash request.</summary>
 public sealed record MediaHashOutcome(string EntryId, bool Stored, MediaHashSkipReason SkipReason, string? FailureReason)
 {
     public static MediaHashOutcome Skipped(string entryId, MediaHashSkipReason reason) =>

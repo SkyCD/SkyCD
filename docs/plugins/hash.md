@@ -15,16 +15,15 @@ Tests: `tests/SkyCD.Plugin.Hash.Tests/`.
 The provider claims every source through the `*` extension and MIME wildcard and is marked `IsOptIn`.
 Discovery uses assembly metadata and implemented capability types only — there is no `plugin.json`.
 
-### Why hashing is opt-in
+### Automatic scan extraction
 
-Hashing reads the whole file. The host therefore never executes this provider during an implicit scan
-or when a preview is opened; those passes use `MediaProviderSelection.Standard`, which skips opt-in
-providers. Hashing runs only when the user explicitly asks for it:
+When the plugin is enabled and loaded (the default), the host hashes published scan files in the
+background and reports progress in the status bar. Local scans record each file's source path and last
+write time even without extended information. Current captures are reused on unchanged rescans; failures
+do not affect publication. When the plugin is disabled or unavailable, scans do not hash files.
 
-- **Browser context menu / Tools → Compute file hashes** hashes the selected catalogued files and
-  refreshes their stored values.
-- **Tools → Extract file hashes during scans** (persisted in application options, default off) runs the
-  same computation for files a completed scan published.
+Hashing reads the whole file, so the provider stays opt-in: previews and other implicit extraction use
+`MediaProviderSelection.Standard` and never trigger hashing. Only the scan-publication pass selects it.
 
 Nothing in the plugin opens a peer-to-peer connection, resolves a magnet link, or publishes metadata to
 any network.

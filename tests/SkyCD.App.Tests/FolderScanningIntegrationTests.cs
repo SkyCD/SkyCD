@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Couchbase.Lite;
 using DryIoc;
 using SkyCD.Couchbase;
@@ -9,7 +11,11 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Scanning;
+using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Host.Media;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -54,6 +60,77 @@ public sealed class FolderScanningIntegrationTests : IDisposable
             }
         }
         catch { }
+    }
+
+    [Fact]
+    public async Task DefaultFolderScan_AndRescan_HashPublishedIdsAndReuseCapturedData()
+    {
+        File.WriteAllText(Path.Combine(scanTestDirectory, "hash.txt"), "hashable content");
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var catalog = (CatalogDocumentRepository)repositories.For<CatalogDocument>();
+        foreach (var entry in catalog.CreateDefaultEntries()) catalog.Save(entry.Id, entry);
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+        var options = optionsRepository.GetOrCreateAppOptions();
+        options.AppStartCount = 10;
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+        using var viewModel = new MainWindowViewModel(repositories);
+        var capability = new CountingMetadataCapability();
+        viewModel.RefreshMediaServices(new MediaExtensionManager([new MediaProvider("hash", "1", capability)]));
+        var scanner = new FolderCatalogScanner();
+        var scanOptions = new FolderScanOptions(scanTestDirectory, TargetParentId: "library");
+        var firstScan = scanner.Scan(scanOptions);
+        var firstFile = Assert.Single(firstScan, entry => entry.Type == CatalogDocumentType.File);
+        var firstCompleted = WaitForHashCompletion(viewModel);
+
+        viewModel.AddImportedDocuments(firstScan);
+        await firstCompleted.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(1, capability.Calls);
+        Assert.Equal(MediaCacheRecordState.Captured, Assert.Single(viewModel.MediaCache.GetRecordsForEntry(firstFile.Id)).State);
+
+        var secondScan = scanner.Scan(scanOptions);
+        var secondFile = Assert.Single(secondScan, entry => entry.Type == CatalogDocumentType.File);
+        Assert.NotEqual(firstFile.Id, secondFile.Id);
+        var secondCompleted = WaitForHashCompletion(viewModel);
+        viewModel.AddImportedDocuments(secondScan);
+        await secondCompleted.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(1, capability.Calls);
+        Assert.Equal(MediaCacheRecordState.Captured, Assert.Single(viewModel.MediaCache.GetRecordsForEntry(firstFile.Id)).State);
+        Assert.Empty(viewModel.MediaCache.GetRecordsForEntry(secondFile.Id));
+        Assert.NotNull(catalog.Get(firstFile.Id));
+    }
+
+    private static Task WaitForHashCompletion(MainWindowViewModel viewModel)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MainWindowViewModel.StatusText) &&
+                viewModel.StatusText == LocalizationService.Current.Format(TextKeys.HashComputeCompleted, 1, 1, 0))
+            {
+                completion.TrySetResult();
+            }
+        };
+        return completion.Task;
+    }
+
+    private sealed class CountingMetadataCapability : IMediaMetadataCapability
+    {
+        private int calls;
+        public int Calls => Volatile.Read(ref calls);
+        public MediaDescriptor Descriptor { get; } = new(["*"], ["*"],
+            new MediaMetadataSchema("test.hash", 1, [new MediaMetadataField("hash", MediaMetadataType.Text)]),
+            Priority: 0, IsOptIn: true);
+
+        public async Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
+            IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            await source.ReadAsync(0, (int)Math.Min(item.Length, 1), cancellationToken);
+            return new MediaExtractionResult([new MediaMetadataValue("hash", MediaMetadataType.Text, Text: "captured")]);
+        }
     }
 
     [Fact]

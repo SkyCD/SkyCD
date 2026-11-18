@@ -6,7 +6,7 @@ public enum MediaProviderSelection
     /// <summary>Only providers that run as part of normal preview and metadata extraction.</summary>
     Standard,
 
-    /// <summary>Only providers that must be requested explicitly, such as whole-file hashing.</summary>
+    /// <summary>Only opt-in providers, such as whole-file hashing during scan publication.</summary>
     OptInOnly,
 
     /// <summary>Every matching provider.</summary>

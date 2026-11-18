@@ -54,13 +54,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             backgroundMediaSync = new BackgroundMediaSyncService(catalogRepository,
                 (documents, token) =>
                 {
-                    new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
+                    var result = new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
                         new ScanPublishOptions { CancellationToken = token }, undoManager?.History);
                     IsDirtyDocument = true;
                     UpdateUndoRedoState();
                     RefreshTreeNodes();
                     RefreshBrowserItemsForSelection();
-                    QueueScanHashing(documents);
+                    QueueScanHashing(result.PublishedDocuments);
                 }, () => !isDisposed && !IsProgressVisible);
             backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
             backgroundMediaSync.Start();
@@ -141,70 +141,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaHashService? mediaHashService;
     private CancellationTokenSource? hashCancellation;
+    private readonly Queue<IReadOnlyList<CatalogDocument>> pendingScanHashing = new();
+    private bool isProcessingScanHashing;
 
-    [ObservableProperty]
-    private bool isScanHashingEnabled;
-
-    partial void OnIsScanHashingEnabledChanged(bool value)
-    {
-        RebuildMenuItems();
-        RefreshTopMenuState();
-    }
-
-    [RelayCommand]
-    private void ToggleScanHashing() => IsScanHashingEnabled = !IsScanHashingEnabled;
-
-    /// <summary>
-    /// Supplies the media providers used for explicit hashing. Called again after plugins are reloaded so
-    /// hashing follows the current provider set.
-    /// </summary>
     public void RefreshMediaServices(MediaExtensionManager updatedManager)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaHashService = new MediaHashService(updatedManager, mediaCacheStore);
-        ComputeHashesCommand.NotifyCanExecuteChanged();
-        RefreshTopMenuState();
+        if (!mediaHashService.CanHash)
+        {
+            pendingScanHashing.Clear();
+            hashCancellation?.Cancel();
+        }
     }
 
-    private bool CanComputeHashes() =>
-        mediaHashService is not null && GetSelectedBrowserItems().Any(IsHashableFile);
-
-    /// <summary>
-    /// Hashes the selected files. Re-running it refreshes stored digests, and running it again while a pass
-    /// is active cancels that pass instead of queuing a second one.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(CanComputeHashes))]
-    private async Task ComputeHashesAsync()
+    private async Task RunHashComputationAsync(MediaHashService service, IReadOnlyList<CatalogDocument> targets)
     {
-        if (mediaHashService is null)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeUnavailable);
-            return;
-        }
-
-        if (hashCancellation is not null)
-        {
-            hashCancellation.Cancel();
-            return;
-        }
-
-        var targets = GetSelectedBrowserItems().Where(IsHashableFile).ToArray();
-        if (targets.Length == 0)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeNoTargets);
-            return;
-        }
-
-        await RunHashComputationAsync(targets);
-    }
-
-    private async Task RunHashComputationAsync(IReadOnlyList<CatalogDocument> targets)
-    {
-        if (mediaHashService is null || targets.Count == 0 || hashCancellation is not null)
-        {
-            return;
-        }
-
         var catalog = catalogRepository?.GetAll()
             ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
 
@@ -218,6 +170,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ProgressValue = 0;
             for (var index = 0; index < targets.Count; index++)
             {
+                await Task.Yield();
                 cancellation.Token.ThrowIfCancellationRequested();
                 var entry = targets[index];
                 var current = index;
@@ -227,7 +180,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     ProgressValue = Math.Clamp((int)Math.Round(
                         ((current + mediaProgress.Fraction) / targets.Count) * 100), 0, 100));
 
-                var outcome = await mediaHashService.ComputeAsync(entry, catalog, progress, cancellation.Token);
+                var outcome = await service.ComputeAsync(entry, catalog, progress, cancellation.Token);
                 if (outcome.Stored)
                 {
                     stored++;
@@ -240,7 +193,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException)
         {
-            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeCancelled);
+            if (!isDisposed && mediaHashService?.CanHash == true)
+            {
+                StatusText = LocalizationService.Current.Get(TextKeys.HashComputeCancelled);
+            }
             return;
         }
         finally
@@ -299,13 +255,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         AiDescriptionBatchRequested?.Invoke(this, new AiDescriptionBatchDialogRequestedEventArgs { Dialog = dialog });
     }
 
-    /// <summary>
-    /// Starts opt-in hashing for freshly scanned files. Hashing reads whole files, so it only runs after a
-    /// scan when the user enabled it; failures never abort the scan.
-    /// </summary>
     private void QueueScanHashing(IReadOnlyList<CatalogDocument> documents)
     {
-        if (!IsScanHashingEnabled || mediaHashService is null || documents.Count == 0)
+        if (isDisposed || mediaHashService?.CanHash != true)
         {
             return;
         }
@@ -316,18 +268,38 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _ = RunScanHashingAsync(files);
+        pendingScanHashing.Enqueue(files);
+        if (!isProcessingScanHashing)
+        {
+            isProcessingScanHashing = true;
+            _ = RunScanHashingAsync();
+        }
     }
 
-    private async Task RunScanHashingAsync(IReadOnlyList<CatalogDocument> files)
+    private async Task RunScanHashingAsync()
     {
         try
         {
-            await RunHashComputationAsync(files);
+            await Task.Yield();
+            while (!isDisposed && mediaHashService is { CanHash: true } service &&
+                   pendingScanHashing.TryDequeue(out var files))
+            {
+                try
+                {
+                    await RunHashComputationAsync(service, files);
+                }
+                catch (Exception exception)
+                {
+                    if (!isDisposed && mediaHashService?.CanHash == true)
+                    {
+                        StatusText = LocalizationService.Current.Format(TextKeys.HashComputeFailed, exception.Message);
+                    }
+                }
+            }
         }
-        catch (Exception exception)
+        finally
         {
-            StatusText = LocalizationService.Current.Format(TextKeys.HashComputeFailed, exception.Message);
+            isProcessingScanHashing = false;
         }
     }
 
@@ -580,6 +552,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (isDisposed) return;
         isDisposed = true;
         pluginCommandCancellation?.Cancel();
+        pendingScanHashing.Clear();
         hashCancellation?.Cancel();
         backgroundMediaSync?.Dispose();
         localizationSubscription.Dispose();
@@ -1476,10 +1449,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var publishedDocuments = documents;
         if (catalogRepository is not null)
         {
             var publisher = new CatalogScanPublisher();
-            publisher.PublishDirect(documents, catalogRepository, new ScanPublishOptions { CancellationToken = cancellationToken }, undoManager?.History);
+            publishedDocuments = publisher.PublishDirect(documents, catalogRepository,
+                new ScanPublishOptions { CancellationToken = cancellationToken }, undoManager?.History).PublishedDocuments;
         }
         else if (inMemoryCatalogEntries is not null)
         {
@@ -1509,7 +1484,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             item.Name.Equals(rootImported.Name, StringComparison.OrdinalIgnoreCase));
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Added, rootImported.Name);
-        QueueScanHashing(documents);
+        QueueScanHashing(publishedDocuments);
     }
 
     public void AddImportedItem(string? suggestedName)
@@ -2733,7 +2708,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPropertiesEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ComputeHashesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
@@ -2809,7 +2783,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ComputeHashesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
@@ -2849,7 +2822,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ComputeHashesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
@@ -3082,19 +3054,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             },
             new MainMenuItemViewModel
             {
-                Header = LocalizationService.Current.Get(TextKeys.ComputeHashesOnScan),
-                Command = ToggleScanHashingCommand,
-                ToggleType = MenuItemToggleType.CheckBox,
-                IsChecked = IsScanHashingEnabled
-            },
-            new MainMenuItemViewModel
-            {
-                Key = "compute_hashes",
-                Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
-                Command = ComputeHashesCommand
-            },
-            new MainMenuItemViewModel
-            {
                 Key = "ai_description_batch",
                 Header = LocalizationService.Current.Get(TextKeys.GenerateAiDescriptions),
                 Command = GenerateAiDescriptionsCommand
@@ -3257,7 +3216,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
         SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
-        SetMenuEnabled(byKey, "compute_hashes", CanComputeHashes());
         SetMenuEnabled(byKey, "ai_description_batch", CanGenerateDescriptions());
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
@@ -3389,13 +3347,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Key = "compute_hashes",
-                Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
-                Command = ComputeHashesCommand
-            },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];

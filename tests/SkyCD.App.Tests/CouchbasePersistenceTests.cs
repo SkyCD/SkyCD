@@ -504,6 +504,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         doc.SetString("Language", "English");
         doc.SetInt("OptionsTabIndex", 1);
         doc.SetInt("AppStartCount", 5);
+        doc.SetBoolean("IsScanHashingEnabled", true);
 
         var result = doc.FromDocument<AppOptionsDocument>();
 
@@ -513,6 +514,8 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.Equal(8787, result.McpPort);
         Assert.False(result.IsMcpStatusIconVisible);
         Assert.Equal(5, result.AppStartCount);
+        using var saved = result.ToMutableDocument("app-options");
+        Assert.Null(saved.GetValue("IsScanHashingEnabled"));
     }
 
     [Fact]
