@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -379,24 +380,31 @@ public sealed class OAuthTests
     [Fact]
     public async Task RealLoopbackBrowser_CompletesLoginAndClosesListener()
     {
-        using var callbackHttp = new HttpClient();
-        Task<HttpResponseMessage>? callback = null;
         Uri? redirect = null;
+        Task<(string StatusLine, string Body)>? callback = null;
         var browser = new SystemOAuthBrowser(authorization =>
         {
             var query = Query(authorization);
             redirect = new Uri(query["redirect_uri"]);
-            callback = callbackHttp.GetAsync(redirect + "?code=browser-code&state=" + query["state"]);
+            var target = new Uri(redirect + "?code=browser-code&state=" + query["state"]);
+            // A dedicated thread delivers the redirect even when other test assemblies saturate the
+            // thread pool, which would otherwise delay the request past the login budget.
+            callback = Task.Factory.StartNew(() => SendCallback(target),
+                CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         });
         using var http = new HttpClient(new TokenEndpoint());
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         var service = new OAuthService(http, new MemoryStore(), browser, TimeProvider.System).ForPlugin("plugin");
         await service.LoginAsync(Provider(), "account", timeout.Token);
-        using var response = await callback!;
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.DoesNotContain("browser-code", await response.Content.ReadAsStringAsync());
+        var (statusLine, body) = await callback!.WaitAsync(TimeSpan.FromMinutes(1));
+        Assert.Equal("HTTP/1.1 200 OK", statusLine);
+        Assert.DoesNotContain("browser-code", body);
         Assert.Equal("access-1", await service.GetAccessTokenAsync(Provider(), "account"));
-        await Assert.ThrowsAsync<HttpRequestException>(() => callbackHttp.GetAsync(redirect, timeout.Token));
+        Assert.Throws<SocketException>(() =>
+        {
+            using var probe = new TcpClient();
+            probe.Connect(IPAddress.Loopback, redirect!.Port);
+        });
     }
 
     [Fact]
@@ -611,6 +619,21 @@ public sealed class OAuthTests
             Interlocked.Increment(ref Deletes);
             return _inner.DeleteAsync(namespaceId, accountId, cancellationToken);
         }
+    }
+
+    private static (string StatusLine, string Body) SendCallback(Uri callbackUri)
+    {
+        using var client = new TcpClient();
+        client.Connect(callbackUri.Host, callbackUri.Port);
+        using var stream = client.GetStream();
+        stream.Write(Encoding.ASCII.GetBytes(
+            $"GET {callbackUri.PathAndQuery} HTTP/1.1\r\nHost: {callbackUri.Authority}\r\nConnection: close\r\n\r\n"));
+        using var reader = new StreamReader(stream, Encoding.ASCII);
+        var response = reader.ReadToEnd();
+        var split = response.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+        return split < 0
+            ? (response.Split("\r\n")[0], string.Empty)
+            : (response[..split].Split("\r\n")[0], response[(split + 4)..]);
     }
 
     private static Dictionary<string, string> Query(Uri uri) => uri.Query.TrimStart('?').Split('&').Select(part => part.Split('=', 2))
