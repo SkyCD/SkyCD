@@ -131,7 +131,7 @@ public static class Microsoft365Products
             return true;
         }
 
-        var fileName = Path.GetFileName(trimmed);
+        var fileName = Path.GetFileName(trimmed.Replace('\\', '/'));
         if (ExecutableCodes.TryGetValue(fileName, out var code))
         {
             productCode = code;

@@ -610,6 +610,10 @@ public sealed class Microsoft365ProductsTests
     [InlineData("WINWORD.EXE", "WINWORD")]
     [InlineData("winword", "WINWORD")]
     [InlineData(@"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE", "EXCEL")]
+    [InlineData("\"C:\\Program Files\\Microsoft Office\\WINWORD.EXE\"", "WINWORD")]
+    [InlineData(@"\\server\share\Office\POWERPNT.EXE", "POWERPNT")]
+    [InlineData("/opt/office/OUTLOOK.EXE", "OUTLOOK")]
+    [InlineData(@"C:\Office/root\Office16/EXCEL.EXE", "EXCEL")]
     public void TryResolveAppCode_AcceptsCodesAndExecutables(string value, string expected)
     {
         Assert.True(Microsoft365Products.TryResolveAppCode(value, out var code));
