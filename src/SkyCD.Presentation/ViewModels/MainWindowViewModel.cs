@@ -2523,7 +2523,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private string GetObjectComments(string objectKey, string documentId)
     {
-        if (catalogRepository?.Get(documentId) is { } document)
+        if (FindCatalogDocument(documentId) is { } document)
         {
             return document.Properties.TryGetValue("Comment", out var comment) ? comment?.ToString() ?? string.Empty : string.Empty;
         }

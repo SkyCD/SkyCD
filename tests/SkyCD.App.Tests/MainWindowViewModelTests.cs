@@ -1013,6 +1013,62 @@ public class MainWindowViewModelTests
         Assert.Empty(request.Dialog.InfoProperties);
     }
 
+    [Theory]
+    [InlineData(CatalogDocumentType.File, false)]
+    [InlineData(CatalogDocumentType.Folder, false)]
+    [InlineData(CatalogDocumentType.NetworkFolder, false)]
+    [InlineData(CatalogDocumentType.Media, false)]
+    [InlineData(CatalogDocumentType.Folder, true)]
+    public void OpenPropertiesCommand_ShowsGeneralFieldsWithoutDuplicatingInfoRows(CatalogDocumentType type, bool tree)
+    {
+        var entry = new CatalogDocument
+        {
+            Id = tree ? "root" : "entry",
+            ParentId = tree ? null : "root",
+            Name = "Item",
+            Type = type,
+            Properties = new SkyCD.Documents.Collections.PropertiesCollection
+            {
+                ["nAmE"] = "Stored name",
+                ["RealDirectoryName"] = "Stored directory",
+                ["cOmMeNt"] = "Imported comment",
+                ["Comments"] = "Other comment",
+                ["FullName"] = "/item"
+            }
+        };
+        var root = new CatalogDocument { Id = "root", Name = "Root", Type = CatalogDocumentType.Folder };
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(tree ? [entry] : [root, entry]);
+        vm.SelectedTreeNode = vm.TreeNodes.Single(node => node.Key == "root");
+        vm.ActivePane = tree ? ActivePane.Tree : ActivePane.Browser;
+        if (!tree)
+        {
+            vm.SelectedBrowserItem = vm.BrowserItems.Single(item => item.Id == "entry");
+        }
+        PropertiesDialogRequestedEventArgs? request = null;
+        vm.PropertiesRequested += (_, args) => request = args;
+
+        vm.OpenPropertiesCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal("Item", request.Dialog.Name);
+        Assert.Equal("Imported comment", request.Dialog.Comments);
+        Assert.Equal(["Comments", "FullName"], request.Dialog.InfoProperties.Keys);
+        Assert.Equal("Stored name", request.Dialog.GetProperties()["Name"]);
+        Assert.Equal("Stored directory", request.Dialog.GetProperties()["RealDirectoryName"]);
+        request.Complete(false, "Canceled comment");
+        Assert.Equal("Imported comment", entry.Properties["Comment"]);
+
+        request = null;
+        vm.OpenPropertiesCommand.Execute(null);
+        Assert.NotNull(request);
+        Assert.Equal("Imported comment", request.Dialog.Comments);
+        request.Complete(true, request.Dialog.Comments);
+        Assert.Equal("Stored name", entry.Properties["Name"]);
+        Assert.Equal("Stored directory", entry.Properties["RealDirectoryName"]);
+        Assert.Equal("Imported comment", entry.Properties["Comment"]);
+        Assert.Equal("Other comment", entry.Properties["Comments"]);
+    }
+
     [Fact]
     public void OpenPropertiesCommand_TreeActive_UsesTreeNodeInsteadOfBrowserItem()
     {
