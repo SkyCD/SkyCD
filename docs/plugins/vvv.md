@@ -61,6 +61,15 @@ Description`). Column shapes verified against the VVV export source
   input, and header-only files fail with actionable errors naming the
   expected layouts. Ties prefer the header-vocabulary match.
 
+## Backup files (.vvvbk)
+
+SkyCD does not directly import `.vvvbk` backups or native `.vvv` catalogs.
+Keep the backup unchanged and restore it with a compatible VVV installation to
+a new catalog, then export all physical volumes with headers and a TAB separator.
+Ensure the export is UTF-8, converting it if necessary, before importing it. This
+does not preserve virtual hierarchy or audio metadata. See the
+[backup compatibility assessment](../implementation/issue-511-vvvbk-assessment.md).
+
 ## Known Loss of Information
 - **Virtual folder structure**: not exported by VVV, only physical origin.
 - **Folder metadata/dates**: folders are synthesized, carrying no dates.
