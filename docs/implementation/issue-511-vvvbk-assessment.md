@@ -3,9 +3,11 @@
 ## Verdict
 
 Do not implement direct `.vvvbk` import yet. The available evidence identifies a
-Firebird backup/restore stream, but neither a policy-compliant restoration path
-nor genuine, redistributable, version-identified backup fixtures has been
-established. Native `.vvv` import is also unsupported; see the
+Firebird backup/restore stream, and IDPL 1.0 for the managed Firebird client is
+now an approved package exception ([#618](https://github.com/SkyCD/SkyCD/issues/618),
+[PR #620](https://github.com/SkyCD/SkyCD/pull/620)), but genuine,
+redistributable, version-identified backup fixtures and a verified restore path
+have not been established. Native `.vvv` import is also unsupported; see the
 [separate assessment](issue-455-vvv-compatibility.md). For now, restore the
 backup with a compatible VVV installation to a **new** catalog, then export
 its physical data for the [existing CSV/TSV importer](../plugins/vvv.md).
@@ -25,9 +27,11 @@ fixtures elsewhere.
   uses the `.vvvbk` extension and routes operations through Firebird backup
   and database creation. The [restore dialog](https://sourceforge.net/p/vvvapp/code/467/tree/trunk/src/restore.cpp)
   selects a backup and a new `.vvv` catalog. The [database interface](https://sourceforge.net/p/vvvapp/code/467/tree/trunk/src/data_interface/firebird_db.cpp)
-  invokes Firebird service backup and restore. These observations identify a
-  backup stream, not a renamed database file; they do not establish which
-  exact source revision produced a particular binary release.
+  routes backup and restore through Firebird's service API, which requires a
+  compatible Firebird server or engine, not only a client library. These
+  observations identify a backup stream, not a renamed database file; they do
+  not establish which exact source revision produced a particular binary
+  release.
 - [Firebird's gbak documentation](https://www.firebirdsql.org/file/documentation/html/en/firebirddocs/gbak/firebird-gbak.html)
   describes logical backups of database metadata and data. Transportable
   backups are the default, but nontransportable backups can be requested.
@@ -74,22 +78,28 @@ simple file-only hierarchy.
 [SkyCD's policy](../legal/dependency-license-policy.json) allowlists specific
 licenses, rejects unknown licenses by default and blocks GPL-family licenses.
 VVV is [GPL-2.0-or-later](https://sourceforge.net/p/vvvapp/code/492/tree/trunk/COPYING),
-so its code must not be copied into SkyCD. The
-[FirebirdSql.Data.FirebirdClient 10.3.4 license](https://www.nuget.org/packages/FirebirdSql.Data.FirebirdClient/10.3.4/License)
-is IDPL 1.0, which is not allowlisted or covered by an explicit package
-exception. Its NuGet metadata lists .NET 10 as computed compatible, not a
-verified runtime test; moreover, the client alone is not a backup reader or
-Firebird engine. This is not a compliant managed restoration path under the
-current policy.
+so its code must not be copied into SkyCD.
 
-[Firebird's licensing documentation](https://firebirdsql.org/file/documentation/html/en/firebirddocs/qsg5/firebird-5-quickstartguide.html#qsg5-firebird-licenses)
-identifies IPL and IDPL licenses for Firebird, neither of which is on the
-allowlist. Shipping or invoking isolated tooling does not itself resolve
-licensing, compatibility, or safety. A specific proposed tool, distribution,
-and all direct and transitive dependencies would need policy and legal review;
-using a user-supplied tool has not been assessed. The policy's
-[exception process](../legal/dependency-policy.md#exception-process) requires
-separate approval; this issue does not change the policy.
+The
+[FirebirdSql.Data.FirebirdClient 10.3.4 license](https://www.nuget.org/packages/FirebirdSql.Data.FirebirdClient/10.3.4/License)
+is IDPL 1.0, which has no SPDX identifier, so CycloneDX reports it as unknown.
+Issue [#618](https://github.com/SkyCD/SkyCD/issues/618) and
+[PR #620](https://github.com/SkyCD/SkyCD/pull/620) record IDPL 1.0 approval for
+this package as an explicit unknown-license exception under the policy's
+[exception process](../legal/dependency-policy.md#exception-process). Any use
+must consume the package unmodified as a separate library, retain its notice
+and license text, and meet source-availability and modification-disclosure
+obligations for covered code. This exception covers missing license metadata
+only; explicitly blocked licenses still fail validation. Its NuGet metadata
+lists .NET 10 as computed compatible, not a verified runtime test.
+
+The approval does not cover Firebird engine binaries, IPL 1.0, or GPL VVV
+source, and the managed client alone is not a backup reader or a Firebird
+engine: gbak backup and restore require a compatible Firebird service. Shipping
+or invoking isolated tooling therefore still needs its own license review. A
+specific proposed tool, distribution, and all direct and transitive dependencies
+would need policy and legal review; using a user-supplied tool has not been
+assessed.
 
 Restoring an untrusted backup also needs stronger safeguards than choosing a
 temporary filename. Firebird documents create versus replacement modes and
@@ -114,9 +124,11 @@ protections implemented by this assessment.
 2. Independently inspect and restore those fixtures in a controlled environment
    to establish backup signatures and versions, compatible Firebird versions,
    ODS and `SERVICE.DB_VERSION`/schema mappings, including older schemas.
-3. Establish a maintained, .NET 10-compatible and policy-compliant access and
-   restoration approach, with an independently reviewed isolation design. Do
-   not weaken blocked-license, unknown-license or whitelist handling.
+3. Establish a maintained and .NET 10-compatible access and restoration
+   approach with an independently reviewed isolation design. The client's IDPL
+   1.0 exception covers the managed client only; any Firebird engine or helper
+   tooling used for restore needs its own policy review. Do not weaken
+   blocked-license, unknown-license or whitelist handling.
 4. Design physical and virtual hierarchy, descriptions, recoverable audio and
    provenance mapping into the SkyCD domain. Add integration tests for real
    fixtures, malformed and truncated input, unsupported versions, encryption,
