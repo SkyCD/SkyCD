@@ -12,7 +12,8 @@ creates a disabled template at the location shown in the status bar, normally
 executable and its argument/environment arrays, then explicitly enable it.
 The same file configures model (where advertised), output language, prompt and
 version, context/output limits, timeout, permitted input sources, metadata-only
-inference, and the processing destination. No command string is passed to a shell.
+inference, an optional `AuthMethodId`, and the processing destination. No command
+string is passed to a shell.
 
 Default settings permit only filename context and leave generation disabled.
 Enable `Sources.Text`, `Metadata`, `Images` or `Audio` individually to permit those
@@ -49,6 +50,37 @@ oversized output, crashes, authentication errors and timeouts retain earlier
 accepted descriptions. A catalog switch cancels its active plugin command.
 Clicking a plugin command while one is running cancels the active command.
 
+## ACP registry browsing
+
+**Tools → Browse cached ACP agent registry** reads an optional local copy of the
+official [ACP registry](https://agentclientprotocol.com/get-started/registry)
+index at `%APPDATA%/SkyCD/acp-registry.json`. Download
+`https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json` there
+manually; SkyCD never fetches, verifies, installs, updates or launches registry
+content. The registry is treated strictly as bounded display data: it cannot set
+the executable, arguments or environment, and unknown or malformed entries are
+ignored. The command lists cached names, identifiers, versions and distribution
+types, and a suggested launch form for currently installed `npx`/`uvx` or a
+platform binary. Any suggested launch remains a manual configuration hint; the
+executable, arguments and environment are always taken from the user-edited
+configuration file, and an archive or package must be installed by the user.
+
+Cached browsing works fully offline. Registry membership is not a compatibility
+claim: an entry still has to satisfy the negotiated requirements below.
+
+## Authentication
+
+After `initialize`, the client reads the agent's advertised `authMethods`. Set
+`AuthMethodId` to an advertised method to run the agent-managed `authenticate`
+flow before any session is created. The client does not advertise terminal
+authentication support because it cannot present an interactive terminal; a
+`terminal` method is rejected with instructions to complete that sign-in
+manually. An `auth_required` response lists only the advertised method
+identifiers, names and types, never the agent's error text. Credentials belong in
+the agent's own authentication store or in the explicitly configured environment
+and are never written to catalog metadata, generated descriptions, configuration
+templates or logs.
+
 ## ACP compatibility and security boundary
 
 The client implements ACP v1 initialization, session setup, streaming prompt
@@ -64,14 +96,19 @@ The agent runs in an empty temporary directory and its process tree is terminate
 on completion/cancellation. This ACP capability boundary is not an operating-system
 sandbox for arbitrary executables: use a trusted agent that honors permission
 negotiation. The plugin grants no catalog, source-file or shell API. Authentication
-not already configured produces an actionable error; interactive authentication
-and registry discovery remain separate work under #460.
+not already configured produces an actionable error listing the advertised
+methods; agent-managed authentication runs only when `AuthMethodId` is configured,
+and terminal authentication must be completed outside SkyCD.
 
 Compatibility is verified with a real fake-agent subprocess and seeded ACP streams
 covering normal responses, crash, timeout, cancellation, malformed/version/auth
-errors, multimodal differences and permission/tool requests. No third-party agent
-is claimed tested. Agents must support ACP v1, plain-text final responses and this
-restricted client-capability combination; provider/model support is negotiated.
+errors, multimodal differences, agent-managed authentication and permission/tool
+requests. No third-party agent is claimed tested. Agents must support ACP v1,
+plain-text final responses and this restricted client-capability combination;
+provider/model support is negotiated. Registry entries are checked only as data;
+`npx`, `uvx` and `binary` distributions are not executed or verified. The cached
+browser reads the stable `registry.json` index and does not distinguish musl Linux
+targets or preview channels.
 
 Protocol references: [initialization](https://agentclientprotocol.com/protocol/v1/initialization),
 [session setup](https://agentclientprotocol.com/protocol/v1/session-setup).

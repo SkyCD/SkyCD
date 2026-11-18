@@ -168,6 +168,109 @@ public sealed class AcpDescriptionTests
             Context(new DescriptionContextPart("content-text", "text/plain", "text")), cancellation.Token));
     }
 
+    [Fact]
+    public async Task ConfiguredAgentAuthenticationRunsBeforeSessionCreation()
+    {
+        var writer = new StringWriter();
+        var transcript = string.Join('\n',
+            Json(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                result = new
+                {
+                    protocolVersion = 1,
+                    agentCapabilities = new { promptCapabilities = new { image = false, audio = false } },
+                    authMethods = new[] { new { id = "agent-login", name = "Sign in" } },
+                    agentInfo = new { name = "fake", version = "1" }
+                }
+            }),
+            Json(new { jsonrpc = "2.0", id = 2, result = new { } }),
+            Json(new { jsonrpc = "2.0", id = 3, result = new { sessionId = "s", models = new { currentModelId = "model" } } }),
+            Chunk("Description"),
+            Json(new { jsonrpc = "2.0", id = 4, result = new { stopReason = "end_turn" } })) + "\n";
+        var result = await new AcpDescriptionClient(new StringReader(transcript), writer, 100)
+            .DescribeAsync(Options with { AuthMethodId = "agent-login" },
+                Context(new DescriptionContextPart("content-text", "text/plain", "text")), "/empty", default);
+        Assert.Equal("Description", result.Text);
+        var messages = writer.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => JsonDocument.Parse(line)).ToArray();
+        Assert.Equal("authenticate", messages[1].RootElement.GetProperty("method").GetString());
+        Assert.Equal("agent-login", messages[1].RootElement.GetProperty("params").GetProperty("methodId").GetString());
+        Assert.Equal("session/new", messages[2].RootElement.GetProperty("method").GetString());
+        foreach (var message in messages) message.Dispose();
+    }
+
+    [Fact]
+    public async Task TerminalAuthenticationIsRejectedAndAuthRequiredErrorsListMethods()
+    {
+        var terminal = Json(new
+        {
+            jsonrpc = "2.0",
+            id = 1,
+            result = new
+            {
+                protocolVersion = 1,
+                authMethods = new[] { new { id = "terminal-login", name = "Terminal", type = "terminal" } }
+            }
+        }) + "\n";
+        var writer = new StringWriter();
+        var terminalException = await Assert.ThrowsAsync<DescriptionAgentException>(() => new AcpDescriptionClient(new StringReader(terminal), writer, 100)
+            .DescribeAsync(Options with { AuthMethodId = "terminal-login" },
+                Context(new DescriptionContextPart("content-text", "text/plain", "text")), "/empty", default));
+        Assert.Contains("terminal", terminalException.Message);
+        Assert.DoesNotContain("session/new", writer.ToString());
+
+        var required = string.Join('\n',
+            Json(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                result = new
+                {
+                    protocolVersion = 1,
+                    authMethods = new[] { new { id = "agent-login", name = "Sign in" } }
+                }
+            }),
+            Json(new { jsonrpc = "2.0", id = 2, error = new { code = -32000, message = "secret-token" } })) + "\n";
+        var exception = await Assert.ThrowsAsync<DescriptionAgentException>(() => new AcpDescriptionClient(new StringReader(required), new StringWriter(), 100)
+            .DescribeAsync(Options, Context(new DescriptionContextPart("content-text", "text/plain", "text")), "/empty", default));
+        Assert.Contains("agent-login", exception.Message);
+        Assert.DoesNotContain("secret-token", exception.Message);
+    }
+
+    [Fact]
+    public async Task RegistryCommandBrowsesOfflineCacheAndNeverGenerates()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "skycd-description-registry-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var configurationPath = Path.Combine(directory, "settings.json");
+        var calls = 0;
+        var host = new DescriptionHost();
+        var plugin = new AiDescriptionPlugin(configurationPath, (_, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new GeneratedDescription("x", "a", null, "1", "1", "English", "content-based AI description", "unknown", DateTimeOffset.UtcNow));
+        });
+        try
+        {
+            await plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.RegistryCommandId, new MenuCommandContext { HostApi = host });
+            Assert.Contains("No cached ACP registry", host.Notifications[^1]);
+            await File.WriteAllTextAsync(Path.Combine(directory, AcpAgentRegistry.FileName), Json(new
+            {
+                version = "1.0.0",
+                agents = new[] { new { id = "cached-agent", name = "Cached Agent", version = "1.0.0", distribution = new { npx = new { package = "cached-agent" } } } }
+            }));
+            await plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.RegistryCommandId, new MenuCommandContext { HostApi = host });
+            Assert.Contains("Cached ACP registry: 1 agents", host.Notifications[^1]);
+            Assert.Contains("cached-agent", host.Notifications[^1]);
+            Assert.Equal(0, calls);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     private sealed class DescriptionHost : IDescriptionHostApi
     {
         public string Stored { get; private set; } = "Earlier accepted description";
