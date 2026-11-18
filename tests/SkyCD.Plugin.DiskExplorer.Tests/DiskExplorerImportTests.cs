@@ -360,8 +360,8 @@ public class DiskExplorerImportTests
         }
 
         builder.Append("</REPORT>");
-        using var source = new MemoryStream(Encoding.UTF8.GetBytes(builder.ToString()));
-        using var cancellation = new CancellationTokenSource(200);
+        using var cancellation = new CancellationTokenSource();
+        using var source = new CancelDuringReadStream(Encoding.UTF8.GetBytes(builder.ToString()), cancellation);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ReadAsync(
             new FileFormatReadRequest
@@ -371,6 +371,38 @@ public class DiskExplorerImportTests
                 FileName = "big.xml"
             },
             cancellation.Token));
+        Assert.True(source.BytesRead >= 32768);
+        Assert.True(source.BytesRead < source.Length);
+    }
+
+    private sealed class CancelDuringReadStream(byte[] data, CancellationTokenSource cancellation) : MemoryStream(data)
+    {
+        public override bool CanSeek => false;
+
+        public long BytesRead { get; private set; }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = base.Read(buffer, offset, count);
+            CancelAfterRead(read);
+            return read;
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            var read = base.Read(buffer);
+            CancelAfterRead(read);
+            return read;
+        }
+
+        private void CancelAfterRead(int count)
+        {
+            BytesRead += count;
+            if (BytesRead >= 32768)
+            {
+                cancellation.Cancel();
+            }
+        }
     }
 
     private sealed class NonSeekableStream(Stream inner) : Stream
