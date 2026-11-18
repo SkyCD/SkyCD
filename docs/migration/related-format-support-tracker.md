@@ -32,6 +32,7 @@ This file tracks v3 format-support tickets created from issue `#118` ("Add relat
 
 - `#486` WinCatalog native catalog (`*.w3cat`) read-only
 - `#514` abeMeda/NeoFinder native catalog (`*.cdw`, `*.abeMeda7`, `*.neofinder7`) read-only
+- `#645` DiskBase native catalog (`*.qdr`) read-only. Supports database version `0x0501` with version-1 tree and directory records; `0x0500` and older record layouts are rejected. Names and descriptions default to Windows-1252, because QDR stores no code-page identifier; callers using the plugin API can select another code page. Undefined byte sequences are rejected. DOS timestamps have two-second precision and an unknown timezone. Individual sizes contain only the stored 32-bit value, so sizes above 4 GiB cannot be recovered.
 
 ## Notes
 
