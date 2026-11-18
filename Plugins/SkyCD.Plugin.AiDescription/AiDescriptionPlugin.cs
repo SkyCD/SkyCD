@@ -10,7 +10,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 
 namespace SkyCD.Plugin.AiDescription;
 
-public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescriptionCapability
+public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescriptionCapability, IDescriptionGenerationPlanner
 {
     public const string CommandId = "ai-description.generate";
     public const string RegistryCommandId = "ai-description.registry";
@@ -75,6 +75,66 @@ public sealed class AiDescriptionPlugin : IMenuPluginCapability, IGeneratedDescr
         var options = await LoadOptionsAsync(cancellationToken);
         return await generate(options, context, cancellationToken);
     }
+
+    /// <summary>
+    /// Reports the locally configured provider without launching it or sending context. A missing, disabled
+    /// or invalid configuration is reported as unavailable instead of failing the Properties view.
+    /// </summary>
+    public DescriptionGenerationPlan GetPlan()
+    {
+        try
+        {
+            var info = new FileInfo(configurationPath);
+            if (!info.Exists)
+            {
+                return Unavailable("configuration is missing");
+            }
+            if (info.Length > 65536)
+            {
+                return Unavailable("configuration exceeds 64 KiB");
+            }
+
+            var options = JsonSerializer.Deserialize<DescriptionAgentOptions>(File.ReadAllText(configurationPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true, MaxDepth = 16 });
+            if (options is null)
+            {
+                return Unavailable("configuration is invalid");
+            }
+
+            var providerName = string.IsNullOrWhiteSpace(options.Executable)
+                ? "ACP agent"
+                : Path.GetFileName(options.Executable);
+            if (!options.Enabled)
+            {
+                return new DescriptionGenerationPlan(false, providerName, PluginVersion, options.Model,
+                    options.ProcessingDestination, options.Sources,
+                    "generation is disabled; enable the configured ACP agent explicitly");
+            }
+
+            options.Validate();
+            return new DescriptionGenerationPlan(true, providerName, PluginVersion, options.Model,
+                options.ProcessingDestination, options.Sources);
+        }
+        catch (DescriptionAgentException exception)
+        {
+            return Unavailable(exception.Message);
+        }
+        catch (JsonException)
+        {
+            return Unavailable("configuration is invalid");
+        }
+        catch (IOException exception)
+        {
+            return Unavailable($"configuration cannot be read: {exception.GetType().Name}");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            return Unavailable($"configuration cannot be read: {exception.GetType().Name}");
+        }
+    }
+
+    private static DescriptionGenerationPlan Unavailable(string reason) =>
+        new(false, string.Empty, PluginVersion, null, "unknown", new DescriptionContextOptions(), reason);
 
     private async Task BrowseRegistryAsync(IHostCommandApi host, CancellationToken cancellationToken)
     {

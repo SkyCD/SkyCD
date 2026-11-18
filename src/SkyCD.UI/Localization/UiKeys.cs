@@ -159,4 +159,27 @@ public static class UiKeys
     public const string LoadSearch = "core.ui.LoadSearch";
     public const string UpdateSearch = "core.ui.UpdateSearch";
     public const string RefreshResults = "core.ui.RefreshResults";
+    public const string AiDescription = "core.ui.AiDescription";
+    public const string Generate = "core.ui.Generate";
+    public const string Regenerate = "core.ui.Regenerate";
+    public const string Clear = "core.ui.Clear";
+    public const string CopyDescription = "core.ui.CopyDescription";
+    public const string AdoptAsComment = "core.ui.AdoptAsComment";
+    public const string AiDescriptionEmpty = "core.ui.AiDescriptionEmpty";
+    public const string AiDescriptionCurrent = "core.ui.AiDescriptionCurrent";
+    public const string AiDescriptionStale = "core.ui.AiDescriptionStale";
+    public const string AiDescriptionUnavailable = "core.ui.AiDescriptionUnavailable";
+    public const string DestinationLocalInference = "core.ui.DestinationLocalInference";
+    public const string DestinationCloud = "core.ui.DestinationCloud";
+    public const string DestinationUnknown = "core.ui.DestinationUnknown";
+    public const string ContextFilename = "core.ui.ContextFilename";
+    public const string ContextMetadata = "core.ui.ContextMetadata";
+    public const string ContextText = "core.ui.ContextText";
+    public const string ContextImages = "core.ui.ContextImages";
+    public const string ContextAudio = "core.ui.ContextAudio";
+    public const string ContextNone = "core.ui.ContextNone";
+    public const string AiDescriptionBatch = "core.ui.AiDescriptionBatch";
+    public const string RegenerateExisting = "core.ui.RegenerateExisting";
+    public const string Start = "core.ui.Start";
+    public const string DescriptionResults = "core.ui.DescriptionResults";
 }

@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
+using SkyCD.Presentation.MediaCache;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -37,6 +38,38 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     public System.Collections.ObjectModel.ObservableCollection<TagAssignmentViewModel> TagAssignments { get; } = [];
     public bool HasTagsTab => TagAssignments.Count > 0;
+
+    /// <summary>Optional AI description surface; absent when no description service is available.</summary>
+    [ObservableProperty] private AiDescriptionViewModel? aiDescription;
+
+    public bool HasAiDescriptionTab => AiDescription is not null;
+
+    /// <summary>Raised with text the view should place on the clipboard.</summary>
+    public event Action<string>? CopyTextRequested;
+
+    partial void OnAiDescriptionChanged(AiDescriptionViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasAiDescriptionTab));
+    }
+
+    /// <summary>
+    /// Attaches the offline AI description tab. Reading and clearing stay available without a provider;
+    /// adopting writes only the comment editor, so the user still confirms the Properties dialog.
+    /// </summary>
+    public void InitializeAiDescription(AiDescriptionService service, string entryId)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
+        if (AiDescription is not null)
+        {
+            AiDescription.CopyRequested -= OnDescriptionCopyRequested;
+        }
+
+        AiDescription = new AiDescriptionViewModel(service, entryId, () => Comments, text => Comments = text);
+        AiDescription.CopyRequested += OnDescriptionCopyRequested;
+    }
+
+    private void OnDescriptionCopyRequested(string text) => CopyTextRequested?.Invoke(text);
 
     public void ApplyCustomPropertyDefaults(IEnumerable<SkyCD.Documents.CustomPropertyDocument>? properties)
     {

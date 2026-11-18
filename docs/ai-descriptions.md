@@ -50,6 +50,31 @@ oversized output, crashes, authentication errors and timeouts retain earlier
 accepted descriptions. A catalog switch cancels its active plugin command.
 Clicking a plugin command while one is running cancels the active command.
 
+## Properties and batch generation
+
+The Properties dialog shows the stored description for a file in an **AI
+description** tab together with the provider, configured context sources and
+processing destination, plus provenance (agent, model, prompt version, language
+and generation time). Generation runs only from the explicit Generate or
+Regenerate button; opening Properties, reading metadata or searching never
+starts an agent. A stored description whose source or context changed is shown as
+stale but remains readable, and a failed regeneration reports the error while
+keeping the earlier accepted text.
+
+**Adopt as comment** copies the generated text into the comment editor. When the
+entry already has a comment, a second confirmation is required, and the comment
+is only written through the normal dialog confirm/undo path. The stored generated
+description is never overwritten by adoption or by comment edits, so the AI and
+user-authored metadata stay distinguishable in metadata browsing and search.
+
+**Tools → Generate AI descriptions...** runs one explicit pass over the selected
+files, showing configured provider/context, per-item progress, a
+Cancel button and per-item outcomes. The pass skips entries whose stored
+description still matches the current source and context unless regeneration is
+requested, processes at most two entries at a time, and records failures per item
+without aborting the rest. Cancelling marks the unfinished items as cancelled and
+keeps all earlier descriptions.
+
 ## ACP registry browsing
 
 **Tools → Browse cached ACP agent registry** reads an optional local copy of the

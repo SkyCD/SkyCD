@@ -52,6 +52,7 @@ public partial class App : Avalonia.Application
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+                mainWindowViewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;

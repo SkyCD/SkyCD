@@ -127,6 +127,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? FindCatalogRequested;
     public event EventHandler<CollectionsDialogRequestedEventArgs>? CollectionsRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
+    public event EventHandler<AiDescriptionBatchDialogRequestedEventArgs>? AiDescriptionBatchRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
@@ -135,6 +136,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? FocusTreeRequested;
 
     private MenuExtensionManager menuExtensionManager;
+    private DescriptionExtensionManager descriptionExtensionManager = new([]);
+    private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaHashService? mediaHashService;
     private CancellationTokenSource? hashCancellation;
@@ -262,6 +265,40 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         entry.Properties.TryGetValue(MediaHashService.SourcePathPropertyKey, out var path) &&
         !string.IsNullOrWhiteSpace(path?.ToString());
 
+    private bool CanGenerateDescriptions() =>
+        aiDescriptionService is not null && GetSelectedBrowserItems().Any(IsDescriptionTarget);
+
+    private static bool IsDescriptionTarget(CatalogDocument entry) =>
+        entry.Type != CatalogDocumentType.Folder;
+
+    /// <summary>
+    /// Opens the explicit batch dialog for the current selection. Nothing is generated until the user
+    /// starts the pass, and unchanged entries are skipped unless regeneration is requested.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanGenerateDescriptions))]
+    private void GenerateAiDescriptions()
+    {
+        if (aiDescriptionService is null)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionUnavailableStatus);
+            return;
+        }
+
+        var entries = GetSelectedBrowserItems().Where(IsDescriptionTarget).ToArray();
+        if (entries.Length == 0)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionBatchNoTargets);
+            return;
+        }
+
+        var dialog = new AiDescriptionBatchDialogViewModel(aiDescriptionService, entries, () =>
+        {
+            IsDirtyDocument = true;
+            RefreshBrowserItemsForSelection();
+        });
+        AiDescriptionBatchRequested?.Invoke(this, new AiDescriptionBatchDialogRequestedEventArgs { Dialog = dialog });
+    }
+
     /// <summary>
     /// Starts opt-in hashing for freshly scanned files. Hashing reads whole files, so it only runs after a
     /// scan when the user enabled it; failures never abort the scan.
@@ -306,6 +343,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HelpMenuItems));
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
+    }
+
+    /// <summary>
+    /// Rebinds the AI description capability after plugins are discovered or reloaded. Descriptions that
+    /// were already captured stay readable both with and without a provider.
+    /// </summary>
+    public void RefreshDescriptionServices(DescriptionExtensionManager updatedManager)
+    {
+        descriptionExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
+        RebuildDescriptionService();
+        RebuildMenuItems();
+        OnPropertyChanged(nameof(ToolsMenuItems));
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
+        RefreshTopMenuState();
+    }
+
+    private void RebuildDescriptionService()
+    {
+        aiDescriptionService = catalogRepository is null
+            ? null
+            : new AiDescriptionService(catalogRepository, mediaCacheStore, descriptionExtensionManager.Capability);
     }
 
     private void RebuildMenuItems()
@@ -359,6 +417,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTopMenuState();
         localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
         AttachHistoryNotifications();
+        RebuildDescriptionService();
 
         try
         {
@@ -2435,6 +2494,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     tagService.GetEntryTagIds(SelectedBrowserItem.Id));
             }
 
+            if (aiDescriptionService is not null)
+            {
+                dialog.InitializeAiDescription(aiDescriptionService, SelectedBrowserItem.Id);
+            }
+
             return true;
         }
 
@@ -2670,6 +2734,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         ComputeHashesCommand.NotifyCanExecuteChanged();
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
@@ -2745,6 +2810,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         ComputeHashesCommand.NotifyCanExecuteChanged();
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -2784,6 +2850,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         ComputeHashesCommand.NotifyCanExecuteChanged();
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -3025,6 +3092,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Key = "compute_hashes",
                 Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
                 Command = ComputeHashesCommand
+            },
+            new MainMenuItemViewModel
+            {
+                Key = "ai_description_batch",
+                Header = LocalizationService.Current.Get(TextKeys.GenerateAiDescriptions),
+                Command = GenerateAiDescriptionsCommand
             }
         };
 
@@ -3185,6 +3258,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuEnabled(byKey, "compute_hashes", CanComputeHashes());
+        SetMenuEnabled(byKey, "ai_description_batch", CanGenerateDescriptions());
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 
