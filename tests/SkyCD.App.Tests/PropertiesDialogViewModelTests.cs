@@ -131,14 +131,28 @@ public class PropertiesDialogViewModelTests
     }
 
     [Theory]
-    [InlineData("2016-06-05T16:49:14.9800000", "en-US", "6/5/2016 4:49:14 PM")]
-    [InlineData("2016-06-05T16:49:14", "lt-LT", "2016-06-05 16:49:14")]
-    public void Constructor_FormatsOffsetlessTimestampsWithoutShifting(string value, string cultureName, string expected)
+    [InlineData("2016-06-05T16:49:14.9800000", "en-US")]
+    [InlineData("2016-06-05T16:49:14", "lt-LT")]
+    public void Constructor_FormatsOffsetlessTimestampsWithoutShifting(string value, string cultureName)
     {
-        var vm = CreateWithCulture(value, CultureInfo.GetCultureInfo(cultureName));
+        var culture = CultureInfo.GetCultureInfo(cultureName);
+        var expected = new DateTime(2016, 6, 5, 16, 49, 14).ToString("G", culture);
+        var vm = CreateWithCulture(value, culture);
 
         Assert.Equal(expected, vm.InfoProperties["Value"]);
         Assert.Equal(value, vm.GetProperties()["Value"]);
+    }
+
+    [Fact]
+    public void Constructor_RespectsCultureSpecificSpacing()
+    {
+        var culture = (CultureInfo)CultureInfo.GetCultureInfo("en-US").Clone();
+        culture.DateTimeFormat.ShortDatePattern = "M/d/yyyy";
+        culture.DateTimeFormat.LongTimePattern = "h:mm:ss'\u202f'tt";
+
+        var vm = CreateWithCulture("2016-06-05T16:49:14.9800000", culture);
+
+        Assert.Equal("6/5/2016 4:49:14\u202fPM", vm.InfoProperties["Value"]);
     }
 
     [Theory]
