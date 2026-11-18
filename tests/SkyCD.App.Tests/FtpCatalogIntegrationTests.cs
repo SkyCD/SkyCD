@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
@@ -73,7 +74,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void FtpScan_CatalogsNestedEntries_AndSurvivesSaveAndReopen()
+    public async Task FtpScan_CatalogsNestedEntries_AndSurvivesSaveAndReopen()
     {
         var stamp = new DateTime(2024, 5, 6, 7, 8, 9, DateTimeKind.Utc);
         var readme = WriteFile("readme.txt", "hello world", stamp);
@@ -144,7 +145,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         Assert.Null(withoutMetadata[0].ParentId);
         Assert.Contains(withoutMetadata, document => document.Name == "note.txt" && document.ParentId != null);
 
-        viewModel.AddImportedDocuments(scanned);
+        await viewModel.AddImportedDocumentsAsync(scanned);
         viewModel.CompleteSaveCatalog(Path.Combine(appDataRoot, "remote.scd"));
         Assert.False(viewModel.IsDirtyDocument);
 

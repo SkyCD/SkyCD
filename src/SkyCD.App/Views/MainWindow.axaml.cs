@@ -685,7 +685,7 @@ public partial class MainWindow : Window
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 90);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                vm.AddImportedDocuments(scannedDocuments, progressVm.CancellationToken);
+                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
                 progressVm.CanCancel = false;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
@@ -776,7 +776,7 @@ public partial class MainWindow : Window
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                vm.AddImportedDocuments(scannedDocuments, progressVm.CancellationToken);
+                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
                 progressVm.CanCancel = false;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
@@ -848,7 +848,7 @@ public partial class MainWindow : Window
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                vm.AddImportedDocuments(scannedDocuments, progressVm.CancellationToken);
+                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
                 progressVm.CanCancel = false;
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);

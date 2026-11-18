@@ -63,6 +63,7 @@ public sealed class MediaExtractionScheduler
         var allIdentities = manager.ResolveProviders(request.Item);
         var identities = manager.ResolveProviders(request.Item, request.ProviderSelection);
         var identityKeys = allIdentities.Select(IdentityKey).ToHashSet(StringComparer.Ordinal);
+        var selectedIdentityKeys = identities.Select(IdentityKey).ToHashSet(StringComparer.Ordinal);
 
         var ownsBatch = request.BatchId is null;
         var batchId = request.BatchId ?? store.BeginBatch().BatchId;
@@ -98,7 +99,8 @@ public sealed class MediaExtractionScheduler
             var captured = existing
                 .Where(record =>
                     record.State == MediaCacheRecordState.Captured &&
-                    string.Equals(record.Fingerprint, request.Fingerprint, StringComparison.Ordinal))
+                    string.Equals(record.Fingerprint, request.Fingerprint, StringComparison.Ordinal) &&
+                    selectedIdentityKeys.Contains(record.CreateIdentityKey()))
                 .ToArray();
 
             var producedNothing = results.Count == 0 || results.All(result => result.Failed);

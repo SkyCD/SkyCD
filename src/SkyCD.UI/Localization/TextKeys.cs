@@ -80,10 +80,6 @@ public static class TextKeys
     public const string About = "core.text.About";
     public const string Options = "core.text.Options";
     public const string ExecutingPluginCommand = "core.text.ExecutingPluginCommand";
-    public const string HashComputeProgress = "core.text.HashComputeProgress";
-    public const string HashComputeCompleted = "core.text.HashComputeCompleted";
-    public const string HashComputeCancelled = "core.text.HashComputeCancelled";
-    public const string HashComputeFailed = "core.text.HashComputeFailed";
     public const string PluginCommandTimedOut = "core.text.PluginCommandTimedOut";
     public const string PluginCommandError = "core.text.PluginCommandError";
     public const string NavigatedToNode = "core.text.NavigatedToNode";

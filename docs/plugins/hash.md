@@ -17,13 +17,14 @@ Discovery uses assembly metadata and implemented capability types only — there
 
 ### Automatic scan extraction
 
-When the plugin is enabled and loaded (the default), the host hashes published scan files in the
-background and reports progress in the status bar. Local scans record each file's source path and last
-write time even without extended information. Current captures are reused on unchanged rescans; failures
-do not affect publication. When the plugin is disabled or unavailable, scans do not hash files.
+When the plugin is enabled and loaded (the default), the host collects its hashes along with other
+metadata while adding local files, before the add completes. Local scans record each file's source path
+and last write time even without extended information. Current captures are reused on unchanged rescans;
+failures do not prevent adding files. When the plugin is disabled or unavailable, files are not hashed.
+Remote listings do not provide a readable file source for metadata extraction.
 
 Hashing reads the whole file, so the provider stays opt-in: previews and other implicit extraction use
-`MediaProviderSelection.Standard` and never trigger hashing. Only the scan-publication pass selects it.
+`MediaProviderSelection.Standard` and never trigger hashing. The add-time metadata pass selects it.
 
 Nothing in the plugin opens a peer-to-peer connection, resolves a magnet link, or publishes metadata to
 any network.

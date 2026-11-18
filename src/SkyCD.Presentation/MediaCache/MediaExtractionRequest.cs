@@ -34,7 +34,7 @@ public sealed class MediaExtractionRequest
 
     /// <summary>
     /// Which matching providers this pass may execute. The default keeps whole-file hashing out of
-    /// implicit extraction; scan publication selects opt-in providers separately.
+    /// implicit extraction; adding files selects opt-in metadata providers separately.
     /// </summary>
     public SkyCD.Plugin.Host.Media.MediaProviderSelection ProviderSelection { get; init; } =
         SkyCD.Plugin.Host.Media.MediaProviderSelection.Standard;

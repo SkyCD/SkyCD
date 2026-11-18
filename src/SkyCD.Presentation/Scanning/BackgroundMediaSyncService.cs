@@ -21,7 +21,7 @@ public sealed class BackgroundMediaSyncService : IDisposable
     private readonly CatalogDocumentRepository repository;
     private readonly IMediaDriveProvider drives;
     private readonly Func<MediaScanOptions, CancellationToken, CatalogScanResult> scan;
-    private readonly Action<IReadOnlyList<CatalogDocument>, CancellationToken> publish;
+    private readonly Func<IReadOnlyList<CatalogDocument>, CancellationToken, Func<bool>, Task> publish;
     private readonly Func<bool> canSync;
     private readonly SemaphoreSlim gate = new(1, 1);
     private CancellationTokenSource? lifetime;
@@ -29,7 +29,7 @@ public sealed class BackgroundMediaSyncService : IDisposable
 
     public BackgroundMediaSyncService(
         CatalogDocumentRepository repository,
-        Action<IReadOnlyList<CatalogDocument>, CancellationToken> publish,
+        Func<IReadOnlyList<CatalogDocument>, CancellationToken, Func<bool>, Task> publish,
         Func<bool>? canSync = null,
         IMediaDriveProvider? drives = null,
         Func<MediaScanOptions, CancellationToken, CatalogScanResult>? scan = null)
@@ -149,7 +149,14 @@ public sealed class BackgroundMediaSyncService : IDisposable
                 var merged = new CatalogEntryMerger().Merge(result.Documents, currentEntries);
                 if (merged.Any(entry => !byId.TryGetValue(entry.Id, out var previous) || !Equivalent(previous, entry)))
                 {
-                    publish(result.Documents, cancellationToken);
+                    await publish(result.Documents, cancellationToken, () =>
+                    {
+                        if (disposed || !canSync() || cancellationToken.IsCancellationRequested) return false;
+                        var latest = repository.Get(root.Id);
+                        var drive = drives.GetDrive(path);
+                        return latest is not null && latest.Name == root.Name && latest.ParentId == root.ParentId
+                            && Text(latest, "RootDirectory") == path && drive is not null && Matches(root, drive);
+                    });
                 }
             }
         }

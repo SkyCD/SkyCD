@@ -368,7 +368,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
             new() { Id = "imported-child", Name = "file.bin", ParentId = "imported-media", Type = CatalogDocumentType.File, Size = 10 }
         };
 
-        viewModel.AddImportedDocuments(imported);
+        await viewModel.AddImportedDocumentsAsync(imported);
 
         Assert.NotNull(context.Catalog.Get("imported-child"));
         Assert.True(viewModel.CanUndo);

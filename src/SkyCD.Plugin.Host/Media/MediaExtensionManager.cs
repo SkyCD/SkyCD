@@ -31,8 +31,8 @@ public sealed class MediaExtensionManager
         slots = new SemaphoreSlim(this.limits.Concurrency);
     }
 
-    public bool HasOptInMetadataProviders => providers.Any(provider =>
-        provider.Capability is IMediaMetadataCapability metadata && metadata.Descriptor.IsOptIn);
+    public bool HasMetadataProviders => providers.Any(provider =>
+        provider.Capability is IMediaMetadataCapability);
 
     /// <summary>The factory must return a new readable stream; the host owns and disposes it.</summary>
     /// <summary>
@@ -61,7 +61,7 @@ public sealed class MediaExtensionManager
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(effective.TimeoutMilliseconds);
-            var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective);
+            var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective, selection);
 
             try
             {
@@ -129,7 +129,8 @@ public sealed class MediaExtensionManager
 
     private async Task<(int Priority, MediaProviderResult Result)?> RunAsync(MediaProvider provider,
         MediaItem item, Func<CancellationToken, Task<Stream>> openSource,
-        IProgress<MediaProgress>? progress, CancellationToken token, MediaExecutionLimits limits)
+        IProgress<MediaProgress>? progress, CancellationToken token, MediaExecutionLimits limits,
+        MediaProviderSelection selection)
     {
         await slots.WaitAsync(token);
         try
@@ -160,7 +161,8 @@ public sealed class MediaExtensionManager
                             throw new MediaLimitExceededException("metadata schema");
                     }
                 }
-                if (provider.Capability is IMediaPreviewCapability previewCapability)
+                if (selection is not (MediaProviderSelection.StandardMetadata or MediaProviderSelection.OptInMetadata) &&
+                    provider.Capability is IMediaPreviewCapability previewCapability)
                 {
                     var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
                     long bytes = 0;
@@ -201,6 +203,8 @@ public sealed class MediaExtensionManager
         {
             MediaProviderSelection.Standard => !descriptor.IsOptIn,
             MediaProviderSelection.OptInOnly => descriptor.IsOptIn,
+            MediaProviderSelection.StandardMetadata => provider.Capability is IMediaMetadataCapability && !descriptor.IsOptIn,
+            MediaProviderSelection.OptInMetadata => provider.Capability is IMediaMetadataCapability && descriptor.IsOptIn,
             _ => true
         };
     }
