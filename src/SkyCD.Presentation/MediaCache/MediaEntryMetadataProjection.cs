@@ -57,6 +57,37 @@ public static class MediaEntryMetadataProjection
             }
         }
 
+        // A failed capture publishes no values, but the fields it would have produced are known from its
+        // schema. Showing them as unavailable keeps a failed hash visible instead of looking never computed.
+        foreach (var record in records
+                     .Where(record => record.State == MediaCacheRecordState.Failed)
+                     .OrderByDescending(record => record.Priority)
+                     .ThenBy(record => record.PluginId, StringComparer.Ordinal))
+        {
+            foreach (var field in record.SchemaFields)
+            {
+                if (string.IsNullOrWhiteSpace(field.Key) || indexByKey.ContainsKey(field.Key))
+                {
+                    continue;
+                }
+
+                indexByKey[field.Key] = views.Count;
+                views.Add(new MediaMetadataFieldView
+                {
+                    Key = field.Key,
+                    Origin = MediaMetadataOrigin.Captured,
+                    Value = null,
+                    Type = field.Type,
+                    Unit = field.Unit,
+                    PluginId = record.PluginId,
+                    PluginVersion = record.PluginVersion,
+                    SchemaId = record.SchemaId,
+                    SchemaVersion = record.SchemaVersion,
+                    RecordState = record.State
+                });
+            }
+        }
+
         if (entry is not null)
         {
             foreach (var (key, value) in entry.Properties)

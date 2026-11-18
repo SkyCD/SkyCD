@@ -24,9 +24,13 @@ public enum MediaMetadataType
 public sealed record MediaMetadataField(string Key, MediaMetadataType Type, string? Unit = null);
 /// <summary>A stable provider-local schema identity and positive version.</summary>
 public sealed record MediaMetadataSchema(string Id, int Version, IReadOnlyList<MediaMetadataField> Fields);
-/// <summary>Supported extensions/MIME types, output schema and descending selection priority.</summary>
+/// <summary>
+/// Supported extensions/MIME types, output schema and descending selection priority. The <c>*</c> entry
+/// matches any source. Opt-in providers are listed among an item's providers but are never executed by an
+/// implicit extraction pass, so expensive whole-source work only runs on an explicit request.
+/// </summary>
 public sealed record MediaDescriptor(IReadOnlyList<string> Extensions, IReadOnlyList<string> ContentTypes,
-    MediaMetadataSchema Schema, int Priority = 0);
+    MediaMetadataSchema Schema, int Priority = 0, bool IsOptIn = false);
 /// <summary>Source facts without filesystem paths or persistence identifiers.</summary>
 public sealed record MediaItem(string Extension, string? ContentType, long Length);
 

@@ -29,6 +29,10 @@ public static class PreviewKeys
     public const string OriginUserEdited = "core.preview.OriginUserEdited";
     public const string StaleValueHint = "core.preview.StaleValueHint";
     public const string CapturedValueHint = "core.preview.CapturedValueHint";
+    public const string FailedValueHint = "core.preview.FailedValueHint";
+    public const string ValueNotAvailable = "core.preview.ValueNotAvailable";
+    public const string CopyValue = "core.preview.CopyValue";
+    public const string CopyValueAutomation = "core.preview.CopyValueAutomation";
 
     public const string EntryNameAutomation = "core.preview.EntryNameAutomation";
     public const string StateAutomation = "core.preview.StateAutomation";
