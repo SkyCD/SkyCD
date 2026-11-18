@@ -1,0 +1,9 @@
+# MyCatalogue MDB import
+
+The read-only MyCatalogue plugin opens Jet 4 `.mdb` catalogs with the observed MyCatalogue 1.2 schema. Other database versions and schemas, including unrelated Access databases, are not supported. No Microsoft Access installation or Jet/ACE driver is required.
+
+The importer validates the required local tables and columns, IDs, root sentinels, parent references, cycles, sizes, and row limits. It reads table data only; stored queries, macros, and external or linked tables are not executed. The original catalog is opened read-only and import uses a private temporary copy, which is deleted after use. The limits are 2 GiB per database, 2,000,000 items, and 100,000 rows each for disks and groups.
+
+Groups are represented as folder nodes marked `MyCatalogueGroup`, separate from media nodes; empty groups are retained. Physical disks and their directory and file descendants remain distinct. Timestamps are preserved as timezone-unspecified source values. CRC32 is retained as an eight-digit hexadecimal bit pattern only when the source marks it calculated. Missing sizes carry `SizeKnown=false` and are hidden in the size column and treated as missing by advanced search. SkyCD's underlying non-nullable size field still stores zero for those entries, so other consumers of that field may not distinguish unknown from zero.
+
+Only schema version 1.2 has been verified; other MyCatalogue versions, encrypted databases, and differences outside the observed schema are not supported. The importer uses the managed `JustyBase.UCanAccess.File` 1.1.0 package (Apache-2.0, .NET 10, no NuGet dependencies). When installing the plugin separately, place its built assembly and `UCanAccess.File.dll` together in the configured plugin directory. The existing application publish scripts do not bundle plugins.
