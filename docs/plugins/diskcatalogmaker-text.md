@@ -1,8 +1,10 @@
 # DiskCatalogMaker text-export import
 
 The `diskcatalogmaker-text` plugin imports DiskCatalogMaker text exports (`.txt`, `.tsv`).
-Native DiskCatalogMaker catalogs (`.dcm`/`.dcmf`/`.dcmd`) and thumbnails are out of scope:
-this plugin covers the documented Export Text route only.
+This plugin covers the documented Export Text route only. Native v5 catalogs (`.dcmf`,
+`.dcmd` packages, thumbnails) are handled by the separate
+[`diskcatalogmaker-v5` plugin](diskcatalogmaker-v5.md); legacy `.dcm` and
+`.toastcat` catalogs remain out of scope.
 
 No genuine DiskCatalogMaker export with redistribution rights could be located, so no
 tested app version is claimed. The fixtures are synthetic data modeled on the
