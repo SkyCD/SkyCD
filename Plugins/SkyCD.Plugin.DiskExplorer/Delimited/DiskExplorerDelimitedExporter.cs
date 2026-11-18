@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper;
 using SkyCD.Plugin.DiskExplorer.Delimited.Exceptions;
 
 namespace SkyCD.Plugin.DiskExplorer.Delimited;
@@ -14,6 +15,9 @@ namespace SkyCD.Plugin.DiskExplorer.Delimited;
 /// Writes Disk Explorer delimited-text reports from catalog rows. Rows are
 /// buffered once to rebuild parent chains and relative paths, then serialized
 /// in encounter order with the requested (or default) column layout.
+/// Uses CsvHelper's <see cref="CsvWriter"/> for consistent field writing and
+/// line ending control. Formula guarding and RFC 4180 quoting are applied
+/// before handing field text to CsvHelper, which writes the value verbatim.
 /// </summary>
 public static class DiskExplorerDelimitedExporter
 {
@@ -42,25 +46,45 @@ public static class DiskExplorerDelimitedExporter
         var rows = request.Rows.ToList();
         var nodes = IndexRows(rows);
 
-        await using var writer = new StreamWriter(target, encoding, bufferSize: 4096, leaveOpen: true)
+        // All quoting and formula guarding is applied in FormatField; CsvHelper
+        // writes each field verbatim. WriteByteOrderMark = false because the
+        // StreamWriter carries encoding (and BOM) separately.
+        var options = new CsvWriterOptions
         {
-            NewLine = newLine
+            Separator = request.Separator,
+            NewLine = newLine,
+            Mode = CsvMode.NoEscape,
+            Quoting = CsvQuoting.WhenNeeded,
+            Injection = CsvInjection.None,
+            WriteByteOrderMark = false,
+            HasHeader = false
         };
 
-        await writer.WriteLineAsync(string.Join(request.Separator.ToString(), columns)).ConfigureAwait(false);
+        await using var writer = new StreamWriter(target, encoding, bufferSize: 4096, leaveOpen: true);
+        await using var csvWriter = CsvWriter.Create(writer, options, leaveOpen: true);
+
+        // Header row
+        foreach (var column in columns)
+        {
+            csvWriter.WriteField(column);
+        }
+
+        await csvWriter.EndRecordAsync();
 
         var total = Math.Max(1, rows.Count);
         var written = 0;
         foreach (var row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var fields = new List<string>(columns.Count);
+
             foreach (var column in columns)
             {
-                fields.Add(FormatField(RenderColumn(column, row, nodes), request));
+                var raw = RenderColumn(column, row, nodes);
+                var field = FormatField(raw, request);
+                csvWriter.WriteField(field, CsvQuoting.WhenNeeded);
             }
 
-            await writer.WriteLineAsync(string.Join(request.Separator.ToString(), fields)).ConfigureAwait(false);
+            await csvWriter.EndRecordAsync();
             written++;
             if (written % 100 == 0)
             {
@@ -68,7 +92,7 @@ public static class DiskExplorerDelimitedExporter
             }
         }
 
-        await writer.FlushAsync().ConfigureAwait(false);
+        await csvWriter.FlushAsync();
         progress?.Report(100);
         _ = fileName;
     }
@@ -196,6 +220,10 @@ public static class DiskExplorerDelimitedExporter
         return string.Empty;
     }
 
+    /// <summary>
+    /// Applies formula guarding and RFC 4180 quoting to a rendered field value.
+    /// The result is written verbatim by CsvHelper.
+    /// </summary>
     private static string FormatField(string value, DiskExplorerDelimitedExportRequest request)
     {
         var guarded = value;
