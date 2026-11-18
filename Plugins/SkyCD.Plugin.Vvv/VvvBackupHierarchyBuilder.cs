@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -31,8 +30,9 @@ internal static class VvvBackupHierarchyBuilder
             return "VVV backup";
         }
 
-        var name = Path.GetFileName(sourceName.Trim());
-        return string.IsNullOrWhiteSpace(name) ? sourceName.Trim() : name;
+        var trimmed = sourceName.Trim();
+        var name = trimmed[(trimmed.LastIndexOfAny(['\\', '/']) + 1)..];
+        return string.IsNullOrWhiteSpace(name) ? trimmed : name;
     }
 
     private sealed class Builder(VvvBackupSnapshot snapshot, string sourceName)
