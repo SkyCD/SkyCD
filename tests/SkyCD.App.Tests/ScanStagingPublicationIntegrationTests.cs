@@ -521,7 +521,7 @@ public sealed class ScanStagingPublicationIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_PublishStagedScan_UpdatesUIAndRecordsUndo()
+    public async Task MainWindowViewModel_PublishStagedScan_UpdatesUIAndRecordsUndo()
     {
         using var setup = InitializeRepositories();
         var repository = setup.CatalogRepository;
@@ -548,7 +548,7 @@ public sealed class ScanStagingPublicationIntegrationTests : IDisposable
 
         store.StageDocuments(session.SessionId, [doc1, doc2]);
 
-        var result = viewModel.PublishStagedScan(store, session.SessionId);
+        var result = await viewModel.PublishStagedScanAsync(store, session.SessionId);
         Assert.NotNull(result);
         Assert.Equal(2, result.PublishedDocumentsCount);
 

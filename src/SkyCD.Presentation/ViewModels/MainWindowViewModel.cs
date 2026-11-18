@@ -27,6 +27,7 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Search;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
@@ -52,15 +53,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (value && catalogRepository is not null && !isDisposed)
         {
             backgroundMediaSync = new BackgroundMediaSyncService(catalogRepository,
-                (documents, token) =>
+                async (documents, token, canPublish) =>
                 {
-                    new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
-                        new ScanPublishOptions { CancellationToken = token }, undoManager?.History);
-                    IsDirtyDocument = true;
-                    UpdateUndoRedoState();
-                    RefreshTreeNodes();
-                    RefreshBrowserItemsForSelection();
-                    QueueScanHashing(documents);
+                    var published = await PublishWithMetadataAsync(documents, () =>
+                    {
+                        new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
+                            new ScanPublishOptions { CancellationToken = token }, undoManager?.History);
+                        IsDirtyDocument = true;
+                        UpdateUndoRedoState();
+                        RefreshTreeNodes();
+                        RefreshBrowserItemsForSelection();
+                        return true;
+                    }, null, token, canPublish: canPublish);
+                    if (published) RefreshPreview();
                 }, () => !isDisposed && !IsProgressVisible);
             backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
             backgroundMediaSync.Start();
@@ -138,131 +143,35 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private DescriptionExtensionManager descriptionExtensionManager = new([]);
     private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
-    private MediaHashService? mediaHashService;
-    private CancellationTokenSource? hashCancellation;
+    private MediaMetadataService? mediaMetadataService;
+    private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
+    private readonly CancellationTokenSource metadataLifetime = new();
 
-    [ObservableProperty]
-    private bool isScanHashingEnabled;
-
-    partial void OnIsScanHashingEnabledChanged(bool value)
-    {
-        RebuildMenuItems();
-        RefreshTopMenuState();
-    }
-
-    [RelayCommand]
-    private void ToggleScanHashing() => IsScanHashingEnabled = !IsScanHashingEnabled;
-
-    /// <summary>
-    /// Supplies the media providers used for explicit hashing. Called again after plugins are reloaded so
-    /// hashing follows the current provider set.
-    /// </summary>
     public void RefreshMediaServices(MediaExtensionManager updatedManager)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
-        mediaHashService = new MediaHashService(updatedManager, mediaCacheStore);
-        ComputeHashesCommand.NotifyCanExecuteChanged();
-        RefreshTopMenuState();
+        mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore);
     }
 
-    private bool CanComputeHashes() =>
-        mediaHashService is not null && GetSelectedBrowserItems().Any(IsHashableFile);
-
-    /// <summary>
-    /// Hashes the selected files. Re-running it refreshes stored digests, and running it again while a pass
-    /// is active cancels that pass instead of queuing a second one.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(CanComputeHashes))]
-    private async Task ComputeHashesAsync()
+    private static bool HasLocalSource(CatalogDocument entry, IReadOnlyDictionary<string, CatalogDocument> catalog)
     {
-        if (mediaHashService is null)
+        if (entry.Type != CatalogDocumentType.File ||
+            !entry.Properties.TryGetValue(MediaMetadataService.SourcePathPropertyKey, out var path) ||
+            string.IsNullOrWhiteSpace(path?.ToString()))
         {
-            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeUnavailable);
-            return;
+            return false;
         }
 
-        if (hashCancellation is not null)
+        var visited = new HashSet<string>(StringComparer.Ordinal) { entry.Id };
+        var parentId = entry.ParentId;
+        while (!string.IsNullOrWhiteSpace(parentId) && visited.Add(parentId) && catalog.TryGetValue(parentId, out var parent))
         {
-            hashCancellation.Cancel();
-            return;
+            if (parent.Type == CatalogDocumentType.NetworkFolder) return false;
+            parentId = parent.ParentId;
         }
 
-        var targets = GetSelectedBrowserItems().Where(IsHashableFile).ToArray();
-        if (targets.Length == 0)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeNoTargets);
-            return;
-        }
-
-        await RunHashComputationAsync(targets);
+        return true;
     }
-
-    private async Task RunHashComputationAsync(IReadOnlyList<CatalogDocument> targets)
-    {
-        if (mediaHashService is null || targets.Count == 0 || hashCancellation is not null)
-        {
-            return;
-        }
-
-        var catalog = catalogRepository?.GetAll()
-            ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
-
-        using var cancellation = new CancellationTokenSource();
-        hashCancellation = cancellation;
-        var stored = 0;
-        var notStored = 0;
-        try
-        {
-            IsProgressVisible = true;
-            ProgressValue = 0;
-            for (var index = 0; index < targets.Count; index++)
-            {
-                cancellation.Token.ThrowIfCancellationRequested();
-                var entry = targets[index];
-                var current = index;
-                SetStatus(LocalizationService.Current.Format(
-                    TextKeys.HashComputeProgress, current + 1, targets.Count, entry.Name));
-                var progress = new Progress<MediaProgress>(mediaProgress =>
-                    ProgressValue = Math.Clamp((int)Math.Round(
-                        ((current + mediaProgress.Fraction) / targets.Count) * 100), 0, 100));
-
-                var outcome = await mediaHashService.ComputeAsync(entry, catalog, progress, cancellation.Token);
-                if (outcome.Stored)
-                {
-                    stored++;
-                }
-                else
-                {
-                    notStored++;
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeCancelled);
-            return;
-        }
-        finally
-        {
-            if (ReferenceEquals(hashCancellation, cancellation))
-            {
-                hashCancellation = null;
-            }
-            IsProgressVisible = false;
-            ProgressValue = 0;
-        }
-
-        StatusText = LocalizationService.Current.Format(TextKeys.HashComputeCompleted, stored, targets.Count, notStored);
-        if (targets.Any(target => string.Equals(target.Id, SelectedBrowserItem?.Id, StringComparison.Ordinal)))
-        {
-            RefreshPreview();
-        }
-    }
-
-    private static bool IsHashableFile(CatalogDocument entry) =>
-        entry.Type == CatalogDocumentType.File &&
-        entry.Properties.TryGetValue(MediaHashService.SourcePathPropertyKey, out var path) &&
-        !string.IsNullOrWhiteSpace(path?.ToString());
 
     private bool CanGenerateDescriptions() =>
         aiDescriptionService is not null && GetSelectedBrowserItems().Any(IsDescriptionTarget);
@@ -296,38 +205,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             RefreshBrowserItemsForSelection();
         });
         AiDescriptionBatchRequested?.Invoke(this, new AiDescriptionBatchDialogRequestedEventArgs { Dialog = dialog });
-    }
-
-    /// <summary>
-    /// Starts opt-in hashing for freshly scanned files. Hashing reads whole files, so it only runs after a
-    /// scan when the user enabled it; failures never abort the scan.
-    /// </summary>
-    private void QueueScanHashing(IReadOnlyList<CatalogDocument> documents)
-    {
-        if (!IsScanHashingEnabled || mediaHashService is null || documents.Count == 0)
-        {
-            return;
-        }
-
-        var files = documents.Where(IsHashableFile).ToArray();
-        if (files.Length == 0)
-        {
-            return;
-        }
-
-        _ = RunScanHashingAsync(files);
-    }
-
-    private async Task RunScanHashingAsync(IReadOnlyList<CatalogDocument> files)
-    {
-        try
-        {
-            await RunHashComputationAsync(files);
-        }
-        catch (Exception exception)
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.HashComputeFailed, exception.Message);
-        }
     }
 
     public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
@@ -579,7 +456,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (isDisposed) return;
         isDisposed = true;
         pluginCommandCancellation?.Cancel();
-        hashCancellation?.Cancel();
+        metadataLifetime.Cancel();
         backgroundMediaSync?.Dispose();
         localizationSubscription.Dispose();
 
@@ -1404,7 +1281,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public CatalogDocument AddTitleOnlyMedia(string? mediaName, string? parentId)
     {
         var document = TitleOnlyMedia.Create(mediaName, parentId);
-        AddImportedDocuments([document]);
+        PublishImportedDocuments([document], CancellationToken.None);
         if (treeNodesByKey.TryGetValue(document.Id, out var node))
         {
             SelectedTreeNode = node;
@@ -1413,26 +1290,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return document;
     }
 
-    public ScanPublishResult? PublishStagedScan(IStagingStore store, string sessionId, ScanPublishOptions? options = null)
+    public async Task<ScanPublishResult?> PublishStagedScanAsync(IStagingStore store, string sessionId, ScanPublishOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        if (catalogRepository is null)
+        var staged = store.GetStagedDocuments(sessionId);
+        var cancellationToken = options?.CancellationToken ?? CancellationToken.None;
+        var result = await PublishWithMetadataAsync(staged, () =>
         {
-            var staged = store.GetStagedDocuments(sessionId);
-            AddImportedDocuments(staged);
-            store.DropSession(sessionId);
-            return new ScanPublishResult
+            if (catalogRepository is null)
             {
-                GenerationId = $"gen-{Guid.NewGuid():N}",
-                PublishedDocumentsCount = staged.Count,
-                PublishedDocuments = staged
-            };
-        }
+                PublishImportedDocuments(staged, cancellationToken);
+                store.DropSession(sessionId);
+                return new ScanPublishResult
+                {
+                    GenerationId = $"gen-{Guid.NewGuid():N}",
+                    PublishedDocumentsCount = staged.Count,
+                    PublishedDocuments = staged
+                };
+            }
 
-        var publisher = new CatalogScanPublisher();
-        var result = publisher.Publish(store, sessionId, catalogRepository, options, undoManager?.History);
+            return new CatalogScanPublisher().Publish(store, sessionId, catalogRepository, options, undoManager?.History);
+        }, null, cancellationToken, sessionId);
 
         UpdateUndoRedoState();
         RefreshTreeNodes();
@@ -1448,25 +1328,184 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         IsDirtyDocument = true;
-        QueueScanHashing(result.PublishedDocuments);
+        RefreshPreview();
         return result;
     }
 
-    public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents) =>
-        AddImportedDocuments(documents, CancellationToken.None);
+    public async Task AddImportedDocumentsAsync(
+        IReadOnlyList<CatalogDocument> documents,
+        CancellationToken cancellationToken = default,
+        IOperationProgress? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(documents);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (documents.Count == 0)
+        {
+            return;
+        }
 
-    public void AddImportedDocuments(IReadOnlyList<CatalogDocument> documents, CancellationToken cancellationToken)
+        await PublishWithMetadataAsync(documents, () =>
+        {
+            PublishImportedDocuments(documents, cancellationToken);
+            return true;
+        }, progress, cancellationToken);
+        RefreshPreview();
+    }
+
+    private async Task<T> PublishWithMetadataAsync<T>(
+        IReadOnlyList<CatalogDocument> documents,
+        Func<T> publish,
+        IOperationProgress? progress,
+        CancellationToken cancellationToken,
+        string? sessionId = null,
+        Func<bool>? canPublish = null)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, metadataLifetime.Token);
+        var token = linked.Token;
+        await metadataPublicationGate.WaitAsync(token);
+        try
+        {
+            while (true)
+            {
+                var existing = catalogRepository?.GetAll()
+                    ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
+                var prepared = catalogRepository is null ? documents : new CatalogEntryMerger().Merge(documents, existing);
+                var preparedIds = prepared.Select(entry => entry.Id).ToHashSet(StringComparer.Ordinal);
+                var catalog = existing.Where(entry => !preparedIds.Contains(entry.Id)).Concat(prepared).ToArray();
+                var batchId = await StageMetadataAsync(prepared, catalog, progress, token, sessionId);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (catalogRepository is not null)
+                    {
+                        var current = new CatalogEntryMerger().Merge(documents, catalogRepository.GetAll());
+                        if (!current.Select(entry => (entry.Id, entry.ParentId))
+                            .SequenceEqual(prepared.Select(entry => (entry.Id, entry.ParentId))))
+                        {
+                            if (batchId is not null) mediaCacheStore.DiscardBatch(batchId);
+                            continue;
+                        }
+                    }
+
+                    if (canPublish is not null && !canPublish())
+                    {
+                        if (batchId is not null) mediaCacheStore.DiscardBatch(batchId);
+                        return default!;
+                    }
+
+                    var result = publish();
+                    if (batchId is not null)
+                    {
+                        try
+                        {
+                            mediaCacheStore.PublishBatch(batchId);
+                        }
+                        catch (Exception exception)
+                        {
+                            progress?.ReportWarning(exception.Message);
+                            try
+                            {
+                                mediaCacheStore.DiscardBatch(batchId);
+                            }
+                            catch (Exception discardException)
+                            {
+                                progress?.ReportWarning(discardException.Message);
+                            }
+                        }
+                    }
+                    return result;
+                }
+                catch
+                {
+                    if (batchId is not null && !isDisposed) mediaCacheStore.DiscardBatch(batchId);
+                    throw;
+                }
+            }
+        }
+        finally
+        {
+            metadataPublicationGate.Release();
+        }
+    }
+
+    private async Task<string?> StageMetadataAsync(
+        IReadOnlyList<CatalogDocument> documents,
+        IReadOnlyList<CatalogDocument> catalog,
+        IOperationProgress? progress,
+        CancellationToken cancellationToken,
+        string? sessionId)
+    {
+        if (mediaMetadataService is not { CanCollect: true } service)
+        {
+            return null;
+        }
+
+        var byId = catalog.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        var files = documents.Where(entry => HasLocalSource(entry, byId)).ToArray();
+        if (files.Length == 0)
+        {
+            return null;
+        }
+
+        string batchId;
+        try
+        {
+            batchId = mediaCacheStore.BeginBatch(sessionId).BatchId;
+        }
+        catch (Exception exception)
+        {
+            progress?.ReportWarning(exception.Message);
+            return null;
+        }
+
+        try
+        {
+            for (var index = 0; index < files.Length; index++)
+            {
+                await Task.Yield();
+                cancellationToken.ThrowIfCancellationRequested();
+                progress?.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
+                    stagePercentage: index * 100d / files.Length, stageCurrent: index, stageTotal: files.Length);
+                progress?.ReportItem(files[index].Name);
+                try
+                {
+                    var currentIndex = index;
+                    var itemProgress = progress is null ? null : new Progress<MediaProgress>(value =>
+                        progress.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
+                            stagePercentage: (currentIndex + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Length,
+                            stageCurrent: currentIndex, stageTotal: files.Length));
+                    var outcome = await service.CollectAsync(files[index], catalog, itemProgress, cancellationToken, batchId);
+                    if (outcome.SkipReason == MediaMetadataSkipReason.Failed)
+                    {
+                        progress?.ReportWarning(outcome.FailureReason ?? outcome.SkipReason.ToString(), itemPath: files[index].Name);
+                    }
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    progress?.ReportWarning(exception.Message, itemPath: files[index].Name);
+                }
+            }
+            return batchId;
+        }
+        catch
+        {
+            if (!isDisposed) mediaCacheStore.DiscardBatch(batchId);
+            throw;
+        }
+    }
+
+    private void PublishImportedDocuments(IReadOnlyList<CatalogDocument> documents, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (documents is null || documents.Count == 0)
+        if (documents.Count == 0)
         {
             return;
         }
 
         if (catalogRepository is not null)
         {
-            var publisher = new CatalogScanPublisher();
-            publisher.PublishDirect(documents, catalogRepository, new ScanPublishOptions { CancellationToken = cancellationToken }, undoManager?.History);
+            new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
+                new ScanPublishOptions { CancellationToken = cancellationToken }, undoManager?.History);
         }
         else if (inMemoryCatalogEntries is not null)
         {
@@ -1496,7 +1535,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             item.Name.Equals(rootImported.Name, StringComparison.OrdinalIgnoreCase));
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Added, rootImported.Name);
-        QueueScanHashing(documents);
     }
 
     public void AddImportedItem(string? suggestedName)
@@ -1516,7 +1554,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ChildrenCount = 0
         };
 
-        AddImportedDocuments([importedItem]);
+        PublishImportedDocuments([importedItem], CancellationToken.None);
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteItem))]
@@ -2720,7 +2758,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPropertiesEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ComputeHashesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
@@ -2796,7 +2833,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ComputeHashesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
@@ -2836,7 +2872,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        ComputeHashesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
@@ -3068,19 +3103,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             },
             new MainMenuItemViewModel
             {
-                Header = LocalizationService.Current.Get(TextKeys.ComputeHashesOnScan),
-                Command = ToggleScanHashingCommand,
-                ToggleType = MenuItemToggleType.CheckBox,
-                IsChecked = IsScanHashingEnabled
-            },
-            new MainMenuItemViewModel
-            {
-                Key = "compute_hashes",
-                Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
-                Command = ComputeHashesCommand
-            },
-            new MainMenuItemViewModel
-            {
                 Key = "ai_description_batch",
                 Header = LocalizationService.Current.Get(TextKeys.GenerateAiDescriptions),
                 Command = GenerateAiDescriptionsCommand
@@ -3243,7 +3265,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
         SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
-        SetMenuEnabled(byKey, "compute_hashes", CanComputeHashes());
         SetMenuEnabled(byKey, "ai_description_batch", CanGenerateDescriptions());
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
@@ -3375,13 +3396,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
-            Separator(),
-            new MainMenuItemViewModel
-            {
-                Key = "compute_hashes",
-                Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
-                Command = ComputeHashesCommand
-            },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];

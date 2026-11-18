@@ -317,11 +317,13 @@ public sealed class CollectionAssignmentTests : IDisposable
         stack.Catalog.Save(existing.Id, existing);
         var publications = 0;
         using var service = new BackgroundMediaSyncService(stack.Catalog,
-            (documents, token) =>
+            (documents, token, canPublish) =>
             {
+                Assert.True(canPublish());
                 publications++;
                 new CatalogScanPublisher().PublishDirect(documents, stack.Catalog,
                     new ScanPublishOptions { CancellationToken = token });
+                return Task.CompletedTask;
             }, drives: new SyncDriveProvider(), scan: (_, _) => new CatalogScanResult
             {
                 Documents = [SyncMedia("scanned"), Entry("existing", "scanned"), Entry("new", "scanned")],
@@ -346,7 +348,7 @@ public sealed class CollectionAssignmentTests : IDisposable
         stack.Catalog.Save("media", SyncMedia());
         var scans = 0;
         var publications = 0;
-        using (var offline = new BackgroundMediaSyncService(stack.Catalog, (_, _) => publications++,
+        using (var offline = new BackgroundMediaSyncService(stack.Catalog, (_, _, _) => { publications++; return Task.CompletedTask; },
             drives: new SyncDriveProvider(false), scan: (_, _) =>
             {
                 scans++;
@@ -356,7 +358,7 @@ public sealed class CollectionAssignmentTests : IDisposable
             await offline.RunOnceAsync();
         }
         Assert.Equal(0, scans);
-        using var changed = new BackgroundMediaSyncService(stack.Catalog, (_, _) => publications++,
+        using var changed = new BackgroundMediaSyncService(stack.Catalog, (_, _, _) => { publications++; return Task.CompletedTask; },
             drives: new SyncDriveProvider(), scan: (_, _) =>
             {
                 DeleteEntry(stack, "media");
@@ -364,6 +366,36 @@ public sealed class CollectionAssignmentTests : IDisposable
             });
         await changed.RunOnceAsync();
         Assert.Equal(0, publications);
+    }
+
+    [Fact]
+    public async Task BackgroundMediaSync_RechecksRootAfterAsyncPreparation()
+    {
+        using var stack = CreateStack();
+        stack.Catalog.Save("media", SyncMedia());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool? valid = null;
+        using var service = new BackgroundMediaSyncService(stack.Catalog,
+            async (_, _, canPublish) =>
+            {
+                started.SetResult();
+                await release.Task;
+                valid = canPublish();
+            }, drives: new SyncDriveProvider(), scan: (_, _) => new CatalogScanResult
+            {
+                Documents = [SyncMedia("scanned"), Entry("new", "scanned")],
+                Statistics = new ScanTraversalStatistics()
+            });
+
+        var running = service.RunOnceAsync();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        DeleteEntry(stack, "media");
+        release.SetResult();
+        await running;
+
+        Assert.False(valid);
+        Assert.Null(stack.Catalog.Get("new"));
     }
 
     [Fact]
@@ -375,7 +407,7 @@ public sealed class CollectionAssignmentTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         var scans = 0;
         using var service = new BackgroundMediaSyncService(stack.Catalog,
-            (_, _) => Assert.Fail("Canceled scan must not publish"), drives: new SyncDriveProvider(),
+            (_, _, _) => Task.FromException(new InvalidOperationException("Canceled scan must not publish")), drives: new SyncDriveProvider(),
             scan: (_, token) =>
             {
                 Interlocked.Increment(ref scans);
@@ -401,10 +433,12 @@ public sealed class CollectionAssignmentTests : IDisposable
         stack.Catalog.Save("good", SyncMedia("good", "Good"));
         var publications = 0;
         using var service = new BackgroundMediaSyncService(stack.Catalog,
-            (documents, token) =>
+            (documents, token, canPublish) =>
             {
+                Assert.True(canPublish());
                 publications++;
                 new CatalogScanPublisher().PublishDirect(documents, stack.Catalog);
+                return Task.CompletedTask;
             }, drives: new SyncDriveProvider(), scan: (options, _) => options.MediaName == "Bad"
                 ? throw new IOException("Unavailable medium")
                 : new CatalogScanResult

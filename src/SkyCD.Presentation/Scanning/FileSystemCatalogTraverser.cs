@@ -104,7 +104,11 @@ internal sealed class FileSystemCatalogTraverser
                 try
                 {
                     context.ThrowIfCancellationRequested();
-                    var fileProperties = new PropertiesCollection();
+                    var fileProperties = new PropertiesCollection
+                    {
+                        ["FullName"] = entry.FullPath,
+                        ["LastWriteTime"] = entry.LastWriteTime.ToString("O")
+                    };
                     if (includeExtendedInfo)
                     {
                         PopulateFileProperties(fileProperties, entry);

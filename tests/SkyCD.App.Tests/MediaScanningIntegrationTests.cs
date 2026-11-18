@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
@@ -69,7 +70,7 @@ public sealed class MediaScanningIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void MediaScan_And_AddImportedDocuments_PersistsToCouchbase_AndUpdatesUI_AndReloadsCorrectly()
+    public async Task MediaScan_And_AddImportedDocuments_PersistsToCouchbase_AndUpdatesUI_AndReloadsCorrectly()
     {
         // 1. Create media directory structure on disk
         var cdRoot = Path.Combine(scanTestDirectory, "CDDriveRoot");
@@ -128,7 +129,7 @@ public sealed class MediaScanningIntegrationTests : IDisposable
         Assert.Equal(5, scannedDocs.Count); // Root Media + AUTORUN.INF + setup.exe + Manual + guide.pdf
 
         // 4. Import into ViewModel
-        viewModel.AddImportedDocuments(scannedDocs);
+        await viewModel.AddImportedDocumentsAsync(scannedDocs);
 
         Assert.True(viewModel.IsDirtyDocument);
 
