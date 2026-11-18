@@ -7,6 +7,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="10.1.0"/>
+        <PackageReference Include="JustyBase.UCanAccess.File" Version="1.1.0"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0"/>
         <PackageReference Include="xunit" Version="2.9.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"/>
@@ -17,6 +18,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Cscd\SkyCD.Plugin.Legacy.Cscd.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Legacy.Ascd\SkyCD.Plugin.Legacy.Ascd.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Csv\SkyCD.Plugin.Csv.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Access\SkyCD.Plugin.Access.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.AiDescription\SkyCD.Plugin.AiDescription.csproj"/>
         <ProjectReference Include="../SkyCD.Acp.FakeAgent/SkyCD.Acp.FakeAgent.csproj" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Json\SkyCD.Plugin.Json.csproj"/>
@@ -39,9 +41,9 @@
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="FormatFixtures\ftpz.ascd" CopyToOutputDirectory="PreserveNewest"/>
-        <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="FormatFixtures\my-documents.ascd" CopyToOutputDirectory="PreserveNewest"/>
-        <None Include="..\SkyCD.Plugin.*.Tests\Fixtures\**\*" Link="FormatFixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"/>
-        <None Include="..\SkyCD.Plugin.Legacy.Scd.Tests\Fixtures\Scd\*-sample.scd" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="FormatFixtures\ftpz.ascd" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="FormatFixtures\my-documents.ascd" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\SkyCD.Plugin.*.Tests\Fixtures\**\*" Link="FormatFixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\SkyCD.Plugin.Legacy.Scd.Tests\Fixtures\Scd\*-sample.scd" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
