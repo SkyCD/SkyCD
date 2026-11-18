@@ -63,6 +63,7 @@
         <Project Path="Plugins/SkyCD.Plugin.DiskCatalogMaker/SkyCD.Plugin.DiskCatalogMaker.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Adc/SkyCD.Plugin.Adc.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.SmartCdCatalogPro/SkyCD.Plugin.SmartCdCatalogPro.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.MyCatalogue/SkyCD.Plugin.MyCatalogue.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -143,6 +144,7 @@
         <Project Path="tests/SkyCD.Plugin.DiskCatalogMaker.Tests/SkyCD.Plugin.DiskCatalogMaker.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Adc.Tests/SkyCD.Plugin.Adc.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.SmartCdCatalogPro.Tests/SkyCD.Plugin.SmartCdCatalogPro.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.MyCatalogue.Tests/SkyCD.Plugin.MyCatalogue.Tests.csproj"/>
     </Folder>
     <Folder Name="/tools/">
         <Project Path="tools/SkyCD.TestLogger/SkyCD.TestLogger.csproj"/>

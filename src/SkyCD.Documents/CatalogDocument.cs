@@ -30,7 +30,10 @@ public sealed class CatalogDocument
 
     public string DisplayType => Type.ToDisplayName();
 
-    public string DisplaySize => SizeFormatting.FormatBytes(Size, "0.##");
+    public bool HasKnownSize => !Properties.TryGetValue("SizeKnown", out var value) ||
+                                !bool.TryParse(value?.ToString(), out var known) || known;
+
+    public string DisplaySize => HasKnownSize ? SizeFormatting.FormatBytes(Size, "0.##") : string.Empty;
 
     public string IconGlyph => ResolveIconGlyph();
 

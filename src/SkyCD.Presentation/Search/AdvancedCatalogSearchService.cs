@@ -199,7 +199,7 @@ public static class AdvancedCatalogSearchService
             AdvancedCatalogField.FullPath => MatchText(fullPath, predicate),
             AdvancedCatalogField.Extension => MatchText(CatalogSearchIndex.NormalizeExtension(document.Name), predicate),
             AdvancedCatalogField.DocumentType => MatchType(document.Type, predicate),
-            AdvancedCatalogField.SizeBytes => MatchNumber(Convert.ToDouble(document.Size, CultureInfo.InvariantCulture), true, null, predicate),
+            AdvancedCatalogField.SizeBytes => MatchNumber(Convert.ToDouble(document.Size, CultureInfo.InvariantCulture), document.HasKnownSize, null, predicate),
             AdvancedCatalogField.Status => MatchText(StoredText(document.Status), predicate),
             AdvancedCatalogField.CustomProperty => MatchCustomProperty(document, predicate),
             AdvancedCatalogField.Metadata => MatchMetadata(metadata, predicate),
