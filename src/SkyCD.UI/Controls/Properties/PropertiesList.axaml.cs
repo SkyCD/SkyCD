@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Markup.Xaml;
 
 namespace SkyCD.UI.Controls.Properties;
@@ -10,6 +12,21 @@ public partial class PropertiesList : UserControl
 {
     public static readonly StyledProperty<IReadOnlyDictionary<string, object?>?> PropertiesDataProperty =
         AvaloniaProperty.Register<PropertiesList, IReadOnlyDictionary<string, object?>?>(nameof(PropertiesData));
+
+    public static readonly StyledProperty<IEnumerable?> RowsProperty =
+        AvaloniaProperty.Register<PropertiesList, IEnumerable?>(nameof(Rows));
+
+    public static readonly StyledProperty<ITemplate<Panel?>?> RowsPanelProperty =
+        AvaloniaProperty.Register<PropertiesList, ITemplate<Panel?>?>(nameof(RowsPanel));
+
+    public static readonly StyledProperty<bool> RowIsTabStopProperty =
+        AvaloniaProperty.Register<PropertiesList, bool>(nameof(RowIsTabStop), true);
+
+    public static readonly StyledProperty<IDataTemplate?> PropertyCellTemplateProperty =
+        AvaloniaProperty.Register<PropertiesList, IDataTemplate?>(nameof(PropertyCellTemplate));
+
+    public static readonly StyledProperty<IDataTemplate?> ValueCellTemplateProperty =
+        AvaloniaProperty.Register<PropertiesList, IDataTemplate?>(nameof(ValueCellTemplate));
 
     public static readonly StyledProperty<string?> PropertyHeaderProperty =
         AvaloniaProperty.Register<PropertiesList, string?>(nameof(PropertyHeader));
@@ -20,13 +37,47 @@ public partial class PropertiesList : UserControl
     public PropertiesList()
     {
         PropertiesRows = [];
+        Rows = PropertiesRows;
         AvaloniaXamlLoader.Load(this);
+        RowsPanel = (ITemplate<Panel?>)Resources["DefaultRowsPanel"]!;
+        PropertyCellTemplate = (IDataTemplate)Resources["DefaultPropertyCellTemplate"]!;
+        ValueCellTemplate = (IDataTemplate)Resources["DefaultValueCellTemplate"]!;
     }
 
     public IReadOnlyDictionary<string, object?>? PropertiesData
     {
         get => GetValue(PropertiesDataProperty);
         set => SetValue(PropertiesDataProperty, value);
+    }
+
+    public IEnumerable? Rows
+    {
+        get => GetValue(RowsProperty);
+        set => SetValue(RowsProperty, value);
+    }
+
+    public ITemplate<Panel?>? RowsPanel
+    {
+        get => GetValue(RowsPanelProperty);
+        set => SetValue(RowsPanelProperty, value);
+    }
+
+    public bool RowIsTabStop
+    {
+        get => GetValue(RowIsTabStopProperty);
+        set => SetValue(RowIsTabStopProperty, value);
+    }
+
+    public IDataTemplate? PropertyCellTemplate
+    {
+        get => GetValue(PropertyCellTemplateProperty);
+        set => SetValue(PropertyCellTemplateProperty, value);
+    }
+
+    public IDataTemplate? ValueCellTemplate
+    {
+        get => GetValue(ValueCellTemplateProperty);
+        set => SetValue(ValueCellTemplateProperty, value);
     }
 
     public string? PropertyHeader

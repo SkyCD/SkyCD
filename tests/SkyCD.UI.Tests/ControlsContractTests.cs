@@ -1,16 +1,25 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using SkyCD.App.Views;
+using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.UI.Controls.Properties;
 using SkyCD.UI.Controls.StatusBar;
 using SkyCD.UI.Controls.Toolbars;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.UI.Tests;
@@ -44,6 +53,49 @@ public class ControlsContractTests
         Assert.Contains(list.PropertiesRows, row => row.Key == "Type" && row.Value == "Audio");
         Assert.Contains(list.PropertiesRows, row => row.Key == "Size" && row.Value == "414");
         Assert.Contains(list.PropertiesRows, row => row.Key == "Location" && row.Value == "Music");
+    }
+
+    [AvaloniaFact]
+    public void CustomPropertiesTable_EditsValuesAndTabsInOrder()
+    {
+        var source = new PropertiesCollection(new Dictionary<string, object?> { ["Existing"] = 42 });
+        var viewModel = new PropertiesDialogViewModel("key", "name", "icon", "", source);
+        viewModel.ApplyCustomPropertyDefaults([
+            new CustomPropertyDocument { Name = "Existing", DefaultValue = "ignored" },
+            new CustomPropertyDocument { Name = "Second", DefaultValue = "default" }
+        ]);
+        var (window, table) = ShowCustomProperties(viewModel);
+        try
+        {
+            var editors = table.GetVisualDescendants().OfType<TextBox>().ToArray();
+            Assert.Equal(2, editors.Length);
+            Assert.Equal("42", editors[0].Text);
+            Assert.Equal("default", editors[1].Text);
+            Assert.Equal(42, viewModel.GetProperties()["Existing"]);
+            Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Existing");
+            Assert.Same(viewModel.CustomProperties, table.Rows);
+
+            Assert.True(editors[0].Focus());
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new Thickness(1), editors[0].BorderThickness);
+            editors[0].Text = "changed";
+            Assert.Equal("changed", viewModel.CustomProperties[0].DefaultValue);
+            Assert.Equal("changed", viewModel.GetProperties()["Existing"]);
+            Assert.Equal(42, source["Existing"]);
+
+            window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(editors[1], window.FocusManager?.GetFocusedElement());
+            Assert.Equal(new Thickness(0), editors[0].BorderThickness);
+            var cancel = window.GetVisualDescendants().OfType<Button>().Single(button => button.IsCancel);
+            cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.False(viewModel.DialogAccepted);
+            Assert.Equal(42, source["Existing"]);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [AvaloniaFact]
@@ -106,6 +158,165 @@ public class ControlsContractTests
         {
             CultureInfo.CurrentUICulture = previous;
         }
+    }
+
+    [AvaloniaFact]
+    public void CustomPropertiesTable_ScrollsAtMinimumSizeAndResizes()
+    {
+        var viewModel = new PropertiesDialogViewModel("key", "name", "icon", "", new PropertiesCollection());
+        viewModel.ApplyCustomPropertyDefaults(Enumerable.Range(0, 40).Select(index =>
+            new CustomPropertyDocument { Name = $"Property {index}", DefaultValue = $"Value {index}" }));
+        var (window, table) = ShowCustomProperties(viewModel);
+        try
+        {
+            var list = table.GetVisualDescendants().OfType<ListBox>().Single();
+            var scroller = list.GetVisualDescendants().OfType<ScrollViewer>().First();
+            Assert.Equal(411, window.Bounds.Width);
+            Assert.Equal(426, window.Bounds.Height);
+            Assert.True(scroller.Extent.Height > scroller.Viewport.Height);
+            Assert.True(scroller.Extent.Width <= scroller.Viewport.Width);
+            Assert.True(table.Bounds.Width < window.Bounds.Width);
+            Assert.True(table.Bounds.Height < window.Bounds.Height);
+
+            var firstEditor = table.GetVisualDescendants().OfType<TextBox>()
+                .Single(editor => ReferenceEquals(editor.DataContext, viewModel.CustomProperties[0]));
+            Assert.True(firstEditor.Focus());
+            for (var index = 1; index < viewModel.CustomProperties.Count; index++)
+            {
+                window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
+                Dispatcher.UIThread.RunJobs();
+                var focusedEditor = Assert.IsType<TextBox>(window.FocusManager?.GetFocusedElement());
+                Assert.Same(viewModel.CustomProperties[index], focusedEditor.DataContext);
+            }
+
+            Assert.True(scroller.Offset.Y > 0);
+            window.KeyPress(Key.Tab, RawInputModifiers.Shift, PhysicalKey.Tab, "\t");
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(viewModel.CustomProperties[38], Assert.IsType<TextBox>(window.FocusManager?.GetFocusedElement()).DataContext);
+
+            list.ScrollIntoView(viewModel.CustomProperties[39]);
+            Dispatcher.UIThread.RunJobs();
+            var lastEditor = table.GetVisualDescendants().OfType<TextBox>()
+                .Single(editor => ReferenceEquals(editor.DataContext, viewModel.CustomProperties[39]));
+            lastEditor.Text = new string('x', 300);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(lastEditor.Text, viewModel.GetProperties()["Property 39"]);
+            Assert.True(scroller.Extent.Width <= scroller.Viewport.Width);
+
+            window.Width = 700;
+            window.Height = 600;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(table.Bounds.Width > 400);
+            Assert.True(scroller.Extent.Width <= scroller.Viewport.Width);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void CustomPropertiesTable_LocalizesHeadersAndHidesWhenEmpty()
+    {
+        var previousCulture = LocalizationService.Current.CurrentCulture;
+        var viewModel = new PropertiesDialogViewModel("key", "name", "icon", "", new PropertiesCollection());
+        Assert.False(viewModel.HasCustomProperties);
+        viewModel.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = "Name" }]);
+        var (window, table) = ShowCustomProperties(viewModel);
+        try
+        {
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("en"));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(LocalizationService.Current[UiKeys.Property], table.PropertyHeader);
+            Assert.Equal(LocalizationService.Current[UiKeys.Value], table.ValueHeader);
+            var englishHeader = table.PropertyHeader;
+
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("lt"));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(LocalizationService.Current[UiKeys.Property], table.PropertyHeader);
+            Assert.Equal(LocalizationService.Current[UiKeys.Value], table.ValueHeader);
+            Assert.NotEqual(englishHeader, table.PropertyHeader);
+        }
+        finally
+        {
+            window.Close();
+            LocalizationService.Current.SetCulture(previousCulture);
+        }
+    }
+
+    [AvaloniaFact]
+    public void PropertiesTable_RemainsReadOnlyAndCustomTabFollowsDefaults()
+    {
+        var source = new PropertiesCollection(new Dictionary<string, object?> { ["Format"] = "Audio" });
+        var viewModel = new PropertiesDialogViewModel("key", "name", "icon", "", source);
+        var window = new PropertiesWindow { DataContext = viewModel };
+        window.Show();
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            var tabs = window.GetVisualDescendants().OfType<TabControl>().Single();
+            var customTab = Assert.IsType<TabItem>(tabs.Items[4]);
+            Assert.False(customTab.IsVisible);
+
+            tabs.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            var table = Assert.IsType<PropertiesList>(Assert.IsType<TabItem>(tabs.Items[2]).Content);
+            Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Format");
+            Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Audio");
+            Assert.Empty(table.GetVisualDescendants().OfType<TextBox>());
+            Assert.True(table.GetVisualDescendants().OfType<ListBoxItem>().Single().IsTabStop);
+
+            viewModel.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = "Custom" }]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(customTab.IsVisible);
+            viewModel.ApplyCustomPropertyDefaults([]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(customTab.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void CustomPropertiesTable_ConfirmRetainsUnchangedValues()
+    {
+        var source = new PropertiesCollection(new Dictionary<string, object?> { ["Number"] = 42 });
+        var viewModel = new PropertiesDialogViewModel("key", "name", "icon", "", source);
+        viewModel.ApplyCustomPropertyDefaults([
+            new CustomPropertyDocument { Name = "Number" },
+            new CustomPropertyDocument { Name = "New", DefaultValue = "default" }
+        ]);
+        var (window, table) = ShowCustomProperties(viewModel);
+        try
+        {
+            var editor = table.GetVisualDescendants().OfType<TextBox>()
+                .Single(value => ReferenceEquals(value.DataContext, viewModel.CustomProperties[1]));
+            editor.Text = "edited";
+            viewModel.ConfirmCommand.Execute(null);
+            Assert.True(viewModel.DialogAccepted);
+            Assert.Equal(42, viewModel.GetProperties()["Number"]);
+            Assert.Equal("edited", viewModel.GetProperties()["New"]);
+            Assert.Equal(42, source["Number"]);
+            Assert.False(source.ContainsKey("New"));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static (PropertiesWindow Window, PropertiesList Table) ShowCustomProperties(PropertiesDialogViewModel viewModel)
+    {
+        var window = new PropertiesWindow { DataContext = viewModel };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var tabs = window.GetVisualDescendants().OfType<TabControl>().Single();
+        tabs.SelectedIndex = 4;
+        Dispatcher.UIThread.RunJobs();
+        var table = Assert.IsType<PropertiesList>(Assert.IsType<TabItem>(tabs.Items[4]).Content);
+        return (window, table);
     }
 
     [AvaloniaFact]
