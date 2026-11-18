@@ -1,0 +1,387 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace SkyCD.App.Tests;
+
+/// <summary>
+/// A minimal scripted FTP server on the loopback interface, used to exercise the real FluentFTP
+/// transport of <c>FtpCatalogConnector</c> against controlled server behaviour (#580): nested
+/// listings, MLSD-less servers, refused listings, rejected credentials, missing directories and
+/// dropped connections.
+/// </summary>
+internal sealed class ScriptedFtpServer : IDisposable
+{
+    private readonly TcpListener listener;
+    private readonly CancellationTokenSource stop = new();
+    private readonly Task acceptLoop;
+    private readonly List<string> commands = [];
+    private readonly object gate = new();
+    private int activeConnections;
+
+    public ScriptedFtpServer(string username = "alice", string password = "secret-pass")
+    {
+        Username = username;
+        Password = password;
+        listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        Port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        acceptLoop = Task.Run(AcceptLoopAsync);
+    }
+
+    public int Port { get; }
+
+    public string Username { get; }
+
+    public string Password { get; }
+
+    /// <summary>Directories served by the fake server; the key is the normalized remote path.</summary>
+    public Dictionary<string, ScriptedDirectory> Directories { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Whether the server advertises and accepts MLSD (a modern server).</summary>
+    public bool SupportsMlsd { get; set; } = true;
+
+    /// <summary>Whether the server answers FEAT at all.</summary>
+    public bool SupportsFeat { get; set; } = true;
+
+    /// <summary>Paths whose listing must be dropped mid-transfer, simulating an interrupted connection.</summary>
+    public HashSet<string> DropListings { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Paths the server answers with 550, simulating a directory that vanished.</summary>
+    public HashSet<string> MissingDirectories { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Number of listing commands the server has served.</summary>
+    public int ListingCount
+    {
+        get
+        {
+            lock (gate)
+            {
+                return commands.FindAll(command =>
+                    command.StartsWith("MLSD ", StringComparison.OrdinalIgnoreCase) ||
+                    command.StartsWith("LIST ", StringComparison.OrdinalIgnoreCase) ||
+                    command.Equals("LIST", StringComparison.OrdinalIgnoreCase) ||
+                    command.Equals("MLSD", StringComparison.OrdinalIgnoreCase)).Count;
+            }
+        }
+    }
+
+    /// <summary>Number of control connections the server has accepted (a reconnect shows up here).</summary>
+    public int ConnectionCount
+    {
+        get
+        {
+            lock (gate)
+            {
+                return activeConnections;
+            }
+        }
+    }
+
+    /// <summary>Whether any command line contained the password (never true for a compliant client).</summary>
+    public bool SawPasswordInCommand
+    {
+        get
+        {
+            lock (gate)
+            {
+                return commands.Exists(command => command.Contains(Password, StringComparison.Ordinal));
+            }
+        }
+    }
+
+    public IReadOnlyList<string> Commands
+    {
+        get
+        {
+            lock (gate)
+            {
+                return [.. commands];
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        stop.Cancel();
+        listener.Stop();
+        try
+        {
+            acceptLoop.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch (AggregateException)
+        {
+        }
+
+        stop.Dispose();
+    }
+
+    private async Task AcceptLoopAsync()
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            TcpClient client;
+            try
+            {
+                client = await listener.AcceptTcpClientAsync(stop.Token);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            lock (gate)
+            {
+                activeConnections++;
+            }
+
+            _ = Task.Run(() => HandleAsync(client));
+        }
+    }
+
+    private async Task HandleAsync(TcpClient client)
+    {
+        using (client)
+        {
+            var stream = client.GetStream();
+            var reader = new StreamReader(stream, new UTF8Encoding(false), false, 1024, leaveOpen: true);
+            var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, leaveOpen: true)
+            {
+                NewLine = "\r\n",
+                AutoFlush = true,
+            };
+
+            TcpListener? passive = null;
+            var authenticated = false;
+
+            try
+            {
+                await writer.WriteLineAsync("220 scripted ftp ready");
+
+                while (!stop.IsCancellationRequested)
+                {
+                    var line = await reader.ReadLineAsync(stop.Token);
+                    if (line is null)
+                    {
+                        return;
+                    }
+
+                    lock (gate)
+                    {
+                        commands.Add(line);
+                    }
+
+                    var space = line.IndexOf(' ');
+                    var verb = (space < 0 ? line : line[..space]).ToUpperInvariant();
+                    var argument = space < 0 ? string.Empty : line[(space + 1)..];
+
+                    switch (verb)
+                    {
+                        case "USER":
+                            await writer.WriteLineAsync(argument == Username ? "331 need password" : "530 unknown user");
+                            break;
+
+                        case "PASS":
+                            authenticated = argument == Password;
+                            await writer.WriteLineAsync(authenticated ? "230 logged in" : "530 login incorrect");
+                            break;
+
+                        case "FEAT":
+                            if (!SupportsFeat)
+                            {
+                                await writer.WriteLineAsync("500 command not understood");
+                                break;
+                            }
+
+                            await writer.WriteLineAsync("211-Features:");
+                            if (SupportsMlsd)
+                            {
+                                await writer.WriteLineAsync(" MLST type*;size*;modify*;perm*;unix.mode*;");
+                            }
+
+                            await writer.WriteLineAsync(" UTF8");
+                            await writer.WriteLineAsync("211 End");
+                            break;
+
+                        case "OPTS":
+                        case "TYPE":
+                        case "MODE":
+                            await writer.WriteLineAsync("200 ok");
+                            break;
+
+                        case "SYST":
+                            await writer.WriteLineAsync("215 UNIX Type: L8");
+                            break;
+
+                        case "PWD":
+                            await writer.WriteLineAsync("257 \"/\" is the current directory");
+                            break;
+
+                        case "NOOP":
+                            await writer.WriteLineAsync("200 noop");
+                            break;
+
+                        case "EPSV":
+                        case "PASV":
+                            {
+                                passive?.Stop();
+                                passive = new TcpListener(IPAddress.Loopback, 0);
+                                passive.Start();
+                                var dataPort = ((IPEndPoint)passive.LocalEndpoint).Port;
+                                await writer.WriteLineAsync(verb == "EPSV"
+                                    ? $"229 Entering Extended Passive Mode (|||{dataPort}|)"
+                                    : $"227 Entering Passive Mode (127,0,0,1,{dataPort / 256},{dataPort % 256})");
+                                break;
+                            }
+
+                        case "MLSD":
+                        case "LIST":
+                            await ServeListingAsync(verb, argument, writer, passive);
+                            passive?.Stop();
+                            passive = null;
+                            break;
+
+                        case "QUIT":
+                            await writer.WriteLineAsync("221 bye");
+                            return;
+
+                        default:
+                            await writer.WriteLineAsync("502 command not implemented");
+                            break;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // The client went away (or the server is stopping): drop the connection silently.
+            }
+            finally
+            {
+                passive?.Stop();
+            }
+        }
+    }
+
+    private async Task ServeListingAsync(string verb, string argument, StreamWriter writer, TcpListener? passive)
+    {
+        var path = Normalize(argument);
+
+        if (verb == "MLSD" && !SupportsMlsd)
+        {
+            await writer.WriteLineAsync("502 MLSD not implemented");
+            return;
+        }
+
+        if (MissingDirectories.Contains(path))
+        {
+            await writer.WriteLineAsync("550 no such directory");
+            return;
+        }
+
+        if (passive is null)
+        {
+            await writer.WriteLineAsync("425 use PASV first");
+            return;
+        }
+
+        if (!Directories.TryGetValue(path, out var directory))
+        {
+            await writer.WriteLineAsync("550 no such directory");
+            return;
+        }
+
+        if (DropListings.Contains(path))
+        {
+            // Announce the transfer, then drop the control connection mid-listing.
+            await writer.WriteLineAsync("150 opening data connection");
+            await writer.FlushAsync();
+            throw new IOException("Simulated interrupted connection.");
+        }
+
+        await writer.WriteLineAsync("150 opening data connection");
+        using var data = await passive.AcceptTcpClientAsync(stop.Token);
+        var payload = verb == "MLSD" ? directory.ToMlsd() : directory.ToList();
+        var bytes = Encoding.UTF8.GetBytes(payload);
+        await data.GetStream().WriteAsync(bytes, stop.Token);
+        await data.GetStream().FlushAsync(stop.Token);
+        await writer.WriteLineAsync("226 transfer complete");
+    }
+
+    internal static string Normalize(string path)
+    {
+        var trimmed = (path ?? string.Empty).Replace('\\', '/').Trim();
+        if (trimmed.Length == 0)
+        {
+            return "/";
+        }
+
+        trimmed = "/" + trimmed.Trim('/');
+        return trimmed.Length == 1 ? "/" : trimmed.TrimEnd('/');
+    }
+}
+
+/// <summary>One scripted directory: a name, its files and its child directories.</summary>
+internal sealed class ScriptedDirectory(string name, DateTime modifiedUtc, string unixMode = "0755")
+{
+    public string Name { get; } = name;
+
+    public DateTime ModifiedUtc { get; } = modifiedUtc;
+
+    public string UnixMode { get; } = unixMode;
+
+    public List<ScriptedFile> Files { get; } = [];
+
+    public List<ScriptedDirectory> Children { get; } = [];
+
+    public string ToMlsd()
+    {
+        var builder = new StringBuilder();
+        builder.Append("type=cdir;perm=el; .\r\n");
+        builder.Append("type=pdir;perm=el; ..\r\n");
+        foreach (var child in Children)
+        {
+            builder.Append($"type=dir;modify={child.ModifiedUtc:yyyyMMddHHmmss};unix.mode={child.UnixMode};perm=el; {child.Name}\r\n");
+        }
+
+        foreach (var file in Files)
+        {
+            builder.Append($"type=file;size={file.Size};modify={file.ModifiedUtc:yyyyMMddHHmmss};unix.mode={file.UnixMode};perm=r; {file.Name}\r\n");
+        }
+
+        return builder.ToString();
+    }
+
+    public string ToList()
+    {
+        var builder = new StringBuilder();
+        builder.Append("total " + (Children.Count + Files.Count) + "\r\n");
+        foreach (var child in Children)
+        {
+            builder.Append($"drwxr-xr-x 1 owner group 0 {child.ModifiedUtc:MMM dd HH:mm} {child.Name}\r\n");
+        }
+
+        foreach (var file in Files)
+        {
+            builder.Append($"-rw-r--r-- 1 owner group {file.Size} {file.ModifiedUtc:MMM dd HH:mm} {file.Name}\r\n");
+        }
+
+        return builder.ToString();
+    }
+}
+
+/// <summary>One scripted file entry.</summary>
+internal sealed class ScriptedFile(string name, long size, DateTime modifiedUtc, string unixMode = "0644")
+{
+    public string Name { get; } = name;
+
+    public long Size { get; } = size;
+
+    public DateTime ModifiedUtc { get; } = modifiedUtc;
+
+    public string UnixMode { get; } = unixMode;
+}

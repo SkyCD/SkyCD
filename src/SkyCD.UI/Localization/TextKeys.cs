@@ -171,6 +171,7 @@ public static class TextKeys
     public const string FtpAuthenticationFailed = "core.text.FtpAuthenticationFailed";
     public const string FtpConnectionFailed = "core.text.FtpConnectionFailed";
     public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";
+    public const string FtpListingNotSupported = "core.text.FtpListingNotSupported";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
     public const string Tags = "core.text.Tags";

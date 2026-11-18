@@ -53,13 +53,14 @@ internal static class ScanRetryExecutor
 
     internal static bool IsTransient(Exception exception)
     {
-        // Permanent FTP-domain failures: rejected credentials, an unsupported scheme and a
-        // vanished directory must never be retried. A dropped control connection
+        // Permanent FTP-domain failures: rejected credentials, an unsupported scheme, a vanished
+        // directory and a refused listing must never be retried. A dropped control connection
         // (FtpConnectionException) is transient — it is the FTP disconnect that the scan has
         // to survive by reconnecting (#433).
         if (exception is FtpAuthenticationException
             or FtpSchemeNotSupportedException
-            or FtpDirectoryNotFoundException)
+            or FtpDirectoryNotFoundException
+            or FtpListingNotSupportedException)
         {
             return false;
         }
