@@ -187,7 +187,7 @@ public class ImagePreviewPluginTests
     public async Task Progress_IsReportedFromStartToFinish()
     {
         var fractions = new System.Collections.Generic.List<double>();
-        var progress = new Progress<MediaProgress>(value => fractions.Add(value.Fraction));
+        var progress = new InlineProgress(value => fractions.Add(value.Fraction));
         var image = ImageFixtures.Jpeg(200, 100);
 
         await new ImagePreviewPlugin().GeneratePreviewAsync(
@@ -196,8 +196,6 @@ public class ImagePreviewPluginTests
             progress,
             CancellationToken.None);
 
-        // Progress is marshalled asynchronously, so drain the queue before asserting on it.
-        await Task.Delay(100);
         Assert.Contains(fractions, fraction => fraction >= 0.99);
         Assert.All(fractions, fraction => Assert.InRange(fraction, 0, 1));
     }
@@ -238,4 +236,9 @@ public class ImagePreviewPluginTests
     private static bool IsLight(SKColor color) => Luminance(color) > 160;
 
     private static int Luminance(SKColor color) => (color.Red + color.Green + color.Blue) / 3;
+
+    private sealed class InlineProgress(Action<MediaProgress> report) : IProgress<MediaProgress>
+    {
+        public void Report(MediaProgress value) => report(value);
+    }
 }
