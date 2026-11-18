@@ -5,6 +5,7 @@ using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
@@ -66,6 +67,10 @@ public sealed class PluginServiceRegistrator
 
         registrator.RegisterInstance(new MediaExtensionManager(plugins.SelectMany(plugin =>
             plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability)))),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>
+            plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.Register<FileFormatManager>(Reuse.Singleton,
