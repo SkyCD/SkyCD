@@ -226,12 +226,26 @@ public partial class EntryPreviewViewModel : ObservableObject, IDisposable
         var rows = new List<MediaPreviewFieldRow>(views.Count);
         foreach (var view in views)
         {
+            if (view.IsFailed)
+            {
+                rows.Add(new MediaPreviewFieldRow(
+                    MediaMetadataValueFormatter.ResolveLabel(view.Key),
+                    LocalizationService.Current.Get(PreviewKeys.ValueNotAvailable),
+                    LocalizationService.Current.Get(PreviewKeys.FailedValueHint),
+                    IsStale: false,
+                    view.IsUserEdited,
+                    IsFailed: true,
+                    IsCopyable: false));
+                continue;
+            }
+
             rows.Add(new MediaPreviewFieldRow(
                 MediaMetadataValueFormatter.ResolveLabel(view.Key),
                 MediaMetadataValueFormatter.Format(view.Value, view.Type, view.Unit, valueLocalizer),
                 ResolveHint(view),
                 view.IsFromStaleRecord,
-                view.IsUserEdited));
+                view.IsUserEdited,
+                IsCopyable: view.Value is not null));
         }
 
         return rows;

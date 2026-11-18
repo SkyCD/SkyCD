@@ -1,6 +1,10 @@
+using System;
 using System.Collections;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Input.Platform;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 
@@ -162,4 +166,32 @@ public partial class MediaPreviewPane : UserControl
     }
 
     private static bool HasAnyField(IEnumerable fields) => fields.GetEnumerator().MoveNext();
+
+    private async void OnCopyFieldClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control { Tag: string value } || string.IsNullOrEmpty(value))
+        {
+            return;
+        }
+
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+        {
+            return;
+        }
+
+        await CopyTextAsync(clipboard, value);
+    }
+
+    private static async Task CopyTextAsync(IClipboard clipboard, string value)
+    {
+        try
+        {
+            await clipboard.SetTextAsync(value);
+        }
+        catch (Exception)
+        {
+            // A clipboard owned by another application must not surface as a UI-thread failure.
+        }
+    }
 }

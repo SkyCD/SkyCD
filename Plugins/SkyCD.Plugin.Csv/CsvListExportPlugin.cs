@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Csv.Exceptions;
 
@@ -39,6 +40,9 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
 
     private static readonly char[] FormulaTriggers = ['=', '+', '-', '@'];
 
+    // Sentinel returned by FormatValue to indicate "write this as a quoted empty field".
+    private const string QuotedEmptySentinel = "\x00EMPTY\x00";
+
     public FileFormatDescriptor SupportedFormat =>
         new(
             FormatId: "skycd-csv-list",
@@ -56,18 +60,37 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
             var export = NormalizeRequest(request.Payload);
             var encoding = ResolveEncoding(export.EncodingName);
             ValidateSeparator(export.Separator);
-            using var writer = new StreamWriter(request.Target, encoding, leaveOpen: true)
-            {
-                NewLine = "\r\n"
-            };
 
             var columns = export.Columns is { Count: > 0 }
                 ? export.Columns.ToArray()
                 : DefaultColumns.ToArray();
+
+            // CsvHelper handles RFC 4180 quoting (separator, quotes, CR, LF in fields).
+            // We configure WhenNeededOrWhitespace so leading/trailing spaces also trigger quoting.
+            // Formula neutralization (prefix with ') is applied before passing to CsvHelper.
+            var options = new CsvWriterOptions
+            {
+                Separator = export.Separator,
+                NewLine = "\r\n",
+                Mode = CsvMode.Rfc4180,
+                Quoting = CsvQuoting.WhenNeededOrWhitespace,
+                Injection = CsvInjection.None,
+                WriteByteOrderMark = false,
+                HasHeader = false
+            };
+
+            // StreamWriter carries the encoding (and writes BOM bytes for UTF-8-with-BOM).
+            await using var streamWriter = new StreamWriter(request.Target, encoding, leaveOpen: true);
+            await using var csvWriter = CsvWriter.Create(streamWriter, options, leaveOpen: true);
+
             if (export.IncludeHeader)
             {
-                await writer.WriteLineAsync(JoinFields(
-                    columns.Select(column => QuoteField(column, export.Separator)), export.Separator));
+                foreach (var column in columns)
+                {
+                    csvWriter.WriteField(column);
+                }
+
+                await csvWriter.EndRecordAsync();
             }
 
             var total = export.Rows is ICollection<Dictionary<string, object?>> sized ? sized.Count : (int?)null;
@@ -75,8 +98,29 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
             foreach (var row in export.Rows)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var fields = columns.Select(column => FormatField(ResolveValue(row, column), column, export));
-                await writer.WriteLineAsync(JoinFields(fields, export.Separator));
+
+                foreach (var column in columns)
+                {
+                    var fieldText = FormatValue(ResolveValue(row, column), column, export);
+                    if (ReferenceEquals(fieldText, QuotedEmptySentinel))
+                    {
+                        // Empty string — write with forced quoting to distinguish from null.
+                        csvWriter.WriteField(string.Empty, CsvQuoting.Always);
+                    }
+                    else if (fieldText is null || fieldText.Length == 0)
+                    {
+                        // Null field — write as empty without quoting.
+                        csvWriter.WriteField(string.Empty, CsvQuoting.WhenNeeded);
+                    }
+                    else
+                    {
+                        // CsvHelper quotes the value when it contains the separator,
+                        // a quote, CR, LF, or leading/trailing whitespace.
+                        csvWriter.WriteField(fieldText, CsvQuoting.WhenNeededOrWhitespace);
+                    }
+                }
+
+                await csvWriter.EndRecordAsync();
                 written++;
                 if (written % 64 == 0 || (total.HasValue && written == total.Value))
                 {
@@ -87,7 +131,7 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
             }
 
             request.Progress?.Report(100);
-            await writer.FlushAsync(cancellationToken);
+            await csvWriter.FlushAsync();
             return new FileFormatWriteResult { Success = true };
         }
         catch (OperationCanceledException)
@@ -182,11 +226,20 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
         return null;
     }
 
-    private static string FormatField(object? value, string column, CsvListExportRequest export)
+    /// <summary>
+    /// Converts a row value to the string to be written. Returns:
+    /// <list type="bullet">
+    /// <item><see langword="null"/> for a null value (written as empty unquoted)</item>
+    /// <item><see cref="QuotedEmptySentinel"/> for an empty-string value (written as quoted <c>""</c>)</item>
+    /// <item>A non-empty string — possibly prefixed with <c>'</c> for formula neutralization —
+    /// to be passed to CsvHelper, which applies RFC 4180 quoting as needed.</item>
+    /// </list>
+    /// </summary>
+    private static string? FormatValue(object? value, string column, CsvListExportRequest export)
     {
         if (value is null)
         {
-            return string.Empty;
+            return null;
         }
 
         var text = column.Equals("SizeBytes", StringComparison.OrdinalIgnoreCase)
@@ -196,13 +249,13 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
                 : ToDisplayText(value);
         if (text is null)
         {
-            return string.Empty;
+            return null;
         }
 
         if (text.Length == 0)
         {
             // Quoted empty distinguishes a literal empty string from a null field.
-            return "\"\"";
+            return QuotedEmptySentinel;
         }
 
         if (!export.AllowFormulas && StartsLikeFormula(text))
@@ -210,22 +263,8 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
             text = "'" + text;
         }
 
-        return QuoteField(text, export.Separator);
+        return text;
     }
-
-    private static string QuoteField(string text, char separator)
-    {
-        var escaped = text.Replace("\"", "\"\"", StringComparison.Ordinal);
-        var needsQuotes = escaped.Contains(separator)
-            || escaped.Contains('"')
-            || escaped.Contains('\r')
-            || escaped.Contains('\n')
-            || (escaped.Length > 0 && (char.IsWhiteSpace(escaped[0]) || char.IsWhiteSpace(escaped[^1])));
-        return needsQuotes ? $"\"{escaped}\"" : escaped;
-    }
-
-    private static string JoinFields(IEnumerable<string> fields, char separator) =>
-        string.Join(separator.ToString(CultureInfo.InvariantCulture), fields);
 
     private static bool StartsLikeFormula(string text)
     {

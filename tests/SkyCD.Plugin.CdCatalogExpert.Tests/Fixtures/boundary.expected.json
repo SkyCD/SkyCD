@@ -1,0 +1,905 @@
+{
+  "catalogName": "Boundary Catalog",
+  "media": [
+    {
+      "name": "Disc 00",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000000}"
+      }
+    },
+    {
+      "name": "Disc 01",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000001}"
+      }
+    },
+    {
+      "name": "Disc 02",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000002}"
+      }
+    },
+    {
+      "name": "Disc 03",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000003}"
+      }
+    },
+    {
+      "name": "Disc 04",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000004}"
+      }
+    },
+    {
+      "name": "Disc 05",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000005}"
+      }
+    },
+    {
+      "name": "Disc 06",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000006}"
+      }
+    },
+    {
+      "name": "Disc 07",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000007}"
+      }
+    },
+    {
+      "name": "Disc 08",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000008}"
+      }
+    },
+    {
+      "name": "Disc 09",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000009}"
+      }
+    },
+    {
+      "name": "Disc 10",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000010}"
+      }
+    },
+    {
+      "name": "Disc 11",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000011}"
+      }
+    },
+    {
+      "name": "Disc 12",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000012}"
+      }
+    },
+    {
+      "name": "Disc 13",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000013}"
+      }
+    },
+    {
+      "name": "Disc 14",
+      "fields": {
+        "ZdcDiscGuid": "{33333333-3333-3333-3333-000000000014}"
+      }
+    }
+  ],
+  "files": [
+    {
+      "name": "file-00-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-002.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-003.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-004.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-005.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-006.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-007.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-008.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-009.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-010.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-011.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-012.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-013.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-014.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-015.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-016.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-017.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-018.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-019.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-020.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-021.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-022.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-023.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-024.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-025.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-026.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-027.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-028.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-029.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-030.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-031.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-032.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-033.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-034.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-035.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-036.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-037.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-038.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-039.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-040.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-041.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-042.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-043.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-044.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-045.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-046.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-047.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-048.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-049.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-050.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-051.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-052.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-053.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-054.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-055.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-056.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-057.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-058.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-059.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-060.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-061.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-062.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-063.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-064.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-065.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-066.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-067.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-068.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-069.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-070.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-071.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-072.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-073.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-074.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-075.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-076.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-077.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-078.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-079.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-080.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-081.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-082.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-083.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-084.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-085.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-086.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-087.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-088.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-089.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-090.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-091.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-092.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-093.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-094.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-095.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-096.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-097.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-098.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-099.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-100.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-101.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-102.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-103.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-104.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-105.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-106.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-107.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-108.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-109.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-110.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-111.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-112.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-113.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-114.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-115.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-116.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-117.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-118.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-00-119.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-01-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-01-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-02-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-02-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-03-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-03-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-04-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-04-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-05-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-05-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-06-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-06-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-07-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-07-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-08-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-08-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-09-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-09-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-10-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-10-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-11-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-11-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-12-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-12-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-13-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-13-001.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-14-000.txt",
+      "size": "128",
+      "attributes": "32"
+    },
+    {
+      "name": "file-14-001.txt",
+      "size": "128",
+      "attributes": "32"
+    }
+  ],
+  "directories": 0,
+  "warnings": [],
+  "members": [
+    {
+      "name": "zdc_index.xml",
+      "sha256": "797F014377529AE269C8463F15DEEBCA9F7DB06DDFC422130EE9CA9A11F80D70"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000000}.xml",
+      "sha256": "C347E95384AB49011B7D1A3D32A0A513D598DFBD543584AEE9E137774AB59B5C"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000001}.xml",
+      "sha256": "39A69328E40616D587C65D0D3FB5020C9F2631C1F5D8FFDBF9C13C67EEA9D00B"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000002}.xml",
+      "sha256": "167A7C0210DC406C57204334F63EDF75E2CE7E7B8B6DE4FC5F2F208363DBE8E7"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000003}.xml",
+      "sha256": "856CEAF86E3B30C3036CEA6DC2B37A01E803DA4585AFA039B43E506C05668E4B"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000004}.xml",
+      "sha256": "63B56D68BA2C036FA0238C3C059EAAF5BD1C3A0161B767F9BCB3EE30CB8B33CF"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000005}.xml",
+      "sha256": "5CBE87FDB63D613C65CD409D75E16EC589D10054B0F8150FB2806CF564A70ED3"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000006}.xml",
+      "sha256": "5D4FF9D10F3EAF880C70D2CCCC36FE6974307D5FA5C9FCFFC6B9EA5554D09338"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000007}.xml",
+      "sha256": "A9FA715A36795AEEF79EAC2F4B3BC59F02F211E9AF79126B6A6611AA69E7631E"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000008}.xml",
+      "sha256": "F3D70D0D0FCECE98355275154B226C69BA220B34E05107F05C09DB2F697BB056"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000009}.xml",
+      "sha256": "239F91019D91234A584C497B310D7EEDCD806184106FB1E061DA0E83B61DAC9B"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000010}.xml",
+      "sha256": "F8927BD6196C35EDEDC66BF2E2B663DD5885D8405EC2724B86EF167E4C4F694A"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000011}.xml",
+      "sha256": "09B262BA18915A372938B72F65CC9A2B7D74F262475213829C1567AF1FC5CB31"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000012}.xml",
+      "sha256": "51850E8346B0599DC031377BE443DD571E596DA0DC923C44B5EE3C3617815489"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000013}.xml",
+      "sha256": "3954ECF8D33F66195A1229D97B751C2FADCCA08C8D67B0A1D791CDC5EE52D428"
+    },
+    {
+      "name": "{33333333-3333-3333-3333-000000000014}.xml",
+      "sha256": "C52E85829D6498636FE29390186676205A15C6695EE9A7D02259D4088D699542"
+    }
+  ]
+}

@@ -26,6 +26,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions;
 using Avalonia.Threading;
@@ -121,6 +122,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
             subscribedViewModel.CollectionsRequested -= OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
+            subscribedViewModel.AiDescriptionBatchRequested -= OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
@@ -144,6 +146,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
             subscribedViewModel.CollectionsRequested += OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
+            subscribedViewModel.AiDescriptionBatchRequested += OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
@@ -152,6 +155,9 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
+            var appOptions = LoadAppOptions();
+            subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
+            subscribedViewModel.IsScanHashingEnabled = appOptions.IsScanHashingEnabled;
             UpdateWindowTitle();
         }
     }
@@ -163,6 +169,20 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainWindowViewModel.IsBackgroundMediaSyncEnabled)
+            && sender is MainWindowViewModel viewModel)
+        {
+            var options = LoadAppOptions();
+            options.IsBackgroundMediaSyncEnabled = viewModel.IsBackgroundMediaSyncEnabled;
+            SaveAppOptions(options);
+        }
+        if (e.PropertyName == nameof(MainWindowViewModel.IsScanHashingEnabled)
+            && sender is MainWindowViewModel hashingViewModel)
+        {
+            var options = LoadAppOptions();
+            options.IsScanHashingEnabled = hashingViewModel.IsScanHashingEnabled;
+            SaveAppOptions(options);
+        }
         if (e.PropertyName is nameof(MainWindowViewModel.IsDirtyDocument) or nameof(MainWindowViewModel.CurrentCatalogPath))
         {
             UpdateWindowTitle();
@@ -322,7 +342,7 @@ public partial class MainWindow : Window
                 }
             }
         }
-        else if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control)
+        else if (e.Key == Key.Z && e.KeyModifiers == (OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control))
         {
             var focused = GetFocusedElement();
             if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
@@ -337,7 +357,8 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
         }
-        else if (e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control)
+        else if ((e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control && !OperatingSystem.IsMacOS())
+            || (e.Key == Key.Z && e.KeyModifiers == ((OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control) | KeyModifiers.Shift)))
         {
             var focused = GetFocusedElement();
             if (focused is TextBox || FindAncestor<TextBox>(focused as Visual) is not null ||
@@ -378,6 +399,11 @@ public partial class MainWindow : Window
     private async void OnAdvancedFindRequested(object? sender, AdvancedFindDialogRequestedEventArgs e)
     {
         await new AdvancedCatalogFindWindow { DataContext = e.Dialog }.ShowDialog<bool?>(this);
+    }
+
+    private async void OnAiDescriptionBatchRequested(object? sender, AiDescriptionBatchDialogRequestedEventArgs e)
+    {
+        await new AiDescriptionBatchWindow { DataContext = e.Dialog }.ShowDialog(this);
     }
 
     private IInputElement? GetFocusedElement()
@@ -1338,6 +1364,7 @@ public partial class MainWindow : Window
                 return new MainWindowViewModel(repositoryManager);
             }, progress);
             reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
             var options = LoadAppOptions();
             reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
             reloadedViewModel.CurrentCatalogPath = localPath;
@@ -1584,6 +1611,8 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+            viewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         }
     }
 

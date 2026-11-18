@@ -47,7 +47,8 @@ statistics infrastructure to remote listings. The traversal policy is supplied t
 
 ### Link / cycle policy
 
-- FTP listings do not expose symlinks or reparse points, so `LinkFollowPolicy` does not apply.
+- FTP listings do not expose reparse points, so `LinkFollowPolicy` does not apply; a server-side
+  symbolic link is reported as a file entry and is not descended into.
 - The **stable visited identity** of a remote directory is its normalized path
   (`FtpLocation.NormalizePath`), which collapses `.`, `..`, duplicate and trailing separators.
 - A directory whose identity was already visited is **skipped** as a cycle, never descended
@@ -59,8 +60,32 @@ statistics infrastructure to remote listings. The traversal policy is supplied t
 - The retry **re-establishes the control session** and repeats the listing, so a server that
   drops the connection mid-traversal is survived instead of failing the scan.
 - Rejected credentials (`FtpAuthenticationException`), an unsupported scheme
-  (`FtpSchemeNotSupportedException`) and a vanished directory (`FtpDirectoryNotFoundException`)
-  are permanent and are never retried.
+  (`FtpSchemeNotSupportedException`), a vanished directory (`FtpDirectoryNotFoundException`) and a
+  server that refuses to list a directory (`FtpListingNotSupportedException`) are permanent and
+  are never retried.
+
+### Transport (#580)
+
+The FTP transport is [FluentFTP](https://www.nuget.org/packages/FluentFTP) (MIT), used behind the
+existing `IFtpCatalogConnector` / `IFtpRemoteSession` abstractions:
+
+- `FtpCatalogConnector` opens one `FluentFTP.FtpClient` per session with `RetryAttempts = 0` (the
+  scan owns retries and reconnects), `EncryptionMode = None`, `DataConnectionType = AutoPassive`
+  (EPSV, then PASV), `TimeConversion = UTC`, `ListingParser = Auto` and 15 s connect / 20 s
+  transfer timeouts.
+- The listing dialect (MLSD with a LIST fallback), the reply parsing and the multi-line reply
+  handling belong to FluentFTP; the scan no longer contains a handwritten FTP client or listing
+  parser.
+- `FtpRemoteListingMapper` projects FluentFTP listing items onto `FtpRemoteEntry`: the self/parent
+  records are dropped, names that cannot be catalogued are ignored, directory sizes are zeroed,
+  the symbolic permission string is preserved and timestamps are normalized to UTC.
+- FluentFTP failures are mapped onto the SkyCD exceptions: `FtpAuthenticationException` for a
+  rejected login, `FtpDirectoryNotFoundException` for a 550/521 listing reply,
+  `FtpListingNotSupportedException` for a 500/501/502/504 listing reply, and
+  `FtpConnectionException` (transient, sanitized) for everything else.
+- `tests/SkyCD.App.Tests/ScriptedFtpServer.cs` is a loopback scripted FTP server used by
+  `FtpCatalogTransportTests` to cover nested listings, MLSD-less servers, refused listings,
+  rejected credentials, missing directories and interrupted connections over a real socket.
 
 ### FTP skip versus fatal
 
@@ -73,6 +98,8 @@ statistics infrastructure to remote listings. The traversal policy is supplied t
 | Remote directory cycle | **Skip** |
 | Child listing retry exhausted | **Fail item** (continue) |
 | Child directory vanished | **Fail item** (continue) |
+| Root listing refused by the server | **Fatal** (`FtpListingNotSupportedException`) |
+| Child listing refused by the server | **Fail item** (continue) |
 | Entry excluded by pattern | **Skip** |
 
 FTP listings carry no hidden/system attributes, so `HiddenSystemFilePolicy` only applies to

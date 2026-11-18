@@ -32,17 +32,34 @@ public sealed class MediaExtensionManager
     }
 
     /// <summary>The factory must return a new readable stream; the host owns and disposes it.</summary>
+    /// <summary>
+    /// Runs matching providers. A per-call <paramref name="limits"/> override exists for explicit operations
+    /// such as whole-file hashing, whose source budget and duration are set by the requested file rather than
+    /// by the preview defaults.
+    /// </summary>
     public async Task<IReadOnlyList<MediaProviderResult>> ProcessAsync(MediaItem item,
         Func<CancellationToken, Task<Stream>> openSource, IProgress<MediaProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, MediaExecutionLimits? limits = null,
+        MediaProviderSelection selection = MediaProviderSelection.Standard)
     {
+        var effective = limits ?? this.limits;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.SourceBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.ArtifactBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.TimeoutMilliseconds);
+
         var results = new List<(int Priority, MediaProviderResult Result)>();
         foreach (var provider in OrderedProviders())
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!IsSelected(provider, item, selection))
+            {
+                continue;
+            }
+
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(limits.TimeoutMilliseconds);
-            var operation = RunAsync(provider, item, openSource, progress, timeout.Token);
+            timeout.CancelAfter(effective.TimeoutMilliseconds);
+            var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective);
+
             try
             {
                 var result = await operation.WaitAsync(timeout.Token);
@@ -88,7 +105,8 @@ public sealed class MediaExtensionManager
                 provider.Capability.GetType().FullName!,
                 descriptor.Schema.Id,
                 descriptor.Schema.Version,
-                descriptor.Priority));
+                descriptor.Priority,
+                descriptor.Schema.Fields));
         }
 
         return identities;
@@ -107,7 +125,7 @@ public sealed class MediaExtensionManager
 
     private async Task<(int Priority, MediaProviderResult Result)?> RunAsync(MediaProvider provider,
         MediaItem item, Func<CancellationToken, Task<Stream>> openSource,
-        IProgress<MediaProgress>? progress, CancellationToken token)
+        IProgress<MediaProgress>? progress, CancellationToken token, MediaExecutionLimits limits)
     {
         await slots.WaitAsync(token);
         try
@@ -162,8 +180,26 @@ public sealed class MediaExtensionManager
     }
 
     private static bool Matches(MediaDescriptor descriptor, MediaItem item) =>
+        descriptor.Extensions.Contains("*", StringComparer.Ordinal) ||
+        descriptor.ContentTypes.Contains("*", StringComparer.Ordinal) ||
         descriptor.Extensions.Contains(item.Extension, StringComparer.OrdinalIgnoreCase) ||
         (item.ContentType is not null && descriptor.ContentTypes.Contains(item.ContentType, StringComparer.OrdinalIgnoreCase));
+
+    private static bool IsSelected(MediaProvider provider, MediaItem item, MediaProviderSelection selection)
+    {
+        var descriptor = ResolveDescriptor(provider.Capability);
+        if (descriptor is null || !Matches(descriptor, item))
+        {
+            return false;
+        }
+
+        return selection switch
+        {
+            MediaProviderSelection.Standard => !descriptor.IsOptIn,
+            MediaProviderSelection.OptInOnly => descriptor.IsOptIn,
+            _ => true
+        };
+    }
 
     private static void ValidateSchema(MediaMetadataSchema schema)
     {

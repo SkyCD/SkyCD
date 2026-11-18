@@ -1,2 +1,12 @@
 _name: Lithuanian
 _flag: 🇱🇹
+metadata.ed2k: "eD2k maiša"
+metadata.tth: "Tiger medžio maiša"
+metadata.sha256: "SHA-256"
+metadata.AiDescription: "AI aprašymas"
+metadata.AiDescriptionAgent: "AI aprašymo agentas"
+metadata.AiDescriptionModel: "AI aprašymo modelis"
+metadata.AiDescriptionPromptVersion: "AI aprašymo užklausos versija"
+metadata.AiDescriptionLanguage: "AI aprašymo kalba"
+metadata.AiDescriptionOrigin: "AI aprašymo kilmė"
+metadata.AiDescriptionProcessingDestination: "AI aprašymo apdorojimo vieta"

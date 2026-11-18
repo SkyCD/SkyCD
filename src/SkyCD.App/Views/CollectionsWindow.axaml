@@ -52,12 +52,13 @@
         <ListBox Grid.Row="1"
                  Grid.Column="0"
                  ItemsSource="{Binding Collections}"
-                 SelectedItem="{Binding SelectedCollection}">
+                 SelectedItem="{Binding SelectedCollection}"
+                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Collections}}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="{Binding Name}" />
-                        <TextBlock Text="Saved search" IsVisible="{Binding IsDynamic}" Opacity="0.7" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}" IsVisible="{Binding IsDynamic}" Opacity="0.7" />
                         <TextBlock Text="{Binding EntryCount, StringFormat='({0})'}"
                                    Opacity="0.7" />
                     </StackPanel>
@@ -70,10 +71,12 @@
                     Spacing="6"
                     VerticalAlignment="Top">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" />
-            <TextBox Text="{Binding NewCollectionName}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
+            <TextBox Text="{Binding NewCollectionName}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
                     Command="{Binding CreateCollectionCommand}" />
-            <TextBox Text="{Binding RenameTo}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" />
+            <TextBox Text="{Binding RenameTo}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}"
+                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}"
                     Command="{Binding RenameCollectionCommand}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}"
@@ -82,13 +85,14 @@
                     Command="{Binding RemoveMissingEntriesCommand}" />
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
                     Command="{Binding NavigateToSelectedCommand}" />
-            <Button Content="Refresh results" Command="{Binding RefreshResultsCommand}" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.RefreshResults}}" Command="{Binding RefreshResultsCommand}" />
         </StackPanel>
 
         <ListBox Grid.Row="1"
                  Grid.Column="2"
                  ItemsSource="{Binding Members}"
                  SelectedItem="{Binding SelectedMember}"
+                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}"
                  DoubleTapped="OnMembersDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate>

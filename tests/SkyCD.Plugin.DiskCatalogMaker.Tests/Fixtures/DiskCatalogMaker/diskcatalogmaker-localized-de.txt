@@ -1,0 +1,6 @@
+Name;Pfad;Größe;Art;Geändert;Erstellt;Kommentar
+Dokumente;/Volumes/Sicherung 2026/Dokumente;;Ordner;06.01.2026 10:00:00;01.12.2025 09:00:00;Steuerunterlagen
+bilanz.pdf;/Volumes/Sicherung 2026/Dokumente/bilanz.pdf;12,5 MB;PDF-Dokument;06.01.2026 10:00:00;01.12.2025 09:00:00;Endgültig
+notizen.txt;/Volumes/Sicherung 2026/Dokumente/notizen.txt;2048;Textdokument;05.01.2026 08:00:00;02.12.2025 08:00:00;
+grüße.txt;/Volumes/Sicherung 2026/grüße.txt;512;Textdokument;07.01.2026 18:30:00;03.12.2025 12:00:00;Grüße aus München
+notizen.txt;/Volumes/Sicherung 2026/notizen.txt;1024;Textdokument;07.01.2026 09:00:00;03.12.2025 12:05:00;

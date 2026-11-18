@@ -10,7 +10,7 @@
 7. Each commit message must begin with `[XXX]` where `XXX` is the issue number solved by that commit.
 8. Before each commit, verify `dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal` passes. If it fails, fix the formatting issues before committing.
 9. PR descriptions must clearly state what issue they solve, using format "Fixes #XXX: [issue title]" at the beginning. Use GitHub-supported closing keywords so the issue is linked and automatically closed when the PR merges into the default branch. Do not use "Solves #XXX", which GitHub does not recognize as a closing keyword. For PRs targeting a feature branch, include the closing reference in the feature-to-main PR as well.
-10. Prefer solving issues with NuGet packages when appropriate, but only use packages with licenses compatible with project policy.
+10. Before implementing new functionality or substantial custom code, consider whether an existing NuGet package provides equivalent functionality. Prefer a suitable, maintained package when it meaningfully reduces custom code and maintenance without compromising required behavior. Check its functional fit, maintenance status, and .NET 10 compatibility, and verify that both the package and its direct and transitive dependencies comply with `docs/legal/dependency-license-policy.json`. Preserve the policy's blocked-license, unknown-license, and explicit-whitelist handling. Do not add a package merely because one exists; retain custom code when no suitable compliant alternative is available or package adoption would add unnecessary complexity.
 11. After each code change, if the build fails, do not commit the changes.
 12. If possible, everytime write integration tests for new functionality
 13. Prefer custom exception types over generic exceptions where practical. Custom exceptions must keep predefined message templates, allow only parameter differences, and be defined one class per file.
@@ -43,6 +43,7 @@
 - Allowed licenses include: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, Zlib.
 - Blocked licenses include GPL/LGPL/AGPL families, SSPL-1.0, and CC-BY-NC-4.0.
 - Unknown/missing licenses are non-compliant unless explicitly whitelisted in policy.
+- Check direct and transitive dependency licenses; do not bypass or weaken these policy rules when evaluating a package.
 
 # Hard requirements
 - .NET 10

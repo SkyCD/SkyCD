@@ -22,6 +22,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.UI.Controls.Preview;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Presentation.Catalog;
@@ -32,11 +33,43 @@ using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
 using SkyCD.Presentation.Collections;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.Presentation.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private BackgroundMediaSyncService? backgroundMediaSync;
+
+    [ObservableProperty]
+    private bool isBackgroundMediaSyncEnabled;
+
+    partial void OnIsBackgroundMediaSyncEnabledChanged(bool value)
+    {
+        backgroundMediaSync?.Dispose();
+        backgroundMediaSync = null;
+        if (value && catalogRepository is not null && !isDisposed)
+        {
+            backgroundMediaSync = new BackgroundMediaSyncService(catalogRepository,
+                (documents, token) =>
+                {
+                    new CatalogScanPublisher().PublishDirect(documents, catalogRepository,
+                        new ScanPublishOptions { CancellationToken = token }, undoManager?.History);
+                    IsDirtyDocument = true;
+                    UpdateUndoRedoState();
+                    RefreshTreeNodes();
+                    RefreshBrowserItemsForSelection();
+                    QueueScanHashing(documents);
+                }, () => !isDisposed && !IsProgressVisible);
+            backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
+            backgroundMediaSync.Start();
+        }
+        RebuildMenuItems();
+    }
+
+    [RelayCommand]
+    private void ToggleBackgroundMediaSync() => IsBackgroundMediaSyncEnabled = !IsBackgroundMediaSyncEnabled;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
     private bool previewArtifactReclaimPending;
@@ -94,6 +127,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? FindCatalogRequested;
     public event EventHandler<CollectionsDialogRequestedEventArgs>? CollectionsRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
+    public event EventHandler<AiDescriptionBatchDialogRequestedEventArgs>? AiDescriptionBatchRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
@@ -102,7 +136,200 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? FocusTreeRequested;
 
     private MenuExtensionManager menuExtensionManager;
+    private DescriptionExtensionManager descriptionExtensionManager = new([]);
+    private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
+    private MediaHashService? mediaHashService;
+    private CancellationTokenSource? hashCancellation;
+
+    [ObservableProperty]
+    private bool isScanHashingEnabled;
+
+    partial void OnIsScanHashingEnabledChanged(bool value)
+    {
+        RebuildMenuItems();
+        RefreshTopMenuState();
+    }
+
+    [RelayCommand]
+    private void ToggleScanHashing() => IsScanHashingEnabled = !IsScanHashingEnabled;
+
+    /// <summary>
+    /// Supplies the media providers used for explicit hashing. Called again after plugins are reloaded so
+    /// hashing follows the current provider set.
+    /// </summary>
+    public void RefreshMediaServices(MediaExtensionManager updatedManager)
+    {
+        ArgumentNullException.ThrowIfNull(updatedManager);
+        mediaHashService = new MediaHashService(updatedManager, mediaCacheStore);
+        ComputeHashesCommand.NotifyCanExecuteChanged();
+        RefreshTopMenuState();
+    }
+
+    private bool CanComputeHashes() =>
+        mediaHashService is not null && GetSelectedBrowserItems().Any(IsHashableFile);
+
+    /// <summary>
+    /// Hashes the selected files. Re-running it refreshes stored digests, and running it again while a pass
+    /// is active cancels that pass instead of queuing a second one.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanComputeHashes))]
+    private async Task ComputeHashesAsync()
+    {
+        if (mediaHashService is null)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeUnavailable);
+            return;
+        }
+
+        if (hashCancellation is not null)
+        {
+            hashCancellation.Cancel();
+            return;
+        }
+
+        var targets = GetSelectedBrowserItems().Where(IsHashableFile).ToArray();
+        if (targets.Length == 0)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeNoTargets);
+            return;
+        }
+
+        await RunHashComputationAsync(targets);
+    }
+
+    private async Task RunHashComputationAsync(IReadOnlyList<CatalogDocument> targets)
+    {
+        if (mediaHashService is null || targets.Count == 0 || hashCancellation is not null)
+        {
+            return;
+        }
+
+        var catalog = catalogRepository?.GetAll()
+            ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
+
+        using var cancellation = new CancellationTokenSource();
+        hashCancellation = cancellation;
+        var stored = 0;
+        var notStored = 0;
+        try
+        {
+            IsProgressVisible = true;
+            ProgressValue = 0;
+            for (var index = 0; index < targets.Count; index++)
+            {
+                cancellation.Token.ThrowIfCancellationRequested();
+                var entry = targets[index];
+                var current = index;
+                SetStatus(LocalizationService.Current.Format(
+                    TextKeys.HashComputeProgress, current + 1, targets.Count, entry.Name));
+                var progress = new Progress<MediaProgress>(mediaProgress =>
+                    ProgressValue = Math.Clamp((int)Math.Round(
+                        ((current + mediaProgress.Fraction) / targets.Count) * 100), 0, 100));
+
+                var outcome = await mediaHashService.ComputeAsync(entry, catalog, progress, cancellation.Token);
+                if (outcome.Stored)
+                {
+                    stored++;
+                }
+                else
+                {
+                    notStored++;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.HashComputeCancelled);
+            return;
+        }
+        finally
+        {
+            if (ReferenceEquals(hashCancellation, cancellation))
+            {
+                hashCancellation = null;
+            }
+            IsProgressVisible = false;
+            ProgressValue = 0;
+        }
+
+        StatusText = LocalizationService.Current.Format(TextKeys.HashComputeCompleted, stored, targets.Count, notStored);
+        if (targets.Any(target => string.Equals(target.Id, SelectedBrowserItem?.Id, StringComparison.Ordinal)))
+        {
+            RefreshPreview();
+        }
+    }
+
+    private static bool IsHashableFile(CatalogDocument entry) =>
+        entry.Type == CatalogDocumentType.File &&
+        entry.Properties.TryGetValue(MediaHashService.SourcePathPropertyKey, out var path) &&
+        !string.IsNullOrWhiteSpace(path?.ToString());
+
+    private bool CanGenerateDescriptions() =>
+        aiDescriptionService is not null && GetSelectedBrowserItems().Any(IsDescriptionTarget);
+
+    private static bool IsDescriptionTarget(CatalogDocument entry) =>
+        entry.Type != CatalogDocumentType.Folder;
+
+    /// <summary>
+    /// Opens the explicit batch dialog for the current selection. Nothing is generated until the user
+    /// starts the pass, and unchanged entries are skipped unless regeneration is requested.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanGenerateDescriptions))]
+    private void GenerateAiDescriptions()
+    {
+        if (aiDescriptionService is null)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionUnavailableStatus);
+            return;
+        }
+
+        var entries = GetSelectedBrowserItems().Where(IsDescriptionTarget).ToArray();
+        if (entries.Length == 0)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionBatchNoTargets);
+            return;
+        }
+
+        var dialog = new AiDescriptionBatchDialogViewModel(aiDescriptionService, entries, () =>
+        {
+            IsDirtyDocument = true;
+            RefreshBrowserItemsForSelection();
+        });
+        AiDescriptionBatchRequested?.Invoke(this, new AiDescriptionBatchDialogRequestedEventArgs { Dialog = dialog });
+    }
+
+    /// <summary>
+    /// Starts opt-in hashing for freshly scanned files. Hashing reads whole files, so it only runs after a
+    /// scan when the user enabled it; failures never abort the scan.
+    /// </summary>
+    private void QueueScanHashing(IReadOnlyList<CatalogDocument> documents)
+    {
+        if (!IsScanHashingEnabled || mediaHashService is null || documents.Count == 0)
+        {
+            return;
+        }
+
+        var files = documents.Where(IsHashableFile).ToArray();
+        if (files.Length == 0)
+        {
+            return;
+        }
+
+        _ = RunScanHashingAsync(files);
+    }
+
+    private async Task RunScanHashingAsync(IReadOnlyList<CatalogDocument> files)
+    {
+        try
+        {
+            await RunHashComputationAsync(files);
+        }
+        catch (Exception exception)
+        {
+            StatusText = LocalizationService.Current.Format(TextKeys.HashComputeFailed, exception.Message);
+        }
+    }
 
     public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
@@ -116,6 +343,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HelpMenuItems));
         OnPropertyChanged(nameof(BrowserContextMenuItems));
         OnPropertyChanged(nameof(TreeContextMenuItems));
+    }
+
+    /// <summary>
+    /// Rebinds the AI description capability after plugins are discovered or reloaded. Descriptions that
+    /// were already captured stay readable both with and without a provider.
+    /// </summary>
+    public void RefreshDescriptionServices(DescriptionExtensionManager updatedManager)
+    {
+        descriptionExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
+        RebuildDescriptionService();
+        RebuildMenuItems();
+        OnPropertyChanged(nameof(ToolsMenuItems));
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
+        RefreshTopMenuState();
+    }
+
+    private void RebuildDescriptionService()
+    {
+        aiDescriptionService = catalogRepository is null
+            ? null
+            : new AiDescriptionService(catalogRepository, mediaCacheStore, descriptionExtensionManager.Capability);
     }
 
     private void RebuildMenuItems()
@@ -169,6 +417,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTopMenuState();
         localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
         AttachHistoryNotifications();
+        RebuildDescriptionService();
 
         try
         {
@@ -330,6 +579,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (isDisposed) return;
         isDisposed = true;
+        pluginCommandCancellation?.Cancel();
+        hashCancellation?.Cancel();
+        backgroundMediaSync?.Dispose();
         localizationSubscription.Dispose();
 
         if (undoManager is not null)
@@ -421,9 +673,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsDeleteEnabled => CanDeleteItem(null);
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     private bool _canUndo;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
     private bool _canRedo;
 
     public bool IsPropertiesEnabled => SelectedBrowserItem is not null || SelectedTreeNode is not null;
@@ -928,42 +1182,56 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                if (selectedId is not null && dialog.HasCustomProperties)
+                RunCatalogEdit(LocalizationService.Current.Get(TextKeys.Properties), () =>
                 {
-                    var document = catalogRepository?.Get(selectedId)
-                        ?? inMemoryCatalogEntries?.FirstOrDefault(item => item.Id == selectedId);
-                    if (document is not null)
+                    if (selectedId is not null)
                     {
-                        foreach (var property in dialog.GetProperties())
+                        var document = catalogRepository?.Get(selectedId)
+                            ?? inMemoryCatalogEntries?.FirstOrDefault(item => item.Id == selectedId);
+                        if (document is not null)
                         {
-                            document.Properties[property.Key] = property.Value;
+                            var previous = new PropertiesCollection(document.Properties);
+                            var properties = dialog.GetProperties();
+                            foreach (var property in dialog.CustomProperties)
+                            {
+                                document.Properties[property.Name] = properties[property.Name];
+                            }
+                            if (comments.Length > 0 || document.Properties.ContainsKey("Comment"))
+                            {
+                                document.Properties["Comment"] = comments;
+                            }
+                            catalogRepository?.Save(document.Id, document);
+                            foreach (var key in previous.Keys.Union(document.Properties.Keys))
+                            {
+                                previous.TryGetValue(key, out var oldValue);
+                                document.Properties.TryGetValue(key, out var newValue);
+                                undoManager?.RecordPropertyChange(document, key, oldValue, newValue);
+                            }
                         }
-                        catalogRepository?.Save(document.Id, document);
                     }
-                }
-                if (dialog.HasTagsTab && tagService is not null && catalogRepository is not null
-                    && !isTreeProperties && SelectedBrowserItem is not null)
-                {
-                    var oldTagIds = tagService.GetEntryTagIds(SelectedBrowserItem.Id);
-                    var newTagIds = dialog.GetAssignedTagIds();
-                    if (!oldTagIds.SequenceEqual(newTagIds, StringComparer.Ordinal))
+                    if (dialog.HasTagsTab && tagService is not null && catalogRepository is not null
+                        && !isTreeProperties && selectedId is not null)
                     {
-                        tagService.SetEntryTags(SelectedBrowserItem.Id, newTagIds);
-                        var changed = catalogRepository.Get(SelectedBrowserItem.Id);
-                        if (changed is not null)
+                        var oldTagIds = tagService.GetEntryTagIds(selectedId);
+                        var newTagIds = dialog.GetAssignedTagIds();
+                        if (!oldTagIds.SequenceEqual(newTagIds, StringComparer.Ordinal))
                         {
-                            undoManager?.RecordTagsChange(changed, oldTagIds, newTagIds);
-                        }
+                            tagService.SetEntryTags(selectedId, newTagIds);
+                            var changed = catalogRepository.Get(selectedId);
+                            if (changed is not null)
+                            {
+                                undoManager?.RecordTagsChange(changed, oldTagIds, newTagIds);
+                            }
 
-                        RefreshBrowserItemsForSelection();
-                        RefreshTagsMenuItems();
+                            RefreshBrowserItemsForSelection();
+                            RefreshTagsMenuItems();
+                        }
                     }
-                }
-                if (!isTreeProperties)
-                {
-                    ApplyBrowserItemRenameIfNeeded(dialog);
-                }
-                commentsByObjectKey[dialog.ObjectKey] = comments;
+                    ApplyBrowserItemRenameIfNeeded(dialog, selectedId);
+                    commentsByObjectKey[dialog.ObjectKey] = comments;
+                });
+                UpdateUndoRedoState();
+                RefreshBrowserItemsForSelection();
                 IsDirtyDocument = true;
                 StatusText = DefaultStatusText;
             }
@@ -983,6 +1251,28 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CanRedo = undoManager?.CanRedo ?? false;
     }
 
+    private void RunCatalogEdit(string displayName, Action apply)
+    {
+        undoManager?.BeginTransaction(displayName);
+        try
+        {
+            if (catalogRepository is not null)
+            {
+                catalogRepository.Collection.Database.InBatch(apply);
+            }
+            else
+            {
+                apply();
+            }
+            undoManager?.CommitTransaction();
+        }
+        catch
+        {
+            undoManager?.RollbackTransaction();
+            throw;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
@@ -992,6 +1282,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var actionName = undoManager.UndoActionName;
+        var selectedIds = GetSelectedBrowserItems().Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         try
         {
             await undoManager.UndoAsync();
@@ -1005,9 +1296,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Restored records are different instances from whatever the browser still holds, and redo replays
-        // captured ids rather than the live selection. Dropping the selection here is what stops a following
-        // delete or redo from acting on a detached object that merely shares a name.
+        // Rebind the logical selection to fresh repository instances after replay.
         SelectedBrowserItem = null;
         SelectedBrowserItems = new List<CatalogDocument>();
 
@@ -1015,6 +1304,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTreeNodes();
         RevealRestoredTreeNode();
         RefreshBrowserItemsForSelection();
+        RestoreHistorySelection(selectedIds);
+        RefreshTagsMenuItems();
+        RefreshCollectionsMenuItems();
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.UndoCompleted, actionName ?? string.Empty);
     }
@@ -1028,6 +1320,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var actionName = undoManager.RedoActionName;
+        var selectedIds = GetSelectedBrowserItems().Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         try
         {
             await undoManager.RedoAsync();
@@ -1045,8 +1338,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         UpdateUndoRedoState();
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
+        RestoreHistorySelection(selectedIds);
+        RefreshTagsMenuItems();
+        RefreshCollectionsMenuItems();
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.RedoCompleted, actionName ?? string.Empty);
+    }
+
+    private void RestoreHistorySelection(IReadOnlySet<string> selectedIds)
+    {
+        var selected = BrowserItems.Where(item => selectedIds.Contains(item.Id)).ToList();
+        SelectedBrowserItems = selected;
+        SelectedBrowserItem = selected.FirstOrDefault();
     }
 
     /// <summary>
@@ -1158,6 +1461,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         IsDirtyDocument = true;
+        QueueScanHashing(result.PublishedDocuments);
         return result;
     }
 
@@ -1205,6 +1509,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             item.Name.Equals(rootImported.Name, StringComparison.OrdinalIgnoreCase));
         IsDirtyDocument = true;
         StatusText = LocalizationService.Current.Format(TextKeys.Added, rootImported.Name);
+        QueueScanHashing(documents);
     }
 
     public void AddImportedItem(string? suggestedName)
@@ -1874,74 +2179,84 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         // Record old statuses for undo
         var oldStatuses = targets.ToDictionary(t => t, t => t.Status);
-
-        if (status is null)
+        var oldProperties = targets.ToDictionary(t => t.Id, t => new PropertiesCollection(t.Properties));
+        RunCatalogEdit(LocalizationService.Current.Get(TextKeys.Status), () =>
         {
-            foreach (var target in targets)
-            {
-                target.Status = null;
-                target.Properties.Remove(ItemStatusNamePropertyKey);
-                target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
-                target.Properties.Remove(ItemStatusIconColorPropertyKey);
-                target.Properties.Remove(ItemStatusIconTextPropertyKey);
-            }
 
-            StatusText = targets.Count == 1
-                ? LocalizationService.Current.Format(TextKeys.ClearedStatusFor, targets[0].Name)
-                : LocalizationService.Current.Format(TextKeys.ClearedStatusForItems, targets.Count);
-        }
-        else
-        {
-            var applicableTargets = targets
-                .Where(target => IsStatusApplicableToItem(status, target))
-                .ToArray();
-            foreach (var target in applicableTargets)
+            if (status is null)
             {
-                target.Status = status.Name;
-                target.Properties[ItemStatusNamePropertyKey] = status.Name;
-                target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
-                target.Properties[ItemStatusIconColorPropertyKey] =
-                    string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
-                target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
-            }
-
-            StatusText = applicableTargets.Length == 0
-                ? LocalizationService.Current.Format(TextKeys.StatusIsNotSupportedForSelectedItemTypes, status.Name)
-                : applicableTargets.Length == 1
-                    ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
-                    : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
-
-            // Record status changes for undo
-            foreach (var target in applicableTargets)
-            {
-                if (oldStatuses.TryGetValue(target, out var oldStatus))
+                foreach (var target in targets)
                 {
-                    undoManager?.RecordStatusChange(target, oldStatus, status.Name);
+                    target.Status = null;
+                    target.Properties.Remove(ItemStatusNamePropertyKey);
+                    target.Properties.Remove(ItemStatusIconGlyphPropertyKey);
+                    target.Properties.Remove(ItemStatusIconColorPropertyKey);
+                    target.Properties.Remove(ItemStatusIconTextPropertyKey);
+                }
+
+                StatusText = targets.Count == 1
+                    ? LocalizationService.Current.Format(TextKeys.ClearedStatusFor, targets[0].Name)
+                    : LocalizationService.Current.Format(TextKeys.ClearedStatusForItems, targets.Count);
+            }
+            else
+            {
+                var applicableTargets = targets
+                    .Where(target => IsStatusApplicableToItem(status, target))
+                    .ToArray();
+                foreach (var target in applicableTargets)
+                {
+                    target.Status = status.Name;
+                    target.Properties[ItemStatusNamePropertyKey] = status.Name;
+                    target.Properties[ItemStatusIconGlyphPropertyKey] = status.IconGlyph;
+                    target.Properties[ItemStatusIconColorPropertyKey] =
+                        string.IsNullOrWhiteSpace(status.IconColor) ? "#FFFFFF" : status.IconColor;
+                    target.Properties[ItemStatusIconTextPropertyKey] = ResolveMenuStatusIconText(status.IconGlyph);
+                }
+
+                StatusText = applicableTargets.Length == 0
+                    ? LocalizationService.Current.Format(TextKeys.StatusIsNotSupportedForSelectedItemTypes, status.Name)
+                    : applicableTargets.Length == 1
+                        ? LocalizationService.Current.Format(TextKeys.StatusAppliedTo, status.Name, applicableTargets[0].Name)
+                        : LocalizationService.Current.Format(TextKeys.StatusAppliedToItems, status.Name, applicableTargets.Length);
+
+                // Record status changes for undo
+                foreach (var target in applicableTargets)
+                {
+                    if (oldStatuses.TryGetValue(target, out var oldStatus))
+                    {
+                        undoManager?.RecordStatusChange(target, oldStatus, status.Name);
+                    }
                 }
             }
-        }
 
-        // Record status clears for undo
-        if (status is null)
-        {
-            foreach (var target in targets)
+            // Record status clears for undo
+            if (status is null)
             {
-                if (oldStatuses.TryGetValue(target, out var oldStatus) && oldStatus != null)
+                foreach (var target in targets)
                 {
-                    undoManager?.RecordStatusChange(target, oldStatus, null);
+                    if (oldStatuses.TryGetValue(target, out var oldStatus) && oldStatus != null)
+                    {
+                        undoManager?.RecordStatusChange(target, oldStatus, null);
+                    }
                 }
             }
-        }
 
-        // Save changes to repository
-        if (catalogRepository is not null)
-        {
-            foreach (var target in targets)
+            // Save changes to repository
+            if (catalogRepository is not null)
             {
-                catalogRepository.Save(target.Id, target);
+                foreach (var target in targets)
+                {
+                    catalogRepository.Save(target.Id, target);
+                    foreach (var key in oldProperties[target.Id].Keys.Union(target.Properties.Keys))
+                    {
+                        oldProperties[target.Id].TryGetValue(key, out var oldValue);
+                        target.Properties.TryGetValue(key, out var newValue);
+                        undoManager?.RecordPropertyChange(target, key, oldValue, newValue);
+                    }
+                }
             }
-        }
 
+        });
         UpdateUndoRedoState();
         IsDirtyDocument = true;
         RefreshBrowserItemsForSelection();
@@ -2147,7 +2462,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (ActivePane == ActivePane.Tree && SelectedTreeNode is not null)
         {
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
-            var comments = GetObjectComments(objectKey);
+            var comments = GetObjectComments(objectKey, SelectedTreeNode.Key);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -2162,7 +2477,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (SelectedBrowserItem is not null)
         {
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
-            var comments = GetObjectComments(objectKey);
+            var comments = GetObjectComments(objectKey, SelectedBrowserItem.Id);
             var infoProperties = GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
 
             dialog = new PropertiesDialogViewModel(
@@ -2179,13 +2494,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     tagService.GetEntryTagIds(SelectedBrowserItem.Id));
             }
 
+            if (aiDescriptionService is not null)
+            {
+                dialog.InitializeAiDescription(aiDescriptionService, SelectedBrowserItem.Id);
+            }
+
             return true;
         }
 
         if (SelectedTreeNode is not null)
         {
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
-            var comments = GetObjectComments(objectKey);
+            var comments = GetObjectComments(objectKey, SelectedTreeNode.Key);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -2201,8 +2521,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return false;
     }
 
-    private string GetObjectComments(string objectKey)
+    private string GetObjectComments(string objectKey, string documentId)
     {
+        if (catalogRepository?.Get(documentId) is { } document)
+        {
+            return document.Properties.TryGetValue("Comment", out var comment) ? comment?.ToString() ?? string.Empty : string.Empty;
+        }
         return commentsByObjectKey.TryGetValue(objectKey, out var comments)
             ? comments
             : string.Empty;
@@ -2331,8 +2655,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .FirstOrDefault(entry => string.Equals(entry.Id, itemId, StringComparison.Ordinal));
     }
 
-    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog)
+    private void ApplyBrowserItemRenameIfNeeded(PropertiesDialogViewModel dialog, string? selectedId)
     {
+        var requestedName = dialog.Name.Trim();
+        if (selectedId is not null && catalogRepository?.Get(selectedId) is { } stored)
+        {
+            if (requestedName.Length == 0 || requestedName == stored.Name)
+            {
+                return;
+            }
+            catalogRepository.Save(stored.Id, new CatalogDocument
+            {
+                Id = stored.Id,
+                Name = requestedName,
+                ParentId = stored.ParentId,
+                Type = stored.Type,
+                Size = stored.Size,
+                ChildrenCount = stored.ChildrenCount,
+                ContentsState = stored.ContentsState,
+                Status = stored.Status,
+                Properties = new PropertiesCollection(stored.Properties)
+            });
+            undoManager?.RecordRename(stored, stored.Name, requestedName);
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+            SelectedBrowserItem = BrowserItems.FirstOrDefault(item => item.Id == stored.Id);
+            return;
+        }
         if (SelectedBrowserItem is null || SelectedTreeNode is null)
         {
             return;
@@ -2340,7 +2689,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var nodeKey = SelectedTreeNode.Key;
         var currentDisplayName = SelectedBrowserItem.Name;
-        var requestedName = dialog.Name.Trim();
         if (string.IsNullOrWhiteSpace(requestedName) ||
             requestedName.Equals(currentDisplayName, StringComparison.Ordinal))
         {
@@ -2385,6 +2733,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPropertiesEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
+        ComputeHashesCommand.NotifyCanExecuteChanged();
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
@@ -2459,6 +2809,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
+        ComputeHashesCommand.NotifyCanExecuteChanged();
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -2497,6 +2849,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
+        ComputeHashesCommand.NotifyCanExecuteChanged();
+        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -2611,6 +2965,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private IReadOnlyList<MainMenuItemViewModel> BuildTopMenuItems()
     {
+        var undoGesture = OperatingSystem.IsMacOS() ? "Meta+Z" : "Ctrl+Z";
+        var redoGesture = OperatingSystem.IsMacOS() ? "Meta+Shift+Z" : "Ctrl+Y";
+
         var menuItems = new List<MainMenuItemViewModel>
         {
             new MainMenuItemViewModel
@@ -2618,13 +2975,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.File),
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", Command = NewCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", InputGesture = "Ctrl+N", Command = NewCatalogCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", Command = OpenCatalogCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.OpenFolder), HotKey = "Ctrl+Shift+O", Command = OpenCatalogFolderCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", Command = SaveCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", InputGesture = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.OpenFolder), HotKey = "Ctrl+Shift+O", InputGesture = "Ctrl+Shift+O", Command = OpenCatalogFolderCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", InputGesture = "Ctrl+S", Command = SaveCatalogCommand },
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", Command = SaveCatalogAsCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", InputGesture = "F12", Command = SaveCatalogAsCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand },
                     Separator(),
@@ -2636,11 +2993,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.Edit),
                 Items =
                 [
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), HotKey = "Ctrl+Z", Command = UndoCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), HotKey = "Ctrl+Y", Command = RedoCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Undo), HotKey = undoGesture, InputGesture = undoGesture, Command = UndoCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Redo), HotKey = redoGesture, InputGesture = redoGesture, Command = RedoCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", Command = AddItemCommand },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", Command = DeleteItemCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand },
                     new MainMenuItemViewModel
                     {
                         Key = "edit_status",
@@ -2650,10 +3007,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", Command = OpenPropertiesCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", Command = FindCatalogCommand },
+                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", InputGesture = "Ctrl+F", Command = FindCatalogCommand },
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.AdvancedFind), Command = AdvancedFindCatalogCommand }
                 ]
@@ -2685,7 +3042,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                             CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
                         ]
                     },
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), HotKey = "F5", Command = RefreshCommand }
+                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), HotKey = "F5", InputGesture = "F5", Command = RefreshCommand }
                 ]
             },
             new MainMenuItemViewModel
@@ -2715,7 +3072,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var toolsMenuItems = new List<MainMenuItemViewModel>
         {
             new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", Command = OpenOptionsCommand }
+                { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", InputGesture = "Ctrl+Alt+O", Command = OpenOptionsCommand },
+            new MainMenuItemViewModel
+            {
+                Header = "Automatically sync mounted media",
+                Command = ToggleBackgroundMediaSyncCommand,
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = IsBackgroundMediaSyncEnabled
+            },
+            new MainMenuItemViewModel
+            {
+                Header = LocalizationService.Current.Get(TextKeys.ComputeHashesOnScan),
+                Command = ToggleScanHashingCommand,
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = IsScanHashingEnabled
+            },
+            new MainMenuItemViewModel
+            {
+                Key = "compute_hashes",
+                Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
+                Command = ComputeHashesCommand
+            },
+            new MainMenuItemViewModel
+            {
+                Key = "ai_description_batch",
+                Header = LocalizationService.Current.Get(TextKeys.GenerateAiDescriptions),
+                Command = GenerateAiDescriptionsCommand
+            }
         };
 
         // Add plugin menu contributions to Tools menu
@@ -2755,7 +3138,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             };
 
             var result = await menuExtensionManager.ExecuteAsync(commandId, context,
-                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), cancellation.Token);
+                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan
+                    : commandId == "ai-description.generate" ? TimeSpan.FromMinutes(6) : TimeSpan.FromSeconds(30), cancellation.Token);
 
             if (result.TimedOut)
             {
@@ -2775,10 +3159,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         finally { pluginCommandCancellation = null; }
     }
 
-    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi
+    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi, IDescriptionHostApi
     {
         private readonly string? rootId = viewModel.TreeNodes.FirstOrDefault()?.Key;
         private readonly string? catalogPath = viewModel.CurrentCatalogPath;
+        private readonly string? descriptionEntryId = viewModel.GetSelectedBrowserItems() is { Count: 1 } selected ? selected[0].Id : null;
+
+        public Task<DescriptionContext> GetDescriptionContextAsync(DescriptionContextOptions options, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (viewModel.isDisposed || catalogPath != viewModel.CurrentCatalogPath || descriptionEntryId is null || viewModel.catalogRepository is null)
+                throw new DescriptionContextChangedException();
+            return Task.FromResult(new CatalogDescriptionService(viewModel.catalogRepository, viewModel.mediaCacheStore).Build(descriptionEntryId, options));
+        }
+
+        public async Task SaveGeneratedDescriptionAsync(DescriptionContext context, GeneratedDescription description, CancellationToken cancellationToken)
+        {
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (viewModel.isDisposed || catalogPath != viewModel.CurrentCatalogPath || descriptionEntryId != context.EntryId || viewModel.catalogRepository is null)
+                    throw new DescriptionContextChangedException();
+                new CatalogDescriptionService(viewModel.catalogRepository, viewModel.mediaCacheStore).Save(context, description);
+                viewModel.IsDirtyDocument = true;
+                viewModel.RefreshBrowserItemsForSelection();
+            });
+        }
 
         public async Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files, CancellationToken cancellationToken = default)
         {
@@ -2851,6 +3257,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
         SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
+        SetMenuEnabled(byKey, "compute_hashes", CanComputeHashes());
+        SetMenuEnabled(byKey, "ai_description_batch", CanGenerateDescriptions());
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 
@@ -2979,8 +3387,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "list" },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
+            Separator(),
+            new MainMenuItemViewModel
+            {
+                Key = "compute_hashes",
+                Header = LocalizationService.Current.Get(TextKeys.ComputeHashes),
+                Command = ComputeHashesCommand
+            },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
@@ -3024,12 +3439,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), Command = AddItemCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), Command = DeleteItemCommand, CommandParameter = "tree" },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "tree" },
             Separator(),
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", Command = CopyCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", Command = PasteCommand },
-            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", Command = CutCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", InputGesture = "Ctrl+C", Command = CopyCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", InputGesture = "Ctrl+V", Command = PasteCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
@@ -3592,3 +4007,4 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private static string ResolveMenuStatusIconText(string iconGlyphKey) => iconGlyphKey;
 }
+

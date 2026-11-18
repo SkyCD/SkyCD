@@ -55,6 +55,46 @@
                                        RtfText="{Binding Comments, Mode=TwoWay}" />
                 </Grid>
             </TabItem>
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}"
+                     IsVisible="{Binding HasAiDescriptionTab}">
+                <ScrollViewer Margin="8">
+                    <StackPanel Spacing="8" DataContext="{Binding AiDescription}"
+                                x:DataType="vm:AiDescriptionViewModel">
+                        <TextBlock Text="{Binding StateText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ProviderText}" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <TextBlock Text="{Binding ContextText}" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <TextBox Text="{Binding DescriptionText}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 Height="150"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" />
+                        <TextBlock Text="{Binding ProvenanceText}" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
+                                   Foreground="Firebrick" />
+                        <TextBlock Text="{Binding AdoptionHint}" IsVisible="{Binding IsAdoptionPending}"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="{Binding GenerateButtonText}"
+                                    Command="{Binding GenerateCommand}"
+                                    IsEnabled="{Binding CanGenerate}" />
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CopyDescription}}"
+                                    Command="{Binding CopyCommand}"
+                                    IsEnabled="{Binding CanCopy}" />
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AdoptAsComment}}"
+                                    Command="{Binding AdoptCommand}"
+                                    IsEnabled="{Binding CanAdopt}" />
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Clear}}"
+                                    Command="{Binding ClearCommand}"
+                                    IsEnabled="{Binding CanClear}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Properties}}" IsVisible="{Binding HasInfoTab}">
                 <cp:PropertiesList Margin="8,8,8,10"
                                    PropertiesData="{Binding InfoProperties}"

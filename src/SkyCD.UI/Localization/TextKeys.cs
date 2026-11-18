@@ -80,6 +80,14 @@ public static class TextKeys
     public const string About = "core.text.About";
     public const string Options = "core.text.Options";
     public const string ExecutingPluginCommand = "core.text.ExecutingPluginCommand";
+    public const string ComputeHashes = "core.text.ComputeHashes";
+    public const string ComputeHashesOnScan = "core.text.ComputeHashesOnScan";
+    public const string HashComputeProgress = "core.text.HashComputeProgress";
+    public const string HashComputeCompleted = "core.text.HashComputeCompleted";
+    public const string HashComputeCancelled = "core.text.HashComputeCancelled";
+    public const string HashComputeFailed = "core.text.HashComputeFailed";
+    public const string HashComputeUnavailable = "core.text.HashComputeUnavailable";
+    public const string HashComputeNoTargets = "core.text.HashComputeNoTargets";
     public const string PluginCommandTimedOut = "core.text.PluginCommandTimedOut";
     public const string PluginCommandError = "core.text.PluginCommandError";
     public const string NavigatedToNode = "core.text.NavigatedToNode";
@@ -171,6 +179,7 @@ public static class TextKeys
     public const string FtpAuthenticationFailed = "core.text.FtpAuthenticationFailed";
     public const string FtpConnectionFailed = "core.text.FtpConnectionFailed";
     public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";
+    public const string FtpListingNotSupported = "core.text.FtpListingNotSupported";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
     public const string Tags = "core.text.Tags";
@@ -190,4 +199,19 @@ public static class TextKeys
     public const string CollectionCleaned = "core.text.CollectionCleaned";
     public const string CollectionAddedTo = "core.text.CollectionAddedTo";
     public const string CollectionRemovedFrom = "core.text.CollectionRemovedFrom";
+    public const string GenerateAiDescriptions = "core.text.GenerateAiDescriptions";
+    public const string AiDescriptionUnavailableStatus = "core.text.AiDescriptionUnavailableStatus";
+    public const string AiDescriptionBatchNoTargets = "core.text.AiDescriptionBatchNoTargets";
+    public const string AiDescriptionProvider = "core.text.AiDescriptionProvider";
+    public const string AiDescriptionDisabled = "core.text.AiDescriptionDisabled";
+    public const string AiDescriptionContext = "core.text.AiDescriptionContext";
+    public const string AiDescriptionProvenance = "core.text.AiDescriptionProvenance";
+    public const string AiDescriptionFailedState = "core.text.AiDescriptionFailedState";
+    public const string AiDescriptionGenerateFailed = "core.text.AiDescriptionGenerateFailed";
+    public const string AiDescriptionAdoptConfirmation = "core.text.AiDescriptionAdoptConfirmation";
+    public const string AiDescriptionBatchItemCount = "core.text.AiDescriptionBatchItemCount";
+    public const string AiDescriptionBatchProgress = "core.text.AiDescriptionBatchProgress";
+    public const string AiDescriptionBatchSummary = "core.text.AiDescriptionBatchSummary";
+    public const string AiDescriptionBatchCancelled = "core.text.AiDescriptionBatchCancelled";
+    public const string AiDescriptionBatchFailed = "core.text.AiDescriptionBatchFailed";
 }

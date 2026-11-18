@@ -127,7 +127,24 @@ public sealed class OAuthTests
         Assert.Empty(await service.GetAccountsAsync(Provider()));
     }
 
+    [Fact]
+    public async Task InvalidGrantOnNonBadRequestStatus_RemovesSession()
+    {
+        var clock = new Clock();
+        var handler = new TokenEndpoint();
+        using var http = new HttpClient(handler);
+        var service = new OAuthService(http, new MemoryStore(), new Browser(), clock).ForPlugin("plugin");
+        await service.LoginAsync(Provider(), "account");
+        clock.Now = clock.Now.AddHours(2);
+        handler.Error = "invalid_grant";
+        handler.ErrorStatus = HttpStatusCode.InternalServerError;
+        Assert.Equal(OAuthFailure.LoginRequired,
+            (await Assert.ThrowsAsync<OAuthException>(() => service.GetAccessTokenAsync(Provider(), "account"))).Failure);
+        Assert.Empty(await service.GetAccountsAsync(Provider()));
+    }
+
     [Theory]
+    [InlineData("")]
     [InlineData("{}")]
     [InlineData("[]")]
     [InlineData("not json")]
@@ -136,6 +153,16 @@ public sealed class OAuthTests
     public async Task MalformedTokenResponse_IsSanitized(string body)
     {
         using var http = new HttpClient(new TokenEndpoint { Body = body });
+        var service = new OAuthService(http, new MemoryStore(), new Browser(), TimeProvider.System).ForPlugin("plugin");
+        var error = await Assert.ThrowsAsync<OAuthException>(() => service.LoginAsync(Provider(), "account"));
+        Assert.Equal(OAuthFailure.InvalidTokenResponse, error.Failure);
+        Assert.DoesNotContain("sensitive", error.ToString());
+    }
+
+    [Fact]
+    public async Task NonJsonTokenError_IsSanitized()
+    {
+        using var http = new HttpClient(new TokenEndpoint { Error = "server_error", Body = "sensitive provider body" });
         var service = new OAuthService(http, new MemoryStore(), new Browser(), TimeProvider.System).ForPlugin("plugin");
         var error = await Assert.ThrowsAsync<OAuthException>(() => service.LoginAsync(Provider(), "account"));
         Assert.Equal(OAuthFailure.InvalidTokenResponse, error.Failure);
@@ -172,6 +199,112 @@ public sealed class OAuthTests
         cts.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.LoginAsync(Provider(), "account", cts.Token));
         Assert.Empty(await service.GetAccountsAsync(Provider()));
+    }
+
+    [Fact]
+    public async Task SameAccount_LoginTokenAndSignOut_AreMutuallyExclusive()
+    {
+        var store = new GatedStore();
+        var browser = new Browser();
+        using var http = new HttpClient(new TokenEndpoint());
+        var coordinator = new OAuthService(http, store, browser, TimeProvider.System);
+        await coordinator.ForPlugin("plugin").LoginAsync(Provider(), "account");
+        var gate = store.Block("account");
+        var holder = coordinator.ForPlugin("plugin").GetAccessTokenAsync(Provider(), "account");
+        await store.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var login = coordinator.ForPlugin("plugin").LoginAsync(Provider(), "account");
+        var signOut = coordinator.ForPlugin("plugin").SignOutAsync(Provider(), "account");
+        await Task.Delay(200);
+        Assert.False(login.IsCompleted);
+        Assert.False(signOut.IsCompleted);
+        Assert.Equal(1, browser.Calls);
+        Assert.Equal(0, store.Deletes);
+        gate.SetResult();
+        Assert.Equal("access-1", await holder.WaitAsync(TimeSpan.FromSeconds(5)));
+        await Task.WhenAll(login, signOut).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(2, browser.Calls);
+        Assert.Equal(1, store.Deletes);
+        Assert.Equal(0, coordinator.LockCount);
+    }
+
+    [Fact]
+    public async Task DifferentAccountsAndPlugins_ProgressWhileAccountIsLocked()
+    {
+        var store = new GatedStore();
+        using var http = new HttpClient(new TokenEndpoint());
+        var coordinator = new OAuthService(http, store, new Browser(), TimeProvider.System);
+        var service = coordinator.ForPlugin("plugin");
+        await service.LoginAsync(Provider(), "account");
+        var gate = store.Block("account");
+        var holder = service.GetAccessTokenAsync(Provider(), "account");
+        await store.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await service.LoginAsync(Provider(), "other").WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("access-2", await service.GetAccessTokenAsync(Provider(), "other").WaitAsync(TimeSpan.FromSeconds(5)));
+        await service.SignOutAsync(Provider(), "other").WaitAsync(TimeSpan.FromSeconds(5));
+        var otherPlugin = coordinator.ForPlugin("other-plugin");
+        await otherPlugin.LoginAsync(Provider(), "account").WaitAsync(TimeSpan.FromSeconds(5));
+        await otherPlugin.SignOutAsync(Provider(), "account").WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(holder.IsCompleted);
+        gate.SetResult();
+        Assert.Equal("access-1", await holder.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, coordinator.LockCount);
+    }
+
+    [Fact]
+    public async Task CanceledWaiter_LeavesLockUsableAndCleansUp()
+    {
+        var store = new GatedStore();
+        using var http = new HttpClient(new TokenEndpoint());
+        var coordinator = new OAuthService(http, store, new Browser(), TimeProvider.System);
+        var service = coordinator.ForPlugin("plugin");
+        await service.LoginAsync(Provider(), "account");
+        var gate = store.Block("account");
+        var holder = service.GetAccessTokenAsync(Provider(), "account");
+        await store.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource();
+        var waiter = service.SignOutAsync(Provider(), "account", cts.Token);
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, store.Deletes);
+        Assert.Equal(1, coordinator.LockCount);
+        gate.SetResult();
+        Assert.Equal("access-1", await holder.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, coordinator.LockCount);
+        Assert.Equal("access-1", await service.GetAccessTokenAsync(Provider(), "account").WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public async Task FailureWhileHoldingLock_ReleasesItForQueuedCaller()
+    {
+        var store = new GatedStore();
+        using var http = new HttpClient(new TokenEndpoint());
+        var coordinator = new OAuthService(http, store, new Browser(), TimeProvider.System);
+        var service = coordinator.ForPlugin("plugin");
+        await service.LoginAsync(Provider(), "account");
+        var gate = store.Block("account");
+        var holder = service.GetAccessTokenAsync(Provider(), "account");
+        await store.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var queued = service.GetAccessTokenAsync(Provider(), "account");
+        gate.SetException(new IOException("storage failed"));
+        await Assert.ThrowsAsync<IOException>(() => holder.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal("access-1", await queued.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, coordinator.LockCount);
+    }
+
+    [Fact]
+    public async Task ManyDistinctAccounts_DoNotRetainLocks()
+    {
+        using var http = new HttpClient(new TokenEndpoint());
+        var coordinator = new OAuthService(http, new MemoryStore(), new Browser(), TimeProvider.System);
+        await Task.WhenAll(Enumerable.Range(0, 500).Select(async index =>
+        {
+            var service = coordinator.ForPlugin("plugin-" + index % 5);
+            var account = "account-" + index;
+            await service.LoginAsync(Provider(), account);
+            await service.GetAccessTokenAsync(Provider(), account);
+            await service.SignOutAsync(Provider(), account);
+        }));
+        Assert.Equal(0, coordinator.LockCount);
     }
 
     [Fact]
@@ -388,9 +521,11 @@ public sealed class OAuthTests
     private sealed class Browser(string mode = "normal") : IOAuthBrowser
     {
         public Uri? AuthorizationUri { get; private set; }
+        public int Calls { get; private set; }
         public Task<Uri> AuthorizeAsync(Func<Uri, Uri> buildAuthorizationUri, int port, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            Calls++;
             var redirect = new Uri("http://127.0.0.1:12345/oauth/callback");
             AuthorizationUri = buildAuthorizationUri(redirect);
             var state = Query(AuthorizationUri)["state"];
@@ -410,6 +545,7 @@ public sealed class OAuthTests
     {
         public List<string> Forms { get; } = [];
         public string? Error { get; set; }
+        public HttpStatusCode ErrorStatus { get; set; } = HttpStatusCode.BadRequest;
         public string? Body { get; init; }
         public bool OmitRefreshToken { get; set; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -417,7 +553,7 @@ public sealed class OAuthTests
             Assert.Equal(HttpMethod.Post, request.Method);
             Assert.Equal("https", request.RequestUri!.Scheme);
             Forms.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
-            return new HttpResponseMessage(Error is null ? HttpStatusCode.OK : HttpStatusCode.BadRequest)
+            return new HttpResponseMessage(Error is null ? HttpStatusCode.OK : ErrorStatus)
             {
                 Content = new StringContent(Body ?? (Error is not null ? $"{{\"error\":\"{Error}\"}}"
                     : $"{{\"access_token\":\"access-{Forms.Count}\",\"token_type\":\"Bearer\",\"expires_in\":3600"
@@ -437,6 +573,44 @@ public sealed class OAuthTests
             => Task.FromResult<IReadOnlyList<string>>(_sessions.Keys.Where(key => key.Namespace == namespaceId).Select(key => key.Account).ToArray());
         public Task DeleteAsync(string namespaceId, string accountId, CancellationToken cancellationToken)
         { _sessions.TryRemove((namespaceId, accountId), out _); return Task.CompletedTask; }
+    }
+
+    /// <summary>Holds reads of one account open so tests can observe which callers wait on its lock.</summary>
+    private sealed class GatedStore : IOAuthTokenStore
+    {
+        private readonly MemoryStore _inner = new();
+        private string? _blockedAccount;
+        private TaskCompletionSource? _gate;
+        public TaskCompletionSource ReadEntered { get; private set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Deletes;
+
+        public TaskCompletionSource Block(string accountId)
+        {
+            _blockedAccount = accountId;
+            ReadEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            return _gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public async Task<OAuthSession?> ReadAsync(string namespaceId, string accountId, CancellationToken cancellationToken)
+        {
+            if (accountId == _blockedAccount && _gate is { } gate)
+            {
+                _gate = null;
+                ReadEntered.SetResult();
+                await gate.Task;
+            }
+            return await _inner.ReadAsync(namespaceId, accountId, cancellationToken);
+        }
+
+        public Task WriteAsync(string namespaceId, OAuthSession session, CancellationToken cancellationToken)
+            => _inner.WriteAsync(namespaceId, session, cancellationToken);
+        public Task<IReadOnlyList<string>> GetAccountsAsync(string namespaceId, CancellationToken cancellationToken)
+            => _inner.GetAccountsAsync(namespaceId, cancellationToken);
+        public Task DeleteAsync(string namespaceId, string accountId, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref Deletes);
+            return _inner.DeleteAsync(namespaceId, accountId, cancellationToken);
+        }
     }
 
     private static Dictionary<string, string> Query(Uri uri) => uri.Query.TrimStart('?').Split('&').Select(part => part.Split('=', 2))

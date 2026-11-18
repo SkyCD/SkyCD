@@ -134,7 +134,8 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
             throw;
         }
         catch (Exception ex) when (ex is FtpAuthenticationException or FtpConnectionException
-                or FtpSchemeNotSupportedException or FtpDirectoryNotFoundException)
+                or FtpSchemeNotSupportedException or FtpDirectoryNotFoundException
+                or FtpListingNotSupportedException)
         {
             throw;
         }
@@ -208,6 +209,16 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         {
             // Rejected credentials and unsupported protocols are fatal for the whole scan.
             throw;
+        }
+        catch (FtpListingNotSupportedException) when (isRoot)
+        {
+            // The root is never skipped or failed silently: both cases are fatal.
+            throw;
+        }
+        catch (FtpListingNotSupportedException ex)
+        {
+            ReportFail(context, normalized, ex.Message, ex.Stage, ex);
+            return null;
         }
         catch (ScanRetryExhaustedException ex)
         {
@@ -497,9 +508,11 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
 
         private static bool IsConnectionFailure(Exception exception)
         {
-            // A vanished directory or a rejected login is a protocol answer from a healthy
-            // transport, not a broken connection: it must not trigger a reconnect.
-            if (exception is FtpDirectoryNotFoundException or FtpAuthenticationException)
+            // A vanished directory, a rejected login or a refused listing is a protocol answer
+            // from a healthy transport, not a broken connection: it must not trigger a reconnect.
+            if (exception is FtpDirectoryNotFoundException
+                or FtpAuthenticationException
+                or FtpListingNotSupportedException)
             {
                 return false;
             }

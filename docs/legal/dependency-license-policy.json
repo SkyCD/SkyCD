@@ -37,6 +37,7 @@
     "CommandDotNet",
     "Couchbase.Lite",
     "Couchbase.Lite.Support.NetDesktop",
+    "CsvHelper",
     "SerialQueue",
     "SQLite",
     "SkyCD.Native.Sqlite2",
