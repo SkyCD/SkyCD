@@ -94,7 +94,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         var progress = new RecordingProgress();
         var address = $"ftp://{Username}:{UrlPassword}@127.0.0.1:{server.Port}/";
 
-        var scanned = new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var scanned = new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             address,
             Username,
             Password,
@@ -131,7 +131,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         AssertDirectoryLog(progress.Messages, "/empty-dir", 0, followingStart: null);
         AssertNoSecrets(progress.Messages);
 
-        var withoutMetadata = new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var withoutMetadata = new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             address,
             Username,
             Password,
@@ -182,7 +182,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         var before = catalogRepository.GetAll().Select(document => document.Id).OrderBy(id => id).ToArray();
         var progress = new RecordingProgress();
 
-        var error = Assert.Throws<FtpAuthenticationException>(() => new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var error = Assert.Throws<RemoteAuthenticationException>(() => new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             $"ftp://127.0.0.1:{server.Port}/",
             Username,
             "wrong-" + Password,
@@ -206,7 +206,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         File.WriteAllText(Path.Combine(ftpRoot, "nested", "inside.txt"), "inside");
         using var server = new LocalFtpServer(ftpRoot, Username, Password, allowAnonymous: true);
 
-        var scanned = new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var scanned = new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             $"ftp://127.0.0.1:{server.Port}/nested",
             username: null,
             password: null,
@@ -231,7 +231,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         File.WriteAllText(Path.Combine(ftpRoot, "listed", "plain.txt"), "plain");
         using var server = new LocalFtpServer(ftpRoot, Username, Password, supportMlsd: false);
 
-        var scanned = new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var scanned = new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             $"127.0.0.1:{server.Port}/listed",
             Username,
             Password,
@@ -250,7 +250,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         closed.Start();
         var closedPort = ((IPEndPoint)closed.LocalEndpoint).Port;
         closed.Stop();
-        var failure = Assert.Throws<FtpConnectionException>(() => new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var failure = Assert.Throws<RemoteConnectionException>(() => new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             $"ftp://127.0.0.1:{closedPort}/",
             Username,
             Password,
@@ -274,7 +274,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         using var server = new LocalFtpServer(ftpRoot, Username, Password, dropConnectionAfterListings: 1);
         var progress = new RecordingProgress();
 
-        var scanned = new FtpCatalogScanner().Scan(new FtpScanOptions(
+        var scanned = new RemoteCatalogScanner().Scan(new RemoteScanOptions(
             $"ftp://127.0.0.1:{server.Port}/",
             Username,
             Password,

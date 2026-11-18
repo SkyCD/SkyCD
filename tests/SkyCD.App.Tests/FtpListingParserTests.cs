@@ -14,7 +14,7 @@ public class FtpListingParserTests
     [Fact]
     public void Parse_ReadsHostPortAndPathWithoutCredentials()
     {
-        var location = FtpLocation.Parse("ftp://alice:s3cret-pass@127.0.0.1:2121/pub/docs/");
+        var location = RemoteLocation.Parse("ftp://alice:s3cret-pass@127.0.0.1:2121/pub/docs/");
 
         Assert.Equal("127.0.0.1", location.Host);
         Assert.Equal(2121, location.Port);
@@ -27,25 +27,25 @@ public class FtpListingParserTests
     [Fact]
     public void TryReadUserInfo_UnescapesCredentials()
     {
-        Assert.True(FtpLocation.TryReadUserInfo("ftp://alice:s3cret-pass@127.0.0.1:2121/pub/docs/", out var username, out var password));
+        Assert.True(RemoteLocation.TryReadUserInfo("ftp://alice:s3cret-pass@127.0.0.1:2121/pub/docs/", out var username, out var password));
         Assert.Equal("alice", username);
         Assert.Equal("s3cret-pass", password);
 
-        Assert.True(FtpLocation.TryReadUserInfo("ftp://alice:p%40ss:word@127.0.0.1/pub", out username, out password));
+        Assert.True(RemoteLocation.TryReadUserInfo("ftp://alice:p%40ss:word@127.0.0.1/pub", out username, out password));
         Assert.Equal("alice", username);
         Assert.Equal("p@ss:word", password);
 
-        Assert.False(FtpLocation.TryReadUserInfo("ftp://127.0.0.1/pub", out _, out _));
+        Assert.False(RemoteLocation.TryReadUserInfo("ftp://127.0.0.1/pub", out _, out _));
     }
 
     [Fact]
     public void Parse_RejectsNonFtpSchemesAndOmitsSecretsFromTheScanDescription()
     {
-        var error = Assert.Throws<FtpSchemeNotSupportedException>(() => FtpLocation.Parse("http://files.example/pub"));
+        var error = Assert.Throws<RemoteSchemeNotSupportedException>(() => RemoteLocation.Parse("http://files.example/pub"));
         Assert.DoesNotContain("password", error.Message, StringComparison.OrdinalIgnoreCase);
 
         const string password = "s3cret-pass";
-        var options = new FtpScanOptions(
+        var options = new RemoteScanOptions(
             $"ftp://alice:{password}@127.0.0.1/pub",
             "alice",
             password,
@@ -54,6 +54,7 @@ public class FtpListingParserTests
             targetParentId: "library",
             includeExtendedInfo: true);
 
+        Assert.StartsWith("FTP ", options.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain(password, options.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("alice:", options.ToString(), StringComparison.Ordinal);
     }

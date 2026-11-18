@@ -2,9 +2,9 @@ using SkyCD.Presentation.Operations;
 
 namespace SkyCD.Presentation.Scanning;
 
-public sealed class FtpScanOptions
+public sealed class RemoteScanOptions
 {
-    public FtpScanOptions(
+    public RemoteScanOptions(
         string address,
         string? username,
         string? password,
@@ -40,22 +40,25 @@ public sealed class FtpScanOptions
 
     /// <summary>
     /// Bounded traversal policy (retries, timeout, exclusion patterns) used by the resilient
-    /// FTP traversal. Null falls back to <see cref="ScanTraversalOptions.Default"/>.
+    /// remote traversal. Null falls back to <see cref="ScanTraversalOptions.Default"/>.
     /// </summary>
     public ScanTraversalOptions? Traversal { get; }
 
     public override string ToString()
     {
+        var protocol = "Remote";
         string location;
         try
         {
-            location = FtpLocation.Parse(Address).PublicUrl;
+            var parsed = RemoteLocation.Parse(Address);
+            protocol = parsed.Scheme.ToUpperInvariant();
+            location = parsed.PublicUrl;
         }
         catch (System.Exception)
         {
             location = SecretSanitizer.Sanitize(Address);
         }
 
-        return $"FTP {location} anonymous={Anonymous} extended={IncludeExtendedInfo}";
+        return $"{protocol} {location} anonymous={Anonymous} extended={IncludeExtendedInfo}";
     }
 }

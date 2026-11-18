@@ -13,39 +13,36 @@ using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.Scanning;
 
-/// <summary>
-/// Resilient FTP catalog traversal (#433).
-/// Directory cycles are skipped, transient disconnects are retried with a bounded reconnect,
-/// unreadable or vanished children fail as individual items and never abort the whole scan.
-/// </summary>
-public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
+public sealed class RemoteCatalogScanner
 {
-    private readonly IFtpCatalogConnector connector = connector ?? new FtpCatalogConnector();
+    private readonly RemoteCatalogProviderRegistry providers;
+
+    public RemoteCatalogScanner() : this(RemoteCatalogProviderRegistry.Default)
+    {
+    }
+
+    public RemoteCatalogScanner(RemoteCatalogProviderRegistry providers) => this.providers = providers;
+
+    public RemoteCatalogScanner(IRemoteCatalogConnector connector) : this(new RemoteCatalogProviderRegistry([connector]))
+    {
+    }
 
     public IReadOnlyList<CatalogDocument> Scan(
-        FtpScanOptions options,
+        RemoteScanOptions options,
         IOperationProgress? progress = null,
         CancellationToken cancellationToken = default) =>
         ScanDetailed(options, progress, cancellationToken).Documents;
 
     public CatalogScanResult ScanDetailed(
-        FtpScanOptions options,
+        RemoteScanOptions options,
         IOperationProgress? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        var location = FtpLocation.Parse(options.Address);
-        var (username, password) = FtpCredentials.Resolve(options.Username, options.Password, options.Anonymous);
-        if (!options.Anonymous &&
-            !FtpCredentials.IsAnonymousUserName(username) &&
-            string.IsNullOrEmpty(password))
-        {
-            throw new FtpAuthenticationException(LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed));
-        }
-
-        // The FTP traversal shares the bounded retry, timeout and cancellation infrastructure
-        // with the folder and media scans so a disconnect is survivable instead of fatal.
+        var location = RemoteLocation.Parse(options.Address, providers);
+        var connector = providers.Get(location.Scheme);
+        var (username, password) = connector.ResolveCredentials(new RemoteCredentials(options.Username, options.Password, options.Anonymous));
         using var context = new ScanOperationContext(
             options.Traversal,
             progress,
@@ -63,7 +60,7 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         {
             context.ThrowIfCancellationRequested();
 
-            using var scope = new FtpSessionScope(connector, location, username, password, context);
+            using var scope = new RemoteSessionScope(connector, location, username, password, context);
             ScanRetryExecutor.Execute(
                 context,
                 location.PublicUrl,
@@ -85,12 +82,11 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
             if (tree is null)
             {
                 // The root is never skipped or failed silently: both cases are fatal.
-                throw new FtpConnectionException(
-                    LocalizationService.Current.Format(TextKeys.FtpConnectionFailed, $"{location.Host}:{location.Port}"));
+                throw connector.ConnectionFailed(location);
             }
 
             var rootName = ResolveRootName(options, location);
-            var rootId = $"ftp-{Guid.NewGuid():N}";
+            var rootId = $"{location.Scheme}-{Guid.NewGuid():N}";
             var documents = new List<CatalogDocument>();
             var totalSize = AddChildren(context, tree, rootId, options.IncludeExtendedInfo, documents);
             var rootProperties = new PropertiesCollection();
@@ -133,26 +129,20 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         {
             throw;
         }
-        catch (Exception ex) when (ex is FtpAuthenticationException or FtpConnectionException
-                or FtpSchemeNotSupportedException or FtpDirectoryNotFoundException
-                or FtpListingNotSupportedException)
+        catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteConnectionException
+                or RemoteSchemeNotSupportedException or RemoteDirectoryNotFoundException
+                or RemoteListingNotSupportedException)
         {
             throw;
         }
         catch (ScanRetryExhaustedException ex)
         {
             var sanitized = SecretSanitizer.Sanitize(ex.Message);
-            throw new FtpConnectionException(
-                LocalizationService.Current.Format(
-                    TextKeys.FtpConnectionFailed,
-                    $"{location.Host}:{location.Port}") + $" ({sanitized})",
-                ex);
+            throw connector.ConnectionFailed(location, ex, sanitized);
         }
         catch (Exception ex)
         {
-            throw new FtpConnectionException(
-                LocalizationService.Current.Format(TextKeys.FtpConnectionFailed, $"{location.Host}:{location.Port}"),
-                ex);
+            throw connector.ConnectionFailed(location, ex);
         }
     }
 
@@ -162,7 +152,7 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
     /// </summary>
     private static RemoteDirectory? ListTree(
         ScanOperationContext context,
-        FtpSessionScope scope,
+        RemoteSessionScope scope,
         string path,
         string name,
         string? permission,
@@ -172,13 +162,13 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         ref int listedRef)
     {
         context.ThrowIfCancellationRequested();
-        var normalized = FtpLocation.NormalizePath(path);
+        var normalized = scope.NormalizePath(path);
 
         if (!visited.Add(normalized))
         {
             // The directory points back to an already visited path: report the cycle instead of
             // recursing forever.
-            ReportSkip(context, normalized, "FTP directory cycle detected.", "list-directory");
+            ReportSkip(context, normalized, $"{scope.Scheme.ToUpperInvariant()} directory cycle detected.", "list-directory");
             return null;
         }
 
@@ -191,10 +181,9 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         context.Progress?.ReportItem(normalized);
         context.Progress?.ReportInfo(reading, itemPath: normalized);
 
-        IReadOnlyList<FtpRemoteEntry> entries;
+        IReadOnlyList<RemoteEntry> entries;
         try
         {
-            // Bounded retry with an automatic reconnect for transient FTP disconnects.
             entries = ScanRetryExecutor.Execute(
                 context,
                 normalized,
@@ -205,17 +194,17 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         {
             throw;
         }
-        catch (Exception ex) when (ex is FtpAuthenticationException or FtpSchemeNotSupportedException)
+        catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteSchemeNotSupportedException)
         {
             // Rejected credentials and unsupported protocols are fatal for the whole scan.
             throw;
         }
-        catch (FtpListingNotSupportedException) when (isRoot)
+        catch (RemoteListingNotSupportedException) when (isRoot)
         {
             // The root is never skipped or failed silently: both cases are fatal.
             throw;
         }
-        catch (FtpListingNotSupportedException ex)
+        catch (RemoteListingNotSupportedException ex)
         {
             ReportFail(context, normalized, ex.Message, ex.Stage, ex);
             return null;
@@ -373,7 +362,7 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         return total;
     }
 
-    private static string ResolveRootName(FtpScanOptions options, FtpLocation location)
+    private static string ResolveRootName(RemoteScanOptions options, RemoteLocation location)
     {
         if (!string.IsNullOrWhiteSpace(options.MediaName))
         {
@@ -435,22 +424,18 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
             or ArgumentException
             or NotSupportedException;
 
-    /// <summary>
-    /// Owns the FTP control session and transparently re-establishes it after a dropped
-    /// connection so a transient disconnect is survivable (#433).
-    /// </summary>
-    private sealed class FtpSessionScope : IDisposable
+    private sealed class RemoteSessionScope : IDisposable
     {
-        private readonly IFtpCatalogConnector connector;
-        private readonly FtpLocation location;
+        private readonly IRemoteCatalogConnector connector;
+        private readonly RemoteLocation location;
         private readonly string username;
         private readonly string password;
         private readonly ScanOperationContext context;
-        private IFtpRemoteSession? session;
+        private IRemoteCatalogSession? session;
 
-        public FtpSessionScope(
-            IFtpCatalogConnector connector,
-            FtpLocation location,
+        public RemoteSessionScope(
+            IRemoteCatalogConnector connector,
+            RemoteLocation location,
             string username,
             string password,
             ScanOperationContext context)
@@ -463,25 +448,25 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         }
 
         /// <summary>Opens a fresh control session, replacing any previous one.</summary>
-        public IFtpRemoteSession Open()
+        public IRemoteCatalogSession Open()
         {
             Reset();
             session = connector.Connect(location, username, password, context.CancellationToken);
             return session;
         }
 
-        /// <summary>
-        /// Lists a remote directory. A dropped connection invalidates the session so the next
-        /// attempt transparently reconnects instead of failing the whole scan.
-        /// </summary>
-        public IReadOnlyList<FtpRemoteEntry> ListDirectory(string path)
+        public string Scheme => location.Scheme;
+
+        public string NormalizePath(string path) => connector.NormalizePath(path);
+
+        public IReadOnlyList<RemoteEntry> ListDirectory(string path)
         {
             var active = session ?? Open();
             try
             {
                 return active.ListDirectory(path);
             }
-            catch (FtpConnectionException)
+            catch (RemoteConnectionException)
             {
                 Reset();
                 throw;
@@ -489,11 +474,7 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
             catch (Exception ex) when (IsConnectionFailure(ex))
             {
                 Reset();
-                throw new FtpConnectionException(
-                    LocalizationService.Current.Format(
-                        TextKeys.FtpConnectionFailed,
-                        $"{location.Host}:{location.Port}"),
-                    ex);
+                throw connector.ConnectionFailed(location, ex);
             }
         }
 
@@ -510,9 +491,9 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
         {
             // A vanished directory, a rejected login or a refused listing is a protocol answer
             // from a healthy transport, not a broken connection: it must not trigger a reconnect.
-            if (exception is FtpDirectoryNotFoundException
-                or FtpAuthenticationException
-                or FtpListingNotSupportedException)
+            if (exception is RemoteDirectoryNotFoundException
+                or RemoteAuthenticationException
+                or RemoteListingNotSupportedException)
             {
                 return false;
             }
@@ -535,6 +516,6 @@ public sealed class FtpCatalogScanner(IFtpCatalogConnector? connector = null)
 
         public List<RemoteDirectory> Directories { get; } = [];
 
-        public List<FtpRemoteEntry> Files { get; } = [];
+        public List<RemoteEntry> Files { get; } = [];
     }
 }

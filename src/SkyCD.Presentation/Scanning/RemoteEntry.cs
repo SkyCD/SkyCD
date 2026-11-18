@@ -2,7 +2,7 @@ using System;
 
 namespace SkyCD.Presentation.Scanning;
 
-public sealed record FtpRemoteEntry(
+public sealed record RemoteEntry(
     string Name,
     string FullName,
     string DirectoryPath,

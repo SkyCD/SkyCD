@@ -11,7 +11,7 @@ namespace SkyCD.App.Tests;
 
 /// <summary>
 /// Integration coverage for the FluentFTP-based FTP transport (#580). Every test drives the real
-/// <see cref="FtpCatalogConnector"/> and <see cref="FtpCatalogScanner"/> against
+/// <see cref="FtpCatalogConnector"/> and <see cref="RemoteCatalogScanner"/> against
 /// <see cref="ScriptedFtpServer"/>, so the FluentFTP session, listing and exception mapping are
 /// exercised end to end over a real loopback socket.
 /// </summary>
@@ -21,7 +21,7 @@ public sealed class FtpCatalogTransportTests
 
     // ------------------------------------------------------------------ helpers
 
-    private static FtpScanOptions Options(int port, string path = "/", ScanTraversalOptions? traversal = null) =>
+    private static RemoteScanOptions Options(int port, string path = "/", ScanTraversalOptions? traversal = null) =>
         new(
             $"ftp://127.0.0.1:{port}{path}",
             "alice",
@@ -32,7 +32,7 @@ public sealed class FtpCatalogTransportTests
             includeExtendedInfo: true,
             traversal: traversal);
 
-    private static FtpScanOptions AnonymousOptions(int port) =>
+    private static RemoteScanOptions AnonymousOptions(int port) =>
         new(
             $"ftp://127.0.0.1:{port}/",
             null,
@@ -77,7 +77,7 @@ public sealed class FtpCatalogTransportTests
     {
         using var server = Server();
 
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port));
 
         var names = result.Documents.Select(document => document.Name).ToList();
@@ -114,7 +114,7 @@ public sealed class FtpCatalogTransportTests
         // refused directory into a silently empty one, so the transport asks for LIST (#580).
         using var server = Server();
 
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port));
 
         Assert.Contains(result.Documents, document => document.Name == "readme.txt");
@@ -129,7 +129,7 @@ public sealed class FtpCatalogTransportTests
         server.SupportsFeat = false;
         server.SupportsMlsd = false;
 
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port));
 
         Assert.Contains(result.Documents, document => document.Name == "top.txt");
@@ -141,7 +141,7 @@ public sealed class FtpCatalogTransportTests
     {
         using var server = Server();
 
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port, "/docs"));
 
         Assert.Contains(result.Documents, document => document.Name == "readme.txt");
@@ -156,7 +156,7 @@ public sealed class FtpCatalogTransportTests
     public void Scan_RejectedCredentials_FailsFatalWithoutRetry()
     {
         using var server = Server();
-        var options = new FtpScanOptions(
+        var options = new RemoteScanOptions(
             $"ftp://127.0.0.1:{server.Port}/",
             "alice",
             "wrong-password",
@@ -166,8 +166,8 @@ public sealed class FtpCatalogTransportTests
             includeExtendedInfo: false,
             traversal: FastFail(maxRetries: 3));
 
-        var exception = Assert.Throws<FtpAuthenticationException>(() =>
-            new FtpCatalogScanner(new FtpCatalogConnector()).ScanDetailed(options));
+        var exception = Assert.Throws<RemoteAuthenticationException>(() =>
+            new RemoteCatalogScanner(new FtpCatalogConnector()).ScanDetailed(options));
 
         Assert.DoesNotContain("wrong-password", exception.Message, StringComparison.Ordinal);
         Assert.Equal(1, server.ConnectionCount);
@@ -180,7 +180,7 @@ public sealed class FtpCatalogTransportTests
         var tree = Tree();
         server.Directories["/"] = tree;
 
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(AnonymousOptions(server.Port));
 
         Assert.Contains(result.Documents, document => document.Name == "top.txt");
@@ -195,8 +195,8 @@ public sealed class FtpCatalogTransportTests
         using var server = Server();
         server.MissingDirectories.Add("/gone");
 
-        var exception = Assert.Throws<FtpDirectoryNotFoundException>(() =>
-            new FtpCatalogScanner(new FtpCatalogConnector())
+        var exception = Assert.Throws<RemoteDirectoryNotFoundException>(() =>
+            new RemoteCatalogScanner(new FtpCatalogConnector())
                 .ScanDetailed(Options(server.Port, "/gone")));
 
         Assert.Contains("/gone", exception.Message, StringComparison.Ordinal);
@@ -210,7 +210,7 @@ public sealed class FtpCatalogTransportTests
         server.MissingDirectories.Add("/docs/nested");
 
         var progress = new RecordingProgress();
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port), progress);
 
         Assert.Contains(result.Documents, document => document.Name == "readme.txt");
@@ -228,7 +228,7 @@ public sealed class FtpCatalogTransportTests
         server.DropListings.Add("/docs");
 
         var progress = new RecordingProgress();
-        var result = new FtpCatalogScanner(new FtpCatalogConnector())
+        var result = new RemoteCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port, traversal: new ScanTraversalOptions { MaxRetries = 2, RetryDelay = TimeSpan.Zero }), progress);
 
         Assert.Contains(result.Documents, document => document.Name == "readme.txt");
@@ -244,8 +244,8 @@ public sealed class FtpCatalogTransportTests
         using var server = Server();
         server.DropListings.Add("/");
 
-        var exception = Assert.Throws<FtpConnectionException>(() =>
-            new FtpCatalogScanner(new FtpCatalogConnector())
+        var exception = Assert.Throws<RemoteConnectionException>(() =>
+            new RemoteCatalogScanner(new FtpCatalogConnector())
                 .ScanDetailed(Options(server.Port, traversal: FastFail())));
 
         Assert.Contains("127.0.0.1", exception.Message, StringComparison.Ordinal);
@@ -257,7 +257,7 @@ public sealed class FtpCatalogTransportTests
     public void Scan_UnreachableServer_FailsWithASanitizedConnectionError()
     {
         // Port 1 on the loopback interface refuses connections.
-        var options = new FtpScanOptions(
+        var options = new RemoteScanOptions(
             "ftp://127.0.0.1:1/",
             "alice",
             "secret-pass",
@@ -267,8 +267,8 @@ public sealed class FtpCatalogTransportTests
             includeExtendedInfo: false,
             traversal: new ScanTraversalOptions { MaxRetries = 0, RetryDelay = TimeSpan.Zero, OperationTimeout = TimeSpan.FromSeconds(20) });
 
-        var exception = Assert.Throws<FtpConnectionException>(() =>
-            new FtpCatalogScanner(new FtpCatalogConnector()).ScanDetailed(options));
+        var exception = Assert.Throws<RemoteConnectionException>(() =>
+            new RemoteCatalogScanner(new FtpCatalogConnector()).ScanDetailed(options));
 
         Assert.Contains("127.0.0.1:1", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("secret-pass", exception.Message, StringComparison.Ordinal);
@@ -284,7 +284,7 @@ public sealed class FtpCatalogTransportTests
         cancellation.Cancel();
 
         Assert.ThrowsAny<OperationCanceledException>(() =>
-            new FtpCatalogScanner(new FtpCatalogConnector())
+            new RemoteCatalogScanner(new FtpCatalogConnector())
                 .ScanDetailed(Options(server.Port), cancellationToken: cancellation.Token));
 
         Assert.Empty(server.Commands);
@@ -296,7 +296,7 @@ public sealed class FtpCatalogTransportTests
         using var server = Server();
         using var cancellation = new CancellationTokenSource();
 
-        var scanner = new FtpCatalogScanner(new FtpCatalogConnector());
+        var scanner = new RemoteCatalogScanner(new FtpCatalogConnector());
         var options = Options(server.Port, traversal: new ScanTraversalOptions { MaxRetries = 50, RetryDelay = TimeSpan.FromMilliseconds(20) });
         server.DropListings.Add("/");
         cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
@@ -311,9 +311,9 @@ public sealed class FtpCatalogTransportTests
     public void Connect_LineBreakInCredentials_IsRejectedBeforeAnyConnection()
     {
         using var server = Server();
-        var location = FtpLocation.Parse($"ftp://127.0.0.1:{server.Port}/");
+        var location = RemoteLocation.Parse($"ftp://127.0.0.1:{server.Port}/");
 
-        Assert.Throws<FtpAuthenticationException>(() =>
+        Assert.Throws<RemoteAuthenticationException>(() =>
             new FtpCatalogConnector().Connect(location, "alice\r\nUSER root", "secret-pass", CancellationToken.None));
 
         Assert.Empty(server.Commands);
