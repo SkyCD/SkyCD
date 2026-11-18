@@ -72,6 +72,24 @@ public sealed class LocalizationViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Properties_CultureChangeRefreshesSizeFromRawSource()
+    {
+        const string size = "503206458";
+        var english = CultureInfo.GetCultureInfo("en-US");
+        var lithuanian = CultureInfo.GetCultureInfo("lt-LT");
+        LocalizationService.Current.SetCulture(english);
+        var source = new PropertiesCollection { ["Size"] = size };
+        var vm = new PropertiesDialogViewModel("key", "Name", "file", "", source);
+        Assert.EndsWith($" ({503206458L.ToString("N0", english)} bytes)", Assert.IsType<string>(vm.InfoProperties["Size"]), StringComparison.Ordinal);
+
+        LocalizationService.Current.SetCulture(lithuanian);
+
+        Assert.EndsWith($" ({503206458L.ToString("N0", lithuanian)} bytes)", Assert.IsType<string>(vm.InfoProperties["Size"]), StringComparison.Ordinal);
+        Assert.Equal(size, vm.GetProperties()["Size"]);
+        Assert.Equal(size, source["Size"]);
+    }
+
+    [Fact]
     public void Properties_CultureChangeRefreshesBooleanAndNullValuesFromRawSource()
     {
         LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("en"));
