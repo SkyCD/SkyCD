@@ -38,6 +38,7 @@
     "Couchbase.Lite",
     "Couchbase.Lite.Support.NetDesktop",
     "CsvHelper",
+    "FirebirdSql.Data.FirebirdClient",
     "SerialQueue",
     "SQLite",
     "SkyCD.Native.Sqlite2",
