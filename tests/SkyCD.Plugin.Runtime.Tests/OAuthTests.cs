@@ -127,7 +127,24 @@ public sealed class OAuthTests
         Assert.Empty(await service.GetAccountsAsync(Provider()));
     }
 
+    [Fact]
+    public async Task InvalidGrantOnNonBadRequestStatus_RemovesSession()
+    {
+        var clock = new Clock();
+        var handler = new TokenEndpoint();
+        using var http = new HttpClient(handler);
+        var service = new OAuthService(http, new MemoryStore(), new Browser(), clock).ForPlugin("plugin");
+        await service.LoginAsync(Provider(), "account");
+        clock.Now = clock.Now.AddHours(2);
+        handler.Error = "invalid_grant";
+        handler.ErrorStatus = HttpStatusCode.InternalServerError;
+        Assert.Equal(OAuthFailure.LoginRequired,
+            (await Assert.ThrowsAsync<OAuthException>(() => service.GetAccessTokenAsync(Provider(), "account"))).Failure);
+        Assert.Empty(await service.GetAccountsAsync(Provider()));
+    }
+
     [Theory]
+    [InlineData("")]
     [InlineData("{}")]
     [InlineData("[]")]
     [InlineData("not json")]
@@ -136,6 +153,16 @@ public sealed class OAuthTests
     public async Task MalformedTokenResponse_IsSanitized(string body)
     {
         using var http = new HttpClient(new TokenEndpoint { Body = body });
+        var service = new OAuthService(http, new MemoryStore(), new Browser(), TimeProvider.System).ForPlugin("plugin");
+        var error = await Assert.ThrowsAsync<OAuthException>(() => service.LoginAsync(Provider(), "account"));
+        Assert.Equal(OAuthFailure.InvalidTokenResponse, error.Failure);
+        Assert.DoesNotContain("sensitive", error.ToString());
+    }
+
+    [Fact]
+    public async Task NonJsonTokenError_IsSanitized()
+    {
+        using var http = new HttpClient(new TokenEndpoint { Error = "server_error", Body = "sensitive provider body" });
         var service = new OAuthService(http, new MemoryStore(), new Browser(), TimeProvider.System).ForPlugin("plugin");
         var error = await Assert.ThrowsAsync<OAuthException>(() => service.LoginAsync(Provider(), "account"));
         Assert.Equal(OAuthFailure.InvalidTokenResponse, error.Failure);
@@ -518,6 +545,7 @@ public sealed class OAuthTests
     {
         public List<string> Forms { get; } = [];
         public string? Error { get; set; }
+        public HttpStatusCode ErrorStatus { get; set; } = HttpStatusCode.BadRequest;
         public string? Body { get; init; }
         public bool OmitRefreshToken { get; set; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -525,7 +553,7 @@ public sealed class OAuthTests
             Assert.Equal(HttpMethod.Post, request.Method);
             Assert.Equal("https", request.RequestUri!.Scheme);
             Forms.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
-            return new HttpResponseMessage(Error is null ? HttpStatusCode.OK : HttpStatusCode.BadRequest)
+            return new HttpResponseMessage(Error is null ? HttpStatusCode.OK : ErrorStatus)
             {
                 Content = new StringContent(Body ?? (Error is not null ? $"{{\"error\":\"{Error}\"}}"
                     : $"{{\"access_token\":\"access-{Forms.Count}\",\"token_type\":\"Bearer\",\"expires_in\":3600"

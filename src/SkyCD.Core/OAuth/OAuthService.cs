@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AsyncKeyedLock;
+using Duende.IdentityModel;
+using Duende.IdentityModel.Client;
 using SkyCD.Plugin.Abstractions.OAuth;
 
 namespace SkyCD.Core.OAuth;
@@ -15,6 +18,7 @@ namespace SkyCD.Core.OAuth;
 /// <summary>Shared coordinator; scoped clients never accept a caller-supplied plugin identity.</summary>
 public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenStore, IOAuthBrowser browser, TimeProvider clock)
 {
+    private readonly HttpClient _httpClient = httpClient;
     private readonly IOAuthTokenStore _tokenStore = tokenStore;
     private readonly IOAuthBrowser _browser = browser;
     private readonly TimeProvider _clock = clock;
@@ -38,47 +42,58 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
             using var gate = await owner.LockAsync(key, accountId, cancellationToken);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromMinutes(5));
-            var verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
-            var state = Base64Url(RandomNumberGenerator.GetBytes(32));
+            var verifier = CryptoRandom.CreateUniqueId();
+            var state = CryptoRandom.CreateUniqueId();
             Uri? redirectUri = null;
             var callback = await owner._browser.AuthorizeAsync(redirect =>
             {
                 redirectUri = redirect;
-                var parameters = new Dictionary<string, string>
-                {
-                    ["response_type"] = "code",
-                    ["client_id"] = provider.ClientId,
-                    ["redirect_uri"] = redirect.AbsoluteUri,
-                    ["scope"] = string.Join(' ', provider.Scopes),
-                    ["state"] = state,
-                    ["code_challenge"] = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))),
-                    ["code_challenge_method"] = "S256"
-                };
-                foreach (var parameter in provider.AuthorizationParameters)
-                    parameters.Add(parameter.Key, parameter.Value);
-                return new Uri(provider.AuthorizationEndpoint.AbsoluteUri + "?" + string.Join('&',
-                    parameters.Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value))));
+                var url = new RequestUrl(provider.AuthorizationEndpoint.AbsoluteUri).CreateAuthorizeUrl(
+                    provider.ClientId,
+                    responseType: "code",
+                    scope: string.Join(' ', provider.Scopes),
+                    redirectUri: redirect.AbsoluteUri,
+                    state: state,
+                    codeChallenge: CodeChallenge(verifier),
+                    codeChallengeMethod: "S256",
+                    extra: new Parameters(provider.AuthorizationParameters));
+                return new Uri(url);
             }, provider.RedirectPort, timeout.Token);
 
             if (redirectUri is null || callback.GetLeftPart(UriPartial.Path) != redirectUri.GetLeftPart(UriPartial.Path)
                 || !string.IsNullOrEmpty(callback.Fragment))
                 throw new OAuthException(OAuthFailure.InvalidCallback);
-            var values = ParseQuery(callback.Query);
-            if (!values.TryGetValue("state", out var actualState) || actualState != state)
+            AuthorizeResponse authorization;
+            try
+            {
+                authorization = new AuthorizeResponse(callback.AbsoluteUri);
+            }
+            catch (ArgumentException)
+            {
                 throw new OAuthException(OAuthFailure.InvalidCallback);
-            if (values.ContainsKey("error"))
+            }
+            catch (InvalidOperationException)
+            {
+                throw new OAuthException(OAuthFailure.InvalidCallback);
+            }
+            if (authorization.State != state)
+                throw new OAuthException(OAuthFailure.InvalidCallback);
+            if (authorization.IsError)
                 throw new OAuthException(OAuthFailure.AuthorizationDenied);
-            if (!values.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
+            var code = authorization.Code;
+            if (string.IsNullOrWhiteSpace(code))
                 throw new OAuthException(OAuthFailure.InvalidCallback);
 
-            var session = await owner.RequestTokensAsync(provider, accountId, new Dictionary<string, string>
+            using var tokenResponse = await owner._httpClient.RequestAuthorizationCodeTokenAsync(new AuthorizationCodeTokenRequest
             {
-                ["grant_type"] = "authorization_code",
-                ["client_id"] = provider.ClientId,
-                ["code"] = code,
-                ["redirect_uri"] = redirectUri.AbsoluteUri,
-                ["code_verifier"] = verifier
-            }, null, timeout.Token);
+                Address = provider.TokenEndpoint.AbsoluteUri,
+                ClientId = provider.ClientId,
+                ClientCredentialStyle = ClientCredentialStyle.PostBody,
+                Code = code,
+                RedirectUri = redirectUri.AbsoluteUri,
+                CodeVerifier = verifier
+            }, timeout.Token);
+            var session = owner.ToSession(tokenResponse, accountId, null);
             await owner._tokenStore.WriteAsync(key, session, timeout.Token);
         }
 
@@ -97,12 +112,14 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
                 throw new OAuthException(OAuthFailure.LoginRequired);
             try
             {
-                session = await owner.RequestTokensAsync(provider, accountId, new Dictionary<string, string>
+                using var tokenResponse = await owner._httpClient.RequestRefreshTokenAsync(new RefreshTokenRequest
                 {
-                    ["grant_type"] = "refresh_token",
-                    ["client_id"] = provider.ClientId,
-                    ["refresh_token"] = session.RefreshToken
-                }, session.RefreshToken, cancellationToken);
+                    Address = provider.TokenEndpoint.AbsoluteUri,
+                    ClientId = provider.ClientId,
+                    ClientCredentialStyle = ClientCredentialStyle.PostBody,
+                    RefreshToken = session.RefreshToken
+                }, cancellationToken);
+                session = owner.ToSession(tokenResponse, accountId, session.RefreshToken);
             }
             catch (OAuthException exception) when (exception.Failure == OAuthFailure.LoginRequired)
             {
@@ -151,68 +168,47 @@ public sealed class OAuthService(HttpClient httpClient, IOAuthTokenStore tokenSt
     private ValueTask<IDisposable> LockAsync(string namespaceId, string accountId, CancellationToken cancellationToken)
         => _locks.LockAsync(namespaceId + ":" + accountId, cancellationToken);
 
-    private async Task<OAuthSession> RequestTokensAsync(OAuthProvider provider, string accountId,
-        Dictionary<string, string> fields, string? previousRefreshToken, CancellationToken cancellationToken)
+    // Never propagate raw provider bodies, which can echo tokens or authorization codes.
+    private OAuthSession ToSession(TokenResponse response, string accountId, string? previousRefreshToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, provider.TokenEndpoint)
+        if (response.Exception is JsonException)
+            throw new OAuthException(OAuthFailure.InvalidTokenResponse);
+        if (response.Exception is not null)
+            ExceptionDispatchInfo.Capture(response.Exception).Throw();
+        if (response.Json is not { ValueKind: JsonValueKind.Object } json)
+            throw new OAuthException(OAuthFailure.InvalidTokenResponse);
+        if (response.HttpResponse is { IsSuccessStatusCode: false })
         {
-            Content = new FormUrlEncodedContent(fields)
-        };
-        using var response = await httpClient.SendAsync(request, cancellationToken);
-        // Never propagate raw provider bodies, which can echo tokens or authorization codes.
-        try
-        {
-            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-            var root = json.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-                throw new OAuthException(OAuthFailure.InvalidTokenResponse);
-            if (!response.IsSuccessStatusCode)
-            {
-                if (previousRefreshToken is not null && root.TryGetProperty("error", out var error)
-                    && error.ValueKind == JsonValueKind.String && error.GetString() == "invalid_grant")
-                    throw new OAuthException(OAuthFailure.LoginRequired);
-                throw new OAuthException(OAuthFailure.TokenRequestFailed);
-            }
-            if (!root.TryGetProperty("access_token", out var access) || access.ValueKind != JsonValueKind.String
-                || string.IsNullOrWhiteSpace(access.GetString())
-                || !root.TryGetProperty("token_type", out var type) || type.ValueKind != JsonValueKind.String
-                || !string.Equals(type.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase)
-                || !root.TryGetProperty("expires_in", out var expiry) || expiry.ValueKind != JsonValueKind.Number || !expiry.TryGetInt64(out var seconds)
-                || seconds <= 0 || seconds > 315360000)
-                throw new OAuthException(OAuthFailure.InvalidTokenResponse);
-            string? refreshToken = previousRefreshToken;
-            if (root.TryGetProperty("refresh_token", out var refresh))
-            {
-                if (refresh.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(refresh.GetString()))
-                    throw new OAuthException(OAuthFailure.InvalidTokenResponse);
-                refreshToken = refresh.GetString();
-            }
-            return new OAuthSession
-            {
-                AccountId = accountId,
-                AccessToken = access.GetString()!,
-                RefreshToken = refreshToken,
-                ExpiresAt = _clock.GetUtcNow().AddSeconds(seconds)
-            };
+            if (previousRefreshToken is not null && json.TryGetProperty("error", out var error)
+                && error.ValueKind == JsonValueKind.String && error.GetString() == "invalid_grant")
+                throw new OAuthException(OAuthFailure.LoginRequired);
+            throw new OAuthException(OAuthFailure.TokenRequestFailed);
         }
-        catch (JsonException) { throw new OAuthException(OAuthFailure.InvalidTokenResponse); }
+        if (!json.TryGetProperty("access_token", out var access) || access.ValueKind != JsonValueKind.String
+            || string.IsNullOrWhiteSpace(access.GetString())
+            || !json.TryGetProperty("token_type", out var type) || type.ValueKind != JsonValueKind.String
+            || !string.Equals(type.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase)
+            || !json.TryGetProperty("expires_in", out var expiry) || expiry.ValueKind != JsonValueKind.Number || !expiry.TryGetInt64(out var seconds)
+            || seconds <= 0 || seconds > 315360000)
+            throw new OAuthException(OAuthFailure.InvalidTokenResponse);
+        string? refreshToken = previousRefreshToken;
+        if (json.TryGetProperty("refresh_token", out var refresh))
+        {
+            if (refresh.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(refresh.GetString()))
+                throw new OAuthException(OAuthFailure.InvalidTokenResponse);
+            refreshToken = refresh.GetString();
+        }
+        return new OAuthSession
+        {
+            AccountId = accountId,
+            AccessToken = access.GetString()!,
+            RefreshToken = refreshToken,
+            ExpiresAt = _clock.GetUtcNow().AddSeconds(seconds)
+        };
     }
 
     private static bool IsEndpoint(Uri? uri) => uri is { IsAbsoluteUri: true, Scheme: "https", Query.Length: 0, Fragment.Length: 0, UserInfo.Length: 0 };
 
-    private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-    private static Dictionary<string, string> ParseQuery(string query)
-    {
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var pair = part.Split('=', 2);
-            var name = Uri.UnescapeDataString(pair[0].Replace('+', ' '));
-            var value = pair.Length == 2 ? Uri.UnescapeDataString(pair[1].Replace('+', ' ')) : "";
-            if (!result.TryAdd(name, value))
-                throw new OAuthException(OAuthFailure.InvalidCallback);
-        }
-        return result;
-    }
+    private static string CodeChallenge(string verifier)
+        => Convert.ToBase64String(SHA256.HashData(Encoding.ASCII.GetBytes(verifier))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
