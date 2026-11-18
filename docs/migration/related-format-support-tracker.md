@@ -28,6 +28,11 @@ This file tracks v3 format-support tickets created from issue `#118` ("Add relat
 - `#447` WinCatalog XML report (`*.xml`) read-only
 - `#494` CdCat (`*.hcf`) read-only
 
+## Third-party native catalog import formats
+
+- `#486` WinCatalog native catalog (`*.w3cat`) read-only
+- `#514` abeMeda/NeoFinder native catalog (`*.cdw`, `*.abeMeda7`, `*.neofinder7`) read-only
+
 ## Notes
 
 - Tickets are grouped by behavior (read/write, write-only, read-only).

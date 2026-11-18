@@ -49,6 +49,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Librer/SkyCD.Plugin.Librer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WinCatalog.Xml/SkyCD.Plugin.WinCatalog.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.AbeMeda/SkyCD.Plugin.AbeMeda.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.AbeMeda.Native/SkyCD.Plugin.AbeMeda.Native.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.EasyDiskCatalog/SkyCD.Plugin.EasyDiskCatalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.GCstar/SkyCD.Plugin.GCstar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WhereIsIt/SkyCD.Plugin.WhereIsIt.csproj"/>
@@ -127,6 +128,7 @@
         <Project Path="tests/SkyCD.Plugin.Librer.Tests/SkyCD.Plugin.Librer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WinCatalog.Xml.Tests/SkyCD.Plugin.WinCatalog.Xml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.AbeMeda.Tests/SkyCD.Plugin.AbeMeda.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.AbeMeda.Native.Tests/SkyCD.Plugin.AbeMeda.Native.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.EasyDiskCatalog.Tests/SkyCD.Plugin.EasyDiskCatalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.GCstar.Tests/SkyCD.Plugin.GCstar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WhereIsIt.Tests/SkyCD.Plugin.WhereIsIt.Tests.csproj"/>
