@@ -125,7 +125,6 @@ public static class TextKeys
     public const string ScanCanceled = "core.text.ScanCanceled";
     public const string LoginCanceled = "core.text.LoginCanceled";
     public const string OpenCatalog = "core.text.OpenCatalog";
-    public const string OpenFolder = "core.text.OpenFolder";
     public const string FailedToOpenCatalogFileFormatHandlerIsUnavailableCheckPluginSettings = "core.text.FailedToOpenCatalogFileFormatHandlerIsUnavailableCheckPluginSettings";
     public const string FailedToOpenCatalogPluginCannotReadThisFormat = "core.text.FailedToOpenCatalogPluginCannotReadThisFormat";
     public const string FailedToOpenCatalogPluginReadError = "core.text.FailedToOpenCatalogPluginReadError";
