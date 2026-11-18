@@ -120,3 +120,46 @@ Endpoints are public-native-client defaults and can be overridden with
 `SKYCD_JETBRAINS_OAUTH_CLIENT_ID`, `SKYCD_JETBRAINS_OAUTH_AUTHORIZATION_ENDPOINT`,
 `SKYCD_JETBRAINS_OAUTH_TOKEN_ENDPOINT`, `SKYCD_JETBRAINS_OAUTH_SCOPES`,
 `SKYCD_JETBRAINS_API_BASE` and `SKYCD_JETBRAINS_LICENSES_PATH`.
+
+## Microsoft 365 connector
+
+`SkyCD.Plugin.Accounts.Microsoft365` implements the same `IOAuthClient`,
+`IAccountConnector`, `IOwnershipProvider` and `IActionProvider` capabilities. It
+signs in through the Microsoft identity platform, reads company subscriptions
+from Microsoft Graph, and detects classic Office applications installed through
+Click-to-Run on Windows. Scope is limited to Microsoft 365 subscriptions and
+installable Office applications: Microsoft Store package parsing, Xbox and Azure
+management are not included.
+
+```bash
+skycd microsoft365 connect [--account <name>] [--store <microsoft365.json>]
+skycd microsoft365 sync    [--account <name>] [--store <microsoft365.json>]
+skycd microsoft365 status  [--account <name>] [--store <microsoft365.json>]
+skycd microsoft365 launch <app-code> [--store <microsoft365.json>]
+skycd microsoft365 signout [--account <name>]
+```
+
+`sync` reads `/directory/subscriptions`, which supplies total seats, renewal
+date, trial flag and provider lifecycle status; when the tenant cannot read
+company subscriptions it falls back to `/subscribedSkus`, which supplies seats
+and capability status but no renewal date. Status is derived at read time:
+suspended/deleted/locked-out plans are `suspended`, plans past
+`nextLifecycleDateTime` are `expired`, plans renewing within 30 days are
+`expiring`, and plans without a renewal date are `no-renewal`.
+
+Installed Office applications are detected from the `App Paths` registry entries
+for Word, Excel, PowerPoint, Outlook, Access, OneNote, Publisher, Visio and
+Project, together with the Click-to-Run product release and version. Suite
+subscriptions link every detected Office app; Visio and Project plans link only
+their own app. `status` reports subscriptions with linked applications, or
+installed applications when no session exists. The token-free snapshot is stored
+in `%LocalAppData%/SkyCD/microsoft365.json` (or `--store`).
+
+Sign-in requires a public native client ID. Configuration can be overridden with
+`SKYCD_MICROSOFT365_OAUTH_CLIENT_ID`, `SKYCD_MICROSOFT365_TENANT`,
+`SKYCD_MICROSOFT365_OAUTH_AUTHORIZATION_ENDPOINT`,
+`SKYCD_MICROSOFT365_OAUTH_TOKEN_ENDPOINT`, `SKYCD_MICROSOFT365_OAUTH_SCOPES`,
+`SKYCD_MICROSOFT365_GRAPH_BASE`, `SKYCD_MICROSOFT365_SUBSCRIPTIONS_PATH` and
+`SKYCD_MICROSOFT365_SKUS_PATH`. `connect`/`sync` exit with code 2 when sign-in is
+required or denied, and 3 on Graph or store failures; provider response bodies
+and tokens are never written to output or disk.
