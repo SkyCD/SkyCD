@@ -1,20 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using UCanAccess.File;
+using FileDataType = UCanAccess.File.DataType;
 
 namespace SkyCD.Plugin.Access;
 
 public sealed class AccessListExportPlugin : IFileFormatPluginCapability
 {
+    private const int MaxTextCharacters = 255;
+
     public FileFormatDescriptor SupportedFormat => new("skycd-access-list", "Access list export (*.mdb)",
         [".mdb"], ["application/x-msaccess"], CanRead: false, CanWrite: true);
 
@@ -27,17 +28,11 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!OperatingSystem.IsWindows()) throw new AccessExportProviderUnavailableException();
-            var provider = FindAvailableProvider() ?? throw new AccessExportProviderUnavailableException();
             var export = request.Payload as AccessListExportRequest ?? new AccessListExportRequest { Rows = CoerceRows(request.Payload) };
             var directory = request.Target is FileStream file
                 ? Path.GetDirectoryName(Path.GetFullPath(file.Name))! : Path.GetTempPath();
             temporary = Path.Combine(directory, $".skycd-access-{Guid.NewGuid():N}.mdb");
-            await Task.Run(() =>
-            {
-                if (!OperatingSystem.IsWindows()) throw new AccessExportProviderUnavailableException();
-                WriteDatabase(temporary, provider, export, request.Progress, cancellationToken);
-            }, cancellationToken);
+            await Task.Run(() => WriteDatabase(temporary, export, request.Progress, cancellationToken), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             await using var source = File.OpenRead(temporary);
             await source.CopyToAsync(request.Target, cancellationToken);
@@ -97,125 +92,41 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability
         throw new ArgumentException("Access export requires ordered catalog-list rows.", nameof(payload));
     }
 
-    public static string? FindAvailableProvider()
-    {
-        if (!OperatingSystem.IsWindows()) return null;
-        if (!CanActivate("ADOX.Catalog") || !CanActivate("ADODB.Command") || !CanActivate("ADODB.Connection"))
-            return null;
-        foreach (var provider in new[] { "Microsoft.ACE.OLEDB.16.0", "Microsoft.ACE.OLEDB.12.0", "Microsoft.Jet.OLEDB.4.0" })
-            if (CanActivate(provider)) return provider;
-        return null;
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static bool CanActivate(string progId)
-    {
-        object? instance = null;
-        try
-        {
-            var type = Type.GetTypeFromProgID(progId);
-            if (type is null) return false;
-            instance = Activator.CreateInstance(type);
-            return instance is not null;
-        }
-        catch (COMException) { return false; }
-        finally { Release(instance); }
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static void WriteDatabase(string path, string provider, AccessListExportRequest export,
+    private static void WriteDatabase(string path, AccessListExportRequest export,
         IProgress<int>? progress, CancellationToken cancellationToken)
     {
         var names = NormalizeColumnNames(export.Columns);
-        var connectionString = new DbConnectionStringBuilder
-        {
-            ["Provider"] = provider,
-            ["Data Source"] = path,
-            ["Jet OLEDB:Engine Type"] = 5
-        };
-        if (export.UseWindows1252Compatibility) connectionString["Locale Identifier"] = 1033;
-        object? catalogObject = null;
-        object? connectionObject = null;
-        object? commandObject = null;
-        var parameters = new List<object>();
-        var transactionActive = false;
         var operation = "creating the Jet database";
         try
         {
-            catalogObject = Activator.CreateInstance(Type.GetTypeFromProgID("ADOX.Catalog")!);
-            dynamic catalog = catalogObject!;
-            catalog.Create(connectionString.ConnectionString);
-            connectionObject = catalog.ActiveConnection;
-            dynamic connection = connectionObject;
+            using var database = Database.Create(path, version: "2003");
             operation = "creating the ItemList table";
-            connection.Execute($"CREATE TABLE [ItemList] ({string.Join(", ", names.Select(name => $"[{name}] TEXT(255) NOT NULL"))})");
-            foreach (var name in names)
-            {
-                operation = $"allowing empty text in column '{name}'";
-                catalog.Tables["ItemList"].Columns[name].Properties["Jet OLEDB:Allow Zero Length"].Value = true;
-            }
+            var table = database.CreateTable("ItemList", names.Select(name =>
+                new ColumnBuilder(name, FileDataType.Text)
+                    .WithLength(MaxTextCharacters * 2)
+                    .WithRequired()).ToArray());
 
-            operation = "preparing parameterized inserts";
-            commandObject = Activator.CreateInstance(Type.GetTypeFromProgID("ADODB.Command")!);
-            dynamic command = commandObject!;
-            command.ActiveConnection = connection;
-            command.CommandType = 1;
-            command.CommandText = $"INSERT INTO [ItemList] ({string.Join(", ", names.Select(name => $"[{name}]"))}) VALUES ({string.Join(", ", names.Select(_ => "?"))})";
-            for (var index = 0; index < names.Count; index++)
-            {
-                operation = $"creating parameter '{names[index]}'";
-                object parameter = command.CreateParameter($"p{index}", 202, 1, 255);
-                command.Parameters.Append(parameter);
-                parameters.Add(parameter);
-            }
+            operation = "inserting rows";
             var written = 0;
-            connection.BeginTrans();
-            transactionActive = true;
             foreach (var row in export.Rows)
             {
-                operation = $"inserting row {written + 1}";
                 cancellationToken.ThrowIfCancellationRequested();
+                var values = new object[names.Count];
                 for (var index = 0; index < names.Count; index++)
                 {
                     var key = export.Columns[index].Key;
                     var value = row.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value;
                     var text = FormatValue(value);
-                    if (text.Length > 255) throw new AccessExportValueTooLongException(names[index]);
-                    ((dynamic)parameters[index]).Value = text;
+                    if (text.Length > MaxTextCharacters) throw new AccessExportValueTooLongException(names[index]);
+                    values[index] = text;
                 }
-                command.Execute();
+                table.AddRow(values);
                 if (++written % 64 == 0) progress?.Report(Math.Min(99, written / 64));
             }
-            cancellationToken.ThrowIfCancellationRequested();
-            connection.CommitTrans();
-            transactionActive = false;
-            operation = "closing the database";
-            connection.Close();
         }
         catch (Exception exception) when (exception is not OperationCanceledException and not AccessExportValueTooLongException)
         {
             throw new AccessExportOperationException(operation, exception);
         }
-        finally
-        {
-            if (connectionObject is not null)
-            {
-                if (transactionActive)
-                {
-                    try { ((dynamic)connectionObject).RollbackTrans(); } catch (COMException) { }
-                }
-                try { ((dynamic)connectionObject).Close(); } catch (COMException) { }
-            }
-            foreach (var parameter in parameters) Release(parameter);
-            Release(commandObject);
-            Release(catalogObject);
-            Release(connectionObject);
-        }
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static void Release(object? value)
-    {
-        if (value is not null && Marshal.IsComObject(value)) Marshal.FinalReleaseComObject(value);
     }
 }

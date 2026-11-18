@@ -9,4 +9,7 @@
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj" />
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="JustyBase.UCanAccess.File" Version="1.1.0" />
+    </ItemGroup>
 </Project>

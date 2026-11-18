@@ -1,45 +1,44 @@
 # Microsoft Access list export
 
 The assembly-discovered `skycd-access-list` capability is export-only for `.mdb`.
-It creates a Jet 4-compatible database with one user table, `ItemList`, without
-requiring Microsoft Access or a legacy catalog application. Windows must have
-ADOX/ADO and a Jet or ACE OLE DB provider matching the SkyCD process architecture.
-The plugin tries activating ACE 16, ACE 12, then Jet 4 providers.
-COM type lookup alone is insufficient: stale or mismatched registrations can
-resolve successfully but fail activation. ADOX and ADO classes must also activate.
-No native runtime is bundled and no additional NuGet packages are required.
+It creates a Jet 4-compatible database with one user table, `ItemList`, on Windows,
+macOS and Linux. No Microsoft Access installation, ACE/Jet OLE DB provider, ADOX,
+COM registration or native runtime is required.
+
+Export is implemented with the pure-managed
+[`JustyBase.UCanAccess.File`](https://www.nuget.org/packages/JustyBase.UCanAccess.File/)
+1.1.0 package (Apache-2.0, .NET 10, no dependencies), a .NET port of Jackcess. The
+package seeds new files from an embedded Access 2003 database template. The
+template and the per-column text sort order use US English (LCID 1033), providing
+Windows-1252-compatible code-page metadata while Jet 4 stores text as Unicode.
 
 `AccessListExportRequest` carries the visible rows in insertion order and selected
 `AccessListColumn` values in column order. Each column has its source key and
 display label. Labels retain supported Unicode; invalid or empty names become
-`ColumnN`, duplicates receive stable numeric suffixes, and all identifiers are
-bracket-quoted, including Access keywords.
+`ColumnN`, duplicates receive stable numeric suffixes, and names are limited to
+Access's 64-character maximum.
 
-All columns are `TEXT(255) NOT NULL` with zero-length strings enabled. Null values
-become empty strings, numeric values use invariant formatting, and timestamps use
-ISO-8601. Callers must supply raw byte values for size columns. Values longer than
-255 characters fail with an actionable error instead of truncation. Each row uses
-positional parameters; apostrophes and other data never enter SQL text.
+All columns are `TEXT(255)` and required (`NOT NULL`). Zero-length strings are
+accepted, so empty and null values are stored as empty strings. Numeric values use
+invariant formatting, and timestamps use ISO-8601. Callers must supply raw byte
+values for size columns. Values longer than 255 characters fail with an actionable
+error instead of truncation.
 
-The default compatibility option sets the Jet database locale to US English
-(LCID 1033), providing Windows-1252-compatible locale metadata while retaining
-the provider's Unicode text support. Database creation uses Jet engine type 5.
-See Microsoft's [Jet provider properties](https://learn.microsoft.com/en-us/office/client-developer/access/desktop-database-reference/microsoft-ole-db-provider-for-microsoft-jet)
-and [ADOX Create method](https://learn.microsoft.com/en-us/office/client-developer/access/desktop-database-reference/create-method-adox).
+Rows are streamed into the table in visible result order with bounded per-row
+memory, progress, and cancellation between rows. Access tables do not define query
+ordering: rows are inserted in visible result order, and no additional ordering
+column is added to the user's selected schema.
 
 Use `FileFormatManager.WriteFileAsync` for filesystem output. It stages a temporary
 sibling and replaces the destination only after a successful export; CLI conversion
-uses this route. The plugin builds its native database in another temporary sibling
-and streams it to the target only after successful completion. Failures and
+uses this route. The plugin builds its database in another temporary sibling and
+streams it to the target only after successful completion. Failures and
 cancellation remove temporary files and preserve the prior destination. Direct
 stream callers own their stream's commit semantics.
 
-Rows stream through a prepared parameterized command inside a native transaction,
-with bounded per-row memory, progress, and cancellation between rows. Access tables
-do not define query ordering: rows are inserted in visible result order, and no
-additional ordering column is added to the user's selected schema.
-
-Tests independently reopen generated databases with ADO to verify the schema,
-values, and insertion order. Native tests skip with an explicit reason where the
-matching runtime is unavailable; normalization and atomic-host-failure tests run
-everywhere.
+Tests reopen the generated database with the file-format library on every platform
+and verify the table name, column order, required flags, values and insertion
+order. Where an ACE or Jet OLE DB provider is installed, an additional Windows test
+uses ADO/ADOX to verify the file independently, including the stored LCID 1033
+locale. The provider-dependent test skips with an explicit reason; no test requires
+Microsoft Access or a legacy catalog application.

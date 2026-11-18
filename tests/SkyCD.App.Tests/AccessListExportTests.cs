@@ -5,12 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Access;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
+using UCanAccess.File;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -61,101 +63,49 @@ public sealed class AccessListExportTests
     }
 
     [Fact]
-    public async Task UnavailableProvider_ReturnsActionableErrorWithoutWritingToTarget()
-    {
-        if (AccessListExportPlugin.FindAvailableProvider() is not null) return;
-        await using var target = new MemoryStream();
-        var result = await new AccessListExportPlugin().WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = "skycd-access-list",
-            Target = target,
-            Payload = new AccessListExportRequest { Rows = [] }
-        });
-        Assert.False(result.Success);
-        Assert.Equal(new AccessExportProviderUnavailableException().Message, result.Error);
-        Assert.Equal(0, target.Length);
-    }
-
-    private sealed class FailingWriter : IFileFormatPluginCapability
-    {
-        public FileFormatDescriptor SupportedFormat => new("fail", "Failing", [".mdb"], [], false, true);
-        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
-        {
-            await request.Target.WriteAsync(new byte[] { 1, 2, 3 }, cancellationToken);
-            return new FileFormatWriteResult { Success = false, Error = "Provider unavailable" };
-        }
-    }
-
-    [AccessProviderFact]
-    [SupportedOSPlatform("windows")]
-    public async Task NativeDatabase_ReopensIndependentlyWithSelectedColumnsAndValuesInOrder()
+    public async Task Database_ReopensWithSelectedColumnsRequiredValuesAndInsertionOrder()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"skycd-access-native-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
-        object? connectionObject = null;
-        object? recordsetObject = null;
         try
         {
             var path = Path.Combine(directory, "list.mdb");
-            var request = new AccessListExportRequest
+            await new FileFormatManager([new AccessListExportPlugin()])
+                .WriteFileAsync("skycd-access-list", path, SampleExport());
+
+            var header = new byte[15];
+            await using (var stream = File.OpenRead(path))
             {
-                Columns = [new("Name", "SELECT"), new("Other", "SELECT"), new("Empty", "Žąsis"), new("Size", "Size"), new("When", "When")],
-                Rows = new IReadOnlyDictionary<string, object?>[]
-                {
-                    new Dictionary<string, object?> { ["Name"] = "O'Brien", ["Other"] = "Žąsis", ["Empty"] = "", ["Size"] = 1234L, ["When"] = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero) },
-                    new Dictionary<string, object?> { ["Name"] = "Second", ["Other"] = null }
-                }
-            };
-            var manager = new FileFormatManager([new AccessListExportPlugin()]);
-            await manager.WriteFileAsync("skycd-access-list", path, request);
-            Assert.Single(Directory.GetFiles(directory));
-            var provider = AccessListExportPlugin.FindAvailableProvider();
-            connectionObject = Activator.CreateInstance(Type.GetTypeFromProgID("ADODB.Connection")!);
-            dynamic connection = connectionObject!;
-            connection.Open($"Provider={provider};Data Source={path};");
-            object schemaObject = connection.OpenSchema(20);
-            dynamic schema = schemaObject;
-            var tables = new List<string>();
-            while (!(bool)schema.EOF)
-            {
-                if ((string)schema.Fields["TABLE_TYPE"].Value == "TABLE")
-                    tables.Add((string)schema.Fields["TABLE_NAME"].Value);
-                schema.MoveNext();
+                stream.Position = 4;
+                await stream.ReadExactlyAsync(header);
             }
-            schema.Close();
-            Marshal.FinalReleaseComObject(schemaObject);
-            Assert.Equal(["ItemList"], tables);
-            recordsetObject = connection.Execute("SELECT * FROM [ItemList]");
-            dynamic rows = recordsetObject;
-            Assert.Equal(5, (int)rows.Fields.Count);
-            Assert.Equal("SELECT", (string)rows.Fields[0].Name);
-            Assert.Equal("SELECT_2", (string)rows.Fields[1].Name);
-            Assert.Equal("Žąsis", (string)rows.Fields[2].Name);
-            Assert.Equal("Size", (string)rows.Fields[3].Name);
-            Assert.Equal("When", (string)rows.Fields[4].Name);
-            Assert.Equal("O'Brien", (string)rows.Fields[0].Value);
-            Assert.Equal("Žąsis", (string)rows.Fields[1].Value);
-            Assert.Equal("", (string)rows.Fields[2].Value);
-            Assert.Equal("1234", (string)rows.Fields[3].Value);
-            Assert.Equal("2026-01-02T03:04:05.0000000+00:00", (string)rows.Fields[4].Value);
-            rows.MoveNext();
-            Assert.Equal("Second", (string)rows.Fields[0].Value);
-            rows.MoveNext();
-            Assert.True((bool)rows.EOF);
-            rows.Close();
-            connection.Close();
+            Assert.Equal("Standard Jet DB", Encoding.ASCII.GetString(header));
+
+            using (var database = Database.Open(path, readOnly: true))
+            {
+                Assert.Equal(["ItemList"], database.GetTableNames().ToArray());
+                var table = database.GetTable("ItemList")!;
+                Assert.Equal(["SELECT", "SELECT_2", "Žąsis", "Size", "When"],
+                    table.Columns.Select(column => column.Name).ToArray());
+                Assert.All(table.Columns, column =>
+                {
+                    Assert.True(column.Required);
+                    Assert.Equal(510, column.ColumnLength);
+                });
+
+                var rows = table.Rows().Select(row => row.ToArray()).ToArray();
+                Assert.Equal(2, rows.Length);
+                Assert.Equal(new object[] { "O'Brien", "Žąsis", "", "1234", "2026-01-02T03:04:05.0000000+00:00" }, rows[0]);
+                Assert.Equal(new object[] { "Second", "", "", "", "" }, rows[1]);
+            }
+
+            Assert.Single(Directory.GetFiles(directory));
         }
-        finally
-        {
-            if (recordsetObject is not null) Marshal.FinalReleaseComObject(recordsetObject);
-            if (connectionObject is not null) Marshal.FinalReleaseComObject(connectionObject);
-            Directory.Delete(directory, true);
-        }
+        finally { Directory.Delete(directory, true); }
     }
 
-    [AccessProviderFact]
-    public async Task CancellationDuringNativeInserts_PreservesDestinationAndRemovesTemporaryFiles()
+    [Fact]
+    public async Task CancellationDuringInserts_PreservesDestinationAndRemovesTemporaryFiles()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"skycd-access-cancel-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
@@ -179,7 +129,7 @@ public sealed class AccessListExportTests
         finally { Directory.Delete(directory, true); }
     }
 
-    [AccessProviderFact]
+    [Fact]
     public async Task OversizedText_FailsWithoutTruncationOrReplacingDestination()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"skycd-access-long-{Guid.NewGuid():N}");
@@ -202,17 +152,116 @@ public sealed class AccessListExportTests
         finally { Directory.Delete(directory, true); }
     }
 
+    [AceProviderFact]
+    [SupportedOSPlatform("windows")]
+    public async Task AceEngine_ReopensGeneratedDatabaseWithLocaleSchemaAndValues()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"skycd-access-ace-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        object? connectionObject = null;
+        object? recordsetObject = null;
+        try
+        {
+            var path = Path.Combine(directory, "list.mdb");
+            await new FileFormatManager([new AccessListExportPlugin()])
+                .WriteFileAsync("skycd-access-list", path, SampleExport());
+
+            var provider = AceProviderFactAttribute.FindProvider();
+            Assert.NotNull(provider);
+            connectionObject = Activator.CreateInstance(Type.GetTypeFromProgID("ADODB.Connection")!);
+            dynamic connection = connectionObject!;
+            connection.Open($"Provider={provider};Data Source={path};");
+            Assert.Equal(1033, (int)connection.Properties.Item("Locale Identifier").Value);
+
+            recordsetObject = connection.Execute("SELECT * FROM [ItemList]");
+            dynamic rows = recordsetObject!;
+            Assert.Equal(5, (int)rows.Fields.Count);
+            string[] expectedNames = ["SELECT", "SELECT_2", "Žąsis", "Size", "When"];
+            for (var index = 0; index < expectedNames.Length; index++)
+                Assert.Equal(expectedNames[index], (string)rows.Fields[index].Name);
+
+            Assert.Equal(new object?[] { "O'Brien", "Žąsis", "", "1234", "2026-01-02T03:04:05.0000000+00:00" },
+                Enumerable.Range(0, 5).Select(index => (object?)rows.Fields[index].Value).ToArray());
+            rows.MoveNext();
+            Assert.Equal("Second", (string)rows.Fields[0].Value);
+            rows.MoveNext();
+            Assert.True((bool)rows.EOF);
+            rows.Close();
+            connection.Close();
+        }
+        finally
+        {
+            if (recordsetObject is not null) Marshal.FinalReleaseComObject(recordsetObject);
+            if (connectionObject is not null) Marshal.FinalReleaseComObject(connectionObject);
+            Directory.Delete(directory, true);
+        }
+    }
+
+    private static AccessListExportRequest SampleExport() => new()
+    {
+        Columns = [new("Name", "SELECT"), new("Other", "SELECT"), new("Empty", "Žąsis"), new("Size", "Size"), new("When", "When")],
+        Rows = new IReadOnlyDictionary<string, object?>[]
+        {
+            new Dictionary<string, object?>
+            {
+                ["Name"] = "O'Brien",
+                ["Other"] = "Žąsis",
+                ["Empty"] = "",
+                ["Size"] = 1234L,
+                ["When"] = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero)
+            },
+            new Dictionary<string, object?> { ["Name"] = "Second", ["Other"] = null }
+        }
+    };
+
+    private sealed class FailingWriter : IFileFormatPluginCapability
+    {
+        public FileFormatDescriptor SupportedFormat => new("fail", "Failing", [".mdb"], [], false, true);
+        public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
+        {
+            await request.Target.WriteAsync(new byte[] { 1, 2, 3 }, cancellationToken);
+            return new FileFormatWriteResult { Success = false, Error = "Provider unavailable" };
+        }
+    }
+
     private sealed class InlineProgress(Action<int> report) : IProgress<int>
     {
         public void Report(int value) => report(value);
     }
 }
 
-public sealed class AccessProviderFactAttribute : FactAttribute
+public sealed class AceProviderFactAttribute : FactAttribute
 {
-    public AccessProviderFactAttribute()
+    public AceProviderFactAttribute()
     {
-        if (AccessListExportPlugin.FindAvailableProvider() is null)
-            Skip = "Requires Windows and a matching Jet/ACE runtime provider; Microsoft Access is not required.";
+        if (FindProvider() is null)
+            Skip = "Requires Windows and an ACE or Jet OLE DB provider; Microsoft Access is not required.";
+    }
+
+    internal static string? FindProvider()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+        foreach (var provider in new[] { "Microsoft.ACE.OLEDB.16.0", "Microsoft.ACE.OLEDB.12.0", "Microsoft.Jet.OLEDB.4.0" })
+            if (CanActivate(provider)) return provider;
+        return null;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool CanActivate(string progId)
+    {
+        object? instance = null;
+        try
+        {
+            var type = Type.GetTypeFromProgID(progId);
+            if (type is null) return false;
+            instance = Activator.CreateInstance(type);
+            return instance is not null;
+        }
+        catch (COMException) { return false; }
+        finally
+        {
+            if (instance is not null && Marshal.IsComObject(instance)) Marshal.FinalReleaseComObject(instance);
+        }
     }
 }
