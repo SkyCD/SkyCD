@@ -1,0 +1,75 @@
+# ============================================================================
+# SkyCD .gitattributes
+# Consistent line endings and diff handling across operating systems.
+# Repository stores all text files with LF; checkouts use native line endings
+# on Windows only where a specific rule below requires CRLF.
+# ============================================================================
+
+# Default: let Git detect text files and store them with LF in the repository.
+* text=auto eol=lf
+
+# --- Source code (always LF in repo, native on checkout) -------------------
+*.cs        text diff=csharp
+*.csx       text diff=csharp
+*.vb        text
+*.xaml      text
+*.axaml     text
+*.csproj    text
+*.vbproj    text
+*.props     text
+*.targets   text
+*.resx      text
+*.config    text
+*.Config    text
+*.manifest  text
+*.json      text
+*.xml       text
+*.yaml      text
+*.yml       text
+*.toml      text
+*.ini       text
+
+# --- Documentation and plain text ------------------------------------------
+*.md        text
+*.txt       text
+*.tsv       text
+
+# --- Scripts ----------------------------------------------------------------
+# Shell scripts must keep LF so they run on Linux/macOS.
+*.sh        text eol=lf
+# Windows batch/command scripts keep CRLF for cmd.exe compatibility.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+# PowerShell runs fine with either; keep LF in repo.
+*.ps1       text eol=lf
+
+# --- Visual Studio solutions -------------------------------------------------
+# Studio regenerates/inspects these with CRLF on Windows.
+*.sln       text eol=crlf
+*.slnx      text
+
+# --- Test data and catalog files ----------------------------------------------
+# Legacy/sample catalog fixtures and SQLite databases are binary.
+*.db        binary
+*.scd       binary
+*.cat       binary
+*.zdc       binary
+*.gcs       binary
+*.ascd      binary
+*.dcmf      binary
+*.vvvbk     binary
+
+# --- Binaries -----------------------------------------------------------------
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.snk       binary
+*.nupkg     binary
+*.zip       binary
+*.7z        binary
+*.ico       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.pdf       binary
