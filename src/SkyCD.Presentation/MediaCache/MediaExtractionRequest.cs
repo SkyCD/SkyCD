@@ -32,13 +32,22 @@ public sealed class MediaExtractionRequest
     /// <summary>Re-extract even when a current captured record already exists.</summary>
     public bool ForceRefresh { get; init; }
 
+    /// <summary>
+    /// Which matching providers this pass may execute. The default keeps opt-in providers, such as
+    /// whole-file hashing, out of implicit extraction; an explicit compute request selects them instead.
+    /// </summary>
+    public SkyCD.Plugin.Host.Media.MediaProviderSelection ProviderSelection { get; init; } =
+        SkyCD.Plugin.Host.Media.MediaProviderSelection.Standard;
+
     /// <summary>Builds a request from a catalog entry, deriving the fingerprint and source facts.</summary>
     public static MediaExtractionRequest ForCatalogEntry(
         CatalogDocument entry,
         Func<CancellationToken, Task<Stream>> openSource,
         IReadOnlyList<CatalogDocument>? catalog = null,
         string? batchId = null,
-        bool forceRefresh = false)
+        bool forceRefresh = false,
+        SkyCD.Plugin.Host.Media.MediaProviderSelection providerSelection =
+            SkyCD.Plugin.Host.Media.MediaProviderSelection.Standard)
     {
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentNullException.ThrowIfNull(openSource);
@@ -51,7 +60,8 @@ public sealed class MediaExtractionRequest
             Item = new MediaItem(MediaSourceFingerprint.GetExtension(entry), ReadContentType(entry), entry.Size),
             OpenSource = openSource,
             BatchId = batchId,
-            ForceRefresh = forceRefresh
+            ForceRefresh = forceRefresh,
+            ProviderSelection = providerSelection
         };
     }
 

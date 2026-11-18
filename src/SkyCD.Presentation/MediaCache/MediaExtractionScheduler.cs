@@ -48,7 +48,8 @@ public sealed class MediaExtractionScheduler
     public async Task<MediaExtractionOutcome> ProcessAsync(
         MediaExtractionRequest request,
         IProgress<MediaProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        MediaExecutionLimits? limits = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.EntryId);
@@ -88,17 +89,19 @@ public sealed class MediaExtractionScheduler
                     payloads: [], records: reused, reusedCacheHit: true);
             }
 
-            var results = await manager.ProcessAsync(request.Item, request.OpenSource, progress, cancellationToken);
+            var results = await manager.ProcessAsync(request.Item, request.OpenSource, progress, cancellationToken,
+                limits, request.ProviderSelection);
 
-            // Every provider failed while captured data exists: treat the source as unavailable and keep the
-            // cached payloads instead of downgrading them to failures.
+            // No usable result while captured data exists: a failure or a throwing provider must never
+            // downgrade usable cached payloads.
             var captured = existing
                 .Where(record =>
                     record.State == MediaCacheRecordState.Captured &&
                     string.Equals(record.Fingerprint, request.Fingerprint, StringComparison.Ordinal))
                 .ToArray();
 
-            if (results.Count > 0 && results.All(result => result.Failed) && captured.Length > 0)
+            var producedNothing = results.Count == 0 || results.All(result => result.Failed);
+            if (producedNothing && captured.Length > 0)
             {
                 if (ownsBatch)
                 {
@@ -318,6 +321,9 @@ public sealed class MediaExtractionScheduler
                 record.State = MediaCacheRecordState.Failed;
                 record.TimedOut = result.TimedOut;
                 record.FailureReason = result.TimedOut ? ReasonTimeout : ReasonFailed;
+                record.SchemaFields = (provider?.SchemaFields ?? [])
+                    .Select(MediaMetadataFieldRecord.From)
+                    .ToList();
                 payloads.Add(new MediaCachePayload(record));
                 continue;
             }

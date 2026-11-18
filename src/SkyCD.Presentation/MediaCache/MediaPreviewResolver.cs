@@ -173,6 +173,11 @@ public sealed class MediaPreviewResolver
     {
         if (fields.Count > 0)
         {
+            if (fields.All(field => field.IsFailed))
+            {
+                return MediaPreviewState.Failed;
+            }
+
             return fields.All(field => field.Origin == MediaMetadataOrigin.Captured && field.IsFromStaleRecord)
                 ? MediaPreviewState.Stale
                 : MediaPreviewState.Ready;

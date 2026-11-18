@@ -33,4 +33,7 @@ public sealed class MediaMetadataFieldView
 
     /// <summary>True when the value comes from a record that is no longer current.</summary>
     public bool IsFromStaleRecord => RecordState is MediaCacheRecordState.Stale or MediaCacheRecordState.Missing;
+
+    /// <summary>True when the provider tried to capture this field and failed, so there is no value.</summary>
+    public bool IsFailed => RecordState == MediaCacheRecordState.Failed;
 }

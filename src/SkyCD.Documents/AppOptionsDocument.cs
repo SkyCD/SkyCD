@@ -34,4 +34,6 @@ public sealed class AppOptionsDocument
 
     public bool IsBackgroundMediaSyncEnabled { get; set; }
 
+    public bool IsScanHashingEnabled { get; set; }
+
 }

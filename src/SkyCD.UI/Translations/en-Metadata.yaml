@@ -1,2 +1,5 @@
 _name: English
 _flag: 🇬🇧
+metadata.ed2k: "eD2k hash"
+metadata.tth: "Tiger Tree Hash"
+metadata.sha256: "SHA-256"

@@ -26,6 +26,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions;
 using Avalonia.Threading;
@@ -152,7 +153,9 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
-            subscribedViewModel.IsBackgroundMediaSyncEnabled = LoadAppOptions().IsBackgroundMediaSyncEnabled;
+            var appOptions = LoadAppOptions();
+            subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
+            subscribedViewModel.IsScanHashingEnabled = appOptions.IsScanHashingEnabled;
             UpdateWindowTitle();
         }
     }
@@ -169,6 +172,13 @@ public partial class MainWindow : Window
         {
             var options = LoadAppOptions();
             options.IsBackgroundMediaSyncEnabled = viewModel.IsBackgroundMediaSyncEnabled;
+            SaveAppOptions(options);
+        }
+        if (e.PropertyName == nameof(MainWindowViewModel.IsScanHashingEnabled)
+            && sender is MainWindowViewModel hashingViewModel)
+        {
+            var options = LoadAppOptions();
+            options.IsScanHashingEnabled = hashingViewModel.IsScanHashingEnabled;
             SaveAppOptions(options);
         }
         if (e.PropertyName is nameof(MainWindowViewModel.IsDirtyDocument) or nameof(MainWindowViewModel.CurrentCatalogPath))
@@ -1347,6 +1357,7 @@ public partial class MainWindow : Window
                 return new MainWindowViewModel(repositoryManager);
             }, progress);
             reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
             var options = LoadAppOptions();
             reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
             reloadedViewModel.CurrentCatalogPath = localPath;
@@ -1593,6 +1604,7 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
         }
     }
 
