@@ -85,8 +85,15 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
             DisconnectWithQuit = true,
         };
 
-    /// <summary>Listing options handed to FluentFTP for one directory.</summary>
-    internal static FtpListOption ListingOptions => FtpListOption.Auto;
+    /// <summary>
+    /// Listing options handed to FluentFTP for one directory.
+    /// <see cref="FtpListOption.Modify"/> and <see cref="FtpListOption.Size"/> keep the exact
+    /// modification time and the size of every entry: a LIST record only carries minutes and
+    /// cannot express a directory size, so FluentFTP asks the server (MDTM/SIZE) for the entries
+    /// it parsed without them. That costs one round trip per entry, but the catalog must keep the
+    /// timestamps the server reports instead of a rounded-down one.
+    /// </summary>
+    public static FtpListOption ListingOptions => FtpListOption.Auto | FtpListOption.SizeModify;
 
     /// <summary>Maps a connect failure onto the SkyCD FTP exception semantics.</summary>
     internal static Exception TranslateConnectFailure(
@@ -224,7 +231,15 @@ internal sealed class FtpRemoteSession : IFtpRemoteSession
         FtpListItem[] listing;
         try
         {
-            listing = client.GetListing(normalized, FtpCatalogConnector.ListingOptions);
+            var options = FtpCatalogConnector.ListingOptions;
+            if (!client.HasFeature(FtpCapability.MLST))
+            {
+                // Without MLST the LIST dialect is the only one; force it so FluentFTP does not
+                // spend a round trip on a command the server does not implement.
+                options |= FtpListOption.ForceList;
+            }
+
+            listing = client.GetListing(normalized, options);
         }
         catch (OperationCanceledException)
         {

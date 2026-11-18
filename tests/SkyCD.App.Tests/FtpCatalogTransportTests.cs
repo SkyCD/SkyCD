@@ -73,7 +73,7 @@ public sealed class FtpCatalogTransportTests
     // ------------------------------------------------------------------ nested listings
 
     [Fact]
-    public void Scan_MlsdServer_TraversesNestedDirectoriesAndMapsTheCatalog()
+    public void Scan_NestedDirectories_TraversesAndMapsTheCatalog()
     {
         using var server = Server();
 
@@ -103,24 +103,22 @@ public sealed class FtpCatalogTransportTests
         Assert.Equal("rw-r--r--", readme.Properties["Permission"]);
         Assert.Equal(Stamp.ToString("O"), readme.Properties["FileDateTime"]);
 
-        Assert.True(server.SupportsMlsd);
-        Assert.Contains(server.Commands, command => command.StartsWith("MLSD", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(server.Commands, command => command.StartsWith("LIST", StringComparison.OrdinalIgnoreCase));
         Assert.False(server.SawPasswordInCommand);
     }
 
     [Fact]
-    public void Scan_LegacyServerWithoutMlsd_FallsBackToTheListDialect()
+    public void Scan_ModernMlsdServer_StillUsesTheListDialect()
     {
+        // FluentFTP answers a failed MLSD with an empty listing, which would turn a missing or
+        // refused directory into a silently empty one, so the transport asks for LIST (#580).
         using var server = Server();
-        server.SupportsMlsd = false;
 
         var result = new FtpCatalogScanner(new FtpCatalogConnector())
             .ScanDetailed(Options(server.Port));
 
         Assert.Contains(result.Documents, document => document.Name == "readme.txt");
-        Assert.Contains(result.Documents, document => document.Name == "deep.txt");
         Assert.Equal(0, result.Statistics.Failed);
-        Assert.DoesNotContain(server.Commands, command => command.StartsWith("MLSD", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(server.Commands, command => command.StartsWith("LIST", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -330,6 +328,7 @@ public sealed class FtpCatalogTransportTests
         Assert.Equal(FluentFTP.FtpEncryptionMode.None, config.EncryptionMode);
         Assert.Equal(FluentFTP.FtpDataConnectionType.AutoPassive, config.DataConnectionType);
         Assert.Equal(FluentFTP.FtpParser.Auto, config.ListingParser);
+        Assert.Equal(FluentFTP.FtpListOption.ForceList, FtpCatalogConnector.ListingOptions);
         Assert.Equal(20_000, config.ReadTimeout);
         Assert.Equal(15_000, config.ConnectTimeout);
     }

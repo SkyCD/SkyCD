@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -15,6 +16,12 @@ namespace SkyCD.App.Tests;
 /// listings, MLSD-less servers, refused listings, rejected credentials, missing directories and
 /// dropped connections.
 /// </summary>
+/// <remarks>
+/// The server answers the way a real FTP server does: it advertises MLST/MLSD in FEAT (unless
+/// <see cref="SupportsMlsd"/> is false) and it always answers a <c>LIST</c> command. FluentFTP
+/// falls back from MLSD to LIST on its own, so a refusal has to be served by both commands to be
+/// observable by the client.
+/// </remarks>
 internal sealed class ScriptedFtpServer : IDisposable
 {
     private readonly TcpListener listener;
@@ -22,7 +29,7 @@ internal sealed class ScriptedFtpServer : IDisposable
     private readonly Task acceptLoop;
     private readonly List<string> commands = [];
     private readonly object gate = new();
-    private int activeConnections;
+    private int connections;
 
     public ScriptedFtpServer(string username = "alice", string password = "secret-pass")
     {
@@ -62,11 +69,7 @@ internal sealed class ScriptedFtpServer : IDisposable
         {
             lock (gate)
             {
-                return commands.FindAll(command =>
-                    command.StartsWith("MLSD ", StringComparison.OrdinalIgnoreCase) ||
-                    command.StartsWith("LIST ", StringComparison.OrdinalIgnoreCase) ||
-                    command.Equals("LIST", StringComparison.OrdinalIgnoreCase) ||
-                    command.Equals("MLSD", StringComparison.OrdinalIgnoreCase)).Count;
+                return commands.FindAll(IsListingCommand).Count;
             }
         }
     }
@@ -78,7 +81,7 @@ internal sealed class ScriptedFtpServer : IDisposable
         {
             lock (gate)
             {
-                return activeConnections;
+                return connections;
             }
         }
     }
@@ -121,6 +124,10 @@ internal sealed class ScriptedFtpServer : IDisposable
         stop.Dispose();
     }
 
+    private static bool IsListingCommand(string command) =>
+        command.StartsWith("MLSD", StringComparison.OrdinalIgnoreCase) ||
+        command.StartsWith("LIST", StringComparison.OrdinalIgnoreCase);
+
     private async Task AcceptLoopAsync()
     {
         while (!stop.IsCancellationRequested)
@@ -137,7 +144,7 @@ internal sealed class ScriptedFtpServer : IDisposable
 
             lock (gate)
             {
-                activeConnections++;
+                connections++;
             }
 
             _ = Task.Run(() => HandleAsync(client));
@@ -157,7 +164,6 @@ internal sealed class ScriptedFtpServer : IDisposable
             };
 
             TcpListener? passive = null;
-            var authenticated = false;
 
             try
             {
@@ -187,8 +193,7 @@ internal sealed class ScriptedFtpServer : IDisposable
                             break;
 
                         case "PASS":
-                            authenticated = argument == Password;
-                            await writer.WriteLineAsync(authenticated ? "230 logged in" : "530 login incorrect");
+                            await writer.WriteLineAsync(argument == Password ? "230 logged in" : "530 login incorrect");
                             break;
 
                         case "FEAT":
@@ -277,20 +282,23 @@ internal sealed class ScriptedFtpServer : IDisposable
             return;
         }
 
-        if (MissingDirectories.Contains(path))
-        {
-            await writer.WriteLineAsync("550 no such directory");
-            return;
-        }
-
         if (passive is null)
         {
             await writer.WriteLineAsync("425 use PASV first");
             return;
         }
 
-        if (!Directories.TryGetValue(path, out var directory))
+        if (MissingDirectories.Contains(path) || !Directories.TryGetValue(path, out var directory))
         {
+            // Like a real server, the refusal is answered only after the data channel was opened
+            // and closed: some clients report a transfer failure as an empty listing otherwise.
+            await writer.WriteLineAsync("150 opening data connection");
+            await writer.FlushAsync();
+            using (var refused = await passive.AcceptTcpClientAsync(stop.Token))
+            {
+                await refused.GetStream().FlushAsync(stop.Token);
+            }
+
             await writer.WriteLineAsync("550 no such directory");
             return;
         }
@@ -304,6 +312,8 @@ internal sealed class ScriptedFtpServer : IDisposable
         }
 
         await writer.WriteLineAsync("150 opening data connection");
+        await writer.FlushAsync();
+
         using var data = await passive.AcceptTcpClientAsync(stop.Token);
         var payload = verb == "MLSD" ? directory.ToMlsd() : directory.ToList();
         var bytes = Encoding.UTF8.GetBytes(payload);
@@ -338,6 +348,9 @@ internal sealed class ScriptedDirectory(string name, DateTime modifiedUtc, strin
 
     public List<ScriptedDirectory> Children { get; } = [];
 
+    /// <summary>The permission field of a LIST record, derived from <see cref="UnixMode"/>.</summary>
+    public string ListMode => "d" + ScriptedFile.SymbolicMode(UnixMode);
+
     public string ToMlsd()
     {
         var builder = new StringBuilder();
@@ -345,12 +358,12 @@ internal sealed class ScriptedDirectory(string name, DateTime modifiedUtc, strin
         builder.Append("type=pdir;perm=el; ..\r\n");
         foreach (var child in Children)
         {
-            builder.Append($"type=dir;modify={child.ModifiedUtc:yyyyMMddHHmmss};unix.mode={child.UnixMode};perm=el; {child.Name}\r\n");
+            builder.Append($"type=dir;modify={child.ModifiedUtc.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture)};unix.mode={child.UnixMode};perm=el; {child.Name}\r\n");
         }
 
         foreach (var file in Files)
         {
-            builder.Append($"type=file;size={file.Size};modify={file.ModifiedUtc:yyyyMMddHHmmss};unix.mode={file.UnixMode};perm=r; {file.Name}\r\n");
+            builder.Append($"type=file;size={file.Size.ToString(CultureInfo.InvariantCulture)};modify={file.ModifiedUtc.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture)};unix.mode={file.UnixMode};perm=r; {file.Name}\r\n");
         }
 
         return builder.ToString();
@@ -359,15 +372,15 @@ internal sealed class ScriptedDirectory(string name, DateTime modifiedUtc, strin
     public string ToList()
     {
         var builder = new StringBuilder();
-        builder.Append("total " + (Children.Count + Files.Count) + "\r\n");
+        builder.Append("total " + (Children.Count + Files.Count).ToString(CultureInfo.InvariantCulture) + "\r\n");
         foreach (var child in Children)
         {
-            builder.Append($"drwxr-xr-x 1 owner group 0 {child.ModifiedUtc:MMM dd HH:mm} {child.Name}\r\n");
+            builder.Append($"{child.ListMode} 1 owner group 0 {child.ModifiedUtc.ToString("MMM dd HH:mm", CultureInfo.InvariantCulture)} {child.Name}\r\n");
         }
 
         foreach (var file in Files)
         {
-            builder.Append($"-rw-r--r-- 1 owner group {file.Size} {file.ModifiedUtc:MMM dd HH:mm} {file.Name}\r\n");
+            builder.Append($"{file.ListMode} 1 owner group {file.Size.ToString(CultureInfo.InvariantCulture)} {file.ModifiedUtc.ToString("MMM dd HH:mm", CultureInfo.InvariantCulture)} {file.Name}\r\n");
         }
 
         return builder.ToString();
@@ -384,4 +397,29 @@ internal sealed class ScriptedFile(string name, long size, DateTime modifiedUtc,
     public DateTime ModifiedUtc { get; } = modifiedUtc;
 
     public string UnixMode { get; } = unixMode;
+
+    /// <summary>The permission field of a LIST record, derived from <see cref="UnixMode"/>.</summary>
+    public string ListMode => "-" + SymbolicMode(UnixMode);
+
+    internal static string SymbolicMode(string mode)
+    {
+        var digits = mode.TrimStart('0');
+        if (digits.Length == 0)
+        {
+            digits = "0";
+        }
+
+        digits = digits.PadLeft(3, '0');
+        digits = digits[^3..];
+        var symbols = new char[9];
+        for (var i = 0; i < 3; i++)
+        {
+            var value = digits[i] is >= '0' and <= '7' ? digits[i] - '0' : 0;
+            symbols[i * 3] = (value & 4) != 0 ? 'r' : '-';
+            symbols[(i * 3) + 1] = (value & 2) != 0 ? 'w' : '-';
+            symbols[(i * 3) + 2] = (value & 1) != 0 ? 'x' : '-';
+        }
+
+        return new string(symbols);
+    }
 }
