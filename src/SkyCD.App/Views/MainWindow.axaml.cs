@@ -629,7 +629,17 @@ public partial class MainWindow : Window
 
         if (dialogVm.SourceMode == AddToListSourceMode.Internet)
         {
-            var loginVm = LoginDialogViewModel.FromAddress(dialogVm.SourceValue);
+            LoginDialogViewModel loginVm;
+            try
+            {
+                loginVm = LoginDialogViewModel.FromAddress(dialogVm.SourceValue);
+            }
+            catch (Exception ex) when (ex is RemoteSchemeNotSupportedException or RemoteConnectionException)
+            {
+                vm.StatusText = SecretSanitizer.Sanitize(ex.Message);
+                return;
+            }
+
             var loginDialog = new LoginWindow
             {
                 DataContext = loginVm
@@ -646,7 +656,7 @@ public partial class MainWindow : Window
             var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
                 ? null
                 : vm.SelectedTreeNode?.Key ?? "library";
-            var scanOptions = new FtpScanOptions(
+            var scanOptions = new RemoteScanOptions(
                 dialogVm.SourceValue,
                 loginVm.Username,
                 loginVm.Password,
@@ -656,7 +666,7 @@ public partial class MainWindow : Window
                 dialogVm.IncludeExtendedInfo);
             loginVm.Password = string.Empty;
 
-            var scanner = new FtpCatalogScanner();
+            var scanner = new RemoteCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {

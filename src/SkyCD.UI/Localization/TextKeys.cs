@@ -175,7 +175,10 @@ public static class TextKeys
     public const string AdvancedFilterKeyRequired = "core.text.AdvancedFilterKeyRequired";
     public const string AdvancedFilterValueRequired = "core.text.AdvancedFilterValueRequired";
     public const string AdvancedFilterOneOfRequired = "core.text.AdvancedFilterOneOfRequired";
-    public const string OnlyFileTransferProtocolCurrentlyIsSupported = "core.text.OnlyFileTransferProtocolCurrentlyIsSupported";
+    public const string RemoteSchemeNotSupported = "core.text.RemoteSchemeNotSupported";
+    public const string RemoteAuthenticationFailed = "core.text.RemoteAuthenticationFailed";
+    public const string RemoteConnectionFailed = "core.text.RemoteConnectionFailed";
+    public const string RemoteListingNotSupported = "core.text.RemoteListingNotSupported";
     public const string FtpAuthenticationFailed = "core.text.FtpAuthenticationFailed";
     public const string FtpConnectionFailed = "core.text.FtpConnectionFailed";
     public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";

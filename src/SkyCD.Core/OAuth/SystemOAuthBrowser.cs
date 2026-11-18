@@ -34,17 +34,20 @@ public sealed class SystemOAuthBrowser : IOAuthBrowser
             using var client = await listener.AcceptTcpClientAsync(cancellationToken);
             await using var stream = client.GetStream();
             // Bound both request size and time so an unrelated local connection cannot stall login.
+            // The budget must tolerate a machine under heavy load: a browser sends its single callback
+            // and never retries, so discarding it here would leave the login waiting for a new connection.
             using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            requestTimeout.CancelAfter(TimeSpan.FromSeconds(2));
-            var header = new StringBuilder();
-            var buffer = new byte[1];
+            requestTimeout.CancelAfter(TimeSpan.FromSeconds(10));
+            var buffer = new byte[8192];
+            var length = 0;
             try
             {
-                while (header.Length < 8192 && !HeadersComplete(header))
+                while (length < buffer.Length && !HeadersComplete(buffer.AsSpan(0, length)))
                 {
-                    if (await stream.ReadAsync(buffer, requestTimeout.Token) == 0)
+                    var read = await stream.ReadAsync(buffer.AsMemory(length), requestTimeout.Token);
+                    if (read == 0)
                         break;
-                    header.Append((char)buffer[0]);
+                    length += read;
                 }
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -56,8 +59,8 @@ public sealed class SystemOAuthBrowser : IOAuthBrowser
                 continue;
             }
 
-            var requestLine = header.ToString().Split("\r\n")[0].Split(' ');
-            var valid = HeadersComplete(header)
+            var requestLine = Encoding.ASCII.GetString(buffer, 0, length).Split("\r\n")[0].Split(' ');
+            var valid = HeadersComplete(buffer.AsSpan(0, length))
                 && requestLine.Length == 3 && requestLine[0] == "GET"
                 && requestLine[1].StartsWith("/oauth/callback?", StringComparison.Ordinal)
                 && Uri.TryCreate(redirect.GetLeftPart(UriPartial.Authority) + requestLine[1], UriKind.Absolute, out _);
@@ -75,6 +78,6 @@ public sealed class SystemOAuthBrowser : IOAuthBrowser
         }
     }
 
-    private static bool HeadersComplete(StringBuilder header) => header.Length >= 4
-        && header[^4] == '\r' && header[^3] == '\n' && header[^2] == '\r' && header[^1] == '\n';
+    private static bool HeadersComplete(ReadOnlySpan<byte> header) => header.Length >= 4
+        && header[^4] == (byte)'\r' && header[^3] == (byte)'\n' && header[^2] == (byte)'\r' && header[^1] == (byte)'\n';
 }

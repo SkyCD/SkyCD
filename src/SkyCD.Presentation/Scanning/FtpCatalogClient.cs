@@ -4,7 +4,6 @@ using System.Threading;
 using FluentFTP;
 using FluentFTP.Exceptions;
 using SkyCD.Presentation.Operations;
-using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.Scanning;
 
@@ -14,15 +13,44 @@ namespace SkyCD.Presentation.Scanning;
 /// belong to FluentFTP; this class only maps the negotiated state onto the catalog session
 /// contract and onto the SkyCD exception semantics.
 /// </summary>
-public sealed class FtpCatalogConnector : IFtpCatalogConnector
+public sealed class FtpCatalogConnector : IRemoteCatalogConnector
 {
+    public string Scheme => "ftp";
+
+    public int DefaultPort => 21;
+
+    public string NormalizePath(string? path) => FtpPath.Normalize(path);
+
+    public bool CanConfirmCredentials(RemoteCredentials credentials) =>
+        credentials.Anonymous ||
+        (!string.IsNullOrWhiteSpace(credentials.Username) &&
+         (!string.IsNullOrWhiteSpace(credentials.Password) || FtpCredentials.IsAnonymousUserName(credentials.Username)));
+
+    public (string Username, string Password) ResolveCredentials(RemoteCredentials credentials)
+    {
+        var resolved = FtpCredentials.Resolve(credentials.Username, credentials.Password, credentials.Anonymous);
+        if (!credentials.Anonymous && !FtpCredentials.IsAnonymousUserName(resolved.Username) &&
+            string.IsNullOrEmpty(resolved.Password))
+        {
+            throw new RemoteAuthenticationException("ftp");
+        }
+
+        return resolved;
+    }
+
+    public RemoteConnectionException ConnectionFailed(RemoteLocation location, Exception? cause = null, string? detail = null)
+    {
+        return new RemoteConnectionException("ftp", $"{location.Host}:{location.Port}", cause,
+            detail is null ? null : $" ({detail})");
+    }
+
     /// <summary>Seconds a control or data operation may stall before it is treated as a disconnect.</summary>
     internal const int TransferTimeoutSeconds = 20;
 
     /// <summary>Seconds a TCP connect may take before it is treated as a disconnect.</summary>
     internal const int ConnectTimeoutSeconds = 15;
 
-    public IFtpRemoteSession Connect(FtpLocation location, string username, string password, CancellationToken cancellationToken)
+    public IRemoteCatalogSession Connect(RemoteLocation location, string username, string password, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(location);
 
@@ -58,7 +86,7 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
     public static FtpConfig CreateConfig() =>
         new()
         {
-            // Supported schemes are decided by FtpLocation; the transport speaks plain FTP only.
+            // Supported schemes are decided by RemoteLocation; the transport speaks plain FTP only.
             EncryptionMode = FtpEncryptionMode.None,
 
             // Passive transfer, EPSV first with PASV as the fallback.
@@ -78,7 +106,7 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
             // Listing times are normalized to UTC rather than the machine's time zone.
             TimeConversion = FtpDate.UTC,
 
-            // Let FluentFTP pick the dialect (MLSD when offered, LIST otherwise) and parse it.
+            // FluentFTP parses the server's LIST dialect.
             ListingParser = FtpParser.Auto,
             BulkListing = false,
 
@@ -98,14 +126,14 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
     /// <summary>Maps a connect failure onto the SkyCD FTP exception semantics.</summary>
     internal static Exception TranslateConnectFailure(
         Exception exception,
-        FtpLocation location,
+        RemoteLocation location,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (exception is FluentFTP.Exceptions.FtpAuthenticationException)
         {
-            return new FtpAuthenticationException(LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed));
+            return new RemoteAuthenticationException("ftp");
         }
 
         return ConnectionFailed(exception, location, cancellationToken);
@@ -115,27 +143,26 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
     internal static Exception TranslateListingFailure(
         Exception exception,
         string path,
-        FtpLocation location,
+        RemoteLocation location,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (exception is FluentFTP.Exceptions.FtpAuthenticationException)
         {
-            return new FtpAuthenticationException(LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed));
+            return new RemoteAuthenticationException("ftp");
         }
 
         if (exception is FtpCommandException command)
         {
             if (IsMissingDirectoryReply(command))
             {
-                return new FtpDirectoryNotFoundException(
-                    LocalizationService.Current.Format(TextKeys.RemoteDirectoryNotFound, path));
+                return new RemoteDirectoryNotFoundException(path);
             }
 
             if (IsListingRefusedReply(command))
             {
-                return new FtpListingNotSupportedException(path, "list-directory");
+                return new RemoteListingNotSupportedException(path, "list-directory", "ftp");
             }
         }
 
@@ -151,29 +178,23 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
         exception.CompletionCode is "500" or "501" or "502" or "504";
 
     /// <summary>Builds the connection exception the scan classifies as a transient disconnect.</summary>
-    internal static FtpConnectionException ConnectionFailed(
+    internal static RemoteConnectionException ConnectionFailed(
         Exception exception,
-        FtpLocation location,
+        RemoteLocation location,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var target = $"{location.Host}:{location.Port}";
-        var message = LocalizationService.Current.Format(TextKeys.FtpConnectionFailed, target);
         var detail = DescribeFailure(exception, location);
-        if (detail.Length > 0)
-        {
-            message = message + " " + detail;
-        }
-
-        return new FtpConnectionException(message, exception);
+        return new RemoteConnectionException("ftp", target, exception, detail.Length > 0 ? " " + detail : null);
     }
 
     /// <summary>
     /// Builds a sanitized one-line description of a transport failure. Credentials and anything
     /// that looks like a secret are removed before the text can reach a progress log.
     /// </summary>
-    internal static string DescribeFailure(Exception exception, FtpLocation location)
+    internal static string DescribeFailure(Exception exception, RemoteLocation location)
     {
         var detail = exception switch
         {
@@ -201,31 +222,31 @@ public sealed class FtpCatalogConnector : IFtpCatalogConnector
         if (username.IndexOfAny(['\r', '\n']) >= 0 || password.IndexOfAny(['\r', '\n']) >= 0)
         {
             // A line break in a credential is command injection on the control channel, not a login.
-            throw new FtpAuthenticationException(LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed));
+            throw new RemoteAuthenticationException("ftp");
         }
     }
 }
 
 /// <summary>
 /// A connected catalog session. Listings are parsed by FluentFTP; the projection onto
-/// <see cref="FtpRemoteEntry"/> keeps the catalog names, sizes, permissions and UTC timestamps.
+/// <see cref="RemoteEntry"/> keeps the catalog names, sizes, permissions and UTC timestamps.
 /// </summary>
-internal sealed class FtpRemoteSession : IFtpRemoteSession
+internal sealed class FtpRemoteSession : IRemoteCatalogSession
 {
     private readonly FtpClient client;
-    private readonly FtpLocation location;
+    private readonly RemoteLocation location;
     private readonly CancellationToken cancellationToken;
 
-    internal FtpRemoteSession(FtpClient client, FtpLocation location, CancellationToken cancellationToken)
+    internal FtpRemoteSession(FtpClient client, RemoteLocation location, CancellationToken cancellationToken)
     {
         this.client = client;
         this.location = location;
         this.cancellationToken = cancellationToken;
     }
 
-    public IReadOnlyList<FtpRemoteEntry> ListDirectory(string path)
+    public IReadOnlyList<RemoteEntry> ListDirectory(string path)
     {
-        var normalized = FtpLocation.NormalizePath(path);
+        var normalized = FtpPath.Normalize(path);
         cancellationToken.ThrowIfCancellationRequested();
 
         FtpListItem[] listing;

@@ -10,7 +10,7 @@ using Xunit;
 namespace SkyCD.App.Tests;
 
 /// <summary>
-/// Traversal resilience of <see cref="FtpCatalogScanner"/> (issue #433): directory cycles are
+/// Traversal resilience of <see cref="RemoteCatalogScanner"/> (issue #433): directory cycles are
 /// skipped, transient disconnects are retried with a reconnect, per-item failures never abort
 /// the scan, and the discovered / skipped / failed counters stay accurate.
 /// </summary>
@@ -18,7 +18,7 @@ public sealed class FtpTraversalResilienceTests
 {
     // ------------------------------------------------------------------ helpers
 
-    private static FtpScanOptions Options(ScanTraversalOptions? traversal = null) =>
+    private static RemoteScanOptions Options(ScanTraversalOptions? traversal = null) =>
         new(
             "ftp://localhost/",
             "user",
@@ -32,27 +32,27 @@ public sealed class FtpTraversalResilienceTests
     private static ScanTraversalOptions FastFail(int maxRetries = 1) =>
         new() { MaxRetries = maxRetries, RetryDelay = TimeSpan.Zero };
 
-    private static FtpRemoteEntry Dir(string name, string fullName, string parent) =>
+    private static RemoteEntry Dir(string name, string fullName, string parent) =>
         new(name, fullName, parent, IsDirectory: true, Size: 0, Permission: null, ModifiedUtc: null);
 
-    private static FtpRemoteEntry File(string name, string fullName, string parent, long size = 10) =>
+    private static RemoteEntry File(string name, string fullName, string parent, long size = 10) =>
         new(name, fullName, parent, IsDirectory: false, Size: size, Permission: null, ModifiedUtc: null);
 
     // ------------------------------------------------------------------ fakes
 
     /// <summary>Serves a fixed tree of remote entries; each path may throw on demand.</summary>
-    private sealed class FakeFtpSession : IFtpRemoteSession
+    private sealed class FakeFtpSession : IRemoteCatalogSession
     {
-        private readonly Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>> listings;
+        private readonly Dictionary<string, Func<IReadOnlyList<RemoteEntry>>> listings;
 
-        public FakeFtpSession(Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>> listings) =>
+        public FakeFtpSession(Dictionary<string, Func<IReadOnlyList<RemoteEntry>>> listings) =>
             this.listings = listings;
 
         public Dictionary<string, int> ListDirectoryCalls { get; } = new(StringComparer.Ordinal);
 
         public int TotalListDirectoryCalls => ListDirectoryCalls.Values.Sum();
 
-        public IReadOnlyList<FtpRemoteEntry> ListDirectory(string path)
+        public IReadOnlyList<RemoteEntry> ListDirectory(string path)
         {
             ListDirectoryCalls[path] = ListDirectoryCalls.GetValueOrDefault(path) + 1;
 
@@ -65,13 +65,22 @@ public sealed class FtpTraversalResilienceTests
         }
     }
 
-    private sealed class FakeFtpConnector : IFtpCatalogConnector
+    private sealed class FakeFtpConnector : IRemoteCatalogConnector
     {
-        private readonly Func<IFtpRemoteSession> factory;
+        private readonly Func<IRemoteCatalogSession> factory;
 
-        public FakeFtpConnector(Func<IFtpRemoteSession> factory) => this.factory = factory;
+        private readonly FtpCatalogConnector ftp = new();
 
-        public IFtpRemoteSession Connect(FtpLocation location, string username, string password, CancellationToken cancellationToken) =>
+        public FakeFtpConnector(Func<IRemoteCatalogSession> factory) => this.factory = factory;
+
+        public string Scheme => ftp.Scheme;
+        public int DefaultPort => ftp.DefaultPort;
+        public string NormalizePath(string? path) => ftp.NormalizePath(path);
+        public bool CanConfirmCredentials(RemoteCredentials credentials) => ftp.CanConfirmCredentials(credentials);
+        public (string Username, string Password) ResolveCredentials(RemoteCredentials credentials) => ftp.ResolveCredentials(credentials);
+        public RemoteConnectionException ConnectionFailed(RemoteLocation location, Exception? cause = null, string? detail = null) => ftp.ConnectionFailed(location, cause, detail);
+
+        public IRemoteCatalogSession Connect(RemoteLocation location, string username, string password, CancellationToken cancellationToken) =>
             factory();
     }
 
@@ -123,7 +132,7 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_DirectoryCycle_IsSkippedAndTheScanStillCompletes()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () =>
             [
@@ -136,7 +145,7 @@ public sealed class FtpTraversalResilienceTests
         });
 
         var progress = new CapturingProgress();
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
 
         Assert.Contains(result.Documents, document => document.Name == "root.txt");
         Assert.Contains(result.Documents, document => document.Name == "deep.txt");
@@ -148,14 +157,14 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_SelfReferencingDirectory_IsSkippedWithoutLooping()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [Dir("self", "/self", "/"), File("root.txt", "/root.txt", "/")],
             ["/self"] = () => [Dir("self", "/self", "/self")],
         });
 
         var progress = new CapturingProgress();
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
 
         Assert.Contains(result.Documents, document => document.Name == "root.txt");
         Assert.Contains(progress.Skipped, path => path == "/self");
@@ -168,7 +177,7 @@ public sealed class FtpTraversalResilienceTests
     public void Scan_TransientDisconnectThenReconnect_RetriesAndSucceeds()
     {
         var attempts = 0;
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [Dir("data", "/data", "/"), File("readme.txt", "/readme.txt", "/")],
             ["/data"] = () =>
@@ -176,14 +185,14 @@ public sealed class FtpTraversalResilienceTests
                 attempts++;
                 if (attempts == 1)
                 {
-                    throw new FtpConnectionException("Connection reset by peer");
+                    throw new RemoteConnectionException("ftp", "Connection reset by peer");
                 }
 
                 return [File("report.csv", "/data/report.csv", "/data", size: 20)];
             },
         });
 
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session))
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session))
             .ScanDetailed(Options(new ScanTraversalOptions { MaxRetries = 2, RetryDelay = TimeSpan.Zero }));
 
         Assert.Equal(2, attempts);
@@ -196,14 +205,14 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_ChildRetryExhausted_FailsTheItemAndContinues()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [Dir("flaky", "/flaky", "/"), File("ok.txt", "/ok.txt", "/")],
-            ["/flaky"] = () => throw new FtpConnectionException("Server closed the connection"),
+            ["/flaky"] = () => throw new RemoteConnectionException("ftp", "Server closed the connection"),
         });
 
         var progress = new CapturingProgress();
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session))
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session))
             .ScanDetailed(Options(FastFail()), progress);
 
         Assert.Contains(result.Documents, document => document.Name == "ok.txt");
@@ -216,14 +225,14 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_ChildDirectoryVanished_FailsTheItemAndContinues()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [Dir("gone", "/gone", "/"), File("ok.txt", "/ok.txt", "/")],
-            ["/gone"] = () => throw new FtpDirectoryNotFoundException("Directory not found"),
+            ["/gone"] = () => throw new RemoteDirectoryNotFoundException("Directory not found"),
         });
 
         var progress = new CapturingProgress();
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
 
         Assert.Contains(result.Documents, document => document.Name == "ok.txt");
         Assert.Contains(progress.Failed, path => path == "/gone");
@@ -233,13 +242,13 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_RootListingRetryExhausted_IsFatal()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
-            ["/"] = () => throw new FtpConnectionException("Server unreachable"),
+            ["/"] = () => throw new RemoteConnectionException("ftp", "Server unreachable"),
         });
 
-        var exception = Assert.Throws<FtpConnectionException>(() =>
-            new FtpCatalogScanner(new FakeFtpConnector(() => session))
+        var exception = Assert.Throws<RemoteConnectionException>(() =>
+            new RemoteCatalogScanner(new FakeFtpConnector(() => session))
                 .ScanDetailed(Options(FastFail())));
 
         Assert.Contains("localhost", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -249,10 +258,10 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_ConnectRetryExhausted_IsFatalAndHidesCredentials()
     {
-        var connector = new FakeFtpConnector(() => throw new FtpConnectionException("Connection refused"));
+        var connector = new FakeFtpConnector(() => throw new RemoteConnectionException("ftp", "Connection refused"));
 
-        var exception = Assert.Throws<FtpConnectionException>(() =>
-            new FtpCatalogScanner(connector).ScanDetailed(Options(FastFail())));
+        var exception = Assert.Throws<RemoteConnectionException>(() =>
+            new RemoteCatalogScanner(connector).ScanDetailed(Options(FastFail())));
 
         Assert.Contains("localhost", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("pass", exception.Message, StringComparison.Ordinal);
@@ -265,11 +274,11 @@ public sealed class FtpTraversalResilienceTests
         var connector = new FakeFtpConnector(() =>
         {
             attempts++;
-            throw new FtpAuthenticationException("Authentication failed");
+            throw new RemoteAuthenticationException("ftp");
         });
 
-        Assert.Throws<FtpAuthenticationException>(() =>
-            new FtpCatalogScanner(connector).ScanDetailed(Options(FastFail())));
+        Assert.Throws<RemoteAuthenticationException>(() =>
+            new RemoteCatalogScanner(connector).ScanDetailed(Options(FastFail())));
 
         Assert.Equal(1, attempts);
     }
@@ -279,16 +288,16 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_CancelledDuringRetryWait_ThrowsOperationCanceledException()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
-            ["/"] = () => throw new FtpConnectionException("Temporary disconnect"),
+            ["/"] = () => throw new RemoteConnectionException("ftp", "Temporary disconnect"),
         });
 
         using var cancellation = new CancellationTokenSource();
         cancellation.CancelAfter(TimeSpan.FromMilliseconds(30));
 
         Assert.ThrowsAny<OperationCanceledException>(() =>
-            new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(
+            new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(
                 Options(new ScanTraversalOptions
                 {
                     MaxRetries = 100,
@@ -300,7 +309,7 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_CancelledBeforeTraversal_ThrowsOperationCanceledException()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [File("never.txt", "/never.txt", "/")],
         });
@@ -309,7 +318,7 @@ public sealed class FtpTraversalResilienceTests
         cancellation.Cancel();
 
         Assert.ThrowsAny<OperationCanceledException>(() =>
-            new FtpCatalogScanner(new FakeFtpConnector(() => session))
+            new RemoteCatalogScanner(new FakeFtpConnector(() => session))
                 .ScanDetailed(Options(), cancellationToken: cancellation.Token));
     }
 
@@ -318,7 +327,7 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_ExclusionPatterns_SkipMatchingEntriesAndKeepCounts()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () =>
             [
@@ -330,7 +339,7 @@ public sealed class FtpTraversalResilienceTests
         });
 
         var progress = new CapturingProgress();
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(
             Options(new ScanTraversalOptions { ExclusionPatterns = ["*.tmp", "drop-dir"] }),
             progress);
 
@@ -347,7 +356,7 @@ public sealed class FtpTraversalResilienceTests
         const int folderCount = 25;
         const int filesPerFolder = 5;
 
-        var listings = new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var listings = new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () =>
             [
@@ -367,7 +376,7 @@ public sealed class FtpTraversalResilienceTests
         }
 
         var session = new FakeFtpSession(listings);
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options());
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options());
 
         var expected = 1 + folderCount + (folderCount * filesPerFolder);
         Assert.Equal(expected, result.Documents.Count);
@@ -379,14 +388,14 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_FailedItem_IsReportedWithoutCredentials()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [Dir("private", "/private", "/")],
-            ["/private"] = () => throw new FtpConnectionException("ftp://user:p@ssw0rd@host/private failed"),
+            ["/private"] = () => throw new RemoteConnectionException("ftp", "ftp://user:p@ssw0rd@host/private failed"),
         });
 
         var progress = new AddingProgressDialogViewModel();
-        new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(
+        new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(
             Options(new ScanTraversalOptions { MaxRetries = 0, RetryDelay = TimeSpan.Zero }),
             progress);
 
@@ -399,13 +408,13 @@ public sealed class FtpTraversalResilienceTests
     [Fact]
     public void Scan_Completed_ReportsDiscoveredSkippedAndFailed()
     {
-        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<FtpRemoteEntry>>>
+        var session = new FakeFtpSession(new Dictionary<string, Func<IReadOnlyList<RemoteEntry>>>
         {
             ["/"] = () => [File("a.txt", "/a.txt", "/")],
         });
 
         var progress = new CapturingProgress();
-        var result = new FtpCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
+        var result = new RemoteCatalogScanner(new FakeFtpConnector(() => session)).ScanDetailed(Options(), progress);
 
         Assert.Equal(2, result.Statistics.Discovered);
         Assert.Equal(0, result.Statistics.Skipped);

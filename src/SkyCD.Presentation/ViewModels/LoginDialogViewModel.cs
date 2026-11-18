@@ -6,10 +6,9 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class LoginDialogViewModel : ObservableObject
 {
-    public bool CanConfirm =>
-        UseAnonymous ||
-        (!string.IsNullOrWhiteSpace(Username) &&
-         (!string.IsNullOrWhiteSpace(Password) || FtpCredentials.IsAnonymousUserName(Username)));
+    private IRemoteCatalogConnector provider = RemoteCatalogProviderRegistry.Default.Get("ftp");
+
+    public bool CanConfirm => provider.CanConfirmCredentials(new RemoteCredentials(Username, Password, UseAnonymous));
 
     public bool IsCredentialEntryEnabled => !UseAnonymous;
 
@@ -21,10 +20,12 @@ public partial class LoginDialogViewModel : ObservableObject
 
     [ObservableProperty] private bool dialogAccepted;
 
-    public static LoginDialogViewModel FromAddress(string? address)
+    public static LoginDialogViewModel FromAddress(string? address, RemoteCatalogProviderRegistry? registry = null)
     {
-        var viewModel = new LoginDialogViewModel();
-        if (FtpLocation.TryReadUserInfo(address, out var username, out var password))
+        registry ??= RemoteCatalogProviderRegistry.Default;
+        var location = RemoteLocation.Parse(address, registry);
+        var viewModel = new LoginDialogViewModel { provider = registry.Get(location.Scheme) };
+        if (RemoteLocation.TryReadUserInfo(address, out var username, out var password))
         {
             viewModel.Username = username;
             viewModel.Password = password;

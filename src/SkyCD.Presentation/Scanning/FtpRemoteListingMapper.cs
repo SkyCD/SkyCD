@@ -6,20 +6,20 @@ using FluentFTP;
 namespace SkyCD.Presentation.Scanning;
 
 /// <summary>
-/// Maps FluentFTP listing items onto the catalog's <see cref="FtpRemoteEntry"/> (#580).
+/// Maps FluentFTP listing items onto the catalog's <see cref="RemoteEntry"/> (#580).
 /// The remote listing parser itself is FluentFTP's; only the catalog-facing projection lives here.
 /// </summary>
 public static class FtpRemoteListingMapper
 {
-    public static IReadOnlyList<FtpRemoteEntry> Map(IEnumerable<FtpListItem?>? listing, string directoryPath)
+    public static IReadOnlyList<RemoteEntry> Map(IEnumerable<FtpListItem?>? listing, string directoryPath)
     {
-        var entries = new List<FtpRemoteEntry>();
+        var entries = new List<RemoteEntry>();
         if (listing is null)
         {
             return entries;
         }
 
-        var directory = FtpLocation.NormalizePath(directoryPath);
+        var directory = FtpPath.Normalize(directoryPath);
         foreach (var item in listing)
         {
             if (item is null)
@@ -41,7 +41,7 @@ public static class FtpRemoteListingMapper
     /// Projects one listing item. Returns null for the self/parent directory records and for
     /// names the catalog cannot represent (empty, dot entries, or names containing a separator).
     /// </summary>
-    public static FtpRemoteEntry? MapItem(FtpListItem item, string directoryPath)
+    public static RemoteEntry? MapItem(FtpListItem item, string directoryPath)
     {
         ArgumentNullException.ThrowIfNull(item);
 
@@ -50,7 +50,7 @@ public static class FtpRemoteListingMapper
             return null;
         }
 
-        var directory = FtpLocation.NormalizePath(directoryPath);
+        var directory = FtpPath.Normalize(directoryPath);
         var name = CatalogName(item);
         if (!IsCatalogName(name))
         {
@@ -60,9 +60,9 @@ public static class FtpRemoteListingMapper
         var isDirectory = item.Type == FtpObjectType.Directory;
         var size = isDirectory || item.Type == FtpObjectType.Link ? 0 : Math.Max(0, item.Size);
 
-        return new FtpRemoteEntry(
+        return new RemoteEntry(
             name,
-            FtpLocation.Combine(directory, name),
+            FtpPath.Combine(directory, name),
             directory,
             isDirectory,
             size,
