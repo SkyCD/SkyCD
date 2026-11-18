@@ -63,14 +63,36 @@ Description`). Column shapes verified against the VVV export source
 
 ## Backup files (.vvvbk)
 
-SkyCD does not directly import `.vvvbk` backups or native `.vvv` catalogs.
-Keep the backup unchanged and restore it with a compatible VVV installation to
-a new catalog, then export all physical volumes with headers and a TAB separator.
-Ensure the export is UTF-8, converting it if necessary, before importing it. This
-does not preserve virtual hierarchy or audio metadata. See the
-[backup compatibility assessment](../implementation/issue-511-vvvbk-assessment.md).
+SkyCD imports VVV 1.5 logical backups (`.vvvbk`) read-only for VVV schema
+versions 14 through 23. Open the backup like any supported catalog file; no VVV
+installation or catalog upgrade is needed. The import restores a private copy
+and leaves the backup and existing catalogs unchanged.
+
+- The import needs a Firebird 5 embedded engine. SkyCD does not bundle the
+  native engine; set `SKYCD_FIREBIRD_ENGINE` to an engine directory (containing
+  `fbclient.dll` and `plugins/engine13.dll`) or place it under
+  `firebird/v5` next to the application or plugin.
+- Only a trusted engine distribution should be configured. The import stages a
+  workspace-local copy with network, external-file and UDF access disabled, but
+  this is not an OS-enforced sandbox.
+- Mapped data includes physical volumes and folders, folder and file
+  descriptions, volume metadata, virtual folders and links, and audio metadata.
+  A `Virtual Folders` media node contains the virtual tree; additional
+  placements of the same folder appear as explicit link rows.
+- Limits are 4 GiB per backup, 2,000,000 rows and 256 hierarchy levels.
+  Non-backup, truncated, corrupt, unsupported-version and over-limit inputs
+  fail with an actionable message.
+- Native `.vvv` catalogs are still not imported. As a fallback, restore the
+  backup with a compatible VVV installation and export all physical volumes
+  with headers and a TAB separator; that export loses virtual structure and
+  audio metadata.
+
+See the [backup import assessment](../implementation/issue-511-vvvbk-assessment.md).
 
 ## Known Loss of Information
-- **Virtual folder structure**: not exported by VVV, only physical origin.
-- **Folder metadata/dates**: folders are synthesized, carrying no dates.
-- **Empty folders**: never present in exports.
+- **Virtual folder structure**: not exported by VVV CSV/TSV, only physical
+  origin; direct `.vvvbk` import preserves it.
+- **Folder metadata/dates**: folders are synthesized in CSV/TSV exports,
+  carrying no dates; direct `.vvvbk` import maps path descriptions.
+- **Empty folders**: never present in CSV/TSV exports; direct `.vvvbk` import
+  maps them.
