@@ -245,6 +245,39 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return result;
     }
 
+    /// <summary>Writes beside the destination and replaces it only after successful serialization.</summary>
+    public async Task<FileFormatWriteResult> WriteFileAsync(string formatId, string path, object payload,
+        IProgress<int>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var destination = Path.GetFullPath(path);
+        var directory = Path.GetDirectoryName(destination)!;
+        Directory.CreateDirectory(directory);
+        var temporary = Path.Combine(directory, $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            FileFormatWriteResult result;
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                result = await WriteAsync(new FileFormatWriteRequest
+                {
+                    FormatId = formatId,
+                    FileName = Path.GetFileName(destination),
+                    Target = stream,
+                    Payload = payload,
+                    Progress = progress
+                }, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporary, destination, overwrite: true);
+            return result;
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
     {
