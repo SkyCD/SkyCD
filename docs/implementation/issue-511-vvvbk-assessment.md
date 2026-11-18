@@ -5,7 +5,7 @@
 Do not implement direct `.vvvbk` import yet. The available evidence identifies a
 Firebird backup/restore stream, and IDPL 1.0 for the managed Firebird client is
 now an approved package exception ([#618](https://github.com/SkyCD/SkyCD/issues/618),
-[PR #620](https://github.com/SkyCD/SkyCD/pull/620)), but genuine,
+[PR #617](https://github.com/SkyCD/SkyCD/pull/617)), but genuine,
 redistributable, version-identified backup fixtures and a verified restore path
 have not been established. Native `.vvv` import is also unsupported; see the
 [separate assessment](issue-455-vvv-compatibility.md). For now, restore the
@@ -84,7 +84,7 @@ The
 [FirebirdSql.Data.FirebirdClient 10.3.4 license](https://www.nuget.org/packages/FirebirdSql.Data.FirebirdClient/10.3.4/License)
 is IDPL 1.0, which has no SPDX identifier, so CycloneDX reports it as unknown.
 Issue [#618](https://github.com/SkyCD/SkyCD/issues/618) and
-[PR #620](https://github.com/SkyCD/SkyCD/pull/620) record IDPL 1.0 approval for
+[PR #617](https://github.com/SkyCD/SkyCD/pull/617) record IDPL 1.0 approval for
 this package as an explicit unknown-license exception under the policy's
 [exception process](../legal/dependency-policy.md#exception-process). Any use
 must consume the package unmodified as a separate library, retain its notice
