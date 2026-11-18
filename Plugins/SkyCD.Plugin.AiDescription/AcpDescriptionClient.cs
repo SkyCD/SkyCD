@@ -169,7 +169,7 @@ public sealed class AcpDescriptionClient
             var method = authMethods.FirstOrDefault(candidate => candidate.Id == options.AuthMethodId)
                 ?? throw new DescriptionAgentException("the configured ACP authentication method is not advertised by this agent");
             if (method.Type != "agent")
-                throw new DescriptionAgentException("only agent-managed ACP authentication is supported; complete interactive sign-in manually and clear AuthMethodId");
+                throw new DescriptionAgentException("only agent-managed ACP authentication is supported; complete terminal or other interactive sign-in manually and clear AuthMethodId");
             await RequestAsync("authenticate", new { methodId = method.Id }, cancellationToken);
         }
         var capabilities = initialized.TryGetProperty("agentCapabilities", out var caps)
