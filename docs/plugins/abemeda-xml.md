@@ -13,7 +13,9 @@ find-results shapes) and the shared NeoFinder/abeMeda catalog concepts (volumes,
 folders, files, comments, dates, sizes, media metadata). Committed fixtures are
 therefore synthetic and version-labeled; conformance against genuine application
 exports is an explicit open follow-up, and the parser accepts a documented
-superset of tag/attribute spellings so real files have room to match.
+superset of tag/attribute spellings so real files have room to match. Native
+catalog fixtures for the same family are tracked separately in the
+[issue #589 fixture acquisition note](../implementation/issue-589-abemeda-native-fixtures.md).
 
 Family roots: `AbeMeda`, `NeoFinder`, `CDFinder`, `CDWinder` (any namespace).
 Volumes: `Volume`, `Disk`, `Media`, `Catalogue`, `Archive`, `CatalogVolume`.
