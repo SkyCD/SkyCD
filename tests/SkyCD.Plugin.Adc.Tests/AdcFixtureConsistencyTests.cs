@@ -17,9 +17,18 @@ public sealed class AdcFixtureConsistencyTests
             {
                 var relative = Path.GetRelativePath(expectedDirectory, expectedPath);
                 var committedPath = AdcCheckedInFixtureTests.FixturePath(relative);
-                Assert.Equal(
-                    File.ReadAllBytes(expectedPath),
-                    File.ReadAllBytes(committedPath));
+                if (relative == "manifest.json")
+                {
+                    Assert.Equal(
+                        File.ReadAllText(expectedPath).Replace("\r\n", "\n", StringComparison.Ordinal),
+                        File.ReadAllText(committedPath).Replace("\r\n", "\n", StringComparison.Ordinal));
+                }
+                else
+                {
+                    Assert.Equal(
+                        File.ReadAllBytes(expectedPath),
+                        File.ReadAllBytes(committedPath));
+                }
             }
         }
         finally
