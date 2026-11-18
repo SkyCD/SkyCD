@@ -199,4 +199,19 @@ public static class TextKeys
     public const string CollectionCleaned = "core.text.CollectionCleaned";
     public const string CollectionAddedTo = "core.text.CollectionAddedTo";
     public const string CollectionRemovedFrom = "core.text.CollectionRemovedFrom";
+    public const string GenerateAiDescriptions = "core.text.GenerateAiDescriptions";
+    public const string AiDescriptionUnavailableStatus = "core.text.AiDescriptionUnavailableStatus";
+    public const string AiDescriptionBatchNoTargets = "core.text.AiDescriptionBatchNoTargets";
+    public const string AiDescriptionProvider = "core.text.AiDescriptionProvider";
+    public const string AiDescriptionDisabled = "core.text.AiDescriptionDisabled";
+    public const string AiDescriptionContext = "core.text.AiDescriptionContext";
+    public const string AiDescriptionProvenance = "core.text.AiDescriptionProvenance";
+    public const string AiDescriptionFailedState = "core.text.AiDescriptionFailedState";
+    public const string AiDescriptionGenerateFailed = "core.text.AiDescriptionGenerateFailed";
+    public const string AiDescriptionAdoptConfirmation = "core.text.AiDescriptionAdoptConfirmation";
+    public const string AiDescriptionBatchItemCount = "core.text.AiDescriptionBatchItemCount";
+    public const string AiDescriptionBatchProgress = "core.text.AiDescriptionBatchProgress";
+    public const string AiDescriptionBatchSummary = "core.text.AiDescriptionBatchSummary";
+    public const string AiDescriptionBatchCancelled = "core.text.AiDescriptionBatchCancelled";
+    public const string AiDescriptionBatchFailed = "core.text.AiDescriptionBatchFailed";
 }
