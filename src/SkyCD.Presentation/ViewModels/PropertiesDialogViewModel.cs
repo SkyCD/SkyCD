@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
@@ -13,6 +14,10 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class PropertiesDialogViewModel : ObservableObject
 {
+    private static readonly Regex TimestampPattern = new(
+        @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,7})?(?<offset>Z|[+-][0-9]{2}:[0-9]{2})?\z",
+        RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+
     private readonly PropertiesCollection sourceProperties;
     private readonly IStringLocalizer valueLocalizer;
     public PropertiesDialogViewModel(
@@ -167,9 +172,10 @@ public partial class PropertiesDialogViewModel : ObservableObject
         IStringLocalizer localizer)
     {
         var normalizedDisplay = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+        var culture = CultureInfo.CurrentUICulture;
         foreach (var (key, value) in infoProperties)
         {
-            normalizedDisplay[key] = NormalizeDisplayValue(value, localizer);
+            normalizedDisplay[key] = NormalizeDisplayValue(value, localizer, culture);
         }
 
         return new PropertiesCollection(normalizedDisplay.ToDictionary(
@@ -181,9 +187,8 @@ public partial class PropertiesDialogViewModel : ObservableObject
     private static string NormalizeDisplayValue(
         object? value,
         IStringLocalizer localizer,
-        CultureInfo? culture = null)
+        CultureInfo culture)
     {
-        culture ??= CultureInfo.CurrentUICulture;
         var unknownText = localizer["Unknown"].Value;
         var yesText = localizer["Yes"].Value;
         var noText = localizer["No"].Value;
@@ -198,6 +203,16 @@ public partial class PropertiesDialogViewModel : ObservableObject
             return boolValue ? yesText : noText;
         }
 
+        if (value is DateTimeOffset offsetValue)
+        {
+            return offsetValue.ToLocalTime().ToString("G", culture);
+        }
+
+        if (value is DateTime dateValue)
+        {
+            return (dateValue.Kind == DateTimeKind.Utc ? dateValue.ToLocalTime() : dateValue).ToString("G", culture);
+        }
+
         var text = value.ToString();
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -207,6 +222,22 @@ public partial class PropertiesDialogViewModel : ObservableObject
         if (bool.TryParse(text, out var parsedBool))
         {
             return parsedBool ? yesText : noText;
+        }
+
+        var timestampMatch = TimestampPattern.Match(text);
+        if (timestampMatch.Success)
+        {
+            if (timestampMatch.Groups["offset"].Success &&
+                DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var timestamp))
+            {
+                return timestamp.ToLocalTime().ToString("G", culture);
+            }
+
+            if (!timestampMatch.Groups["offset"].Success &&
+                DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var wallClock))
+            {
+                return wallClock.ToString("G", culture);
+            }
         }
 
         if (string.Equals(text, nameof(CatalogContentsState.NotScanned), StringComparison.OrdinalIgnoreCase))

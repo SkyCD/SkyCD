@@ -50,6 +50,25 @@ public sealed class LocalizationViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Properties_CultureChangeRefreshesTimestampsFromRawSource()
+    {
+        const string timestamp = "2016-06-05T16:49:14.9800000";
+        LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("en-US"));
+        var source = new PropertiesCollection { ["Created"] = timestamp };
+        var vm = new PropertiesDialogViewModel("key", "Name", "file", "", source);
+        var notifications = new List<string?>();
+        vm.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        Assert.Equal("6/5/2016 4:49:14 PM", vm.InfoProperties["Created"]);
+
+        LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("lt-LT"));
+
+        Assert.Equal("2016-06-05 16:49:14", vm.InfoProperties["Created"]);
+        Assert.Contains(nameof(PropertiesDialogViewModel.InfoProperties), notifications);
+        Assert.Equal(timestamp, vm.GetProperties()["Created"]);
+        Assert.Equal(timestamp, source["Created"]);
+    }
+
+    [Fact]
     public void Properties_CultureChangeRefreshesBooleanAndNullValuesFromRawSource()
     {
         LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("en"));
