@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia.Input;
 using SkyCD.App.Converters;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -1277,6 +1279,47 @@ public class MainWindowViewModelTests
             Assert.Equal(item.InputGesture, item.HotKey);
             Assert.IsType<KeyGesture>(gestureConverter.Convert(item.HotKey, typeof(KeyGesture), null, CultureInfo.InvariantCulture));
         });
+    }
+
+    [Fact]
+    public void FileMenu_OffersOnlyCatalogFileOperations()
+    {
+        var vm = CreateViewModel();
+        var localization = LocalizationService.Current;
+
+        ICommand?[] expectedCommands =
+        [
+            vm.NewCatalogCommand,
+            vm.OpenCatalogCommand,
+            vm.SaveCatalogCommand,
+            vm.SaveCatalogAsCommand,
+            vm.OpenPropertiesCommand,
+            vm.ExitApplicationCommand
+        ];
+        var commands = vm.FileMenuItems
+            .Where(item => item.Command is not null)
+            .Select(item => item.Command)
+            .ToArray();
+        Assert.Equal(expectedCommands, commands);
+
+        string[] expectedHeaders =
+        [
+            localization.Get(TextKeys.New),
+            localization.Get(TextKeys.Open),
+            localization.Get(TextKeys.Save),
+            localization.Get(TextKeys.SaveAs),
+            localization.Get(TextKeys.Properties),
+            localization.Get(TextKeys.Exit)
+        ];
+        var headers = vm.FileMenuItems
+            .Where(item => item.Header != "-")
+            .Select(item => item.Header)
+            .ToArray();
+        Assert.Equal(expectedHeaders, headers);
+
+        Assert.DoesNotContain(
+            AllMenuItems(vm),
+            item => item.HotKey == "Ctrl+Shift+O" || item.InputGesture == "Ctrl+Shift+O");
     }
 
     [Fact]
