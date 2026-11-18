@@ -7,4 +7,7 @@
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CommandDotNet" Version="8.1.1"/>
+    </ItemGroup>
 </Project>

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.CdCatalogExpert;
 using Xunit;
@@ -152,6 +153,19 @@ public sealed class ZdcReaderTests
         });
         using var stream = ZdcFixture.StreamOf(mutated);
         Assert.False(plugin.CanHandleContent(stream, "catalog.zdc"));
+    }
+
+    [Fact]
+    public void Read_Windows1252Xml_PreservesPayload()
+    {
+        var payload = Encoding.Latin1.GetBytes("<?xml version=\"1.0\" encoding=\"windows-1252\"?><catalog>\u0080</catalog>");
+        var database = new ZdcDatabase();
+        database.Members.Add(new ZdcMember { FileName = "catalog.xml", Payload = payload });
+
+        using var stream = ZdcFixture.StreamOf(ZdcFixture.Serialize(database));
+        var result = ZdcReader.Read(stream);
+
+        Assert.Equal(payload, Assert.Single(result.Members, member => member.FileName == "catalog.xml").Payload);
     }
 
     [Fact]

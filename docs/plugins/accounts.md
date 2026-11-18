@@ -90,3 +90,33 @@ failures fail with exit code 3.
 No network access and no vendor APIs: sync works offline against the local
 store plus optional `--from` files. Passwords, tokens and keys are never
 stored — only product, seat, date and note metadata.
+
+## JetBrains connector
+
+`SkyCD.Plugin.Accounts.JetBrains` additionally implements `IOAuthClient`,
+`IAccountConnector`, `IOwnershipProvider` and `IActionProvider`, so a single
+discovered capability provides the JetBrains-specific connection, ownership and
+launch behavior. OAuth tokens stay in the host's encrypted OAuth store; the
+plugin only persists a token-free ownership snapshot
+(`%LocalAppData%/SkyCD/jetbrains.json`, or `--store`).
+
+```bash
+skycd jetbrains connect [--account <name>] [--store <jetbrains.json>]
+skycd jetbrains sync    [--account <name>] [--store <jetbrains.json>]
+skycd jetbrains status  [--account <name>] [--store <jetbrains.json>]
+skycd jetbrains launch <product-code> [--store <jetbrains.json>]
+skycd jetbrains signout [--account <name>]
+```
+
+`sync` calls the JetBrains Account API with the current access token, records
+license type, expiration, renewal, trial/suspension state and optional assignee
+email, and scans for locally installed IDEs (Toolbox and standalone, Windows and
+macOS layouts). `status` derives subscription state at read time, links owned
+products to installed IDEs, and reports installed products without a license.
+`connect`/`sync` exit with code 2 when sign-in is required, 3 on API or store
+failures. `launch` starts the detected IDE for a product code.
+
+Endpoints are public-native-client defaults and can be overridden with
+`SKYCD_JETBRAINS_OAUTH_CLIENT_ID`, `SKYCD_JETBRAINS_OAUTH_AUTHORIZATION_ENDPOINT`,
+`SKYCD_JETBRAINS_OAUTH_TOKEN_ENDPOINT`, `SKYCD_JETBRAINS_OAUTH_SCOPES`,
+`SKYCD_JETBRAINS_API_BASE` and `SKYCD_JETBRAINS_LICENSES_PATH`.
