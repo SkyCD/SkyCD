@@ -5,6 +5,8 @@
     <ItemGroup>
         <!-- MIT: tag-soup HTML parsing for report import. No script execution; parsing only. -->
         <PackageReference Include="AngleSharp" Version="1.10.4" />
+        <!-- Apache-2.0: compliant per dependency-license-policy.json -->
+        <PackageReference Include="CsvHelper" Version="34.0.0" />
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>

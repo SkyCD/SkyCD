@@ -1,22 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper;
 
 namespace SkyCD.Plugin.Csv;
 
 /// <summary>
-/// Shared, compliant CSV stream parser supporting auto-detected delimiters,
-/// quoted delimiters/newlines, and RFC 4180 quote escaping.
+/// Shared CSV stream parser supporting auto-detected delimiters, quoted
+/// delimiters/newlines, and RFC 4180 quote escaping. The public API is
+/// implemented via CsvHelper where appropriate; character-level helpers
+/// remain for callers that operate on individual lines (<see cref="CsvCatalogPlugin"/>).
 /// </summary>
 public static class CsvParser
 {
-    private static readonly char[] RecognizedDelimiters = [',', ';', '\t'];
-
     /// <summary>
-    /// Detects the column separator delimiter from a header line.
+    /// Detects the column separator delimiter from a header line by counting
+    /// unquoted occurrences of comma, semicolon and tab, returning the most
+    /// frequent (comma on a tie).
     /// </summary>
     public static char DetectDelimiter(string headerLine)
     {
@@ -58,133 +62,92 @@ public static class CsvParser
     }
 
     /// <summary>
-    /// Parses a single CSV line with the given delimiter.
+    /// Parses a single CSV line with the given delimiter using CsvHelper.
     /// </summary>
     public static List<string> ParseLine(string line, char delimiter = ',')
     {
-        var result = new List<string>();
-        var buffer = new StringBuilder();
-        var inQuotes = false;
-
-        for (var index = 0; index < line.Length; index++)
+        var options = new CsvReaderOptions
         {
-            var current = line[index];
-            if (current == '"')
+            Separator = delimiter,
+            HasHeader = false,
+            SkipEmptyLines = false,
+            MalformedData = CsvMalformedDataHandling.Recover,
+            AllowLineBreaksInQuotes = false,
+            Mode = CsvMode.Rfc4180
+        };
+
+        using var reader = CsvReader.Create(new StringReader(line), options, leaveOpen: false);
+        if (reader.Read())
+        {
+            var fields = new List<string>(reader.FieldCount);
+            for (var i = 0; i < reader.FieldCount; i++)
             {
-                if (inQuotes && index + 1 < line.Length && line[index + 1] == '"')
-                {
-                    buffer.Append('"');
-                    index++;
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
+                fields.Add(reader.GetString(i));
             }
-            else if (current == delimiter && !inQuotes)
-            {
-                result.Add(buffer.ToString());
-                buffer.Clear();
-            }
-            else
-            {
-                buffer.Append(current);
-            }
+
+            return fields;
         }
 
-        result.Add(buffer.ToString());
-        return result;
+        return [];
     }
 
     /// <summary>
-    /// Reads all records from a text reader with detected delimiter, supporting multi-line quoted fields.
+    /// Reads all records from a text reader with detected delimiter, supporting
+    /// multi-line quoted fields. Blank lines between records are skipped.
     /// </summary>
     public static async Task<CsvReadResult> ReadCsvAsync(
         TextReader reader,
         char? explicitDelimiter = null,
         CancellationToken cancellationToken = default)
     {
-        var rows = new List<List<string>>();
-        var currentRow = new List<string>();
-        var fieldBuffer = new StringBuilder();
-        var inQuotes = false;
+        // Buffer the entire content so we can detect the delimiter from the
+        // first non-blank line before handing it to CsvHelper.
+        // Preserve the LF line endings returned by the previous line-based parser.
+        var content = (await reader.ReadToEndAsync(cancellationToken))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+
         var delimiter = explicitDelimiter ?? ',';
-        var delimiterResolved = explicitDelimiter.HasValue;
-        var hasContentInField = false;
-
-        string? line;
-        while ((line = await reader.ReadLineAsync(cancellationToken)) is not null)
+        if (!explicitDelimiter.HasValue)
         {
-            if (!delimiterResolved && !inQuotes)
+            foreach (var candidate in content.Split('\n'))
             {
-                if (string.IsNullOrWhiteSpace(line))
+                if (!string.IsNullOrWhiteSpace(candidate))
                 {
-                    continue;
+                    delimiter = DetectDelimiter(candidate);
+                    break;
                 }
-
-                delimiter = DetectDelimiter(line);
-                delimiterResolved = true;
-            }
-
-            for (var index = 0; index < line.Length; index++)
-            {
-                var current = line[index];
-                if (current == '"')
-                {
-                    if (inQuotes && index + 1 < line.Length && line[index + 1] == '"')
-                    {
-                        fieldBuffer.Append('"');
-                        hasContentInField = true;
-                        index++;
-                    }
-                    else
-                    {
-                        inQuotes = !inQuotes;
-                        hasContentInField = true;
-                    }
-                }
-                else if (current == delimiter && !inQuotes)
-                {
-                    currentRow.Add(fieldBuffer.ToString());
-                    fieldBuffer.Clear();
-                    hasContentInField = false;
-                }
-                else
-                {
-                    fieldBuffer.Append(current);
-                    hasContentInField = true;
-                }
-            }
-
-            if (inQuotes)
-            {
-                // Newline within a quoted field
-                fieldBuffer.Append('\n');
-            }
-            else
-            {
-                currentRow.Add(fieldBuffer.ToString());
-                fieldBuffer.Clear();
-
-                // Skip purely empty lines between records
-                if (currentRow.Count > 1 || (currentRow.Count == 1 && !string.IsNullOrWhiteSpace(currentRow[0])))
-                {
-                    rows.Add(currentRow);
-                }
-
-                currentRow = new List<string>();
-                hasContentInField = false;
             }
         }
 
-        // Handle case where file ended while still in quotes or with pending fields
-        if (inQuotes || hasContentInField || currentRow.Count > 0)
+        var options = new CsvReaderOptions
         {
-            currentRow.Add(fieldBuffer.ToString());
-            if (currentRow.Count > 1 || (currentRow.Count == 1 && !string.IsNullOrWhiteSpace(currentRow[0])))
+            Separator = delimiter,
+            HasHeader = false,
+            SkipEmptyLines = true,
+            MalformedData = CsvMalformedDataHandling.Recover,
+            AllowLineBreaksInQuotes = true,
+            Mode = CsvMode.Rfc4180
+        };
+
+        var rows = new List<List<string>>();
+        using var csvReader = CsvReader.Create(new StringReader(content), options, leaveOpen: false);
+
+        while (await csvReader.ReadAsync(cancellationToken))
+        {
+            var row = new List<string>(csvReader.FieldCount);
+            for (var i = 0; i < csvReader.FieldCount; i++)
             {
-                rows.Add(currentRow);
+                row.Add(csvReader.GetString(i));
             }
+
+            // Skip purely empty rows (single whitespace-only field).
+            if (row.Count == 1 && string.IsNullOrWhiteSpace(row[0]))
+            {
+                continue;
+            }
+
+            rows.Add(row);
         }
 
         return new CsvReadResult(rows, delimiter);
@@ -192,7 +155,7 @@ public static class CsvParser
 
     /// <summary>
     /// Reads all records from a text reader, supporting multi-line quoted fields.
-
+    /// </summary>
     public static async Task<List<List<string>>> ReadAllRowsAsync(
         TextReader reader,
         char? explicitDelimiter = null,
@@ -203,7 +166,7 @@ public static class CsvParser
     }
 
     /// <summary>
-    /// Escapes a field value for CSV serialization.
+    /// Escapes a field value for CSV serialization per RFC 4180.
     /// </summary>
     public static string Escape(string? value, char delimiter = ',')
     {
@@ -212,7 +175,7 @@ public static class CsvParser
             return string.Empty;
         }
 
-        var escaped = value.Replace("\"", "\"\"");
+        var escaped = value.Replace("\"", "\"\"", StringComparison.Ordinal);
         return escaped.Contains(delimiter) || escaped.Contains('"') || escaped.Contains('\n') || escaped.Contains('\r')
             ? $"\"{escaped}\""
             : escaped;
