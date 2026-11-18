@@ -29,6 +29,7 @@ Define a repeatable dependency license compliance process for SkyCD v3.
 ## Unknown Licenses
 - Unknown or missing licenses are treated as non-compliant (`failOnUnknownLicense=true`).
 - Package-specific exceptions are permitted in `allowedUnknownLicensePackages` with explicit rationale.
+  - SkyCD uses CsvHelper 34.0.0 under Apache-2.0. The package declares `MS-PL OR Apache-2.0`, and the checker flags the unapproved alternative even though Apache-2.0 is available.
 
 ### Current Unknown-License Exceptions
 - `SQLite` (3.53.4 is reported by the SBOM as `Unknown - See URL`; the [official copyright statement](https://www.sqlite.org/copyright.html) dedicates all deliverable SQLite code to the public domain and permits commercial redistribution). This exception covers missing license metadata only; explicitly blocked licenses still fail validation.

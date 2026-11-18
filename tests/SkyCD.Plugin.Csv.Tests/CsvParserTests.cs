@@ -96,13 +96,17 @@ public sealed class CsvParserTests
         Assert.Equal(["a.txt", "100"], result.Rows[1]);
     }
 
-    [Fact]
-    public async Task ReadCsvAsync_HandlesMutlilineQuotedField()
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public async Task ReadCsvAsync_NormalizesMultilineQuotedFieldToLf(string newline)
     {
-        const string csv = "Name,Desc\nfile.txt,\"line1\nline2\"\n";
+        var csv = $"Name;Desc{newline}file.txt;\"line1{newline}line2\"{newline}";
         using var reader = new StringReader(csv);
         var result = await CsvParser.ReadCsvAsync(reader);
         Assert.Equal(2, result.Rows.Count);
+        Assert.Equal(';', result.Delimiter);
         Assert.Equal("line1\nline2", result.Rows[1][1]);
     }
 

@@ -102,17 +102,19 @@ public static class CsvParser
     {
         // Buffer the entire content so we can detect the delimiter from the
         // first non-blank line before handing it to CsvHelper.
-        var content = await reader.ReadToEndAsync(cancellationToken);
+        // Preserve the LF line endings returned by the previous line-based parser.
+        var content = (await reader.ReadToEndAsync(cancellationToken))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
 
         var delimiter = explicitDelimiter ?? ',';
         if (!explicitDelimiter.HasValue)
         {
             foreach (var candidate in content.Split('\n'))
             {
-                var trimmed = candidate.TrimEnd('\r');
-                if (!string.IsNullOrWhiteSpace(trimmed))
+                if (!string.IsNullOrWhiteSpace(candidate))
                 {
-                    delimiter = DetectDelimiter(trimmed);
+                    delimiter = DetectDelimiter(candidate);
                     break;
                 }
             }
