@@ -51,6 +51,23 @@ public class PropertiesWindowLayoutTests
         Assert.Contains("Click=\"OnCancelClicked\"", xaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CustomProperties_UsesSharedTableAndEditableValueTemplate()
+    {
+        var window = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
+        var table = ReadRepoFile("src", "SkyCD.UI", "Controls", "Properties", "PropertiesList.axaml");
+
+        Assert.Contains("Rows=\"{Binding CustomProperties}\"", window, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding HasCustomProperties}\"", window, StringComparison.Ordinal);
+        Assert.Contains("<cp:PropertiesList.PropertyCellTemplate>", window, StringComparison.Ordinal);
+        Assert.Contains("<cp:PropertiesList.ValueCellTemplate>", window, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", window, StringComparison.Ordinal);
+        Assert.Contains("PropertyHeader=\"{i18n:Translate {x:Static i18n:UiKeys.Property}}\"", window, StringComparison.Ordinal);
+        Assert.Contains("ValueHeader=\"{i18n:Translate {x:Static i18n:UiKeys.Value}}\"", window, StringComparison.Ordinal);
+        Assert.Contains("ContentTemplate=\"{Binding PropertyCellTemplate, ElementName=Root}\"", table, StringComparison.Ordinal);
+        Assert.Contains("ContentTemplate=\"{Binding ValueCellTemplate, ElementName=Root}\"", table, StringComparison.Ordinal);
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();

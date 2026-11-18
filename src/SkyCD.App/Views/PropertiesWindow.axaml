@@ -22,6 +22,20 @@
         <converters:IconGlyphConverter x:Key="IconConverter" />
     </Window.Resources>
 
+    <Window.Styles>
+        <Style Selector="TextBox.property-value">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="TextBox.property-value:focus">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="*,Auto" Margin="0">
         <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
@@ -113,18 +127,31 @@
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" IsVisible="{Binding HasCustomProperties}">
-                <ScrollViewer Margin="8">
-                    <ItemsControl ItemsSource="{Binding CustomProperties}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
-                                <StackPanel Margin="0,0,0,8" Spacing="4">
-                                    <TextBlock Text="{Binding Name}" />
-                                    <TextBox Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <cp:PropertiesList Margin="8,8,8,10"
+                                   Rows="{Binding CustomProperties}"
+                                   RowIsTabStop="False"
+                                   PropertyHeader="{i18n:Translate {x:Static i18n:UiKeys.Property}}"
+                                   ValueHeader="{i18n:Translate {x:Static i18n:UiKeys.Value}}">
+                    <!-- Tab navigation cannot reach unrealized rows. -->
+                    <cp:PropertiesList.RowsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel />
+                        </ItemsPanelTemplate>
+                    </cp:PropertiesList.RowsPanel>
+                    <cp:PropertiesList.PropertyCellTemplate>
+                        <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
+                            <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </cp:PropertiesList.PropertyCellTemplate>
+                    <cp:PropertiesList.ValueCellTemplate>
+                        <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
+                            <TextBox Classes="property-value"
+                                     Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     AutomationProperties.Name="{Binding Name}" />
+                        </DataTemplate>
+                    </cp:PropertiesList.ValueCellTemplate>
+                </cp:PropertiesList>
             </TabItem>
         </TabControl>
 

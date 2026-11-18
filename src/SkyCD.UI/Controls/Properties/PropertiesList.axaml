@@ -2,6 +2,22 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SkyCD.UI.Controls.Properties.PropertiesList"
              x:Name="Root">
+    <UserControl.Resources>
+        <ItemsPanelTemplate x:Key="DefaultRowsPanel">
+            <VirtualizingStackPanel />
+        </ItemsPanelTemplate>
+        <DataTemplate x:Key="DefaultPropertyCellTemplate">
+            <TextBlock Text="{Binding Key}" TextWrapping="Wrap" />
+        </DataTemplate>
+        <DataTemplate x:Key="DefaultValueCellTemplate">
+            <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="ListBox.editable-rows">
+            <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
+        </Style>
+    </UserControl.Styles>
     <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1">
         <Grid RowDefinitions="Auto,*">
             <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
@@ -18,14 +34,19 @@
             </Border>
 
             <ListBox Grid.Row="1"
+                     Classes.editable-rows="{Binding !RowIsTabStop, ElementName=Root}"
                      BorderThickness="0"
                      SelectionMode="Single"
-                     ItemsSource="{Binding PropertiesRows, ElementName=Root}">
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ItemsPanel="{Binding RowsPanel, ElementName=Root}"
+                     ItemsSource="{Binding Rows, ElementName=Root}">
                 <ListBox.Styles>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Padding" Value="0" />
                         <Setter Property="Margin" Value="0" />
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="IsTabStop" Value="{Binding RowIsTabStop, ElementName=Root}" />
                     </Style>
                 </ListBox.Styles>
                 <ListBox.ItemTemplate>
@@ -34,13 +55,15 @@
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="0,0,1,1"
                                     Padding="8,4">
-                                <TextBlock Text="{Binding Key}" TextWrapping="Wrap" />
+                                <ContentPresenter Content="{Binding}"
+                                                  ContentTemplate="{Binding PropertyCellTemplate, ElementName=Root}" />
                             </Border>
                             <Border Grid.Column="1"
                                     BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="0,0,0,1"
                                     Padding="8,4">
-                                <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
+                                <ContentPresenter Content="{Binding}"
+                                                  ContentTemplate="{Binding ValueCellTemplate, ElementName=Root}" />
                             </Border>
                         </Grid>
                     </DataTemplate>
