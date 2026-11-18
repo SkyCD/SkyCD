@@ -92,19 +92,22 @@ public sealed class ZdcWriterTests
         var write = await plugin.WriteAsync(new FileFormatWriteRequest
         {
             Target = target,
-            FormatId = "cdcatalogexpert-zdc",
+            FormatId = ZdcFixture.FormatId,
             Payload = rows
         });
         Assert.True(write.Success, write.Error);
 
         target.Position = 0;
         var restored = ZdcReader.Read(target);
-        Assert.Contains(restored.Members, m => m.FileName == "disc.xml");
         Assert.Contains(restored.Members, m => m.FileName == ZdcFormat.IndexMemberName);
+        var discMember = Assert.Single(restored.Members, m =>
+            m.FileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) &&
+            m.FileName != ZdcFormat.IndexMemberName);
+        Assert.Contains("disc.xml", Encoding.ASCII.GetString(discMember.Payload));
     }
 
     [Fact]
-    public async Task RoundTrip_PluginReadWrite_PreservesRowsAndRewritesIdentical()
+    public async Task RoundTrip_PluginReadWrite_PreservesHierarchyAndMetadata()
     {
         using var source = ZdcFixture.StreamOf(ZdcFixture.Serialize(ZdcFixture.SampleDatabase()));
         var read = await plugin.ReadAsync(ZdcFixture.ReadRequest(source));
@@ -115,11 +118,11 @@ public sealed class ZdcWriterTests
         var write = await plugin.WriteAsync(new FileFormatWriteRequest
         {
             Target = target,
-            FormatId = "cdcatalogexpert-zdc",
-            Payload = document
+            FormatId = ZdcFixture.FormatId,
+            Payload = document,
+            FileName = "catalog.zdc"
         });
         Assert.True(write.Success, write.Error);
-        Assert.Equal(((MemoryStream)source).ToArray(), target.ToArray());
 
         target.Position = 0;
         var reread = await plugin.ReadAsync(ZdcFixture.ReadRequest(target));
@@ -129,9 +132,68 @@ public sealed class ZdcWriterTests
         for (var i = 0; i < document.Rows.Count; i++)
         {
             Assert.Equal(document.Rows[i]["nodeId"], redocument.Rows[i]["nodeId"]);
+            Assert.Equal(document.Rows[i]["parentId"], redocument.Rows[i]["parentId"]);
+            Assert.Equal(document.Rows[i]["kind"], redocument.Rows[i]["kind"]);
             Assert.Equal(document.Rows[i]["name"], redocument.Rows[i]["name"]);
+            Assert.Equal(document.Rows[i]["sizeBytes"], redocument.Rows[i]["sizeBytes"]);
+            Assert.Equal(
+                Properties(document.Rows[i]),
+                Properties(redocument.Rows[i]));
         }
     }
+
+    [Fact]
+    public async Task WriteAsync_SameRowsTwice_IsByteIdentical()
+    {
+        using var source = ZdcFixture.StreamOf(ZdcFixture.Serialize(ZdcFixture.SampleDatabase()));
+        var read = await plugin.ReadAsync(ZdcFixture.ReadRequest(source));
+        var document = Assert.IsType<ZdcReportDocument>(read.Payload);
+
+        using var first = new MemoryStream();
+        using var second = new MemoryStream();
+        Assert.True((await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            Target = first,
+            FormatId = ZdcFixture.FormatId,
+            Payload = document
+        })).Success);
+        Assert.True((await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            Target = second,
+            FormatId = ZdcFixture.FormatId,
+            Payload = document
+        })).Success);
+        Assert.Equal(first.ToArray(), second.ToArray());
+    }
+
+    [Fact]
+    public async Task WriteAsync_NonRepresentableCharacter_ReturnsFailure()
+    {
+        var rows = new List<Dictionary<string, object?>>
+        {
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["nodeId"] = "media:1",
+                ["parentId"] = null,
+                ["kind"] = "media",
+                ["name"] = "Disc \u4E2D",
+                ["sizeBytes"] = "0"
+            }
+        };
+
+        using var target = new MemoryStream();
+        var write = await plugin.WriteAsync(new FileFormatWriteRequest
+        {
+            Target = target,
+            FormatId = ZdcFixture.FormatId,
+            Payload = rows
+        });
+        Assert.False(write.Success);
+        Assert.Contains("Windows-1252", write.Error);
+    }
+
+    private static Dictionary<string, object?> Properties(Dictionary<string, object?> row) =>
+        Assert.IsType<Dictionary<string, object?>>(row["properties"]);
 
     [Fact]
     public async Task WriteAsync_InvalidPayload_ReturnsFailure()
@@ -140,7 +202,7 @@ public sealed class ZdcWriterTests
         var write = await plugin.WriteAsync(new FileFormatWriteRequest
         {
             Target = target,
-            FormatId = "cdcatalogexpert-zdc",
+            FormatId = ZdcFixture.FormatId,
             Payload = 42
         });
         Assert.False(write.Success);
