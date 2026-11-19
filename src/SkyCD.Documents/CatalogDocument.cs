@@ -28,6 +28,25 @@ public sealed class CatalogDocument
 
     public PropertiesCollection Properties { get; init; } = new();
 
+    /// <summary>
+    /// Returns a copy with a different name. The document is immutable, and the resolved lending and
+    /// location projections are carried over so a rename does not drop them in the same session.
+    /// </summary>
+    public CatalogDocument WithName(string name) => new()
+    {
+        Id = Id,
+        Name = name,
+        ParentId = ParentId,
+        Type = Type,
+        Size = Size,
+        ChildrenCount = ChildrenCount,
+        ContentsState = ContentsState,
+        Status = Status,
+        Properties = new PropertiesCollection(Properties),
+        lendingState = lendingState,
+        locationName = locationName
+    };
+
     private (string Borrower, bool Overdue)? lendingState;
 
     public string LentTo => lendingState?.Borrower ?? string.Empty;

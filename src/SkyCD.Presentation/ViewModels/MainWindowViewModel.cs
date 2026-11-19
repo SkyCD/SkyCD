@@ -95,6 +95,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
     private Dictionary<string, BrowserTreeNode> treeNodesByKey;
+    private BrowserTreeNode? renamingNode;
     private readonly Dictionary<string, string> commentsByObjectKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Dictionary<string, List<CatalogDocument>> addedItemsByNodeKey =
@@ -146,6 +147,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? ExitRequested;
     public event EventHandler? FocusBrowserRequested;
     public event EventHandler? FocusTreeRequested;
+    public event EventHandler? RenameRequested;
 
     private MenuExtensionManager menuExtensionManager;
     private DescriptionExtensionManager descriptionExtensionManager = new([]);
@@ -794,6 +796,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(IsDeleteEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        RenameItemCommand.NotifyCanExecuteChanged();
     }
 
     public bool IsCopyEnabled => SelectedBrowserItem is not null;
@@ -2041,6 +2044,155 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return true;
     }
 
+    public bool CanRenameTreeNode(BrowserTreeNode? node)
+    {
+        return node is not null && !string.IsNullOrWhiteSpace(node.Key);
+    }
+
+    public bool CanRenameItem(object? parameter = null)
+    {
+        return ResolveTargetPane(parameter) == ActivePane.Tree && CanRenameTreeNode(SelectedTreeNode);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRenameItem))]
+    private void RenameItem(object? parameter = null)
+    {
+        if (!CanRenameItem(parameter))
+        {
+            return;
+        }
+
+        BeginRename(SelectedTreeNode!);
+    }
+
+    /// <summary>
+    /// Swaps the node's tree label for an inline editor. The label itself is not touched until the
+    /// edit is confirmed, so cancelling leaves the displayed name exactly as it was.
+    /// </summary>
+    public void BeginRename(BrowserTreeNode node)
+    {
+        if (!CanRenameTreeNode(node))
+        {
+            return;
+        }
+
+        if (renamingNode is not null && !ReferenceEquals(renamingNode, node))
+        {
+            CancelRename(renamingNode, restoreFocus: false);
+        }
+
+        renamingNode = node;
+        node.RenameError = null;
+        node.RenameText = node.Title;
+        node.IsRenaming = true;
+        SelectedTreeNode = node;
+        RenameRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void CommitRename(BrowserTreeNode? node = null)
+    {
+        node ??= renamingNode;
+        if (node is null || !node.IsRenaming)
+        {
+            return;
+        }
+
+        var newName = (node.RenameText ?? string.Empty).Trim();
+        if (newName.Length == 0)
+        {
+            node.RenameError = LocalizationService.Current.Get(TextKeys.CatalogNameRequired);
+            StatusText = node.RenameError;
+            return;
+        }
+
+        var previousName = node.Title;
+        if (string.Equals(newName, previousName, StringComparison.Ordinal))
+        {
+            FinishRename(node);
+            FocusTreeRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (!TryPersistTreeRename(node, newName))
+        {
+            FinishRename(node);
+            StatusText = LocalizationService.Current.Format(TextKeys.RenameStaleEntry, previousName);
+            FocusTreeRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        node.Title = newName;
+        FinishRename(node);
+        RefreshBrowserItemsForSelection();
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Renamed, newName);
+        FocusTreeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <param name="restoreFocus">
+    /// False when the edit ended because the user moved focus elsewhere; pulling focus back to the
+    /// tree in that case would fight the click that ended the edit.
+    /// </param>
+    public void CancelRename(BrowserTreeNode? node = null, bool restoreFocus = true)
+    {
+        node ??= renamingNode;
+        if (node is null)
+        {
+            return;
+        }
+
+        FinishRename(node);
+        if (restoreFocus)
+        {
+            FocusTreeRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void FinishRename(BrowserTreeNode node)
+    {
+        node.IsRenaming = false;
+        node.RenameText = string.Empty;
+        node.RenameError = null;
+        if (ReferenceEquals(renamingNode, node))
+        {
+            renamingNode = null;
+        }
+    }
+
+    private bool TryPersistTreeRename(BrowserTreeNode node, string newName)
+    {
+        if (catalogRepository is not null)
+        {
+            var stored = catalogRepository.Get(node.Key);
+            if (stored is null)
+            {
+                return false;
+            }
+
+            RunCatalogEdit(LocalizationService.Current.Get(TextKeys.Rename), () =>
+            {
+                catalogRepository.Save(stored.Id, stored.WithName(newName));
+                undoManager?.RecordRename(stored, stored.Name, newName);
+            });
+            return true;
+        }
+
+        if (inMemoryCatalogEntries is null)
+        {
+            return false;
+        }
+
+        var index = inMemoryCatalogEntries.FindIndex(entry =>
+            string.Equals(entry.Id, node.Key, StringComparison.Ordinal));
+        if (index < 0)
+        {
+            return false;
+        }
+
+        inMemoryCatalogEntries[index] = inMemoryCatalogEntries[index].WithName(newName);
+        return true;
+    }
+
     private static BrowserTreeNode? FindParentTreeNode(IEnumerable<BrowserTreeNode> nodes, string childKey)
     {
         foreach (var node in nodes)
@@ -2947,6 +3099,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        RenameItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -3630,6 +3783,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Rename), Command = RenameItemCommand, CommandParameter = "tree" },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "tree" },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Copy), HotKey = "Ctrl+C", InputGesture = "Ctrl+C", Command = CopyCommand },
