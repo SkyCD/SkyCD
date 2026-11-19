@@ -77,21 +77,14 @@ keeps all earlier descriptions.
 
 ## ACP registry browsing
 
-**Tools → Browse cached ACP agent registry** reads an optional local copy of the
-official [ACP registry](https://agentclientprotocol.com/get-started/registry)
-index at `%APPDATA%/SkyCD/acp-registry.json`. Download
-`https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json` there
-manually; SkyCD never fetches, verifies, installs, updates or launches registry
-content. The registry is treated strictly as bounded display data: it cannot set
-the executable, arguments or environment, and unknown or malformed entries are
-ignored. The command lists cached names, identifiers, versions and distribution
-types, and a suggested launch form for currently installed `npx`/`uvx` or a
-platform binary. Any suggested launch remains a manual configuration hint; the
-executable, arguments and environment are always taken from the user-edited
-configuration file, and an archive or package must be installed by the user.
-
-Cached browsing works fully offline. Registry membership is not a compatibility
-claim: an entry still has to satisfy the negotiated requirements below.
+In **Tools → Options → ACP agents**, choose **Download ACP registry** to cache
+the official [ACP registry](https://agentclientprotocol.com/get-started/registry)
+at `%APPDATA%/SkyCD/acp-registry.json`. You can browse the cached list offline.
+SkyCD marks matching native executables on `PATH` as **Installed** and lists
+executables placed directly in `%APPDATA%/SkyCD/acp-agents`. Use **Browse for
+local executable** to select an ACP executable elsewhere. Save your selection
+before starting generation. Registry downloads contain the catalog only. Install
+the agent package or archive separately before selecting its local executable.
 
 ## Authentication
 

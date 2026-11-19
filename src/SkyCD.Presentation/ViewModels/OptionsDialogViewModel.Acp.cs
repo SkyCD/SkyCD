@@ -1,8 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.UI.Localization;
 
@@ -21,6 +26,35 @@ public partial class OptionsDialogViewModel
     [ObservableProperty] private bool acpEnabled;
     [ObservableProperty] private string? acpRegistryStatus;
     [ObservableProperty] private string? acpAlertMessage;
+
+    [RelayCommand]
+    private async Task RefreshAcpRegistryAsync(CancellationToken cancellationToken)
+    {
+        if (acpSettingsCapability is not { } capability) return;
+        AcpAlertMessage = null;
+        try
+        {
+            await capability.RefreshRegistryAsync(cancellationToken);
+            var selected = SelectedAcpAgent;
+            var selectionChanged = !Equals(selected, initialAcpSettings?.SelectedAgent);
+            var enabled = AcpEnabled;
+            LoadAcpSettings(capability);
+            AcpEnabled = enabled;
+            if (selectionChanged && selected?.IsInstalled == true)
+            {
+                SelectedAcpAgent = AcpAgents.FirstOrDefault(agent => Equals(agent, selected));
+                if (SelectedAcpAgent is null)
+                {
+                    AcpAgents.Add(selected);
+                    SelectedAcpAgent = selected;
+                }
+            }
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException or OperationCanceledException)
+        {
+            AcpAlertMessage = LocalizationService.Current.Format(UiKeys.AcpRegistryDownloadError, exception.Message);
+        }
+    }
 
     public void LoadAcpSettings(IAcpAgentSettingsCapability? capability)
     {

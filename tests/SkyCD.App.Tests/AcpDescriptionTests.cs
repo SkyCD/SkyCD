@@ -255,6 +255,18 @@ public sealed class AcpDescriptionTests
             var executable = Path.Combine(localAgents.FullName, command);
             File.WriteAllText(executable, "");
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserExecute);
+            var offlineAgent = Assert.Single(plugin.GetAgentSettings().Agents);
+            Assert.Equal(executable, offlineAgent.Executable);
+            Assert.True(offlineAgent.IsInstalled);
+            var node = Path.Combine(localAgents.FullName, OperatingSystem.IsWindows() ? "node.exe" : "node");
+            File.WriteAllText(node, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(node, UnixFileMode.UserExecute);
+            var modules = OperatingSystem.IsWindows() ? "acp-agents/node_modules" : "lib/node_modules";
+            var npmPackage = directory.CreateSubdirectory($"{modules}/@test/agent");
+            var npmScript = Path.Combine(npmPackage.FullName, "cli.js");
+            File.WriteAllText(npmScript, "");
+            File.WriteAllText(Path.Combine(npmPackage.FullName, "package.json"),
+                Json(new { name = "@test/agent", bin = new { agent = "cli.js" } }));
             var distribution = new[] { "windows", "linux", "darwin" }
                 .SelectMany(os => new[] { "x86_64", "aarch64" }.Select(arch => os + "-" + arch))
                 .ToDictionary(platform => platform, _ => new { cmd = command, args = new[] { "--acp" } });
@@ -264,13 +276,17 @@ public sealed class AcpDescriptionTests
                 agents = new object[]
                 {
                     new { id = "test-agent", name = "Test Agent", version = "1", distribution = new { binary = distribution } },
-                    new { id = "cached-agent", name = "Cached Agent", version = "1", distribution = new { npx = new { package = "cached-agent" } } }
+                    new { id = "cached-agent", name = "Cached Agent", version = "1", distribution = new { npx = new { package = "cached-agent" } } },
+                    new { id = "npm-agent", name = "NPM Agent", version = "1", distribution = new { npx = new { package = "@test/agent@1.0.0", args = new[] { "--acp" } } } }
                 }
             }));
 
             var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
             dialog.LoadAcpSettings(plugin);
             Assert.False(dialog.AcpAgents.Single(agent => agent.Name == "Cached Agent").IsInstalled);
+            var npmAgent = dialog.AcpAgents.Single(agent => agent.Name == "NPM Agent");
+            Assert.Equal(node, npmAgent.Executable);
+            Assert.Equal(new[] { npmScript, "--acp" }, npmAgent.Arguments);
             var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
             Assert.True(detected.IsInstalled);
             dialog.SelectedAcpAgent = detected;

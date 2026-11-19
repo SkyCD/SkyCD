@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
 
@@ -7,6 +9,9 @@ public interface IAcpAgentSettingsCapability : IPluginCapability
 {
     /// <summary>Reads the cached registry and local configuration without launching an agent.</summary>
     AcpAgentSettings GetAgentSettings();
+
+    /// <summary>Downloads and validates the official registry before replacing the offline cache.</summary>
+    Task RefreshRegistryAsync(CancellationToken cancellationToken);
 
     /// <summary>Saves the selected provider and the user's generation preference.</summary>
     void SaveAgentSettings(AcpAgentChoice? agent, bool enabled);

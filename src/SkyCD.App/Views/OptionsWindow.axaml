@@ -421,6 +421,8 @@
                         <TextBlock Text="{Binding SelectedAcpAgent.Executable}" TextWrapping="Wrap" />
                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.BrowseAcpExecutable}}" Click="OnBrowseAcpAgentClicked"
                                 IsEnabled="{Binding CanChooseAcpAgent}" />
+                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.DownloadAcpRegistry}}"
+                                Command="{Binding RefreshAcpRegistryCommand}" IsEnabled="{Binding CanChooseAcpAgent}" />
                         <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.EnableAiDescriptions}}" IsChecked="{Binding AcpEnabled}"
                                   IsEnabled="{Binding CanChooseAcpAgent}" />
                         <TextBlock Text="{Binding AcpRegistryStatus}" TextWrapping="Wrap" />

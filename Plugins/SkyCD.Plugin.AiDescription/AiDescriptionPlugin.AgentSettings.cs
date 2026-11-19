@@ -2,13 +2,54 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.Plugin.AiDescription;
 
 public sealed partial class AiDescriptionPlugin
 {
+    private static readonly HttpClient RegistryClient = new() { Timeout = TimeSpan.FromSeconds(20) };
+
+    public async Task RefreshRegistryAsync(CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(Path.GetFullPath(configurationPath))!;
+        Directory.CreateDirectory(directory);
+        var temporaryPath = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            using var response = await RegistryClient.GetAsync(AcpAgentRegistry.OfficialIndexUrl,
+                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(TimeSpan.FromSeconds(20));
+            await using var source = await response.Content.ReadAsStreamAsync(deadline.Token);
+            await using (var file = File.Create(temporaryPath))
+            {
+                var buffer = new byte[8192];
+                int count;
+                while ((count = await source.ReadAsync(buffer, deadline.Token)) > 0)
+                {
+                    if (file.Length + count > AcpAgentRegistry.MaximumBytes)
+                        throw new AcpRegistryException("download exceeds the 8 MiB limit");
+                    await file.WriteAsync(buffer.AsMemory(0, count), deadline.Token);
+                }
+            }
+
+            if (AcpAgentRegistry.Load(temporaryPath).Agents.Count == 0)
+                throw new AcpRegistryException("download contains no supported agents");
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporaryPath, Path.Combine(directory, AcpAgentRegistry.FileName), overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temporaryPath);
+        }
+    }
+
     public AcpAgentSettings GetAgentSettings()
     {
         var options = ReadAgentSettings();
@@ -16,21 +57,32 @@ public sealed partial class AiDescriptionPlugin
         var registryPath = Path.Combine(directory, AcpAgentRegistry.FileName);
         List<AcpAgentChoice> agents = [];
         string? status = null;
+        var localDirectory = Path.Combine(directory, "acp-agents");
         try
         {
-            var searchDirectories = new[] { Path.Combine(directory, "acp-agents") }
+            var searchDirectories = new[] { localDirectory }
                 .Concat((System.Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator))
                 .Where(Path.IsPathFullyQualified)
                 .ToArray();
             foreach (var agent in AcpAgentRegistry.Load(registryPath).Agents)
             {
                 var executable = FindExecutable(agent.BinaryCommand, searchDirectories);
-                agents.Add(new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments));
+                var npmChoice = executable is null ? FindInstalledNpmAgent(agent, searchDirectories) : null;
+                agents.Add(npmChoice ?? new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments));
             }
         }
         catch (AcpRegistryException exception)
         {
-            status = $"{exception.Message}. Save a registry copy from {AcpAgentRegistry.OfficialIndexUrl} to {registryPath} to browse it here.";
+            status = $"{exception.Message}. Download the registry to browse available agents.";
+        }
+
+        if (Directory.Exists(localDirectory))
+        {
+            foreach (var executable in Directory.EnumerateFiles(localDirectory).Where(IsExecutable))
+            {
+                if (agents.Any(agent => SameExecutable(agent.Executable, executable))) continue;
+                agents.Add(new AcpAgentChoice(Path.GetFileName(executable), executable, []));
+            }
         }
 
         AcpAgentChoice? selected = null;

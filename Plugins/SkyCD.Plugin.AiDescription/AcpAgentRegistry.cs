@@ -13,6 +13,8 @@ public sealed record AcpRegistryAgent(string Id, string Name, string Version, st
 {
     internal string? BinaryCommand { get; init; }
     internal IReadOnlyList<string> BinaryArguments { get; init; } = [];
+    internal string? NpmPackage { get; init; }
+    internal IReadOnlyList<string> NpmArguments { get; init; } = [];
 }
 
 /// <summary>Reads a locally cached copy of the official ACP registry index for offline browsing.</summary>
@@ -89,9 +91,13 @@ public sealed class AcpAgentRegistry
         string? hint = null;
         string? binaryCommand = null;
         IReadOnlyList<string> binaryArguments = [];
+        string? npmPackage = null;
+        IReadOnlyList<string> npmArguments = [];
         if (distribution.TryGetProperty("npx", out var npx) && npx.ValueKind == JsonValueKind.Object)
         {
             kinds.Add("npx");
+            npmPackage = BoundedString(npx, "package", 256);
+            npmArguments = BoundedArguments(npx);
             hint ??= PackageHint("npx", npx);
         }
         if (distribution.TryGetProperty("uvx", out var uvx) && uvx.ValueKind == JsonValueKind.Object)
@@ -115,7 +121,9 @@ public sealed class AcpAgentRegistry
         agent = new AcpRegistryAgent(id, name, version, description, kinds, hint)
         {
             BinaryCommand = binaryCommand,
-            BinaryArguments = binaryArguments
+            BinaryArguments = binaryArguments,
+            NpmPackage = npmPackage,
+            NpmArguments = npmArguments
         };
         return true;
     }
