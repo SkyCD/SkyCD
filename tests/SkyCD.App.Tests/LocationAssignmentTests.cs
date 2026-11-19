@@ -121,9 +121,10 @@ public sealed class LocationAssignmentTests : IDisposable
 
         using var reopened = CreateStack();
         var service = reopened.Service;
-        Assert.Equal("Garage", service.GetEntryOwnLocationId("media"));
-        Assert.Equal("Garage", service.GetEntryEffectiveLocationId("file"));
-        Assert.Equal("Garage", service.GetLocations().Single().Name);
+        var location = service.GetLocations().Single();
+        Assert.Equal("Garage", location.Name);
+        Assert.Equal(location.Id, service.GetEntryOwnLocationId("media"));
+        Assert.Equal(location.Id, service.GetEntryEffectiveLocationId("file"));
     }
 
     [Fact]
