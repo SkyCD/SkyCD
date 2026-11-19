@@ -1,6 +1,8 @@
+using System;
 using System.Linq;
 using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -411,5 +413,79 @@ public class OptionsDialogViewModelTests
 
         Assert.Equal(["XML"], vm.FilteredPlugins.Select(plugin => plugin.Name).ToArray());
         Assert.Equal("XML", vm.SelectedPlugin?.Name);
+    }
+
+    [Fact]
+    public void SelectedPluginDescription_ShowsSelectedPluginDescription()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: "Reads JSON catalogs"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml", description: "Reads XML catalogs")
+        ]);
+
+        Assert.Equal("Reads JSON catalogs", vm.SelectedPluginDescription);
+    }
+
+    [Fact]
+    public void SelectedPluginDescription_UpdatesWhenSelectionChanges()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: "Reads JSON catalogs"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml", description: "Reads XML catalogs")
+        ]);
+
+        vm.SelectedPlugin = vm.Plugins.Single(plugin => plugin.Name == "XML");
+
+        Assert.Equal("Reads XML catalogs", vm.SelectedPluginDescription);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void SelectedPluginDescription_FallsBackWhenPluginHasNoDescription(string description)
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: description)
+        ]);
+
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.NoPluginDescription), vm.SelectedPluginDescription);
+        Assert.DoesNotContain(vm.SelectedPluginDescription, vm.InfoMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SelectedPluginDescription_FallsBackWhenNothingIsSelected()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins([]);
+
+        Assert.Null(vm.SelectedPlugin);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.NoPluginDescription), vm.SelectedPluginDescription);
+    }
+
+    [Fact]
+    public void SetPlugins_RefreshKeepsDescriptionSeparateFromLoadedCount()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: "Reads JSON catalogs"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml", description: "Reads XML catalogs")
+        ]);
+        vm.SelectedPlugin = vm.Plugins.Single(plugin => plugin.Name == "XML");
+
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: "Reads JSON catalogs"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml", description: "Reads XML catalogs")
+        ]);
+
+        Assert.DoesNotContain("Reads", vm.InfoMessage, StringComparison.Ordinal);
+        Assert.Equal("Reads JSON catalogs", vm.SelectedPluginDescription);
     }
 }
