@@ -259,6 +259,45 @@ public sealed class AdvancedCatalogFindDialogTests
     }
 
     [Fact]
+    public async Task SubtreeScope_ChangesFromWholeCatalogToRootOnlyOrDescendants()
+    {
+        var documents = new[]
+        {
+            Doc("disc", type: CatalogDocumentType.Media),
+            Doc("folder", "disc", type: CatalogDocumentType.Folder),
+            Doc("nested", "folder"),
+            Doc("outside", "disc")
+        };
+        using var vm = new AdvancedCatalogFindDialogViewModel(documents, selectedSubtreeId: "folder");
+
+        await vm.SearchAsync();
+        Assert.Equal(4, vm.TotalMatches);
+
+        vm.SearchSubtree = true;
+        vm.IncludeDescendants = false;
+        await vm.SearchAsync();
+        Assert.Equal("folder", Assert.Single(vm.Results).Document.Id);
+
+        vm.IncludeDescendants = true;
+        await vm.SearchAsync();
+        Assert.Equal(["folder", "nested"], vm.Results.Select(match => match.Document.Id));
+    }
+
+    [Theory]
+    [InlineData(1000, false)]
+    [InlineData(1001, true)]
+    public async Task ResultLimit_ReportsTheExactTotalAndOnlyPagesAvailableMatches(int count, bool limited)
+    {
+        using var vm = Create(Enumerable.Range(0, count).Select(index => Doc($"file-{index}")).ToArray());
+
+        await vm.SearchAsync();
+
+        Assert.Equal(count, vm.TotalMatches);
+        Assert.Equal(limited, vm.ResultsTruncated);
+        Assert.Equal(10, vm.PageCount);
+    }
+
+    [Fact]
     public async Task ScopeType_LimitsToEntryKind()
     {
         var documents = new[]

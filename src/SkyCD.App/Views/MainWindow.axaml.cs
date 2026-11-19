@@ -79,6 +79,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         AttachPaneFocusHandlers();
         AddHandler(InputElement.KeyDownEvent, OnMainWindowKeyDown, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
+        QuickFindResultList.AddHandler(InputElement.KeyDownEvent, OnQuickFindResultKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closing += OnClosing;
@@ -295,6 +296,29 @@ public partial class MainWindow : Window
             // In headless or unit test environments OwnedWindows may not be initialized
         }
 
+        if (subscribedViewModel is { IsQuickFilterOpen: true } vm && e.Key == Key.Escape)
+        {
+            vm.CloseQuickFilterCommand.Execute(null);
+            MainBrowserItemsView.FocusActiveControl();
+            e.Handled = true;
+            return;
+        }
+
+        if (subscribedViewModel?.ShowQuickFindResults == true &&
+            e.Key == Key.Down && e.KeyModifiers == KeyModifiers.None && GetFocusedElement() == QuickFindBox)
+        {
+            QuickFindResultList.Focus();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Delete && e.Source is Visual source &&
+            (source == QuickFindResultList || QuickFindResultList.IsVisualAncestorOf(source)))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Delete && e.KeyModifiers == KeyModifiers.None)
         {
             var focused = GetFocusedElement();
@@ -376,12 +400,36 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnFindCatalogRequested(object? sender, EventArgs e)
+    private void OnFindCatalogRequested(object? sender, EventArgs e)
     {
-        if (sender is MainWindowViewModel vm)
+        Dispatcher.UIThread.Post(() =>
         {
-            await new CatalogFindWindow { DataContext = vm.CreateCatalogFindDialogViewModel() }.ShowDialog(this);
+            if (subscribedViewModel?.IsQuickFilterOpen != true) return;
+            QuickFindBox.Focus();
+            QuickFindBox.SelectAll();
+        }, DispatcherPriority.Input);
+    }
+
+    private void OnQuickFindResultDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (FindAncestor<ListBoxItem>(e.Source as Visual) is not null)
+        {
+            OpenQuickFindResult();
         }
+    }
+
+    private void OnQuickFindResultKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None) return;
+        OpenQuickFindResult();
+        e.Handled = true;
+    }
+
+    private void OpenQuickFindResult()
+    {
+        if (subscribedViewModel is not { SelectedQuickFindResult: not null } vm) return;
+        vm.OpenQuickFindResultCommand.Execute(null);
+        MainBrowserItemsView.FocusActiveControl();
     }
 
     private async void OnCollectionsRequested(object? sender, CollectionsDialogRequestedEventArgs e)
@@ -587,9 +635,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (decision == UnsavedChangesDecision.Save)
+            if (decision == UnsavedChangesDecision.Save && !await SaveCatalogAsync(vm))
             {
-                vm.SaveCatalogCommand.Execute(null);
+                return;
             }
 
             SaveUiState(vm);
@@ -901,13 +949,19 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (decision == UnsavedChangesDecision.Save)
+            if (decision == UnsavedChangesDecision.Save && !await SaveCatalogAsync(vm))
             {
-                vm.SaveCatalogCommand.Execute(null);
+                return;
             }
         }
 
-        vm.CompleteNewCatalog();
+        var newCatalog = MainWindowViewModel.CreateNewCatalog();
+        newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+        newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+        newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+        newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
+        newCatalog.CompleteNewCatalog();
+        DataContext = newCatalog;
     }
 
     private async void OnOpenCatalogRequested(object? sender, EventArgs e)
@@ -927,9 +981,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (decision == UnsavedChangesDecision.Save)
+            if (decision == UnsavedChangesDecision.Save && !await SaveCatalogAsync(vm))
             {
-                vm.SaveCatalogCommand.Execute(null);
+                return;
             }
         }
 
@@ -991,26 +1045,35 @@ public partial class MainWindow : Window
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm)
+        if (DataContext is MainWindowViewModel vm)
         {
-            return;
+            await SaveCatalogAsync(vm);
         }
+    }
 
-        EnsureFileFormatProvidersLoaded();
+    private async void OnSaveCatalogAsRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await SaveCatalogAsync(vm, saveAs: true);
+        }
+    }
 
-        var targetPath = vm.CurrentCatalogPath;
+    private async Task<bool> SaveCatalogAsync(MainWindowViewModel vm, bool saveAs = false)
+    {
+        var targetPath = saveAs ? null : vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
             var fileTypeChoices = fileFormatManager.GetSaveFilters()
                 .ToFilePickerTypes(
                     allSupportedFilesLabel: null,
-                    allFilesLabel: null);
-
-            var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
-
+                    allFilesLabel: saveAs ? PickerLocalizer["AllFiles"].Value : null);
+            var defaultExtension = fileFormatManager.GetSaveFormats().Any(format => format.FormatId == "skycd-json")
+                ? "json"
+                : fileFormatManager.GetPreferredSaveExtension();
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = LocalizationService.Current.Get(TextKeys.SaveCatalog),
+                Title = LocalizationService.Current.Get(saveAs ? TextKeys.SaveCatalogAs : TextKeys.SaveCatalog),
                 SuggestedFileName = $"catalog.{defaultExtension}",
                 DefaultExtension = defaultExtension,
                 FileTypeChoices = fileTypeChoices
@@ -1021,78 +1084,20 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            return;
+            return false;
         }
 
         try
         {
-            var capability = fileFormatManager.GetInstanceFor(targetPath);
-            if (!capability.SupportedFormat.CanWrite)
-            {
-                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
-            }
-
-            var content = """
-                          # SkyCD catalog placeholder
-                          # TODO: replace with full catalog serialization pipeline
-                          """;
-            File.WriteAllText(targetPath, content);
-            vm.CompleteSaveCatalog(targetPath);
+            await new CatalogSaveService(fileFormatManager).SaveAsync(targetPath, vm.GetAllCatalogEntries());
+            if (saveAs) vm.CompleteSaveCatalogAs(targetPath);
+            else vm.CompleteSaveCatalog(targetPath);
+            return true;
         }
         catch (Exception ex)
         {
             vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
-        }
-    }
-
-    private async void OnSaveCatalogAsRequested(object? sender, EventArgs e)
-    {
-        if (DataContext is not MainWindowViewModel vm)
-        {
-            return;
-        }
-
-        EnsureFileFormatProvidersLoaded();
-
-        var fileTypeChoices = fileFormatManager.GetSaveFilters()
-            .ToFilePickerTypes(
-                allSupportedFilesLabel: null,
-                allFilesLabel: PickerLocalizer["AllFiles"].Value);
-
-        var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
-
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = LocalizationService.Current.Get(TextKeys.SaveCatalogAs),
-            SuggestedFileName = $"catalog.{defaultExtension}",
-            DefaultExtension = defaultExtension,
-            FileTypeChoices = fileTypeChoices
-        });
-
-        var localPath = file?.TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(localPath))
-        {
-            return;
-        }
-
-        try
-        {
-            var capability = fileFormatManager.GetInstanceFor(localPath);
-            if (!capability.SupportedFormat.CanWrite)
-            {
-                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
-            }
-
-            var content = """
-                          # SkyCD catalog placeholder
-                          # TODO: replace with full catalog serialization pipeline
-                          """;
-            File.WriteAllText(localPath, content);
-            vm.CompleteSaveCatalogAs(localPath);
-        }
-        catch (Exception ex)
-        {
-            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
+            return false;
         }
     }
 

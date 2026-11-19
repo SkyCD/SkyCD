@@ -21,6 +21,29 @@ public sealed class RemoteCatalogProviderTests
         Assert.Equal(path, location.Path);
     }
 
+    [Theory]
+    [InlineData("webdav://example.com/pub", "webdav", 80, "/pub")]
+    [InlineData("webdavs://example.com/pub", "webdavs", 443, "/pub")]
+    [InlineData("webdav://example.com:8080/a%20b/", "webdav", 8080, "/a b")]
+    public void Parse_WebDavSchemesAndNormalizesPath(string address, string scheme, int port, string path)
+    {
+        var location = RemoteLocation.Parse(address);
+        Assert.Equal(scheme, location.Scheme);
+        Assert.Equal(port, location.Port);
+        Assert.Equal(path, location.Path);
+    }
+
+    [Fact]
+    public void Registry_WebDavSchemes_ResolveToTheWebDavConnector()
+    {
+        Assert.IsType<WebDavCatalogConnector>(RemoteCatalogProviderRegistry.Default.Get("webdav"));
+        Assert.IsType<WebDavCatalogConnector>(RemoteCatalogProviderRegistry.Default.Get("webdavs"));
+
+        // Plain HTTP(S) stays unclaimed so ordinary web pages cannot masquerade as sources.
+        Assert.Throws<RemoteSchemeNotSupportedException>(() => RemoteCatalogProviderRegistry.Default.Get("http"));
+        Assert.Throws<RemoteSchemeNotSupportedException>(() => RemoteCatalogProviderRegistry.Default.Get("https"));
+    }
+
     [Fact]
     public void Registry_FtpsScheme_UsesImplicitTlsAndPort990()
     {

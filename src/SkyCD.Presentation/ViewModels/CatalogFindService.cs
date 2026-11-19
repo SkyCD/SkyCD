@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using SkyCD.Documents;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -18,7 +19,8 @@ public static class CatalogFindService
     public static IReadOnlyList<CatalogFindResult> Search(
         IReadOnlyList<CatalogDocument> documents,
         string? query,
-        ICatalogSearchFieldProvider? fieldProvider)
+        ICatalogSearchFieldProvider? fieldProvider,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query) || documents.Count == 0) return [];
 
@@ -28,7 +30,11 @@ public static class CatalogFindService
             .GroupBy(static document => document.Id, StringComparer.Ordinal)
             .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
 
-        return documents.Select(document => CreateResult(document, byId, trimmed, fieldLookup))
+        return documents.Select(document =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return CreateResult(document, byId, trimmed, fieldLookup);
+            })
             .Where(static result => result is not null)
             .Select(static result => result!)
             .OrderBy(static result => result.FullPath, StringComparer.OrdinalIgnoreCase)

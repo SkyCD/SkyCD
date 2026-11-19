@@ -391,6 +391,21 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
 
         // Path matching keeps working unchanged.
         Assert.Equal(3, CatalogFindService.Search(documents, "Mixtape", provider).Count);
+
+        using var browser = MainWindowViewModel.CreateForInMemoryCatalog(documents, mediaCacheStore: store);
+        browser.FindCatalogCommand.Execute(null);
+        browser.SearchWholeCatalog = true;
+        browser.QuickFindQuery = "CAPTURED COMMENT";
+        using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (browser.QuickFindResults.Count == 0)
+        {
+            await Task.Delay(10, timeout.Token);
+        }
+
+        var quickMatch = Assert.Single(browser.QuickFindResults);
+        Assert.Equal(TrackEntryId, quickMatch.Document.Id);
+        Assert.Equal("Comments", quickMatch.MatchedField);
+        Assert.False(browser.IsDirtyDocument);
     }
 
     [Fact]

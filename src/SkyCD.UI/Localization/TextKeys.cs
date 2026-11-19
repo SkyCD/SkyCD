@@ -153,6 +153,7 @@ public static class TextKeys
     public const string Unknown = "core.text.Unknown";
     public const string Find = "core.text.Find";
     public const string FindEmptyQuery = "core.text.FindEmptyQuery";
+    public const string QuickFindEmptyQuery = "core.text.QuickFindEmptyQuery";
     public const string FindSearching = "core.text.FindSearching";
     public const string FindNoMatches = "core.text.FindNoMatches";
     public const string FindMatchCount = "core.text.FindMatchCount";
@@ -196,6 +197,9 @@ public static class TextKeys
     public const string SmbAuthenticationFailed = "core.text.SmbAuthenticationFailed";
     public const string SmbListingNotSupported = "core.text.SmbListingNotSupported";
     public const string RemotePlatformNotSupported = "core.text.RemotePlatformNotSupported";
+    public const string WebDavConnectionFailed = "core.text.WebDavConnectionFailed";
+    public const string WebDavAuthenticationFailed = "core.text.WebDavAuthenticationFailed";
+    public const string WebDavListingNotSupported = "core.text.WebDavListingNotSupported";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
     public const string Tags = "core.text.Tags";
