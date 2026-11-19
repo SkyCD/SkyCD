@@ -1,73 +1,110 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
     <Styles.Resources>
-        <!-- Light Theme Resources -->
-        <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#808080" />
-            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#C0C0C0" />
-            <SolidColorBrush x:Key="TabItemBorderDarkBrush" Color="#808080" />
-            <SolidColorBrush x:Key="TabItemBorderLightBrush" Color="#DFDFDF" />
-            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#000000" />
-            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#ECE9E9" />
-            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#D0D0D0" />
-            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#808080" />
-        </ResourceDictionary>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="TabCardBackgroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TabCardBorderBrush" Color="#ADADAD" />
+                    <SolidColorBrush x:Key="TabHeaderForegroundBrush" Color="#505050" />
+                    <SolidColorBrush x:Key="TabHeaderHoverBrush" Color="#E8E8E8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="TabCardBackgroundBrush" Color="#282828" />
+                    <SolidColorBrush x:Key="TabCardBorderBrush" Color="#666666" />
+                    <SolidColorBrush x:Key="TabHeaderForegroundBrush" Color="#C6C6C6" />
+                    <SolidColorBrush x:Key="TabHeaderHoverBrush" Color="#3A3A3A" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
 
-        <!-- Dark Theme Resources -->
-        <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="TabControlBackgroundBrush" Color="#2D2D2D" />
-            <SolidColorBrush x:Key="TabControlBorderBrush" Color="#1a1a1a" />
-            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#3d3d3d" />
-            <SolidColorBrush x:Key="TabItemBorderDarkBrush" Color="#1a1a1a" />
-            <SolidColorBrush x:Key="TabItemBorderLightBrush" Color="#5a5a5a" />
-            <SolidColorBrush x:Key="TabItemForegroundBrush" Color="#e0e0e0" />
-            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#454545" />
-            <SolidColorBrush x:Key="TabItemHoverBackgroundBrush" Color="#4a4a4a" />
-            <SolidColorBrush x:Key="TabItemDisabledForegroundBrush" Color="#707070" />
+            <ControlTheme x:Key="CardTabControlTheme" TargetType="TabControl">
+                <Setter Property="Background" Value="{DynamicResource TabCardBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource TabCardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid RowDefinitions="Auto,*">
+                            <ItemsPresenter Name="PART_ItemsPresenter"
+                                            ItemsPanel="{TemplateBinding ItemsPanel}"
+                                            ZIndex="1" />
+                            <!-- The selected header covers the top border where it meets the page. -->
+                            <Border Grid.Row="1"
+                                    Margin="0,-1,0,0"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <Panel ClipToBounds="True">
+                                    <ContentPresenter Name="PART_SelectedContentHost"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                    <ContentPresenter Name="PART_SelectedContentHost2"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      IsVisible="False" />
+                                </Panel>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <ControlTheme x:Key="CardTabItemTheme" TargetType="TabItem">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1,1,1,0" />
+                <Setter Property="Foreground" Value="{DynamicResource TabHeaderForegroundBrush}" />
+                <Setter Property="Padding" Value="14,5,14,6" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid>
+                            <Border Name="HoverBackground"
+                                    Margin="0,0,0,1"
+                                    Background="{DynamicResource TabHeaderHoverBrush}"
+                                    IsHitTestVisible="False"
+                                    IsVisible="False" />
+                            <ContentPresenter Name="PART_ContentPresenter"
+                                              Background="{TemplateBinding Background}"
+                                              BorderBrush="{TemplateBinding BorderBrush}"
+                                              BorderThickness="{TemplateBinding BorderThickness}"
+                                              Padding="{TemplateBinding Padding}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding Header}"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                              RecognizesAccessKey="True" />
+                            <Border Name="FocusOutline"
+                                    Margin="3"
+                                    BorderBrush="{DynamicResource ThemeForegroundBrush}"
+                                    BorderThickness="1"
+                                    IsHitTestVisible="False"
+                                    IsVisible="False" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+                <Style Selector="^:pointerover:not(:selected):not(:disabled) /template/ Border#HoverBackground">
+                    <Setter Property="IsVisible" Value="True" />
+                </Style>
+                <Style Selector="^:selected">
+                    <Setter Property="Background" Value="{DynamicResource TabCardBackgroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource TabCardBorderBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
+                </Style>
+                <Style Selector="^:focus-visible /template/ Border#FocusOutline">
+                    <Setter Property="IsVisible" Value="True" />
+                </Style>
+                <Style Selector="^:disabled /template/ ContentPresenter#PART_ContentPresenter">
+                    <Setter Property="Opacity" Value="{DynamicResource ThemeDisabledOpacity}" />
+                </Style>
+            </ControlTheme>
         </ResourceDictionary>
     </Styles.Resources>
 
-    <!-- Legacy WinForms-style TabControl with 3D beveled borders -->
-    <Style Selector="TabControl">
-        <Setter Property="Background" Value="{DynamicResource TabControlBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource TabControlBorderBrush}" />
-        <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="Padding" Value="0" />
+    <Style Selector="TabControl[TabStripPlacement=Top]">
+        <Setter Property="Theme" Value="{StaticResource CardTabControlTheme}" />
     </Style>
-
-    <!-- TabItem styling - Classic beveled WinForms button appearance -->
-    <Style Selector="TabItem">
-        <Setter Property="Padding" Value="16,4,16,4" />
-        <Setter Property="Margin" Value="2,2,0,0" />
-        <Setter Property="Background" Value="{DynamicResource TabItemBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource TabItemBorderLightBrush}" />
-        <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="FontSize" Value="11" />
+    <Style Selector="TabControl[TabStripPlacement=Top] > TabItem">
+        <Setter Property="Theme" Value="{StaticResource CardTabItemTheme}" />
     </Style>
-
-    <!-- Selected/active tab - lighter appearance with highlight borders -->
-    <Style Selector="TabItem:selected">
-        <Setter Property="Background" Value="{DynamicResource TabItemSelectedBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource TabItemBorderLightBrush}" />
-        <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="ZIndex" Value="1" />
-        <Setter Property="Padding" Value="16,4,16,4" />
-        <Setter Property="Margin" Value="2,2,0,-2" />
-    </Style>
-
-    <!-- Hover/focus state -->
-    <Style Selector="TabItem:pointerover">
-        <Setter Property="Background" Value="{DynamicResource TabItemHoverBackgroundBrush}" />
-    </Style>
-
-    <!-- Disabled state -->
-    <Style Selector="TabItem:disabled">
-        <Setter Property="Foreground" Value="{DynamicResource TabItemDisabledForegroundBrush}" />
-        <Setter Property="Background" Value="{DynamicResource TabItemBackgroundBrush}" />
-    </Style>
-
 </Styles>
