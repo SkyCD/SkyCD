@@ -1162,9 +1162,7 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         e.Dialog.SetCustomProperties(options.CustomProperties);
-        e.Dialog.SetScanOptions(options.SkipSymbolicLinks, options.HiddenSystemFilePolicy, options.SkipRecycleBins,
-            options.SkipWellKnownSystemFolders, options.SkipEmptyFolders, options.SkipOnlineOnlyCloudFiles);
-        e.Dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
+        LoadScanOptionsIntoDialog(e.Dialog, options);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
@@ -1201,13 +1199,7 @@ public partial class MainWindow : Window
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
-            var scanSettings = e.Dialog.GetScanOptions();
-            options.SkipSymbolicLinks = scanSettings.SkipSymbolicLinks;
-            options.HiddenSystemFilePolicy = scanSettings.HiddenSystemFilePolicy;
-            options.SkipRecycleBins = scanSettings.SkipRecycleBins;
-            options.SkipWellKnownSystemFolders = scanSettings.SkipWellKnownSystemFolders;
-            options.SkipEmptyFolders = scanSettings.SkipEmptyFolders;
-            options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
+            SaveScanOptionsFromDialog(e.Dialog, options);
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             scanExclusionRuleRepository.ReplaceAll(e.Dialog.GetScanExclusionRules());
@@ -1403,6 +1395,29 @@ public partial class MainWindow : Window
     private void SaveAppOptions(AppOptionsDocument options)
     {
         appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+    }
+
+    private void LoadScanOptionsIntoDialog(OptionsDialogViewModel dialog, AppOptionsDocument options)
+    {
+        dialog.SetScanOptions(new ScanSettingsSnapshot(
+            options.SkipSymbolicLinks,
+            options.HiddenSystemFilePolicy,
+            options.SkipRecycleBins,
+            options.SkipWellKnownSystemFolders,
+            options.SkipEmptyFolders,
+            options.SkipOnlineOnlyCloudFiles));
+        dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
+    }
+
+    private void SaveScanOptionsFromDialog(OptionsDialogViewModel dialog, AppOptionsDocument options)
+    {
+        var scanSettings = dialog.GetScanOptions();
+        options.SkipSymbolicLinks = scanSettings.SkipSymbolicLinks;
+        options.HiddenSystemFilePolicy = scanSettings.HiddenSystemFilePolicy;
+        options.SkipRecycleBins = scanSettings.SkipRecycleBins;
+        options.SkipWellKnownSystemFolders = scanSettings.SkipWellKnownSystemFolders;
+        options.SkipEmptyFolders = scanSettings.SkipEmptyFolders;
+        options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
     }
 
     private void ApplyWindowBounds(AppOptionsDocument options)

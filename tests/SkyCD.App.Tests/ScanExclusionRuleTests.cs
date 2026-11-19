@@ -30,6 +30,14 @@ public sealed class ScanExclusionRuleTests : IDisposable
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
     }
 
+    private CatalogScanResult ScanWith(Action<FakeScanFileSystem> populate, ScanTraversalOptions traversal)
+    {
+        var fs = new FakeScanFileSystem();
+        fs.AddDirectory(root);
+        populate(fs);
+        return new FolderCatalogScanner(fs).ScanDetailed(new FolderScanOptions(root, Traversal: traversal));
+    }
+
     [Fact]
     public void DefaultExclusionRules_ArePlatformAppropriateAndEntryTyped()
     {
@@ -42,51 +50,65 @@ public sealed class ScanExclusionRuleTests : IDisposable
 
         if (OperatingSystem.IsWindows())
         {
-            Assert.Contains(defaults, rule => rule.Pattern == "$RECYCLE.BIN" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == "System Volume Information" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == "Thumbs.db" && rule.EntryType == "File");
-            Assert.Contains(defaults, rule => rule.Pattern == "desktop.ini" && rule.EntryType == "File");
-            Assert.Contains(defaults, rule => rule.Pattern == "pagefile.sys" && rule.EntryType == "File");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == "lost+found");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == ".Trash");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == ".DS_Store");
+            AssertWindowsDefaultRules(defaults);
         }
         else if (OperatingSystem.IsLinux())
         {
-            Assert.Contains(defaults, rule => rule.Pattern == ".Trash" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == ".Trash-1000" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == "lost+found" && rule.EntryType == "Folder");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == "Thumbs.db");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == "System Volume Information");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == ".Trashes");
+            AssertLinuxDefaultRules(defaults);
         }
         else if (OperatingSystem.IsMacOS())
         {
-            Assert.Contains(defaults, rule => rule.Pattern == ".Trashes" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == ".Spotlight-V100" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == ".fseventsd" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == ".TemporaryItems" && rule.EntryType == "Folder");
-            Assert.Contains(defaults, rule => rule.Pattern == ".DS_Store" && rule.EntryType == "File");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == "Thumbs.db");
-            Assert.DoesNotContain(defaults, rule => rule.Pattern == "$RECYCLE.BIN");
+            AssertMacOsDefaultRules(defaults);
         }
+    }
+
+    private static void AssertWindowsDefaultRules(IReadOnlyList<ScanExclusionRuleDocument> defaults)
+    {
+        Assert.Contains(defaults, rule => rule.Pattern == "$RECYCLE.BIN" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == "System Volume Information" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == "Thumbs.db" && rule.EntryType == "File");
+        Assert.Contains(defaults, rule => rule.Pattern == "desktop.ini" && rule.EntryType == "File");
+        Assert.Contains(defaults, rule => rule.Pattern == "pagefile.sys" && rule.EntryType == "File");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == "lost+found");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == ".Trash");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == ".DS_Store");
+    }
+
+    private static void AssertLinuxDefaultRules(IReadOnlyList<ScanExclusionRuleDocument> defaults)
+    {
+        Assert.Contains(defaults, rule => rule.Pattern == ".Trash" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == ".Trash-1000" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == "lost+found" && rule.EntryType == "Folder");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == "Thumbs.db");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == "System Volume Information");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == ".Trashes");
+    }
+
+    private static void AssertMacOsDefaultRules(IReadOnlyList<ScanExclusionRuleDocument> defaults)
+    {
+        Assert.Contains(defaults, rule => rule.Pattern == ".Trashes" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == ".Spotlight-V100" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == ".fseventsd" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == ".TemporaryItems" && rule.EntryType == "Folder");
+        Assert.Contains(defaults, rule => rule.Pattern == ".DS_Store" && rule.EntryType == "File");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == "Thumbs.db");
+        Assert.DoesNotContain(defaults, rule => rule.Pattern == "$RECYCLE.BIN");
     }
 
     [Fact]
     public void ExclusionRule_FileOnly_DoesNotExcludeFolderWithSameName()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddDirectory(Path.Combine(root, "data"));
-        fs.AddFile(Path.Combine(root, "data", "inside.txt"), length: 1);
-        fs.AddFile(Path.Combine(root, "data.tmp"), length: 1);
-
-        var result = new FolderCatalogScanner(fs).ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions
+        var result = ScanWith(
+            fs =>
+            {
+                fs.AddDirectory(Path.Combine(root, "data"));
+                fs.AddFile(Path.Combine(root, "data", "inside.txt"), length: 1);
+                fs.AddFile(Path.Combine(root, "data.tmp"), length: 1);
+            },
+            new ScanTraversalOptions
             {
                 ExclusionRules = [new ScanExclusionRule("data", ScanEntryType.File, IsInclude: false)]
-            }));
+            });
 
         Assert.Contains(result.Documents, d => d.Name == "data" && d.Type == CatalogDocumentType.Folder);
         Assert.Contains(result.Documents, d => d.Name == "inside.txt");
@@ -96,21 +118,20 @@ public sealed class ScanExclusionRuleTests : IDisposable
     [Fact]
     public void ExclusionRule_FolderOnly_DoesNotExcludeFileWithSameName()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddFile(Path.Combine(root, "data"), length: 1);
-        fs.AddDirectory(Path.Combine(root, "data-folder"));
-
-        var result = new FolderCatalogScanner(fs).ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions
+        var result = ScanWith(
+            fs =>
+            {
+                fs.AddFile(Path.Combine(root, "data"), length: 1);
+                fs.AddDirectory(Path.Combine(root, "data-folder"));
+            },
+            new ScanTraversalOptions
             {
                 ExclusionRules =
                 [
                     new ScanExclusionRule("data", ScanEntryType.Folder, IsInclude: false),
                     new ScanExclusionRule("data-folder", ScanEntryType.Folder, IsInclude: false)
                 ]
-            }));
+            });
 
         Assert.Contains(result.Documents, d => d.Name == "data" && d.Type == CatalogDocumentType.File);
         Assert.DoesNotContain(result.Documents, d => d.Name == "data-folder");
@@ -119,17 +140,16 @@ public sealed class ScanExclusionRuleTests : IDisposable
     [Fact]
     public void ExclusionRule_MatchingEntryType_IsSkipped()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddFile(Path.Combine(root, "data"), length: 1);
-        fs.AddFile(Path.Combine(root, "keep.bin"), length: 1);
-
-        var result = new FolderCatalogScanner(fs).ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions
+        var result = ScanWith(
+            fs =>
+            {
+                fs.AddFile(Path.Combine(root, "data"), length: 1);
+                fs.AddFile(Path.Combine(root, "keep.bin"), length: 1);
+            },
+            new ScanTraversalOptions
             {
                 ExclusionRules = [new ScanExclusionRule("data", ScanEntryType.Both, IsInclude: false)]
-            }));
+            });
 
         Assert.DoesNotContain(result.Documents, d => d.Name == "data");
         Assert.Contains(result.Documents, d => d.Name == "keep.bin");
@@ -138,17 +158,16 @@ public sealed class ScanExclusionRuleTests : IDisposable
     [Fact]
     public void InclusionRules_WhitelistOnlyMatchingEntries()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddFile(Path.Combine(root, "keep.txt"), length: 1);
-        fs.AddFile(Path.Combine(root, "drop.bin"), length: 1);
-
-        var result = new FolderCatalogScanner(fs).ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions
+        var result = ScanWith(
+            fs =>
+            {
+                fs.AddFile(Path.Combine(root, "keep.txt"), length: 1);
+                fs.AddFile(Path.Combine(root, "drop.bin"), length: 1);
+            },
+            new ScanTraversalOptions
             {
                 InclusionRules = [new ScanExclusionRule("*.txt", ScanEntryType.Both, IsInclude: true)]
-            }));
+            });
 
         Assert.Contains(result.Documents, d => d.Name == "keep.txt");
         Assert.DoesNotContain(result.Documents, d => d.Name == "drop.bin");
@@ -157,17 +176,16 @@ public sealed class ScanExclusionRuleTests : IDisposable
     [Fact]
     public void InclusionRules_EntryTypeScoped_KeepsOtherKindsOut()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddDirectory(Path.Combine(root, "docs"));
-        fs.AddFile(Path.Combine(root, "note.txt"), length: 1);
-
-        var result = new FolderCatalogScanner(fs).ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions
+        var result = ScanWith(
+            fs =>
+            {
+                fs.AddDirectory(Path.Combine(root, "docs"));
+                fs.AddFile(Path.Combine(root, "note.txt"), length: 1);
+            },
+            new ScanTraversalOptions
             {
                 InclusionRules = [new ScanExclusionRule("docs", ScanEntryType.Folder, IsInclude: true)]
-            }));
+            });
 
         Assert.Contains(result.Documents, d => d.Name == "docs" && d.Type == CatalogDocumentType.Folder);
         Assert.DoesNotContain(result.Documents, d => d.Name == "note.txt");
@@ -176,51 +194,43 @@ public sealed class ScanExclusionRuleTests : IDisposable
     [Fact]
     public void SkipRecycleBins_ToggleControlsRecycleBinEntries()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddDirectory(Path.Combine(root, "$RECYCLE.BIN"));
-        fs.AddFile(Path.Combine(root, "$RECYCLE.BIN", "junk.dat"), length: 1);
-        fs.AddFile(Path.Combine(root, "visible.txt"), length: 1);
+        Action<FakeScanFileSystem> populate = fs =>
+        {
+            fs.AddDirectory(Path.Combine(root, "$RECYCLE.BIN"));
+            fs.AddFile(Path.Combine(root, "$RECYCLE.BIN", "junk.dat"), length: 1);
+            fs.AddFile(Path.Combine(root, "visible.txt"), length: 1);
+        };
 
-        var scanner = new FolderCatalogScanner(fs);
-        var skipped = scanner.ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions { SkipRecycleBins = true }));
+        var skipped = ScanWith(populate, new ScanTraversalOptions { SkipRecycleBins = true });
         Assert.DoesNotContain(skipped.Documents, d => d.Name == "$RECYCLE.BIN");
         Assert.DoesNotContain(skipped.Documents, d => d.Name == "junk.dat");
         Assert.Contains(skipped.Documents, d => d.Name == "visible.txt");
 
-        var included = scanner.ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions { SkipRecycleBins = false }));
+        var included = ScanWith(populate, new ScanTraversalOptions { SkipRecycleBins = false });
         Assert.Contains(included.Documents, d => d.Name == "$RECYCLE.BIN");
     }
 
     [Fact]
     public void SkipWellKnownSystemFolders_ToggleControlsSystemEntries()
     {
-        var fs = new FakeScanFileSystem();
-        fs.AddDirectory(root);
-        fs.AddDirectory(Path.Combine(root, "System Volume Information"));
-        fs.AddFile(Path.Combine(root, "Thumbs.db"), length: 1);
-        fs.AddFile(Path.Combine(root, "visible.txt"), length: 1);
+        Action<FakeScanFileSystem> populate = fs =>
+        {
+            fs.AddDirectory(Path.Combine(root, "System Volume Information"));
+            fs.AddFile(Path.Combine(root, "Thumbs.db"), length: 1);
+            fs.AddFile(Path.Combine(root, "visible.txt"), length: 1);
+        };
 
-        var scanner = new FolderCatalogScanner(fs);
-        var skipped = scanner.ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions { SkipWellKnownSystemFolders = true }));
+        var skipped = ScanWith(populate, new ScanTraversalOptions { SkipWellKnownSystemFolders = true });
         Assert.DoesNotContain(skipped.Documents, d => d.Name == "System Volume Information");
         Assert.DoesNotContain(skipped.Documents, d => d.Name == "Thumbs.db");
         Assert.Contains(skipped.Documents, d => d.Name == "visible.txt");
 
-        var included = scanner.ScanDetailed(new FolderScanOptions(
-            root,
-            Traversal: new ScanTraversalOptions
-            {
-                SkipWellKnownSystemFolders = false,
-                ExclusionPatterns = [],
-                ExclusionRules = []
-            }));
+        var included = ScanWith(populate, new ScanTraversalOptions
+        {
+            SkipWellKnownSystemFolders = false,
+            ExclusionPatterns = [],
+            ExclusionRules = []
+        });
         Assert.Contains(included.Documents, d => d.Name == "System Volume Information");
         Assert.Contains(included.Documents, d => d.Name == "Thumbs.db");
     }
@@ -355,8 +365,12 @@ public sealed class ScanExclusionRuleTests : IDisposable
 
         var replaced = ruleRepository.GetOrdered();
         Assert.Equal(2, replaced.Count);
-        Assert.Contains(replaced, rule => rule.Pattern == "*.tmp" && rule.EntryType == "File" && !rule.IsInclude);
-        Assert.Contains(replaced, rule => rule.Pattern == "*.keep" && rule.EntryType == "Both" && rule.IsInclude);
+        var tmpRule = Assert.Single(replaced, rule => rule.Pattern == "*.tmp");
+        Assert.Equal("File", tmpRule.EntryType);
+        Assert.False(tmpRule.IsInclude);
+        var keepRule = Assert.Single(replaced, rule => rule.Pattern == "*.keep");
+        Assert.Equal("Both", keepRule.EntryType);
+        Assert.True(keepRule.IsInclude);
 
         // Existing rules are preserved when defaults are ensured again.
         ruleRepository.EnsureDefaultRules();
@@ -397,7 +411,7 @@ public sealed class ScanExclusionRuleTests : IDisposable
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SetScanOptions(true, "SkipHiddenAndSystem", false, false, true, true);
+        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true));
         vm.SetScanExclusionRules(
         [
             new ScanExclusionRuleDocument { Pattern = "*.tmp", EntryType = "File", IsInclude = false },
@@ -414,8 +428,12 @@ public sealed class ScanExclusionRuleTests : IDisposable
 
         var rules = vm.GetScanExclusionRules();
         Assert.Equal(2, rules.Count);
-        Assert.Contains(rules, rule => rule.Pattern == "*.tmp" && rule.EntryType == "File" && !rule.IsInclude);
-        Assert.Contains(rules, rule => rule.Pattern == "*.keep" && rule.EntryType == "Folder" && rule.IsInclude);
+        var tmpRule = Assert.Single(rules, rule => rule.Pattern == "*.tmp");
+        Assert.Equal("File", tmpRule.EntryType);
+        Assert.False(tmpRule.IsInclude);
+        var keepRule = Assert.Single(rules, rule => rule.Pattern == "*.keep");
+        Assert.Equal("Folder", keepRule.EntryType);
+        Assert.True(keepRule.IsInclude);
     }
 
     [Fact]

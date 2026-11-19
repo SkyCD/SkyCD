@@ -95,26 +95,21 @@ public partial class OptionsDialogViewModel
             .ToArray();
     }
 
-    public void SetScanOptions(
-        bool skipSymbolicLinks,
-        string hiddenSystemFilePolicy,
-        bool skipRecycleBins,
-        bool skipWellKnownSystemFolders,
-        bool skipEmptyFolders,
-        bool skipOnlineOnlyCloudFiles)
+    public void SetScanOptions(ScanSettingsSnapshot settings)
     {
-        SkipSymbolicLinks = skipSymbolicLinks;
+        ArgumentNullException.ThrowIfNull(settings);
+        SkipSymbolicLinks = settings.SkipSymbolicLinks;
         SelectedHiddenSystemPolicyIndex =
-            (int)ScanSettingsApplicator.ParseHiddenSystemFilePolicy(hiddenSystemFilePolicy);
-        SkipRecycleBins = skipRecycleBins;
-        SkipWellKnownSystemFolders = skipWellKnownSystemFolders;
-        SkipEmptyFolders = skipEmptyFolders;
-        SkipOnlineOnlyCloudFiles = skipOnlineOnlyCloudFiles;
+            (int)ScanSettingsApplicator.ParseHiddenSystemFilePolicy(settings.HiddenSystemFilePolicy);
+        SkipRecycleBins = settings.SkipRecycleBins;
+        SkipWellKnownSystemFolders = settings.SkipWellKnownSystemFolders;
+        SkipEmptyFolders = settings.SkipEmptyFolders;
+        SkipOnlineOnlyCloudFiles = settings.SkipOnlineOnlyCloudFiles;
     }
 
-    public (bool SkipSymbolicLinks, string HiddenSystemFilePolicy, bool SkipRecycleBins, bool SkipWellKnownSystemFolders, bool SkipEmptyFolders, bool SkipOnlineOnlyCloudFiles) GetScanOptions()
+    public ScanSettingsSnapshot GetScanOptions()
     {
-        return (
+        return new ScanSettingsSnapshot(
             SkipSymbolicLinks,
             ScanSettingsApplicator.ToHiddenSystemFilePolicyString(
                 (HiddenSystemFilePolicy)Math.Clamp(SelectedHiddenSystemPolicyIndex, 0, 3)),
