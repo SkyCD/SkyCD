@@ -301,6 +301,8 @@ public sealed class AcpDescriptionTests
             dialog.AcpSearchText = string.Empty;
             var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
             Assert.True(detected.IsInstalled);
+            dialog.SelectAcpAgent(npmAgent);
+            Assert.Equal(npmAgent, dialog.AcpCardAgent);
             dialog.SelectAcpAgent(detected);
             Assert.Equal(detected, dialog.AcpCardAgent);
             var pendingStatus = dialog.AcpCardStatus;

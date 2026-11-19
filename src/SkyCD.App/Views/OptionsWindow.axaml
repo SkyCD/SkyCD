@@ -33,17 +33,26 @@
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="Padding" Value="9" />
         </Style>
-        <Style Selector="TextBlock.acpCardStatus">
-            <Setter Property="IsVisible" Value="False" />
-        </Style>
-        <Style Selector="Border.acpAgentCard.selected TextBlock.acpCardStatus">
-            <Setter Property="IsVisible" Value="True" />
-        </Style>
         <Style Selector="Button.acpUseAgent">
-            <Setter Property="IsVisible" Value="{ReflectionBinding IsInstalled}" />
+            <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
         </Style>
         <Style Selector="Border.acpAgentCard.selected Button.acpUseAgent">
-            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="IsEnabled" Value="False" />
+            <Setter Property="Theme">
+                <ControlTheme TargetType="Button">
+                    <Setter Property="Template">
+                        <ControlTemplate>
+                            <Border Background="#234767" BorderBrush="#5795D6" BorderThickness="1" CornerRadius="3">
+                                <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                                  Padding="7,4" HorizontalContentAlignment="Center"
+                                                  VerticalContentAlignment="Center" Foreground="#E2F0FF" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter>
+                </ControlTheme>
+            </Setter>
+            <Setter Property="Content"
+                    Value="{ReflectionBinding DataContext.AcpCardStatus, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" />
         </Style>
     </Window.Styles>
 
@@ -89,10 +98,8 @@
                         <TextBlock Text="{Binding RegistryVersion}" Opacity="0.7"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                            <Button Classes="acpUseAgent" Click="OnSelectAcpAgentClicked"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
-                            <TextBlock Classes="acpCardStatus" FontWeight="SemiBold" VerticalAlignment="Center"
-                                       Text="{ReflectionBinding DataContext.AcpCardStatus, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" />
+                            <Button Classes="acpUseAgent" IsVisible="{Binding IsInstalled}"
+                                    Click="OnSelectAcpAgentClicked" />
                             <Button IsVisible="{Binding CanInstall}" Click="OnInstallAcpAgentClicked"
                                     Content="{i18n:Translate {x:Static i18n:UiKeys.InstallAcpAgent}}" />
                             <Button IsVisible="{Binding CanLocateExecutable}" Click="OnBrowseAcpAgentClicked"
