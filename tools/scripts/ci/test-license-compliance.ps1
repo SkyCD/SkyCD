@@ -49,3 +49,6 @@ try {
 finally {
     Remove-Item -LiteralPath $testDir -Recurse -Force
 }
+
+# Negative cases leave LASTEXITCODE set to 1; report success only after all assertions and cleanup pass.
+exit 0
