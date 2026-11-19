@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:media="clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.Plugin.Abstractions"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
@@ -401,6 +402,29 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <TextBlock Text="{Binding CustomPropertyAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" IsVisible="{Binding ShowAcpSection}" Spacing="10">
+                        <ComboBox ItemsSource="{Binding AcpAgents}"
+                                  SelectedItem="{Binding SelectedAcpAgent}"
+                                  IsEnabled="{Binding CanChooseAcpAgent}"
+                                  PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SelectAcpAgent}}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="media:AcpAgentChoice">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Name}" />
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentInstalled}}" IsVisible="{Binding IsInstalled}" Opacity="0.7" />
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentNotDetected}}" IsVisible="{Binding !IsInstalled}" Opacity="0.7" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Text="{Binding SelectedAcpAgent.Executable}" TextWrapping="Wrap" />
+                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.BrowseAcpExecutable}}" Click="OnBrowseAcpAgentClicked"
+                                IsEnabled="{Binding CanChooseAcpAgent}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.EnableAiDescriptions}}" IsChecked="{Binding AcpEnabled}"
+                                  IsEnabled="{Binding CanChooseAcpAgent}" />
+                        <TextBlock Text="{Binding AcpRegistryStatus}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding AcpAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />
                     </StackPanel>
                     <Border Grid.Row="4"
                             IsVisible="{Binding ShowNoSearchResults}"

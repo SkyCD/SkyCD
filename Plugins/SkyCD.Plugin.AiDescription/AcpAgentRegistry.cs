@@ -9,7 +9,11 @@ namespace SkyCD.Plugin.AiDescription;
 
 /// <summary>One cached registry entry. Registry content is descriptive data and is never executed.</summary>
 public sealed record AcpRegistryAgent(string Id, string Name, string Version, string Description,
-    IReadOnlyList<string> Distributions, string? LaunchHint);
+    IReadOnlyList<string> Distributions, string? LaunchHint)
+{
+    internal string? BinaryCommand { get; init; }
+    internal IReadOnlyList<string> BinaryArguments { get; init; } = [];
+}
 
 /// <summary>Reads a locally cached copy of the official ACP registry index for offline browsing.</summary>
 public sealed class AcpAgentRegistry
@@ -83,6 +87,8 @@ public sealed class AcpAgentRegistry
         var description = BoundedString(entry, "description", 512) ?? string.Empty;
         var kinds = new List<string>();
         string? hint = null;
+        string? binaryCommand = null;
+        IReadOnlyList<string> binaryArguments = [];
         if (distribution.TryGetProperty("npx", out var npx) && npx.ValueKind == JsonValueKind.Object)
         {
             kinds.Add("npx");
@@ -96,10 +102,21 @@ public sealed class AcpAgentRegistry
         if (distribution.TryGetProperty("binary", out var binary) && binary.ValueKind == JsonValueKind.Object)
         {
             kinds.Add("binary");
-            hint ??= BinaryHint(binary);
+            var platform = PlatformKey();
+            if (platform is not null && binary.TryGetProperty(platform, out var target) && target.ValueKind == JsonValueKind.Object)
+            {
+                binaryCommand = BoundedString(target, "cmd", 512);
+                binaryArguments = BoundedArguments(target);
+                if (binaryCommand is not null)
+                    hint ??= Bound($"binary ({platform}): install and run {string.Join(' ', new[] { binaryCommand }.Concat(binaryArguments).Select(Quote))}", 400);
+            }
         }
         if (kinds.Count == 0) return false;
-        agent = new AcpRegistryAgent(id, name, version, description, kinds, hint);
+        agent = new AcpRegistryAgent(id, name, version, description, kinds, hint)
+        {
+            BinaryCommand = binaryCommand,
+            BinaryArguments = binaryArguments
+        };
         return true;
     }
 
@@ -109,17 +126,6 @@ public sealed class AcpAgentRegistry
         if (name is null) return null;
         var arguments = BoundedArguments(package);
         return Bound(string.Join(' ', new[] { launcher, name }.Concat(arguments).Select(Quote)), 400);
-    }
-
-    private static string? BinaryHint(JsonElement binary)
-    {
-        var platform = PlatformKey();
-        if (platform is null || !binary.TryGetProperty(platform, out var target) || target.ValueKind != JsonValueKind.Object)
-            return null;
-        var command = BoundedString(target, "cmd", 512);
-        if (command is null) return null;
-        var arguments = BoundedArguments(target);
-        return Bound($"binary ({platform}): install and run {string.Join(' ', new[] { command }.Concat(arguments).Select(Quote))}", 400);
     }
 
     private static string? PlatformKey()

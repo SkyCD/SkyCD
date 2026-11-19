@@ -63,6 +63,17 @@ public static class UiKeys
     public const string Options = "core.ui.Options";
     public const string Settings = "core.ui.Settings";
     public const string Search = "core.ui.Search";
+    public const string AcpAgents = "core.ui.AcpAgents";
+    public const string SelectAcpAgent = "core.ui.SelectAcpAgent";
+    public const string AcpAgentInstalled = "core.ui.AcpAgentInstalled";
+    public const string AcpAgentNotDetected = "core.ui.AcpAgentNotDetected";
+    public const string BrowseAcpExecutable = "core.ui.BrowseAcpExecutable";
+    public const string SelectAcpExecutable = "core.ui.SelectAcpExecutable";
+    public const string EnableAiDescriptions = "core.ui.EnableAiDescriptions";
+    public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
+    public const string ChooseInstalledAcpAgent = "core.ui.ChooseInstalledAcpAgent";
+    public const string AcpSettingsLoadError = "core.ui.AcpSettingsLoadError";
+    public const string AcpSettingsSaveError = "core.ui.AcpSettingsSaveError";
     public const string NavigateCategoriesHint = "core.ui.NavigateCategoriesHint";
     public const string Tools = "core.ui.Tools";
     public const string ProjectSettings = "core.ui.ProjectSettings";

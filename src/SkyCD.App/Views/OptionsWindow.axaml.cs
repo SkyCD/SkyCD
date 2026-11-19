@@ -1,12 +1,14 @@
 using SkyCD.UI.Localization;
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
+using Avalonia.Platform.Storage;
 using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Views;
@@ -51,6 +53,18 @@ public partial class OptionsWindow : Window
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
     {
         Close(false);
+    }
+
+    private async void OnBrowseAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not OptionsDialogViewModel vm) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = LocalizationService.Current.Get(UiKeys.SelectAcpExecutable),
+            AllowMultiple = false
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
+            vm.ChooseLocalAcpAgent(path);
     }
 
     private void OnOpened(object? sender, EventArgs e)

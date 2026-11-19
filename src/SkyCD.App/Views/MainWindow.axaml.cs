@@ -24,6 +24,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Host.Media;
@@ -1145,6 +1146,7 @@ public partial class MainWindow : Window
         e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         RefreshPlugins(e.Dialog);
+        e.Dialog.LoadAcpSettings(pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault());
 
         var dialog = new OptionsWindow
         {

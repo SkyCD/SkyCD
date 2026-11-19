@@ -239,35 +239,56 @@ public sealed class AcpDescriptionTests
     }
 
     [Fact]
-    public async Task RegistryCommandBrowsesOfflineCacheAndNeverGenerates()
+    public void OptionsDetectsLocalAgentAndPersistsSelectionOnlyOnConfirm()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-description-registry-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        var configurationPath = Path.Combine(directory, "settings.json");
-        var calls = 0;
-        var host = new DescriptionHost();
-        var plugin = new AiDescriptionPlugin(configurationPath, (_, _, _) =>
-        {
-            calls++;
-            return Task.FromResult(new GeneratedDescription("x", "a", null, "1", "1", "English", "content-based AI description", "unknown", DateTimeOffset.UtcNow));
-        });
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-options-");
         try
         {
-            await plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.RegistryCommandId, new MenuCommandContext { HostApi = host });
-            Assert.Contains("No cached ACP registry", host.Notifications[^1]);
-            await File.WriteAllTextAsync(Path.Combine(directory, AcpAgentRegistry.FileName), Json(new
+            var configurationPath = Path.Combine(directory.FullName, "settings.json");
+            var plugin = new AiDescriptionPlugin(configurationPath, (_, _, _) =>
+                throw new InvalidOperationException("Options must never launch the agent."));
+            Assert.DoesNotContain(plugin.GetMenuContributions(), item => item.CommandId == "ai-description.registry");
+            Assert.NotNull(plugin.GetAgentSettings().RegistryStatus);
+
+            var localAgents = directory.CreateSubdirectory("acp-agents");
+            var command = OperatingSystem.IsWindows() ? "test-agent.exe" : "test-agent";
+            var executable = Path.Combine(localAgents.FullName, command);
+            File.WriteAllText(executable, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserExecute);
+            var distribution = new[] { "windows", "linux", "darwin" }
+                .SelectMany(os => new[] { "x86_64", "aarch64" }.Select(arch => os + "-" + arch))
+                .ToDictionary(platform => platform, _ => new { cmd = command, args = new[] { "--acp" } });
+            File.WriteAllText(Path.Combine(directory.FullName, AcpAgentRegistry.FileName), Json(new
             {
                 version = "1.0.0",
-                agents = new[] { new { id = "cached-agent", name = "Cached Agent", version = "1.0.0", distribution = new { npx = new { package = "cached-agent" } } } }
+                agents = new object[]
+                {
+                    new { id = "test-agent", name = "Test Agent", version = "1", distribution = new { binary = distribution } },
+                    new { id = "cached-agent", name = "Cached Agent", version = "1", distribution = new { npx = new { package = "cached-agent" } } }
+                }
             }));
-            await plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.RegistryCommandId, new MenuCommandContext { HostApi = host });
-            Assert.Contains("Cached ACP registry: 1 agents", host.Notifications[^1]);
-            Assert.Contains("cached-agent", host.Notifications[^1]);
-            Assert.Equal(0, calls);
+
+            var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
+            dialog.LoadAcpSettings(plugin);
+            Assert.False(dialog.AcpAgents.Single(agent => agent.Name == "Cached Agent").IsInstalled);
+            var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
+            Assert.True(detected.IsInstalled);
+            dialog.SelectedAcpAgent = detected;
+            dialog.AcpEnabled = true;
+            Assert.False(File.Exists(configurationPath));
+
+            dialog.ConfirmCommand.Execute(null);
+
+            Assert.True(dialog.DialogAccepted);
+            var saved = plugin.GetAgentSettings();
+            Assert.True(saved.Enabled);
+            Assert.Equal(executable, saved.SelectedAgent?.Executable);
+            Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
+            Assert.True(plugin.GetPlan().IsEnabled);
         }
         finally
         {
-            Directory.Delete(directory, true);
+            directory.Delete(recursive: true);
         }
     }
 
