@@ -972,8 +972,9 @@ public class MainWindowViewModelTests
 
         Assert.NotNull(request);
         Assert.Equal($"{document.DisplaySize} ({document.Size.ToString("N0", CultureInfo.CurrentUICulture)} bytes)", request!.Dialog.InfoProperties["Size"]);
-        Assert.Equal("32", request.Dialog.InfoProperties["Attributes"]);
+        Assert.Equal("Archive", request.Dialog.InfoProperties["Attributes"]);
         Assert.Equal(rawSize, request.Dialog.GetProperties()["Size"]);
+        Assert.Equal("32", request.Dialog.GetProperties()["Attributes"]);
         request.Complete(true, request.Dialog.Comments);
         request = null;
         vm.OpenPropertiesCommand.Execute(null);
