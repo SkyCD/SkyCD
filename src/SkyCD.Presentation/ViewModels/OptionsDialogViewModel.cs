@@ -110,6 +110,10 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<OptionsPluginItem> FilteredPlugins { get; } = [];
 
+    private OptionsPluginItem? pluginSelectionBeforeFilter;
+    private bool isAutoSelectingPlugin;
+    private bool pluginSelectionIsAuto;
+
     public ObservableCollection<LanguageItem> Languages { get; } = [];
 
     public ObservableCollection<string> FilteredSettingCategories { get; } = [];
@@ -327,6 +331,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
     {
+        pluginSelectionBeforeFilter = null;
         var snapshot = plugins.ToArray();
         Plugins.Clear();
         foreach (var plugin in snapshot)
@@ -405,6 +410,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
+        pluginSelectionIsAuto = isAutoSelectingPlugin;
         ConfigurePluginCommand.NotifyCanExecuteChanged();
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
     }
@@ -434,7 +440,31 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     partial void OnPluginFilterTextChanged(string value)
     {
+        var isEmpty = string.IsNullOrWhiteSpace(value);
+        if (!isEmpty && pluginSelectionBeforeFilter is null)
+        {
+            pluginSelectionBeforeFilter = SelectedPlugin;
+        }
+
         RefreshFilteredPlugins();
+
+        if (isEmpty && pluginSelectionBeforeFilter is not null)
+        {
+            var snapshot = pluginSelectionBeforeFilter;
+            pluginSelectionBeforeFilter = null;
+            if (pluginSelectionIsAuto)
+            {
+                isAutoSelectingPlugin = true;
+                try
+                {
+                    SelectedPlugin = Plugins.Contains(snapshot) ? snapshot : FilteredPlugins.FirstOrDefault();
+                }
+                finally
+                {
+                    isAutoSelectingPlugin = false;
+                }
+            }
+        }
     }
 
     partial void OnSettingsSearchTextChanged(string value)
@@ -532,7 +562,15 @@ public partial class OptionsDialogViewModel : ObservableObject
 
         if (SelectedPlugin is null || !FilteredPlugins.Contains(SelectedPlugin))
         {
-            SelectedPlugin = FilteredPlugins.FirstOrDefault();
+            isAutoSelectingPlugin = true;
+            try
+            {
+                SelectedPlugin = FilteredPlugins.FirstOrDefault();
+            }
+            finally
+            {
+                isAutoSelectingPlugin = false;
+            }
         }
     }
 
