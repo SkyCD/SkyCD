@@ -13,8 +13,9 @@ namespace SkyCD.App.Tests;
 /// (<see cref="FakeScanFileSystem"/>), as the license policy blocks every NuGet SMB client
 /// (SMBLibrary is LGPL-3.0-or-later) and CI cannot host a controlled SMB server. Live
 /// verification against a real share is documented in docs/architecture/catalog-scan-traversal.md.
-/// The fake-session tests use anonymous access so no real network connection is established;
-/// explicit credentials are covered by the translation matrix and the account-name builder.
+/// The fake-session tests use anonymous access and override the Windows-only check so they run
+/// on every CI platform without touching the network; explicit credentials are covered by the
+/// translation matrix and the account-name builder.
 /// </summary>
 public sealed class SmbCatalogTransportTests
 {
@@ -42,7 +43,7 @@ public sealed class SmbCatalogTransportTests
     {
         var fileSystem = new FakeScanFileSystem();
         SeedShare(fileSystem);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         using var session = connector.Connect(
             LocationFor($@"\\{Host}\share\docs"), Guest(), CancellationToken.None);
@@ -64,7 +65,7 @@ public sealed class SmbCatalogTransportTests
     {
         var fileSystem = new FakeScanFileSystem();
         SeedShare(fileSystem);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         var uncLocation = RemoteLocation.Parse($@"\\{Host}\share\docs");
         var smbLocation = RemoteLocation.Parse($"smb://{Host}/share/docs");
@@ -86,7 +87,7 @@ public sealed class SmbCatalogTransportTests
         var fileSystem = new FakeScanFileSystem();
         SeedShare(fileSystem);
         fileSystem.LinkDirectory($@"\\{Host}\share\docs\loop", $@"\\{Host}\share\docs");
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         using var session = connector.Connect(
             LocationFor($@"\\{Host}\share\docs"), Guest(), CancellationToken.None);
@@ -107,7 +108,7 @@ public sealed class SmbCatalogTransportTests
             $@"\\{Host}\share",
             () => new IOException("The network path was not found.", unchecked((int)0x80070035)),
             failTimes: int.MaxValue);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         var exception = Assert.Throws<RemoteConnectionException>(() => connector.Connect(
             LocationFor($@"\\{Host}\share"), Guest(), CancellationToken.None));
@@ -127,7 +128,7 @@ public sealed class SmbCatalogTransportTests
             $@"\\{Host}\share",
             () => new IOException("Logon failure: unknown user name or bad password.", unchecked((int)0x8007052E)),
             failTimes: int.MaxValue);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         var exception = Assert.Throws<RemoteAuthenticationException>(() => connector.Connect(
             LocationFor($@"\\{Host}\share"), Guest(), CancellationToken.None));
@@ -142,7 +143,7 @@ public sealed class SmbCatalogTransportTests
     {
         var fileSystem = new FakeScanFileSystem();
         SeedShare(fileSystem);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         using var session = connector.Connect(
             LocationFor($@"\\{Host}\share\docs"), Guest(), CancellationToken.None);
@@ -162,7 +163,7 @@ public sealed class SmbCatalogTransportTests
             $@"\\{Host}\share\docs\locked",
             () => new UnauthorizedAccessException("Access to the path is denied."),
             failTimes: int.MaxValue);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
 
         using var session = connector.Connect(
             LocationFor($@"\\{Host}\share\docs"), Guest(), CancellationToken.None);
@@ -181,7 +182,7 @@ public sealed class SmbCatalogTransportTests
     {
         var fileSystem = new FakeScanFileSystem();
         SeedShare(fileSystem);
-        var connector = new SmbCatalogConnector(fileSystem);
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
@@ -192,17 +193,7 @@ public sealed class SmbCatalogTransportTests
     [Fact]
     public void Connect_UnsupportedPlatform_FailsWithTypedPlatformError()
     {
-        var connector = new SmbCatalogConnector(new FakeScanFileSystem());
-
-        if (OperatingSystem.IsWindows())
-        {
-            // The platform guard is not reachable here; the wiring itself is still exercised.
-            using var cancelled = new CancellationTokenSource();
-            cancelled.Cancel();
-            Assert.ThrowsAny<OperationCanceledException>(() => connector.Connect(
-                LocationFor($@"\\{Host}\share\docs"), Guest(), cancelled.Token));
-            return;
-        }
+        var connector = new SmbCatalogConnector(new FakeScanFileSystem(), () => false);
 
         var exception = Assert.Throws<RemotePlatformNotSupportedException>(() => connector.Connect(
             LocationFor($@"\\{Host}\share\docs"), Guest(), CancellationToken.None));

@@ -22,14 +22,24 @@ namespace SkyCD.Presentation.Scanning;
 public sealed class SmbCatalogConnector : IRemoteCatalogConnector
 {
     private readonly IScanFileSystem fileSystem;
+    private readonly Func<bool> isPlatformSupported;
 
-    public SmbCatalogConnector() : this(new RealScanFileSystem())
+    public SmbCatalogConnector() : this(new RealScanFileSystem(), static () => OperatingSystem.IsWindows())
     {
     }
 
     /// <summary>Builds the connector; <paramref name="fileSystem"/> is the test seam for a fake session.</summary>
-    public SmbCatalogConnector(IScanFileSystem fileSystem) =>
+    public SmbCatalogConnector(IScanFileSystem fileSystem)
+        : this(fileSystem, static () => OperatingSystem.IsWindows())
+    {
+    }
+
+    /// <summary>Test seam: <paramref name="isPlatformSupported"/> replaces the Windows-only check.</summary>
+    internal SmbCatalogConnector(IScanFileSystem fileSystem, Func<bool> isPlatformSupported)
+    {
         this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        this.isPlatformSupported = isPlatformSupported ?? throw new ArgumentNullException(nameof(isPlatformSupported));
+    }
 
     public string Scheme => "smb";
 
@@ -75,7 +85,7 @@ public sealed class SmbCatalogConnector : IRemoteCatalogConnector
         ArgumentNullException.ThrowIfNull(location);
         ArgumentNullException.ThrowIfNull(credentials);
 
-        if (!OperatingSystem.IsWindows())
+        if (!isPlatformSupported())
         {
             throw new RemotePlatformNotSupportedException(Scheme);
         }

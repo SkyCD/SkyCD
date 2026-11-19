@@ -262,6 +262,14 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
             return trimmed;
         }
 
+        // UNC paths ("\\server\share", or "//server/share" once unified on Unix) keep their
+        // shape on every OS: Path.GetFullPath would collapse the two leading separators away.
+        if (trimmed.StartsWith(@"\\", StringComparison.Ordinal) ||
+            trimmed.StartsWith("//", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
         return Path.GetFullPath(unified).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 
