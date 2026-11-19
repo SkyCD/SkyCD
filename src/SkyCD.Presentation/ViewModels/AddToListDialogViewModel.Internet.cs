@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SkyCD.Presentation.Scanning;
@@ -20,6 +21,8 @@ public partial class AddToListDialogViewModel
     [ObservableProperty] private string internetProtocol = "ftp";
 
     [ObservableProperty] private string internetHost = string.Empty;
+
+    [ObservableProperty] private string internetPort = InternetProviders.Get("ftp").DefaultPort.ToString(CultureInfo.InvariantCulture);
 
     [ObservableProperty] private string internetPath = string.Empty;
 
@@ -86,9 +89,9 @@ public partial class AddToListDialogViewModel
             return UiKeys.InternetShareRequired;
         }
 
-        var provider = InternetProviders.Get(location.Scheme);
         InternetProtocol = location.Scheme;
-        InternetHost = location.Port == provider.DefaultPort ? location.Host : $"{location.Host}:{location.Port}";
+        InternetHost = location.Host;
+        InternetPort = location.Port.ToString(CultureInfo.InvariantCulture);
         InternetPath = location.Path;
         var hasCredentials = RemoteLocation.TryReadUserInfo(address, out var username, out var password);
         InternetCredentials.AuthMethodIndex = 0;
@@ -105,11 +108,14 @@ public partial class AddToListDialogViewModel
     partial void OnInternetProtocolChanged(string value)
     {
         InternetCredentials.SetProtocol(value);
+        InternetPort = InternetProviders.Get(value).DefaultPort.ToString(CultureInfo.InvariantCulture);
         OnPropertyChanged(nameof(IsSmbInternetProtocol));
         UpdateInternetLocation();
     }
 
     partial void OnInternetHostChanged(string value) => UpdateInternetLocation();
+
+    partial void OnInternetPortChanged(string value) => UpdateInternetLocation();
 
     partial void OnInternetPathChanged(string value) => UpdateInternetLocation();
 
@@ -119,21 +125,17 @@ public partial class AddToListDialogViewModel
     {
         internetLocation = null;
         var host = InternetHost.Trim();
-        if (host.Length > 0 && !host.Any(c => char.IsWhiteSpace(c) || char.IsControl(c)) &&
-            host.IndexOfAny(['/', '\\', '@', '?', '#', '%']) < 0)
+        if (Uri.CheckHostName(host) != UriHostNameType.Unknown && TryGetInternetPort(out var port))
         {
             var path = RemoteLocation.EscapePath(InternetPath.TrimStart('/'));
             try
             {
-                if (Uri.TryCreate($"{InternetProtocol}://{host}", UriKind.Absolute, out var endpoint) &&
-                    endpoint.Port != 0)
-                {
-                    internetLocation = RemoteLocation.Parse($"{InternetProtocol}://{host}/{path}", InternetProviders);
-                }
+                var address = new UriBuilder(InternetProtocol, host, port, path).Uri.AbsoluteUri;
+                internetLocation = RemoteLocation.Parse(address, InternetProviders);
             }
             catch (Exception ex) when (ex is RemoteConnectionException or UriFormatException)
             {
-                // Validation uses a static message so even a URL accidentally typed into the host field stays private.
+                // The form reports a static validation message.
             }
         }
 
@@ -141,10 +143,16 @@ public partial class AddToListDialogViewModel
         RecomputeValidation();
     }
 
+    private bool TryGetInternetPort(out int port) =>
+        int.TryParse(InternetPort, NumberStyles.None, CultureInfo.InvariantCulture, out port) &&
+        port is >= 1 and <= 65535;
+
     private string? GetInternetValidationMessage()
     {
         var key = internetLocation is null
-            ? (string.IsNullOrWhiteSpace(InternetHost) ? TextKeys.AddressIsRequiredForInternetSource : UiKeys.InvalidInternetHost)
+            ? string.IsNullOrWhiteSpace(InternetHost)
+                ? TextKeys.AddressIsRequiredForInternetSource
+                : !TryGetInternetPort(out _) ? UiKeys.InvalidInternetPort : UiKeys.InvalidInternetHost
             : IsSmbInternetProtocol && internetLocation.Path == "/"
                 ? UiKeys.InternetShareRequired
                 : !InternetCredentials.CanConfirm ? UiKeys.InternetCredentialsRequired : null;

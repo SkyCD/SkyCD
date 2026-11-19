@@ -36,7 +36,9 @@ public partial class LoginDialogViewModel : ObservableObject
         string.Equals(provider.Scheme, "ftp", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(provider.Scheme, "ftps", StringComparison.OrdinalIgnoreCase);
 
-    public bool IsAnonymousAvailable => !IsSftp;
+    public bool IsAnonymousAvailable => IsFtp;
+
+    public bool IsHostKeyTrustAvailable => CanTrustHostKey();
 
     public bool IsKeyAuthentication => IsSftp && AuthMethodIndex == 1;
 
@@ -185,10 +187,12 @@ public partial class LoginDialogViewModel : ObservableObject
         DialogAccepted = true;
     }
 
-    [RelayCommand]
+    private bool CanCheckHostKey() => IsSftp && location is not null && Port is >= 1 and <= 65535;
+
+    [RelayCommand(CanExecute = nameof(CanCheckHostKey))]
     private async Task CheckHostKeyAsync()
     {
-        if (location is null)
+        if (!CanCheckHostKey() || location is null)
         {
             return;
         }
@@ -277,6 +281,8 @@ public partial class LoginDialogViewModel : ObservableObject
     private void NotifyHostKeyChanged()
     {
         TrustHostKeyCommand.NotifyCanExecuteChanged();
+        CheckHostKeyCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(IsHostKeyTrustAvailable));
     }
 
     partial void OnUsernameChanged(string value)

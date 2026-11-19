@@ -38,6 +38,7 @@ public static class UiKeys
     public const string InvalidInternetClipboardUrl = "core.ui.InvalidInternetClipboardUrl";
     public const string UnsupportedInternetClipboardUrl = "core.ui.UnsupportedInternetClipboardUrl";
     public const string InternetClipboardUnavailable = "core.ui.InternetClipboardUnavailable";
+    public const string InvalidInternetPort = "core.ui.InvalidInternetPort";
     public const string InvalidInternetHost = "core.ui.InvalidInternetHost";
     public const string InternetShareRequired = "core.ui.InternetShareRequired";
     public const string InternetCredentialsRequired = "core.ui.InternetCredentialsRequired";
