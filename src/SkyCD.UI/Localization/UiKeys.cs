@@ -7,6 +7,7 @@ public static class UiKeys
     public const string Adding = "core.ui.Adding";
     public const string ServerLogin = "core.ui.ServerLogin";
     public const string EnterServerCredentials = "core.ui.EnterServerCredentials";
+    public const string UsernameAndPassword = "core.ui.UsernameAndPassword";
     public const string Username = "core.ui.Username";
     public const string Password = "core.ui.Password";
     public const string Domain = "core.ui.Domain";

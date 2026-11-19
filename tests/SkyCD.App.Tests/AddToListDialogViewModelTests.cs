@@ -307,6 +307,36 @@ public class AddToListDialogViewModelTests
         Assert.True(vm.CanConfirm);
     }
 
+    [Theory]
+    [InlineData("ftp")]
+    [InlineData("ftps")]
+    public void InternetSource_FtpAuthenticationSelectionUpdatesScanCredentials(string scheme)
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet)
+        {
+            InternetProtocol = scheme,
+            InternetHost = "example.com",
+        };
+
+        var credentials = vm.InternetCredentials;
+        Assert.False(vm.CanConfirm);
+        credentials.FtpAuthenticationIndex = 1;
+        Assert.True(vm.CanConfirm);
+        Assert.False(credentials.IsCredentialEntryEnabled);
+        Assert.True(vm.CreateInternetScanOptions(null).Anonymous);
+
+        Assert.Null(vm.FillInternetFromUrl($"{scheme}://alice:secret@example.com/"));
+        Assert.Equal(0, credentials.FtpAuthenticationIndex);
+        Assert.True(credentials.IsCredentialEntryEnabled);
+        Assert.True(vm.CanConfirm);
+        Assert.False(vm.CreateInternetScanOptions(null).Anonymous);
+
+        credentials.FtpAuthenticationIndex = 1;
+        var anonymousOptions = vm.CreateInternetScanOptions(null);
+        Assert.Null(anonymousOptions.Username);
+        Assert.Null(anonymousOptions.Password);
+    }
+
     [Fact]
     public void InternetSource_SftpHostKeyCheckRequiresValidEndpoint()
     {

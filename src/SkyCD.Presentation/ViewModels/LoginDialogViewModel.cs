@@ -53,6 +53,18 @@ public partial class LoginDialogViewModel : ObservableObject
         LocalizationService.Current.Get(UiKeys.PrivateKey),
     ];
 
+    public string[] FtpAuthenticationNames =>
+    [
+        LocalizationService.Current.Get(UiKeys.UsernameAndPassword),
+        LocalizationService.Current.Get(UiKeys.AnonymousAccess),
+    ];
+
+    public int FtpAuthenticationIndex
+    {
+        get => UseAnonymous ? 1 : 0;
+        set => UseAnonymous = value == 1;
+    }
+
     /// <summary>TLS mode chosen in this dialog; the scheme of the address selects the default.</summary>
     public RemoteTlsMode TlsMode => (RemoteTlsMode)TlsModeIndex;
 
@@ -303,6 +315,7 @@ public partial class LoginDialogViewModel : ObservableObject
     partial void OnUseAnonymousChanged(bool value)
     {
         OnPropertyChanged(nameof(IsCredentialEntryEnabled));
+        OnPropertyChanged(nameof(FtpAuthenticationIndex));
         ConfirmCommand.NotifyCanExecuteChanged();
     }
 

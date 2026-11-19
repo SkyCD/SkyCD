@@ -30,8 +30,10 @@ public partial class AddToListDialogViewModel
 
     public RemoteScanOptions CreateInternetScanOptions(string? targetParentId) =>
         new(InternetCredentials.EffectiveAddress,
-            InternetCredentials.Username,
-            InternetCredentials.IsPasswordAuthentication ? InternetCredentials.Password : null,
+            InternetCredentials.UseAnonymous ? null : InternetCredentials.Username,
+            InternetCredentials.IsCredentialEntryEnabled && InternetCredentials.IsPasswordAuthentication
+                ? InternetCredentials.Password
+                : null,
             InternetCredentials.UseAnonymous,
             string.IsNullOrWhiteSpace(MediaName) ? null : MediaName,
             targetParentId,
