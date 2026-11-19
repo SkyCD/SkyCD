@@ -12,6 +12,10 @@ public static class UiKeys
     public const string AnonymousAccess = "core.ui.AnonymousAccess";
     public const string AuthenticationMethod = "core.ui.AuthenticationMethod";
     public const string PrivateKey = "core.ui.PrivateKey";
+    public const string TlsMode = "core.ui.TlsMode";
+    public const string TlsOff = "core.ui.TlsOff";
+    public const string TlsExplicit = "core.ui.TlsExplicit";
+    public const string TlsImplicit = "core.ui.TlsImplicit";
     public const string KeyFile = "core.ui.KeyFile";
     public const string KeyPassphrase = "core.ui.KeyPassphrase";
     public const string HostKey = "core.ui.HostKey";

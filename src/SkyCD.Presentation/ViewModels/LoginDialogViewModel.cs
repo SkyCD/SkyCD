@@ -30,6 +30,10 @@ public partial class LoginDialogViewModel : ObservableObject
 
     public bool IsSftp => string.Equals(provider.Scheme, "sftp", StringComparison.OrdinalIgnoreCase);
 
+    public bool IsFtp =>
+        string.Equals(provider.Scheme, "ftp", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(provider.Scheme, "ftps", StringComparison.OrdinalIgnoreCase);
+
     public bool IsAnonymousAvailable => !IsSftp;
 
     public bool IsKeyAuthentication => IsSftp && AuthMethodIndex == 1;
@@ -45,12 +49,41 @@ public partial class LoginDialogViewModel : ObservableObject
         LocalizationService.Current.Get(UiKeys.PrivateKey),
     ];
 
-    /// <summary>The address to scan: the parsed location with the port chosen in this dialog.</summary>
-    public string EffectiveAddress =>
-        location is null
-            ? string.Empty
-            : new UriBuilder(location.Scheme, location.Host, Port, location.Path).Uri.GetComponents(
+    /// <summary>TLS mode chosen in this dialog; the scheme of the address selects the default.</summary>
+    public RemoteTlsMode TlsMode => (RemoteTlsMode)TlsModeIndex;
+
+    public string[] TlsModeNames =>
+    [
+        LocalizationService.Current.Get(UiKeys.TlsOff),
+        LocalizationService.Current.Get(UiKeys.TlsExplicit),
+        LocalizationService.Current.Get(UiKeys.TlsImplicit),
+    ];
+
+    /// <summary>
+    /// The address to scan: the parsed location with the port chosen in this dialog and, when the
+    /// chosen TLS mode differs from the scheme default, an explicit <c>tls=</c> query parameter.
+    /// </summary>
+    public string EffectiveAddress
+    {
+        get
+        {
+            if (location is null)
+            {
+                return string.Empty;
+            }
+
+            var address = new UriBuilder(location.Scheme, location.Host, Port, location.Path).Uri.GetComponents(
                 UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
+            return TlsMode == provider.DefaultTlsMode
+                ? address
+                : address + "?tls=" + TlsMode switch
+                {
+                    RemoteTlsMode.Explicit => "explicit",
+                    RemoteTlsMode.Implicit => "implicit",
+                    _ => "off",
+                };
+        }
+    }
 
     [ObservableProperty] private string username = string.Empty;
 
@@ -61,6 +94,8 @@ public partial class LoginDialogViewModel : ObservableObject
     [ObservableProperty] private bool dialogAccepted;
 
     [ObservableProperty] private int authMethodIndex;
+
+    [ObservableProperty] private int tlsModeIndex;
 
     [ObservableProperty] private string keyFilePath = string.Empty;
 
@@ -88,6 +123,7 @@ public partial class LoginDialogViewModel : ObservableObject
             provider = registry.Get(location.Scheme),
             location = location,
             Port = location.Port,
+            TlsModeIndex = (int)location.TlsMode,
         };
         if (RemoteLocation.TryReadUserInfo(address, out var username, out var password))
         {
@@ -214,6 +250,11 @@ public partial class LoginDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(IsKeyAuthentication));
         OnPropertyChanged(nameof(IsPasswordAuthentication));
         ConfirmCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnTlsModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(TlsMode));
     }
 
     partial void OnKeyFilePathChanged(string value)

@@ -246,6 +246,8 @@ public sealed class SftpCatalogProviderTests : IDisposable
 
         public int DefaultPort => 22;
 
+        public RemoteTlsMode DefaultTlsMode => RemoteTlsMode.Off;
+
         public string NormalizePath(string? path) => FtpPathNormalize(path);
 
         public bool CanConfirmCredentials(RemoteCredentials credentials) => true;

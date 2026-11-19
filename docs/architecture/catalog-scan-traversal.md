@@ -75,17 +75,18 @@ is used. The parsed public URL omits credentials; providers supply normalized di
 - The retry **re-establishes the session** and repeats the listing.
 - Rejected credentials (`RemoteAuthenticationException`), an unsupported scheme
   (`RemoteSchemeNotSupportedException`), a vanished directory (`RemoteDirectoryNotFoundException`),
-  a refused listing (`RemoteListingNotSupportedException`) and an untrusted host key
-  (`RemoteHostKeyException`) are permanent and are never retried.
+  a refused listing (`RemoteListingNotSupportedException`), an untrusted host key
+  (`RemoteHostKeyException`) and a failed TLS protection (`RemoteTlsException`) are permanent
+  and are never retried.
 
 ### Transport (#580)
 
 The FTP provider uses [FluentFTP](https://www.nuget.org/packages/FluentFTP) (MIT):
 
 - `FtpCatalogConnector` opens one `FluentFTP.FtpClient` per session with `RetryAttempts = 1` (the
-  scan owns retries and reconnects), `EncryptionMode = None`, `DataConnectionType = AutoPassive`
+  scan owns retries and reconnects), `DataConnectionType = AutoPassive`
   (EPSV, then PASV), `TimeConversion = UTC`, `ListingParser = Auto` and 15 s connect / 20 s
-  transfer timeouts.
+  transfer timeouts. One connector instance serves one scheme: `ftp://` or `ftps://` (#623).
 - FluentFTP handles LIST parsing and reply handling; SIZE and MDTM preserve exact metadata.
 - `FtpRemoteListingMapper` projects listings onto `RemoteEntry`: self/parent records and invalid
   names are dropped, directory sizes are zeroed, symbolic permissions and UTC timestamps are kept.
@@ -93,6 +94,29 @@ The FTP provider uses [FluentFTP](https://www.nuget.org/packages/FluentFTP) (MIT
 - `tests/SkyCD.App.Tests/ScriptedFtpServer.cs` is a loopback scripted FTP server used by
   `FtpCatalogTransportTests` to cover nested listings, MLSD-less servers, refused listings,
   rejected credentials, missing directories and interrupted connections over a real socket.
+
+### FTPS transport (#623)
+
+FTPS is the same provider with FluentFTP's TLS support; no additional package is used:
+
+- `RemoteTlsMode` (`Off` / `Explicit` / `Implicit`) is part of `RemoteLocation`. The scheme picks
+  the default — `ftps://` is implicit TLS on port 990 — and an optional `tls=off|explicit|implicit`
+  query parameter overrides it. The query is split off the raw address before `System.Uri`
+  parsing, because .NET folds `?` into the path of `ftp://` addresses. The login dialog exposes a
+  TLS mode selector whose choice is carried in the address, like the port.
+- `FtpConfig.EncryptionMode` maps the mode to FluentFTP `None` / `Explicit` (AUTH TLS) /
+  `Implicit`; data channels are protected (PROT P) in both TLS modes. The PBSZ 0 / PROT P upgrade
+  is issued explicitly after login so a rejected upgrade reports `RemoteTlsDataProtectionException`
+  instead of an ambiguous command failure; there is no plaintext fallback.
+- Certificates are validated against the system trust store and the target host name by default.
+  Validation failures report `RemoteCertificateValidationException`; handshake failures report
+  `RemoteTlsHandshakeException` and a refused AUTH TLS reports `RemoteTlsUpgradeException`.
+  All four `RemoteTlsException` kinds are localized, fatal and never retried.
+- `tests/SkyCD.App.Tests/LocalFtpServer.cs` serves TLS (self-signed loopback certificate) in
+  implicit and explicit modes with knobs for rejected AUTH TLS and rejected PROT P.
+  `FtpsCatalogTransportTests` covers implicit and explicit listings over protected channels,
+  certificate rejection, rejected AUTH TLS and PROT P, plaintext servers, authentication failure,
+  cancellation and interrupted connections.
 
 ### SFTP transport (#624)
 
@@ -125,6 +149,7 @@ The SFTP provider uses [SSH.NET](https://www.nuget.org/packages/SSH.NET) (MIT):
 | --- | --- |
 | Authentication rejected / unsupported scheme | **Fatal** (typed exception) |
 | Host key unknown or changed | **Fatal** (`RemoteHostKeyException`) |
+| TLS certificate rejected / handshake or upgrade refused | **Fatal** (`RemoteTlsException`) |
 | Root connect retry exhausted | **Fatal** (`RemoteConnectionException`) |
 | Root listing retry exhausted | **Fatal** (`RemoteConnectionException`) |
 | Cancellation or operation timeout | **Fatal** (`OperationCanceledException`) |
