@@ -7,12 +7,12 @@ namespace SkyCD.App.Tests;
 public class LanguageItemTests
 {
     [Theory]
-    [InlineData("🇬🇧", "GB")]
-    [InlineData("🇱🇹", "LT")]
-    [InlineData("🇿🇿", "globe")]
-    [InlineData("🌐", "globe")]
-    [InlineData("", "globe")]
-    [InlineData(null, "globe")]
+    [InlineData("🇬🇧", "flag-united-kingdom")]
+    [InlineData("🇱🇹", "flag-lithuania")]
+    [InlineData("🇿🇿", "globe-with-meridians")]
+    [InlineData("🌐", "globe-with-meridians")]
+    [InlineData("", "globe-with-meridians")]
+    [InlineData(null, "globe-with-meridians")]
     public void ResolveAssetName_UsesFlagSequenceOrFallback(string? flag, string assetName)
     {
         Assert.Equal(assetName, LanguageFlagImageConverter.ResolveAssetName(flag));

@@ -5,7 +5,6 @@
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
-        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -27,14 +26,6 @@
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
-        <!-- The packaged IconPacks theme was compiled against an older Avalonia binding API. -->
-        <ControlTheme x:Key="{x:Type iconPacks:PackIconControl}" TargetType="iconPacks:PackIconControl">
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <PathIcon Data="{TemplateBinding Data}" Foreground="{TemplateBinding Foreground}" />
-                </ControlTemplate>
-            </Setter>
-        </ControlTheme>
     </Window.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">

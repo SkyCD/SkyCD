@@ -56,4 +56,15 @@ public class StatusBadgeTests
 
         Assert.Equal(Colors.Red, Assert.IsType<SolidColorBrush>(icon.Foreground).Color);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("unknown:status")]
+    public void MenuStatusIcon_WithNoRenderableGlyph_HasNoIcon(string key)
+    {
+        var converter = new MenuIconConverter();
+        var status = new StatusMenuIcon(key, "#FF0000");
+
+        Assert.Null(converter.Convert(status, typeof(object), null, CultureInfo.InvariantCulture));
+    }
 }
