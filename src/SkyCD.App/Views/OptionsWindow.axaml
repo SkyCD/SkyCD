@@ -22,19 +22,52 @@
         <vm:OptionsDialogViewModel />
     </Design.DataContext>
 
+    <Window.Styles>
+        <Style Selector="Border.acpAgentCard">
+            <Setter Property="BorderBrush" Value="{DynamicResource TabCardBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10" />
+        </Style>
+        <Style Selector="Border.acpAgentCard.selected">
+            <Setter Property="BorderBrush" Value="#5795D6" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="9" />
+        </Style>
+        <Style Selector="TextBlock.acpCardStatus">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.acpAgentCard.selected TextBlock.acpCardStatus">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="Button.acpUseAgent">
+            <Setter Property="IsVisible" Value="{ReflectionBinding IsInstalled}" />
+        </Style>
+        <Style Selector="Border.acpAgentCard.selected Button.acpUseAgent">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+    </Window.Styles>
+
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
         <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
+        <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
         <ItemsPanelTemplate x:Key="AcpAgentCardsPanel">
             <UniformGrid Columns="2" />
         </ItemsPanelTemplate>
         <DataTemplate x:Key="AcpAgentCardTemplate" x:DataType="media:AcpAgentChoice">
-            <Border MinHeight="96" Margin="3" Padding="10"
+            <Border Classes="acpAgentCard" MinHeight="96" Margin="3"
                     Background="{DynamicResource TabCardBackgroundBrush}"
-                    BorderBrush="{DynamicResource TabCardBorderBrush}" BorderThickness="1" CornerRadius="6">
+                    CornerRadius="6">
+                <Classes.selected>
+                    <MultiBinding Converter="{StaticResource AcpAgentSelectionConverter}">
+                        <Binding />
+                        <ReflectionBinding Path="DataContext.AcpCardAgent"
+                                           RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Window}}" />
+                    </MultiBinding>
+                </Classes.selected>
                 <Grid ColumnDefinitions="34,*" ColumnSpacing="9" RowDefinitions="Auto,Auto" RowSpacing="8">
                     <Border Width="34" Height="34" CornerRadius="7" Background="#36516D"
                             VerticalAlignment="Top">
@@ -56,8 +89,10 @@
                         <TextBlock Text="{Binding RegistryVersion}" Opacity="0.7"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                            <Button IsVisible="{Binding IsInstalled}" Click="OnSelectAcpAgentClicked"
+                            <Button Classes="acpUseAgent" Click="OnSelectAcpAgentClicked"
                                     Content="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
+                            <TextBlock Classes="acpCardStatus" FontWeight="SemiBold" VerticalAlignment="Center"
+                                       Text="{ReflectionBinding DataContext.AcpCardStatus, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" />
                             <Button IsVisible="{Binding CanInstall}" Click="OnInstallAcpAgentClicked"
                                     Content="{i18n:Translate {x:Static i18n:UiKeys.InstallAcpAgent}}" />
                             <Button IsVisible="{Binding CanLocateExecutable}" Click="OnBrowseAcpAgentClicked"

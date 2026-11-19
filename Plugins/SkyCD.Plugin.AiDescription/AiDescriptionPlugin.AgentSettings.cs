@@ -102,7 +102,7 @@ public sealed partial class AiDescriptionPlugin
             }
         }
 
-        return new AcpAgentSettings(agents, selected, status);
+        return new AcpAgentSettings(agents, selected, status) { IsGenerationEnabled = options.Enabled };
     }
 
     public void SaveAgentSettings(AcpAgentChoice agent, bool activate = false)

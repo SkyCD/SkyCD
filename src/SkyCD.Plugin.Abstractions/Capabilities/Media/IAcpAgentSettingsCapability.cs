@@ -64,4 +64,8 @@ public sealed record AcpAgentChoice(string Name, string? Executable, IReadOnlyLi
 /// <param name="SelectedAgent">The current provider, if configured.</param>
 /// <param name="RegistryStatus">An optional message about the registry cache.</param>
 public sealed record AcpAgentSettings(IReadOnlyList<AcpAgentChoice> Agents,
-    AcpAgentChoice? SelectedAgent, string? RegistryStatus);
+    AcpAgentChoice? SelectedAgent, string? RegistryStatus)
+{
+    /// <summary>Whether the saved agent is enabled for generation.</summary>
+    public bool IsGenerationEnabled { get; init; }
+}

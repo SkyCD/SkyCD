@@ -302,6 +302,8 @@ public sealed class AcpDescriptionTests
             var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
             Assert.True(detected.IsInstalled);
             dialog.SelectAcpAgent(detected);
+            Assert.Equal(detected, dialog.AcpCardAgent);
+            var pendingStatus = dialog.AcpCardStatus;
             Assert.False(File.Exists(configurationPath));
 
             dialog.ConfirmCommand.Execute(null);
@@ -311,6 +313,9 @@ public sealed class AcpDescriptionTests
             Assert.Equal(executable, saved.SelectedAgent?.Executable);
             Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
             Assert.True(plugin.GetPlan().IsEnabled);
+            await dialog.LoadAcpSettingsAsync(plugin);
+            Assert.Equal(executable, dialog.AcpCardAgent?.Executable);
+            Assert.NotEqual(pendingStatus, dialog.AcpCardStatus);
         }
         finally
         {

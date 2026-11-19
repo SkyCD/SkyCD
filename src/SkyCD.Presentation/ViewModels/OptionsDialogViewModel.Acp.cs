@@ -31,6 +31,10 @@ public partial class OptionsDialogViewModel
     public string? AcpSelectionLabel => SelectedAcpAgent is { IsInstalled: true } agent
         ? LocalizationService.Current.Format(UiKeys.SelectedAcpAgent, agent.Name) : null;
     public bool HasAcpSelection => SelectedAcpAgent?.IsInstalled == true;
+    public AcpAgentChoice? AcpCardAgent => explicitlySelectedAcpAgent || initialAcpSettings?.IsGenerationEnabled == true
+        ? SelectedAcpAgent : null;
+    public string AcpCardStatus => LocalizationService.Current.Get(explicitlySelectedAcpAgent
+        ? UiKeys.AcpSelectionPending : UiKeys.AcpAgentInUse);
     public bool HasAcpRegistryStatus => !string.IsNullOrWhiteSpace(AcpRegistryStatus);
     public bool HasAcpAlert => !string.IsNullOrWhiteSpace(AcpAlertMessage);
     public string AcpLoadingLabel => InstallingAcpAgentName is { } name
@@ -87,6 +91,7 @@ public partial class OptionsDialogViewModel
         CancellationToken cancellationToken = default)
     {
         acpSettingsCapability = capability;
+        explicitlySelectedAcpAgent = false;
         IsAcpLoading = true;
         try
         {
@@ -167,6 +172,7 @@ public partial class OptionsDialogViewModel
                 }
             }
             NotifyAcpAgentListsChanged();
+            NotifyAcpCardSelectionChanged();
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or JsonException)
         {
@@ -193,8 +199,15 @@ public partial class OptionsDialogViewModel
 
     public void SelectAcpAgent(AcpAgentChoice agent)
     {
-        SelectedAcpAgent = agent;
         explicitlySelectedAcpAgent = true;
+        SelectedAcpAgent = agent;
+        NotifyAcpCardSelectionChanged();
+    }
+
+    private void NotifyAcpCardSelectionChanged()
+    {
+        OnPropertyChanged(nameof(AcpCardAgent));
+        OnPropertyChanged(nameof(AcpCardStatus));
     }
 
     private bool TrySaveAcpSettings()
