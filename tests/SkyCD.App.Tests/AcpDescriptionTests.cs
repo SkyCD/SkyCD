@@ -287,6 +287,10 @@ public sealed class AcpDescriptionTests
             var npmAgent = dialog.AcpAgents.Single(agent => agent.Name == "NPM Agent");
             Assert.Equal(node, npmAgent.Executable);
             Assert.Equal(new[] { npmScript, "--acp" }, npmAgent.Arguments);
+            File.WriteAllText(Path.Combine(npmPackage.FullName, "cli.sh"), "#!/bin/sh");
+            File.WriteAllText(Path.Combine(npmPackage.FullName, "package.json"),
+                Json(new { name = "@test/agent", bin = "cli.sh" }));
+            Assert.False(plugin.GetAgentSettings().Agents.Single(agent => agent.Name == "NPM Agent").IsInstalled);
             dialog.AcpSearchText = "npm";
             Assert.Equal(npmAgent, Assert.Single(dialog.InstalledAcpAgents));
             Assert.Empty(dialog.AvailableAcpAgents);
@@ -303,6 +307,65 @@ public sealed class AcpDescriptionTests
             Assert.Equal(executable, saved.SelectedAgent?.Executable);
             Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
             Assert.True(plugin.GetPlan().IsEnabled);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SettingsRepairsPreserveLaunchArgumentsAndPrivateConfiguration()
+    {
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-repairs-");
+        try
+        {
+            var configuration = Path.Combine(directory.FullName, "settings.json");
+            var local = directory.CreateSubdirectory("acp-agents");
+            var executable = Path.Combine(local.FullName, OperatingSystem.IsWindows() ? "agent.exe" : "agent");
+            File.WriteAllText(executable, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            var arguments = Enumerable.Repeat("argument", 32).Append(new string('x', 513)).Append("--acp").ToArray();
+            var targets = new[] { "windows", "linux", "darwin" }
+                .SelectMany(os => new[] { "x86_64", "aarch64" }.Select(arch => os + "-" + arch))
+                .ToDictionary(platform => platform, _ => new { cmd = Path.GetFileName(executable), args = arguments });
+            File.WriteAllText(Path.Combine(directory.FullName, AcpAgentRegistry.FileName), Json(new
+            {
+                version = "1.0.0",
+                agents = new[] { new { id = "agent", name = "Agent", version = "1", distribution = new { binary = targets } } }
+            }));
+            var plugin = new AiDescriptionPlugin(configuration, (_, _, _) =>
+                throw new InvalidOperationException("Discovery must not launch processes."));
+            var detected = plugin.GetAgentSettings().Agents.First(agent => agent.Name == "Agent");
+            Assert.Equal(arguments, detected.Arguments);
+            plugin.SaveAgentSettings(detected);
+            Assert.Equal(arguments, plugin.GetAgentSettings().SelectedAgent!.Arguments);
+
+            File.WriteAllText(configuration, Json(new { Executable = executable, Arguments = (string[]?)null }));
+            var settings = plugin.GetAgentSettings();
+            Assert.Empty(settings.SelectedAgent!.Arguments);
+            var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
+            await dialog.LoadAcpSettingsAsync(plugin);
+            Assert.NotEmpty(dialog.AcpAgents);
+            Assert.Equal(executable, dialog.SelectedAcpAgent?.Executable);
+            Assert.Null(dialog.AcpRegistryStatus);
+            plugin.SaveAgentSettings(settings.SelectedAgent);
+            Assert.Empty(plugin.GetAgentSettings().SelectedAgent!.Arguments);
+            if (!OperatingSystem.IsWindows())
+                Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(configuration));
+            Assert.Empty(Directory.GetFiles(directory.FullName, "*.tmp"));
+
+            File.Delete(executable);
+            await dialog.LoadAcpSettingsAsync(plugin);
+            dialog.SelectedAcpAgent = dialog.AcpAgents.First(agent => agent.Name == "Agent");
+            var attached = Path.Combine(directory.FullName, OperatingSystem.IsWindows() ? "attached.exe" : "attached");
+            File.WriteAllText(attached, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(attached, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            dialog.ChooseLocalAcpAgent(attached);
+            Assert.Equal(arguments, dialog.SelectedAcpAgent!.Arguments);
+            dialog.ConfirmCommand.Execute(null);
+            Assert.True(dialog.DialogAccepted);
+            Assert.Equal(arguments, plugin.GetAgentSettings().SelectedAgent!.Arguments);
         }
         finally
         {

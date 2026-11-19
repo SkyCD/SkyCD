@@ -135,7 +135,9 @@ public partial class OptionsDialogViewModel
             return;
         }
 
-        var agent = new AcpAgentChoice(Path.GetFileName(path), path, []);
+        var agent = SelectedAcpAgent is { IsInstalled: false } cached
+            ? cached with { Executable = path }
+            : new AcpAgentChoice(Path.GetFileName(path), path, []);
         AcpAgents.Add(agent);
         SelectedAcpAgent = agent;
         NotifyAcpAgentListsChanged();

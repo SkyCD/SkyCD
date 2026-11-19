@@ -97,7 +97,9 @@ public sealed class AcpAgentRegistry
         {
             kinds.Add("npx");
             npmPackage = BoundedString(npx, "package", 256);
-            npmArguments = BoundedArguments(npx);
+            var launchArguments = LaunchArguments(npx);
+            npmArguments = launchArguments ?? [];
+            if (launchArguments is null) npmPackage = null;
             hint ??= PackageHint("npx", npx);
         }
         if (distribution.TryGetProperty("uvx", out var uvx) && uvx.ValueKind == JsonValueKind.Object)
@@ -112,7 +114,9 @@ public sealed class AcpAgentRegistry
             if (platform is not null && binary.TryGetProperty(platform, out var target) && target.ValueKind == JsonValueKind.Object)
             {
                 binaryCommand = BoundedString(target, "cmd", 512);
-                binaryArguments = BoundedArguments(target);
+                var launchArguments = LaunchArguments(target);
+                binaryArguments = launchArguments ?? [];
+                if (launchArguments is null) binaryCommand = null;
                 if (binaryCommand is not null)
                     hint ??= Bound($"binary ({platform}): install and run {string.Join(' ', new[] { binaryCommand }.Concat(binaryArguments).Select(Quote))}", 400);
             }
@@ -149,6 +153,19 @@ public sealed class AcpAgentRegistry
         if (OperatingSystem.IsMacOS()) return "darwin-" + architecture;
         if (OperatingSystem.IsLinux()) return "linux-" + architecture;
         return null;
+    }
+
+    private static IReadOnlyList<string>? LaunchArguments(JsonElement owner)
+    {
+        if (!owner.TryGetProperty("args", out var args)) return [];
+        if (args.ValueKind != JsonValueKind.Array) return null;
+        var values = new List<string>();
+        foreach (var argument in args.EnumerateArray())
+        {
+            if (argument.ValueKind != JsonValueKind.String) return null;
+            values.Add(argument.GetString()!);
+        }
+        return values;
     }
 
     private static IReadOnlyList<string> BoundedArguments(JsonElement owner)

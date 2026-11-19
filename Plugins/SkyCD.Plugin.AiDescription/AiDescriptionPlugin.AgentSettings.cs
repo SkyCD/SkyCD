@@ -135,7 +135,12 @@ public sealed partial class AiDescriptionPlugin
         var temporaryPath = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true }));
+            var fileOptions = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows())
+                fileOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using (var stream = new FileStream(temporaryPath, fileOptions))
+            using (var writer = new StreamWriter(stream))
+                writer.Write(JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(temporaryPath, fullPath, overwrite: true);
         }
         finally
@@ -149,9 +154,10 @@ public sealed partial class AiDescriptionPlugin
         var info = new FileInfo(configurationPath);
         if (!info.Exists) return new DescriptionAgentOptions();
         if (info.Length > 65536) throw new DescriptionAgentException("configuration exceeds 64 KiB");
-        return JsonSerializer.Deserialize<DescriptionAgentOptions>(File.ReadAllText(configurationPath),
+        var options = JsonSerializer.Deserialize<DescriptionAgentOptions>(File.ReadAllText(configurationPath),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true, MaxDepth = 16 })
             ?? throw new DescriptionAgentException("configuration is invalid");
+        return options with { Arguments = options.Arguments ?? [] };
     }
 
     private static bool SameExecutable(string? first, string second) => string.Equals(first, second,
