@@ -79,7 +79,8 @@ public static class WinCatalogHierarchyBuilder
                     columnMap,
                     nodesById,
                     explicitFolderPaths,
-                    synthesizedFolderPaths);
+                    synthesizedFolderPaths,
+                    skippedReasons);
 
                 importedRecordsCount++;
             }
@@ -114,7 +115,8 @@ public static class WinCatalogHierarchyBuilder
         Dictionary<WinCatalogCsvColumn, int> columnMap,
         Dictionary<string, Dictionary<string, object?>> nodesById,
         HashSet<string> explicitFolderPaths,
-        HashSet<string> synthesizedFolderPaths)
+        HashSet<string> synthesizedFolderPaths,
+        List<string> skippedReasons)
     {
         var catalogPath = GetValue(row, columnMap, WinCatalogCsvColumn.CatalogPath);
         var filePath = GetValue(row, columnMap, WinCatalogCsvColumn.FilePath);
@@ -138,6 +140,13 @@ public static class WinCatalogHierarchyBuilder
         if (string.IsNullOrWhiteSpace(catalogPath) && string.IsNullOrWhiteSpace(filePath))
         {
             throw new InvalidOperationException("Row does not specify Catalog Path or File Path.");
+        }
+
+        if (columnMap.TryGetValue(WinCatalogCsvColumn.PhysicalLocation, out var locationIndex) &&
+            locationIndex < row.Count &&
+            string.IsNullOrWhiteSpace(row[locationIndex]))
+        {
+            skippedReasons.Add($"Row {rowIndex + 1}: blank Physical Location value was ignored.");
         }
 
         // Determine media name and relative path parts

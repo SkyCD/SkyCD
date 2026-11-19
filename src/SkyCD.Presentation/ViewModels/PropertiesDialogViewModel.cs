@@ -19,7 +19,8 @@ public partial class PropertiesDialogViewModel : ObservableObject
     {
         "Name",
         "RealDirectoryName",
-        "Comment"
+        "Comment",
+        "LocationId"
     };
 
     private static readonly Regex TimestampPattern = new(

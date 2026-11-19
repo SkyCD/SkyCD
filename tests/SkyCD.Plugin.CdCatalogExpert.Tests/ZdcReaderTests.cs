@@ -87,6 +87,38 @@ public sealed class ZdcReaderTests
     }
 
     [Fact]
+    public async Task ReadAsync_BlankDiscStorageLocation_ReportedInSummary()
+    {
+        var database = new ZdcDatabase
+        {
+            Members =
+            {
+                ZdcFixture.IndexMember(
+                    "<?xml version=\"1.0\" encoding=\"windows-1252\"?>"
+                    + "<Z N=\"Blank Location Catalog\">"
+                    + $"<L N=\"Blank Disc\" F=\"{{{ZdcFixture.DiscGuidA}}}\" DS=\"\"/>"
+                    + $"<L N=\"Spaces Disc\" F=\"{{{ZdcFixture.DiscGuidB}}}\" DS=\"   \"/>"
+                    + "</Z>"),
+                ZdcFixture.DiscMember(ZdcFixture.DiscGuidA, ZdcFixture.DiscXml(ZdcFixture.DiscGuidA)),
+                ZdcFixture.DiscMember(ZdcFixture.DiscGuidB, ZdcFixture.DiscXml(ZdcFixture.DiscGuidB))
+            }
+        };
+        using var stream = ZdcFixture.StreamOf(ZdcFixture.Serialize(database));
+        var result = await plugin.ReadAsync(ZdcFixture.ReadRequest(stream));
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<ZdcReportDocument>(result.Payload);
+
+        Assert.Contains(
+            document.Summary.SkippedReasons,
+            reason => reason.Contains("Blank Disc", System.StringComparison.Ordinal) &&
+                      reason.Contains("blank storage location value was ignored", System.StringComparison.Ordinal));
+        Assert.Contains(
+            document.Summary.SkippedReasons,
+            reason => reason.Contains("Spaces Disc", System.StringComparison.Ordinal) &&
+                      reason.Contains("blank storage location value was ignored", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ReadAsync_SampleDatabase_PreservesTreeFieldsAndCover()
     {
         using var stream = ZdcFixture.StreamOf(ZdcFixture.Serialize(ZdcFixture.SampleDatabase()));

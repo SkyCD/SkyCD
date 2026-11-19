@@ -158,6 +158,55 @@ namespace SkyCD.Presentation.UndoRedo
                 affectedOldTagIds ?? new Dictionary<string, IReadOnlyList<string>>()));
         }
 
+        public void RecordLocationCreated(
+            LocationDocumentRepository locationRepository,
+            CatalogDocumentRepository catalogRepository,
+            string locationId,
+            string locationName)
+        {
+            if (locationRepository == null || catalogRepository == null) return;
+            if (string.IsNullOrWhiteSpace(locationId)) return;
+            _history.PushAction(new Actions.CreateLocationAction(catalogRepository, locationRepository, locationId, locationName ?? string.Empty));
+        }
+
+        public void RecordLocationRenamed(LocationDocumentRepository locationRepository, string locationId, string oldName, string newName)
+        {
+            if (locationRepository == null) return;
+            if (string.IsNullOrWhiteSpace(locationId)) return;
+            if (string.Equals(oldName, newName, StringComparison.Ordinal)) return;
+            _history.PushAction(new Actions.RenameLocationAction(locationRepository, locationId, oldName ?? string.Empty, newName ?? string.Empty));
+        }
+
+        public void RecordLocationDeleted(
+            CatalogDocumentRepository catalogRepository,
+            LocationDocumentRepository locationRepository,
+            string locationId,
+            string locationName,
+            IReadOnlyDictionary<string, string?> affectedOldLocationIds)
+        {
+            if (catalogRepository == null || locationRepository == null) return;
+            if (string.IsNullOrWhiteSpace(locationId)) return;
+            _history.PushAction(new Actions.DeleteLocationAction(
+                catalogRepository, locationRepository, locationId, locationName ?? string.Empty,
+                affectedOldLocationIds ?? new Dictionary<string, string?>()));
+        }
+
+        public void RecordLocationsMerged(
+            CatalogDocumentRepository catalogRepository,
+            LocationDocumentRepository locationRepository,
+            string sourceLocationId,
+            string sourceLocationName,
+            string targetLocationId,
+            IReadOnlyDictionary<string, string?> affectedOldLocationIds)
+        {
+            if (catalogRepository == null || locationRepository == null) return;
+            if (string.IsNullOrWhiteSpace(sourceLocationId) || string.IsNullOrWhiteSpace(targetLocationId)) return;
+            if (string.Equals(sourceLocationId, targetLocationId, StringComparison.Ordinal)) return;
+            _history.PushAction(new Actions.MergeLocationsAction(
+                catalogRepository, locationRepository, sourceLocationId, sourceLocationName ?? string.Empty, targetLocationId,
+                affectedOldLocationIds ?? new Dictionary<string, string?>()));
+        }
+
         public void RecordCollectionCreated(
             VirtualCollectionDocumentRepository collectionRepository,
             string collectionId,

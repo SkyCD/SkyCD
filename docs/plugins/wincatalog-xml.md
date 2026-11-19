@@ -41,3 +41,18 @@ To generate an export compatible with SkyCD:
 - **Fields Absent from Source**: only fields included during the WinCatalog export can be recovered; unmapped fields are recorded in the import summary (`UnsupportedFields`) as diagnostics.
 - **Partial Exports**: search-result exports without folder rows have their folder structure synthesized from paths; a report is marked partial when ancestors had to be synthesized or records were skipped. Missing exported entries are never interpreted as deleted files.
 - **Provenance**: original paths are preserved as `WinCatalogPath`/`WinCatalogFilePath` properties and the detected report schema version as `WinCatalogSchemaVersion`.
+
+## Physical location
+
+Physical location fields (`Physical_location` / `PhysicalLocation`) are imported under
+the `PhysicalLocation` property key and canonicalized into SkyCD's location model on
+the host side (issue #647). The raw `PhysicalLocation` value is retained verbatim on
+each entry; the bare `Location` key is never used for this data, because other
+importers reserve it for filesystem paths. A location value that is present but blank
+(empty or whitespace-only) cannot be mapped to a location and is reported in the import
+summary `SkippedReasons` (nested exports: `Item 'name': blank Physical Location value
+was ignored.`; flat exports reuse the shared CSV row diagnostics) instead of being
+silently dropped. Items that simply omit the field are silent.
+
+Location export is unsupported: this plugin is read-only, so physical locations
+assigned in SkyCD are never written back to WinCatalog XML reports.

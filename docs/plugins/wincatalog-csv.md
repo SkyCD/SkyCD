@@ -25,3 +25,17 @@ Comma, semicolon and tab delimiters are detected automatically. Columns may be r
 A report without either path column fails with a descriptive missing-path error. Media roots come from Disk/Volume Label where available, or catalog/physical paths. A report with no usable media identity cannot reproduce the original media grouping; generic roots may be used. Include media columns for reliable recovery.
 
 Missing intermediate folders are synthesized. Such reports, and reports with skipped malformed rows, are marked partial in the import summary. CSV does not carry thumbnails or embedded file contents. This plugin is read-only and does not implement CSV export or native WinCatalog catalog import.
+
+## Physical location
+
+Physical location cells are imported under the `PhysicalLocation` property key and
+canonicalized into SkyCD's location model on the host side (issue #647). The raw
+`PhysicalLocation` value is retained verbatim on each entry so nothing is lost before
+canonicalization; the bare `Location` key is never used for this data, because other
+importers reserve it for filesystem paths. A cell that is present but blank (empty or
+whitespace-only) cannot be mapped to a location; it is reported in the import summary
+`SkippedReasons` (e.g. `Row 3: blank Physical Location value was ignored.`) instead of
+being silently dropped. Rows that simply omit the location cell are silent.
+
+Location export is unsupported: this plugin is read-only (`CanWrite: false`), so
+physical locations assigned in SkyCD are never written back to WinCatalog CSV reports.

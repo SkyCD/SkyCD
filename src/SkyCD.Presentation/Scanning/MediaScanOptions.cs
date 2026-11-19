@@ -10,4 +10,5 @@ public sealed record MediaScanOptions(
     bool IncludeMediaInfo = true,
     bool IncludeExtendedInfo = false,
     bool IncludeSubfolders = true,
-    ScanTraversalOptions? Traversal = null);
+    ScanTraversalOptions? Traversal = null,
+    string? LocationId = null);

@@ -13,6 +13,7 @@ public sealed class AdvancedCatalogFieldConverter : IValueConverter
         AdvancedCatalogField.ActiveLoan => LocalizationService.Current.Get(UiKeys.ActiveLoans),
         AdvancedCatalogField.Borrower => LocalizationService.Current.Get(UiKeys.Borrower),
         AdvancedCatalogField.OverdueLoan => LocalizationService.Current.Get(UiKeys.OverdueLoans),
+        AdvancedCatalogField.Location => LocalizationService.Current.Get(UiKeys.Location),
         _ => value?.ToString()
     };
 

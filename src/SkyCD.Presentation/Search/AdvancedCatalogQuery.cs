@@ -112,7 +112,8 @@ public enum AdvancedCatalogField
     Metadata,
     ActiveLoan,
     Borrower,
-    OverdueLoan
+    OverdueLoan,
+    Location
 }
 
 public enum AdvancedCatalogOperator

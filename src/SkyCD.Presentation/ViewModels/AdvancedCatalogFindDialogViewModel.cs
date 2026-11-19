@@ -21,7 +21,8 @@ public enum AdvancedFindSortKey
     Name,
     Size,
     Type,
-    Status
+    Status,
+    Location
 }
 
 /// <summary>
@@ -505,6 +506,9 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             AdvancedFindSortKey.Status => matches
                 .OrderBy(static match => match.Document.Status is null, Comparer<bool>.Default)
                 .ThenBy(static match => match.Document.Status, StringComparer.OrdinalIgnoreCase),
+            AdvancedFindSortKey.Location => matches
+                .OrderBy(static match => !match.Document.HasLocation, Comparer<bool>.Default)
+                .ThenBy(static match => match.Document.Location, StringComparer.OrdinalIgnoreCase),
             _ => matches
                 .OrderBy(static match => match.FullPath, StringComparer.OrdinalIgnoreCase)
         };

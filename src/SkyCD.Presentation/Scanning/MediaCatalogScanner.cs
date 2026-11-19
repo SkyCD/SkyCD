@@ -8,6 +8,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Presentation.Operations;
+using SkyCD.Presentation.Locations;
 
 namespace SkyCD.Presentation.Scanning;
 
@@ -81,6 +82,11 @@ public sealed class MediaCatalogScanner(
         {
             PopulateMediaDriveProperties(rootProperties, driveInfo);
             PopulateVolumeMetadata(rootProperties, driveInfo, cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.LocationId))
+        {
+            rootProperties[CatalogLocationService.LocationPropertyKey] = options.LocationId.Trim();
         }
 
         var rootDoc = new CatalogDocument

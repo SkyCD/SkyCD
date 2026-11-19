@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.WinCatalog.Csv;
@@ -148,5 +149,36 @@ public sealed class WinCatalogCsvHierarchyTests
         Assert.Equal(1, doc.Summary.SkippedRecordsCount);
         Assert.NotEmpty(doc.Summary.SkippedReasons);
         Assert.Contains("Row 4", doc.Summary.SkippedReasons[0]);
+    }
+
+    [Fact]
+    public async Task ReadAsync_BlankPhysicalLocationCells_ReportedAndRawValueKept()
+    {
+        var csv = "Disk,Catalog Path,Name,Physical Location\n"
+            + "\"Disk1\",\"Catalog\\Disk1\\file-a.txt\",\"file-a.txt\",\"Attic\"\n"
+            + "\"Disk1\",\"Catalog\\Disk1\\file-b.txt\",\"file-b.txt\",\"   \"\n"
+            + "\"Disk1\",\"Catalog\\Disk1\\file-c.txt\",\"file-c.txt\",\"\"\n";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            FormatId = "wincatalog-csv",
+            Source = stream,
+            FileName = "blank-locations.csv"
+        });
+
+        Assert.True(result.Success, result.Error);
+        var doc = Assert.IsType<WinCatalogCsvReportDocument>(result.Payload);
+
+        var kept = doc.Rows.Single(r => string.Equals(r["name"]?.ToString(), "file-a.txt", StringComparison.Ordinal));
+        var keptProps = Assert.IsAssignableFrom<Dictionary<string, object?>>(kept["properties"]);
+        Assert.Equal("Attic", keptProps["PhysicalLocation"]);
+
+        Assert.Contains("Row 3: blank Physical Location value was ignored.", doc.Summary.SkippedReasons);
+        Assert.Contains("Row 4: blank Physical Location value was ignored.", doc.Summary.SkippedReasons);
+
+        var blankCell = doc.Rows.Single(r => string.Equals(r["name"]?.ToString(), "file-b.txt", StringComparison.Ordinal));
+        var blankProps = Assert.IsAssignableFrom<Dictionary<string, object?>>(blankCell["properties"]);
+        Assert.DoesNotContain("PhysicalLocation", blankProps.Keys);
     }
 }

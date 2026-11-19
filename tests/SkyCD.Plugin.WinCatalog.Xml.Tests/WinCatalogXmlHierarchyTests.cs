@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -223,5 +224,70 @@ public sealed class WinCatalogXmlHierarchyTests
 
         Assert.False(result.Success);
         Assert.Contains("read-only", result.Error);
+    }
+
+    [Fact]
+    public async Task ReadAsync_BlankPhysicalLocationValues_ReportedAndRawValueKept()
+    {
+        var xml =
+            "<WinCatalog version=\"2026\">\r\n" +
+            "  <Disks>\r\n" +
+            "    <Disk Name=\"Disk 1\" Physical_location=\"   \">\r\n" +
+            "      <File Name=\"kept.txt\" Size=\"10\" Physical_location=\"Shelf 2\"/>\r\n" +
+            "      <File Name=\"blank.txt\" Size=\"10\" Physical_location=\"\"/>\r\n" +
+            "    </Disk>\r\n" +
+            "  </Disks>\r\n" +
+            "</WinCatalog>";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            Source = stream,
+            FormatId = "wincatalog-xml",
+            FileName = "blank-locations.xml"
+        });
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<WinCatalogXmlReportDocument>(result.Payload);
+
+        Assert.Contains("Item 'Disk 1': blank Physical Location value was ignored.", document.Summary.SkippedReasons);
+        Assert.Contains("Item 'blank.txt': blank Physical Location value was ignored.", document.Summary.SkippedReasons);
+
+        var kept = document.Rows.Single(row => string.Equals(row["name"]?.ToString(), "kept.txt", StringComparison.Ordinal));
+        var keptProperties = Assert.IsAssignableFrom<Dictionary<string, object?>>(kept["properties"]);
+        Assert.Equal("Shelf 2", keptProperties["PhysicalLocation"]);
+
+        var blank = document.Rows.Single(row => string.Equals(row["name"]?.ToString(), "blank.txt", StringComparison.Ordinal));
+        var blankProperties = Assert.IsAssignableFrom<Dictionary<string, object?>>(blank["properties"]);
+        Assert.DoesNotContain("PhysicalLocation", blankProperties.Keys);
+    }
+
+    [Fact]
+    public async Task ReadAsync_FlatSearchBlankPhysicalLocation_ReportedWithoutFlooding()
+    {
+        var xml =
+            "<WinCatalog version=\"2026\">\r\n" +
+            "  <Results>\r\n" +
+            "    <Item Disk=\"Disk 1\" CatalogPath=\"Catalog\\Disk 1\\blank.txt\" Name=\"blank.txt\" Physical_location=\"\"/>\r\n" +
+            "    <Item Disk=\"Disk 1\" CatalogPath=\"Catalog\\Disk 1\\kept.txt\" Name=\"kept.txt\" Physical_location=\"Shelf 3\"/>\r\n" +
+            "    <Item Disk=\"Disk 1\" CatalogPath=\"Catalog\\Disk 1\\no-loc.txt\" Name=\"no-loc.txt\"/>\r\n" +
+            "  </Results>\r\n" +
+            "</WinCatalog>";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
+        {
+            Source = stream,
+            FormatId = "wincatalog-xml",
+            FileName = "flat-blank-locations.xml"
+        });
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<WinCatalogXmlReportDocument>(result.Payload);
+
+        Assert.Contains(document.Summary.SkippedReasons, reason => reason.Contains("blank Physical Location value was ignored.", StringComparison.Ordinal));
+        Assert.DoesNotContain(document.Summary.SkippedReasons, reason => reason.Contains("no-loc.txt", StringComparison.Ordinal));
+
+        var kept = document.Rows.Single(row => string.Equals(row["name"]?.ToString(), "kept.txt", StringComparison.Ordinal));
+        var keptProperties = Assert.IsAssignableFrom<Dictionary<string, object?>>(kept["properties"]);
+        Assert.Equal("Shelf 3", keptProperties["PhysicalLocation"]);
     }
 }

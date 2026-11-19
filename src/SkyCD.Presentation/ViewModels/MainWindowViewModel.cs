@@ -36,6 +36,7 @@ using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
 using SkyCD.Presentation.Lending;
+using SkyCD.Presentation.Locations;
 using SkyCD.Presentation.Collections;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.Scanning;
@@ -86,6 +87,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly CatalogUndoManager? undoManager;
     private readonly CatalogTagService? tagService;
     private readonly TagDocumentRepository? tagRepository;
+    private readonly CatalogLocationService? locationService;
+    private readonly LocationDocumentRepository? locationRepository;
     private readonly VirtualCollectionService? collectionService;
     private readonly VirtualCollectionDocumentRepository? collectionRepository;
     private readonly bool shouldSeedDefaultCatalog;
@@ -139,6 +142,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
+    public event EventHandler<LocationsDialogRequestedEventArgs>? LocationsRequested;
     public event EventHandler? ExitRequested;
     public event EventHandler? FocusBrowserRequested;
     public event EventHandler? FocusTreeRequested;
@@ -275,9 +279,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         this.tagService = this.tagRepository is not null
             ? new CatalogTagService(this.catalogRepository, this.tagRepository)
             : null;
+        this.locationRepository = CreateLocationDocuments(this.catalogRepository);
+        this.locationService = this.locationRepository is not null
+            ? new CatalogLocationService(this.catalogRepository, this.locationRepository)
+            : null;
         this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
         this.collectionService = this.collectionRepository is not null
-            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, ProjectLending)
+            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, entries => ProjectLocations(ProjectLending(entries)))
             : null;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
@@ -359,6 +367,40 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 ?? database.CreateCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName);
             var repository = new TagDocumentRepository();
             repository.Initialize(typeof(TagDocument), mapping.CollectionName, collection);
+            return repository;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Opens the location repository on the catalog database without changing
+    /// the view-model constructor surface, matching <see cref="CreateTagDocuments"/>.
+    /// </summary>
+    private static LocationDocumentRepository? CreateLocationDocuments(CatalogDocumentRepository catalog)
+    {
+        try
+        {
+            var database = catalog.Collection?.Database;
+            if (database is null)
+            {
+                return null;
+            }
+
+            var mapping = (CouchbaseDocument?)typeof(LocationDocument)
+                .GetCustomAttributes(typeof(CouchbaseDocument), inherit: false)
+                .FirstOrDefault();
+            if (mapping is null || string.IsNullOrWhiteSpace(mapping.CollectionName))
+            {
+                return null;
+            }
+
+            var collection = database.GetCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName)
+                ?? database.CreateCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName);
+            var repository = new LocationDocumentRepository();
+            repository.Initialize(typeof(LocationDocument), mapping.CollectionName, collection);
             return repository;
         }
         catch
@@ -585,6 +627,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             Header = LocalizationService.Current.Get(UiKeys.LentTo), ValuePath = nameof(CatalogDocument.LentTo),
             Width = new Avalonia.Controls.GridLength(140, Avalonia.Controls.GridUnitType.Pixel)
+        },
+        new()
+        {
+            Header = LocalizationService.Current.Get(UiKeys.Location), ValuePath = nameof(CatalogDocument.Location),
+            Width = new Avalonia.Controls.GridLength(140, Avalonia.Controls.GridUnitType.Pixel)
         }
     ];
 
@@ -771,7 +818,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public AdvancedCatalogFindDialogViewModel CreateAdvancedCatalogFindDialogViewModel()
     {
-        var entries = ProjectLending(GetAllCatalogEntries());
+        var entries = ProjectLocations(ProjectLending(GetAllCatalogEntries()));
         var (lookup, metadataKeys) = BuildAdvancedFindMetadata();
         return new AdvancedCatalogFindDialogViewModel(
             entries,
@@ -1333,9 +1380,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         AddToListRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    public CatalogDocument AddTitleOnlyMedia(string? mediaName, string? parentId)
+    public CatalogDocument AddTitleOnlyMedia(string? mediaName, string? parentId, string? locationId = null)
     {
         var document = TitleOnlyMedia.Create(mediaName, parentId);
+        if (!string.IsNullOrWhiteSpace(locationId))
+        {
+            document.Properties[CatalogLocationService.LocationPropertyKey] = locationId;
+        }
+
         PublishImportedDocuments([document], CancellationToken.None);
         if (treeNodesByKey.TryGetValue(document.Id, out var node))
         {
@@ -2483,6 +2535,38 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         TagsRequested?.Invoke(this, new TagsDialogRequestedEventArgs { Dialog = dialog });
     }
 
+    [RelayCommand]
+    private void OpenLocationsDialog()
+    {
+        if (locationService is null || locationRepository is null || catalogRepository is null)
+        {
+            return;
+        }
+
+        var dialog = new LocationsDialogViewModel(
+            locationService,
+            undoManager,
+            catalogRepository,
+            locationRepository,
+            onChanged: () =>
+            {
+                IsDirtyDocument = true;
+                UpdateUndoRedoState();
+                RefreshLocations();
+            },
+            navigate: NavigateToDocument);
+        LocationsRequested?.Invoke(this, new LocationsDialogRequestedEventArgs
+        {
+            Dialog = dialog,
+            Complete = _ =>
+            {
+                IsDirtyDocument = true;
+                UpdateUndoRedoState();
+                RefreshLocations();
+            }
+        });
+    }
+
     private void NavigateToDocument(CatalogDocument document)
     {
         NavigateToFindResult(new CatalogFindResult(document, string.Empty, string.Empty));
@@ -2725,7 +2809,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 .ToArray();
         }
 
-        items = ProjectLending(items).Where(MatchesLendingFilter).ToArray();
+        items = ProjectLocations(ProjectLending(items)).Where(MatchesLendingFilter).Where(MatchesLocationFilter).ToArray();
 
         if (items.Length == 0)
         {
@@ -3502,6 +3586,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             BuildLoansMenu(),
+            BuildLocationsMenu(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
@@ -3552,6 +3637,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
             BuildLoansMenu(),
+            BuildLocationsMenu(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
@@ -3573,7 +3659,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (catalogRepository is not null)
         {
-            return BuildTreeNodesFromEntries(ProjectLending(catalogRepository.GetAll()));
+            return BuildTreeNodesFromEntries(ProjectLocations(ProjectLending(catalogRepository.GetAll())));
         }
 
         return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
@@ -3687,16 +3773,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return new PropertiesCollection();
         }
 
-        if (document.ContentsState != CatalogContentsState.NotScanned ||
-            document.Properties.ContainsKey(TitleOnlyMedia.ContentsStatePropertyKey))
+        var needsContentsState = document.ContentsState == CatalogContentsState.NotScanned &&
+            !document.Properties.ContainsKey(TitleOnlyMedia.ContentsStatePropertyKey);
+        // The effective location name is stored data resolved from the repository only, so it is
+        // available offline without touching the media.
+        var locationName = locationService is null ? string.Empty : locationService.GetEffectiveLocationName(document);
+        if (!needsContentsState && locationName.Length == 0)
         {
             return document.Properties;
         }
 
-        var copy = new PropertiesCollection(document.Properties)
+        var copy = new PropertiesCollection(document.Properties);
+        if (needsContentsState)
         {
-            [TitleOnlyMedia.ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString()
-        };
+            copy[TitleOnlyMedia.ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString();
+        }
+
+        if (locationName.Length > 0)
+        {
+            copy["Location"] = locationName;
+        }
+
         return copy;
     }
 
@@ -3718,7 +3815,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             children,
             isExpanded)
         {
-            LoanIndicator = entry.IsLent ? LocalizationService.Current.Get(entry.IsLoanOverdue ? UiKeys.LoanOverdueBadge : UiKeys.LoanBadge) : null
+            LoanIndicator = entry.IsLent ? LocalizationService.Current.Get(entry.IsLoanOverdue ? UiKeys.LoanOverdueBadge : UiKeys.LoanBadge) : null,
+            LocationIndicator = entry.HasLocation ? entry.Location : null
         };
     }
 

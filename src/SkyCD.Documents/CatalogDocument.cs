@@ -38,6 +38,19 @@ public sealed class CatalogDocument
 
     public void SetLendingState((string Borrower, bool Overdue)? state) => lendingState = state;
 
+    private string? locationName;
+
+    /// <summary>
+    /// Resolved physical storage location name, projected from the assigned location id. Persisted
+    /// assignments live in <c>Properties["LocationId"]</c> and are inherited from ancestors, so this
+    /// value is computed at projection time and is never serialized.
+    /// </summary>
+    public string Location => locationName ?? string.Empty;
+
+    public bool HasLocation => !string.IsNullOrEmpty(locationName);
+
+    public void SetLocationName(string? name) => locationName = name;
+
     public string DisplayType => Type.ToDisplayName();
 
     public bool HasKnownSize => !Properties.TryGetValue("SizeKnown", out var value) ||

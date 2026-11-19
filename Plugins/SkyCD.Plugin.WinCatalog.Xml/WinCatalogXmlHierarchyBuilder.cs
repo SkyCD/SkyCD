@@ -61,6 +61,12 @@ public static class WinCatalogXmlHierarchyBuilder
             var parentInfo = item.ParentIndex >= 0 ? nodeInfo[item.ParentIndex] : null;
             var name = ResolveEntryName(item, index);
 
+            if (item.Fields.TryGetValue(WinCatalogCsvColumn.PhysicalLocation, out var location) &&
+                string.IsNullOrWhiteSpace(location))
+            {
+                skippedReasons.Add($"Item '{name}': blank Physical Location value was ignored.");
+            }
+
             switch (item.Kind)
             {
                 case WinCatalogXmlElementKind.Media:
@@ -440,6 +446,13 @@ public static class WinCatalogXmlHierarchyBuilder
             var row = new List<string>();
             foreach (var (column, _) in csvColumns)
             {
+                // Physical Location is the trailing column; omit the cell when the field is
+                // absent so blank-location diagnostics only fire for present-but-blank values.
+                if (column == WinCatalogCsvColumn.PhysicalLocation && !item.Fields.ContainsKey(column))
+                {
+                    continue;
+                }
+
                 string? value = null;
                 if (column == WinCatalogCsvColumn.CatalogPath &&
                     !item.Fields.TryGetValue(WinCatalogCsvColumn.CatalogPath, out value) &&
