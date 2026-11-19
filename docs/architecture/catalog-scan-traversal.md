@@ -143,6 +143,39 @@ The SFTP provider uses [SSH.NET](https://www.nuget.org/packages/SSH.NET) (MIT):
   used by `SftpCatalogTransportTests` to cover nested listings, password and key authentication,
   auth failure, unknown and changed host keys, cancellation and interrupted connections.
 
+### WebDAV transport (#625)
+
+The WebDAV provider uses [WebDav.Client](https://www.nuget.org/packages/WebDav.Client) (MIT,
+no dependencies on .NET Standard 2.0):
+
+- `WebDavCatalogConnector` serves two schemes from one implementation: `webdav://` (HTTP, port
+  80) and `webdavs://` (HTTPS, port 443). Plain `http://` and `https://` addresses are **not**
+  accepted — they stay unclaimed schemes, so an ordinary web page can never be mistaken for a
+  remote source and users opt into WebDAV explicitly.
+- Listings use `PROPFIND` with `Depth: 1`; WebDav.Client parses the `207 Multi-Status` body and
+  `WebDavRemoteListingMapper` resolves each `href` against the request URI (relative or absolute),
+  percent-decodes the path, drops the collection's own record and the protocol self/parent
+  records, and maps only direct members: trailing-slash hrefs and `resourcetype` collections
+  become directories, `getcontentlength`/`getlastmodified` become size and UTC timestamp.
+- Authentication is Basic or Digest through `HttpClientHandler` credentials (negotiated from the
+  server's `WWW-Authenticate` challenge); anonymous access sends no `Authorization` header.
+  System proxy defaults and automatic redirects apply; a redirect chain that exceeds the limit
+  surfaces as a connection failure. Secrets never appear in messages or progress output.
+- The provider is **read-only**: uploads, moves and deletes are out of scope.
+- Failure mapping: `401` → `RemoteAuthenticationException`, `403` and malformed/missing `207`
+  bodies → `RemoteListingNotSupportedException`, `404` → `RemoteDirectoryNotFoundException`,
+  `5xx`, transport errors, timeouts and redirect loops → the transient
+  `RemoteConnectionException`. A Depth 0 `PROPFIND` at connect time surfaces refused credentials
+  and unreachable endpoints in the "connect" stage like the other providers, while a missing
+  path is reported by the first listing.
+- `tests/SkyCD.App.Tests/WebDavCatalogTransportTests.cs` drives the connector against a fake
+  `HttpMessageHandler` (nested listings, auth failure, not-found, forbidden, malformed and
+  missing multistatus, partial propstat failure, cancellation, HTTPS scheme). The Basic/Digest
+  handshake itself belongs to `HttpClientHandler`; verifying it end to end needs a live WebDAV
+  server (for example Apache `mod_dav` or a NAS share) and is a manual check: add such a source
+  with and without credentials in the Add To List dialog and compare the catalog with the
+  server's own listing.
+
 ### Remote skip versus fatal
 
 | Condition | Disposition |
