@@ -55,6 +55,52 @@ public class ControlsContractTests
         Assert.Contains(list.PropertiesRows, row => row.Key == "Location" && row.Value == "Music");
     }
 
+    [AvaloniaTheory]
+    [InlineData(1.0)]
+    [InlineData(1.25)]
+    [InlineData(1.5)]
+    public void PropertiesList_AlignsHeaderAndRowDividersWithAndWithoutScrollbar(double scaling)
+    {
+        foreach (var (width, rowCount) in new[] { (411, 1), (411, 100), (640, 100), (640, 1) })
+        {
+            var table = new PropertiesList
+            {
+                PropertyHeader = "Property",
+                ValueHeader = "Value",
+                PropertiesData = Enumerable.Range(0, rowCount)
+                    .ToDictionary(index => $"Property {index}", _ => (object?)"Value")
+            };
+            var window = new Window { Width = width, Height = 426, Content = table };
+            try
+            {
+                window.SetRenderScaling(scaling);
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+
+                var headerLabel = Assert.Single(table.GetVisualDescendants().OfType<TextBlock>(),
+                    text => text.Text == "Property");
+                var headerCell = Assert.IsType<Border>(headerLabel.GetVisualParent());
+                var scrollViewer = Assert.Single(table.GetVisualDescendants().OfType<ScrollViewer>());
+                Assert.Equal(rowCount > 1, scrollViewer.Extent.Height > scrollViewer.Viewport.Height);
+                var rows = table.GetVisualDescendants().OfType<ListBoxItem>().ToArray();
+                Assert.NotEmpty(rows);
+                foreach (var row in rows)
+                {
+                    var cell = Assert.Single(row.GetVisualDescendants().OfType<Border>(),
+                        border => border.BorderThickness == new Thickness(0, 0, 1, 1));
+                    Assert.Equal(
+                        headerCell.TranslatePoint(new Point(headerCell.Bounds.Width, 0), table)!.Value.X,
+                        cell.TranslatePoint(new Point(cell.Bounds.Width, 0), table)!.Value.X);
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+    }
+
     [AvaloniaFact]
     public void CustomPropertiesTable_EditsValuesAndTabsInOrder()
     {
