@@ -143,6 +143,50 @@ The SFTP provider uses [SSH.NET](https://www.nuget.org/packages/SSH.NET) (MIT):
   used by `SftpCatalogTransportTests` to cover nested listings, password and key authentication,
   auth failure, unknown and changed host keys, cancellation and interrupted connections.
 
+### SMB transport (#626)
+
+**Package evaluation (recorded per #626).** No NuGet SMB client may be used: **SMBLibrary**
+(and every fork or wrapper — `SMBLibrary.Std`, `SMBLibrary.ForXamarin`, `SMBLibrary.Win32`,
+`SMBLibraryLite`, and the MIT-licensed `InkSoft.SmbAbstraction`, which depends on SMBLibrary)
+is **LGPL-3.0-or-later**, which `docs/legal/dependency-license-policy.json` blocks; the
+`SMBLibraryCore.Client` fork declares no license and is non-compliant under `failOnUnknownLicense`.
+The provider therefore uses **`System.IO` over Windows UNC paths** — zero extra dependencies and
+zero SMB protocol code, trading cross-platform access away (see below).
+
+- Both `smb://server/share/path` and Windows UNC `\\server\share\path` normalize to one
+  location model (`smb` scheme, port 445, `/share/path`) in `RemoteLocation`, so the two input
+  forms produce identical catalog output. Plain `\\server\share` with backslashes is recognized
+  as UNC; `//server/share` is **not** (it is scheme-relative URL syntax).
+- Listings enumerate the UNC path through `IScanFileSystem` (the same abstraction as local
+  folder scans); `SmbRemoteListingMapper` maps names, sizes and UTC timestamps, and reparse
+  points/directory symlinks carry their resolved target as `VisitedIdentity`, so the shared
+  cycle/visited logic treats them exactly like SFTP symlinks. Windows attributes are read for
+  classification; the catalog has no attribute slot, so `Permission` stays null.
+- Credentials: the login dialog collects domain/user/password (guest or anonymous uses the
+  current logon session or the server's guest policy). Explicit credentials are attached to
+  the share connection with `WNetAddConnection2` (`mpr.dll`), which negotiates NTLM/Kerberos
+  through the Windows redirector. Secrets never appear in messages or progress output.
+- **Windows-only.** On other platforms the provider fails with the typed, localized
+  `RemotePlatformNotSupportedException` instead of an obscure IO error.
+- Failure mapping: logon/access failures (`ERROR_ACCESS_DENIED`, `ERROR_INVALID_PASSWORD`,
+  `ERROR_LOGON_FAILURE`) → `RemoteAuthenticationException`; a missing share or an unreachable
+  server (`ERROR_BAD_NETPATH` and friends) → the transient `RemoteConnectionException`;
+  a missing folder inside the share → `RemoteDirectoryNotFoundException`; an ACL refusal of one
+  folder during a listing → `RemoteListingNotSupportedException` (fail item, like FTP's refused
+  listing). Trade-off: Windows reports a down server and a missing share with the same
+  `ERROR_BAD_NETPATH`, so both are reported as connection failures — the message still names
+  the exact UNC path.
+- `tests/SkyCD.App.Tests/SmbCatalogTransportTests.cs` and `SmbRemoteListingMapperTests.cs`
+  cover the provider against a fake session (`FakeScanFileSystem`): nested listings,
+  UNC/`smb://` equivalence, reparse-point identities, missing share/folder, rejected
+  credentials, ACL refusal, cancellation, the platform guard and the Win32 translation matrix.
+  CI cannot host a controlled SMB server (a Samba container needs Linux/Docker), so live
+  verification is manual: on Windows, share a folder (or use a NAS), then in Add To List add
+  both `\\server\share\path` and `smb://server/share/path` with and without domain credentials
+  and compare the catalogs with the share's own listing in Explorer; an unknown account must
+  surface "SMB authentication failed" and an unshared name "Could not connect to the SMB
+  server".
+
 ### Remote skip versus fatal
 
 | Condition | Disposition |

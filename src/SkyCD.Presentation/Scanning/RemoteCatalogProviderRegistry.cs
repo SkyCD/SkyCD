@@ -12,6 +12,7 @@ public sealed class RemoteCatalogProviderRegistry
         new FtpCatalogConnector(),
         new FtpCatalogConnector("ftps", 990, RemoteTlsMode.Implicit),
         new SftpCatalogConnector(),
+        new SmbCatalogConnector(),
     ]);
 
     public RemoteCatalogProviderRegistry(IEnumerable<IRemoteCatalogConnector> connectors)

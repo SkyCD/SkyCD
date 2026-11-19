@@ -15,7 +15,8 @@ public sealed class RemoteScanOptions
         ScanTraversalOptions? traversal = null,
         RemoteAuthMethod authMethod = RemoteAuthMethod.Password,
         string? keyFilePath = null,
-        string? keyFilePassphrase = null)
+        string? keyFilePassphrase = null,
+        string? domain = null)
     {
         Address = address;
         Username = username;
@@ -28,6 +29,7 @@ public sealed class RemoteScanOptions
         AuthMethod = authMethod;
         KeyFilePath = keyFilePath;
         KeyFilePassphrase = keyFilePassphrase;
+        Domain = domain;
     }
 
     public string Address { get; }
@@ -58,6 +60,9 @@ public sealed class RemoteScanOptions
 
     /// <summary>Optional passphrase of the private key file; never included in any string representation.</summary>
     public string? KeyFilePassphrase { get; }
+
+    /// <summary>Windows domain of the account; used only by the SMB provider (#626).</summary>
+    public string? Domain { get; }
 
     public override string ToString()
     {

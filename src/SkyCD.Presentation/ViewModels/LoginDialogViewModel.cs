@@ -24,11 +24,13 @@ public partial class LoginDialogViewModel : ObservableObject
         this.hostKeys = hostKeys ?? throw new ArgumentNullException(nameof(hostKeys));
 
     public bool CanConfirm => provider.CanConfirmCredentials(
-        new RemoteCredentials(Username, Password, UseAnonymous, AuthMethod, KeyFilePath, KeyFilePassphrase));
+        new RemoteCredentials(Username, Password, UseAnonymous, AuthMethod, KeyFilePath, KeyFilePassphrase, Domain));
 
     public bool IsCredentialEntryEnabled => !UseAnonymous;
 
     public bool IsSftp => string.Equals(provider.Scheme, "sftp", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsSmb => string.Equals(provider.Scheme, "smb", StringComparison.OrdinalIgnoreCase);
 
     public bool IsFtp =>
         string.Equals(provider.Scheme, "ftp", StringComparison.OrdinalIgnoreCase) ||
@@ -86,6 +88,8 @@ public partial class LoginDialogViewModel : ObservableObject
     }
 
     [ObservableProperty] private string username = string.Empty;
+
+    [ObservableProperty] private string domain = string.Empty;
 
     [ObservableProperty] private string password = string.Empty;
 
@@ -229,6 +233,11 @@ public partial class LoginDialogViewModel : ObservableObject
     }
 
     partial void OnUsernameChanged(string value)
+    {
+        ConfirmCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnDomainChanged(string value)
     {
         ConfirmCommand.NotifyCanExecuteChanged();
     }

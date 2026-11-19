@@ -31,6 +31,25 @@ public sealed class RemoteCatalogProviderTests
         Assert.Equal(RemoteTlsMode.Off, RemoteCatalogProviderRegistry.Default.Get("ftp").DefaultTlsMode);
     }
 
+    [Theory]
+    [InlineData(@"\\server\share\path")]
+    [InlineData("smb://server/share/path")]
+    public void Parse_UncAndSmbAddresses_ResolveToOneLocationModel(string address)
+    {
+        var location = RemoteLocation.Parse(address);
+        Assert.Equal("smb", location.Scheme);
+        Assert.Equal("server", location.Host);
+        Assert.Equal(445, location.Port);
+        Assert.Equal("/share/path", location.Path);
+    }
+
+    [Fact]
+    public void Registry_SmbScheme_ResolvesToTheSmbConnector()
+    {
+        Assert.IsType<SmbCatalogConnector>(RemoteCatalogProviderRegistry.Default.Get("smb"));
+        Assert.Equal(445, RemoteCatalogProviderRegistry.Default.Get("smb").DefaultPort);
+    }
+
     [Fact]
     public void Credentials_DoNotExposePasswordInStringRepresentation()
     {

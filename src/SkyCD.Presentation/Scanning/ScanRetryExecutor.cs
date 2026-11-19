@@ -59,7 +59,8 @@ internal static class ScanRetryExecutor
             or RemoteDirectoryNotFoundException
             or RemoteListingNotSupportedException
             or RemoteHostKeyException
-            or RemoteTlsException)
+            or RemoteTlsException
+            or RemotePlatformNotSupportedException)
         {
             return false;
         }

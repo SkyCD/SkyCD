@@ -59,8 +59,21 @@ public sealed record RemoteLocation(
         return username.Length > 0 || password.Length > 0;
     }
 
-    private static string WithDefaultScheme(string address) =>
-        address.Contains("://", StringComparison.Ordinal) ? address : "ftp://" + address;
+    private static string WithDefaultScheme(string address)
+    {
+        if (address.Contains("://", StringComparison.Ordinal))
+        {
+            return address;
+        }
+
+        // Windows UNC paths are SMB shares (#626); anything else without a scheme stays FTP.
+        if (address.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            return "smb://" + address[2..].Replace('\\', '/');
+        }
+
+        return "ftp://" + address;
+    }
 
     /// <summary>
     /// Reads the optional <c>tls=off|explicit|implicit</c> query parameter. Returns null when the

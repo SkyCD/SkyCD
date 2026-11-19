@@ -5,8 +5,11 @@ using SkyCD.UI.Localization;
 namespace SkyCD.Presentation.Scanning;
 
 public sealed class RemoteAuthenticationException(string scheme) : IOException(
-    scheme.Equals("ftp", StringComparison.OrdinalIgnoreCase)
-        ? LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed)
-        : LocalizationService.Current.Format(TextKeys.RemoteAuthenticationFailed, scheme.ToUpperInvariant()))
+    scheme.ToLowerInvariant() switch
+    {
+        "ftp" => LocalizationService.Current.Get(TextKeys.FtpAuthenticationFailed),
+        "smb" => LocalizationService.Current.Get(TextKeys.SmbAuthenticationFailed),
+        _ => LocalizationService.Current.Format(TextKeys.RemoteAuthenticationFailed, scheme.ToUpperInvariant()),
+    })
 {
 }
