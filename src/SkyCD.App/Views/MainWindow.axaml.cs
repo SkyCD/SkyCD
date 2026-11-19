@@ -1009,7 +1009,6 @@ public partial class MainWindow : Window
 
     private async Task<bool> SaveCatalogAsync(MainWindowViewModel vm, bool saveAs = false)
     {
-        EnsureFileFormatProvidersLoaded();
         var targetPath = saveAs ? null : vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
