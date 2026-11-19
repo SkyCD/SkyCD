@@ -15,7 +15,7 @@ namespace SkyCD.App.Tests;
 public sealed class AcpDescriptionTests
 {
     private static DescriptionContext Context(params DescriptionContextPart[] parts) => new("entry", "source", "context", new(Text: true, Images: true, Audio: true), parts);
-    private static readonly DescriptionAgentOptions Options = new() { MaxOutputCharacters = 100, ProcessingDestination = "unknown", Sources = new(Text: true, Images: true, Audio: true) };
+    private static readonly DescriptionAgentOptions Options = new() { Enabled = true, MaxOutputCharacters = 100, ProcessingDestination = "unknown", Sources = new(Text: true, Images: true, Audio: true) };
     private static string Json(object value) => JsonSerializer.Serialize(value);
     private static string Initialization(bool images = false, int version = 1) => Json(new
     {
@@ -133,7 +133,7 @@ public sealed class AcpDescriptionTests
         {
             await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
             Assert.Equal(0, calls);
-            var configured = new DescriptionAgentOptions { Executable = Environment.ProcessPath!, Sources = new(Text: true) };
+            var configured = new DescriptionAgentOptions { Enabled = true, Executable = Environment.ProcessPath!, Sources = new(Text: true) };
             await File.WriteAllTextAsync(path, Json(configured));
             await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
             Assert.Equal(1, calls);
@@ -306,7 +306,7 @@ public sealed class AcpDescriptionTests
             var saved = plugin.GetAgentSettings();
             Assert.Equal(executable, saved.SelectedAgent?.Executable);
             Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
-            Assert.True(plugin.GetPlan().IsEnabled);
+            Assert.False(plugin.GetPlan().IsEnabled);
         }
         finally
         {
@@ -366,6 +366,47 @@ public sealed class AcpDescriptionTests
             dialog.ConfirmCommand.Execute(null);
             Assert.True(dialog.DialogAccepted);
             Assert.Equal(arguments, plugin.GetAgentSettings().SelectedAgent!.Arguments);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SavedConsentSurvivesProviderChangesAndGatesGeneration(bool enabled)
+    {
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-consent-");
+        try
+        {
+            var configuration = Path.Combine(directory.FullName, "settings.json");
+            var executable = Path.Combine(directory.FullName, OperatingSystem.IsWindows() ? "agent.exe" : "agent");
+            File.WriteAllText(executable, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            var calls = 0;
+            var plugin = new AiDescriptionPlugin(configuration, (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(new GeneratedDescription("description", "agent", null, "1", "1", "English", "test", "unknown", DateTimeOffset.UtcNow));
+            });
+            File.WriteAllText(configuration, Json(new { Enabled = enabled, Executable = executable }));
+            Assert.Equal(enabled, plugin.GetPlan().IsEnabled);
+            var selected = plugin.GetAgentSettings().SelectedAgent!;
+            plugin.SaveAgentSettings(selected);
+            plugin.SaveAgentSettings(selected with { Arguments = ["--acp"] });
+            Assert.Equal(enabled, JsonSerializer.Deserialize<DescriptionAgentOptions>(File.ReadAllText(configuration))!.Enabled);
+            Assert.Equal(enabled, plugin.GetPlan().IsEnabled);
+            if (enabled)
+                await plugin.GenerateAsync(Context(), default);
+            else
+            {
+                await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.GenerateAsync(Context(), default));
+                await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(
+                    AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = new DescriptionHost() }, default));
+            }
+            Assert.Equal(enabled ? 1 : 0, calls);
         }
         finally
         {

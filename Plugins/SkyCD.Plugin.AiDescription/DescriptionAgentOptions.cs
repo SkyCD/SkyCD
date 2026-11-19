@@ -6,6 +6,7 @@ namespace SkyCD.Plugin.AiDescription;
 
 public sealed record DescriptionAgentOptions
 {
+    public bool Enabled { get; init; }
     public string Executable { get; init; } = string.Empty;
     public IReadOnlyList<string> Arguments { get; init; } = [];
     public IReadOnlyDictionary<string, string> Environment { get; init; } = new Dictionary<string, string>();
@@ -21,6 +22,12 @@ public sealed record DescriptionAgentOptions
     public DescriptionContextOptions Sources { get; init; } = new();
 
     public void Validate()
+    {
+        if (!Enabled) throw new DescriptionAgentException("generation is disabled; enable the configured ACP agent explicitly");
+        ValidateSettings();
+    }
+
+    internal void ValidateSettings()
     {
         if (string.IsNullOrWhiteSpace(Executable) || !System.IO.Path.IsPathFullyQualified(Executable) || !System.IO.File.Exists(Executable))
             throw new DescriptionAgentException("configure an absolute path to an installed ACP executable");

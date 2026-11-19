@@ -6,8 +6,16 @@ capability using the existing media schema and durable cache infrastructure.
 Automatic metadata extraction never starts an AI agent. No vendor API, model
 download, registry executable installation, or `plugin.json` discovery is used.
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:72ff8ecbc892e6b14e27d3d7e8a5329cc2780c157eadf37db57b3255cfb067c0 -->
+
 With the plugin enabled, select an installed agent in **Tools → Options → ACP
-agents** and save. The plugin uses that agent for explicit generation requests.
+agents** and save. Explicitly set `"Enabled": true` in the configuration file to
+permit generation requests. Selecting or changing an agent preserves the saved
+`Enabled` preference; `false` or an omitted value keeps generation unavailable.
+
+<!-- /coderabbit-ai-generated:v1 -->
 The **AI description configuration** command shows the advanced settings file,
 normally `%APPDATA%/SkyCD/ai-descriptions.json`.
 The same file configures model (where advertised), output language, prompt and

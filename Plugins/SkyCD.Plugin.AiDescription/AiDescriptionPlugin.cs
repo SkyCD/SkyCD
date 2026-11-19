@@ -48,7 +48,7 @@ public sealed partial class AiDescriptionPlugin : IMenuPluginCapability, IGenera
         }
         if (commandId == "ai-description.configuration")
         {
-            await host.NotifyAsync($"Configure the installed ACP executable, arguments, environment, optional AuthMethodId, model, language, prompt, limits, permitted sources and processing destination in {configurationPath}. Optionally download {AcpAgentRegistry.OfficialIndexUrl} to {Path.Combine(Path.GetDirectoryName(configurationPath)!, AcpAgentRegistry.FileName)} for offline browsing. Select a local agent in Options to make it available for generation.", cancellationToken);
+            await host.NotifyAsync($"Configure the installed ACP executable, arguments, environment, optional AuthMethodId, model, language, prompt, limits, permitted sources and processing destination in {configurationPath}. Optionally download {AcpAgentRegistry.OfficialIndexUrl} to {Path.Combine(Path.GetDirectoryName(configurationPath)!, AcpAgentRegistry.FileName)} for offline browsing. Select a local agent in Options and explicitly set Enabled to true in the configuration to permit generation.", cancellationToken);
             return;
         }
         if (commandId != CommandId) return;
@@ -95,6 +95,10 @@ public sealed partial class AiDescriptionPlugin : IMenuPluginCapability, IGenera
             var providerName = string.IsNullOrWhiteSpace(options.Executable)
                 ? "ACP agent"
                 : Path.GetFileName(options.Executable);
+            if (!options.Enabled)
+                return new DescriptionGenerationPlan(false, providerName, PluginVersion, options.Model,
+                    options.ProcessingDestination, options.Sources,
+                    "generation is disabled; enable the configured ACP agent explicitly");
             options.Validate();
             return new DescriptionGenerationPlan(true, providerName, PluginVersion, options.Model,
                 options.ProcessingDestination, options.Sources);

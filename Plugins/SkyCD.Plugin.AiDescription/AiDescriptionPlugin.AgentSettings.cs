@@ -129,7 +129,7 @@ public sealed partial class AiDescriptionPlugin
             throw new DescriptionAgentException("select an installed ACP executable");
         }
 
-        options.Validate();
+        options.ValidateSettings();
         var fullPath = Path.GetFullPath(configurationPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var temporaryPath = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
