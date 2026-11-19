@@ -3,13 +3,14 @@
 The separate `skycd.ai-description` plugin contributes **Tools → Generate AI
 description for selected file**. It implements an explicit generated-metadata
 capability using the existing media schema and durable cache infrastructure.
-Automatic metadata extraction never starts an AI agent. No vendor API, model
-download, registry executable installation, or `plugin.json` discovery is used.
+Automatic metadata extraction never starts an AI agent. The plugin has no
+vendor API or model download, and plugin discovery uses assembly metadata.
 
-Select exactly one file, then use **AI description configuration**. The command
-creates a disabled template at the location shown in the status bar, normally
-`%APPDATA%/SkyCD/ai-descriptions.json`. Edit it to select an installed ACP
-executable and its argument/environment arrays, then explicitly enable it.
+With the plugin enabled, choose **Use agent** for an installed agent in
+**Tools → Options → ACP agents** and save to activate it for generation.
+Opening Options on its own preserves the saved generation preference.
+The **AI description configuration** command shows the advanced settings file,
+normally `%APPDATA%/SkyCD/ai-descriptions.json`.
 The same file configures model (where advertised), output language, prompt and
 version, context/output limits, timeout, permitted input sources, metadata-only
 inference, an optional `AuthMethodId`, and the processing destination. No command
@@ -77,21 +78,21 @@ keeps all earlier descriptions.
 
 ## ACP registry browsing
 
-**Tools → Browse cached ACP agent registry** reads an optional local copy of the
-official [ACP registry](https://agentclientprotocol.com/get-started/registry)
-index at `%APPDATA%/SkyCD/acp-registry.json`. Download
-`https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json` there
-manually; SkyCD never fetches, verifies, installs, updates or launches registry
-content. The registry is treated strictly as bounded display data: it cannot set
-the executable, arguments or environment, and unknown or malformed entries are
-ignored. The command lists cached names, identifiers, versions and distribution
-types, and a suggested launch form for currently installed `npx`/`uvx` or a
-platform binary. Any suggested launch remains a manual configuration hint; the
-executable, arguments and environment are always taken from the user-edited
-configuration file, and an archive or package must be installed by the user.
+Opening **Tools → Options → ACP agents** refreshes the official
+[ACP registry](https://agentclientprotocol.com/get-started/registry). SkyCD uses
+the cached catalog when offline. **Install** downloads the selected native agent
+or installs its pinned npm or uv package under `%APPDATA%/SkyCD/acp-agents`.
+Package-based installations require the corresponding package manager. Native
+downloads are checked against the registry checksum when available.
 
-Cached browsing works fully offline. Registry membership is not a compatibility
-claim: an entry still has to satisfy the negotiated requirements below.
+Installing an agent selects it in Options. Choose **Save** to use it for
+generation. Use **Locate** on a native agent's card to find the specific
+executable from an existing installation outside `PATH`.
+
+Agents installed by SkyCD show **Uninstall** and offer **Update** when the
+registry advertises a newer version. Updating an active agent keeps it active.
+Uninstalling it clears the selection. System-wide and manually located agents
+are managed outside SkyCD.
 
 ## Authentication
 

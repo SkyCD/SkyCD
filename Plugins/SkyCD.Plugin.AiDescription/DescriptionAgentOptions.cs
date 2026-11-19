@@ -24,6 +24,11 @@ public sealed record DescriptionAgentOptions
     public void Validate()
     {
         if (!Enabled) throw new DescriptionAgentException("generation is disabled; enable the configured ACP agent explicitly");
+        ValidateSettings();
+    }
+
+    internal void ValidateSettings()
+    {
         if (string.IsNullOrWhiteSpace(Executable) || !System.IO.Path.IsPathFullyQualified(Executable) || !System.IO.File.Exists(Executable))
             throw new DescriptionAgentException("configure an absolute path to an installed ACP executable");
         if (Prompt is null || Sources is null || Arguments is null || Environment is null

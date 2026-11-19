@@ -145,7 +145,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses), LocalizationService.Current.Get(UiKeys.CustomProperties)];
+    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses), LocalizationService.Current.Get(UiKeys.CustomProperties), LocalizationService.Current.Get(UiKeys.AcpAgents)];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -202,7 +202,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowPluginInfoSection ||
         ShowLanguageSection ||
         ShowMcpSection ||
-        ShowStatusesSection || ShowCustomPropertiesSection;
+        ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -307,6 +307,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         StatusAlertMessage = string.Empty;
+        if (!TrySaveAcpSettings()) return;
         DialogAccepted = true;
     }
 
@@ -546,6 +547,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowPluginInfoSection));
         OnPropertyChanged(nameof(ShowLanguageSection));
         OnPropertyChanged(nameof(HasVisibleCategoryContent));
+        OnPropertyChanged(nameof(ShowAcpSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }
 

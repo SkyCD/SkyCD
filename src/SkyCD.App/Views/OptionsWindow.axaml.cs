@@ -1,13 +1,17 @@
 using SkyCD.UI.Localization;
 using System;
 using System.ComponentModel;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
+using Avalonia.Platform.Storage;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.App.Views;
 
@@ -16,12 +20,24 @@ public partial class OptionsWindow : Window
     private const double TargetWidth = 1024;
     private const double TargetHeight = 768;
     private const double ScreenUsageFactor = 0.9;
+    private readonly CancellationTokenSource acpLifetime = new();
+    private bool hasOpened;
+    private bool startedAcpLoad;
+
+    public IAcpAgentSettingsCapability? AcpSettingsCapability { get; init; }
 
     public OptionsWindow()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
+        Opened += OnLoadAcpAgents;
+        Closed += (_, _) =>
+        {
+            acpLifetime.Cancel();
+            if (DataContext is OptionsDialogViewModel vm)
+                vm.PropertyChanged -= OnViewModelPropertyChanged;
+        };
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -38,7 +54,7 @@ public partial class OptionsWindow : Window
         }
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is OptionsDialogViewModel vm &&
             e.PropertyName == nameof(OptionsDialogViewModel.DialogAccepted) &&
@@ -46,11 +62,115 @@ public partial class OptionsWindow : Window
         {
             Close(true);
         }
+        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAcpSection))
+        {
+            await LoadAcpAgentsIfVisibleAsync();
+        }
     }
 
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
     {
         Close(false);
+    }
+
+    private async void OnBrowseAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not OptionsDialogViewModel { CanChooseAcpAgent: true } vm ||
+            sender is not Button { DataContext: AcpAgentChoice { ExpectedExecutable: { } expected } agent }) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = LocalizationService.Current.Format(UiKeys.AcpFindExecutable, expected),
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(expected) { Patterns = [expected] }]
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
+            vm.ChooseLocalAcpAgent(agent, path);
+    }
+
+    private async void OnLoadAcpAgents(object? sender, EventArgs e)
+    {
+        hasOpened = true;
+        await LoadAcpAgentsIfVisibleAsync();
+    }
+
+    private async Task LoadAcpAgentsIfVisibleAsync()
+    {
+        if (!hasOpened || startedAcpLoad || DataContext is not OptionsDialogViewModel { ShowAcpSection: true } vm)
+            return;
+
+        startedAcpLoad = true;
+        await vm.LoadAcpSettingsAsync(AcpSettingsCapability, refreshRegistry: true, acpLifetime.Token);
+    }
+
+    private async void OnInstallAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
+            return;
+
+        var error = agent.IsManaged
+            ? await vm.UpdateAcpAgentAsync(agent, acpLifetime.Token)
+            : await vm.InstallAcpAgentAsync(agent, acpLifetime.Token);
+        await ShowAcpOperationErrorAsync(agent.IsManaged ? UiKeys.AcpUpdateErrorTitle : UiKeys.AcpInstallErrorTitle,
+            agent.Name, error);
+    }
+
+    private async void OnUninstallAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
+            return;
+
+        var error = await vm.UninstallAcpAgentAsync(agent, acpLifetime.Token);
+        await ShowAcpOperationErrorAsync(UiKeys.AcpUninstallErrorTitle, agent.Name, error);
+    }
+
+    private async Task ShowAcpOperationErrorAsync(string title, string agentName, string? error)
+    {
+        if (error is null || acpLifetime.IsCancellationRequested) return;
+
+        var close = new Button
+        {
+            Content = LocalizationService.Current.Get(UiKeys.Ok),
+            IsDefault = true,
+            IsCancel = true,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        };
+        var dialog = new Window
+        {
+            Title = LocalizationService.Current.Format(title, agentName),
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Width = 440,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            CanMinimize = false,
+            ShowInTaskbar = false,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(16),
+                Spacing = 14,
+                Children =
+                {
+                    new ScrollViewer
+                    {
+                        MaxHeight = 240,
+                        Content = new SelectableTextBlock
+                        {
+                            Text = error,
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                        }
+                    },
+                    close
+                }
+            }
+        };
+        close.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(this);
+    }
+
+    private void OnSelectAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: AcpAgentChoice { IsInstalled: true } agent } &&
+            DataContext is OptionsDialogViewModel { CanChooseAcpAgent: true } vm)
+            vm.SelectAcpAgent(agent);
     }
 
     private void OnOpened(object? sender, EventArgs e)
