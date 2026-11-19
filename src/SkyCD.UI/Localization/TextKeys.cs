@@ -153,6 +153,7 @@ public static class TextKeys
     public const string Unknown = "core.text.Unknown";
     public const string Find = "core.text.Find";
     public const string FindEmptyQuery = "core.text.FindEmptyQuery";
+    public const string QuickFindEmptyQuery = "core.text.QuickFindEmptyQuery";
     public const string FindSearching = "core.text.FindSearching";
     public const string FindNoMatches = "core.text.FindNoMatches";
     public const string FindMatchCount = "core.text.FindMatchCount";
@@ -188,6 +189,10 @@ public static class TextKeys
     public const string HostKeyStatusUnknown = "core.text.HostKeyStatusUnknown";
     public const string HostKeyStatusTrusted = "core.text.HostKeyStatusTrusted";
     public const string HostKeyStatusChanged = "core.text.HostKeyStatusChanged";
+    public const string RemoteCertificateValidationFailed = "core.text.RemoteCertificateValidationFailed";
+    public const string RemoteTlsHandshakeFailed = "core.text.RemoteTlsHandshakeFailed";
+    public const string RemoteTlsUpgradeRejected = "core.text.RemoteTlsUpgradeRejected";
+    public const string RemoteTlsDataProtectionRejected = "core.text.RemoteTlsDataProtectionRejected";
     public const string WebDavConnectionFailed = "core.text.WebDavConnectionFailed";
     public const string WebDavAuthenticationFailed = "core.text.WebDavAuthenticationFailed";
     public const string WebDavListingNotSupported = "core.text.WebDavListingNotSupported";

@@ -43,6 +43,9 @@ public sealed class WebDavCatalogConnector : IRemoteCatalogConnector
 
     public int DefaultPort => defaultPort;
 
+    /// <summary>Transport security is the scheme itself (webdav vs webdavs); FTPS TLS modes do not apply.</summary>
+    public RemoteTlsMode DefaultTlsMode => RemoteTlsMode.Off;
+
     public string NormalizePath(string? path) => FtpPath.Normalize(path);
 
     public bool CanConfirmCredentials(RemoteCredentials credentials) =>

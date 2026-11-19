@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Authentication;
 using System.Threading;
 using FluentFTP;
 using FluentFTP.Exceptions;
@@ -11,13 +12,42 @@ namespace SkyCD.Presentation.Scanning;
 /// Establishes a catalog session on top of a <see cref="FluentFTP.FtpClient"/> (#580).
 /// The socket, the UTF-8 negotiation, the passive data channel and the reply/listing parsing
 /// belong to FluentFTP; this class only maps the negotiated state onto the catalog session
-/// contract and onto the SkyCD exception semantics.
+/// contract and onto the SkyCD exception semantics. One instance serves one scheme: plain
+/// <c>ftp://</c> or <c>ftps://</c> with implicit TLS (#623).
 /// </summary>
 public sealed class FtpCatalogConnector : IRemoteCatalogConnector
 {
-    public string Scheme => "ftp";
+    private readonly string scheme;
+    private readonly int defaultPort;
+    private readonly RemoteTlsMode defaultTlsMode;
+    private readonly FtpSslValidation? certificateValidation;
 
-    public int DefaultPort => 21;
+    public FtpCatalogConnector() : this("ftp", 21, RemoteTlsMode.Off)
+    {
+    }
+
+    /// <summary>
+    /// Builds a connector for one FTP scheme. <paramref name="certificateValidation"/> is a
+    /// test-only trust policy; when null the FluentFTP default applies and every certificate
+    /// must validate against the system trust store and the target host name.
+    /// </summary>
+    internal FtpCatalogConnector(
+        string scheme,
+        int defaultPort,
+        RemoteTlsMode defaultTlsMode,
+        FtpSslValidation? certificateValidation = null)
+    {
+        this.scheme = scheme;
+        this.defaultPort = defaultPort;
+        this.defaultTlsMode = defaultTlsMode;
+        this.certificateValidation = certificateValidation;
+    }
+
+    public string Scheme => scheme;
+
+    public int DefaultPort => defaultPort;
+
+    public RemoteTlsMode DefaultTlsMode => defaultTlsMode;
 
     public string NormalizePath(string? path) => FtpPath.Normalize(path);
 
@@ -32,7 +62,7 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
         if (!credentials.Anonymous && !FtpCredentials.IsAnonymousUserName(resolved.Username) &&
             string.IsNullOrEmpty(resolved.Password))
         {
-            throw new RemoteAuthenticationException("ftp");
+            throw new RemoteAuthenticationException(scheme);
         }
 
         return resolved;
@@ -40,7 +70,7 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
 
     public RemoteConnectionException ConnectionFailed(RemoteLocation location, Exception? cause = null, string? detail = null)
     {
-        return new RemoteConnectionException("ftp", $"{location.Host}:{location.Port}", cause,
+        return new RemoteConnectionException(scheme, $"{location.Host}:{location.Port}", cause,
             detail is null ? null : $" ({detail})");
     }
 
@@ -59,13 +89,27 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
         RejectLineBreaks(username, password, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var client = new FtpClient(location.Host, username, password, location.Port, CreateConfig());
+        var validation = new TlsValidationState();
+        var client = new FtpClient(location.Host, username, password, location.Port, CreateConfig(location.TlsMode));
+        client.ValidateCertificate += (control, args) =>
+        {
+            certificateValidation?.Invoke(control, args);
+            if (!args.Accept)
+            {
+                validation.CertificateRejected = true;
+            }
+        };
 
         try
         {
             // FluentFTP owns the greeting, FEAT/UTF8 negotiation, TYPE I and the login exchange.
             client.Connect();
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (location.TlsMode != RemoteTlsMode.Off)
+            {
+                NegotiateDataProtection(client, location, cancellationToken);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -75,21 +119,31 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
         catch (Exception ex)
         {
             client.Dispose();
-            throw TranslateConnectFailure(ex, location, cancellationToken);
+            throw TranslateConnectFailure(ex, location, validation, cancellationToken);
         }
 
-        return new FtpRemoteSession(client, location, cancellationToken);
+        return new FtpRemoteSession(client, location, validation, cancellationToken);
     }
 
     /// <summary>
     /// Transport configuration for the catalog scan. Every value here is a deliberate choice:
     /// the transport must behave exactly like the traversal contract expects.
     /// </summary>
-    public static FtpConfig CreateConfig() =>
+    public static FtpConfig CreateConfig(RemoteTlsMode tlsMode) =>
         new()
         {
-            // Supported schemes are decided by RemoteLocation; the transport speaks plain FTP only.
-            EncryptionMode = FtpEncryptionMode.None,
+            // Supported schemes and TLS modes are decided by RemoteLocation; the transport
+            // implements them with FluentFTP's implicit/explicit FTPS (#623).
+            EncryptionMode = tlsMode switch
+            {
+                RemoteTlsMode.Implicit => FtpEncryptionMode.Implicit,
+                RemoteTlsMode.Explicit => FtpEncryptionMode.Explicit,
+                _ => FtpEncryptionMode.None,
+            },
+
+            // Data-channel protection is negotiated explicitly after login (PROT P) so a rejected
+            // upgrade is reported precisely; switched on again in NegotiateDataProtection.
+            DataConnectionEncryption = false,
 
             // Passive transfer, EPSV first with PASV as the fallback.
             DataConnectionType = FtpDataConnectionType.AutoPassive,
@@ -125,17 +179,67 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
     /// </summary>
     public static FtpListOption ListingOptions => FtpListOption.ForceList | FtpListOption.SizeModify;
 
+    /// <summary>
+    /// Upgrades the protected data channel (RFC 4217): PBSZ 0 then PROT P, after which every
+    /// transfer is TLS-wrapped. Rejected upgrades fail typed instead of falling back to a
+    /// plaintext data channel. FluentFTP sends these itself when DataConnectionEncryption is
+    /// set up front; doing it here keeps a rejection distinguishable from any other command
+    /// failure during connect.
+    /// </summary>
+    private static void NegotiateDataProtection(FtpClient client, RemoteLocation location, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var pbsz = client.Execute("PBSZ 0");
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!pbsz.Success)
+        {
+            throw new RemoteTlsDataProtectionException($"{location.Host}:{location.Port}");
+        }
+
+        var prot = client.Execute("PROT P");
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!prot.Success)
+        {
+            throw new RemoteTlsDataProtectionException($"{location.Host}:{location.Port}");
+        }
+
+        // The server promised protected data channels; hold FluentFTP to that for every transfer.
+        client.Config.DataConnectionEncryption = true;
+    }
+
     /// <summary>Maps a connect failure onto the SkyCD FTP exception semantics.</summary>
     internal static Exception TranslateConnectFailure(
         Exception exception,
         RemoteLocation location,
+        TlsValidationState validation,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (exception is RemoteTlsException)
+        {
+            return exception;
+        }
+
+        if (location.TlsMode != RemoteTlsMode.Off)
+        {
+            switch (exception)
+            {
+                // The server refused the AUTH TLS upgrade; plaintext is not a fallback.
+                case FtpSecurityNotAvailableException:
+                    return new RemoteTlsUpgradeException($"{location.Host}:{location.Port}", exception);
+                case FtpInvalidCertificateException:
+                    return new RemoteCertificateValidationException($"{location.Host}:{location.Port}", exception);
+                case AuthenticationException:
+                    return validation.CertificateRejected
+                        ? new RemoteCertificateValidationException($"{location.Host}:{location.Port}", exception)
+                        : new RemoteTlsHandshakeException($"{location.Host}:{location.Port}", exception);
+            }
+        }
+
         if (exception is FluentFTP.Exceptions.FtpAuthenticationException)
         {
-            return new RemoteAuthenticationException("ftp");
+            return new RemoteAuthenticationException(location.Scheme);
         }
 
         return ConnectionFailed(exception, location, cancellationToken);
@@ -146,13 +250,32 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
         Exception exception,
         string path,
         RemoteLocation location,
+        TlsValidationState validation,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (exception is RemoteTlsException)
+        {
+            return exception;
+        }
+
+        if (location.TlsMode != RemoteTlsMode.Off)
+        {
+            switch (exception)
+            {
+                case FtpInvalidCertificateException:
+                    return new RemoteCertificateValidationException($"{location.Host}:{location.Port}", exception);
+                case AuthenticationException:
+                    return validation.CertificateRejected
+                        ? new RemoteCertificateValidationException($"{location.Host}:{location.Port}", exception)
+                        : new RemoteTlsHandshakeException($"{location.Host}:{location.Port}", exception);
+            }
+        }
+
         if (exception is FluentFTP.Exceptions.FtpAuthenticationException)
         {
-            return new RemoteAuthenticationException("ftp");
+            return new RemoteAuthenticationException(location.Scheme);
         }
 
         if (exception is FtpCommandException command)
@@ -164,7 +287,7 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
 
             if (IsListingRefusedReply(command))
             {
-                return new RemoteListingNotSupportedException(path, "list-directory", "ftp");
+                return new RemoteListingNotSupportedException(path, "list-directory", location.Scheme);
             }
         }
 
@@ -189,7 +312,7 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
 
         var target = $"{location.Host}:{location.Port}";
         var detail = DescribeFailure(exception, location);
-        return new RemoteConnectionException("ftp", target, exception, detail.Length > 0 ? " " + detail : null);
+        return new RemoteConnectionException(location.Scheme, target, exception, detail.Length > 0 ? " " + detail : null);
     }
 
     /// <summary>
@@ -218,15 +341,24 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
         return detail;
     }
 
-    private static void RejectLineBreaks(string username, string password, CancellationToken cancellationToken)
+    private void RejectLineBreaks(string username, string password, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (username.IndexOfAny(['\r', '\n']) >= 0 || password.IndexOfAny(['\r', '\n']) >= 0)
         {
             // A line break in a credential is command injection on the control channel, not a login.
-            throw new RemoteAuthenticationException("ftp");
+            throw new RemoteAuthenticationException(scheme);
         }
     }
+}
+
+/// <summary>
+/// Records whether a presented TLS certificate was rejected, so a handshake failure can be
+/// reported as a certificate problem rather than a generic TLS failure.
+/// </summary>
+internal sealed class TlsValidationState
+{
+    public bool CertificateRejected { get; set; }
 }
 
 /// <summary>
@@ -237,12 +369,18 @@ internal sealed class FtpRemoteSession : IRemoteCatalogSession
 {
     private readonly FtpClient client;
     private readonly RemoteLocation location;
+    private readonly TlsValidationState validation;
     private readonly CancellationToken cancellationToken;
 
-    internal FtpRemoteSession(FtpClient client, RemoteLocation location, CancellationToken cancellationToken)
+    internal FtpRemoteSession(
+        FtpClient client,
+        RemoteLocation location,
+        TlsValidationState validation,
+        CancellationToken cancellationToken)
     {
         this.client = client;
         this.location = location;
+        this.validation = validation;
         this.cancellationToken = cancellationToken;
     }
 
@@ -275,7 +413,7 @@ internal sealed class FtpRemoteSession : IRemoteCatalogSession
         }
         catch (Exception ex)
         {
-            throw FtpCatalogConnector.TranslateListingFailure(ex, normalized, location, cancellationToken);
+            throw FtpCatalogConnector.TranslateListingFailure(ex, normalized, location, validation, cancellationToken);
         }
 
         cancellationToken.ThrowIfCancellationRequested();

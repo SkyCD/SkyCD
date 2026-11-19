@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Couchbase.Lite;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
@@ -33,6 +34,7 @@ using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
+using SkyCD.Presentation.Lending;
 using SkyCD.Presentation.Collections;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.Scanning;
@@ -77,6 +79,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void ToggleBackgroundMediaSync() => IsBackgroundMediaSyncEnabled = !IsBackgroundMediaSyncEnabled;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
+    private Database? temporaryCatalogDatabase;
     private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly CatalogUndoManager? undoManager;
@@ -260,13 +263,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.undoManager = undoManager;
+        loanService = this.catalogRepository.Collection is not null ? CatalogLoanService.Open(this.catalogRepository) : null;
         this.tagRepository = CreateTagDocuments(this.catalogRepository);
         this.tagService = this.tagRepository is not null
             ? new CatalogTagService(this.catalogRepository, this.tagRepository)
             : null;
         this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
         this.collectionService = this.collectionRepository is not null
-            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup)
+            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, ProjectLending)
             : null;
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
@@ -453,6 +457,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        quickFindCancellation?.Cancel();
         if (isDisposed) return;
         isDisposed = true;
         pluginCommandCancellation?.Cancel();
@@ -477,7 +482,34 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             mediaCacheStore.Dispose();
         }
 
+        if (temporaryCatalogDatabase is { } database)
+        {
+            using (database) database.Delete();
+        }
+
         GC.SuppressFinalize(this);
+    }
+
+    public static MainWindowViewModel CreateNewCatalog()
+    {
+        var database = new Database($"skycd-new-catalog-{Guid.NewGuid():N}",
+            new DatabaseConfiguration { Directory = Path.GetTempPath() });
+        try
+        {
+            var collection = database.GetDefaultCollection();
+            var repository = new CatalogDocumentRepository();
+            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+            return new MainWindowViewModel(repository, new PropertyValueLocalizer(), CreateEmptyMenuExtensionManager(),
+                shouldSeedDefaultCatalog: false, new CatalogUndoManager(repository))
+            {
+                temporaryCatalogDatabase = database
+            };
+        }
+        catch
+        {
+            using (database) database.Delete();
+            throw;
+        }
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
@@ -541,6 +573,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Width = new Avalonia.Controls.GridLength(100, Avalonia.Controls.GridUnitType.Pixel),
             HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        },
+        new()
+        {
+            Header = LocalizationService.Current.Get(UiKeys.LentTo), ValuePath = nameof(CatalogDocument.LentTo),
+            Width = new Avalonia.Controls.GridLength(140, Avalonia.Controls.GridUnitType.Pixel)
         }
     ];
 
@@ -712,7 +749,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsCutEnabled => SelectedBrowserItem is not null;
 
     [RelayCommand]
-    private void FindCatalog() => FindCatalogRequested?.Invoke(this, EventArgs.Empty);
+    private void FindCatalog()
+    {
+        IsQuickFilterOpen = true;
+        FindCatalogRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     public CatalogFindDialogViewModel CreateCatalogFindDialogViewModel() =>
         new(GetAllCatalogEntries(), NavigateToFindResult, searchFieldProvider);
@@ -723,7 +764,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public AdvancedCatalogFindDialogViewModel CreateAdvancedCatalogFindDialogViewModel()
     {
-        var entries = GetAllCatalogEntries();
+        var entries = ProjectLending(GetAllCatalogEntries());
         var (lookup, metadataKeys) = BuildAdvancedFindMetadata();
         return new AdvancedCatalogFindDialogViewModel(
             entries,
@@ -737,7 +778,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 IsDirtyDocument = true;
                 RefreshCollectionsMenuItems();
-            });
+            },
+            SelectedTreeNode?.Key);
     }
 
     private (AdvancedCatalogSearchService.MetadataLookup? Lookup, IReadOnlyList<string> Keys) BuildAdvancedFindMetadata()
@@ -838,13 +880,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return values.ToArray();
     }
 
-    private IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
+    public IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
 
     private void NavigateToFindResult(CatalogFindResult result)
     {
         var document = result.Document;
-        var nodeKey = IsTreeVisibleType(document) ? document.Id : document.ParentId;
+        var nodeKey = IsTreeVisibleType(document) ? document.Id : document.ParentId ?? "library";
         if (string.IsNullOrWhiteSpace(nodeKey) || !treeNodesByKey.TryGetValue(nodeKey, out var node)) return;
 
         ExpandAncestors(node.Key);
@@ -880,12 +922,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void CompleteNewCatalog()
     {
+        inMemoryCatalogEntries?.Clear();
         commentsByObjectKey.Clear();
         addedItemsByNodeKey.Clear();
         deletedItemNamesByNodeKey.Clear();
         renamedBrowserItemNamesByNodeKey.Clear();
         CurrentCatalogPath = null;
         SelectedBrowserItem = null;
+        SelectedBrowserItems = new List<CatalogDocument>();
         ClipboardItem = null;
 
         // History describes edits to the catalog that was open. Carrying it into a new catalog would let Undo
@@ -893,6 +937,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // entries that no longer exist.
         ResetUndoHistory();
 
+        RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
         StatusText = LocalizationService.Current.Get(TextKeys.CreatedANewCatalog);
@@ -989,6 +1034,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetProgress(90, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
         CompleteOperation();
 
+        loanService?.SaveUnderPath(filePath);
         CurrentCatalogPath = filePath;
         StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogTo, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
@@ -1018,6 +1064,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetProgress(95, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
         CompleteOperation();
 
+        loanService?.SaveUnderPath(filePath);
         CurrentCatalogPath = filePath;
         StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogAs, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
@@ -1036,6 +1083,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var selectedId = isTreeProperties
             ? SelectedTreeNode?.Key
             : SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
+        dialog.Lending = selectedId is null ? null : CreateLoanEditor(selectedId);
         PropertiesRequested?.Invoke(this, new PropertiesDialogRequestedEventArgs
         {
             Dialog = dialog,
@@ -1539,7 +1587,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void AddImportedItem(string? suggestedName)
     {
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        var nodeKey = SelectedTreeNode?.Key;
         var itemName = string.IsNullOrWhiteSpace(suggestedName)
             ? $"Imported Item {DateTime.Now:HHmmss}"
             : suggestedName.Trim();
@@ -1665,6 +1713,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             BrowserItems.Remove(item);
         }
+
+        RefreshQuickFind();
 
         // Restore selection to the same position, or next available
         if (BrowserItems.Count > 0 && selectedIndex >= 0)
@@ -2623,12 +2673,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 .ToArray();
         }
 
+        items = ProjectLending(items).Where(MatchesLendingFilter).ToArray();
+
         if (items.Length == 0)
         {
             BrowserItems = [];
             SelectedBrowserItem = null;
             SelectedBrowserItems = new List<CatalogDocument>();
             UpdateSelectedContentsNotice();
+            RefreshQuickFind();
             return;
         }
 
@@ -2652,6 +2705,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ? new List<CatalogDocument> { SelectedBrowserItem }
             : new List<CatalogDocument>();
         UpdateSelectedContentsNotice();
+        RefreshQuickFind();
     }
 
     private void UpdateSelectedContentsNotice()
@@ -3397,6 +3451,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
+            BuildLoansMenu(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
@@ -3446,6 +3501,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", InputGesture = "Ctrl+V", Command = PasteCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
+            BuildLoansMenu(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
@@ -3467,7 +3523,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (catalogRepository is not null)
         {
-            return BuildTreeNodesFromEntries(catalogRepository.GetAll());
+            return BuildTreeNodesFromEntries(ProjectLending(catalogRepository.GetAll()));
         }
 
         return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
@@ -3610,7 +3666,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             entry.Name,
             entry.IconGlyph,
             children,
-            isExpanded);
+            isExpanded)
+        {
+            LoanIndicator = entry.IsLent ? LocalizationService.Current.Get(entry.IsLoanOverdue ? UiKeys.LoanOverdueBadge : UiKeys.LoanBadge) : null
+        };
     }
 
     private static IReadOnlyList<BrowserTreeNode> BuildTreeNodesFromEntries(IReadOnlyList<CatalogDocument> entries)

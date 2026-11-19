@@ -325,7 +325,7 @@ public sealed class FtpCatalogTransportTests
     [Fact]
     public void Connect_TransportConfigNeverRetriesAndNormalizesTimesToUtc()
     {
-        var config = FtpCatalogConnector.CreateConfig();
+        var config = FtpCatalogConnector.CreateConfig(RemoteTlsMode.Off);
 
         Assert.Equal(1, config.RetryAttempts);
         Assert.Equal(FluentFTP.FtpDate.UTC, config.TimeConversion);
@@ -335,6 +335,9 @@ public sealed class FtpCatalogTransportTests
         Assert.Equal(FluentFTP.FtpListOption.ForceList | FluentFTP.FtpListOption.SizeModify, FtpCatalogConnector.ListingOptions);
         Assert.Equal(20_000, config.ReadTimeout);
         Assert.Equal(15_000, config.ConnectTimeout);
+
+        Assert.Equal(FluentFTP.FtpEncryptionMode.Explicit, FtpCatalogConnector.CreateConfig(RemoteTlsMode.Explicit).EncryptionMode);
+        Assert.Equal(FluentFTP.FtpEncryptionMode.Implicit, FtpCatalogConnector.CreateConfig(RemoteTlsMode.Implicit).EncryptionMode);
     }
 
     /// <summary>Collects the progress events the scan reports.</summary>

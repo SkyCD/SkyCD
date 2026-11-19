@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Threading.Tasks;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.ViewModels;
@@ -37,6 +39,65 @@ public sealed class CatalogFindTests
         Assert.Equal(2, result.Count(match => match.Document.Name.Equals("sunset.jpg", System.StringComparison.OrdinalIgnoreCase)));
         Assert.Contains(result, match => match.FullPath.StartsWith("Disc A /", System.StringComparison.Ordinal));
         Assert.Contains(result, match => match.FullPath.StartsWith("Disc B /", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task QuickFind_FiltersCurrentChildrenAndRestoresListWhenClearedOrClosed()
+    {
+        using var catalog = MainWindowViewModel.CreateForInMemoryCatalog(Documents);
+        var folder = catalog.TreeNodes.Single(node => node.Key == "disc-a").Children.Single();
+        catalog.SelectedTreeNode = folder;
+        catalog.FindCatalogCommand.Execute(null);
+        Assert.True(catalog.IsQuickFilterOpen);
+
+        catalog.QuickFindQuery = "sunset";
+        await WaitForAsync(() => catalog.QuickFindStatus == "No matching catalog entries.");
+        Assert.Empty(catalog.VisibleBrowserItems);
+
+        catalog.QuickFindQuery = "tRiP";
+        await WaitForAsync(() => catalog.VisibleBrowserItems.Count == 1);
+        Assert.Equal("nested-a", Assert.Single(catalog.VisibleBrowserItems).Id);
+
+        catalog.QuickFindQuery = string.Empty;
+        Assert.Same(catalog.BrowserItems, catalog.VisibleBrowserItems);
+
+        catalog.QuickFindQuery = "missing";
+        catalog.CloseQuickFilterCommand.Execute(null);
+        Assert.False(catalog.IsQuickFilterOpen);
+        Assert.Same(catalog.BrowserItems, catalog.VisibleBrowserItems);
+        Assert.Same(folder, catalog.SelectedTreeNode);
+        Assert.False(catalog.IsDirtyDocument);
+    }
+
+    [Fact]
+    public async Task QuickFind_UsesLatestQueryAndNavigatesToTheChosenDuplicate()
+    {
+        using var catalog = MainWindowViewModel.CreateForInMemoryCatalog(Documents);
+        catalog.FindCatalogCommand.Execute(null);
+        catalog.SearchWholeCatalog = true;
+        catalog.QuickFindQuery = "photos";
+        catalog.QuickFindQuery = "SUNSET";
+        await WaitForAsync(() => catalog.QuickFindResults.Count == 2);
+        var selected = Assert.Single(catalog.QuickFindResults, result => result.Document.Id == "file-a");
+        Assert.Equal("Disc A / Photos / Trips", selected.Context);
+
+        catalog.SelectedQuickFindResult = selected;
+        catalog.OpenQuickFindResultCommand.Execute(null);
+
+        Assert.False(catalog.IsQuickFilterOpen);
+        Assert.Equal("nested-a", catalog.SelectedTreeNode?.Key);
+        Assert.Equal("file-a", catalog.SelectedBrowserItem?.Id);
+        Assert.True(catalog.TreeNodes.Single(node => node.Key == "disc-a").Children.Single().IsExpanded);
+        Assert.False(catalog.IsDirtyDocument);
+    }
+
+    private static async Task WaitForAsync(Func<bool> predicate)
+    {
+        using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!predicate())
+        {
+            await Task.Delay(10, timeout.Token);
+        }
     }
 
     [Theory]

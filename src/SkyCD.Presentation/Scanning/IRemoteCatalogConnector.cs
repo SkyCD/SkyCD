@@ -15,6 +15,9 @@ public interface IRemoteCatalogConnector
 
     int DefaultPort { get; }
 
+    /// <summary>TLS mode this protocol defaults to; an address may override it (see RemoteLocation).</summary>
+    RemoteTlsMode DefaultTlsMode { get; }
+
     string NormalizePath(string? path);
 
     bool CanConfirmCredentials(RemoteCredentials credentials);

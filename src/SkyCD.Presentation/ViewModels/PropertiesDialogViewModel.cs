@@ -26,6 +26,10 @@ public partial class PropertiesDialogViewModel : ObservableObject
         @"\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,7})?(?<offset>Z|[+-][0-9]{2}:[0-9]{2})?\z",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
+    public LoanDialogViewModel? Lending { get; set; }
+
+    public bool HasLendingTab => Lending is not null;
+
     private readonly PropertiesCollection sourceProperties;
     private readonly IStringLocalizer valueLocalizer;
     public PropertiesDialogViewModel(

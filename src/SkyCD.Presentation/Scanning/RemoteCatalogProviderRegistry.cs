@@ -10,6 +10,7 @@ public sealed class RemoteCatalogProviderRegistry
     public static RemoteCatalogProviderRegistry Default { get; } = new(
     [
         new FtpCatalogConnector(),
+        new FtpCatalogConnector("ftps", 990, RemoteTlsMode.Implicit),
         new SftpCatalogConnector(),
         new WebDavCatalogConnector("webdav", 80),
         new WebDavCatalogConnector("webdavs", 443),

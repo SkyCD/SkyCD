@@ -44,6 +44,15 @@ public static class TellicoHierarchyBuilder
                 rootProperties["TellicoSyntaxVersion"] = parseResult.SyntaxVersion;
             }
 
+            var keptIds = collection.Entries.Where(entry => entry is not null)
+                .Select(entry => entry!.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var unmatchedLoans = collection.Loans.Where(loan => !keptIds.Contains(loan.EntryRef)).ToArray();
+            if (unmatchedLoans.Length > 0)
+            {
+                rootProperties["TellicoUnmappedLoans"] = unmatchedLoans.Select(loan => loan.Uid ?? loan.EntryRef).ToArray();
+            }
+
+            var loansByEntry = collection.Loans.ToLookup(loan => loan.EntryRef, StringComparer.OrdinalIgnoreCase);
             rows.Add(new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
             {
                 ["nodeId"] = rootNodeId,
@@ -76,6 +85,12 @@ public static class TellicoHierarchyBuilder
                 foreach (var (field, value) in item.Fields)
                 {
                     properties[ToPropertyKey(field)] = value;
+                }
+
+                var additionalLoans = loansByEntry[item.Id].Skip(1).ToArray();
+                if (additionalLoans.Length > 0)
+                {
+                    properties["TellicoUnmappedLoans"] = additionalLoans.Select(loan => loan.Uid ?? loan.EntryRef).ToArray();
                 }
 
                 foreach (var (key, value) in item.ExtraFields)

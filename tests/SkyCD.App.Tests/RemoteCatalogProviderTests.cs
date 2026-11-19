@@ -45,6 +45,16 @@ public sealed class RemoteCatalogProviderTests
     }
 
     [Fact]
+    public void Registry_FtpsScheme_UsesImplicitTlsAndPort990()
+    {
+        var ftps = RemoteCatalogProviderRegistry.Default.Get("ftps");
+        Assert.IsType<FtpCatalogConnector>(ftps);
+        Assert.Equal(990, ftps.DefaultPort);
+        Assert.Equal(RemoteTlsMode.Implicit, ftps.DefaultTlsMode);
+        Assert.Equal(RemoteTlsMode.Off, RemoteCatalogProviderRegistry.Default.Get("ftp").DefaultTlsMode);
+    }
+
+    [Fact]
     public void Credentials_DoNotExposePasswordInStringRepresentation()
     {
         var credentials = new RemoteCredentials("alice", "secret", false);
@@ -114,6 +124,7 @@ public sealed class RemoteCatalogProviderTests
     {
         public string Scheme => "test";
         public int DefaultPort => 4321;
+        public RemoteTlsMode DefaultTlsMode => RemoteTlsMode.Off;
         public string? Username { get; private set; }
         public string? Password { get; private set; }
         public bool DropFirstListing { get; init; }

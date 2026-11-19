@@ -1,3 +1,5 @@
+using System;
+using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -67,5 +69,30 @@ public class LoginDialogViewModelTests
         Assert.Equal(string.Empty, blank.Username);
         Assert.Equal(string.Empty, blank.Password);
         Assert.False(blank.ConfirmCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void FromAddress_TlsModeDefaultsToTheSchemeAndEffectiveAddressKeepsTheChoice()
+    {
+        var implicitFtps = LoginDialogViewModel.FromAddress("ftps://127.0.0.1/pub");
+        Assert.True(implicitFtps.IsFtp);
+        Assert.Equal(RemoteTlsMode.Implicit, implicitFtps.TlsMode);
+        Assert.StartsWith("ftps://127.0.0.1", implicitFtps.EffectiveAddress, StringComparison.Ordinal);
+        Assert.DoesNotContain("tls=", implicitFtps.EffectiveAddress, StringComparison.Ordinal);
+
+        var plain = LoginDialogViewModel.FromAddress("ftp://127.0.0.1:2121/pub");
+        Assert.Equal(RemoteTlsMode.Off, plain.TlsMode);
+        Assert.Equal("ftp://127.0.0.1:2121/pub", plain.EffectiveAddress);
+
+        plain.TlsModeIndex = 1;
+        Assert.Equal(RemoteTlsMode.Explicit, plain.TlsMode);
+        Assert.Equal("ftp://127.0.0.1:2121/pub?tls=explicit", plain.EffectiveAddress);
+
+        var queried = LoginDialogViewModel.FromAddress("ftp://127.0.0.1/pub?tls=explicit");
+        Assert.Equal(RemoteTlsMode.Explicit, queried.TlsMode);
+        Assert.Contains("tls=explicit", queried.EffectiveAddress, StringComparison.Ordinal);
+
+        implicitFtps.TlsModeIndex = 0;
+        Assert.Equal("ftps://127.0.0.1:990/pub?tls=off", implicitFtps.EffectiveAddress);
     }
 }

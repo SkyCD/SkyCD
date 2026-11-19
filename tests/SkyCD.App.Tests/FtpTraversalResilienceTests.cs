@@ -75,6 +75,7 @@ public sealed class FtpTraversalResilienceTests
 
         public string Scheme => ftp.Scheme;
         public int DefaultPort => ftp.DefaultPort;
+        public RemoteTlsMode DefaultTlsMode => ftp.DefaultTlsMode;
         public string NormalizePath(string? path) => ftp.NormalizePath(path);
         public bool CanConfirmCredentials(RemoteCredentials credentials) => ftp.CanConfirmCredentials(credentials);
         public (string Username, string Password) ResolveCredentials(RemoteCredentials credentials) => ftp.ResolveCredentials(credentials);

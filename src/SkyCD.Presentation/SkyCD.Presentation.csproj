@@ -21,4 +21,8 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+    <ItemGroup>
+        <!-- Test seam: FTPS certificate trust policy injection (see FtpCatalogConnector). -->
+        <InternalsVisibleTo Include="SkyCD.App.Tests" />
+    </ItemGroup>
 </Project>
