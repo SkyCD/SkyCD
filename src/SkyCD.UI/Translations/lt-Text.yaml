@@ -191,3 +191,5 @@ text.AiDescriptionBatchProgress: "Generuojama {0} iš {1}: {2}..."
 text.AiDescriptionBatchSummary: "Sugeneruota {0}, praleista {1}, nepavyko {2}, atšaukta {3}."
 text.AiDescriptionBatchCancelled: "AI aprašymų paketas atšauktas."
 text.AiDescriptionBatchFailed: "AI aprašymų paketas nepavyko: {0}"
+
+text.QuickFindEmptyQuery: "Įveskite tekstą sąrašui filtruoti arba pasirinkite visą katalogą."

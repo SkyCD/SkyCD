@@ -36,9 +36,9 @@ public sealed class PreviewPaneUiContractTests
     }
 
     [Fact]
-    public void FindDialog_ShowsWhichCapturedFieldMatched()
+    public void QuickFind_ShowsWhichCapturedFieldMatched()
     {
-        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "CatalogFindWindow.axaml");
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
 
         Assert.Contains("Text=\"{Binding MatchedField}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("IsVisible=\"{Binding HasMatchedField}\"", xaml, StringComparison.Ordinal);

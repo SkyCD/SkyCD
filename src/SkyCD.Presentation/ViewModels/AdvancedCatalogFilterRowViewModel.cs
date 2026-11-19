@@ -17,8 +17,31 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
     public IReadOnlyList<AdvancedCatalogField> Fields { get; } =
         Enum.GetValues<AdvancedCatalogField>();
 
-    public IReadOnlyList<AdvancedCatalogOperator> Operators { get; } =
-        Enum.GetValues<AdvancedCatalogOperator>();
+    private static readonly AdvancedCatalogOperator[] AllOperators = Enum.GetValues<AdvancedCatalogOperator>();
+    private static readonly AdvancedCatalogOperator[] PresenceOperators =
+        [AdvancedCatalogOperator.IsPresent, AdvancedCatalogOperator.IsMissing];
+    private static readonly AdvancedCatalogOperator[] TextOperators = AllOperators
+        .Where(static op => op is not (AdvancedCatalogOperator.GreaterThan or AdvancedCatalogOperator.GreaterThanOrEqual
+            or AdvancedCatalogOperator.LessThan or AdvancedCatalogOperator.LessThanOrEqual))
+        .ToArray();
+
+    public IReadOnlyList<AdvancedCatalogOperator> Operators
+    {
+        get
+        {
+            var compatible = SelectedField switch
+            {
+                AdvancedCatalogField.ActiveLoan or AdvancedCatalogField.OverdueLoan => PresenceOperators,
+                AdvancedCatalogField.Name or AdvancedCatalogField.FullPath or AdvancedCatalogField.Extension
+                    or AdvancedCatalogField.DocumentType or AdvancedCatalogField.Status
+                    or AdvancedCatalogField.Borrower => TextOperators,
+                _ => AllOperators
+            };
+
+            // A previously saved rule remains editable even if its operator is no longer suggested.
+            return compatible.Contains(SelectedOperator) ? compatible : [.. compatible, SelectedOperator];
+        }
+    }
 
     [ObservableProperty]
     private AdvancedCatalogField selectedField = AdvancedCatalogField.Name;
@@ -40,6 +63,7 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
     partial void OnSelectedFieldChanged(AdvancedCatalogField value)
     {
         OnPropertyChanged(nameof(IsKeyed));
+        OnPropertyChanged(nameof(Operators));
         if (value is AdvancedCatalogField.ActiveLoan or AdvancedCatalogField.OverdueLoan)
         {
             SelectedOperator = AdvancedCatalogOperator.IsPresent;
@@ -61,8 +85,11 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedOperatorChanged(AdvancedCatalogOperator value) =>
+    partial void OnSelectedOperatorChanged(AdvancedCatalogOperator value)
+    {
         OnPropertyChanged(nameof(IsValueRequired));
+        OnPropertyChanged(nameof(Operators));
+    }
 
     /// <summary>
     /// Builds the typed predicate, or returns false with a human-readable reason

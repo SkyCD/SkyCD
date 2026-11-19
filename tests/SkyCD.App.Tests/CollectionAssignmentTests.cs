@@ -498,6 +498,34 @@ public sealed class CollectionAssignmentTests : IDisposable
     }
 
     [Fact]
+    public void SavedSearchEditor_LoadAndUpdate_PreserveScopeAndCriteria()
+    {
+        using var stack = CreateStack();
+        var query = NameContainsQuery("original") with
+        {
+            Scope = new CatalogQueryScope { RootId = "stored-root", IncludeDescendants = false }
+        };
+        var collection = stack.Service.CreateDynamicCollection("Scoped", query);
+        using var finder = new SkyCD.Presentation.ViewModels.AdvancedCatalogFindDialogViewModel(
+            savedSearchService: stack.Service, selectedSubtreeId: "another-root");
+        finder.SelectedSavedSearch = collection;
+        finder.LoadSavedSearchCommand.Execute(null);
+
+        Assert.True(finder.SearchSubtree);
+        Assert.False(finder.IncludeDescendants);
+        Assert.Equal("stored-root", finder.ScopeRootId);
+        var filter = Assert.Single(finder.Filters);
+        Assert.Equal("original", filter.ValueText);
+
+        filter.ValueText = "updated";
+        finder.UpdateSavedSearchCommand.Execute(null);
+        var saved = stack.Service.GetDynamicQuery(collection.Id);
+        Assert.Equal("stored-root", saved.Scope.RootId);
+        Assert.False(saved.Scope.IncludeDescendants);
+        Assert.Equal("updated", Assert.Single(saved.Root.Predicates).Value?.ToString());
+    }
+
+    [Fact]
     public void SavedSearch_MissingScopeDoesNotWidenResults()
     {
         using var stack = CreateStack();

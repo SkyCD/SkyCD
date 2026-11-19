@@ -455,6 +455,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        quickFindCancellation?.Cancel();
         if (isDisposed) return;
         isDisposed = true;
         pluginCommandCancellation?.Cancel();
@@ -719,7 +720,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsCutEnabled => SelectedBrowserItem is not null;
 
     [RelayCommand]
-    private void FindCatalog() => FindCatalogRequested?.Invoke(this, EventArgs.Empty);
+    private void FindCatalog()
+    {
+        IsQuickFilterOpen = true;
+        FindCatalogRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     public CatalogFindDialogViewModel CreateCatalogFindDialogViewModel() =>
         new(GetAllCatalogEntries(), NavigateToFindResult, searchFieldProvider);
@@ -744,7 +749,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 IsDirtyDocument = true;
                 RefreshCollectionsMenuItems();
-            });
+            },
+            SelectedTreeNode?.Key);
     }
 
     private (AdvancedCatalogSearchService.MetadataLookup? Lookup, IReadOnlyList<string> Keys) BuildAdvancedFindMetadata()
@@ -851,7 +857,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void NavigateToFindResult(CatalogFindResult result)
     {
         var document = result.Document;
-        var nodeKey = IsTreeVisibleType(document) ? document.Id : document.ParentId;
+        var nodeKey = IsTreeVisibleType(document) ? document.Id : document.ParentId ?? "library";
         if (string.IsNullOrWhiteSpace(nodeKey) || !treeNodesByKey.TryGetValue(nodeKey, out var node)) return;
 
         ExpandAncestors(node.Key);
@@ -1675,6 +1681,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             BrowserItems.Remove(item);
         }
+
+        RefreshQuickFind();
 
         // Restore selection to the same position, or next available
         if (BrowserItems.Count > 0 && selectedIndex >= 0)
@@ -2641,6 +2649,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             SelectedBrowserItem = null;
             SelectedBrowserItems = new List<CatalogDocument>();
             UpdateSelectedContentsNotice();
+            RefreshQuickFind();
             return;
         }
 
@@ -2664,6 +2673,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ? new List<CatalogDocument> { SelectedBrowserItem }
             : new List<CatalogDocument>();
         UpdateSelectedContentsNotice();
+        RefreshQuickFind();
     }
 
     private void UpdateSelectedContentsNotice()

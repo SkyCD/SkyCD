@@ -79,6 +79,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         AttachPaneFocusHandlers();
         AddHandler(InputElement.KeyDownEvent, OnMainWindowKeyDown, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
+        QuickFindResultList.AddHandler(InputElement.KeyDownEvent, OnQuickFindResultKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closing += OnClosing;
@@ -295,6 +296,29 @@ public partial class MainWindow : Window
             // In headless or unit test environments OwnedWindows may not be initialized
         }
 
+        if (subscribedViewModel is { IsQuickFilterOpen: true } vm && e.Key == Key.Escape)
+        {
+            vm.CloseQuickFilterCommand.Execute(null);
+            MainBrowserItemsView.FocusActiveControl();
+            e.Handled = true;
+            return;
+        }
+
+        if (subscribedViewModel?.ShowQuickFindResults == true &&
+            e.Key == Key.Down && e.KeyModifiers == KeyModifiers.None && GetFocusedElement() == QuickFindBox)
+        {
+            QuickFindResultList.Focus();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Delete && e.Source is Visual source &&
+            (source == QuickFindResultList || QuickFindResultList.IsVisualAncestorOf(source)))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Delete && e.KeyModifiers == KeyModifiers.None)
         {
             var focused = GetFocusedElement();
@@ -376,12 +400,36 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnFindCatalogRequested(object? sender, EventArgs e)
+    private void OnFindCatalogRequested(object? sender, EventArgs e)
     {
-        if (sender is MainWindowViewModel vm)
+        Dispatcher.UIThread.Post(() =>
         {
-            await new CatalogFindWindow { DataContext = vm.CreateCatalogFindDialogViewModel() }.ShowDialog(this);
+            if (subscribedViewModel?.IsQuickFilterOpen != true) return;
+            QuickFindBox.Focus();
+            QuickFindBox.SelectAll();
+        }, DispatcherPriority.Input);
+    }
+
+    private void OnQuickFindResultDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (FindAncestor<ListBoxItem>(e.Source as Visual) is not null)
+        {
+            OpenQuickFindResult();
         }
+    }
+
+    private void OnQuickFindResultKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None) return;
+        OpenQuickFindResult();
+        e.Handled = true;
+    }
+
+    private void OpenQuickFindResult()
+    {
+        if (subscribedViewModel is not { SelectedQuickFindResult: not null } vm) return;
+        vm.OpenQuickFindResultCommand.Execute(null);
+        MainBrowserItemsView.FocusActiveControl();
     }
 
     private async void OnCollectionsRequested(object? sender, CollectionsDialogRequestedEventArgs e)

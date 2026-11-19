@@ -151,6 +151,11 @@ public static class UiKeys
     public const string FindCatalog = "core.ui.FindCatalog";
     public const string FindCatalogHint = "core.ui.FindCatalogHint";
     public const string Find = "core.ui.Find";
+    public const string QuickFind = "core.ui.QuickFind";
+    public const string CurrentList = "core.ui.CurrentList";
+    public const string WholeCatalog = "core.ui.WholeCatalog";
+    public const string SearchSubtree = "core.ui.SearchSubtree";
+    public const string IncludeDescendants = "core.ui.IncludeDescendants";
     public const string Location = "core.ui.Location";
     public const string OpenResult = "core.ui.OpenResult";
     public const string Tags = "core.ui.Tags";
