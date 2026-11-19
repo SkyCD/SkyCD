@@ -108,7 +108,7 @@ public sealed class MediaMetadataService
         return Task.FromResult(stream);
     }
 
-    private static bool MatchesRecordedTimestamp(CatalogDocument entry, FileInfo file)
+    internal static bool MatchesRecordedTimestamp(CatalogDocument entry, FileInfo file)
     {
         if (!entry.Properties.TryGetValue("LastWriteTime", out var raw) || raw is null)
         {

@@ -30,7 +30,16 @@ source medium, or plugin installation.
 
 ## Context and results
 
-Only permitted cached context is sent: filename, extracted text, metadata, and
+Adding files through a catalog scan starts a description pass for each new file
+when an AI description provider is enabled. For local files, SkyCD attaches the
+original directly from disk. Agents that advertise embedded context receive the
+original bytes for files up to 4 MiB. Otherwise, SkyCD passes a link to the local
+file for the agent to open. The original is neither copied into SkyCD's cache nor
+replaced with extracted text or thumbnails. Remote or unreadable originals
+report a per-file failure. Rescanned entries keep their existing descriptions.
+Cancelling or an agent error leaves the added files in the catalog.
+
+Manual generation uses permitted cached context: filename, extracted text, metadata, and
 cached image thumbnails/posters/cover art or audio artifacts. No original source
 files or filesystem paths are supplied. Native images/audio are sent only when
 advertised. Unsupported context is omitted; generation fails explicitly if no

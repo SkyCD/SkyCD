@@ -15,7 +15,14 @@ public sealed record DescriptionContextPart(string Kind, string ContentType, str
 
 /// <summary>A bounded snapshot whose source and content fingerprints must still match at publication.</summary>
 public sealed record DescriptionContext(string EntryId, string SourceFingerprint, string ContextFingerprint,
-    DescriptionContextOptions Options, IReadOnlyList<DescriptionContextPart> Parts);
+    DescriptionContextOptions Options, IReadOnlyList<DescriptionContextPart> Parts)
+{
+    /// <summary>The original file explicitly attached by a catalog-add operation.</summary>
+    public DescriptionOriginalFile? OriginalFile { get; init; }
+}
+
+/// <summary>A snapshot of the original local file supplied directly to the provider.</summary>
+public sealed record DescriptionOriginalFile(string FullPath, string Name, long Length, DateTime LastWriteTimeUtc);
 
 /// <summary>Plain generated text with negotiated agent identity and user-configured provenance.</summary>
 public sealed record GeneratedDescription(string Text, string Agent, string? Model, string PluginVersion,
