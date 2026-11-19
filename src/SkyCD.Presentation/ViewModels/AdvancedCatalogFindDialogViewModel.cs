@@ -37,7 +37,8 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     IReadOnlyList<string>? customPropertyKeys = null,
     IReadOnlyList<string>? statusValues = null,
     VirtualCollectionService? savedSearchService = null,
-    Action? onSavedSearchChanged = null)
+    Action? onSavedSearchChanged = null,
+    string? selectedSubtreeId = null)
     : ObservableObject, IDisposable
 {
     public const int PageSize = 100;
@@ -50,7 +51,25 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     private int searchGeneration;
     private IReadOnlyList<CatalogFindResult> allMatches = [];
     private bool disposed;
-    private CatalogQueryScope loadedScope = new();
+    private readonly string? initialSubtreeId = selectedSubtreeId;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasScopeRoot), nameof(ScopeRootLabel))]
+    private string? scopeRootId = selectedSubtreeId;
+
+    [ObservableProperty]
+    private bool searchSubtree;
+
+    [ObservableProperty]
+    private bool includeDescendants = true;
+
+    public bool HasScopeRoot => ScopeRootId is not null;
+    public string ScopeRootLabel => this.documents.FirstOrDefault(entry => entry.Id == ScopeRootId)?.Name
+        ?? ScopeRootId
+        ?? string.Empty;
+
+    partial void OnSearchSubtreeChanged(bool value) => ClearResults();
+    partial void OnIncludeDescendantsChanged(bool value) => ClearResults();
 
     public IReadOnlyList<VirtualCollectionDocument> SavedSearches => savedSearchService?.GetCollections()
         .Where(collection => collection.Kind == VirtualCollectionKind.Dynamic).ToArray() ?? [];
@@ -93,7 +112,9 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
                 });
             }
 
-            loadedScope = query.Scope;
+            ScopeRootId = query.Scope.RootId ?? initialSubtreeId;
+            SearchSubtree = query.Scope.RootId is not null;
+            IncludeDescendants = query.Scope.IncludeDescendants;
             SelectedScopeType = query.Scope.Types is { Count: > 0 } ? query.Scope.Types[0] : null;
             SelectedCombination = query.Root.Combination;
             SelectedSortKey = query.SortKey;
@@ -201,7 +222,10 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     private IReadOnlyList<CatalogFindResult> results = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedResult))]
     private CatalogFindResult? selectedResult;
+
+    public bool HasSelectedResult => CanNavigateToResult(SelectedResult);
 
     [ObservableProperty]
     private bool isSearching;
@@ -268,11 +292,12 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
         {
             var snapshot = documents;
             var lookup = metadataLookup;
-            var matches = await Task.Run(() =>
+            var (matches, totalMatches) = await Task.Run(() =>
             {
                 var index = new CatalogSearchIndex();
                 index.Rebuild(snapshot);
-                return AdvancedCatalogSearchService.Search(index, query, lookup, cancellationToken);
+                var page = AdvancedCatalogSearchService.Search(index, query, lookup, cancellationToken, out var total);
+                return (page, total);
             }, cancellationToken);
 
             if (disposed || generation != searchGeneration)
@@ -280,7 +305,7 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
                 return;
             }
 
-            ApplyMatches(matches);
+            ApplyMatches(matches, totalMatches);
         }
         catch (OperationCanceledException)
         {
@@ -336,7 +361,9 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     [RelayCommand]
     private void ResetFilters()
     {
-        loadedScope = new();
+        ScopeRootId = initialSubtreeId;
+        SearchSubtree = false;
+        IncludeDescendants = true;
         Filters.Clear();
         Filters.Add(new AdvancedCatalogFilterRowViewModel());
         SelectedCombination = CatalogQueryCombination.All;
@@ -419,7 +446,12 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             : null;
         query = new AdvancedCatalogQuery
         {
-            Scope = loadedScope with { Types = types },
+            Scope = new CatalogQueryScope
+            {
+                RootId = SearchSubtree ? ScopeRootId : null,
+                IncludeDescendants = IncludeDescendants,
+                Types = types
+            },
             SortKey = SelectedSortKey,
             SortDescending = SortDescending,
             Root = new CatalogQueryGroup
@@ -434,11 +466,11 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
         return true;
     }
 
-    private void ApplyMatches(IReadOnlyList<CatalogFindResult> matches)
+    private void ApplyMatches(IReadOnlyList<CatalogFindResult> matches, int totalMatches)
     {
         allMatches = matches;
-        ResultsTruncated = matches.Count >= AdvancedCatalogSearchService.MaxTake;
-        TotalMatches = matches.Count;
+        ResultsTruncated = matches.Count < totalMatches;
+        TotalMatches = totalMatches;
         PageIndex = 0;
         ReapplySort();
     }

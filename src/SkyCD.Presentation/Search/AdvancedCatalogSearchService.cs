@@ -37,7 +37,15 @@ public static class AdvancedCatalogSearchService
         CatalogSearchIndex index,
         AdvancedCatalogQuery query,
         MetadataLookup? metadataLookup = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Search(index, query, metadataLookup, cancellationToken, out _);
+
+    internal static IReadOnlyList<CatalogFindResult> Search(
+        CatalogSearchIndex index,
+        AdvancedCatalogQuery query,
+        MetadataLookup? metadataLookup,
+        CancellationToken cancellationToken,
+        out int totalMatches)
     {
         ArgumentNullException.ThrowIfNull(index);
         ArgumentNullException.ThrowIfNull(query);
@@ -72,6 +80,7 @@ public static class AdvancedCatalogSearchService
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        totalMatches = matches.Count;
         var ordered = AdvancedCatalogFindDialogViewModel.SortMatches(
             matches.Select(match => match.Result).ToArray(), query.SortKey, query.SortDescending);
 
