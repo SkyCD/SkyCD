@@ -431,7 +431,9 @@
                                                     <TextBox Grid.Column="0"
                                                              Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                     <multiSelect:MultiSelectDropdown Grid.Column="1"
-                                                                                     ItemsSource="{Binding IconOptionItems}"
+                                                                                     IsIconPicker="True"
+                                                                                     IconKeys="{Binding IconOptions}"
+                                                                                     SelectedIconKey="{Binding IconGlyph, Mode=TwoWay}"
                                                                                      IsSingleSelect="True"
                                                                                      ShowItemLabels="False"
                                                                                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SelectIcon}}">
