@@ -23,5 +23,5 @@ public interface IRemoteCatalogConnector
 
     RemoteConnectionException ConnectionFailed(RemoteLocation location, Exception? cause = null, string? detail = null);
 
-    IRemoteCatalogSession Connect(RemoteLocation location, string username, string password, CancellationToken cancellationToken);
+    IRemoteCatalogSession Connect(RemoteLocation location, RemoteCredentials credentials, CancellationToken cancellationToken);
 }

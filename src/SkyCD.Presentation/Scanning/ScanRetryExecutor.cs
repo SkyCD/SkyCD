@@ -57,7 +57,8 @@ internal static class ScanRetryExecutor
         if (exception is RemoteAuthenticationException
             or RemoteSchemeNotSupportedException
             or RemoteDirectoryNotFoundException
-            or RemoteListingNotSupportedException)
+            or RemoteListingNotSupportedException
+            or RemoteHostKeyException)
         {
             return false;
         }

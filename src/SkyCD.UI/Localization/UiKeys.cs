@@ -10,6 +10,14 @@ public static class UiKeys
     public const string Username = "core.ui.Username";
     public const string Password = "core.ui.Password";
     public const string AnonymousAccess = "core.ui.AnonymousAccess";
+    public const string AuthenticationMethod = "core.ui.AuthenticationMethod";
+    public const string PrivateKey = "core.ui.PrivateKey";
+    public const string KeyFile = "core.ui.KeyFile";
+    public const string KeyPassphrase = "core.ui.KeyPassphrase";
+    public const string HostKey = "core.ui.HostKey";
+    public const string CheckHostKey = "core.ui.CheckHostKey";
+    public const string TrustHostKey = "core.ui.TrustHostKey";
+    public const string ReplaceHostKey = "core.ui.ReplaceHostKey";
     public const string Ok = "core.ui.Ok";
     public const string Cancel = "core.ui.Cancel";
     public const string Yes = "core.ui.Yes";

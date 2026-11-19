@@ -79,12 +79,12 @@ public sealed class RemoteCatalogProviderTests
         var registry = new RemoteCatalogProviderRegistry([provider]);
         var exception = Assert.Throws<RemoteSchemeNotSupportedException>(() =>
             new RemoteCatalogScanner(registry).Scan(new RemoteScanOptions(
-                "sftp://alice:secret@example.com/root", null, null, false, null, null, false)));
-        Assert.Equal("sftp", exception.Scheme);
-        Assert.Contains("sftp", exception.Message, StringComparison.OrdinalIgnoreCase);
+                "smb://alice:secret@example.com/root", null, null, false, null, null, false)));
+        Assert.Equal("smb", exception.Scheme);
+        Assert.Contains("smb", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("secret", exception.Message, StringComparison.Ordinal);
         Assert.Empty(provider.Listed);
-        Assert.Throws<RemoteSchemeNotSupportedException>(() => LoginDialogViewModel.FromAddress("sftp://example.com", registry));
+        Assert.Throws<RemoteSchemeNotSupportedException>(() => LoginDialogViewModel.FromAddress("smb://example.com", registry));
     }
 
     private sealed class TestProvider : IRemoteCatalogConnector, IRemoteCatalogSession
@@ -109,11 +109,11 @@ public sealed class RemoteCatalogProviderTests
         public RemoteConnectionException ConnectionFailed(RemoteLocation location, Exception? cause = null, string? detail = null) =>
             new("test", location.Host, cause, detail);
 
-        public IRemoteCatalogSession Connect(RemoteLocation location, string username, string password, CancellationToken cancellationToken)
+        public IRemoteCatalogSession Connect(RemoteLocation location, RemoteCredentials credentials, CancellationToken cancellationToken)
         {
             Connections++;
-            Username = username;
-            Password = password;
+            Username = credentials.Username;
+            Password = credentials.Password;
             return this;
         }
 

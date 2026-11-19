@@ -50,10 +50,12 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
     /// <summary>Seconds a TCP connect may take before it is treated as a disconnect.</summary>
     internal const int ConnectTimeoutSeconds = 15;
 
-    public IRemoteCatalogSession Connect(RemoteLocation location, string username, string password, CancellationToken cancellationToken)
+    public IRemoteCatalogSession Connect(RemoteLocation location, RemoteCredentials credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(location);
+        ArgumentNullException.ThrowIfNull(credentials);
 
+        var (username, password) = ResolveCredentials(credentials);
         RejectLineBreaks(username, password, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 

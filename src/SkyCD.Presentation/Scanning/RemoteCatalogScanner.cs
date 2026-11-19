@@ -42,7 +42,14 @@ public sealed class RemoteCatalogScanner
 
         var location = RemoteLocation.Parse(options.Address, providers);
         var connector = providers.Get(location.Scheme);
-        var (username, password) = connector.ResolveCredentials(new RemoteCredentials(options.Username, options.Password, options.Anonymous));
+        var credentials = new RemoteCredentials(
+            options.Username,
+            options.Password,
+            options.Anonymous,
+            options.AuthMethod,
+            options.KeyFilePath,
+            options.KeyFilePassphrase);
+        connector.ResolveCredentials(credentials);
         using var context = new ScanOperationContext(
             options.Traversal,
             progress,
@@ -60,7 +67,7 @@ public sealed class RemoteCatalogScanner
         {
             context.ThrowIfCancellationRequested();
 
-            using var scope = new RemoteSessionScope(connector, location, username, password, context);
+            using var scope = new RemoteSessionScope(connector, location, credentials, context);
             ScanRetryExecutor.Execute(
                 context,
                 location.PublicUrl,
@@ -131,7 +138,7 @@ public sealed class RemoteCatalogScanner
         }
         catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteConnectionException
                 or RemoteSchemeNotSupportedException or RemoteDirectoryNotFoundException
-                or RemoteListingNotSupportedException)
+                or RemoteListingNotSupportedException or RemoteHostKeyException)
         {
             throw;
         }
@@ -159,12 +166,14 @@ public sealed class RemoteCatalogScanner
         DateTime? modifiedUtc,
         bool isRoot,
         HashSet<string> visited,
-        ref int listedRef)
+        ref int listedRef,
+        string? visitedIdentity = null)
     {
         context.ThrowIfCancellationRequested();
         var normalized = scope.NormalizePath(path);
+        var identity = visitedIdentity ?? normalized;
 
-        if (!visited.Add(normalized))
+        if (!visited.Add(identity))
         {
             // The directory points back to an already visited path: report the cycle instead of
             // recursing forever.
@@ -268,7 +277,8 @@ public sealed class RemoteCatalogScanner
                 entry.ModifiedUtc,
                 isRoot: false,
                 visited,
-                ref listedRef);
+                ref listedRef,
+                entry.VisitedIdentity);
 
             if (child is not null)
             {
@@ -428,22 +438,19 @@ public sealed class RemoteCatalogScanner
     {
         private readonly IRemoteCatalogConnector connector;
         private readonly RemoteLocation location;
-        private readonly string username;
-        private readonly string password;
+        private readonly RemoteCredentials credentials;
         private readonly ScanOperationContext context;
         private IRemoteCatalogSession? session;
 
         public RemoteSessionScope(
             IRemoteCatalogConnector connector,
             RemoteLocation location,
-            string username,
-            string password,
+            RemoteCredentials credentials,
             ScanOperationContext context)
         {
             this.connector = connector;
             this.location = location;
-            this.username = username;
-            this.password = password;
+            this.credentials = credentials;
             this.context = context;
         }
 
@@ -451,7 +458,7 @@ public sealed class RemoteCatalogScanner
         public IRemoteCatalogSession Open()
         {
             Reset();
-            session = connector.Connect(location, username, password, context.CancellationToken);
+            session = connector.Connect(location, credentials, context.CancellationToken);
             return session;
         }
 

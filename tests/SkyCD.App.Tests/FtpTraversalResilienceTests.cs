@@ -80,7 +80,7 @@ public sealed class FtpTraversalResilienceTests
         public (string Username, string Password) ResolveCredentials(RemoteCredentials credentials) => ftp.ResolveCredentials(credentials);
         public RemoteConnectionException ConnectionFailed(RemoteLocation location, Exception? cause = null, string? detail = null) => ftp.ConnectionFailed(location, cause, detail);
 
-        public IRemoteCatalogSession Connect(RemoteLocation location, string username, string password, CancellationToken cancellationToken) =>
+        public IRemoteCatalogSession Connect(RemoteLocation location, RemoteCredentials credentials, CancellationToken cancellationToken) =>
             factory();
     }
 
