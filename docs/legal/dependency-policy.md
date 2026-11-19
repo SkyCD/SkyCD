@@ -4,7 +4,7 @@
 Define a repeatable dependency license compliance process for SkyCD v3.
 
 ## Scope
-- Applies to NuGet dependencies used by the v3 solution (`SkyCD.V3.slnx`).
+- Applies to NuGet dependencies used by the v3 solution (`SkyCD.slnx`).
 - Applies to direct and transitive dependencies discovered in the generated SBOM.
 
 ## Source of Truth
@@ -14,17 +14,13 @@ Define a repeatable dependency license compliance process for SkyCD v3.
 
 ## Compatibility with SkyCD
 
-SkyCD uses the BSD 2-Clause license. The allowlist records reviewed licenses whose terms can be met when their respective components are distributed alongside SkyCD. Each component keeps its own license, and releases must include the notices it requires. CI checks the SBOM against those decisions. It cannot determine compatibility from the wording of an arbitrary license or verify that releases include the required notices.
+SkyCD uses the BSD 2-Clause license. CI looks up each declared dependency license in the [OSADL compatibility matrix](https://www.osadl.org/Access-to-raw-data.oss-compliance-raw-data-access.0.html), with SkyCD's license as the outbound license. A known compatible license passes without a policy edit. An incompatible license fails. A missing or inconclusive result follows the unknown-license rules below. The explicit blocklist takes precedence.
 
-## Allowed License Families
-- `MIT`
-- `Apache-2.0`
-- `BSD-2-Clause`
-- `BSD-3-Clause`
-- `CC-BY-4.0` for separately licensed artwork such as Twemoji. Preserve attribution and the license link, and disclose any changes to the artwork. CI recognizes the official Creative Commons license URLs when the SBOM provides no usable license name or identifier.
-- `ISC`
-- `MPL-2.0`
-- `Zlib`
+The checked-in `osadl-bsd-2-clause.json` is an extract of the BSD-2-Clause outbound row of the Open Source Automation Development Lab (OSADL) eG compatibility matrix, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The extract keeps the verdicts and omits the explanations and other outbound rows. Its source timestamp and SHA-256 identify the input, so CI can use the data offline and reproduce decisions.
+
+The policy explicitly allows `CC-BY-4.0` for separately licensed artwork such as Twemoji because the OSADL matrix does not cover it. Preserve attribution and the license link, and disclose any changes to the artwork. CI recognizes official Creative Commons license URLs when the SBOM provides no usable license name or identifier. Release notices and custom EULAs still require review.
+
+The policy also retains the existing approval for `MPL-2.0` dependencies. The matrix evaluates outbound licensing, while MPL 2.0 allows a larger work to use other terms when the covered files stay under the MPL and its distribution requirements are met. See [MPL 2.0 section 3.3](https://www.mozilla.org/MPL/2.0/#distribution-of-a-larger-work).
 
 ## Blocked License Families
 - All `GPL`, `LGPL`, `AGPL` variants

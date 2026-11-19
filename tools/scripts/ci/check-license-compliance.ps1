@@ -21,6 +21,11 @@ if (-not (Test-Path $PolicyPath)) {
 
 $sbom = Get-Content $SbomPath -Raw | ConvertFrom-Json -Depth 100
 $policy = Get-Content $PolicyPath -Raw | ConvertFrom-Json -Depth 20
+$matrixPath = Join-Path (Split-Path -Parent (Resolve-Path -LiteralPath $PolicyPath)) $policy.compatibilityMatrix
+$matrix = Get-Content -LiteralPath $matrixPath -Raw | ConvertFrom-Json
+if ($matrix.outboundLicense -ne $policy.projectLicenseId -or -not $matrix.inboundLicenses) {
+    throw "Compatibility matrix does not cover SkyCD's configured license '$($policy.projectLicenseId)'."
+}
 
 $allowed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $blocked = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -99,15 +104,25 @@ foreach ($component in $components) {
         }
 
         foreach ($token in $allTokens) {
+            $compatibility = $matrix.inboundLicenses.PSObject.Properties[$token].Value
             if ($blocked.Contains($token)) {
                 $status = "Blocked"
                 $reasons += "Blocked license '$token'."
             }
-            elseif (-not $allowed.Contains($token)) {
+            elseif ($allowed.Contains($token) -or $compatibility -in @("Yes", "Same")) {
+                continue
+            }
+            elseif ($compatibility -eq "No") {
+                if ($status -ne "Blocked") {
+                    $status = "Incompatible"
+                }
+                $reasons += "OSADL marks '$token' incompatible with '$($policy.projectLicenseId)'."
+            }
+            else {
                 if ($status -eq "Compliant") {
                     $status = "Unknown"
                 }
-                $reasons += "Unknown/unapproved license '$token'."
+                $reasons += "Compatibility with '$($policy.projectLicenseId)' could not be determined for '$token'."
             }
         }
     }
@@ -130,13 +145,16 @@ foreach ($component in $components) {
         continue
     }
 
-    if ($status -eq "Blocked" -or ($status -eq "Unknown" -and $policy.failOnUnknownLicense)) {
+    if ($status -in @("Blocked", "Incompatible") -or ($status -eq "Unknown" -and $policy.failOnUnknownLicense)) {
         $nonCompliant += $item
     }
 }
 
 $summary = [PSCustomObject]@{
     GeneratedUtc = (Get-Date).ToUniversalTime().ToString("o")
+    ProjectLicense = $policy.projectLicenseId
+    CompatibilityDataSource = $matrix.source
+    CompatibilityDataTimestamp = $matrix.sourceTimestamp
     ComponentsScanned = $results.Count
     NonCompliantCount = $nonCompliant.Count
     FailOnUnknownLicense = [bool]$policy.failOnUnknownLicense
