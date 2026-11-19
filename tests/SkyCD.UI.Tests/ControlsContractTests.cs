@@ -197,8 +197,9 @@ public class ControlsContractTests
 
             Assert.Contains(list.PropertiesRows, row => row.Key == "Size" && row.Value == "1.5 KB (1,536 bytes)");
             Assert.Contains(list.PropertiesRows, row => row.Key == "FileSize" && row.Value == "1.5 MB");
-            Assert.Contains(list.PropertiesRows, row => row.Key == "Attributes" && row.Value == "32");
+            Assert.Contains(list.PropertiesRows, row => row.Key == "Attributes" && row.Value == "Archive");
             Assert.Equal("1536", vm.GetProperties()["Size"]);
+            Assert.Equal("32", vm.GetProperties()["Attributes"]);
         }
         finally
         {
