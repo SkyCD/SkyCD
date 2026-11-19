@@ -33,7 +33,7 @@ public sealed class VolumeExtensionManager : IVolumeMetadataProvider
 
         var values = new List<MediaMetadataValue>();
         var seenKeys = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var provider in OrderedProviders())
+        foreach (var provider in OrderedProviders(cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
@@ -60,8 +60,30 @@ public sealed class VolumeExtensionManager : IVolumeMetadataProvider
         return values;
     }
 
-    private IEnumerable<VolumeProvider> OrderedProviders() => providers
-        .OrderByDescending(static provider => provider.Capability.Descriptor.Priority)
-        .ThenBy(static provider => provider.PluginId, StringComparer.Ordinal)
-        .ThenBy(static provider => provider.Capability.GetType().FullName, StringComparer.Ordinal);
+    private IEnumerable<VolumeProvider> OrderedProviders(CancellationToken cancellationToken)
+    {
+        var candidates = new List<(VolumeProvider Provider, int Priority)>();
+        foreach (var provider in providers)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                candidates.Add((provider, provider.Capability.Descriptor.Priority));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                PluginFailure.Publish(provider.Capability.GetType(), "volume", exception);
+            }
+        }
+
+        return candidates
+            .OrderByDescending(static candidate => candidate.Priority)
+            .ThenBy(static candidate => candidate.Provider.PluginId, StringComparer.Ordinal)
+            .ThenBy(static candidate => candidate.Provider.Capability.GetType().FullName, StringComparer.Ordinal)
+            .Select(static candidate => candidate.Provider);
+    }
 }

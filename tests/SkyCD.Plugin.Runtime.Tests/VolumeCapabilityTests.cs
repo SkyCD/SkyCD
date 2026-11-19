@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Threading;
+using SkyCD.Plugin.Abstractions;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.Volume;
@@ -47,6 +49,50 @@ public sealed class VolumeCapabilityTests
         Assert.Equal("fake-serial", Assert.Single(values).Text);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FailingDescriptor_IsReportedAndSkippedWithoutLosingHealthyValues(bool throwsCancellation)
+    {
+        var broken = new FakeVolumeCapability
+        {
+            DescriptorException = throwsCancellation
+                ? new OperationCanceledException()
+                : new InvalidOperationException("Private descriptor failure")
+        };
+        var manager = new VolumeExtensionManager([
+            new VolumeProvider("broken", "1", broken),
+            new VolumeProvider("a", "1", new FakeVolumeCapability { Text = "low" }),
+            new VolumeProvider("z", "1", new FakeVolumeCapability { Text = "high", Priority = 100 })]);
+        var failures = new ConcurrentBag<PluginFailure>();
+        void Capture(PluginFailure failure) => failures.Add(failure);
+        PluginFailure.Reported += Capture;
+        try
+        {
+            Assert.Equal("high", Assert.Single(manager.CaptureVolumeMetadata(Volume, default)).Text);
+            Assert.False(broken.WasExtracted);
+            Assert.Contains(failures, failure => failure.Operation == "volume");
+        }
+        finally
+        {
+            PluginFailure.Reported -= Capture;
+        }
+    }
+
+    [Fact]
+    public void DescriptorCancellation_PropagatesCallerCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var manager = new VolumeExtensionManager([
+            new VolumeProvider("a", "1", new FakeVolumeCapability
+            {
+                OnDescriptorRead = cancellation.Cancel,
+                DescriptorException = new OperationCanceledException(cancellation.Token)
+            })]);
+
+        Assert.ThrowsAny<OperationCanceledException>(() => manager.CaptureVolumeMetadata(Volume, cancellation.Token));
+    }
+
     [Fact]
     public void ProvidersKeepCollidingKeysWithDeterministicPrecedence()
     {
@@ -74,7 +120,8 @@ public sealed class VolumeCapabilityTests
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        var manager = new VolumeExtensionManager([new VolumeProvider("a", "1", new FakeVolumeCapability())]);
+        var manager = new VolumeExtensionManager([new VolumeProvider("a", "1", new FakeVolumeCapability
+            { DescriptorException = new InvalidOperationException("Must not read after cancellation") })]);
 
         Assert.ThrowsAny<OperationCanceledException>(() => manager.CaptureVolumeMetadata(Volume, cancellation.Token));
     }
@@ -103,11 +150,28 @@ public sealed class FakeVolumeCapability : IVolumeMetadataCapability
     public int Priority { get; init; }
     public string Text { get; init; } = "fake-serial";
 
-    public VolumeDescriptor Descriptor => new(new MediaMetadataSchema("fake", 1,
-        [new MediaMetadataField("fakeSerial", MediaMetadataType.Text)]), Priority);
+    public Exception? DescriptorException { get; init; }
+    public Action? OnDescriptorRead { get; init; }
+    public bool WasExtracted { get; private set; }
+
+    public VolumeDescriptor Descriptor
+    {
+        get
+        {
+            OnDescriptorRead?.Invoke();
+            if (DescriptorException is not null)
+            {
+                throw DescriptorException;
+            }
+
+            return new VolumeDescriptor(new MediaMetadataSchema("fake", 1,
+                [new MediaMetadataField("fakeSerial", MediaMetadataType.Text)]), Priority);
+        }
+    }
 
     public VolumeExtractionResult Extract(VolumeMediaContext volume, CancellationToken cancellationToken)
     {
+        WasExtracted = true;
         if (Fail)
         {
             throw new InvalidOperationException("Private plugin failure");
