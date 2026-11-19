@@ -44,6 +44,13 @@ public static class AdvancedCatalogSearchService
         Validate(query);
 
         var candidates = index.GetScopeCandidates(query.Scope);
+
+        // Apply duplicate/unique classification as a pre-filter before predicates.
+        if (query.DuplicateFilter != DuplicateFilterMode.None)
+        {
+            candidates = ClassifyByDuplicateStatus(index, candidates, query, metadataLookup, cancellationToken);
+        }
+
         var matches = new List<(CatalogFindResult Result, string SortPath)>(candidates.Count);
         var checkedCount = 0;
 
@@ -106,6 +113,22 @@ public static class AdvancedCatalogSearchService
                 "Take must be between 1 and '{0}', but was '{1}'.",
                 MaxTake,
                 query.Take);
+        }
+
+        if (!Enum.IsDefined(query.DuplicateFilter))
+        {
+            throw new AdvancedCatalogQueryException("Duplicate filter mode is invalid.");
+        }
+
+        if (!Enum.IsDefined(query.HashAlgorithm))
+        {
+            throw new AdvancedCatalogQueryException("Hash algorithm is invalid.");
+        }
+
+        if (query.DuplicateFilter != DuplicateFilterMode.None && query.HashAlgorithm == ComparisonAlgorithm.None)
+        {
+            throw new AdvancedCatalogQueryException(
+                "A hash algorithm is required when duplicate filtering is enabled.");
         }
 
         ValidateGroup(query.Root);
@@ -584,5 +607,259 @@ public static class AdvancedCatalogSearchService
 
         var separator = fullPath.LastIndexOf(" / ", StringComparison.Ordinal);
         return separator < 0 ? fullPath : fullPath.Substring(0, separator);
+    }
+
+    /// <summary>
+    /// Classifies file entries by (size, normalized hash) across the full scope, then
+    /// filters to duplicates (groups of 2+) or uniques (singletons). Classification is
+    /// performed on all file entries before any predicate filtering, so a name filter
+    /// cannot hide the other member of a duplicate group.
+    /// </summary>
+    private static IReadOnlyList<CatalogDocument> ClassifyByDuplicateStatus(
+        CatalogSearchIndex index,
+        IReadOnlyList<CatalogDocument> candidates,
+        AdvancedCatalogQuery query,
+        MetadataLookup? metadataLookup,
+        CancellationToken cancellationToken)
+    {
+        var groups = new Dictionary<(long Size, string Hash), List<CatalogDocument>>(
+            EqualityComparer<(long, string)>.Default);
+
+        foreach (var document in candidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (document.Type != CatalogDocumentType.File)
+            {
+                continue;
+            }
+
+            var hash = TryNormalizeHash(document, query.HashAlgorithm, metadataLookup);
+            if (hash is null)
+            {
+                continue;
+            }
+
+            var key = (document.Size, hash);
+            if (!groups.TryGetValue(key, out var list))
+            {
+                list = [];
+                groups[key] = list;
+            }
+
+            list.Add(document);
+        }
+
+        var resultIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var group in groups.Values)
+        {
+            if (query.DuplicateFilter == DuplicateFilterMode.Duplicates && group.Count >= 2)
+            {
+                foreach (var doc in group)
+                {
+                    resultIds.Add(doc.Id);
+                }
+            }
+            else if (query.DuplicateFilter == DuplicateFilterMode.Uniques && group.Count == 1)
+            {
+                resultIds.Add(group[0].Id);
+            }
+        }
+
+        return candidates.Where(doc => resultIds.Contains(doc.Id)).ToArray();
+    }
+
+    /// <summary>
+    /// Attempts to extract and normalize a hash value for the given document using the
+    /// specified algorithm. Returns null if the hash is missing, invalid, or ambiguous.
+    /// </summary>
+    private static string? TryNormalizeHash(
+        CatalogDocument document,
+        ComparisonAlgorithm algorithm,
+        MetadataLookup? metadataLookup)
+    {
+        return algorithm switch
+        {
+            ComparisonAlgorithm.Sha256 => TryNormalizeSha256(document, metadataLookup),
+            ComparisonAlgorithm.Crc32 => TryNormalizeCrc32(document, metadataLookup),
+            _ => null
+        };
+    }
+
+    private static string? TryNormalizeSha256(
+        CatalogDocument document,
+        MetadataLookup? metadataLookup)
+    {
+        var raw = LookupHashValue(document, "sha256", metadataLookup);
+        if (raw is not string text)
+        {
+            return null;
+        }
+
+        var trimmed = text.Trim();
+        if (trimmed.Length != 64)
+        {
+            return null;
+        }
+
+        foreach (var c in trimmed)
+        {
+            if (!Uri.IsHexDigit(c))
+            {
+                return null;
+            }
+        }
+
+        return trimmed.ToLowerInvariant();
+    }
+
+    private static string? TryNormalizeCrc32(
+        CatalogDocument document,
+        MetadataLookup? metadataLookup)
+    {
+        var raw = LookupHashValue(document, "crc32", metadataLookup);
+        if (raw is null)
+        {
+            return null;
+        }
+
+        if (raw is uint u)
+        {
+            return u.ToString("x8", CultureInfo.InvariantCulture);
+        }
+
+        if (raw is int or long)
+        {
+            var num = Convert.ToInt64(raw, CultureInfo.InvariantCulture);
+            return ((uint)num).ToString("x8", CultureInfo.InvariantCulture);
+        }
+
+        if (raw is not string text)
+        {
+            return null;
+        }
+
+        var trimmed = text.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        // Handle "0x" prefixed hex.
+        if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && trimmed.Length > 2)
+        {
+            var hexPart = trimmed[2..];
+            if (hexPart.Length <= 8
+                && uint.TryParse(hexPart, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexVal))
+            {
+                return hexVal.ToString("x8", CultureInfo.InvariantCulture);
+            }
+
+            return null;
+        }
+
+        // Exactly 8 hex chars: hex if contains a-f, ambiguous if all digits.
+        if (trimmed.Length == 8 && IsAllHexDigits(trimmed))
+        {
+            if (ContainsAlphaHexDigit(trimmed))
+            {
+                return trimmed.ToLowerInvariant();
+            }
+
+            // All digits 0-9, exactly 8 chars → ambiguous → exclude.
+            return null;
+        }
+
+        // All digits, not 8 chars → decimal.
+        if (IsAllDigits(trimmed) && trimmed.Length != 8
+            && long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var decimalVal))
+        {
+            return ((uint)decimalVal).ToString("x8", CultureInfo.InvariantCulture);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Looks up a hash value from metadata (plugin-provided) or catalog properties.
+    /// Uses case-insensitive key matching for property lookups.
+    /// </summary>
+    private static object? LookupHashValue(
+        CatalogDocument document,
+        string key,
+        MetadataLookup? metadataLookup)
+    {
+        if (metadataLookup is not null)
+        {
+            var metadata = metadataLookup(document);
+            if (metadata is not null && TryGetValueIgnoreCase(metadata, key, out var metaVal) && metaVal is not null)
+            {
+                return metaVal;
+            }
+        }
+
+        if (TryGetValueIgnoreCase(document.Properties, key, out var propVal))
+        {
+            return propVal;
+        }
+
+        return null;
+    }
+
+    private static bool TryGetValueIgnoreCase(
+        IReadOnlyDictionary<string, object?> dict,
+        string key,
+        out object? value)
+    {
+        foreach (var kvp in dict)
+        {
+            if (string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                value = kvp.Value;
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
+
+    private static bool IsAllHexDigits(string text)
+    {
+        foreach (var c in text)
+        {
+            if (!Uri.IsHexDigit(c))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ContainsAlphaHexDigit(string text)
+    {
+        foreach (var c in text)
+        {
+            if ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsAllDigits(string text)
+    {
+        foreach (var c in text)
+        {
+            if (c < '0' || c > '9')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

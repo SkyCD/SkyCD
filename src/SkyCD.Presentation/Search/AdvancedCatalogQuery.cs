@@ -28,6 +28,19 @@ public sealed record AdvancedCatalogQuery
 
     /// <summary>Maximum matches to return. Clamped to 1..1000; defaults to 200.</summary>
     public int Take { get; init; } = 200;
+
+    /// <summary>
+    /// Optional pre-filter that classifies file entries as duplicates or uniques
+    /// before ordinary predicates, sorting, and pagination are applied.
+    /// When <see cref="DuplicateFilterMode.None"/> (default), search behavior is unchanged.
+    /// </summary>
+    public DuplicateFilterMode DuplicateFilter { get; init; } = DuplicateFilterMode.None;
+
+    /// <summary>
+    /// Hash algorithm used for duplicate/unique classification. Required when
+    /// <see cref="DuplicateFilter"/> is not <see cref="DuplicateFilterMode.None"/>.
+    /// </summary>
+    public ComparisonAlgorithm HashAlgorithm { get; init; } = ComparisonAlgorithm.None;
 }
 
 /// <summary>
@@ -59,6 +72,32 @@ public enum CatalogQueryCombination
 {
     All,
     Any
+}
+
+/// <summary>
+/// Controls the duplicate/unique pre-filter applied before ordinary search predicates.
+/// </summary>
+public enum DuplicateFilterMode
+{
+    /// <summary>No duplicate/unique filtering; existing behavior is unchanged.</summary>
+    None,
+
+    /// <summary>Return only file entries that belong to a size/hash group of two or more.</summary>
+    Duplicates,
+
+    /// <summary>Return only file entries that are singletons among classifiable files in scope.</summary>
+    Uniques
+}
+
+/// <summary>
+/// Hash algorithm used for duplicate/unique comparison.
+/// Never mixes different algorithms; each value is only compared against itself.
+/// </summary>
+public enum ComparisonAlgorithm
+{
+    None,
+    Sha256,
+    Crc32
 }
 
 public enum AdvancedCatalogField

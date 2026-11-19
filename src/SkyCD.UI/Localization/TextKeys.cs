@@ -166,6 +166,13 @@ public static class TextKeys
     public const string AdvancedFilterKeyRequired = "core.text.AdvancedFilterKeyRequired";
     public const string AdvancedFilterValueRequired = "core.text.AdvancedFilterValueRequired";
     public const string AdvancedFilterOneOfRequired = "core.text.AdvancedFilterOneOfRequired";
+    public const string AdvancedFindDuplicateFilter = "core.text.AdvancedFindDuplicateFilter";
+    public const string AdvancedFindHashAlgorithm = "core.text.AdvancedFindHashAlgorithm";
+    public const string AdvancedFindDuplicateNone = "core.text.AdvancedFindDuplicateNone";
+    public const string AdvancedFindDuplicateDuplicates = "core.text.AdvancedFindDuplicateDuplicates";
+    public const string AdvancedFindDuplicateUniques = "core.text.AdvancedFindDuplicateUniques";
+    public const string AdvancedFindAlgorithmSha256 = "core.text.AdvancedFindAlgorithmSha256";
+    public const string AdvancedFindAlgorithmCrc32 = "core.text.AdvancedFindAlgorithmCrc32";
     public const string RemoteSchemeNotSupported = "core.text.RemoteSchemeNotSupported";
     public const string RemoteAuthenticationFailed = "core.text.RemoteAuthenticationFailed";
     public const string RemoteConnectionFailed = "core.text.RemoteConnectionFailed";
