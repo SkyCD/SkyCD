@@ -94,13 +94,18 @@
                                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}" />
                     </StackPanel>
                     <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                        <TextBlock Text="{Binding RegistryVersion}" Opacity="0.7"
+                        <TextBlock Text="{Binding DisplayVersion}" Opacity="0.7"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
                             <Button Classes="acpUseAgent" IsVisible="{Binding IsInstalled}"
                                     Click="OnSelectAcpAgentClicked" />
                             <Button IsVisible="{Binding CanInstall}" Click="OnInstallAcpAgentClicked"
                                     Content="{i18n:Translate {x:Static i18n:UiKeys.InstallAcpAgent}}" />
+                            <Button IsVisible="{Binding CanUpdate}" Click="OnInstallAcpAgentClicked"
+                                    ToolTip.Tip="{Binding RegistryVersion}"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.UpdateAcpAgent}}" />
+                            <Button IsVisible="{Binding IsManaged}" Click="OnUninstallAcpAgentClicked"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.UninstallAcpAgent}}" />
                             <Button IsVisible="{Binding CanLocateExecutable}" Click="OnBrowseAcpAgentClicked"
                                     ToolTip.Tip="{Binding ExpectedExecutable}"
                                     Content="{i18n:Translate {x:Static i18n:UiKeys.LocateAcpAgent}}" />

@@ -451,11 +451,13 @@ public sealed class AcpDescriptionTests
                     archive = "https://example.test/agent.zip",
                     sha256 = Convert.ToHexString(SHA256.HashData(bytes))
                 });
-            await File.WriteAllTextAsync(Path.Combine(directory.FullName, AcpAgentRegistry.FileName), Json(new
+            var registryPath = Path.Combine(directory.FullName, AcpAgentRegistry.FileName);
+            Task WriteRegistryAsync(string version) => File.WriteAllTextAsync(registryPath, Json(new
             {
                 version = "1.0.0",
-                agents = new[] { new { id = "installable-agent", name = "Installable Agent", version = "1.0.0", distribution = new { binary = distribution } } }
+                agents = new[] { new { id = "installable-agent", name = "Installable Agent", version, distribution = new { binary = distribution } } }
             }));
+            await WriteRegistryAsync("1.0.0");
             var settingsPath = Path.Combine(directory.FullName, "settings.json");
             var plugin = new AiDescriptionPlugin(settingsPath, (_, _, _) =>
                 throw new InvalidOperationException("Options must never launch the agent."), client);
@@ -463,6 +465,10 @@ public sealed class AcpDescriptionTests
             await dialog.LoadAcpSettingsAsync(plugin);
             var agent = Assert.Single(dialog.AvailableAcpAgents);
             Assert.True(agent.CanInstall);
+            Assert.False(agent.CanUpdate);
+            Assert.False(agent.IsManaged);
+            await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.UpdateAgentAsync(agent.RegistryId!, CancellationToken.None));
+            Assert.Throws<DescriptionAgentException>(() => plugin.UninstallAgent(agent.RegistryId!));
             Assert.Equal(executableName, agent.ExpectedExecutable);
             Assert.Null(dialog.AcpCardAgent);
             var loadingLabel = dialog.AcpLoadingLabel;
@@ -498,6 +504,38 @@ public sealed class AcpDescriptionTests
             Assert.True(dialog.DialogAccepted);
             Assert.Equal(installed.Executable, plugin.GetAgentSettings().SelectedAgent?.Executable);
             Assert.True(plugin.GetPlan().IsEnabled);
+            Assert.True(installed.IsManaged);
+            Assert.Equal("1.0.0", installed.InstalledVersion);
+            Assert.False(installed.CanUpdate);
+
+            await WriteRegistryAsync("1.1.0");
+            await dialog.LoadAcpSettingsAsync(plugin);
+            var outdated = Assert.Single(dialog.InstalledAcpAgents);
+            Assert.True(outdated.CanUpdate);
+            Assert.Equal("1.0.0", outdated.DisplayVersion);
+            handler.FailDownload = true;
+            Assert.NotNull(await dialog.UpdateAcpAgentAsync(outdated, CancellationToken.None));
+            Assert.Equal(installed.Executable, plugin.GetAgentSettings().SelectedAgent?.Executable);
+            Assert.True(File.Exists(installed.Executable));
+            handler.FailDownload = false;
+            Assert.Null(await dialog.UpdateAcpAgentAsync(outdated, CancellationToken.None));
+            var updated = Assert.Single(dialog.InstalledAcpAgents);
+            Assert.Equal("1.1.0", updated.InstalledVersion);
+            Assert.False(updated.CanUpdate);
+            Assert.NotEqual(installed.Executable, updated.Executable);
+            Assert.False(File.Exists(installed.Executable));
+            Assert.Equal(updated, dialog.AcpCardAgent);
+            Assert.True(plugin.GetPlan().IsEnabled);
+
+            File.Delete(registryPath);
+            await dialog.LoadAcpSettingsAsync(plugin);
+            var offline = Assert.Single(dialog.InstalledAcpAgents);
+            Assert.True(offline.IsManaged);
+            Assert.Null(await dialog.UninstallAcpAgentAsync(offline, CancellationToken.None));
+            Assert.Empty(dialog.InstalledAcpAgents);
+            Assert.Null(dialog.AcpCardAgent);
+            Assert.False(File.Exists(updated.Executable));
+            Assert.False(plugin.GetPlan().IsEnabled);
         }
         finally
         {
@@ -554,10 +592,12 @@ public sealed class AcpDescriptionTests
     private sealed class AgentArchiveHandler(byte[] content) : HttpMessageHandler
     {
         public Action? OnRequest { get; set; }
+        public bool FailDownload { get; set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             OnRequest?.Invoke();
+            if (FailDownload) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway));
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) });
         }
     }

@@ -107,7 +107,24 @@ public partial class OptionsWindow : Window
         if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
             return;
 
-        var error = await vm.InstallAcpAgentAsync(agent, acpLifetime.Token);
+        var error = agent.IsManaged
+            ? await vm.UpdateAcpAgentAsync(agent, acpLifetime.Token)
+            : await vm.InstallAcpAgentAsync(agent, acpLifetime.Token);
+        await ShowAcpOperationErrorAsync(agent.IsManaged ? UiKeys.AcpUpdateErrorTitle : UiKeys.AcpInstallErrorTitle,
+            agent.Name, error);
+    }
+
+    private async void OnUninstallAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
+            return;
+
+        var error = await vm.UninstallAcpAgentAsync(agent, acpLifetime.Token);
+        await ShowAcpOperationErrorAsync(UiKeys.AcpUninstallErrorTitle, agent.Name, error);
+    }
+
+    private async Task ShowAcpOperationErrorAsync(string title, string agentName, string? error)
+    {
         if (error is null || acpLifetime.IsCancellationRequested) return;
 
         var close = new Button
@@ -119,7 +136,7 @@ public partial class OptionsWindow : Window
         };
         var dialog = new Window
         {
-            Title = LocalizationService.Current.Format(UiKeys.AcpInstallErrorTitle, agent.Name),
+            Title = LocalizationService.Current.Format(title, agentName),
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Width = 440,
             SizeToContent = SizeToContent.Height,

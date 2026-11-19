@@ -72,6 +72,14 @@ public static class UiKeys
     public const string UseAcpAgent = "core.ui.UseAcpAgent";
     public const string AcpAgentSelected = "core.ui.AcpAgentSelected";
     public const string InstallAcpAgent = "core.ui.InstallAcpAgent";
+    public const string UpdateAcpAgent = "core.ui.UpdateAcpAgent";
+    public const string UninstallAcpAgent = "core.ui.UninstallAcpAgent";
+    public const string UpdatingAcpAgent = "core.ui.UpdatingAcpAgent";
+    public const string UninstallingAcpAgent = "core.ui.UninstallingAcpAgent";
+    public const string AcpAgentUpdateError = "core.ui.AcpAgentUpdateError";
+    public const string AcpAgentUninstallError = "core.ui.AcpAgentUninstallError";
+    public const string AcpUpdateErrorTitle = "core.ui.AcpUpdateErrorTitle";
+    public const string AcpUninstallErrorTitle = "core.ui.AcpUninstallErrorTitle";
     public const string LocateAcpAgent = "core.ui.LocateAcpAgent";
     public const string AcpFindExecutable = "core.ui.AcpFindExecutable";
     public const string AcpAgentInstallError = "core.ui.AcpAgentInstallError";

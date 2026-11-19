@@ -24,7 +24,12 @@ public sealed partial class AiDescriptionPlugin
     private static readonly Regex NpmSpec = new(@"\A(?<name>(?:@[a-z0-9_.-]+/)?[a-z0-9][a-z0-9_.-]*)@[0-9][a-zA-Z0-9.+-]*\z");
     private static readonly Regex UvSpec = new(@"\A(?<name>[a-zA-Z0-9][a-zA-Z0-9_.-]*)(?:==|@)(?<version>[0-9][a-zA-Z0-9.+-]*)\z");
 
-    private sealed record ManagedLaunch(string Directory, string EntryPoint, bool UsesNode, IReadOnlyList<string> Arguments);
+    private sealed record ManagedLaunch(string Directory, string EntryPoint, bool UsesNode, IReadOnlyList<string> Arguments)
+    {
+        public string? Version { get; init; }
+        public string? RegistryId { get; init; }
+        public string? Name { get; init; }
+    }
 
     private static AcpAgentChoice WithRegistryDetails(AcpAgentChoice choice, AcpRegistryAgent agent) => choice with
     {
@@ -32,17 +37,50 @@ public sealed partial class AiDescriptionPlugin
         RegistryVersion = agent.Version,
         Description = agent.Description,
         ExpectedExecutable = NativeFileName(agent.BinaryCommand),
-        CanInstall = !choice.IsInstalled && (GetNativeUri(agent) is not null || NpmSpec.IsMatch(agent.NpmPackage ?? string.Empty) ||
-            UvSpec.IsMatch(agent.UvPackage ?? string.Empty))
+        CanInstall = !choice.IsInstalled && !choice.IsManaged && HasInstaller(agent),
+        CanUpdate = choice.IsManaged && HasInstaller(agent) && IsNewerVersion(agent.Version, choice.InstalledVersion)
     };
 
-    public async Task<AcpAgentChoice> InstallAgentAsync(string registryId, CancellationToken cancellationToken)
+    private static bool HasInstaller(AcpRegistryAgent agent) => GetNativeUri(agent) is not null ||
+        NpmSpec.IsMatch(agent.NpmPackage ?? string.Empty) || UvSpec.IsMatch(agent.UvPackage ?? string.Empty);
+
+    private static bool IsNewerVersion(string incoming, string? installed)
+    {
+        if (string.Equals(incoming, installed, StringComparison.OrdinalIgnoreCase)) return false;
+        return !Version.TryParse(incoming, out var newVersion) || !Version.TryParse(installed, out var oldVersion) || newVersion > oldVersion;
+    }
+
+    public Task<AcpAgentChoice> InstallAgentAsync(string registryId, CancellationToken cancellationToken)
+        => InstallOrUpdateAgentAsync(registryId, update: false, cancellationToken);
+
+    public Task<AcpAgentChoice> UpdateAgentAsync(string registryId, CancellationToken cancellationToken)
+        => InstallOrUpdateAgentAsync(registryId, update: true, cancellationToken);
+
+    private async Task<AcpAgentChoice> InstallOrUpdateAgentAsync(string registryId, bool update, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var operation = LockManagedSettings();
+        return await InstallAgentCoreAsync(registryId, update, cancellationToken);
+    }
+
+    private FileStream LockManagedSettings()
+    {
+        var path = Path.GetFullPath(configurationPath) + ".agent-lock";
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        return new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+    }
+
+    private async Task<AcpAgentChoice> InstallAgentCoreAsync(string registryId, bool update, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(configurationPath))!;
         var agent = AcpAgentRegistry.Load(Path.Combine(directory, AcpAgentRegistry.FileName)).Find(registryId)
             ?? throw new DescriptionAgentException("the selected agent is no longer in the registry");
         var local = Path.Combine(directory, "acp-agents");
-        if (ReadManagedAgent(agent, local) is { } existing) return WithRegistryDetails(existing, agent);
+        var previous = ReadManagedLaunch(local, agent.Id);
+        if (update && previous is null) throw new DescriptionAgentException("SkyCD did not install this agent");
+        if (previous is not null && (!update || !IsNewerVersion(agent.Version, previous.Version)) &&
+            ResolveManagedAgent(agent.Id, agent.Name, local, previous) is { IsInstalled: true } existing)
+            return WithRegistryDetails(existing, agent);
 
         var name = Guid.NewGuid().ToString("N");
         var installedDirectory = Path.Combine(local, name);
@@ -58,12 +96,31 @@ public sealed partial class AiDescriptionPlugin
                 : NpmSpec.IsMatch(agent.NpmPackage ?? string.Empty)
                     ? await InstallNpmAgentAsync(agent, installedDirectory, name, cancellationToken)
                     : await InstallUvAgentAsync(agent, installedDirectory, name, cancellationToken);
-            var choice = ResolveManagedAgent(agent, local, launch)
-                ?? throw new DescriptionAgentException("the installed agent's launch file could not be found");
+            launch = launch with { Version = agent.Version, RegistryId = agent.Id, Name = agent.Name };
+            var choice = ResolveManagedAgent(agent.Id, agent.Name, local, launch);
+            if (!choice.IsInstalled) throw new DescriptionAgentException("the installed agent's launch file could not be found");
             await File.WriteAllTextAsync(temporaryReceipt, JsonSerializer.Serialize(launch), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporaryReceipt, receipt, overwrite: true);
+            var options = previous is not null ? ReadAgentSettings() : null;
+            var migrate = previous is not null && options is not null && UsesManagedLaunch(options, local, previous);
+            if (migrate)
+            {
+                var arguments = previous!.UsesNode ? options!.Arguments.Skip(1) : options!.Arguments;
+                if (arguments.SequenceEqual(previous.Arguments)) arguments = launch.Arguments;
+                if (launch.UsesNode) arguments = [choice.Arguments[0], .. arguments];
+                WriteAgentSettings(options! with { Executable = choice.Executable!, Arguments = arguments.ToArray() });
+            }
+            try
+            {
+                File.Move(temporaryReceipt, receipt, overwrite: true);
+            }
+            catch
+            {
+                if (migrate) WriteAgentSettings(options!);
+                throw;
+            }
             committed = true;
+            if (previous is not null) TryDeleteRetiredInstall(ManagedDirectory(local, previous));
             return WithRegistryDetails(choice, agent);
         }
         finally
@@ -73,14 +130,17 @@ public sealed partial class AiDescriptionPlugin
         }
     }
 
-    private static AcpAgentChoice? ReadManagedAgent(AcpRegistryAgent agent, string directory)
+    private static ManagedLaunch? ReadManagedLaunch(string directory, string registryId)
     {
         try
         {
-            var receipt = new FileInfo(ReceiptPath(directory, agent.Id));
+            var receipt = new FileInfo(ReceiptPath(directory, registryId));
             if (!receipt.Exists || receipt.Length > 64 * 1024) return null;
             var launch = JsonSerializer.Deserialize<ManagedLaunch>(File.ReadAllText(receipt.FullName));
-            return launch is null ? null : ResolveManagedAgent(agent, directory, launch);
+            if (launch is null || launch.Arguments is null || string.IsNullOrWhiteSpace(launch.EntryPoint) ||
+                (launch.RegistryId is not null && launch.RegistryId != registryId)) return null;
+            _ = SafeChildPath(ManagedDirectory(directory, launch), launch.EntryPoint);
+            return launch;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException or DescriptionAgentException)
         {
@@ -88,16 +148,107 @@ public sealed partial class AiDescriptionPlugin
         }
     }
 
-    private static AcpAgentChoice? ResolveManagedAgent(AcpRegistryAgent agent, string directory, ManagedLaunch launch)
+    public void UninstallAgent(string registryId)
     {
-        if (!Guid.TryParseExact(launch.Directory, "N", out _) || launch.Arguments is null) return null;
-        var entryPoint = SafeChildPath(Path.Combine(directory, launch.Directory), launch.EntryPoint);
-        if (!File.Exists(entryPoint)) return null;
-        if (!launch.UsesNode)
-            return IsExecutable(entryPoint) ? new AcpAgentChoice(agent.Name, entryPoint, launch.Arguments) : null;
+        using var operation = LockManagedSettings();
+        var local = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configurationPath))!, "acp-agents");
+        var launch = ReadManagedLaunch(local, registryId)
+            ?? throw new DescriptionAgentException("SkyCD did not install this agent");
+        var installed = ManagedDirectory(local, launch);
+        var retired = Path.Combine(local, ".retired-" + Guid.NewGuid().ToString("N"));
+        var options = ReadAgentSettings();
+        var selected = UsesManagedLaunch(options, local, launch);
+        var moved = Directory.Exists(installed);
+        if (moved) Directory.Move(installed, retired);
+        var cleared = false;
+        try
+        {
+            if (selected)
+            {
+                WriteAgentSettings(options with
+                {
+                    Enabled = false,
+                    Executable = string.Empty,
+                    Arguments = [],
+                    Environment = new Dictionary<string, string>(),
+                    AuthMethodId = null,
+                    Model = null,
+                    ProcessingDestination = "unknown"
+                });
+                cleared = true;
+            }
+            File.Delete(ReceiptPath(local, registryId));
+        }
+        catch
+        {
+            if (moved) Directory.Move(retired, installed);
+            if (cleared) WriteAgentSettings(options);
+            throw;
+        }
+        if (moved) TryDeleteRetiredInstall(retired);
+    }
 
-        var node = FindExecutable("node", SystemSearchDirectories());
-        return node is null ? null : new AcpAgentChoice(agent.Name, node, [entryPoint, .. launch.Arguments]);
+    private static string ManagedDirectory(string root, ManagedLaunch launch)
+    {
+        if (!Guid.TryParseExact(launch.Directory, "N", out _))
+            throw new DescriptionAgentException("the install record points outside SkyCD's managed installations");
+        var directory = Path.Combine(root, launch.Directory);
+        if (File.GetAttributes(root).HasFlag(FileAttributes.ReparsePoint) ||
+            (Directory.Exists(directory) && File.GetAttributes(directory).HasFlag(FileAttributes.ReparsePoint)))
+            throw new DescriptionAgentException("the managed install folder redirects outside its expected location");
+        return directory;
+    }
+
+    private static bool UsesManagedLaunch(DescriptionAgentOptions options, string root, ManagedLaunch launch)
+    {
+        var entryPoint = SafeChildPath(ManagedDirectory(root, launch), launch.EntryPoint);
+        return launch.UsesNode
+            ? options.Arguments.Count > 0 && SameExecutable(options.Arguments[0], entryPoint)
+            : SameExecutable(options.Executable, entryPoint);
+    }
+
+    private static void TryDeleteRetiredInstall(string directory)
+    {
+        try
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // An existing agent process can still hold files from the retired installation.
+        }
+    }
+
+    private static AcpAgentChoice? ReadUnlistedManagedAgent(string receipt, string directory)
+    {
+        try
+        {
+            if (new FileInfo(receipt).Length > 64 * 1024) return null;
+            var launch = JsonSerializer.Deserialize<ManagedLaunch>(File.ReadAllText(receipt));
+            if (launch is not { RegistryId: { } id, Name: { } name, Arguments: not null } ||
+                string.IsNullOrWhiteSpace(launch.EntryPoint) ||
+                !SameExecutable(receipt, ReceiptPath(directory, id))) return null;
+            return ResolveManagedAgent(id, name, directory, launch);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or
+            ArgumentException or DescriptionAgentException)
+        {
+            return null;
+        }
+    }
+
+    private static AcpAgentChoice ResolveManagedAgent(string registryId, string name, string directory, ManagedLaunch launch)
+    {
+        var entryPoint = SafeChildPath(ManagedDirectory(directory, launch), launch.EntryPoint);
+        var executable = File.Exists(entryPoint)
+            ? launch.UsesNode ? FindExecutable("node", SystemSearchDirectories()) : IsExecutable(entryPoint) ? entryPoint : null
+            : null;
+        return new AcpAgentChoice(name, executable, launch.UsesNode ? [entryPoint, .. launch.Arguments] : launch.Arguments)
+        {
+            IsManaged = true,
+            RegistryId = registryId,
+            InstalledVersion = launch.Version
+        };
     }
 
     private static string ReceiptPath(string directory, string id) => Path.Combine(directory,

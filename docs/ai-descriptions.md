@@ -89,6 +89,11 @@ Installing an agent selects it in Options. Choose **Save** to use it for
 generation. Use **Locate** on a native agent's card to find the specific
 executable from an existing installation outside `PATH`.
 
+Agents installed by SkyCD show **Uninstall** and offer **Update** when the
+registry advertises a newer version. Updating an active agent keeps it active.
+Uninstalling it clears the selection. System-wide and manually located agents
+are managed outside SkyCD.
+
 ## Authentication
 
 After `initialize`, the client reads the agent's advertised `authMethods`. Set

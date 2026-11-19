@@ -32,9 +32,7 @@ public partial class OptionsDialogViewModel
         ? SelectedAcpAgent : null;
     public bool HasAcpRegistryStatus => !string.IsNullOrWhiteSpace(AcpRegistryStatus);
     public bool HasAcpAlert => !string.IsNullOrWhiteSpace(AcpAlertMessage);
-    public string AcpLoadingLabel => InstallingAcpAgentName is { } name
-        ? LocalizationService.Current.Format(UiKeys.InstallingAcpAgent, name)
-        : LocalizationService.Current.Get(UiKeys.LoadingAcpAgents);
+    public string AcpLoadingLabel => AcpOperationLabel ?? LocalizationService.Current.Get(UiKeys.LoadingAcpAgents);
 
     [ObservableProperty]
     private AcpAgentChoice? selectedAcpAgent;
@@ -47,7 +45,7 @@ public partial class OptionsDialogViewModel
     private string? acpAlertMessage;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AcpLoadingLabel))]
-    private string? installingAcpAgentName;
+    private string? acpOperationLabel;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanChooseAcpAgent))]
     private bool isAcpLoading;
@@ -59,8 +57,8 @@ public partial class OptionsDialogViewModel
         var search = AcpSearchText.Trim();
         var matching = AcpAgents.Where(agent => agent.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
             agent.Description?.Contains(search, StringComparison.CurrentCultureIgnoreCase) == true).ToArray();
-        InstalledAcpAgents = matching.Where(agent => agent.IsInstalled).ToArray();
-        AvailableAcpAgents = matching.Where(agent => !agent.IsInstalled).ToArray();
+        InstalledAcpAgents = matching.Where(agent => agent.IsInstalled || agent.IsManaged).ToArray();
+        AvailableAcpAgents = matching.Where(agent => !agent.IsInstalled && !agent.IsManaged).ToArray();
         OnPropertyChanged(nameof(InstalledAcpAgents));
         OnPropertyChanged(nameof(AvailableAcpAgents));
         OnPropertyChanged(nameof(HasInstalledAcpAgents));
@@ -103,18 +101,47 @@ public partial class OptionsDialogViewModel
         }
     }
 
-    public async Task<string?> InstallAcpAgentAsync(AcpAgentChoice agent, CancellationToken cancellationToken)
+    public Task<string?> InstallAcpAgentAsync(AcpAgentChoice agent, CancellationToken cancellationToken)
+        => ChangeManagedAgentAsync(agent, AcpAgentOperation.Install, cancellationToken);
+
+    public Task<string?> UpdateAcpAgentAsync(AcpAgentChoice agent, CancellationToken cancellationToken)
+        => ChangeManagedAgentAsync(agent, AcpAgentOperation.Update, cancellationToken);
+
+    public Task<string?> UninstallAcpAgentAsync(AcpAgentChoice agent, CancellationToken cancellationToken)
+        => ChangeManagedAgentAsync(agent, AcpAgentOperation.Uninstall, cancellationToken);
+
+    private enum AcpAgentOperation { Install, Update, Uninstall }
+
+    private async Task<string?> ChangeManagedAgentAsync(AcpAgentChoice agent, AcpAgentOperation operation,
+        CancellationToken cancellationToken)
     {
-        if (acpSettingsCapability is not { } capability || IsAcpLoading || !agent.CanInstall ||
-            agent.RegistryId is not { } id) return null;
+        if (acpSettingsCapability is not { } capability || IsAcpLoading || agent.RegistryId is not { } id) return null;
+        var (allowed, progressKey, errorKey) = operation switch
+        {
+            AcpAgentOperation.Update => (agent.CanUpdate, UiKeys.UpdatingAcpAgent, UiKeys.AcpAgentUpdateError),
+            AcpAgentOperation.Uninstall => (agent.IsManaged, UiKeys.UninstallingAcpAgent, UiKeys.AcpAgentUninstallError),
+            _ => (agent.CanInstall, UiKeys.InstallingAcpAgent, UiKeys.AcpAgentInstallError)
+        };
+        if (!allowed) return null;
+
         IsAcpLoading = true;
-        InstallingAcpAgentName = agent.Name;
+        AcpOperationLabel = LocalizationService.Current.Format(progressKey, agent.Name);
         AcpAlertMessage = null;
         try
         {
-            var installed = await capability.InstallAgentAsync(id, cancellationToken);
-            await ReadAcpSettingsAsync(capability, preserveSelection: true, cancellationToken);
-            SelectAcpAgent(AcpAgents.FirstOrDefault(candidate => candidate.RegistryId == id && candidate.IsInstalled) ?? installed);
+            var wasPending = explicitlySelectedAcpAgent && SelectedAcpAgent?.RegistryId == id;
+            AcpAgentChoice? installed = null;
+            if (operation == AcpAgentOperation.Uninstall)
+                await Task.Run(() => capability.UninstallAgent(id), cancellationToken);
+            else if (operation == AcpAgentOperation.Update)
+                installed = await capability.UpdateAgentAsync(id, cancellationToken);
+            else
+                installed = await capability.InstallAgentAsync(id, cancellationToken);
+
+            if (wasPending) explicitlySelectedAcpAgent = false;
+            await ReadAcpSettingsAsync(capability, preserveSelection: true, cancellationToken, replacedRegistryId: id);
+            if (installed is not null && (operation == AcpAgentOperation.Install || wasPending))
+                SelectAcpAgent(AcpAgents.FirstOrDefault(candidate => candidate.RegistryId == id && candidate.IsInstalled) ?? installed);
             return null;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -125,23 +152,25 @@ public partial class OptionsDialogViewModel
             UnauthorizedAccessException or InvalidOperationException or OperationCanceledException or JsonException or
             ArgumentException or NotSupportedException or System.ComponentModel.Win32Exception)
         {
-            return LocalizationService.Current.Format(UiKeys.AcpAgentInstallError, exception.Message);
+            return LocalizationService.Current.Format(errorKey, exception.Message);
         }
         finally
         {
-            InstallingAcpAgentName = null;
+            AcpOperationLabel = null;
             IsAcpLoading = false;
         }
     }
 
     private async Task ReadAcpSettingsAsync(IAcpAgentSettingsCapability? capability, bool preserveSelection,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string? replacedRegistryId = null)
     {
         try
         {
             var settings = capability is null ? null : await Task.Run(capability.GetAgentSettings, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            var pending = preserveSelection && !Equals(SelectedAcpAgent, initialAcpSettings?.SelectedAgent)
+            var pending = preserveSelection && SelectedAcpAgent is { } current &&
+                (replacedRegistryId is null || current.RegistryId != replacedRegistryId) &&
+                !Equals(SelectedAcpAgent, initialAcpSettings?.SelectedAgent)
                 ? SelectedAcpAgent : null;
             initialAcpSettings = settings;
             AcpRegistryStatus = capability is null
@@ -200,7 +229,7 @@ public partial class OptionsDialogViewModel
 
     private bool TrySaveAcpSettings()
     {
-        if (IsAcpLoading && InstallingAcpAgentName is not null) return false;
+        if (IsAcpLoading && AcpOperationLabel is not null) return false;
         AcpAlertMessage = null;
         if (initialAcpSettings is not { } initial || acpSettingsCapability is null ||
             SelectedAcpAgent is not { } selected || (!explicitlySelectedAcpAgent && Equals(initial.SelectedAgent, selected)))

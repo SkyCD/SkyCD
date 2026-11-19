@@ -17,6 +17,12 @@ public interface IAcpAgentSettingsCapability : IPluginCapability
     /// <summary>Installs a registry agent locally and returns its launch configuration.</summary>
     Task<AcpAgentChoice> InstallAgentAsync(string registryId, CancellationToken cancellationToken);
 
+    /// <summary>Updates an agent previously installed by SkyCD from its registry entry.</summary>
+    Task<AcpAgentChoice> UpdateAgentAsync(string registryId, CancellationToken cancellationToken);
+
+    /// <summary>Removes an agent previously installed by SkyCD.</summary>
+    void UninstallAgent(string registryId);
+
     /// <summary>Saves the selected provider and activates it when explicitly chosen by the user.</summary>
     void SaveAgentSettings(AcpAgentChoice agent, bool activate = false);
 }
@@ -42,14 +48,26 @@ public sealed record AcpAgentChoice(string Name, string? Executable, IReadOnlyLi
     /// <summary>Whether this entry has an install method for the active platform.</summary>
     public bool CanInstall { get; init; }
 
+    /// <summary>Whether SkyCD owns the installation.</summary>
+    public bool IsManaged { get; init; }
+
+    /// <summary>The installed version when recorded by SkyCD.</summary>
+    public string? InstalledVersion { get; init; }
+
+    /// <summary>Whether an update is available for a SkyCD installation.</summary>
+    public bool CanUpdate { get; init; }
+
+    /// <summary>The version shown on the agent card.</summary>
+    public string? DisplayVersion => IsManaged ? InstalledVersion : RegistryVersion;
+
     /// <summary>The expected file name when locating a native installation manually.</summary>
     public string? ExpectedExecutable { get; init; }
 
     /// <summary>Whether a named native executable can be located manually.</summary>
-    public bool CanLocateExecutable => !IsInstalled && ExpectedExecutable is not null;
+    public bool CanLocateExecutable => !IsInstalled && !IsManaged && ExpectedExecutable is not null;
 
     /// <summary>Whether there is a launch or installation action for this platform.</summary>
-    public bool HasAvailableAction => IsInstalled || CanInstall || CanLocateExecutable;
+    public bool HasAvailableAction => IsInstalled || IsManaged || CanInstall || CanLocateExecutable;
 
     /// <summary>Monochrome path data from the agent's registry icon, when available.</summary>
     public IReadOnlyList<string> IconPaths { get; init; } = [];

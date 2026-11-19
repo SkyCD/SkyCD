@@ -70,7 +70,8 @@ public sealed partial class AiDescriptionPlugin
             {
                 var executable = FindExecutable(agent.BinaryCommand, searchDirectories);
                 var npmChoice = executable is null ? FindInstalledNpmAgent(agent, searchDirectories) : null;
-                var choice = ReadManagedAgent(agent, localDirectory) ?? npmChoice ??
+                var launch = ReadManagedLaunch(localDirectory, agent.Id);
+                var choice = (launch is null ? null : ResolveManagedAgent(agent.Id, agent.Name, localDirectory, launch)) ?? npmChoice ??
                     new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments);
                 agents.Add(WithRegistryDetails(choice, agent) with { IconPaths = ReadAgentIcon(agent, directory) });
             }
@@ -82,6 +83,11 @@ public sealed partial class AiDescriptionPlugin
 
         if (Directory.Exists(localDirectory))
         {
+            foreach (var receipt in Directory.EnumerateFiles(localDirectory, "*.json"))
+            {
+                if (ReadUnlistedManagedAgent(receipt, localDirectory) is { } managed &&
+                    !agents.Any(agent => agent.RegistryId == managed.RegistryId)) agents.Add(managed);
+            }
             foreach (var executable in Directory.EnumerateFiles(localDirectory).Where(IsExecutable))
             {
                 if (agents.Any(agent => SameExecutable(agent.Executable, executable))) continue;
@@ -107,6 +113,7 @@ public sealed partial class AiDescriptionPlugin
 
     public void SaveAgentSettings(AcpAgentChoice agent, bool activate = false)
     {
+        using var operation = LockManagedSettings();
         var options = ReadAgentSettings();
         if (agent.Executable is { } executable)
         {
@@ -134,6 +141,11 @@ public sealed partial class AiDescriptionPlugin
 
         if (activate) options = options with { Enabled = true };
         options.ValidateSettings();
+        WriteAgentSettings(options);
+    }
+
+    private void WriteAgentSettings(DescriptionAgentOptions options)
+    {
         var content = JsonSerializer.SerializeToUtf8Bytes(options, new JsonSerializerOptions { WriteIndented = true });
         if (content.Length > 65536) throw new DescriptionAgentException("configuration exceeds 64 KiB");
         var fullPath = Path.GetFullPath(configurationPath);
