@@ -24,10 +24,18 @@ public sealed class PluginManager(
     IRepository<PluginDocument> pluginRepository)
 {
     private readonly DiscoveredPluginCollection plugins = [];
+    private IReadOnlyCollection<DiscoveredPlugin> availablePlugins = [];
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => plugins;
 
     public event EventHandler? PluginsChanged;
+
+    /// <summary>Returns compatible discovered plugins, including disabled plugins, with the requested capability.</summary>
+    public IReadOnlyList<string> GetAvailablePluginIds<TCapability>()
+        where TCapability : class, IPluginCapability => availablePlugins
+        .Where(static plugin => plugin.Capabilities.OfType<TCapability>().Any())
+        .Select(static plugin => plugin.Id)
+        .ToArray();
 
     public IReadOnlyList<TCapability> GetCapabilities<TCapability>()
         where TCapability : class, IPluginCapability
@@ -48,6 +56,7 @@ public sealed class PluginManager(
 
         var discovered = DiscoverByAssemblyScan(normalizedDirectories, hostVersion);
 
+        availablePlugins = discovered;
         UpsertPluginDocuments(MapToPluginDocuments(discovered));
         var descriptors = GetPluginDescriptors();
         plugins.Import(discovered, descriptors);

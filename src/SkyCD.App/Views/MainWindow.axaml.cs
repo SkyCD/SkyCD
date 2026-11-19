@@ -28,6 +28,7 @@ using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Abstractions;
 using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
@@ -803,7 +804,8 @@ public partial class MainWindow : Window
                 IncludeMediaInfo: dialogVm.IncludeMediaInfo,
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
 
-            var scanner = new MediaCatalogScanner(mediaDriveProvider);
+            var scanner = new MediaCatalogScanner(mediaDriveProvider,
+                volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
@@ -957,7 +959,8 @@ public partial class MainWindow : Window
 
         var newCatalog = MainWindowViewModel.CreateNewCatalog();
         newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-        newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+        newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
+            ServiceProvider.Resolve<VolumeExtensionManager>());
         newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
         newCatalog.CompleteNewCatalog();
@@ -1329,7 +1332,8 @@ public partial class MainWindow : Window
                 return new MainWindowViewModel(repositoryManager);
             }, progress);
             reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-            reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+            reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
+                ServiceProvider.Resolve<VolumeExtensionManager>());
             var options = LoadAppOptions();
             reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
             reloadedViewModel.CurrentCatalogPath = localPath;
@@ -1580,7 +1584,8 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-            viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+            viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
+                ServiceProvider.Resolve<VolumeExtensionManager>());
             viewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         }
     }
@@ -1598,9 +1603,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var availableDescriptors = pluginManager.GetPluginDescriptors()
-            .Where(static descriptor => descriptor.IsAvailable)
-            .Select(static descriptor => (descriptor.Id, IsEnabled: true))
+        var availableDescriptors = pluginManager.GetAvailablePluginIds<IFileFormatPluginCapability>()
+            .Select(static id => (id, IsEnabled: true))
             .ToArray();
         if (availableDescriptors.Length == 0)
         {

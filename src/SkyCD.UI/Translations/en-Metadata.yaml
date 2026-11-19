@@ -3,6 +3,7 @@ _flag: 🇬🇧
 metadata.ed2k: "eD2k hash"
 metadata.tth: "Tiger Tree Hash"
 metadata.sha256: "SHA-256"
+metadata.VolumeSerialNumber: "Volume serial number"
 metadata.AiDescription: "AI description"
 metadata.AiDescriptionAgent: "AI description agent"
 metadata.AiDescriptionModel: "AI description model"

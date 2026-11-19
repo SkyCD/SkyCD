@@ -189,7 +189,9 @@ public partial class PropertiesDialogViewModel : ObservableObject
         {
             if (!HiddenInfoPropertyKeys.Contains(key))
             {
-                normalizedDisplay[key] = NormalizeDisplayValue(key, value, localizer, culture);
+                // Display keys localize through the metadata catalog and fall back to the stored key.
+                normalizedDisplay[MediaMetadataValueFormatter.ResolveLabel(key)] =
+                    NormalizeDisplayValue(key, value, localizer, culture);
             }
         }
 
