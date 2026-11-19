@@ -250,7 +250,8 @@ public class AddToListDialogViewModelTests
         Assert.True(vm.CanConfirm);
         Assert.Equal(scheme, vm.InternetProtocol);
         Assert.Equal("example.com", vm.InternetHost);
-        Assert.Equal(port.ToString(System.Globalization.CultureInfo.InvariantCulture), vm.InternetPort);
+        Assert.Empty(vm.InternetPort);
+        Assert.Equal(port.ToString(System.Globalization.CultureInfo.InvariantCulture), vm.SuggestedInternetPort);
         Assert.Equal(scheme is "ftp" or "ftps", vm.InternetCredentials.IsAnonymousAvailable);
         Assert.Equal("/share/my folder%20?", vm.InternetPath);
         var options = vm.CreateInternetScanOptions("target-id");
@@ -338,12 +339,41 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void InternetSource_TlsUpdatesSuggestedPortWithoutOverwritingManualPort()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet)
+        {
+            InternetHost = "example.com",
+        };
+
+        Assert.Empty(vm.InternetPort);
+        Assert.Equal("21", vm.SuggestedInternetPort);
+        vm.InternetCredentials.TlsModeIndex = (int)RemoteTlsMode.Implicit;
+        Assert.Equal("990", vm.SuggestedInternetPort);
+        Assert.Equal(990, RemoteLocation.Parse(vm.CreateInternetScanOptions(null).Address).Port);
+
+        vm.InternetPort = "2121";
+        vm.InternetCredentials.TlsModeIndex = (int)RemoteTlsMode.Explicit;
+        Assert.Equal("21", vm.SuggestedInternetPort);
+        Assert.Equal("2121", vm.InternetPort);
+        Assert.Equal(2121, RemoteLocation.Parse(vm.CreateInternetScanOptions(null).Address).Port);
+
+        Assert.Null(vm.FillInternetFromUrl("ftp://example.com/pub?tls=implicit"));
+        Assert.Empty(vm.InternetPort);
+        Assert.Equal(990, RemoteLocation.Parse(vm.CreateInternetScanOptions(null).Address).Port);
+
+        Assert.Null(vm.FillInternetFromUrl("ftp://example.com:21/pub?tls=implicit"));
+        Assert.Equal("21", vm.InternetPort);
+        Assert.Equal(21, RemoteLocation.Parse(vm.CreateInternetScanOptions(null).Address).Port);
+    }
+
+    [Fact]
     public void InternetSource_SftpHostKeyCheckRequiresValidEndpoint()
     {
         using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet);
-        Assert.Equal("21", vm.InternetPort);
+        Assert.Equal("21", vm.SuggestedInternetPort);
         vm.InternetProtocol = "sftp";
-        Assert.Equal("22", vm.InternetPort);
+        Assert.Equal("22", vm.SuggestedInternetPort);
         var check = vm.InternetCredentials.CheckHostKeyCommand;
         Assert.False(check.CanExecute(null));
         Assert.False(vm.InternetCredentials.IsHostKeyTrustAvailable);
@@ -362,7 +392,7 @@ public class AddToListDialogViewModelTests
         vm.InternetHost = string.Empty;
         Assert.False(check.CanExecute(null));
         vm.InternetProtocol = "ftps";
-        Assert.Equal("990", vm.InternetPort);
+        Assert.Equal("990", vm.SuggestedInternetPort);
     }
 
     [Fact]

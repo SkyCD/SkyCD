@@ -104,6 +104,9 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         Assert.Equal(UrlPassword, addDialog.InternetCredentials.Password);
         addDialog.InternetCredentials.Password = Password;
         Assert.True(addDialog.CanConfirm);
+        Assert.True(addDialog.CheckInternetConnectionCommand.CanExecute(null));
+        await addDialog.CheckInternetConnectionCommand.ExecuteAsync(null);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InternetCheckSucceeded), addDialog.InternetCheckStatus);
         var options = addDialog.CreateInternetScanOptions("library");
         Assert.DoesNotContain(UrlPassword, options.Address, StringComparison.Ordinal);
         Assert.DoesNotContain(Password, options.Address, StringComparison.Ordinal);

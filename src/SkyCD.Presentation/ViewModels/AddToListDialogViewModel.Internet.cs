@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SkyCD.Presentation.Scanning;
 using SkyCD.UI.Localization;
 
@@ -22,11 +25,21 @@ public partial class AddToListDialogViewModel
 
     [ObservableProperty] private string internetHost = string.Empty;
 
-    [ObservableProperty] private string internetPort = InternetProviders.Get("ftp").DefaultPort.ToString(CultureInfo.InvariantCulture);
+    [ObservableProperty] private string internetPort = string.Empty;
+
+    [ObservableProperty] private string? internetCheckStatus;
+
+    private int internetSettingsRevision;
 
     [ObservableProperty] private string internetPath = string.Empty;
 
     public bool IsSmbInternetProtocol => InternetProtocol == "smb";
+
+    public string SuggestedInternetPort => DefaultInternetPort.ToString(CultureInfo.InvariantCulture);
+
+    private int DefaultInternetPort => InternetCredentials.IsFtp
+        ? InternetCredentials.TlsMode == RemoteTlsMode.Implicit ? 990 : 21
+        : InternetProviders.Get(InternetProtocol).DefaultPort;
 
     public RemoteScanOptions CreateInternetScanOptions(string? targetParentId) =>
         new(InternetCredentials.EffectiveAddress,
@@ -93,7 +106,11 @@ public partial class AddToListDialogViewModel
 
         InternetProtocol = location.Scheme;
         InternetHost = location.Host;
-        InternetPort = location.Port.ToString(CultureInfo.InvariantCulture);
+        var authority = authorityUrl[(schemeEnd + 3)..];
+        var hostAndPort = authority[(authority.LastIndexOf('@') + 1)..];
+        InternetPort = hostAndPort.LastIndexOf(':') > hostAndPort.LastIndexOf(']')
+            ? location.Port.ToString(CultureInfo.InvariantCulture)
+            : string.Empty;
         InternetPath = location.Path;
         var hasCredentials = RemoteLocation.TryReadUserInfo(address, out var username, out var password);
         InternetCredentials.AuthMethodIndex = 0;
@@ -110,7 +127,7 @@ public partial class AddToListDialogViewModel
     partial void OnInternetProtocolChanged(string value)
     {
         InternetCredentials.SetProtocol(value);
-        InternetPort = InternetProviders.Get(value).DefaultPort.ToString(CultureInfo.InvariantCulture);
+        OnPropertyChanged(nameof(SuggestedInternetPort));
         OnPropertyChanged(nameof(IsSmbInternetProtocol));
         UpdateInternetLocation();
     }
@@ -121,7 +138,67 @@ public partial class AddToListDialogViewModel
 
     partial void OnInternetPathChanged(string value) => UpdateInternetLocation();
 
-    private void OnInternetCredentialsChanged(object? sender, EventArgs e) => RecomputeValidation();
+    private void OnInternetCredentialsChanged(object? sender, EventArgs e) => UpdateInternetValidation();
+
+    private void OnInternetCredentialPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LoginDialogViewModel.TlsMode))
+        {
+            OnPropertyChanged(nameof(SuggestedInternetPort));
+            UpdateInternetLocation();
+        }
+    }
+
+    private void UpdateInternetValidation()
+    {
+        internetSettingsRevision++;
+        InternetCheckStatus = null;
+        CheckInternetConnectionCommand.NotifyCanExecuteChanged();
+        RecomputeValidation();
+    }
+
+    private bool CanCheckInternetConnection() =>
+        InternetProtocol != "sftp" && GetInternetValidationMessage() is null;
+
+    [RelayCommand(CanExecute = nameof(CanCheckInternetConnection))]
+    private async Task CheckInternetConnectionAsync(CancellationToken cancellationToken)
+    {
+        if (!CanCheckInternetConnection())
+        {
+            return;
+        }
+
+        var revision = internetSettingsRevision;
+        var options = CreateInternetScanOptions(null);
+        InternetCheckStatus = LocalizationService.Current.Get(UiKeys.InternetChecking);
+        string statusKey;
+        try
+        {
+            await Task.Run(() =>
+            {
+                var location = RemoteLocation.Parse(options.Address, InternetProviders);
+                var connector = InternetProviders.Get(location.Scheme);
+                var credentials = new RemoteCredentials(options.Username, options.Password, options.Anonymous, domain: options.Domain);
+                using var session = connector.Connect(location, credentials, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                session.ListDirectory(location.Path);
+            }, cancellationToken);
+            statusKey = UiKeys.InternetCheckSucceeded;
+        }
+        catch (RemoteAuthenticationException)
+        {
+            statusKey = UiKeys.InternetCheckAuthenticationFailed;
+        }
+        catch (Exception)
+        {
+            statusKey = UiKeys.InternetCheckFailed;
+        }
+
+        if (!cancellationToken.IsCancellationRequested && revision == internetSettingsRevision)
+        {
+            InternetCheckStatus = LocalizationService.Current.Get(statusKey);
+        }
+    }
 
     private void UpdateInternetLocation()
     {
@@ -142,12 +219,20 @@ public partial class AddToListDialogViewModel
         }
 
         InternetCredentials.SetLocation(internetLocation);
-        RecomputeValidation();
+        UpdateInternetValidation();
     }
 
-    private bool TryGetInternetPort(out int port) =>
-        int.TryParse(InternetPort, NumberStyles.None, CultureInfo.InvariantCulture, out port) &&
-        port is >= 1 and <= 65535;
+    private bool TryGetInternetPort(out int port)
+    {
+        if (string.IsNullOrEmpty(InternetPort))
+        {
+            port = DefaultInternetPort;
+            return true;
+        }
+
+        return int.TryParse(InternetPort, NumberStyles.None, CultureInfo.InvariantCulture, out port) &&
+            port is >= 1 and <= 65535;
+    }
 
     private string? GetInternetValidationMessage()
     {

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
         xmlns:converters="using:SkyCD.App.Converters"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:views="using:SkyCD.App.Views"
@@ -230,7 +231,7 @@
                         <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
                         <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
-                                 Text="{Binding InternetPort}" MaxLength="5"
+                                 Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
                     </Grid>
                     <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
@@ -239,6 +240,12 @@
                                Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
                     <TextBox Classes="source-field" Text="{Binding InternetPath}" />
                     <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
+                    <StackPanel Spacing="4" IsVisible="{Binding !InternetCredentials.IsSftp}">
+                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
+                                Command="{Binding CheckInternetConnectionCommand}" />
+                        <TextBlock Text="{Binding InternetCheckStatus}" TextWrapping="Wrap"
+                                   IsVisible="{Binding InternetCheckStatus, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
                 </StackPanel>
 
                 <TextBlock IsVisible="{Binding IsSourceTitleOnly}"

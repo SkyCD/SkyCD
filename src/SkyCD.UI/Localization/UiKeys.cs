@@ -42,6 +42,10 @@ public static class UiKeys
     public const string InvalidInternetPort = "core.ui.InvalidInternetPort";
     public const string InvalidInternetHost = "core.ui.InvalidInternetHost";
     public const string InternetShareRequired = "core.ui.InternetShareRequired";
+    public const string InternetChecking = "core.ui.InternetChecking";
+    public const string InternetCheckSucceeded = "core.ui.InternetCheckSucceeded";
+    public const string InternetCheckAuthenticationFailed = "core.ui.InternetCheckAuthenticationFailed";
+    public const string InternetCheckFailed = "core.ui.InternetCheckFailed";
     public const string InternetCredentialsRequired = "core.ui.InternetCredentialsRequired";
     public const string FromInternet = "core.ui.FromInternet";
     public const string TitleOnly = "core.ui.TitleOnly";

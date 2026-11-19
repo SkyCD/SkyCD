@@ -36,6 +36,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         }
 
         InternetCredentials.ConfirmCommand.CanExecuteChanged += OnInternetCredentialsChanged;
+        InternetCredentials.PropertyChanged += OnInternetCredentialPropertyChanged;
         RecomputeValidation();
         localizationSubscription = LocalizationObserver.Observe(this, static vm =>
         {
@@ -205,6 +206,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         isDisposed = true;
         driveProvider.DrivesChanged -= OnDrivesChanged;
         InternetCredentials.ConfirmCommand.CanExecuteChanged -= OnInternetCredentialsChanged;
+        InternetCredentials.PropertyChanged -= OnInternetCredentialPropertyChanged;
+        CheckInternetConnectionCommand.Cancel();
         localizationSubscription.Dispose();
     }
 
