@@ -329,4 +329,87 @@ public class OptionsDialogViewModelTests
         Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.Media, exported.ItemTypes!);
         Assert.Contains(SkyCD.Documents.Enum.CatalogDocumentType.File, exported.ItemTypes!);
     }
+
+    [Fact]
+    public void PluginFilterText_FiltersPluginsByName()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
+        ]);
+
+        vm.PluginFilterText = "xm";
+
+        Assert.Equal(["XML"], vm.FilteredPlugins.Select(plugin => plugin.Name).ToArray());
+        Assert.Equal("XML", vm.SelectedPlugin?.Name);
+        Assert.Equal(2, vm.Plugins.Count);
+    }
+
+    [Fact]
+    public void PluginFilterText_IgnoresCase()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
+        ]);
+
+        vm.PluginFilterText = "JsOn";
+
+        Assert.Equal(["JSON"], vm.FilteredPlugins.Select(plugin => plugin.Name).ToArray());
+        Assert.Equal("JSON", vm.SelectedPlugin?.Name);
+    }
+
+    [Fact]
+    public void PluginFilterText_ClearingRestoresAllPlugins()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
+        ]);
+        vm.PluginFilterText = "xml";
+
+        vm.PluginFilterText = string.Empty;
+
+        Assert.Equal(2, vm.FilteredPlugins.Count);
+        Assert.Equal("JSON", vm.SelectedPlugin?.Name);
+    }
+
+    [Fact]
+    public void PluginFilterText_WithoutMatchClearsSelectionAndDisablesConfigure()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0",
+                supportsConfiguration: true, id: "plugin.json")
+        ]);
+
+        vm.PluginFilterText = "terminal";
+
+        Assert.Empty(vm.FilteredPlugins);
+        Assert.Null(vm.SelectedPlugin);
+        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SetPlugins_AppliesActivePluginFilter()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.PluginFilterText = "xml";
+
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
+        ]);
+
+        Assert.Equal(["XML"], vm.FilteredPlugins.Select(plugin => plugin.Name).ToArray());
+        Assert.Equal("XML", vm.SelectedPlugin?.Name);
+    }
 }

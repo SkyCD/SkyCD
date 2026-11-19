@@ -108,6 +108,12 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<OptionsPluginItem> Plugins { get; } = [];
 
+    public ObservableCollection<OptionsPluginItem> FilteredPlugins { get; } = [];
+
+    private OptionsPluginItem? pluginSelectionBeforeFilter;
+    private bool isAutoSelectingPlugin;
+    private bool pluginSelectionIsAuto;
+
     public ObservableCollection<LanguageItem> Languages { get; } = [];
 
     public ObservableCollection<string> FilteredSettingCategories { get; } = [];
@@ -124,6 +130,8 @@ public partial class OptionsDialogViewModel : ObservableObject
     [ObservableProperty] private bool dialogAccepted;
 
     [ObservableProperty] private int selectedTabIndex;
+
+    [ObservableProperty] private string pluginFilterText = string.Empty;
 
     [ObservableProperty] private string settingsSearchText = string.Empty;
 
@@ -323,6 +331,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
     {
+        pluginSelectionBeforeFilter = null;
         var snapshot = plugins.ToArray();
         Plugins.Clear();
         foreach (var plugin in snapshot)
@@ -335,7 +344,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             Plugins.Add(plugin);
         }
 
-        SelectedPlugin = Plugins.FirstOrDefault();
+        RefreshFilteredPlugins();
         InfoMessage = LocalizationService.Current.Format(TextKeys.LoadedPluginS, Plugins.Count);
         ConfigurePluginCommand.NotifyCanExecuteChanged();
     }
@@ -401,6 +410,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
+        pluginSelectionIsAuto = isAutoSelectingPlugin;
         ConfigurePluginCommand.NotifyCanExecuteChanged();
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
     }
@@ -426,6 +436,35 @@ public partial class OptionsDialogViewModel : ObservableObject
 
         SelectedSettingCategory = CurrentCategoryName;
         NotifySettingsVisibilityChanged();
+    }
+
+    partial void OnPluginFilterTextChanged(string value)
+    {
+        var isEmpty = string.IsNullOrWhiteSpace(value);
+        if (!isEmpty && pluginSelectionBeforeFilter is null)
+        {
+            pluginSelectionBeforeFilter = SelectedPlugin;
+        }
+
+        RefreshFilteredPlugins();
+
+        if (isEmpty && pluginSelectionBeforeFilter is not null)
+        {
+            var snapshot = pluginSelectionBeforeFilter;
+            pluginSelectionBeforeFilter = null;
+            if (pluginSelectionIsAuto)
+            {
+                isAutoSelectingPlugin = true;
+                try
+                {
+                    SelectedPlugin = Plugins.Contains(snapshot) ? snapshot : FilteredPlugins.FirstOrDefault();
+                }
+                finally
+                {
+                    isAutoSelectingPlugin = false;
+                }
+            }
+        }
     }
 
     partial void OnSettingsSearchTextChanged(string value)
@@ -506,6 +545,33 @@ public partial class OptionsDialogViewModel : ObservableObject
             isRefreshingLocalization = false;
         }
         NotifySettingsVisibilityChanged();
+    }
+
+    private void RefreshFilteredPlugins()
+    {
+        var filter = PluginFilterText.Trim();
+        IEnumerable<OptionsPluginItem> matching = string.IsNullOrEmpty(filter)
+            ? Plugins
+            : Plugins.Where(plugin => plugin.Name.Contains(filter, StringComparison.OrdinalIgnoreCase));
+
+        FilteredPlugins.Clear();
+        foreach (var plugin in matching)
+        {
+            FilteredPlugins.Add(plugin);
+        }
+
+        if (SelectedPlugin is null || !FilteredPlugins.Contains(SelectedPlugin))
+        {
+            isAutoSelectingPlugin = true;
+            try
+            {
+                SelectedPlugin = FilteredPlugins.FirstOrDefault();
+            }
+            finally
+            {
+                isAutoSelectingPlugin = false;
+            }
+        }
     }
 
     private void RefreshFilteredCategories()
