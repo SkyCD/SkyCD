@@ -28,15 +28,18 @@ public sealed class VirtualCollectionService
     private readonly CatalogDocumentRepository catalogRepository;
     private readonly VirtualCollectionDocumentRepository collectionRepository;
     private readonly Func<AdvancedCatalogSearchService.MetadataLookup?>? metadataLookupFactory;
+    private readonly Func<IReadOnlyList<CatalogDocument>, IReadOnlyList<CatalogDocument>>? projectEntries;
 
     public VirtualCollectionService(
         CatalogDocumentRepository catalogRepository,
         VirtualCollectionDocumentRepository collectionRepository,
-        Func<AdvancedCatalogSearchService.MetadataLookup?>? metadataLookupFactory = null)
+        Func<AdvancedCatalogSearchService.MetadataLookup?>? metadataLookupFactory = null,
+        Func<IReadOnlyList<CatalogDocument>, IReadOnlyList<CatalogDocument>>? projectEntries = null)
     {
         this.catalogRepository = catalogRepository ?? throw new ArgumentNullException(nameof(catalogRepository));
         this.collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
         this.metadataLookupFactory = metadataLookupFactory;
+        this.projectEntries = projectEntries;
     }
 
     public IReadOnlyList<VirtualCollectionDocument> GetCollections() =>
@@ -246,7 +249,8 @@ public sealed class VirtualCollectionService
 
         var query = DeserializeQuery(collection.SavedQueryJson);
         var index = new CatalogSearchIndex();
-        index.Rebuild(catalogRepository.GetAll());
+        var entries = catalogRepository.GetAll();
+        index.Rebuild(projectEntries?.Invoke(entries) ?? entries);
         var matches = AdvancedCatalogSearchService.Search(index, query, metadataLookupFactory?.Invoke());
         var resolved = new List<CatalogDocument>(matches.Count);
         foreach (var match in matches)

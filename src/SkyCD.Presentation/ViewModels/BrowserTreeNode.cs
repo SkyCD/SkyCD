@@ -27,6 +27,8 @@ public partial class BrowserTreeNode : ObservableObject
 
     public string IconGlyph { get; }
 
+    public string? LoanIndicator { get; init; }
+
     // Observable so a deleted node can be detached in place. Rebuilding the whole tree instead
     // destroys every realized TreeViewItem, including the one holding keyboard focus.
     public ObservableCollection<BrowserTreeNode> Children { get; }
