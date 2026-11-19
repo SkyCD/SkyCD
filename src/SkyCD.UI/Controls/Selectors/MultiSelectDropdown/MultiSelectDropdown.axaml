@@ -51,6 +51,7 @@
                     <ListBox.Styles>
                         <Style Selector="ListBoxItem">
                             <Setter Property="Padding" Value="0" />
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
                         </Style>
                         <Style Selector="ListBoxItem:selected">
                             <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
@@ -67,6 +68,7 @@
                                 </Border.Styles>
                                 <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
                                     <CheckBox IsChecked="{Binding IsSelected}"
+                                              AutomationProperties.Name="{Binding Label}"
                                               PointerPressed="OnItemCheckBoxPointerPressed"
                                               VerticalAlignment="Center" />
                                     <ContentControl Grid.Column="1"
@@ -75,6 +77,7 @@
                                                     ContentTemplate="{Binding ItemPreviewTemplate, ElementName=Root}"
                                                     Content="{Binding Label}" />
                                     <TextBlock Grid.Column="2"
+                                               IsVisible="{Binding ShowItemLabels, ElementName=Root}"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                                Text="{Binding Label}" />
