@@ -59,14 +59,23 @@ foreach ($component in $components) {
             continue
         }
 
-        if ($null -ne $licenseEntry.license.name) {
-            $licenseValues += [string]$licenseEntry.license.name
-            continue
-        }
-
         if ($null -ne $licenseEntry.expression) {
             $licenseValues += [string]$licenseEntry.expression
             continue
+        }
+
+        $licenseUrl = [string]$licenseEntry.license.url
+        $licenseName = [string]$licenseEntry.license.name
+        if ($policy.licenseIdsByUrl -and $licenseUrl -and ($licenseName -in @("", "Unknown - See URL", $licenseUrl))) {
+            $knownLicense = $policy.licenseIdsByUrl.PSObject.Properties[$licenseUrl]
+            if ($null -ne $knownLicense) {
+                $licenseValues += [string]$knownLicense.Value
+                continue
+            }
+        }
+
+        if ($licenseName) {
+            $licenseValues += $licenseName
         }
     }
 

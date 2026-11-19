@@ -12,11 +12,16 @@ Define a repeatable dependency license compliance process for SkyCD v3.
 - Compliance report artifact: `artifacts/licenses/license-compliance.json`
 - SBOM artifact: `artifacts/licenses/bom.json`
 
+## Compatibility with SkyCD
+
+SkyCD uses the BSD 2-Clause license. The allowlist records reviewed licenses whose terms can be met when their respective components are distributed alongside SkyCD. Each component keeps its own license, and releases must include the notices it requires. CI checks the SBOM against those decisions. It cannot determine compatibility from the wording of an arbitrary license or verify that releases include the required notices.
+
 ## Allowed License Families
 - `MIT`
 - `Apache-2.0`
 - `BSD-2-Clause`
 - `BSD-3-Clause`
+- `CC-BY-4.0` for separately licensed artwork such as Twemoji. Preserve attribution and the license link, and disclose any changes to the artwork. CI recognizes the official Creative Commons license URLs when the SBOM provides no usable license name or identifier.
 - `ISC`
 - `MPL-2.0`
 - `Zlib`
