@@ -60,7 +60,6 @@ public static class TextKeys
     public const string HistoryCapacityReached = "core.text.HistoryCapacityReached";
     public const string OperationNotUndoable = "core.text.OperationNotUndoable";
     public const string Status = "core.text.Status";
-    public const string Properties2 = "core.text.Properties2";
     public const string View = "core.text.View";
     public const string StatusBar = "core.text.StatusBar";
     public const string Tiles = "core.text.Tiles";

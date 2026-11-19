@@ -3065,7 +3065,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", InputGesture = "F12", Command = SaveCatalogAsCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand },
+                    new MainMenuItemViewModel
+                        { Header = LocalizationService.Current.Get(TextKeys.Properties), HotKey = "Alt+Enter", InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Exit), Command = ExitApplicationCommand }
                 ]
@@ -3087,9 +3088,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         IsEnabled = IsDeleteEnabled,
                         Items = BuildStatusMenuItems()
                     },
-                    Separator(),
-                    new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Properties2), HotKey = "Alt+Enter", InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", InputGesture = "Ctrl+F", Command = FindCatalogCommand },
