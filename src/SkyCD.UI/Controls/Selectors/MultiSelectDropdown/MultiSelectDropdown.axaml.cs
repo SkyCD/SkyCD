@@ -30,6 +30,9 @@ public partial class MultiSelectDropdown : UserControl
     public static readonly StyledProperty<IDataTemplate?> ItemPreviewTemplateProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, IDataTemplate?>(nameof(ItemPreviewTemplate));
 
+    public static readonly StyledProperty<bool> ShowItemLabelsProperty =
+        AvaloniaProperty.Register<MultiSelectDropdown, bool>(nameof(ShowItemLabels), defaultValue: true);
+
     private readonly ObservableCollection<MultiSelectOptionItem> filteredItems = [];
     private IEnumerable<MultiSelectOptionItem>? trackedItems;
     private bool suppressInlineTextProcessing;
@@ -68,6 +71,12 @@ public partial class MultiSelectDropdown : UserControl
     {
         get => GetValue(ItemPreviewTemplateProperty);
         set => SetValue(ItemPreviewTemplateProperty, value);
+    }
+
+    public bool ShowItemLabels
+    {
+        get => GetValue(ShowItemLabelsProperty);
+        set => SetValue(ShowItemLabelsProperty, value);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
