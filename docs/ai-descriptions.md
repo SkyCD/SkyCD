@@ -3,8 +3,8 @@
 The separate `skycd.ai-description` plugin contributes **Tools → Generate AI
 description for selected file**. It implements an explicit generated-metadata
 capability using the existing media schema and durable cache infrastructure.
-Automatic metadata extraction never starts an AI agent. No vendor API, model
-download, registry executable installation, or `plugin.json` discovery is used.
+Automatic metadata extraction never starts an AI agent. The plugin has no
+vendor API or model download, and plugin discovery uses assembly metadata.
 
 With the plugin enabled, select an installed agent in **Tools → Options → ACP
 agents** and save. The plugin uses that agent for explicit generation requests.
@@ -77,14 +77,16 @@ keeps all earlier descriptions.
 
 ## ACP registry browsing
 
-In **Tools → Options → ACP agents**, choose **Download ACP registry** to cache
-the official [ACP registry](https://agentclientprotocol.com/get-started/registry)
-at `%APPDATA%/SkyCD/acp-registry.json`. You can browse the cached list offline.
-SkyCD marks matching native executables on `PATH` as **Installed** and lists
-executables placed directly in `%APPDATA%/SkyCD/acp-agents`. Use **Browse for
-local executable** to select an ACP executable elsewhere. Save your selection
-before starting generation. Registry downloads contain the catalog only. Install
-the agent package or archive separately before selecting its local executable.
+Opening **Tools → Options → ACP agents** refreshes the official
+[ACP registry](https://agentclientprotocol.com/get-started/registry). SkyCD uses
+the cached catalog when offline. **Install** downloads the selected native agent
+or installs its pinned npm or uv package under `%APPDATA%/SkyCD/acp-agents`.
+Package-based installations require the corresponding package manager. Native
+downloads are checked against the registry checksum when available.
+
+Installing an agent selects it in Options. Choose **Save** to use it for
+generation. Use **Locate** on a native agent's card to find the specific
+executable from an existing installation outside `PATH`.
 
 ## Authentication
 

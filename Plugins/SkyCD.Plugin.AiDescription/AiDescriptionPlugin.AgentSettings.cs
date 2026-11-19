@@ -39,10 +39,12 @@ public sealed partial class AiDescriptionPlugin
                 }
             }
 
-            if (AcpAgentRegistry.Load(temporaryPath).Agents.Count == 0)
+            var registry = AcpAgentRegistry.Load(temporaryPath);
+            if (registry.Agents.Count == 0)
                 throw new AcpRegistryException("download contains no supported agents");
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, Path.Combine(directory, AcpAgentRegistry.FileName), overwrite: true);
+            await RefreshAgentIconsAsync(registry, directory, cancellationToken);
         }
         finally
         {
@@ -68,13 +70,14 @@ public sealed partial class AiDescriptionPlugin
             {
                 var executable = FindExecutable(agent.BinaryCommand, searchDirectories);
                 var npmChoice = executable is null ? FindInstalledNpmAgent(agent, searchDirectories) : null;
-                var choice = npmChoice ?? new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments);
-                agents.Add(choice with { RegistryVersion = agent.Version, Description = agent.Description });
+                var choice = ReadManagedAgent(agent, localDirectory) ?? npmChoice ??
+                    new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments);
+                agents.Add(WithRegistryDetails(choice, agent) with { IconPaths = ReadAgentIcon(agent, directory) });
             }
         }
         catch (AcpRegistryException exception)
         {
-            status = $"{exception.Message}. Download the registry to browse available agents.";
+            status = exception.Message;
         }
 
         if (Directory.Exists(localDirectory))

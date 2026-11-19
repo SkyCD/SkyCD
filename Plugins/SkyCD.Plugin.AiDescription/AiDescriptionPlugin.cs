@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,10 +23,12 @@ public sealed partial class AiDescriptionPlugin : IMenuPluginCapability, IGenera
     { }
 
     public AiDescriptionPlugin(string configurationPath,
-        Func<DescriptionAgentOptions, DescriptionContext, CancellationToken, Task<GeneratedDescription>> generate)
+        Func<DescriptionAgentOptions, DescriptionContext, CancellationToken, Task<GeneratedDescription>> generate,
+        HttpClient? agentDownloadClient = null)
     {
         this.configurationPath = configurationPath;
         this.generate = generate;
+        this.agentDownloadClient = agentDownloadClient ?? AgentDownloads;
     }
 
     public MediaMetadataSchema Schema => new("skycd.ai-description.metadata", 1,

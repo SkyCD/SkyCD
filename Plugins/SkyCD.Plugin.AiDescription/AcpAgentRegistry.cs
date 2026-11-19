@@ -15,6 +15,11 @@ public sealed record AcpRegistryAgent(string Id, string Name, string Version, st
     internal IReadOnlyList<string> BinaryArguments { get; init; } = [];
     internal string? NpmPackage { get; init; }
     internal IReadOnlyList<string> NpmArguments { get; init; } = [];
+    internal string? BinaryArchive { get; init; }
+    internal string? BinaryChecksum { get; init; }
+    internal string? IconUrl { get; init; }
+    internal string? UvPackage { get; init; }
+    internal IReadOnlyList<string> UvArguments { get; init; } = [];
 }
 
 /// <summary>Reads a locally cached copy of the official ACP registry index for offline browsing.</summary>
@@ -92,6 +97,10 @@ public sealed class AcpAgentRegistry
         string? binaryCommand = null;
         IReadOnlyList<string> binaryArguments = [];
         string? npmPackage = null;
+        string? binaryArchive = null;
+        string? binaryChecksum = null;
+        string? uvPackage = null;
+        IReadOnlyList<string> uvArguments = [];
         IReadOnlyList<string> npmArguments = [];
         if (distribution.TryGetProperty("npx", out var npx) && npx.ValueKind == JsonValueKind.Object)
         {
@@ -103,6 +112,8 @@ public sealed class AcpAgentRegistry
         if (distribution.TryGetProperty("uvx", out var uvx) && uvx.ValueKind == JsonValueKind.Object)
         {
             kinds.Add("uvx");
+            uvPackage = BoundedString(uvx, "package", 256);
+            uvArguments = BoundedArguments(uvx);
             hint ??= PackageHint("uvx", uvx);
         }
         if (distribution.TryGetProperty("binary", out var binary) && binary.ValueKind == JsonValueKind.Object)
@@ -113,6 +124,8 @@ public sealed class AcpAgentRegistry
             {
                 binaryCommand = BoundedString(target, "cmd", 512);
                 binaryArguments = BoundedArguments(target);
+                binaryArchive = BoundedString(target, "archive", 2048);
+                binaryChecksum = BoundedString(target, "sha256", 64);
                 if (binaryCommand is not null)
                     hint ??= Bound($"binary ({platform}): install and run {string.Join(' ', new[] { binaryCommand }.Concat(binaryArguments).Select(Quote))}", 400);
             }
@@ -123,7 +136,12 @@ public sealed class AcpAgentRegistry
             BinaryCommand = binaryCommand,
             BinaryArguments = binaryArguments,
             NpmPackage = npmPackage,
-            NpmArguments = npmArguments
+            NpmArguments = npmArguments,
+            BinaryArchive = binaryArchive,
+            BinaryChecksum = binaryChecksum,
+            IconUrl = BoundedString(entry, "icon", 512),
+            UvPackage = uvPackage,
+            UvArguments = uvArguments
         };
         return true;
     }

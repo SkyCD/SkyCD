@@ -27,23 +27,45 @@
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
+        <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
         <ItemsPanelTemplate x:Key="AcpAgentCardsPanel">
-            <WrapPanel />
+            <UniformGrid Columns="2" />
         </ItemsPanelTemplate>
         <DataTemplate x:Key="AcpAgentCardTemplate" x:DataType="media:AcpAgentChoice">
-            <Border Width="205" MinHeight="90" Margin="0,0,7,7" Padding="9"
+            <Border MinHeight="96" Margin="3" Padding="10"
                     Background="{DynamicResource TabCardBackgroundBrush}"
                     BorderBrush="{DynamicResource TabCardBorderBrush}" BorderThickness="1" CornerRadius="6">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="5">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                               ToolTip.Tip="{Binding Name}" />
-                    <TextBlock Grid.Row="1" Text="{Binding Description}" Opacity="0.78"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}" />
-                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                <Grid ColumnDefinitions="34,*" ColumnSpacing="9" RowDefinitions="Auto,Auto" RowSpacing="8">
+                    <Border Width="34" Height="34" CornerRadius="7" Background="#36516D"
+                            VerticalAlignment="Top">
+                        <Grid>
+                            <TextBlock Text="{Binding IconLabel}" Foreground="White" FontWeight="SemiBold"
+                                       IsVisible="{Binding !IconPaths.Count}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Image Source="{Binding IconPaths, Converter={StaticResource AcpAgentIconConverter}}"
+                                   Width="20" Height="20" />
+                        </Grid>
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="3">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding Name}" />
+                        <TextBlock Text="{Binding Description}" Opacity="0.78"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="4">
                         <TextBlock Text="{Binding RegistryVersion}" Opacity="0.7"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <Button Grid.Column="1" IsVisible="{Binding IsInstalled}" Click="OnSelectAcpAgentClicked"
-                                Content="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                            <Button IsVisible="{Binding IsInstalled}" Click="OnSelectAcpAgentClicked"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
+                            <Button IsVisible="{Binding CanInstall}" Click="OnInstallAcpAgentClicked"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.InstallAcpAgent}}" />
+                            <Button IsVisible="{Binding CanLocateExecutable}" Click="OnBrowseAcpAgentClicked"
+                                    ToolTip.Tip="{Binding ExpectedExecutable}"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.LocateAcpAgent}}" />
+                            <TextBlock IsVisible="{Binding !HasAvailableAction}" Opacity="0.7"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentUnavailable}}" />
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
@@ -426,15 +448,9 @@
                     </StackPanel>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto" RowSpacing="12">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                            <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
-                                     Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     IsEnabled="{Binding !IsAcpLoading}" />
-                            <Button Grid.Column="1"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.DownloadAcpRegistry}}"
-                                    Command="{Binding RefreshAcpRegistryCommand}"
-                                    IsEnabled="{Binding CanRefreshAcpRegistry}" />
-                        </Grid>
+                        <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
+                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding !IsAcpLoading}" />
 
                         <Border Grid.Row="1" BorderBrush="{DynamicResource TabCardBorderBrush}"
                                 BorderThickness="1" CornerRadius="6">
@@ -442,23 +458,30 @@
                                 <ScrollViewer IsVisible="{Binding !IsAcpLoading}"
                                               HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel Margin="12" Spacing="10">
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentInstalled}}"
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentInstalled}}" IsVisible="{Binding HasInstalledAcpAgents}"
                                                    FontWeight="SemiBold" />
-                                        <ItemsControl ItemsSource="{Binding InstalledAcpAgents}"
+                                        <ItemsControl ItemsSource="{Binding InstalledAcpAgents}" IsVisible="{Binding HasInstalledAcpAgents}"
                                                       ItemTemplate="{StaticResource AcpAgentCardTemplate}"
                                                       ItemsPanel="{StaticResource AcpAgentCardsPanel}" />
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentsAvailable}}"
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentsAvailable}}" IsVisible="{Binding HasAvailableAcpAgents}"
                                                    FontWeight="SemiBold" Margin="0,8,0,0" />
-                                        <ItemsControl ItemsSource="{Binding AvailableAcpAgents}"
+                                        <ItemsControl ItemsSource="{Binding AvailableAcpAgents}" IsVisible="{Binding HasAvailableAcpAgents}"
                                                       ItemTemplate="{StaticResource AcpAgentCardTemplate}"
                                                       ItemsPanel="{StaticResource AcpAgentCardsPanel}" />
                                     </StackPanel>
                                 </ScrollViewer>
+                                <Grid IsVisible="{Binding !IsAcpLoading}">
+                                    <TextBlock IsVisible="{Binding HasNoMatchingAcpAgents}"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.NoMatchingAcpAgents}}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75" />
+                                </Grid>
                                 <StackPanel IsVisible="{Binding IsAcpLoading}" HorizontalAlignment="Center"
                                             VerticalAlignment="Center" Spacing="10">
                                     <ProgressBar Width="124" Height="5" IsIndeterminate="{Binding IsAcpLoading}" />
                                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.LoadingAcpAgents}}"
-                                               HorizontalAlignment="Center" />
+                                               IsVisible="{Binding !InstallingAcpAgentName}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding InstallingAcpAgentName}"
+                                               IsVisible="{Binding !!InstallingAcpAgentName}" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -471,9 +494,7 @@
                                 <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                            Text="{Binding SelectedAcpAgent.Name}"
                                            IsVisible="{Binding !!SelectedAcpAgent}" />
-                                <Button Grid.Column="1"
-                                        Content="{i18n:Translate {x:Static i18n:UiKeys.BrowseAcpExecutable}}"
-                                        Click="OnBrowseAcpAgentClicked" IsEnabled="{Binding CanChooseAcpAgent}" />
+
                             </Grid>
                             <TextBlock Text="{Binding AcpRegistryStatus}" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding AcpAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />

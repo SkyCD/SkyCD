@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,6 +13,9 @@ public interface IAcpAgentSettingsCapability : IPluginCapability
 
     /// <summary>Downloads and validates the official registry before replacing the offline cache.</summary>
     Task RefreshRegistryAsync(CancellationToken cancellationToken);
+
+    /// <summary>Installs a registry agent locally and returns its launch configuration.</summary>
+    Task<AcpAgentChoice> InstallAgentAsync(string registryId, CancellationToken cancellationToken);
 
     /// <summary>Saves the selected provider.</summary>
     void SaveAgentSettings(AcpAgentChoice agent);
@@ -31,6 +35,28 @@ public sealed record AcpAgentChoice(string Name, string? Executable, IReadOnlyLi
 
     /// <summary>The agent summary advertised by the registry.</summary>
     public string? Description { get; init; }
+
+    /// <summary>The identity used to install this registry entry.</summary>
+    public string? RegistryId { get; init; }
+
+    /// <summary>Whether this entry has an install method for the active platform.</summary>
+    public bool CanInstall { get; init; }
+
+    /// <summary>The expected file name when locating a native installation manually.</summary>
+    public string? ExpectedExecutable { get; init; }
+
+    /// <summary>Whether a named native executable can be located manually.</summary>
+    public bool CanLocateExecutable => !IsInstalled && ExpectedExecutable is not null;
+
+    /// <summary>Whether there is a launch or installation action for this platform.</summary>
+    public bool HasAvailableAction => IsInstalled || CanInstall || CanLocateExecutable;
+
+    /// <summary>Monochrome path data from the agent's registry icon, when available.</summary>
+    public IReadOnlyList<string> IconPaths { get; init; } = [];
+
+    /// <summary>A short visual identifier used when an agent has no rendered logo.</summary>
+    public string IconLabel => string.Concat(Name.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)
+        .Take(2).Select(word => char.ToUpperInvariant(word[0])));
 }
 
 /// <summary>A snapshot of local ACP provider settings.</summary>

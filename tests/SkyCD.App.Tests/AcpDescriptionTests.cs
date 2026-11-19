@@ -1,6 +1,10 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -308,6 +312,79 @@ public sealed class AcpDescriptionTests
         {
             directory.Delete(recursive: true);
         }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OptionsInstallsAndSelectsOnlyAValidRegistryArchive(bool escapesInstallFolder)
+    {
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-install-");
+        try
+        {
+            var executableName = OperatingSystem.IsWindows() ? "registry-agent.exe" : "registry-agent";
+            using var buffer = new MemoryStream();
+            using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = zip.CreateEntry(escapesInstallFolder ? "../escaped" : "bin/" + executableName);
+                using var file = entry.Open();
+                file.WriteByte(42);
+            }
+            var bytes = buffer.ToArray();
+            using var client = new HttpClient(new AgentArchiveHandler(bytes));
+            var distribution = new[] { "windows", "linux", "darwin" }
+                .SelectMany(os => new[] { "x86_64", "aarch64" }.Select(arch => os + "-" + arch))
+                .ToDictionary(platform => platform, _ => new
+                {
+                    cmd = "./bin/" + executableName,
+                    args = new[] { "--acp" },
+                    archive = "https://example.test/agent.zip",
+                    sha256 = Convert.ToHexString(SHA256.HashData(bytes))
+                });
+            await File.WriteAllTextAsync(Path.Combine(directory.FullName, AcpAgentRegistry.FileName), Json(new
+            {
+                version = "1.0.0",
+                agents = new[] { new { id = "installable-agent", name = "Installable Agent", version = "1.0.0", distribution = new { binary = distribution } } }
+            }));
+            var settingsPath = Path.Combine(directory.FullName, "settings.json");
+            var plugin = new AiDescriptionPlugin(settingsPath, (_, _, _) =>
+                throw new InvalidOperationException("Options must never launch the agent."), client);
+            var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
+            await dialog.LoadAcpSettingsAsync(plugin);
+            var agent = Assert.Single(dialog.AvailableAcpAgents);
+            Assert.True(agent.CanInstall);
+            Assert.Equal(executableName, agent.ExpectedExecutable);
+
+            await dialog.InstallAcpAgentAsync(agent, CancellationToken.None);
+
+            Assert.False(File.Exists(settingsPath));
+            if (escapesInstallFolder)
+            {
+                Assert.Null(dialog.SelectedAcpAgent);
+                Assert.Empty(dialog.InstalledAcpAgents);
+                Assert.Contains("outside its install folder", dialog.AcpAlertMessage);
+                Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(directory.FullName, "acp-agents")));
+                return;
+            }
+
+            var installed = Assert.Single(dialog.InstalledAcpAgents);
+            Assert.Equal(installed, dialog.SelectedAcpAgent);
+            Assert.Empty(dialog.AvailableAcpAgents);
+            Assert.Equal(new[] { "--acp" }, installed.Arguments);
+            dialog.ConfirmCommand.Execute(null);
+            Assert.True(dialog.DialogAccepted);
+            Assert.Equal(installed.Executable, plugin.GetAgentSettings().SelectedAgent?.Executable);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    private sealed class AgentArchiveHandler(byte[] content) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) });
     }
 
     private sealed class DescriptionHost : IDescriptionHostApi
