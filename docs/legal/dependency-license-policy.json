@@ -1,13 +1,11 @@
 {
-  "allowedLicenseIds": [
-    "Apache-2.0",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "ISC",
-    "MIT",
-    "MPL-2.0",
-    "Zlib"
-  ],
+  "projectLicenseId": "BSD-2-Clause",
+  "compatibilityMatrix": "osadl-bsd-2-clause.json",
+  "allowedLicenseIds": ["CC-BY-4.0"],
+  "licenseIdsByUrl": {
+    "https://creativecommons.org/licenses/by/4.0/": "CC-BY-4.0",
+    "https://creativecommons.org/licenses/by/4.0/legalcode": "CC-BY-4.0"
+  },
   "blockedLicenseIds": [
     "AGPL-1.0",
     "AGPL-1.0-only",

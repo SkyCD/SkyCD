@@ -1,11 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:selectors="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown"
              x:Class="SkyCD.UI.Controls.Selectors.MultiSelectDropdown.MultiSelectDropdown"
              x:Name="Root">
-    <UserControl.Resources>
-        <selectors:IconKeyToSymbolConverter x:Key="IconKeyToSymbolConverter" />
-    </UserControl.Resources>
     <Grid RowDefinitions="Auto">
         <Border BorderBrush="#3F3F46"
                 BorderThickness="1"
@@ -73,11 +69,11 @@
                                     <CheckBox IsChecked="{Binding IsSelected}"
                                               PointerPressed="OnItemCheckBoxPointerPressed"
                                               VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1"
-                                               IsVisible="{Binding ShowIconSymbols, ElementName=Root}"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource ThemeForegroundBrush}"
-                                               Text="{Binding Label, Converter={StaticResource IconKeyToSymbolConverter}}" />
+                                    <ContentControl Grid.Column="1"
+                                                    IsVisible="{Binding ItemPreviewTemplate, ElementName=Root, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                    VerticalAlignment="Center"
+                                                    ContentTemplate="{Binding ItemPreviewTemplate, ElementName=Root}"
+                                                    Content="{Binding Label}" />
                                     <TextBlock Grid.Column="2"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource ThemeForegroundBrush}"

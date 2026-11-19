@@ -15,11 +15,22 @@ try {
         @{ Name = "FirebirdSql.Data.FirebirdClient"; License = "Unknown - See URL"; Status = "CompliantByException"; ExitCode = 0 },
         @{ Name = "FirebirdSql.Data.FirebirdClient"; License = "GPL-3.0-only"; Status = "Blocked"; ExitCode = 1 },
         @{ Name = "Unapproved.Package"; License = "Unknown - See URL"; Status = "Unknown"; ExitCode = 1 },
-        @{ Name = "Approved.Package"; License = "MIT"; Status = "Compliant"; ExitCode = 0 }
+        @{ Name = "Approved.Package"; License = "MIT"; Status = "Compliant"; ExitCode = 0 },
+        @{ Name = "Compatible.Package"; License = "0BSD"; Status = "Compliant"; ExitCode = 0 },
+        @{ Name = "Compatible.Package"; License = "bsd-3-clause"; Status = "Compliant"; ExitCode = 0 },
+        @{ Name = "Incompatible.Package"; License = "MPL-2.0"; Status = "Incompatible"; ExitCode = 1 },
+        @{ Name = "Incompatible.Package"; License = "EUPL-1.2"; Status = "Incompatible"; ExitCode = 1 },
+        @{ Name = "SQLite"; License = "EUPL-1.2"; Status = "Incompatible"; ExitCode = 1 },
+        @{ Name = "Twemoji.Artwork"; License = "CC-BY-4.0"; Status = "Compliant"; ExitCode = 0 },
+        @{ Name = "Twemoji.Artwork"; License = "Unknown - See URL"; Url = "https://creativecommons.org/licenses/by/4.0/"; Status = "Compliant"; ExitCode = 0 },
+        @{ Name = "Noncommercial.Artwork"; License = "CC-BY-NC-4.0"; Url = "https://creativecommons.org/licenses/by/4.0/"; Status = "Blocked"; ExitCode = 1 },
+        @{ Name = "Unreviewed.Binary"; License = "Unknown - See URL"; Url = "https://aka.ms/deprecateLicenseUrl"; Status = "Unknown"; ExitCode = 1 }
     )
 
     foreach ($case in $cases) {
-        @{ components = @(@{ name = $case.Name; version = "0.92.0"; licenses = @(@{ license = @{ name = $case.License } }) }) } |
+        $license = @{ name = $case.License }
+        if ($case.Url) { $license.url = $case.Url }
+        @{ components = @(@{ name = $case.Name; version = "0.92.0"; licenses = @(@{ license = $license }) }) } |
             ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $sbomPath
         $output = & (Join-Path $PSHOME "pwsh") -NoProfile -File $validator -SbomPath $sbomPath -PolicyPath $policy -ReportPath $reportPath 2>&1
         if ($LASTEXITCODE -ne $case.ExitCode) {
@@ -38,3 +49,6 @@ try {
 finally {
     Remove-Item -LiteralPath $testDir -Recurse -Force
 }
+
+# Negative cases leave LASTEXITCODE set to 1; report success only after all assertions and cleanup pass.
+exit 0
