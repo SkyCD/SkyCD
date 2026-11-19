@@ -178,6 +178,13 @@ text.AdvancedFindCancelled: "Search cancelled."
 text.AdvancedFindPageStatus: "Showing {0}–{1} of {2} matches."
 text.AdvancedFindFailed: "Search failed: {0}"
 text.AdvancedFindTruncated: "Only the first {0} matches are shown."
+text.AdvancedFindDuplicateFilter: Duplicate filter
+text.AdvancedFindHashAlgorithm: Hash algorithm
+text.AdvancedFindDuplicateNone: Any file
+text.AdvancedFindDuplicateDuplicates: Duplicate files
+text.AdvancedFindDuplicateUniques: Unique files
+text.AdvancedFindAlgorithmSha256: SHA-256
+text.AdvancedFindAlgorithmCrc32: CRC32
 text.AdvancedFilterKeyRequired: "A key is required for custom property and metadata filters."
 text.AdvancedFilterValueRequired: "A comparison value is required for this operator."
 text.AdvancedFilterOneOfRequired: "OneOf requires at least one semicolon-separated value."

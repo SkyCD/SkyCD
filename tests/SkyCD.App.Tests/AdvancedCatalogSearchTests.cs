@@ -435,4 +435,433 @@ public sealed class AdvancedCatalogSearchTests
         var extension = System.IO.Path.GetExtension(name ?? string.Empty);
         return extension.Length <= 1 ? string.Empty : extension.Substring(1).ToLowerInvariant();
     }
+
+    private static List<CatalogDocument> CreateDuplicateCatalog()
+    {
+        return
+        [
+            new() { Id = "disc-a", Name = "Disc A", Type = CatalogDocumentType.Media },
+            new() { Id = "folder-a", ParentId = "disc-a", Name = "Docs", Type = CatalogDocumentType.Folder },
+            new() { Id = "dup-1", ParentId = "folder-a", Name = "report.pdf", Type = CatalogDocumentType.File, Size = 1024,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "aabbccdd00112233445566778899aabbccddeeff00112233445566778899aabb" } },
+            new() { Id = "dup-2", ParentId = "folder-a", Name = "report-copy.pdf", Type = CatalogDocumentType.File, Size = 1024,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "AABBCCDD00112233445566778899AABBCCDDEEFF00112233445566778899AABB" } },
+            new() { Id = "unique-1", ParentId = "folder-a", Name = "notes.txt", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "1122334455667788990011223344556677889900112233445566778899001122" } },
+            new() { Id = "no-hash", ParentId = "folder-a", Name = "readme.md", Type = CatalogDocumentType.File, Size = 256 },
+            new() { Id = "diff-size", ParentId = "folder-a", Name = "report-v2.pdf", Type = CatalogDocumentType.File, Size = 2048,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "aabbccdd00112233445566778899aabbccddeeff00112233445566778899aabb" } },
+        ];
+    }
+
+    [Fact]
+    public void Search_Duplicates_Sha256_ReturnsOnlyMatchingGroups()
+    {
+        var index = CreateIndex(CreateDuplicateCatalog());
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+        var ids = results.Select(r => r.Document.Id).OrderBy(id => id).ToArray();
+        Assert.Equal(["dup-1", "dup-2"], ids);
+    }
+
+    [Fact]
+    public void Search_Uniques_Sha256_ReturnsOnlySingletons()
+    {
+        var index = CreateIndex(CreateDuplicateCatalog());
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Uniques,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+        var ids = results.Select(r => r.Document.Id).OrderBy(id => id).ToArray();
+        Assert.Equal(["diff-size", "unique-1"], ids);
+    }
+
+    [Fact]
+    public void Search_NoDuplicateFilter_ReturnsAllFiles()
+    {
+        var index = CreateIndex(CreateDuplicateCatalog());
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.None,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        // All 7 entries in scope (media + folder + 5 files)
+        Assert.Equal(7, results.Count);
+    }
+
+    [Fact]
+    public void Search_Duplicates_ExcludesFilesWithoutHash()
+    {
+        var index = CreateIndex(CreateDuplicateCatalog());
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.DoesNotContain(results, r => r.Document.Id == "no-hash");
+    }
+
+    [Fact]
+    public void Search_Duplicates_AppliedBeforePredicates()
+    {
+        var index = CreateIndex(CreateDuplicateCatalog());
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Root = new CatalogQueryGroup
+            {
+                Predicates =
+                [
+                    new AdvancedCatalogPredicate
+                    {
+                        Field = AdvancedCatalogField.Name,
+                        Operator = AdvancedCatalogOperator.Contains,
+                        Value = "report.pdf"
+                    }
+                ]
+            },
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Single(results);
+        Assert.Equal("dup-1", results[0].Document.Id);
+    }
+
+    [Fact]
+    public void Search_Duplicates_ScopeLimiting()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "disc-a", Name = "Disc A", Type = CatalogDocumentType.Media },
+            new() { Id = "folder-a", ParentId = "disc-a", Name = "Docs", Type = CatalogDocumentType.Folder },
+            new() { Id = "dup-a1", ParentId = "folder-a", Name = "file1.bin", Type = CatalogDocumentType.File, Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } },
+            new() { Id = "dup-a2", ParentId = "folder-a", Name = "file2.bin", Type = CatalogDocumentType.File, Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } },
+            new() { Id = "disc-b", Name = "Disc B", Type = CatalogDocumentType.Media },
+            new() { Id = "dup-b1", ParentId = "disc-b", Name = "file3.bin", Type = CatalogDocumentType.File, Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            Scope = new CatalogQueryScope { RootId = "disc-a", IncludeDescendants = true },
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+        var ids = results.Select(r => r.Document.Id).OrderBy(id => id).ToArray();
+        Assert.Equal(["dup-a1", "dup-a2"], ids);
+    }
+
+    [Fact]
+    public void Search_Duplicates_FoldersAndMediaNotClassified()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "media", Name = "Disc", Type = CatalogDocumentType.Media, Size = 100 },
+            new() { Id = "folder", ParentId = "media", Name = "Folder", Type = CatalogDocumentType.Folder, Size = 100 },
+            new() { Id = "file", ParentId = "folder", Name = "f.bin", Type = CatalogDocumentType.File, Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Uniques,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Single(results);
+        Assert.Equal("file", results[0].Document.Id);
+    }
+
+    [Fact]
+    public void Search_Duplicates_ZeroByteFiles()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "empty1", Name = "a.txt", Type = CatalogDocumentType.File, Size = 0,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" } },
+            new() { Id = "empty2", Name = "b.txt", Type = CatalogDocumentType.File, Size = 0,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+    }
+
+    [Fact]
+    public void Search_Validate_ThrowsWhenDuplicateFilterWithoutAlgorithm()
+    {
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.None,
+            Take = 200
+        };
+
+        Assert.Throws<AdvancedCatalogQueryException>(() => AdvancedCatalogSearchService.Validate(query));
+    }
+
+    [Fact]
+    public void Search_Duplicates_Crc32_HexFormat()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "f1", Name = "a.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "DEADBEEF" } },
+            new() { Id = "f2", Name = "b.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["CRC32"] = "deadbeef" } },
+            new() { Id = "f3", Name = "c.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "CAFEBABE" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Crc32,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+        var ids = results.Select(r => r.Document.Id).OrderBy(id => id).ToArray();
+        Assert.Equal(["f1", "f2"], ids);
+    }
+
+    [Fact]
+    public void Search_Duplicates_Crc32_DecimalFormat()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "f1", Name = "a.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "3735928559" } },
+            new() { Id = "f2", Name = "b.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "DEADBEEF" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Crc32,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+    }
+
+    [Fact]
+    public void Search_Duplicates_Crc32_Ambiguous8DigitExcluded()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "f1", Name = "a.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "12345678" } },
+            new() { Id = "f2", Name = "b.bin", Type = CatalogDocumentType.File, Size = 512,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "12345678" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Crc32,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Search_Duplicates_Crc32_ZeroPrefixedHex()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "f1", Name = "a.bin", Type = CatalogDocumentType.File, Size = 256,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "0x0A1B2C3D" } },
+            new() { Id = "f2", Name = "b.bin", Type = CatalogDocumentType.File, Size = 256,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["Crc32"] = "0a1b2c3d" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Crc32,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Equal(2, results.Count);
+    }
+
+    [Fact]
+    public void Search_Duplicates_WithMetadataLookup()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "f1", Name = "a.bin", Type = CatalogDocumentType.File, Size = 100 },
+            new() { Id = "f2", Name = "b.bin", Type = CatalogDocumentType.File, Size = 100 },
+        };
+
+        var index = CreateIndex(docs);
+        var sha = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+        AdvancedCatalogSearchService.MetadataLookup lookup = doc =>
+            new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase) { ["sha256"] = sha };
+
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query, lookup);
+
+        Assert.Equal(2, results.Count);
+    }
+
+    [Fact]
+    public void Search_Duplicates_InvalidSha256Length_Excluded()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "f1", Name = "a.bin", Type = CatalogDocumentType.File, Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "tooshort" } },
+            new() { Id = "f2", Name = "b.bin", Type = CatalogDocumentType.File, Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "tooshort" } },
+        };
+
+        var index = CreateIndex(docs);
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        var results = AdvancedCatalogSearchService.Search(index, query);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Search_Uniques_ScopeRelative()
+    {
+        var docs = new List<CatalogDocument>
+        {
+            new() { Id = "disc-a", Name = "Disc A", Type = CatalogDocumentType.Media },
+            new() { Id = "fa", ParentId = "disc-a", Name = "x.bin", Type = CatalogDocumentType.File, Size = 10,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" } },
+            new() { Id = "disc-b", Name = "Disc B", Type = CatalogDocumentType.Media },
+            new() { Id = "fb", ParentId = "disc-b", Name = "x.bin", Type = CatalogDocumentType.File, Size = 10,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection { ["sha256"] = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" } },
+        };
+
+        var index = CreateIndex(docs);
+
+        var dupQuery = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+        var dupResults = AdvancedCatalogSearchService.Search(index, dupQuery);
+        Assert.Equal(2, dupResults.Count);
+
+        var uniqueQuery = new AdvancedCatalogQuery
+        {
+            Scope = new CatalogQueryScope { RootId = "disc-a", IncludeDescendants = true },
+            DuplicateFilter = DuplicateFilterMode.Uniques,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+        var uniqueResults = AdvancedCatalogSearchService.Search(index, uniqueQuery);
+        Assert.Single(uniqueResults);
+        Assert.Equal("fa", uniqueResults[0].Document.Id);
+    }
+
+    [Fact]
+    public void Search_Duplicates_Cancellation()
+    {
+        var docs = new List<CatalogDocument>();
+        for (var i = 0; i < 500; i++)
+        {
+            docs.Add(new CatalogDocument
+            {
+                Id = $"f{i}",
+                Name = $"file{i}.bin",
+                Type = CatalogDocumentType.File,
+                Size = 100,
+                Properties = new SkyCD.Documents.Collections.PropertiesCollection
+                {
+                    ["sha256"] = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                }
+            });
+        }
+
+        var index = CreateIndex(docs);
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var query = new AdvancedCatalogQuery
+        {
+            DuplicateFilter = DuplicateFilterMode.Duplicates,
+            HashAlgorithm = ComparisonAlgorithm.Sha256,
+            Take = 1000
+        };
+
+        Assert.Throws<OperationCanceledException>(() =>
+            AdvancedCatalogSearchService.Search(index, query, null, cts.Token));
+    }
 }
