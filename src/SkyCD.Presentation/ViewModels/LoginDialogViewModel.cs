@@ -74,7 +74,7 @@ public partial class LoginDialogViewModel : ObservableObject
                 return string.Empty;
             }
 
-            var address = new UriBuilder(location.Scheme, location.Host, Port, location.Path).Uri.GetComponents(
+            var address = new UriBuilder(location.Scheme, location.Host, Port, RemoteLocation.EscapePath(location.Path)).Uri.GetComponents(
                 UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
             return TlsMode == provider.DefaultTlsMode
                 ? address
@@ -143,6 +143,42 @@ public partial class LoginDialogViewModel : ObservableObject
         return viewModel;
     }
 
+    internal void SetProtocol(string scheme)
+    {
+        provider = RemoteCatalogProviderRegistry.Default.Get(scheme);
+        SetLocation(null);
+        TlsModeIndex = (int)provider.DefaultTlsMode;
+        AuthMethodIndex = 0;
+        UseAnonymous = false;
+        Domain = string.Empty;
+        Username = string.Empty;
+        Password = string.Empty;
+        KeyFilePath = string.Empty;
+        KeyFilePassphrase = string.Empty;
+        OnPropertyChanged(nameof(IsFtp));
+        OnPropertyChanged(nameof(IsSmb));
+        OnPropertyChanged(nameof(IsSftp));
+        OnPropertyChanged(nameof(IsAnonymousAvailable));
+        ConfirmCommand.NotifyCanExecuteChanged();
+    }
+
+    internal void SetLocation(RemoteLocation? value)
+    {
+        var endpointChanged = location?.Host != value?.Host || location?.Port != value?.Port;
+        location = value;
+        Port = value?.Port ?? provider.DefaultPort;
+        if (endpointChanged)
+        {
+            presentedHostKey = null;
+            HostKeyFingerprint = null;
+            SetHostKeyState(SftpHostKeyState.Unknown);
+            if (IsSftp && value is not null)
+            {
+                RefreshHostKeyState();
+            }
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()
     {
@@ -158,6 +194,7 @@ public partial class LoginDialogViewModel : ObservableObject
         }
 
         var host = location.Host;
+        var port = Port;
         HostKeyStatus = LocalizationService.Current.Format(TextKeys.HostKeyChecking, host);
         HostKeyFingerprint = null;
         presentedHostKey = null;
@@ -165,13 +202,23 @@ public partial class LoginDialogViewModel : ObservableObject
 
         try
         {
-            var presented = await Task.Run(() => hostKeys.FetchHostKey(host, Port, CancellationToken.None));
+            var presented = await Task.Run(() => hostKeys.FetchHostKey(host, port, CancellationToken.None));
+            if (location?.Host != host || Port != port)
+            {
+                return;
+            }
+
             presentedHostKey = presented;
             HostKeyFingerprint = presented.Fingerprint;
-            SetHostKeyState(hostKeys.Evaluate(host, Port, presented.Fingerprint));
+            SetHostKeyState(hostKeys.Evaluate(host, port, presented.Fingerprint));
         }
         catch (Exception ex)
         {
+            if (location?.Host != host || Port != port)
+            {
+                return;
+            }
+
             HostKeyIsTrusted = false;
             HostKeyTrustButtonLabel = LocalizationService.Current.Get(UiKeys.TrustHostKey);
             HostKeyStatus = LocalizationService.Current.Format(

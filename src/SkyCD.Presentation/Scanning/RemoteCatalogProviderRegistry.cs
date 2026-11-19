@@ -25,6 +25,8 @@ public sealed class RemoteCatalogProviderRegistry
         }
     }
 
+    public IReadOnlyCollection<string> Schemes => providers.Keys;
+
     public IRemoteCatalogConnector Get(string scheme) =>
         providers.TryGetValue(scheme, out var provider)
             ? provider

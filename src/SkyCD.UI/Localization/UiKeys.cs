@@ -30,6 +30,17 @@ public static class UiKeys
     public const string AddToList = "core.ui.AddToList";
     public const string FromMedia = "core.ui.FromMedia";
     public const string FromFolder = "core.ui.FromFolder";
+    public const string InternetProtocol = "core.ui.InternetProtocol";
+    public const string InternetHost = "core.ui.InternetHost";
+    public const string InternetPath = "core.ui.InternetPath";
+    public const string InternetSharePath = "core.ui.InternetSharePath";
+    public const string PasteInternetUrl = "core.ui.PasteInternetUrl";
+    public const string InvalidInternetClipboardUrl = "core.ui.InvalidInternetClipboardUrl";
+    public const string UnsupportedInternetClipboardUrl = "core.ui.UnsupportedInternetClipboardUrl";
+    public const string InternetClipboardUnavailable = "core.ui.InternetClipboardUnavailable";
+    public const string InvalidInternetHost = "core.ui.InvalidInternetHost";
+    public const string InternetShareRequired = "core.ui.InternetShareRequired";
+    public const string InternetCredentialsRequired = "core.ui.InternetCredentialsRequired";
     public const string FromInternet = "core.ui.FromInternet";
     public const string TitleOnly = "core.ui.TitleOnly";
     public const string TitleOnlyMediaHint = "core.ui.TitleOnlyMediaHint";

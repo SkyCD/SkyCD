@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using SkyCD.Presentation.Operations;
 using SkyCD.UI.Localization;
 
@@ -35,7 +36,7 @@ public sealed record RemoteLocation(
         var port = uri.IsDefaultPort || uri.Port < 1 ? provider.DefaultPort : uri.Port;
         var path = provider.NormalizePath(Uri.UnescapeDataString(string.IsNullOrEmpty(uri.AbsolutePath) ? "/" : uri.AbsolutePath));
         var tlsMode = ParseTlsQuery(query, trimmed) ?? provider.DefaultTlsMode;
-        var builder = new UriBuilder(uri.Scheme, uri.IdnHost, port, path);
+        var builder = new UriBuilder(uri.Scheme, uri.IdnHost, port, EscapePath(path));
         var publicUrl = builder.Uri.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
         return new RemoteLocation(uri.Scheme, uri.IdnHost, port, path, publicUrl, tlsMode);
     }
@@ -58,6 +59,9 @@ public sealed record RemoteLocation(
         password = Unescape(passwordPart);
         return username.Length > 0 || password.Length > 0;
     }
+
+    internal static string EscapePath(string path) =>
+        string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
 
     private static string WithDefaultScheme(string address)
     {
