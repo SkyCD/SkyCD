@@ -70,7 +70,7 @@
                                               PointerPressed="OnItemCheckBoxPointerPressed"
                                               VerticalAlignment="Center" />
                                     <ContentControl Grid.Column="1"
-                                                    IsVisible="{Binding !!ItemPreviewTemplate, ElementName=Root}"
+                                                    IsVisible="{Binding ItemPreviewTemplate, ElementName=Root, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                     VerticalAlignment="Center"
                                                     ContentTemplate="{Binding ItemPreviewTemplate, ElementName=Root}"
                                                     Content="{Binding Label}" />
