@@ -98,6 +98,8 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             SelectedCombination = query.Root.Combination;
             SelectedSortKey = query.SortKey;
             SortDescending = query.SortDescending;
+            SelectedDuplicateFilter = query.DuplicateFilter;
+            SelectedHashAlgorithm = query.HashAlgorithm;
             SavedSearchName = SelectedSavedSearch.Name;
             ClearResults();
         }
@@ -182,6 +184,18 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
 
     [ObservableProperty]
     private bool sortDescending;
+
+    [ObservableProperty]
+    private DuplicateFilterMode selectedDuplicateFilter = DuplicateFilterMode.None;
+
+    [ObservableProperty]
+    private ComparisonAlgorithm selectedHashAlgorithm = ComparisonAlgorithm.None;
+
+    public IReadOnlyList<DuplicateFilterMode> AvailableDuplicateFilters { get; } =
+        Enum.GetValues<DuplicateFilterMode>();
+
+    public IReadOnlyList<ComparisonAlgorithm> AvailableHashAlgorithms { get; } =
+        Enum.GetValues<ComparisonAlgorithm>();
 
     [ObservableProperty]
     private IReadOnlyList<CatalogFindResult> results = [];
@@ -327,6 +341,8 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
         Filters.Add(new AdvancedCatalogFilterRowViewModel());
         SelectedCombination = CatalogQueryCombination.All;
         SelectedScopeType = null;
+        SelectedDuplicateFilter = DuplicateFilterMode.None;
+        SelectedHashAlgorithm = ComparisonAlgorithm.None;
         ClearResults();
     }
 
@@ -411,7 +427,9 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
                 Combination = SelectedCombination,
                 Predicates = predicates
             },
-            Take = AdvancedCatalogSearchService.MaxTake
+            Take = AdvancedCatalogSearchService.MaxTake,
+            DuplicateFilter = SelectedDuplicateFilter,
+            HashAlgorithm = SelectedHashAlgorithm
         };
         return true;
     }
