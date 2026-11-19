@@ -584,9 +584,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (decision == UnsavedChangesDecision.Save)
+            if (decision == UnsavedChangesDecision.Save && !await SaveCatalogAsync(vm))
             {
-                vm.SaveCatalogCommand.Execute(null);
+                return;
             }
 
             SaveUiState(vm);
@@ -897,13 +897,19 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (decision == UnsavedChangesDecision.Save)
+            if (decision == UnsavedChangesDecision.Save && !await SaveCatalogAsync(vm))
             {
-                vm.SaveCatalogCommand.Execute(null);
+                return;
             }
         }
 
-        vm.CompleteNewCatalog();
+        var newCatalog = MainWindowViewModel.CreateNewCatalog();
+        newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+        newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>());
+        newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+        newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
+        newCatalog.CompleteNewCatalog();
+        DataContext = newCatalog;
     }
 
     private async void OnOpenCatalogRequested(object? sender, EventArgs e)
@@ -923,9 +929,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (decision == UnsavedChangesDecision.Save)
+            if (decision == UnsavedChangesDecision.Save && !await SaveCatalogAsync(vm))
             {
-                vm.SaveCatalogCommand.Execute(null);
+                return;
             }
         }
 
@@ -987,26 +993,36 @@ public partial class MainWindow : Window
 
     private async void OnSaveCatalogRequested(object? sender, EventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm)
+        if (DataContext is MainWindowViewModel vm)
         {
-            return;
+            await SaveCatalogAsync(vm);
         }
+    }
 
+    private async void OnSaveCatalogAsRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await SaveCatalogAsync(vm, saveAs: true);
+        }
+    }
+
+    private async Task<bool> SaveCatalogAsync(MainWindowViewModel vm, bool saveAs = false)
+    {
         EnsureFileFormatProvidersLoaded();
-
-        var targetPath = vm.CurrentCatalogPath;
+        var targetPath = saveAs ? null : vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
             var fileTypeChoices = fileFormatManager.GetSaveFilters()
                 .ToFilePickerTypes(
                     allSupportedFilesLabel: null,
-                    allFilesLabel: null);
-
-            var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
-
+                    allFilesLabel: saveAs ? PickerLocalizer["AllFiles"].Value : null);
+            var defaultExtension = fileFormatManager.GetSaveFormats().Any(format => format.FormatId == "skycd-json")
+                ? "json"
+                : fileFormatManager.GetPreferredSaveExtension();
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = LocalizationService.Current.Get(TextKeys.SaveCatalog),
+                Title = LocalizationService.Current.Get(saveAs ? TextKeys.SaveCatalogAs : TextKeys.SaveCatalog),
                 SuggestedFileName = $"catalog.{defaultExtension}",
                 DefaultExtension = defaultExtension,
                 FileTypeChoices = fileTypeChoices
@@ -1017,78 +1033,20 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            return;
+            return false;
         }
 
         try
         {
-            var capability = fileFormatManager.GetInstanceFor(targetPath);
-            if (!capability.SupportedFormat.CanWrite)
-            {
-                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
-            }
-
-            var content = """
-                          # SkyCD catalog placeholder
-                          # TODO: replace with full catalog serialization pipeline
-                          """;
-            File.WriteAllText(targetPath, content);
-            vm.CompleteSaveCatalog(targetPath);
+            await new CatalogSaveService(fileFormatManager).SaveAsync(targetPath, vm.GetAllCatalogEntries());
+            if (saveAs) vm.CompleteSaveCatalogAs(targetPath);
+            else vm.CompleteSaveCatalog(targetPath);
+            return true;
         }
         catch (Exception ex)
         {
             vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
-        }
-    }
-
-    private async void OnSaveCatalogAsRequested(object? sender, EventArgs e)
-    {
-        if (DataContext is not MainWindowViewModel vm)
-        {
-            return;
-        }
-
-        EnsureFileFormatProvidersLoaded();
-
-        var fileTypeChoices = fileFormatManager.GetSaveFilters()
-            .ToFilePickerTypes(
-                allSupportedFilesLabel: null,
-                allFilesLabel: PickerLocalizer["AllFiles"].Value);
-
-        var defaultExtension = fileFormatManager.GetPreferredSaveExtension();
-
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = LocalizationService.Current.Get(TextKeys.SaveCatalogAs),
-            SuggestedFileName = $"catalog.{defaultExtension}",
-            DefaultExtension = defaultExtension,
-            FileTypeChoices = fileTypeChoices
-        });
-
-        var localPath = file?.TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(localPath))
-        {
-            return;
-        }
-
-        try
-        {
-            var capability = fileFormatManager.GetInstanceFor(localPath);
-            if (!capability.SupportedFormat.CanWrite)
-            {
-                throw new FileFormatReadOnlyException(capability.SupportedFormat.FormatId);
-            }
-
-            var content = """
-                          # SkyCD catalog placeholder
-                          # TODO: replace with full catalog serialization pipeline
-                          """;
-            File.WriteAllText(localPath, content);
-            vm.CompleteSaveCatalogAs(localPath);
-        }
-        catch (Exception ex)
-        {
-            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
+            return false;
         }
     }
 
