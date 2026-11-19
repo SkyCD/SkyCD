@@ -122,6 +122,16 @@
                     <Style Selector="TreeViewItem" x:DataType="vm:BrowserTreeNode">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
+                    <Style Selector="TextBox.rename-editor">
+                        <Setter Property="MinWidth" Value="90" />
+                        <Setter Property="MinHeight" Value="20" />
+                        <Setter Property="Padding" Value="2,0" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                    </Style>
+                    <Style Selector="TextBox.rename-editor.invalid">
+                        <Setter Property="BorderBrush" Value="#DC2626" />
+                        <Setter Property="BorderThickness" Value="1" />
+                    </Style>
                 </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
@@ -129,7 +139,17 @@
                             <Image Width="16" Height="16"
                                    VerticalAlignment="Center"
                                    Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsRenaming}" />
+                            <TextBox Classes="rename-editor"
+                                     Classes.invalid="{Binding HasRenameError}"
+                                     Text="{Binding RenameText, Mode=TwoWay}"
+                                     IsVisible="{Binding IsRenaming}"
+                                     VerticalAlignment="Center"
+                                     ToolTip.Tip="{Binding RenameError}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Rename}}"
+                                     KeyDown="OnRenameEditorKeyDown"
+                                     LostFocus="OnRenameEditorLostFocus" />
                             <TextBlock Text="{Binding LoanIndicator}" FontSize="10" Opacity="0.8" VerticalAlignment="Center" />
                             <TextBlock Text="{Binding LocationIndicator}" FontSize="10" Opacity="0.8" VerticalAlignment="Center" />
                         </StackPanel>

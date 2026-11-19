@@ -23,7 +23,7 @@ public partial class BrowserTreeNode : ObservableObject
 
     public string Key { get; }
 
-    public string Title { get; }
+    [ObservableProperty] private string title = string.Empty;
 
     public string IconGlyph { get; }
 
@@ -36,4 +36,15 @@ public partial class BrowserTreeNode : ObservableObject
     public ObservableCollection<BrowserTreeNode> Children { get; }
 
     [ObservableProperty] private bool isExpanded;
+
+    // Inline rename state: the tree label is swapped for an editor while IsRenaming is true.
+    [ObservableProperty] private bool isRenaming;
+
+    [ObservableProperty] private string renameText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRenameError))]
+    private string? renameError;
+
+    public bool HasRenameError => !string.IsNullOrEmpty(RenameError);
 }

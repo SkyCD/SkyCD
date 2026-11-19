@@ -137,6 +137,7 @@ public partial class MainWindow : Window
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
+            subscribedViewModel.RenameRequested -= OnRenameRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -162,6 +163,7 @@ public partial class MainWindow : Window
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
+            subscribedViewModel.RenameRequested += OnRenameRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
@@ -219,6 +221,58 @@ public partial class MainWindow : Window
             TreeViewFocus.FocusItem(treeView, subscribedViewModel.SelectedTreeNode);
             subscribedViewModel.ActivePane = ActivePane.Tree;
         }, DispatcherPriority.Loaded);
+    }
+
+    private void OnRenameRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var treeView = this.FindControl<TreeView>("MainTreeView");
+            if (treeView is null || subscribedViewModel?.SelectedTreeNode is not { IsRenaming: true } node)
+            {
+                return;
+            }
+
+            var container = TreeViewFocus.FindContainer(treeView, node) as TreeViewItem;
+            var editor = container?.GetVisualDescendants().OfType<TextBox>()
+                .FirstOrDefault(static textBox => textBox.IsVisible);
+            if (editor is null)
+            {
+                return;
+            }
+
+            editor.Focus();
+            editor.SelectAll();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OnRenameEditorKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (subscribedViewModel is null || sender is not TextBox { DataContext: BrowserTreeNode node })
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            subscribedViewModel.CommitRename(node);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            subscribedViewModel.CancelRename(node);
+        }
+    }
+
+    private void OnRenameEditorLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (subscribedViewModel is null || sender is not TextBox { DataContext: BrowserTreeNode node } || !node.IsRenaming)
+        {
+            return;
+        }
+
+        subscribedViewModel.CancelRename(node, restoreFocus: false);
     }
 
     private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)

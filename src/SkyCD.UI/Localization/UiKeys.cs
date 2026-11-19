@@ -121,6 +121,7 @@ public static class UiKeys
     public const string NoSettingsMatch = "core.ui.NoSettingsMatch";
     public const string Save = "core.ui.Save";
     public const string Properties = "core.ui.Properties";
+    public const string Rename = "core.ui.Rename";
     public const string General = "core.ui.General";
     public const string NameLabel = "core.ui.NameLabel";
     public const string CommentsLabel = "core.ui.CommentsLabel";
