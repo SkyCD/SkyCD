@@ -433,6 +433,7 @@
                                                     <multiSelect:MultiSelectDropdown Grid.Column="1"
                                                                                      ItemsSource="{Binding IconOptionItems}"
                                                                                      IsSingleSelect="True"
+                                                                                     HideItemLabels="True"
                                                                                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SelectIcon}}">
                                                         <multiSelect:MultiSelectDropdown.ItemPreviewTemplate>
                                                             <DataTemplate x:DataType="x:String">

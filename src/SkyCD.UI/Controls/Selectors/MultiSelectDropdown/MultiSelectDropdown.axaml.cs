@@ -30,6 +30,9 @@ public partial class MultiSelectDropdown : UserControl
     public static readonly StyledProperty<IDataTemplate?> ItemPreviewTemplateProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, IDataTemplate?>(nameof(ItemPreviewTemplate));
 
+    public static readonly StyledProperty<bool> HideItemLabelsProperty =
+        AvaloniaProperty.Register<MultiSelectDropdown, bool>(nameof(HideItemLabels));
+
     private readonly ObservableCollection<MultiSelectOptionItem> filteredItems = [];
     private IEnumerable<MultiSelectOptionItem>? trackedItems;
     private bool suppressInlineTextProcessing;
@@ -68,6 +71,17 @@ public partial class MultiSelectDropdown : UserControl
     {
         get => GetValue(ItemPreviewTemplateProperty);
         set => SetValue(ItemPreviewTemplateProperty, value);
+    }
+
+    /// <summary>
+    /// Hides the item name labels in the dropdown choices while keeping
+    /// name-based search. Use for icon-only pickers; choices stay
+    /// identifiable through their automation names.
+    /// </summary>
+    public bool HideItemLabels
+    {
+        get => GetValue(HideItemLabelsProperty);
+        set => SetValue(HideItemLabelsProperty, value);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

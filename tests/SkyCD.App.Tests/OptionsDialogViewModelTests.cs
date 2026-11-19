@@ -412,4 +412,16 @@ public class OptionsDialogViewModelTests
         Assert.Equal(["XML"], vm.FilteredPlugins.Select(plugin => plugin.Name).ToArray());
         Assert.Equal("XML", vm.SelectedPlugin?.Name);
     }
+
+    [Fact]
+    public void SelectingIconOption_SetsIconGlyphAndKeepsSingleSelection()
+    {
+        var variant = new StatusVariantItemViewModel();
+        var option = variant.IconOptionItems.First(item => item.Label == variant.IconOptions[0]);
+
+        option.IsSelected = true;
+
+        Assert.Equal(option.Label, variant.IconGlyph);
+        Assert.Equal(option, Assert.Single(variant.IconOptionItems, static item => item.IsSelected));
+    }
 }
