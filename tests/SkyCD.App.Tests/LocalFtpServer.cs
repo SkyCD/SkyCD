@@ -2,9 +2,14 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.App.Tests;
 
@@ -16,6 +21,10 @@ internal sealed class LocalFtpServer : IDisposable
     private readonly bool allowAnonymous;
     private readonly bool supportMlsd;
     private readonly int dropConnectionAfterListings;
+    private readonly RemoteTlsMode tlsMode;
+    private readonly bool rejectAuthTls;
+    private readonly bool rejectProtP;
+    private readonly X509Certificate2? certificate;
     private readonly TcpListener listener;
     private readonly Thread thread;
     private volatile bool stopping;
@@ -28,13 +37,20 @@ internal sealed class LocalFtpServer : IDisposable
         string password,
         bool allowAnonymous = false,
         bool supportMlsd = true,
-        int dropConnectionAfterListings = int.MaxValue)
+        int dropConnectionAfterListings = int.MaxValue,
+        RemoteTlsMode tlsMode = RemoteTlsMode.Off,
+        bool rejectAuthTls = false,
+        bool rejectProtP = false)
     {
         this.username = username;
         this.password = password;
         this.allowAnonymous = allowAnonymous;
         this.supportMlsd = supportMlsd;
         this.dropConnectionAfterListings = dropConnectionAfterListings;
+        this.tlsMode = tlsMode;
+        this.rejectAuthTls = rejectAuthTls;
+        this.rejectProtP = rejectProtP;
+        certificate = tlsMode == RemoteTlsMode.Off ? null : CreateCertificate();
         rootFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
         listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
@@ -44,6 +60,9 @@ internal sealed class LocalFtpServer : IDisposable
     }
 
     public int Port { get; }
+
+    /// <summary>The self-signed certificate presented on TLS connections; null when TLS is off.</summary>
+    public X509Certificate2? Certificate => certificate;
 
     public void Dispose()
     {
@@ -98,23 +117,21 @@ internal sealed class LocalFtpServer : IDisposable
     private void Handle(TcpClient client)
     {
         client.NoDelay = true;
-        using var stream = client.GetStream();
-        stream.ReadTimeout = 20000;
-        stream.WriteTimeout = 20000;
-        using var reader = new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true);
-        using var writer = new StreamWriter(stream, new UTF8Encoding(false), bufferSize: 1024, leaveOpen: true)
-        {
-            NewLine = "\r\n",
-            AutoFlush = true
-        };
+        var networkStream = client.GetStream();
+        networkStream.ReadTimeout = 20000;
+        networkStream.WriteTimeout = 20000;
 
-        writer.WriteLine("220 SkyCD FTP fixture ready");
+        // Implicit FTPS speaks TLS from the first byte; explicit upgrades after AUTH TLS.
+        Stream stream = tlsMode == RemoteTlsMode.Implicit ? AuthenticateAsServer(networkStream) : networkStream;
+        var (reader, writer) = CreateText(stream);
         var authenticated = false;
         string? pendingUser = null;
         TcpListener? passive = null;
+        var dataProtected = false;
 
         try
         {
+            writer.WriteLine("220 SkyCD FTP fixture ready");
             string? line;
             while ((line = reader.ReadLine()) is not null)
             {
@@ -128,7 +145,7 @@ internal sealed class LocalFtpServer : IDisposable
                     break;
                 }
 
-                if (!authenticated && verb is not ("USER" or "PASS" or "FEAT" or "SYST" or "NOOP" or "OPTS" or "TYPE"))
+                if (!authenticated && verb is not ("USER" or "PASS" or "FEAT" or "SYST" or "NOOP" or "OPTS" or "TYPE" or "AUTH"))
                 {
                     writer.WriteLine("530 Please login");
                     continue;
@@ -143,6 +160,34 @@ internal sealed class LocalFtpServer : IDisposable
                     case "PASS":
                         authenticated = Accepts(pendingUser, argument);
                         writer.WriteLine(authenticated ? "230 Logged in" : "530 Login incorrect");
+                        break;
+                    case "AUTH":
+                        if (tlsMode != RemoteTlsMode.Explicit || rejectAuthTls ||
+                            !argument.Equals("TLS", StringComparison.OrdinalIgnoreCase))
+                        {
+                            writer.WriteLine("502 Command not implemented");
+                            break;
+                        }
+
+                        // The reply must reach the client before the TLS handshake starts.
+                        writer.WriteLine("234 AUTH TLS OK");
+                        reader.Dispose();
+                        writer.Dispose();
+                        stream = AuthenticateAsServer(networkStream);
+                        (reader, writer) = CreateText(stream);
+                        break;
+                    case "PBSZ":
+                        writer.WriteLine(tlsMode != RemoteTlsMode.Off ? "200 OK" : "502 Command not implemented");
+                        break;
+                    case "PROT":
+                        if (rejectProtP || !argument.Equals("P", StringComparison.OrdinalIgnoreCase))
+                        {
+                            writer.WriteLine("504 Command not implemented");
+                            break;
+                        }
+
+                        dataProtected = tlsMode != RemoteTlsMode.Off;
+                        writer.WriteLine(dataProtected ? "200 OK" : "504 Command not implemented");
                         break;
                     case "PWD":
                         writer.WriteLine("257 \"/\" is the current directory");
@@ -186,7 +231,7 @@ internal sealed class LocalFtpServer : IDisposable
                         break;
                     case "MLSD":
                     case "LIST":
-                        ServeListing(writer, ref passive, verb, string.IsNullOrWhiteSpace(argument) ? "/" : argument);
+                        ServeListing(writer, ref passive, verb, string.IsNullOrWhiteSpace(argument) ? "/" : argument, dataProtected);
                         if (ShouldDropConnection())
                         {
                             // Simulate an abrupt server-side disconnect so the client has to
@@ -205,6 +250,9 @@ internal sealed class LocalFtpServer : IDisposable
         finally
         {
             passive?.Stop();
+            reader.Dispose();
+            writer.Dispose();
+            stream.Dispose();
         }
     }
 
@@ -229,7 +277,7 @@ internal sealed class LocalFtpServer : IDisposable
         return listener;
     }
 
-    private void ServeListing(StreamWriter writer, ref TcpListener? passive, string verb, string ftpPath)
+    private void ServeListing(StreamWriter writer, ref TcpListener? passive, string verb, string ftpPath, bool dataProtected)
     {
         if (passive is null)
         {
@@ -251,10 +299,17 @@ internal sealed class LocalFtpServer : IDisposable
 
             writer.WriteLine("150 Opening data connection");
             using var dataClient = AcceptData(dataListener);
-            using var dataStream = dataClient.GetStream();
+            var raw = dataClient.GetStream();
+            using Stream dataStream = dataProtected ? AuthenticateAsServer(raw) : raw;
             var bytes = new UTF8Encoding(false).GetBytes(BuildListing(verb, local));
             dataStream.Write(bytes);
             dataStream.Flush();
+            if (dataStream is SslStream ssl)
+            {
+                // close_notify, so the client does not see a truncated TLS stream at end of data.
+                ssl.ShutdownAsync().GetAwaiter().GetResult();
+            }
+
             dataClient.Client.Shutdown(SocketShutdown.Send);
             transferred = true;
         }
@@ -298,6 +353,57 @@ internal sealed class LocalFtpServer : IDisposable
         }
 
         return accept.GetAwaiter().GetResult();
+    }
+
+    private static (StreamReader Reader, StreamWriter Writer) CreateText(Stream stream)
+    {
+        var reader = new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true);
+        var writer = new StreamWriter(stream, new UTF8Encoding(false), bufferSize: 1024, leaveOpen: true)
+        {
+            NewLine = "\r\n",
+            AutoFlush = true,
+        };
+        return (reader, writer);
+    }
+
+    private SslStream AuthenticateAsServer(Stream inner)
+    {
+        var ssl = new SslStream(inner, leaveInnerStreamOpen: false);
+        ssl.AuthenticateAsServer(new SslServerAuthenticationOptions
+        {
+            ServerCertificate = certificate,
+            EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+            ClientCertificateRequired = false,
+        });
+        return ssl;
+    }
+
+    /// <summary>A loopback-only self-signed certificate; clients must pin it explicitly to trust it.</summary>
+    private static X509Certificate2 CreateCertificate()
+    {
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest(
+            "CN=SkyCD FTPS fixture",
+            rsa,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(
+            X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
+        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+            new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, false));
+        var names = new SubjectAlternativeNameBuilder();
+        names.AddIpAddress(IPAddress.Loopback);
+        names.AddDnsName("localhost");
+        request.CertificateExtensions.Add(names.Build());
+        using var ephemeral = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddYears(1));
+
+        // Windows Schannel cannot serve from an ephemeral key; the PFX round-trip persists the
+        // private key in a key container so AuthenticateAsServer can use it.
+        return X509CertificateLoader.LoadPkcs12(
+            ephemeral.Export(X509ContentType.Pfx),
+            password: null,
+            X509KeyStorageFlags.Exportable);
     }
 
     private string ToLocal(string ftpPath)

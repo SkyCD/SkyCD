@@ -188,6 +188,10 @@ public static class TextKeys
     public const string HostKeyStatusUnknown = "core.text.HostKeyStatusUnknown";
     public const string HostKeyStatusTrusted = "core.text.HostKeyStatusTrusted";
     public const string HostKeyStatusChanged = "core.text.HostKeyStatusChanged";
+    public const string RemoteCertificateValidationFailed = "core.text.RemoteCertificateValidationFailed";
+    public const string RemoteTlsHandshakeFailed = "core.text.RemoteTlsHandshakeFailed";
+    public const string RemoteTlsUpgradeRejected = "core.text.RemoteTlsUpgradeRejected";
+    public const string RemoteTlsDataProtectionRejected = "core.text.RemoteTlsDataProtectionRejected";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
     public const string Tags = "core.text.Tags";

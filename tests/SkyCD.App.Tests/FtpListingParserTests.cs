@@ -58,4 +58,36 @@ public class FtpListingParserTests
         Assert.DoesNotContain(password, options.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("alice:", options.ToString(), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Parse_FtpsScheme_DefaultsToImplicitTlsAndPort990()
+    {
+        var location = RemoteLocation.Parse("ftps://files.example/pub");
+
+        Assert.Equal("ftps", location.Scheme);
+        Assert.Equal(990, location.Port);
+        Assert.Equal(RemoteTlsMode.Implicit, location.TlsMode);
+        Assert.Equal("ftps://files.example:990/pub", location.PublicUrl);
+    }
+
+    [Fact]
+    public void Parse_TlsQuery_OverridesTheSchemeDefaultAndStaysOutOfThePublicUrl()
+    {
+        Assert.Equal(RemoteTlsMode.Off, RemoteLocation.Parse("ftp://files.example/pub").TlsMode);
+        Assert.Equal(RemoteTlsMode.Explicit, RemoteLocation.Parse("ftp://files.example/pub?tls=explicit").TlsMode);
+        Assert.Equal(RemoteTlsMode.Off, RemoteLocation.Parse("ftps://files.example/pub?tls=off").TlsMode);
+        Assert.Equal(RemoteTlsMode.Explicit, RemoteLocation.Parse("ftps://files.example/pub?tls=EXPLICIT").TlsMode);
+
+        var location = RemoteLocation.Parse("ftp://files.example:2121/pub?tls=explicit");
+        Assert.Equal(2121, location.Port);
+        Assert.Equal("ftp://files.example:2121/pub", location.PublicUrl);
+    }
+
+    [Fact]
+    public void Parse_UnknownTlsValue_FailsClearlyWithoutEchoingSecrets()
+    {
+        var error = Assert.Throws<RemoteConnectionException>(() =>
+            RemoteLocation.Parse("ftp://alice:s3cret-pass@files.example/pub?tls=banana"));
+        Assert.DoesNotContain("s3cret-pass", error.ToString(), StringComparison.Ordinal);
+    }
 }

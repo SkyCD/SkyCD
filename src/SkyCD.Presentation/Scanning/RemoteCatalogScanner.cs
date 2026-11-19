@@ -138,7 +138,8 @@ public sealed class RemoteCatalogScanner
         }
         catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteConnectionException
                 or RemoteSchemeNotSupportedException or RemoteDirectoryNotFoundException
-                or RemoteListingNotSupportedException or RemoteHostKeyException)
+                or RemoteListingNotSupportedException or RemoteHostKeyException
+                or RemoteTlsException)
         {
             throw;
         }
@@ -203,9 +204,11 @@ public sealed class RemoteCatalogScanner
         {
             throw;
         }
-        catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteSchemeNotSupportedException)
+        catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteSchemeNotSupportedException
+                or RemoteTlsException)
         {
-            // Rejected credentials and unsupported protocols are fatal for the whole scan.
+            // Rejected credentials, unsupported protocols and failed TLS protection are fatal
+            // for the whole scan.
             throw;
         }
         catch (RemoteListingNotSupportedException) when (isRoot)
@@ -500,7 +503,8 @@ public sealed class RemoteCatalogScanner
             // from a healthy transport, not a broken connection: it must not trigger a reconnect.
             if (exception is RemoteDirectoryNotFoundException
                 or RemoteAuthenticationException
-                or RemoteListingNotSupportedException)
+                or RemoteListingNotSupportedException
+                or RemoteTlsException)
             {
                 return false;
             }

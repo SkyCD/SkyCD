@@ -7,7 +7,12 @@ public sealed class RemoteCatalogProviderRegistry
 {
     private readonly Dictionary<string, IRemoteCatalogConnector> providers = new(StringComparer.OrdinalIgnoreCase);
 
-    public static RemoteCatalogProviderRegistry Default { get; } = new([new FtpCatalogConnector(), new SftpCatalogConnector()]);
+    public static RemoteCatalogProviderRegistry Default { get; } = new(
+    [
+        new FtpCatalogConnector(),
+        new FtpCatalogConnector("ftps", 990, RemoteTlsMode.Implicit),
+        new SftpCatalogConnector(),
+    ]);
 
     public RemoteCatalogProviderRegistry(IEnumerable<IRemoteCatalogConnector> connectors)
     {
