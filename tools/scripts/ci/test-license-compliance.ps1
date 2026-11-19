@@ -18,7 +18,7 @@ try {
         @{ Name = "Approved.Package"; License = "MIT"; Status = "Compliant"; ExitCode = 0 },
         @{ Name = "Compatible.Package"; License = "0BSD"; Status = "Compliant"; ExitCode = 0 },
         @{ Name = "Compatible.Package"; License = "bsd-3-clause"; Status = "Compliant"; ExitCode = 0 },
-        @{ Name = "PreviouslyApproved.Package"; License = "MPL-2.0"; Status = "Compliant"; ExitCode = 0 },
+        @{ Name = "Incompatible.Package"; License = "MPL-2.0"; Status = "Incompatible"; ExitCode = 1 },
         @{ Name = "Incompatible.Package"; License = "EUPL-1.2"; Status = "Incompatible"; ExitCode = 1 },
         @{ Name = "SQLite"; License = "EUPL-1.2"; Status = "Incompatible"; ExitCode = 1 },
         @{ Name = "Twemoji.Artwork"; License = "CC-BY-4.0"; Status = "Compliant"; ExitCode = 0 },

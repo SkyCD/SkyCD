@@ -20,8 +20,6 @@ The checked-in `osadl-bsd-2-clause.json` is an extract of the BSD-2-Clause outbo
 
 The policy explicitly allows `CC-BY-4.0` for separately licensed artwork such as Twemoji because the OSADL matrix does not cover it. Preserve attribution and the license link, and disclose any changes to the artwork. CI recognizes official Creative Commons license URLs when the SBOM provides no usable license name or identifier. Release notices and custom EULAs still require review.
 
-The policy also retains the existing approval for `MPL-2.0` dependencies. The matrix evaluates outbound licensing, while MPL 2.0 allows a larger work to use other terms when the covered files stay under the MPL and its distribution requirements are met. See [MPL 2.0 section 3.3](https://www.mozilla.org/MPL/2.0/#distribution-of-a-larger-work).
-
 ## Blocked License Families
 - All `GPL`, `LGPL`, `AGPL` variants
 - `SSPL-1.0`
