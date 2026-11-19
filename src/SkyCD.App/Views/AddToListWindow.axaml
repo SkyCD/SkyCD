@@ -4,12 +4,8 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
-        Width="428"
-        Height="380"
-        MinWidth="428"
-        MinHeight="380"
-        MaxWidth="428"
-        MaxHeight="380"
+        Width="445"
+        SizeToContent="Height"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         CanMinimize="False"
@@ -20,6 +16,37 @@
     <Design.DataContext>
         <vm:AddToListDialogViewModel />
     </Design.DataContext>
+
+    <Window.Resources>
+        <ControlTheme x:Key="AddToListTabItemTheme" TargetType="TabItem">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="#B0B0B0"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      Content="{TemplateBinding Header}"
+                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      RecognizesAccessKey="True" />
+                </ControlTemplate>
+            </Setter>
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Style Selector="^:pointerover, ^:focus-visible">
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="7,2" />
+            </Style>
+            <Style Selector="^:selected">
+                <Setter Property="Background" Value="#207A7A7A" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="7,2" />
+            </Style>
+        </ControlTheme>
+    </Window.Resources>
 
     <Window.Styles>
         <Style Selector="TextBlock">
@@ -42,72 +69,75 @@
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="11" />
         </Style>
-        <Style Selector="TabItem">
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="11" />
+        <Style Selector="Button.source">
+            <Setter Property="Height" Value="68" />
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.source.selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="#7A7A7A" />
+            <Setter Property="Background" Value="#207A7A7A" />
+        </Style>
+        <Style Selector="TextBox.source-field, ComboBox.source-field, Button.source-field">
+            <Setter Property="Height" Value="26" />
         </Style>
     </Window.Styles>
 
-    <Grid Margin="4"
-          RowDefinitions="50,75,*,36"
-          ColumnDefinitions="89,*,161"
-          RowSpacing="4"
-          ColumnSpacing="6">
-        <Border Grid.RowSpan="3"
-                BorderBrush="#B0B0B0"
-                BorderThickness="1">
-            <StackPanel Margin="2" Spacing="4">
-                <Button Height="58"
-                        Padding="2"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
+    <Grid Margin="8"
+          ColumnDefinitions="89,*"
+          ColumnSpacing="8">
+        <Border BorderBrush="#B0B0B0"
+                BorderThickness="1"
+                Padding="2"
+                VerticalAlignment="Top">
+            <StackPanel>
+                <Button Classes="source"
+                        Classes.selected="{Binding IsSourceMedia}"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Media">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="28"
-                               Height="28"
+                        <Image Width="40"
+                               Height="40"
                                Stretch="Uniform"
                                Source="/Assets/add-from-media.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromMedia}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
-                <Button Height="58"
-                        Padding="2"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
+                <Button Classes="source"
+                        Classes.selected="{Binding IsSourceFolder}"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Folder">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="28"
-                               Height="28"
+                        <Image Width="40"
+                               Height="40"
                                Stretch="Uniform"
                                Source="/Assets/add-from-folder.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromFolder}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
-                <Button Height="58"
-                        Padding="2"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
+                <Button Classes="source"
+                        Classes.selected="{Binding IsSourceInternet}"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Internet">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="28"
-                               Height="28"
+                        <Image Width="40"
+                               Height="40"
                                Stretch="Uniform"
                                Source="/Assets/add-from-internet.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromInternet}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
-                <Button Height="58"
-                        Padding="2"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
+                <Button Classes="source"
+                        Classes.selected="{Binding IsSourceTitleOnly}"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="TitleOnly">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
-                        <Image Width="28"
-                               Height="28"
+                        <Image Width="40"
+                               Height="40"
                                Stretch="Uniform"
                                Source="/Assets/add-from-media.png" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnly}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
@@ -116,102 +146,116 @@
             </StackPanel>
         </Border>
 
-        <StackPanel Grid.Column="1"
-                    Grid.ColumnSpan="2"
-                    Spacing="4">
-            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
-            <TextBox Text="{Binding MediaName}" />
-        </StackPanel>
-
-        <Grid Grid.Row="1"
-              Grid.Column="1"
-              Grid.ColumnSpan="2">
-            <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="4">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
-                <ComboBox ItemsSource="{Binding AvailableDrives}"
-                          SelectedItem="{Binding SelectedDrive}"
-                          HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
-                          IsChecked="{Binding IncludeMediaInfo}" />
+        <Grid Grid.Column="1" RowDefinitions="Auto,84,Auto,Auto" RowSpacing="6">
+            <StackPanel Spacing="3">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
+                <TextBox Classes="source-field" Text="{Binding MediaName}" />
             </StackPanel>
 
-            <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="4">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                    <TextBox Text="{Binding SourceValue}" />
-                    <Button Grid.Column="1"
-                            Content="..."
-                            Width="28"
-                            Click="OnBrowseFolderClicked" />
-                </Grid>
-                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeSubfolders}}"
-                          IsChecked="{Binding IncludeSubfolders}" />
-            </StackPanel>
+            <Grid Grid.Row="1">
+                <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="3">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
+                    <ComboBox Classes="source-field"
+                              ItemsSource="{Binding AvailableDrives}"
+                              SelectedItem="{Binding SelectedDrive}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
+                              IsChecked="{Binding IncludeMediaInfo}" />
+                </StackPanel>
 
-            <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="4">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.EnterInternetAddress}}" />
-                <TextBox Text="{Binding SourceValue}" />
-            </StackPanel>
+                <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="3">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                        <Button Grid.Column="1"
+                                Classes="source-field"
+                                Content="..."
+                                Width="28"
+                                Click="OnBrowseFolderClicked" />
+                    </Grid>
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeSubfolders}}"
+                              IsChecked="{Binding IncludeSubfolders}" />
+                </StackPanel>
 
-            <TextBlock IsVisible="{Binding IsSourceTitleOnly}"
-                       Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
+                <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="3">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.EnterInternetAddress}}" />
+                    <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                </StackPanel>
+
+                <TextBlock IsVisible="{Binding IsSourceTitleOnly}"
+                           Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
+                           TextWrapping="Wrap" />
+            </Grid>
+
+            <Grid Grid.Row="2">
+                <TabControl TabStripPlacement="Bottom">
+                    <TabControl.Template>
+                        <ControlTemplate>
+                            <Grid RowDefinitions="80,28">
+                                <Border BorderBrush="#B0B0B0" BorderThickness="1">
+                                    <ContentPresenter Name="PART_SelectedContentHost"
+                                                      HorizontalContentAlignment="Stretch"
+                                                      VerticalContentAlignment="Stretch" />
+                                </Border>
+                                <!-- Leave room for the dialog actions beside the tab headers. -->
+                                <ItemsPresenter Name="PART_ItemsPresenter"
+                                                Grid.Row="1"
+                                                Margin="0,0,154,0"
+                                                VerticalAlignment="Center"
+                                                ItemsPanel="{TemplateBinding ItemsPanel}" />
+                            </Grid>
+                        </ControlTemplate>
+                    </TabControl.Template>
+                    <TabItem Theme="{StaticResource AddToListTabItemTheme}"
+                             Header="{i18n:Translate {x:Static i18n:UiKeys.AddContents}}">
+                        <StackPanel Margin="10" Spacing="6">
+                            <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.AsNewMedia}}"
+                                         IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
+                                         Command="{Binding SelectTargetCommand}"
+                                         CommandParameter="NewMedia" />
+                            <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
+                                         IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
+                                         Command="{Binding SelectTargetCommand}"
+                                         CommandParameter="SelectedFolder" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Theme="{StaticResource AddToListTabItemTheme}"
+                             Header="{i18n:Translate {x:Static i18n:UiKeys.Misc}}">
+                        <StackPanel Margin="10" Spacing="6">
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
+                                      IsChecked="{Binding IncludeExtendedInfo}"
+                                      IsEnabled="{Binding IsScanOptionsEnabled}" />
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,0,2"
+                            Spacing="6">
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
+                            Width="72"
+                            Height="25"
+                            Command="{Binding ConfirmCommand}" />
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                            Width="72"
+                            Height="25"
+                            Click="OnCancelClicked" />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Grid.Row="3"
+                       MinHeight="14"
+                       Foreground="#B00000"
+                       Text="{Binding ValidationMessage}"
                        TextWrapping="Wrap" />
-        </Grid>
-
-        <TabControl Grid.Row="2"
-                    Grid.Column="1"
-                    Grid.ColumnSpan="2"
-                    TabStripPlacement="Bottom">
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.AddContents}}">
-                <StackPanel Margin="10" Spacing="6">
-                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.AsNewMedia}}"
-                                 IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
-                                 Command="{Binding SelectTargetCommand}"
-                                 CommandParameter="NewMedia" />
-                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
-                                 IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
-                                 Command="{Binding SelectTargetCommand}"
-                                 CommandParameter="SelectedFolder" />
-                </StackPanel>
-            </TabItem>
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Misc}}">
-                <StackPanel Margin="10" Spacing="6">
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
-                              IsChecked="{Binding IncludeExtendedInfo}"
-                              IsEnabled="{Binding IsScanOptionsEnabled}" />
-                </StackPanel>
-            </TabItem>
-        </TabControl>
-
-        <TextBlock Grid.Row="3"
-                   Grid.Column="1"
-                   Foreground="#B00000"
-                   Text="{Binding ValidationMessage}"
-                   VerticalAlignment="Center"
-                   TextTrimming="CharacterEllipsis" />
-
-        <Grid Grid.Row="3"
-              Grid.Column="2"
-              HorizontalAlignment="Right"
-              VerticalAlignment="Center"
-              ColumnDefinitions="Auto,Auto"
-              ColumnSpacing="6">
-            <Button Grid.Column="0"
-                    Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
-                    Width="72"
-                    Height="25"
-                    Command="{Binding ConfirmCommand}" />
-            <Button Grid.Column="1"
-                    Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
-                    Width="72"
-                    Height="25"
-                    Click="OnCancelClicked" />
         </Grid>
     </Grid>
 </Window>
