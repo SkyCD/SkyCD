@@ -53,6 +53,7 @@ public partial class MainWindow : Window
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly CatalogDocumentRepository catalogRepository;
     private readonly StatusVariantDocumentRepository statusVariantRepository;
+    private readonly ScanExclusionRuleDocumentRepository scanExclusionRuleRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private readonly IMediaDriveProvider mediaDriveProvider;
@@ -75,6 +76,8 @@ public partial class MainWindow : Window
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
         statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
+        scanExclusionRuleRepository =
+            (ScanExclusionRuleDocumentRepository)repositoryManager.For<ScanExclusionRuleDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -709,6 +712,7 @@ public partial class MainWindow : Window
                 string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
                 targetParentId,
                 dialogVm.IncludeExtendedInfo,
+                traversal: BuildScanTraversalOptions(),
                 authMethod: loginVm.AuthMethod,
                 keyFilePath: string.IsNullOrWhiteSpace(loginVm.KeyFilePath) ? null : loginVm.KeyFilePath,
                 keyFilePassphrase: string.IsNullOrEmpty(loginVm.KeyFilePassphrase) ? null : loginVm.KeyFilePassphrase,
@@ -806,6 +810,7 @@ public partial class MainWindow : Window
                 RootType: rootType,
                 IncludeMediaInfo: dialogVm.IncludeMediaInfo,
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                Traversal: BuildScanTraversalOptions(),
                 LocationId: dialogVm.SelectedLocationId);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
@@ -879,7 +884,8 @@ public partial class MainWindow : Window
                 TargetParentId: targetParentId,
                 RootType: rootType,
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
-                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
+                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                Traversal: BuildScanTraversalOptions());
 
             var scanner = new FolderCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
@@ -1156,11 +1162,15 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         e.Dialog.SetCustomProperties(options.CustomProperties);
+        e.Dialog.SetScanOptions(options.SkipSymbolicLinks, options.HiddenSystemFilePolicy, options.SkipRecycleBins,
+            options.SkipWellKnownSystemFolders, options.SkipEmptyFolders, options.SkipOnlineOnlyCloudFiles);
+        e.Dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
+        e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -1191,8 +1201,16 @@ public partial class MainWindow : Window
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
+            var scanSettings = e.Dialog.GetScanOptions();
+            options.SkipSymbolicLinks = scanSettings.SkipSymbolicLinks;
+            options.HiddenSystemFilePolicy = scanSettings.HiddenSystemFilePolicy;
+            options.SkipRecycleBins = scanSettings.SkipRecycleBins;
+            options.SkipWellKnownSystemFolders = scanSettings.SkipWellKnownSystemFolders;
+            options.SkipEmptyFolders = scanSettings.SkipEmptyFolders;
+            options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
+            scanExclusionRuleRepository.ReplaceAll(e.Dialog.GetScanExclusionRules());
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
@@ -1211,6 +1229,7 @@ public partial class MainWindow : Window
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
         e.Dialog.ConfigurePluginRequested -= OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
+        e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
@@ -1372,6 +1391,13 @@ public partial class MainWindow : Window
     private AppOptionsDocument LoadAppOptions()
     {
         return appOptionsRepository.GetOrCreateAppOptions();
+    }
+
+    private ScanTraversalOptions BuildScanTraversalOptions()
+    {
+        return ScanSettingsApplicator.BuildTraversalOptions(
+            LoadAppOptions(),
+            scanExclusionRuleRepository.GetOrdered());
     }
 
     private void SaveAppOptions(AppOptionsDocument options)
@@ -1538,6 +1564,23 @@ public partial class MainWindow : Window
 
         statusVariantRepository.ReplaceAll(statusVariantRepository.CreateDefaultEntries());
         dialogVm.SetStatusVariants(statusVariantRepository.GetOrdered());
+    }
+
+    private async void OnResetScanExclusionRulesRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var confirmed = await ShowResetScanRulesPromptAsync();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        scanExclusionRuleRepository.ReplaceAll(scanExclusionRuleRepository.CreateDefaultEntries());
+        dialogVm.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
     }
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
@@ -2172,6 +2215,13 @@ public partial class MainWindow : Window
     private async Task<bool> ShowResetStatusesPromptAsync()
     {
         var dialog = new ResetStatusesConfirmWindow();
+        var result = await dialog.ShowDialog<bool?>(this);
+        return result == true;
+    }
+
+    private async Task<bool> ShowResetScanRulesPromptAsync()
+    {
+        var dialog = new ResetScanRulesConfirmWindow();
         var result = await dialog.ShowDialog<bool?>(this);
         return result == true;
     }

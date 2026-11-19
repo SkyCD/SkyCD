@@ -34,4 +34,16 @@ public sealed class AppOptionsDocument
 
     public bool IsBackgroundMediaSyncEnabled { get; set; }
 
+    public bool SkipSymbolicLinks { get; set; } = false;
+
+    public string HiddenSystemFilePolicy { get; set; } = "Include";
+
+    public bool SkipRecycleBins { get; set; } = true;
+
+    public bool SkipWellKnownSystemFolders { get; set; } = true;
+
+    public bool SkipEmptyFolders { get; set; } = false;
+
+    public bool SkipOnlineOnlyCloudFiles { get; set; } = false;
+
 }

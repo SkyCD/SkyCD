@@ -213,6 +213,12 @@ internal sealed class FileSystemCatalogTraverser
                     documents,
                     isRoot: false);
 
+                if (context.Traversal.SkipEmptyFolders && subDirDirectChildren == 0)
+                {
+                    ReportSkip(subDir.FullPath, "Empty folder excluded by policy.", "process-directory");
+                    continue;
+                }
+
                 var subDirDoc = new CatalogDocument
                 {
                     Id = subDirId,
@@ -356,9 +362,46 @@ internal sealed class FileSystemCatalogTraverser
             return false;
         }
 
+        if (context.Traversal.SkipRecycleBins && WellKnownScanExclusions.RecycleBinNames.Contains(entry.Name))
+        {
+            skipReason = "Recycle bin excluded by policy.";
+            return false;
+        }
+
+        if (context.Traversal.SkipWellKnownSystemFolders)
+        {
+            var wellKnownNames = entry.IsDirectory
+                ? WellKnownScanExclusions.SystemFolderNames
+                : WellKnownScanExclusions.SystemFileNames;
+            if (wellKnownNames.Contains(entry.Name))
+            {
+                skipReason = "Well-known system entry excluded by policy.";
+                return false;
+            }
+        }
+
         if (ShouldSkipHiddenOrSystem(entry.Attributes))
         {
             skipReason = "Hidden/system entry excluded by policy.";
+            return false;
+        }
+
+        if (context.Traversal.SkipOnlineOnlyCloudFiles && (entry.Attributes & FileAttributes.Offline) != 0)
+        {
+            skipReason = "Online-only cloud file excluded by policy.";
+            return false;
+        }
+
+        var ignoreCase = OperatingSystem.IsWindows();
+        if (ScanExclusionRule.IsExcludedByAny(context.Traversal.ExclusionRules, entry.Name, entry.IsDirectory, ignoreCase))
+        {
+            skipReason = "Excluded by rule.";
+            return false;
+        }
+
+        if (!ScanExclusionRule.PassesInclusion(context.Traversal.InclusionRules, entry.Name, entry.IsDirectory, ignoreCase))
+        {
+            skipReason = "Not matched by any inclusion rule.";
             return false;
         }
 

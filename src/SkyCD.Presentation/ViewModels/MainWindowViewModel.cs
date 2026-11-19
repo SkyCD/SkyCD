@@ -70,7 +70,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         return true;
                     }, null, token, canPublish: canPublish);
                     if (published) RefreshPreview();
-                }, () => !isDisposed && !IsProgressVisible, volumeMetadata: volumeMetadataProvider);
+                }, () => !isDisposed && !IsProgressVisible, volumeMetadata: volumeMetadataProvider,
+                traversalFactory: scanTraversalFactory);
             backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
             backgroundMediaSync.Start();
         }
@@ -91,6 +92,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly LocationDocumentRepository? locationRepository;
     private readonly VirtualCollectionService? collectionService;
     private readonly VirtualCollectionDocumentRepository? collectionRepository;
+    private readonly Func<ScanTraversalOptions>? scanTraversalFactory;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
@@ -287,6 +289,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         this.collectionService = this.collectionRepository is not null
             ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, entries => ProjectLocations(ProjectLending(entries)))
             : null;
+        this.scanTraversalFactory = CreateScanTraversalFactory(this.catalogRepository);
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
@@ -367,6 +370,56 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 ?? database.CreateCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName);
             var repository = new TagDocumentRepository();
             repository.Initialize(typeof(TagDocument), mapping.CollectionName, collection);
+            return repository;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Builds the background-sync traversal policy from persisted scan settings, opening the
+    /// sibling repositories on the catalog database like <see cref="CreateTagDocuments"/>.
+    /// </summary>
+    private static Func<ScanTraversalOptions>? CreateScanTraversalFactory(CatalogDocumentRepository catalog)
+    {
+        var appOptions = OpenSiblingRepository<AppOptionsDocument, AppOptionsDocumentRepository>(catalog);
+        var scanRules = OpenSiblingRepository<ScanExclusionRuleDocument, ScanExclusionRuleDocumentRepository>(catalog);
+        if (appOptions is null || scanRules is null)
+        {
+            return null;
+        }
+
+        return () => ScanSettingsApplicator.BuildTraversalOptions(
+            appOptions.GetOrCreateAppOptions(),
+            scanRules.GetOrdered());
+    }
+
+    private static TRepository? OpenSiblingRepository<TDocument, TRepository>(CatalogDocumentRepository catalog)
+        where TDocument : class, new()
+        where TRepository : RepositoryBase<TDocument>, new()
+    {
+        try
+        {
+            var database = catalog.Collection?.Database;
+            if (database is null)
+            {
+                return null;
+            }
+
+            var mapping = (CouchbaseDocument?)typeof(TDocument)
+                .GetCustomAttributes(typeof(CouchbaseDocument), inherit: false)
+                .FirstOrDefault();
+            if (mapping is null || string.IsNullOrWhiteSpace(mapping.CollectionName))
+            {
+                return null;
+            }
+
+            var collection = database.GetCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName)
+                ?? database.CreateCollection(mapping.CollectionName, global::Couchbase.Lite.Collection.DefaultScopeName);
+            var repository = new TRepository();
+            repository.Initialize(typeof(TDocument), mapping.CollectionName, collection);
             return repository;
         }
         catch
