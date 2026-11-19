@@ -49,6 +49,8 @@ public sealed class FtpCatalogConnector : IRemoteCatalogConnector
 
     public RemoteTlsMode DefaultTlsMode => defaultTlsMode;
 
+    public StringComparer PathComparer => StringComparer.Ordinal;
+
     public string NormalizePath(string? path) => FtpPath.Normalize(path);
 
     public bool CanConfirmCredentials(RemoteCredentials credentials) =>

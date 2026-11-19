@@ -55,15 +55,19 @@ public sealed class RemoteCatalogProviderTests
     }
 
     [Theory]
-    [InlineData(@"\\server\share\path")]
-    [InlineData("smb://server/share/path")]
-    public void Parse_UncAndSmbAddresses_ResolveToOneLocationModel(string address)
+    [InlineData(@"\\server\share\path", "/share/path")]
+    [InlineData("smb://server/share/path", "/share/path")]
+    [InlineData(@"\\server\share\report%20final", "/share/report%20final")]
+    [InlineData("smb://server/share/report%2520final", "/share/report%20final")]
+    [InlineData(@"\\server\share\a#b", "/share/a#b")]
+    [InlineData("smb://server/share/a%23b", "/share/a#b")]
+    public void Parse_UncAndSmbAddresses_ResolveToOneLocationModel(string address, string expectedPath)
     {
         var location = RemoteLocation.Parse(address);
         Assert.Equal("smb", location.Scheme);
         Assert.Equal("server", location.Host);
         Assert.Equal(445, location.Port);
-        Assert.Equal("/share/path", location.Path);
+        Assert.Equal(expectedPath, location.Path);
     }
 
     [Fact]
@@ -144,6 +148,7 @@ public sealed class RemoteCatalogProviderTests
         public string Scheme => "test";
         public int DefaultPort => 4321;
         public RemoteTlsMode DefaultTlsMode => RemoteTlsMode.Off;
+        public StringComparer PathComparer => StringComparer.Ordinal;
         public string? Username { get; private set; }
         public string? Password { get; private set; }
         public bool DropFirstListing { get; init; }

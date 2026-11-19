@@ -69,7 +69,17 @@ public sealed record RemoteLocation(
         // Windows UNC paths are SMB shares (#626); anything else without a scheme stays FTP.
         if (address.StartsWith(@"\\", StringComparison.Ordinal))
         {
-            return "smb://" + address[2..].Replace('\\', '/');
+            // Each UNC component is escaped so literal '%', '#' and spaces survive the URI
+            // round trip; the host itself is left as written. Supplied SMB URLs are untouched.
+            var segments = address[2..].Split('\\');
+            var escaped = new string[segments.Length];
+            for (var i = 1; i < segments.Length; i++)
+            {
+                escaped[i] = Uri.EscapeDataString(segments[i]);
+            }
+
+            escaped[0] = segments[0];
+            return "smb://" + string.Join("/", escaped);
         }
 
         return "ftp://" + address;

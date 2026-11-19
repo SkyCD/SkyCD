@@ -110,4 +110,18 @@ public sealed class SmbRemoteListingMapperTests
 
         Assert.Empty(mapped);
     }
+
+    [Fact]
+    public void Map_PreservesBoundaryWhitespaceInFilesystemNames()
+    {
+        // Windows names may carry whitespace such as U+3000 at the boundary; it is part of
+        // the name and must survive into the catalog.
+        var entry = Assert.Single(SmbRemoteListingMapper.Map(
+            new[] { Entry("\u3000Reports", length: 1) },
+            "/share/docs",
+            Host));
+
+        Assert.Equal("\u3000Reports", entry.Name);
+        Assert.Equal("/share/docs/\u3000Reports", entry.FullName);
+    }
 }

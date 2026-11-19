@@ -23,22 +23,31 @@ public sealed class SmbCatalogConnector : IRemoteCatalogConnector
 {
     private readonly IScanFileSystem fileSystem;
     private readonly Func<bool> isPlatformSupported;
+    private readonly ISmbNetworkShare networkShares;
 
-    public SmbCatalogConnector() : this(new RealScanFileSystem(), static () => OperatingSystem.IsWindows())
+    public SmbCatalogConnector()
+        : this(new RealScanFileSystem(), static () => OperatingSystem.IsWindows(), new WindowsSmbNetworkShare())
     {
     }
 
     /// <summary>Builds the connector; <paramref name="fileSystem"/> is the test seam for a fake session.</summary>
     public SmbCatalogConnector(IScanFileSystem fileSystem)
-        : this(fileSystem, static () => OperatingSystem.IsWindows())
+        : this(fileSystem, static () => OperatingSystem.IsWindows(), new WindowsSmbNetworkShare())
     {
     }
 
-    /// <summary>Test seam: <paramref name="isPlatformSupported"/> replaces the Windows-only check.</summary>
-    internal SmbCatalogConnector(IScanFileSystem fileSystem, Func<bool> isPlatformSupported)
+    /// <summary>
+    /// Test seam: <paramref name="isPlatformSupported"/> replaces the Windows-only check and
+    /// <paramref name="networkShares"/> replaces the network-provider connection handling.
+    /// </summary>
+    internal SmbCatalogConnector(
+        IScanFileSystem fileSystem,
+        Func<bool> isPlatformSupported,
+        ISmbNetworkShare? networkShares = null)
     {
         this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         this.isPlatformSupported = isPlatformSupported ?? throw new ArgumentNullException(nameof(isPlatformSupported));
+        this.networkShares = networkShares ?? new WindowsSmbNetworkShare();
     }
 
     public string Scheme => "smb";
@@ -47,6 +56,9 @@ public sealed class SmbCatalogConnector : IRemoteCatalogConnector
 
     /// <summary>The Windows redirector secures the transport; FTPS TLS modes do not apply.</summary>
     public RemoteTlsMode DefaultTlsMode => RemoteTlsMode.Off;
+
+    /// <summary>Windows share paths are case-insensitive, like the local scan on Windows.</summary>
+    public StringComparer PathComparer => StringComparer.OrdinalIgnoreCase;
 
     public string NormalizePath(string? path) => FtpPath.Normalize(path);
 
@@ -94,33 +106,40 @@ public sealed class SmbCatalogConnector : IRemoteCatalogConnector
         cancellationToken.ThrowIfCancellationRequested();
 
         var shareRoot = ShareRoot(location);
+        Action? releaseConnection = null;
         if (!credentials.Anonymous)
         {
             // Explicit credentials are attached to the share connection by the Windows
             // network provider; anonymous keeps the current logon session (or guest access).
-            SmbNetworkConnection.Establish(shareRoot, credentials.Domain, resolved.Username, resolved.Password);
+            try
+            {
+                networkShares.Connect(shareRoot, credentials.Domain, resolved.Username, resolved.Password);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw TranslateException(ex, shareRoot, location, isListing: false);
+            }
+
+            var domain = credentials.Domain;
+            var user = resolved.Username;
+            releaseConnection = () => networkShares.Disconnect(shareRoot, domain, user);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Share/root validation: one enumeration step fails typed when the share is missing,
-        // the server is unreachable or the share refuses the account. A missing subfolder is
-        // not a connect failure and is reported by the first listing, like FTP login.
         try
         {
-            using var probe = fileSystem.EnumerateDirectories(shareRoot).GetEnumerator();
-            probe.MoveNext();
+            cancellationToken.ThrowIfCancellationRequested();
+            return new SmbRemoteSession(fileSystem, location, cancellationToken, releaseConnection);
         }
-        catch (OperationCanceledException)
+        catch
         {
+            // A session that never started must not keep the share connection alive.
+            releaseConnection?.Invoke();
             throw;
         }
-        catch (Exception ex)
-        {
-            throw TranslateException(ex, shareRoot, location, isListing: false);
-        }
-
-        return new SmbRemoteSession(fileSystem, location, cancellationToken);
     }
 
     private static string ShareRoot(RemoteLocation location)
@@ -192,31 +211,171 @@ public sealed class SmbCatalogConnector : IRemoteCatalogConnector
     }
 }
 
-/// <summary>Attaches explicit credentials to a Windows share connection (WNetAddConnection2).</summary>
-internal static class SmbNetworkConnection
+/// <summary>
+/// Share connections created for explicit credentials. Implementations must throw
+/// <see cref="Win32Exception"/> with the network-provider error code on failure and must
+/// never throw from <see cref="Disconnect"/>.
+/// </summary>
+internal interface ISmbNetworkShare
 {
-    public static void Establish(string uncShareRoot, string? domain, string username, string password)
-    {
-        var resource = new NETRESOURCE
-        {
-            dwType = RESOURCETYPE_DISK,
-            lpRemoteName = uncShareRoot,
-        };
+    void Connect(string uncShareRoot, string? domain, string username, string password);
 
-        var code = WNetAddConnection2(ref resource, password, FormatUser(domain, username), 0);
-        if (code != 0)
+    void Disconnect(string uncShareRoot, string? domain, string username);
+}
+
+/// <summary>
+/// Attaches explicit credentials to Windows share connections (WNetAddConnection2) and tracks
+/// ownership so a scan releases only connections it created: connections that were already
+/// present (for example mounted by another application) are left alone, and connections are
+/// cancelled only after the last session that uses them has finished (#626 review).
+/// </summary>
+internal sealed class WindowsSmbNetworkShare : ISmbNetworkShare
+{
+    private readonly object gate = new();
+    private readonly Dictionary<(string Share, string User), int> activeUses = new();
+    private readonly HashSet<(string Share, string User)> owned = new();
+
+    public void Connect(string uncShareRoot, string? domain, string username, string password)
+    {
+        lock (gate)
         {
-            throw new Win32Exception(code);
+            var key = (uncShareRoot, SmbNetworkConnection.FormatUser(domain, username));
+            if (activeUses.TryGetValue(key, out var uses))
+            {
+                activeUses[key] = uses + 1;
+                return;
+            }
+
+            if (IsShareConnected(uncShareRoot))
+            {
+                // Joined a connection somebody else established: never cancel it on release.
+                activeUses[key] = 1;
+                return;
+            }
+
+            var code = SmbNetworkConnection.AddConnection(uncShareRoot, domain, username, password);
+            if (code != 0)
+            {
+                throw new Win32Exception(code);
+            }
+
+            activeUses[key] = 1;
+            owned.Add(key);
         }
     }
 
+    public void Disconnect(string uncShareRoot, string? domain, string username)
+    {
+        var cancel = false;
+        lock (gate)
+        {
+            var key = (uncShareRoot, SmbNetworkConnection.FormatUser(domain, username));
+            if (!activeUses.TryGetValue(key, out var uses))
+            {
+                return;
+            }
+
+            if (uses > 1)
+            {
+                activeUses[key] = uses - 1;
+                return;
+            }
+
+            activeUses.Remove(key);
+            cancel = owned.Remove(key);
+        }
+
+        if (cancel)
+        {
+            SmbNetworkConnection.CancelConnection(uncShareRoot);
+        }
+    }
+
+    private static bool IsShareConnected(string uncShareRoot) =>
+        SmbNetworkConnection.IsShareConnected(uncShareRoot);
+}
+
+/// <summary>Raw mpr.dll network-provider calls used by <see cref="WindowsSmbNetworkShare"/>.</summary>
+internal static class SmbNetworkConnection
+{
     /// <summary>Builds the account name the Windows network provider expects: "domain\user".</summary>
     internal static string FormatUser(string? domain, string username) =>
         string.IsNullOrWhiteSpace(domain) || username.Contains('\\', StringComparison.Ordinal)
             ? username
             : domain.Trim() + "\\" + username;
 
+    public static int AddConnection(string uncShareRoot, string? domain, string username, string password)
+    {
+        var resource = new NETRESOURCE
+        {
+            dwType = RESOURCETYPE_DISK,
+            lpRemoteName = uncShareRoot,
+        };
+        return WNetAddConnection2(ref resource, password, FormatUser(domain, username), 0);
+    }
+
+    public static void CancelConnection(string uncShareRoot)
+    {
+        try
+        {
+            WNetCancelConnection2(uncShareRoot, 0, true);
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or IOException)
+        {
+            // Releasing a connection must never fail the scan.
+        }
+    }
+
+    /// <summary>True when the logon session already has this share connected.</summary>
+    public static bool IsShareConnected(string uncShareRoot)
+    {
+        if (WNetOpenEnum(RESOURCE_CONNECTED, RESOURCETYPE_DISK, 0, null, out var handle) != 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var buffer = Marshal.AllocHGlobal(BufferSize);
+            try
+            {
+                while (true)
+                {
+                    var count = -1;
+                    var size = BufferSize;
+                    var code = WNetEnumResource(handle, ref count, buffer, ref size);
+                    if (code == ERROR_NO_MORE_ITEMS || code != 0 || count <= 0)
+                    {
+                        return false;
+                    }
+
+                    var stride = Marshal.SizeOf<NETRESOURCE>();
+                    for (var i = 0; i < count; i++)
+                    {
+                        var entry = Marshal.PtrToStructure<NETRESOURCE>(IntPtr.Add(buffer, i * stride));
+                        if (entry.lpRemoteName is not null &&
+                            entry.lpRemoteName.Equals(uncShareRoot, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+        finally
+        {
+            WNetCloseEnum(handle);
+        }
+    }
+
     private const int RESOURCETYPE_DISK = 1;
+    private const int RESOURCE_CONNECTED = 1;
+    private const int ERROR_NO_MORE_ITEMS = 259;
+    private const int BufferSize = 64 * 1024;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct NETRESOURCE
@@ -226,13 +385,25 @@ internal static class SmbNetworkConnection
         public int dwDisplayType;
         public int dwUsage;
         public string? lpLocalName;
-        public string lpRemoteName;
+        public string? lpRemoteName;
         public string? lpComment;
         public string? lpProvider;
     }
 
     [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
     private static extern int WNetAddConnection2(ref NETRESOURCE netResource, string? password, string? userName, int flags);
+
+    [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
+    private static extern int WNetCancelConnection2(string name, int flags, bool force);
+
+    [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
+    private static extern int WNetOpenEnum(int scope, int type, int usage, IntPtr? resources, out IntPtr enumHandle);
+
+    [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
+    private static extern int WNetEnumResource(IntPtr enumHandle, ref int count, IntPtr buffer, ref int bufferSize);
+
+    [DllImport("mpr.dll")]
+    private static extern int WNetCloseEnum(IntPtr enumHandle);
 }
 
 /// <summary>
@@ -244,12 +415,18 @@ internal sealed class SmbRemoteSession : IRemoteCatalogSession
     private readonly IScanFileSystem fileSystem;
     private readonly RemoteLocation location;
     private readonly CancellationToken cancellationToken;
+    private readonly Action? releaseConnection;
 
-    internal SmbRemoteSession(IScanFileSystem fileSystem, RemoteLocation location, CancellationToken cancellationToken)
+    internal SmbRemoteSession(
+        IScanFileSystem fileSystem,
+        RemoteLocation location,
+        CancellationToken cancellationToken,
+        Action? releaseConnection)
     {
         this.fileSystem = fileSystem;
         this.location = location;
         this.cancellationToken = cancellationToken;
+        this.releaseConnection = releaseConnection;
     }
 
     public IReadOnlyList<RemoteEntry> ListDirectory(string path)
@@ -279,7 +456,13 @@ internal sealed class SmbRemoteSession : IRemoteCatalogSession
 
     public void Dispose()
     {
-        // The Windows share connection outlives the session on purpose: cancelling it could
-        // break other connections of the logon session to the same server.
+        try
+        {
+            releaseConnection?.Invoke();
+        }
+        catch (Exception ex) when (ex is IOException or Win32Exception)
+        {
+            // A connection that cannot be released is already gone; disposal must not throw.
+        }
     }
 }

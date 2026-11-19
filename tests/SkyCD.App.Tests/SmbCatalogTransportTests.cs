@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -14,18 +16,22 @@ namespace SkyCD.App.Tests;
 /// (SMBLibrary is LGPL-3.0-or-later) and CI cannot host a controlled SMB server. Live
 /// verification against a real share is documented in docs/architecture/catalog-scan-traversal.md.
 /// The fake-session tests use anonymous access and override the Windows-only check so they run
-/// on every CI platform without touching the network; explicit credentials are covered by the
-/// translation matrix and the account-name builder.
+/// on every CI platform without touching the network; explicit credentials go through a fake
+/// share-connection seam, and the raw Win32 mapping is covered by the translation matrix.
 /// </summary>
 public sealed class SmbCatalogTransportTests
 {
     private const string Host = "fileserver";
+    private const string Username = "catalog-user";
+    private const string Password = "s3cret-pass";
 
     // ------------------------------------------------------------------ helpers
 
     private static RemoteLocation LocationFor(string uncPath) => RemoteLocation.Parse(uncPath);
 
     private static RemoteCredentials Guest() => new(null, null, anonymous: true);
+
+    private static RemoteCredentials Credentials() => new(Username, Password, anonymous: false, domain: "CORP");
 
     private static void SeedShare(FakeScanFileSystem fileSystem)
     {
@@ -97,10 +103,33 @@ public sealed class SmbCatalogTransportTests
         Assert.Equal("/share/docs", entry.VisitedIdentity);
     }
 
+    [Fact]
+    public void Scan_VisitedIdentity_ComparesCaseInsensitively()
+    {
+        var fileSystem = new FakeScanFileSystem();
+        SeedShare(fileSystem);
+
+        // The alias resolves to a target whose stored case differs from the scanned root.
+        fileSystem.LinkDirectory($@"\\{Host}\share\docs\loop", $@"\\{Host}\share\DOCS");
+        var connector = new SmbCatalogConnector(fileSystem, () => true);
+
+        var scanned = new RemoteCatalogScanner(connector).Scan(new RemoteScanOptions(
+            $@"\\{Host}\share\docs",
+            null,
+            null,
+            anonymous: true,
+            mediaName: null,
+            targetParentId: null,
+            includeExtendedInfo: false));
+
+        Assert.DoesNotContain(scanned, document => document.Name == "loop");
+        Assert.Equal(4, scanned.Count);
+    }
+
     // ------------------------------------------------------------------ typed errors
 
     [Fact]
-    public void Connect_MissingShare_FailsWithTypedConnectionError()
+    public void ListDirectory_MissingShare_FailsWithTypedConnectionError()
     {
         var fileSystem = new FakeScanFileSystem();
         fileSystem.AddDirectory($@"\\{Host}\share");
@@ -110,8 +139,8 @@ public sealed class SmbCatalogTransportTests
             failTimes: int.MaxValue);
         var connector = new SmbCatalogConnector(fileSystem, () => true);
 
-        var exception = Assert.Throws<RemoteConnectionException>(() => connector.Connect(
-            LocationFor($@"\\{Host}\share"), Guest(), CancellationToken.None));
+        using var session = connector.Connect(LocationFor($@"\\{Host}\share"), Guest(), CancellationToken.None);
+        var exception = Assert.Throws<RemoteConnectionException>(() => session.ListDirectory("/share"));
 
         Assert.StartsWith(
             LocalizationService.Current.Format(TextKeys.SmbConnectionFailed, $@"\\{Host}\share"),
@@ -120,7 +149,7 @@ public sealed class SmbCatalogTransportTests
     }
 
     [Fact]
-    public void Connect_RejectedCredentials_FailsWithTypedAuthenticationError()
+    public void ListDirectory_RejectedCredentials_FailsWithTypedAuthenticationError()
     {
         var fileSystem = new FakeScanFileSystem();
         fileSystem.AddDirectory($@"\\{Host}\share");
@@ -130,12 +159,63 @@ public sealed class SmbCatalogTransportTests
             failTimes: int.MaxValue);
         var connector = new SmbCatalogConnector(fileSystem, () => true);
 
-        var exception = Assert.Throws<RemoteAuthenticationException>(() => connector.Connect(
-            LocationFor($@"\\{Host}\share"), Guest(), CancellationToken.None));
+        using var session = connector.Connect(LocationFor($@"\\{Host}\share"), Guest(), CancellationToken.None);
+        var exception = Assert.Throws<RemoteAuthenticationException>(() => session.ListDirectory("/share"));
 
         Assert.Equal(
             LocalizationService.Current.Get(TextKeys.SmbAuthenticationFailed),
             exception.Message);
+    }
+
+    [Fact]
+    public void Connect_CredentialEstablishmentFailure_FailsWithTypedAuthenticationError()
+    {
+        var fileSystem = new FakeScanFileSystem();
+        SeedShare(fileSystem);
+        var shares = new FakeSmbNetworkShare
+        {
+            ConnectFailure = () => new Win32Exception(1326),
+        };
+        var connector = new SmbCatalogConnector(fileSystem, () => true, shares);
+
+        var exception = Assert.Throws<RemoteAuthenticationException>(() => connector.Connect(
+            LocationFor($@"\\{Host}\share\docs"), Credentials(), CancellationToken.None));
+
+        Assert.Equal(
+            LocalizationService.Current.Get(TextKeys.SmbAuthenticationFailed),
+            exception.Message);
+        Assert.Empty(shares.Disconnects);
+    }
+
+    [Fact]
+    public void Dispose_ReleasesTheShareConnection()
+    {
+        var fileSystem = new FakeScanFileSystem();
+        SeedShare(fileSystem);
+        var shares = new FakeSmbNetworkShare();
+        var connector = new SmbCatalogConnector(fileSystem, () => true, shares);
+
+        var session = connector.Connect(LocationFor($@"\\{Host}\share\docs"), Credentials(), CancellationToken.None);
+        Assert.Empty(shares.Disconnects);
+        session.Dispose();
+
+        Assert.Equal(
+            new[] { ($@"\\{Host}\share", @"CORP\" + Username) },
+            shares.Disconnects);
+    }
+
+    [Fact]
+    public void Connect_CancelledAfterEstablish_ReleasesTheShareConnection()
+    {
+        var fileSystem = new FakeScanFileSystem();
+        SeedShare(fileSystem);
+        using var cancelled = new CancellationTokenSource();
+        var shares = new FakeSmbNetworkShare { OnConnect = cancelled.Cancel };
+        var connector = new SmbCatalogConnector(fileSystem, () => true, shares);
+
+        Assert.ThrowsAny<OperationCanceledException>(() => connector.Connect(
+            LocationFor($@"\\{Host}\share\docs"), Credentials(), cancelled.Token));
+        Assert.Single(shares.Disconnects);
     }
 
     [Fact]
@@ -227,5 +307,27 @@ public sealed class SmbCatalogTransportTests
     public void FormatUser_BuildsTheWindowsAccountName(string? domain, string username, string expected)
     {
         Assert.Equal(expected, SmbNetworkConnection.FormatUser(domain, username));
+    }
+
+    /// <summary>Records share-connection lifetime and can fail like the Windows network provider.</summary>
+    private sealed class FakeSmbNetworkShare : ISmbNetworkShare
+    {
+        public Func<Exception>? ConnectFailure { get; init; }
+
+        public Action? OnConnect { get; init; }
+
+        public List<(string Share, string User)> Disconnects { get; } = [];
+
+        public void Connect(string uncShareRoot, string? domain, string username, string password)
+        {
+            OnConnect?.Invoke();
+            if (ConnectFailure is not null)
+            {
+                throw ConnectFailure();
+            }
+        }
+
+        public void Disconnect(string uncShareRoot, string? domain, string username) =>
+            Disconnects.Add((uncShareRoot, SmbNetworkConnection.FormatUser(domain, username)));
     }
 }

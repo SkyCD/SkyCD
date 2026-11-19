@@ -37,7 +37,8 @@ public static class SmbRemoteListingMapper
 
     /// <summary>
     /// Projects one filesystem entry. Returns null for names the catalog cannot represent
-    /// (empty, dot entries, or names containing a separator).
+    /// (empty, dot entries, or names containing a separator). Boundary whitespace is kept:
+    /// Windows names may legitimately contain characters like U+3000.
     /// </summary>
     public static RemoteEntry? MapItem(ScanFileSystemEntry? entry, string directoryPath, string host)
     {
@@ -46,7 +47,7 @@ public static class SmbRemoteListingMapper
             return null;
         }
 
-        var name = (entry.Name ?? string.Empty).Trim();
+        var name = entry.Name ?? string.Empty;
         if (!IsCatalogName(name))
         {
             return null;

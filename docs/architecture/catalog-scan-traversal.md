@@ -198,7 +198,11 @@ zero SMB protocol code, trading cross-platform access away (see below).
 - Credentials: the login dialog collects domain/user/password (guest or anonymous uses the
   current logon session or the server's guest policy). Explicit credentials are attached to
   the share connection with `WNetAddConnection2` (`mpr.dll`), which negotiates NTLM/Kerberos
-  through the Windows redirector. Secrets never appear in messages or progress output.
+  through the Windows redirector; failures from that call are classified like listing failures
+  (bad logon → `RemoteAuthenticationException`). Connections a scan creates are released when
+  its session ends, and only those: connections that already existed are left alone, so a scan
+  never drops a share another application uses. Secrets never appear in messages or progress
+  output.
 - **Windows-only.** On other platforms the provider fails with the typed, localized
   `RemotePlatformNotSupportedException` instead of an obscure IO error.
 - Failure mapping: logon/access failures (`ERROR_ACCESS_DENIED`, `ERROR_INVALID_PASSWORD`,
@@ -210,9 +214,11 @@ zero SMB protocol code, trading cross-platform access away (see below).
   `ERROR_BAD_NETPATH`, so both are reported as connection failures — the message still names
   the exact UNC path.
 - `tests/SkyCD.App.Tests/SmbCatalogTransportTests.cs` and `SmbRemoteListingMapperTests.cs`
-  cover the provider against a fake session (`FakeScanFileSystem`): nested listings,
-  UNC/`smb://` equivalence, reparse-point identities, missing share/folder, rejected
-  credentials, ACL refusal, cancellation, the platform guard and the Win32 translation matrix.
+  cover the provider against a fake session (`FakeScanFileSystem`) and a fake share connection:
+  nested listings, UNC/`smb://` equivalence (including literal `%` and `#` names),
+  reparse-point identities with case-insensitive comparison, missing share/folder, rejected
+  credentials (both native and listing paths), connection release on dispose and cancellation,
+  ACL refusal, cancellation, the platform guard and the Win32 translation matrix.
   CI cannot host a controlled SMB server (a Samba container needs Linux/Docker), so live
   verification is manual: on Windows, share a folder (or use a NAS), then in Add To List add
   both `\\server\share\path` and `smb://server/share/path` with and without domain credentials

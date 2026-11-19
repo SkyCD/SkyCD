@@ -84,7 +84,7 @@ public sealed class RemoteCatalogScanner
                 permission: null,
                 modifiedUtc: null,
                 isRoot: true,
-                visited: new HashSet<string>(StringComparer.Ordinal),
+                visited: new HashSet<string>(connector.PathComparer),
                 listedRef: ref listedCount);
 
             if (tree is null)

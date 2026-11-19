@@ -18,6 +18,12 @@ public interface IRemoteCatalogConnector
     /// <summary>TLS mode this protocol defaults to; an address may override it (see RemoteLocation).</summary>
     RemoteTlsMode DefaultTlsMode { get; }
 
+    /// <summary>
+    /// How this protocol compares paths for the shared visited-identity logic: Windows-like
+    /// providers (SMB) are case-insensitive, server-defined providers (FTP, SFTP, WebDAV) are not.
+    /// </summary>
+    StringComparer PathComparer { get; }
+
     string NormalizePath(string? path);
 
     bool CanConfirmCredentials(RemoteCredentials credentials);
