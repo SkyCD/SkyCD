@@ -435,7 +435,8 @@ public sealed class AcpDescriptionTests
                 file.WriteByte(42);
             }
             var bytes = buffer.ToArray();
-            using var client = new HttpClient(new AgentArchiveHandler(bytes));
+            var handler = new AgentArchiveHandler(bytes);
+            using var client = new HttpClient(handler);
             var distribution = new[] { "windows", "linux", "darwin" }
                 .SelectMany(os => new[] { "x86_64", "aarch64" }.Select(arch => os + "-" + arch))
                 .ToDictionary(platform => platform, _ => new
@@ -458,21 +459,36 @@ public sealed class AcpDescriptionTests
             var agent = Assert.Single(dialog.AvailableAcpAgents);
             Assert.True(agent.CanInstall);
             Assert.Equal(executableName, agent.ExpectedExecutable);
+            Assert.False(dialog.HasAcpSelection);
+            Assert.Null(dialog.AcpSelectionLabel);
+            var loadingLabel = dialog.AcpLoadingLabel;
+            handler.OnRequest = () =>
+            {
+                Assert.True(dialog.IsAcpLoading);
+                Assert.Contains(agent.Name, dialog.AcpLoadingLabel);
+                Assert.NotEqual(loadingLabel, dialog.AcpLoadingLabel);
+            };
 
-            await dialog.InstallAcpAgentAsync(agent, CancellationToken.None);
+            var error = await dialog.InstallAcpAgentAsync(agent, CancellationToken.None);
+
+            Assert.False(dialog.IsAcpLoading);
+            Assert.Equal(loadingLabel, dialog.AcpLoadingLabel);
 
             Assert.False(File.Exists(settingsPath));
             if (escapesInstallFolder)
             {
                 Assert.Null(dialog.SelectedAcpAgent);
                 Assert.Empty(dialog.InstalledAcpAgents);
-                Assert.Contains("outside its install folder", dialog.AcpAlertMessage);
+                Assert.Contains("outside its install folder", error);
                 Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(directory.FullName, "acp-agents")));
                 return;
             }
 
             var installed = Assert.Single(dialog.InstalledAcpAgents);
+            Assert.Null(error);
             Assert.Equal(installed, dialog.SelectedAcpAgent);
+            Assert.True(dialog.HasAcpSelection);
+            Assert.Contains(installed.Name, dialog.AcpSelectionLabel);
             Assert.Empty(dialog.AvailableAcpAgents);
             Assert.Equal(new[] { "--acp" }, installed.Arguments);
             dialog.ConfirmCommand.Execute(null);
@@ -534,8 +550,13 @@ public sealed class AcpDescriptionTests
 
     private sealed class AgentArchiveHandler(byte[] content) : HttpMessageHandler
     {
+        public Action? OnRequest { get; set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) });
+        {
+            OnRequest?.Invoke();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) });
+        }
     }
 
     private sealed class DescriptionHost : IDescriptionHostApi

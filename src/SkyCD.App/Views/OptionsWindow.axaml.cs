@@ -104,8 +104,49 @@ public partial class OptionsWindow : Window
 
     private async void OnInstallAcpAgentClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: AcpAgentChoice agent } && DataContext is OptionsDialogViewModel vm)
-            await vm.InstallAcpAgentAsync(agent, acpLifetime.Token);
+        if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
+            return;
+
+        var error = await vm.InstallAcpAgentAsync(agent, acpLifetime.Token);
+        if (error is null || acpLifetime.IsCancellationRequested) return;
+
+        var close = new Button
+        {
+            Content = LocalizationService.Current.Get(UiKeys.Ok),
+            IsDefault = true,
+            IsCancel = true,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        };
+        var dialog = new Window
+        {
+            Title = LocalizationService.Current.Format(UiKeys.AcpInstallErrorTitle, agent.Name),
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Width = 440,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            CanMinimize = false,
+            ShowInTaskbar = false,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(16),
+                Spacing = 14,
+                Children =
+                {
+                    new ScrollViewer
+                    {
+                        MaxHeight = 240,
+                        Content = new SelectableTextBlock
+                        {
+                            Text = error,
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                        }
+                    },
+                    close
+                }
+            }
+        };
+        close.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(this);
     }
 
     private void OnSelectAcpAgentClicked(object? sender, RoutedEventArgs e)

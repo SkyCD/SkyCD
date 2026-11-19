@@ -447,10 +447,15 @@
                         <TextBlock Text="{Binding CustomPropertyAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />
                     </StackPanel>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
-                          RowDefinitions="Auto,*,Auto" RowSpacing="12">
-                        <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
-                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 IsEnabled="{Binding !IsAcpLoading}" />
+                          RowDefinitions="Auto,*,Auto">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,0,0,12">
+                            <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
+                                     Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding !IsAcpLoading}" />
+                            <TextBlock Grid.Column="1" IsVisible="{Binding HasAcpSelection}"
+                                       Text="{Binding AcpSelectionLabel}" ToolTip.Tip="{Binding AcpSelectionLabel}"
+                                       MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </Grid>
 
                         <Border Grid.Row="1" BorderBrush="{DynamicResource TabCardBorderBrush}"
                                 BorderThickness="1" CornerRadius="6">
@@ -478,26 +483,16 @@
                                 <StackPanel IsVisible="{Binding IsAcpLoading}" HorizontalAlignment="Center"
                                             VerticalAlignment="Center" Spacing="10">
                                     <ProgressBar Width="124" Height="5" IsIndeterminate="{Binding IsAcpLoading}" />
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.LoadingAcpAgents}}"
-                                               IsVisible="{Binding !InstallingAcpAgentName}" HorizontalAlignment="Center" />
-                                    <TextBlock Text="{Binding InstallingAcpAgentName}"
-                                               IsVisible="{Binding !!InstallingAcpAgentName}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding AcpLoadingLabel}" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Grid>
                         </Border>
 
                         <StackPanel Grid.Row="2" Spacing="6">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                           Text="{i18n:Translate {x:Static i18n:UiKeys.SelectAcpAgent}}"
-                                           IsVisible="{Binding !SelectedAcpAgent}" />
-                                <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                           Text="{Binding SelectedAcpAgent.Name}"
-                                           IsVisible="{Binding !!SelectedAcpAgent}" />
-
-                            </Grid>
-                            <TextBlock Text="{Binding AcpRegistryStatus}" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding AcpAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />
+                            <TextBlock IsVisible="{Binding HasAcpRegistryStatus}" Text="{Binding AcpRegistryStatus}"
+                                       Margin="0,6,0,0" TextWrapping="Wrap" />
+                            <TextBlock IsVisible="{Binding HasAcpAlert}" Text="{Binding AcpAlertMessage}"
+                                       Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#DC2626" />
                         </StackPanel>
                     </Grid>
                     <Border Grid.Row="4"
