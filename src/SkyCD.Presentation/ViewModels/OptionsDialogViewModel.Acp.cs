@@ -28,9 +28,6 @@ public partial class OptionsDialogViewModel
     public bool HasAvailableAcpAgents => AvailableAcpAgents.Count != 0;
     public bool HasNoMatchingAcpAgents => !HasInstalledAcpAgents && !HasAvailableAcpAgents;
 
-    public string? AcpSelectionLabel => SelectedAcpAgent is { IsInstalled: true } agent
-        ? LocalizationService.Current.Format(UiKeys.SelectedAcpAgent, agent.Name) : null;
-    public bool HasAcpSelection => SelectedAcpAgent?.IsInstalled == true;
     public AcpAgentChoice? AcpCardAgent => explicitlySelectedAcpAgent || initialAcpSettings?.IsGenerationEnabled == true
         ? SelectedAcpAgent : null;
     public string AcpCardStatus => LocalizationService.Current.Get(explicitlySelectedAcpAgent
@@ -42,7 +39,6 @@ public partial class OptionsDialogViewModel
         : LocalizationService.Current.Get(UiKeys.LoadingAcpAgents);
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AcpSelectionLabel), nameof(HasAcpSelection))]
     private AcpAgentChoice? selectedAcpAgent;
     [ObservableProperty] private string acpSearchText = string.Empty;
     [ObservableProperty]

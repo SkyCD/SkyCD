@@ -466,8 +466,7 @@ public sealed class AcpDescriptionTests
             var agent = Assert.Single(dialog.AvailableAcpAgents);
             Assert.True(agent.CanInstall);
             Assert.Equal(executableName, agent.ExpectedExecutable);
-            Assert.False(dialog.HasAcpSelection);
-            Assert.Null(dialog.AcpSelectionLabel);
+            Assert.Null(dialog.AcpCardAgent);
             var loadingLabel = dialog.AcpLoadingLabel;
             handler.OnRequest = () =>
             {
@@ -494,8 +493,7 @@ public sealed class AcpDescriptionTests
             var installed = Assert.Single(dialog.InstalledAcpAgents);
             Assert.Null(error);
             Assert.Equal(installed, dialog.SelectedAcpAgent);
-            Assert.True(dialog.HasAcpSelection);
-            Assert.Contains(installed.Name, dialog.AcpSelectionLabel);
+            Assert.Equal(installed, dialog.AcpCardAgent);
             Assert.Empty(dialog.AvailableAcpAgents);
             Assert.Equal(new[] { "--acp" }, installed.Arguments);
             dialog.ConfirmCommand.Execute(null);

@@ -64,7 +64,6 @@ public static class UiKeys
     public const string Settings = "core.ui.Settings";
     public const string Search = "core.ui.Search";
     public const string AcpAgents = "core.ui.AcpAgents";
-    public const string SelectedAcpAgent = "core.ui.SelectedAcpAgent";
     public const string AcpAgentInstalled = "core.ui.AcpAgentInstalled";
     public const string SearchAcpAgents = "core.ui.SearchAcpAgents";
     public const string AcpAgentsAvailable = "core.ui.AcpAgentsAvailable";

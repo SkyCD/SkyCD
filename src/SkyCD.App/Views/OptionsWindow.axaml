@@ -490,14 +490,10 @@
                     </StackPanel>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,0,0,12">
-                            <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
-                                     Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     IsEnabled="{Binding !IsAcpLoading}" />
-                            <TextBlock Grid.Column="1" IsVisible="{Binding HasAcpSelection}"
-                                       Text="{Binding AcpSelectionLabel}" ToolTip.Tip="{Binding AcpSelectionLabel}"
-                                       MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        </Grid>
+                        <TextBox Margin="0,0,0,12"
+                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
+                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding !IsAcpLoading}" />
 
                         <Border Grid.Row="1" BorderBrush="{DynamicResource TabCardBorderBrush}"
                                 BorderThickness="1" CornerRadius="6">
