@@ -314,7 +314,10 @@ public sealed class FtpCatalogTransportTests
         var location = RemoteLocation.Parse($"ftp://127.0.0.1:{server.Port}/");
 
         Assert.Throws<RemoteAuthenticationException>(() =>
-            new FtpCatalogConnector().Connect(location, "alice\r\nUSER root", "secret-pass", CancellationToken.None));
+            new FtpCatalogConnector().Connect(
+                location,
+                new RemoteCredentials("alice\r\nUSER root", "secret-pass", false),
+                CancellationToken.None));
 
         Assert.Empty(server.Commands);
     }

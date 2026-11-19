@@ -44,8 +44,10 @@ Failed and skipped items are reported through `IOperationProgress.ReportFailed` 
 `RemoteCatalogScanner` selects an `IRemoteCatalogConnector` from `RemoteCatalogProviderRegistry`
 by URL scheme. A provider supplies its default port, path and credential rules, connection error
 messages, and `IRemoteCatalogSession` directory listings. Registering another provider does not
-change traversal or the login flow. FTP is the only registered transport; addresses without a scheme
-default to FTP. Unsupported schemes fail before connecting with a localized typed error.
+change traversal. FTP (`ftp://`, port 21) and SFTP (`sftp://`, port 22) are registered transports;
+addresses without a scheme default to FTP. Unsupported schemes fail before connecting with a
+localized typed error. The login dialog adds SFTP-only fields (port, authentication method,
+key file, passphrase and host-key confirmation) when the selected scheme is `sftp`.
 
 Remote scans use the same bounded retry, cancellation and statistics infrastructure. The traversal
 policy is supplied through `RemoteScanOptions.Traversal`; when omitted, `ScanTraversalOptions.Default`
@@ -55,7 +57,14 @@ is used. The parsed public URL omits credentials; providers supply normalized di
 
 - FTP listings do not expose reparse points, so `LinkFollowPolicy` does not apply; a server-side
   symbolic link is reported as a file entry and is not descended into.
-- The **stable visited identity** of a remote directory is the path normalized by its provider.
+- SFTP listings do expose symbolic links. A symlink is resolved to its target before mapping:
+  a symlinked directory is catalogued under its link name but carries the target's path as its
+  `RemoteEntry.VisitedIdentity`, so the shared visited-identity logic treats it as a cycle
+  candidate — a link back into an already visited directory is skipped instead of recursed,
+  and every alias of the same target is traversed at most once. A dangling link stays a file
+  entry and is never descended into.
+- The **stable visited identity** of a remote directory is the path normalized by its provider
+  (or the resolved target path for symlinked directories).
   FTP collapses `.`, `..`, duplicate and trailing separators.
 - A directory whose identity was already visited is **skipped** as a cycle, never descended
   into, so a server that lists a parent back into its child cannot loop the scan.
@@ -65,8 +74,9 @@ is used. The parsed public URL omits credentials; providers supply normalized di
 - A dropped connection (`RemoteConnectionException`) is **transient** and is retried.
 - The retry **re-establishes the session** and repeats the listing.
 - Rejected credentials (`RemoteAuthenticationException`), an unsupported scheme
-  (`RemoteSchemeNotSupportedException`), a vanished directory (`RemoteDirectoryNotFoundException`)
-  and a refused listing (`RemoteListingNotSupportedException`) are permanent and are never retried.
+  (`RemoteSchemeNotSupportedException`), a vanished directory (`RemoteDirectoryNotFoundException`),
+  a refused listing (`RemoteListingNotSupportedException`) and an untrusted host key
+  (`RemoteHostKeyException`) are permanent and are never retried.
 
 ### Transport (#580)
 
@@ -84,11 +94,37 @@ The FTP provider uses [FluentFTP](https://www.nuget.org/packages/FluentFTP) (MIT
   `FtpCatalogTransportTests` to cover nested listings, MLSD-less servers, refused listings,
   rejected credentials, missing directories and interrupted connections over a real socket.
 
+### SFTP transport (#624)
+
+The SFTP provider uses [SSH.NET](https://www.nuget.org/packages/SSH.NET) (MIT):
+
+- `SftpCatalogConnector` opens one `Renci.SshNet.SftpClient` per session with 15 s handshake /
+  20 s operation timeouts. Password authentication and private-key authentication (key file plus
+  optional passphrase) are supported; secrets are never persisted in the catalog and never appear
+  in string representations or progress messages.
+- SSH.NET handles the SSH transport, the key exchange and the SFTP v3 protocol; `SftpRemoteListingMapper`
+  projects listings onto `RemoteEntry` with the same name, size, permission and UTC timestamp
+  rules as the FTP mapper, and resolves symlinked entries to their target path for the visited
+  identity.
+- **Host keys are verified against `SftpHostKeyStore`** (a per-user JSON file, default
+  `%APPDATA%/SkyCD/sftp-known-hosts.json`). Trust is only created by explicit user confirmation
+  from the login dialog's host-key panel; there is no implicit trust path. An unknown key or a
+  changed fingerprint fails the connection with the typed `RemoteHostKeyException` (localized,
+  carrying the target and the `SHA256:` fingerprint) until the user confirms or replaces the entry.
+- SFTP failures map to the neutral exceptions (`RemoteAuthenticationException`,
+  `RemoteConnectionException`, `RemoteDirectoryNotFoundException`,
+  `RemoteListingNotSupportedException`); timeouts map to the transient
+  `RemoteConnectionException`, cancellation to `OperationCanceledException`.
+- `tests/SkyCD.App.Tests/ScriptedSftpServer.cs` is an in-process SSH/SFTP server (FxSsh, MIT)
+  used by `SftpCatalogTransportTests` to cover nested listings, password and key authentication,
+  auth failure, unknown and changed host keys, cancellation and interrupted connections.
+
 ### Remote skip versus fatal
 
 | Condition | Disposition |
 | --- | --- |
 | Authentication rejected / unsupported scheme | **Fatal** (typed exception) |
+| Host key unknown or changed | **Fatal** (`RemoteHostKeyException`) |
 | Root connect retry exhausted | **Fatal** (`RemoteConnectionException`) |
 | Root listing retry exhausted | **Fatal** (`RemoteConnectionException`) |
 | Cancellation or operation timeout | **Fatal** (`OperationCanceledException`) |

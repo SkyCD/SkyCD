@@ -647,14 +647,18 @@ public partial class MainWindow : Window
                 ? null
                 : vm.SelectedTreeNode?.Key ?? "library";
             var scanOptions = new RemoteScanOptions(
-                dialogVm.SourceValue,
+                loginVm.EffectiveAddress,
                 loginVm.Username,
                 loginVm.Password,
                 loginVm.UseAnonymous,
                 string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
                 targetParentId,
-                dialogVm.IncludeExtendedInfo);
+                dialogVm.IncludeExtendedInfo,
+                authMethod: loginVm.AuthMethod,
+                keyFilePath: string.IsNullOrWhiteSpace(loginVm.KeyFilePath) ? null : loginVm.KeyFilePath,
+                keyFilePassphrase: string.IsNullOrEmpty(loginVm.KeyFilePassphrase) ? null : loginVm.KeyFilePassphrase);
             loginVm.Password = string.Empty;
+            loginVm.KeyFilePassphrase = string.Empty;
 
             var scanner = new RemoteCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };

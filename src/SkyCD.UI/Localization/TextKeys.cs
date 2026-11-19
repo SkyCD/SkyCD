@@ -174,6 +174,13 @@ public static class TextKeys
     public const string FtpConnectionFailed = "core.text.FtpConnectionFailed";
     public const string RemoteDirectoryNotFound = "core.text.RemoteDirectoryNotFound";
     public const string FtpListingNotSupported = "core.text.FtpListingNotSupported";
+    public const string RemoteHostKeyUnknown = "core.text.RemoteHostKeyUnknown";
+    public const string RemoteHostKeyChanged = "core.text.RemoteHostKeyChanged";
+    public const string HostKeyChecking = "core.text.HostKeyChecking";
+    public const string HostKeyCheckFailed = "core.text.HostKeyCheckFailed";
+    public const string HostKeyStatusUnknown = "core.text.HostKeyStatusUnknown";
+    public const string HostKeyStatusTrusted = "core.text.HostKeyStatusTrusted";
+    public const string HostKeyStatusChanged = "core.text.HostKeyStatusChanged";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
     public const string Tags = "core.text.Tags";

@@ -9,4 +9,5 @@ public sealed record RemoteEntry(
     bool IsDirectory,
     long Size,
     string? Permission,
-    DateTime? ModifiedUtc);
+    DateTime? ModifiedUtc,
+    string? VisitedIdentity = null);

@@ -12,7 +12,10 @@ public sealed class RemoteScanOptions
         string? mediaName,
         string? targetParentId,
         bool includeExtendedInfo,
-        ScanTraversalOptions? traversal = null)
+        ScanTraversalOptions? traversal = null,
+        RemoteAuthMethod authMethod = RemoteAuthMethod.Password,
+        string? keyFilePath = null,
+        string? keyFilePassphrase = null)
     {
         Address = address;
         Username = username;
@@ -22,6 +25,9 @@ public sealed class RemoteScanOptions
         TargetParentId = targetParentId;
         IncludeExtendedInfo = includeExtendedInfo;
         Traversal = traversal;
+        AuthMethod = authMethod;
+        KeyFilePath = keyFilePath;
+        KeyFilePassphrase = keyFilePassphrase;
     }
 
     public string Address { get; }
@@ -43,6 +49,15 @@ public sealed class RemoteScanOptions
     /// remote traversal. Null falls back to <see cref="ScanTraversalOptions.Default"/>.
     /// </summary>
     public ScanTraversalOptions? Traversal { get; }
+
+    /// <summary>How the remote server is authenticated.</summary>
+    public RemoteAuthMethod AuthMethod { get; }
+
+    /// <summary>Path of the private key file; used only when <see cref="AuthMethod"/> is <see cref="RemoteAuthMethod.PrivateKey"/>.</summary>
+    public string? KeyFilePath { get; }
+
+    /// <summary>Optional passphrase of the private key file; never included in any string representation.</summary>
+    public string? KeyFilePassphrase { get; }
 
     public override string ToString()
     {
