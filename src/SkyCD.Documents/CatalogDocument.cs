@@ -28,6 +28,16 @@ public sealed class CatalogDocument
 
     public PropertiesCollection Properties { get; init; } = new();
 
+    private (string Borrower, bool Overdue)? lendingState;
+
+    public string LentTo => lendingState?.Borrower ?? string.Empty;
+
+    public bool IsLent => lendingState.HasValue;
+
+    public bool IsLoanOverdue => lendingState?.Overdue == true;
+
+    public void SetLendingState((string Borrower, bool Overdue)? state) => lendingState = state;
+
     public string DisplayType => Type.ToDisplayName();
 
     public bool HasKnownSize => !Properties.TryGetValue("SizeKnown", out var value) ||

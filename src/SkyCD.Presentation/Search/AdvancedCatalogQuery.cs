@@ -109,7 +109,10 @@ public enum AdvancedCatalogField
     SizeBytes,
     Status,
     CustomProperty,
-    Metadata
+    Metadata,
+    ActiveLoan,
+    Borrower,
+    OverdueLoan
 }
 
 public enum AdvancedCatalogOperator

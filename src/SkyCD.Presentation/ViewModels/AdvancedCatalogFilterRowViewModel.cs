@@ -40,7 +40,15 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
     partial void OnSelectedFieldChanged(AdvancedCatalogField value)
     {
         OnPropertyChanged(nameof(IsKeyed));
-        if (value is AdvancedCatalogField.SizeBytes)
+        if (value is AdvancedCatalogField.ActiveLoan or AdvancedCatalogField.OverdueLoan)
+        {
+            SelectedOperator = AdvancedCatalogOperator.IsPresent;
+        }
+        else if (value is AdvancedCatalogField.Borrower)
+        {
+            SelectedOperator = AdvancedCatalogOperator.Contains;
+        }
+        else if (value is AdvancedCatalogField.SizeBytes)
         {
             SelectedOperator = AdvancedCatalogOperator.Equals;
         }

@@ -994,6 +994,8 @@ public static class TellicoParser
                     {
                         entry.Fields.TryAdd("LoanUid", loan.Uid);
                     }
+
+                    break;
                 }
             }
         }

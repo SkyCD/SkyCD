@@ -130,6 +130,7 @@
                                    VerticalAlignment="Center"
                                    Source="{Binding IconGlyph, Converter={StaticResource IconConverter}}" />
                             <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding LoanIndicator}" FontSize="10" Opacity="0.8" VerticalAlignment="Center" />
                         </StackPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>

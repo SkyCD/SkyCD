@@ -901,6 +901,20 @@ public partial class BrowserItemsView : UserControl
         badge.Bind(ToolTip.TipProperty, new Binding("Properties[StatusName]"));
         iconContainer.Children.Add(badge);
 
+        var loanBadge = new TextBlock
+        {
+            Text = "↗",
+            FontWeight = Avalonia.Media.FontWeight.Bold,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = Brushes.White,
+            Foreground = Brushes.Black,
+            FontSize = 10
+        };
+        loanBadge.Bind(IsVisibleProperty, new Binding("IsLent") { FallbackValue = false });
+        loanBadge.Bind(ToolTip.TipProperty, new Binding("LentTo"));
+        iconContainer.Children.Add(loanBadge);
+
         return iconContainer;
     }
 

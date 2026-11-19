@@ -35,6 +35,7 @@ using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Operations;
+using SkyCD.Presentation.Lending;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
@@ -124,6 +125,7 @@ public partial class MainWindow : Window
             subscribedViewModel.AiDescriptionBatchRequested -= OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
+            subscribedViewModel.LoansRequested -= OnLoansRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
@@ -147,6 +149,7 @@ public partial class MainWindow : Window
             subscribedViewModel.AiDescriptionBatchRequested += OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
+            subscribedViewModel.LoansRequested += OnLoansRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
@@ -1104,6 +1107,12 @@ public partial class MainWindow : Window
         e.Complete(accepted == true, e.Dialog.Comments);
     }
 
+    private async void OnLoansRequested(object? sender, LoanDialogRequestedEventArgs e)
+    {
+        var dialog = new LoansWindow { DataContext = e.Dialog };
+        await dialog.ShowDialog(this);
+    }
+
     private async void OnTagsRequested(object? sender, TagsDialogRequestedEventArgs e)
     {
         var dialog = new TagsWindow
@@ -1297,12 +1306,19 @@ public partial class MainWindow : Window
         vm.BeginCatalogLoad();
         var progress = new Progress<int>(vm.ReportCatalogLoadProgress);
         MainWindowViewModel? reloadedViewModel = null;
+        IReadOnlyList<string> loanWarnings = [];
         try
         {
             reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
             {
                 var entries = ExtractCatalogEntries(payload);
-                ReplaceCatalogContent(entries, importProgress);
+                var lending = CatalogLoanService.Open(catalogRepository);
+                lending.CatalogPath = localPath;
+                catalogRepository.Collection.Database.InBatch(() =>
+                {
+                    ReplaceCatalogContent(entries, importProgress);
+                    loanWarnings = new ImportedLoanMapper(lending).Import(entries);
+                });
                 importProgress.Report(90);
                 return new MainWindowViewModel(repositoryManager);
             }, progress);
@@ -1314,6 +1330,10 @@ public partial class MainWindow : Window
             options.LastOpenedCatalogPath = localPath;
             SaveAppOptions(options);
             reloadedViewModel.CompleteOpenCatalog();
+            if (loanWarnings.Count > 0)
+            {
+                reloadedViewModel.StatusText = LocalizationService.Current.Format(UiKeys.LoanImportWarnings, string.Join("; ", loanWarnings));
+            }
             DataContext = reloadedViewModel;
             reloadedViewModel = null; // Ownership passes to the window.
         }
