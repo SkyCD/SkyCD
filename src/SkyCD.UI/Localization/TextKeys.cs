@@ -188,6 +188,9 @@ public static class TextKeys
     public const string HostKeyStatusUnknown = "core.text.HostKeyStatusUnknown";
     public const string HostKeyStatusTrusted = "core.text.HostKeyStatusTrusted";
     public const string HostKeyStatusChanged = "core.text.HostKeyStatusChanged";
+    public const string WebDavConnectionFailed = "core.text.WebDavConnectionFailed";
+    public const string WebDavAuthenticationFailed = "core.text.WebDavAuthenticationFailed";
+    public const string WebDavListingNotSupported = "core.text.WebDavListingNotSupported";
     public const string ReadingRemoteDirectory = "core.text.ReadingRemoteDirectory";
     public const string FoundItemsInRemoteDirectory = "core.text.FoundItemsInRemoteDirectory";
     public const string Tags = "core.text.Tags";

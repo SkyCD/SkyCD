@@ -9,9 +9,12 @@ public sealed class RemoteConnectionException(string scheme, string target, Exce
 {
     private static string FormatMessage(string scheme, string target, string? detail)
     {
-        var message = scheme.Equals("ftp", StringComparison.OrdinalIgnoreCase)
-            ? LocalizationService.Current.Format(TextKeys.FtpConnectionFailed, target)
-            : LocalizationService.Current.Format(TextKeys.RemoteConnectionFailed, scheme.ToUpperInvariant(), target);
+        var message = scheme.ToLowerInvariant() switch
+        {
+            "ftp" => LocalizationService.Current.Format(TextKeys.FtpConnectionFailed, target),
+            "webdav" or "webdavs" => LocalizationService.Current.Format(TextKeys.WebDavConnectionFailed, target),
+            _ => LocalizationService.Current.Format(TextKeys.RemoteConnectionFailed, scheme.ToUpperInvariant(), target),
+        };
         return message + detail;
     }
 }
