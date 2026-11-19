@@ -109,7 +109,7 @@ public sealed class AcpDescriptionTests
     {
         var executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../SkyCD.Acp.FakeAgent/bin/Release/net10.0/",
             OperatingSystem.IsWindows() ? "SkyCD.Acp.FakeAgent.exe" : "SkyCD.Acp.FakeAgent"));
-        var options = Options with { Enabled = true, Executable = executable, Arguments = [scenario], Model = scenario == "normal" ? "fake-model" : null, TimeoutSeconds = scenario == "hang" ? 1 : 10 };
+        var options = Options with { Executable = executable, Arguments = [scenario], Model = scenario == "normal" ? "fake-model" : null, TimeoutSeconds = scenario == "hang" ? 1 : 10 };
         var before = Directory.GetDirectories(Path.GetTempPath(), "skycd-description-*").ToHashSet();
         var generation = AcpDescriptionClient.GenerateAsync(options, Context(new DescriptionContextPart("content-text", "text/plain", "Seeded text")), default);
         if (scenario == "normal") Assert.Equal("A concise cached-content description.", (await generation).Text);
@@ -133,7 +133,7 @@ public sealed class AcpDescriptionTests
         {
             await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
             Assert.Equal(0, calls);
-            var configured = new DescriptionAgentOptions { Enabled = true, Executable = Environment.ProcessPath!, Sources = new(Text: true) };
+            var configured = new DescriptionAgentOptions { Executable = Environment.ProcessPath!, Sources = new(Text: true) };
             await File.WriteAllTextAsync(path, Json(configured));
             await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
             Assert.Equal(1, calls);
@@ -164,7 +164,7 @@ public sealed class AcpDescriptionTests
             OperatingSystem.IsWindows() ? "SkyCD.Acp.FakeAgent.exe" : "SkyCD.Acp.FakeAgent"));
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => AcpDescriptionClient.GenerateAsync(
-            Options with { Enabled = true, Executable = executable, Arguments = ["hang"], TimeoutSeconds = 10 },
+            Options with { Executable = executable, Arguments = ["hang"], TimeoutSeconds = 10 },
             Context(new DescriptionContextPart("content-text", "text/plain", "text")), cancellation.Token));
     }
 
@@ -239,7 +239,7 @@ public sealed class AcpDescriptionTests
     }
 
     [Fact]
-    public void OptionsDetectsLocalAgentAndPersistsSelectionOnlyOnConfirm()
+    public async Task OptionsDetectsLocalAgentAndPersistsSelectionOnlyOnConfirm()
     {
         var directory = Directory.CreateTempSubdirectory("skycd-acp-options-");
         try
@@ -282,22 +282,24 @@ public sealed class AcpDescriptionTests
             }));
 
             var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
-            dialog.LoadAcpSettings(plugin);
+            await dialog.LoadAcpSettingsAsync(plugin);
             Assert.False(dialog.AcpAgents.Single(agent => agent.Name == "Cached Agent").IsInstalled);
             var npmAgent = dialog.AcpAgents.Single(agent => agent.Name == "NPM Agent");
             Assert.Equal(node, npmAgent.Executable);
             Assert.Equal(new[] { npmScript, "--acp" }, npmAgent.Arguments);
+            dialog.AcpSearchText = "npm";
+            Assert.Equal(npmAgent, Assert.Single(dialog.InstalledAcpAgents));
+            Assert.Empty(dialog.AvailableAcpAgents);
+            dialog.AcpSearchText = string.Empty;
             var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
             Assert.True(detected.IsInstalled);
             dialog.SelectedAcpAgent = detected;
-            dialog.AcpEnabled = true;
             Assert.False(File.Exists(configurationPath));
 
             dialog.ConfirmCommand.Execute(null);
 
             Assert.True(dialog.DialogAccepted);
             var saved = plugin.GetAgentSettings();
-            Assert.True(saved.Enabled);
             Assert.Equal(executable, saved.SelectedAgent?.Executable);
             Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
             Assert.True(plugin.GetPlan().IsEnabled);

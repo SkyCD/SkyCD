@@ -1146,11 +1146,11 @@ public partial class MainWindow : Window
         e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         RefreshPlugins(e.Dialog);
-        e.Dialog.LoadAcpSettings(pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault());
 
         var dialog = new OptionsWindow
         {
-            DataContext = e.Dialog
+            DataContext = e.Dialog,
+            AcpSettingsCapability = pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault()
         };
 
         bool? accepted = false;

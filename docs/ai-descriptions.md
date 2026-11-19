@@ -6,10 +6,10 @@ capability using the existing media schema and durable cache infrastructure.
 Automatic metadata extraction never starts an AI agent. No vendor API, model
 download, registry executable installation, or `plugin.json` discovery is used.
 
-Select exactly one file, then use **AI description configuration**. The command
-creates a disabled template at the location shown in the status bar, normally
-`%APPDATA%/SkyCD/ai-descriptions.json`. Edit it to select an installed ACP
-executable and its argument/environment arrays, then explicitly enable it.
+With the plugin enabled, select an installed agent in **Tools → Options → ACP
+agents** and save. The plugin uses that agent for explicit generation requests.
+The **AI description configuration** command shows the advanced settings file,
+normally `%APPDATA%/SkyCD/ai-descriptions.json`.
 The same file configures model (where advertised), output language, prompt and
 version, context/output limits, timeout, permitted input sources, metadata-only
 inference, an optional `AuthMethodId`, and the processing destination. No command

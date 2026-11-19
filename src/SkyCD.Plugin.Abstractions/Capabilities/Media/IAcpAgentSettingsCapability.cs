@@ -13,8 +13,8 @@ public interface IAcpAgentSettingsCapability : IPluginCapability
     /// <summary>Downloads and validates the official registry before replacing the offline cache.</summary>
     Task RefreshRegistryAsync(CancellationToken cancellationToken);
 
-    /// <summary>Saves the selected provider and the user's generation preference.</summary>
-    void SaveAgentSettings(AcpAgentChoice? agent, bool enabled);
+    /// <summary>Saves the selected provider.</summary>
+    void SaveAgentSettings(AcpAgentChoice agent);
 }
 
 /// <summary>An agent displayed in the provider picker.</summary>
@@ -25,12 +25,17 @@ public sealed record AcpAgentChoice(string Name, string? Executable, IReadOnlyLi
 {
     /// <summary>Whether a local executable was found.</summary>
     public bool IsInstalled => Executable is not null;
+
+    /// <summary>The version advertised by the registry.</summary>
+    public string? RegistryVersion { get; init; }
+
+    /// <summary>The agent summary advertised by the registry.</summary>
+    public string? Description { get; init; }
 }
 
 /// <summary>A snapshot of local ACP provider settings.</summary>
 /// <param name="Agents">Agents available to browse.</param>
 /// <param name="SelectedAgent">The current provider, if configured.</param>
-/// <param name="Enabled">Whether AI description generation is enabled.</param>
 /// <param name="RegistryStatus">An optional message about the registry cache.</param>
 public sealed record AcpAgentSettings(IReadOnlyList<AcpAgentChoice> Agents,
-    AcpAgentChoice? SelectedAgent, bool Enabled, string? RegistryStatus);
+    AcpAgentChoice? SelectedAgent, string? RegistryStatus);

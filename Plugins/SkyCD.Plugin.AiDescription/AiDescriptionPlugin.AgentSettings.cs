@@ -68,7 +68,8 @@ public sealed partial class AiDescriptionPlugin
             {
                 var executable = FindExecutable(agent.BinaryCommand, searchDirectories);
                 var npmChoice = executable is null ? FindInstalledNpmAgent(agent, searchDirectories) : null;
-                agents.Add(npmChoice ?? new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments));
+                var choice = npmChoice ?? new AcpAgentChoice(agent.Name, executable, agent.BinaryArguments);
+                agents.Add(choice with { RegistryVersion = agent.Version, Description = agent.Description });
             }
         }
         catch (AcpRegistryException exception)
@@ -98,13 +99,13 @@ public sealed partial class AiDescriptionPlugin
             }
         }
 
-        return new AcpAgentSettings(agents, selected, options.Enabled, status);
+        return new AcpAgentSettings(agents, selected, status);
     }
 
-    public void SaveAgentSettings(AcpAgentChoice? agent, bool enabled)
+    public void SaveAgentSettings(AcpAgentChoice agent)
     {
         var options = ReadAgentSettings();
-        if (agent?.Executable is { } executable)
+        if (agent.Executable is { } executable)
         {
             if (!Path.IsPathFullyQualified(executable) || !File.Exists(executable))
                 throw new DescriptionAgentException("select an installed ACP executable");
@@ -123,13 +124,12 @@ public sealed partial class AiDescriptionPlugin
                 };
             }
         }
-        else if (enabled)
+        else
         {
             throw new DescriptionAgentException("select an installed ACP executable");
         }
 
-        options = options with { Enabled = enabled };
-        if (enabled) options.Validate();
+        options.Validate();
         var fullPath = Path.GetFullPath(configurationPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var temporaryPath = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";

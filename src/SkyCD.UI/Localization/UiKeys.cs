@@ -69,7 +69,10 @@ public static class UiKeys
     public const string AcpAgentNotDetected = "core.ui.AcpAgentNotDetected";
     public const string BrowseAcpExecutable = "core.ui.BrowseAcpExecutable";
     public const string SelectAcpExecutable = "core.ui.SelectAcpExecutable";
-    public const string EnableAiDescriptions = "core.ui.EnableAiDescriptions";
+    public const string SearchAcpAgents = "core.ui.SearchAcpAgents";
+    public const string AcpAgentsAvailable = "core.ui.AcpAgentsAvailable";
+    public const string LoadingAcpAgents = "core.ui.LoadingAcpAgents";
+    public const string UseAcpAgent = "core.ui.UseAcpAgent";
     public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
     public const string ChooseInstalledAcpAgent = "core.ui.ChooseInstalledAcpAgent";
     public const string AcpSettingsLoadError = "core.ui.AcpSettingsLoadError";

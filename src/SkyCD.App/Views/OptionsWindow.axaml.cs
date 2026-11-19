@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.App.Views;
 
@@ -19,11 +20,14 @@ public partial class OptionsWindow : Window
     private const double TargetHeight = 768;
     private const double ScreenUsageFactor = 0.9;
 
+    public IAcpAgentSettingsCapability? AcpSettingsCapability { get; init; }
+
     public OptionsWindow()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
+        Opened += OnLoadAcpAgents;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -65,6 +69,19 @@ public partial class OptionsWindow : Window
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
             vm.ChooseLocalAcpAgent(path);
+    }
+
+    private async void OnLoadAcpAgents(object? sender, EventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel vm)
+            await vm.LoadAcpSettingsAsync(AcpSettingsCapability);
+    }
+
+    private void OnSelectAcpAgentClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: AcpAgentChoice { IsInstalled: true } agent } &&
+            DataContext is OptionsDialogViewModel { CanChooseAcpAgent: true } vm)
+            vm.SelectedAcpAgent = agent;
     }
 
     private void OnOpened(object? sender, EventArgs e)
