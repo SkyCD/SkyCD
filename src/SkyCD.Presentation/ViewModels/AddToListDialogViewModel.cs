@@ -17,10 +17,18 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public AddToListDialogViewModel(
         IMediaDriveProvider? driveProvider = null,
-        AddToListSourceMode initialSourceMode = AddToListSourceMode.Media)
+        AddToListSourceMode initialSourceMode = AddToListSourceMode.Media,
+        IReadOnlyList<LocationItemViewModel>? locationOptions = null)
     {
         this.driveProvider = driveProvider ?? new SystemMediaDriveProvider();
         this.driveProvider.DrivesChanged += OnDrivesChanged;
+        foreach (var option in locationOptions ?? [])
+        {
+            LocationChoices.Add(option);
+        }
+
+        RefreshLocationChoiceLabels();
+        SelectedLocation = LocationChoices[0];
         RefreshDrives();
         if (initialSourceMode != AddToListSourceMode.Media)
         {
@@ -32,10 +40,43 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         {
             vm.RecomputeValidation();
             vm.OnPropertyChanged(nameof(SourceValueLabel));
+            vm.RefreshLocationChoiceLabels();
         });
     }
 
     public ObservableCollection<MediaDriveInfo> AvailableDrives { get; } = [];
+
+    /// <summary>Location picker choices; the first entry is the empty "(none)" choice.</summary>
+    public ObservableCollection<LocationItemViewModel> LocationChoices { get; } =
+    [
+        new(string.Empty, string.Empty)
+    ];
+
+    [ObservableProperty]
+    private LocationItemViewModel? selectedLocation;
+
+    /// <summary>
+    /// The picked location id, or null when "(none)" is selected. The picker binds through
+    /// <see cref="SelectedLocation"/>, which keeps this value in sync in both directions.
+    /// </summary>
+    public string? SelectedLocationId
+    {
+        get => string.IsNullOrEmpty(SelectedLocation?.LocationId) ? null : SelectedLocation!.LocationId;
+        set
+        {
+            SelectedLocation = LocationChoices.FirstOrDefault(choice =>
+                string.Equals(choice.LocationId, value ?? string.Empty, StringComparison.Ordinal))
+                ?? LocationChoices[0];
+        }
+    }
+
+    partial void OnSelectedLocationChanged(LocationItemViewModel? value) =>
+        OnPropertyChanged(nameof(SelectedLocationId));
+
+    private void RefreshLocationChoiceLabels()
+    {
+        LocationChoices[0].Name = LocalizationService.Current.Get(UiKeys.LocationNone);
+    }
 
     [ObservableProperty] private MediaDriveInfo? selectedDrive;
 
@@ -50,6 +91,9 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool IsSourceTitleOnly => SourceMode == AddToListSourceMode.TitleOnly;
 
     public bool IsScanOptionsEnabled => SourceMode != AddToListSourceMode.TitleOnly;
+
+    /// <summary>The location picker applies to media roots created from a drive or a title-only entry.</summary>
+    public bool IsLocationPickerVisible => SourceMode is AddToListSourceMode.Media or AddToListSourceMode.TitleOnly;
 
     public bool IsTargetSelectedFolder => TargetPlacement == AddToListTargetPlacement.SelectedFolder;
 
@@ -226,6 +270,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsSourceInternet));
         OnPropertyChanged(nameof(IsSourceTitleOnly));
         OnPropertyChanged(nameof(IsScanOptionsEnabled));
+        OnPropertyChanged(nameof(IsLocationPickerVisible));
     }
 
     partial void OnSelectedDriveChanged(MediaDriveInfo? value)

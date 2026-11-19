@@ -238,6 +238,7 @@ public static class AdvancedCatalogSearchService
             AdvancedCatalogField.ActiveLoan => MatchText(document.IsLent ? "true" : null, predicate),
             AdvancedCatalogField.Borrower => MatchText(StoredText(document.LentTo), predicate),
             AdvancedCatalogField.OverdueLoan => MatchText(document.IsLoanOverdue ? "true" : null, predicate),
+            AdvancedCatalogField.Location => MatchText(StoredText(document.Location), predicate),
             _ => false
         };
     }

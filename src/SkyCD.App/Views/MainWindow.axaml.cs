@@ -130,6 +130,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.LoansRequested -= OnLoansRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
+            subscribedViewModel.LocationsRequested -= OnLocationsRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
@@ -154,6 +155,7 @@ public partial class MainWindow : Window
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.LoansRequested += OnLoansRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
+            subscribedViewModel.LocationsRequested += OnLocationsRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
@@ -658,7 +660,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider);
+        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider, locationOptions: vm.GetLocationChoices());
         var dialog = new AddToListWindow
         {
             DataContext = dialogVm
@@ -777,7 +779,7 @@ public partial class MainWindow : Window
                 : vm.SelectedTreeNode?.Key ?? "library";
             try
             {
-                vm.AddTitleOnlyMedia(dialogVm.MediaName, targetParentId);
+                vm.AddTitleOnlyMedia(dialogVm.MediaName, targetParentId, dialogVm.SelectedLocationId);
             }
             catch (Exception ex)
             {
@@ -803,7 +805,8 @@ public partial class MainWindow : Window
                 TargetParentId: targetParentId,
                 RootType: rootType,
                 IncludeMediaInfo: dialogVm.IncludeMediaInfo,
-                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
+                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                LocationId: dialogVm.SelectedLocationId);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
                 volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
@@ -1130,6 +1133,16 @@ public partial class MainWindow : Window
             DataContext = e.Dialog
         };
         await dialog.ShowDialog(this);
+    }
+
+    private async void OnLocationsRequested(object? sender, LocationsDialogRequestedEventArgs e)
+    {
+        var dialog = new LocationsWindow
+        {
+            DataContext = e.Dialog
+        };
+        var accepted = await dialog.ShowDialog<bool?>(this);
+        e.Complete(accepted == true);
     }
 
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
@@ -1701,6 +1714,38 @@ public partial class MainWindow : Window
         {
             catalogRepository.Save(entry.Id, entry);
             progress?.Report(++processed * 90 / total);
+        }
+
+        // Imported rows may carry source-specific location data (PhysicalLocation, ZdcStorageLocation);
+        // canonicalize it into the location model now that the entries are persisted. The raw source
+        // keys stay in Properties so export round-trips remain lossless.
+        if (CreateLocationService() is { } locationService)
+        {
+            foreach (var entry in entries)
+            {
+                locationService.CanonicalizeImportedLocation(entry);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Builds a location service on the catalog database for import canonicalization without
+    /// changing the window constructor surface.
+    /// </summary>
+    private SkyCD.Presentation.Locations.CatalogLocationService? CreateLocationService()
+    {
+        try
+        {
+            if (repositoryManager.For<LocationDocument>() is not LocationDocumentRepository locationRepository)
+            {
+                return null;
+            }
+
+            return new SkyCD.Presentation.Locations.CatalogLocationService(catalogRepository, locationRepository);
+        }
+        catch
+        {
+            return null;
         }
     }
 

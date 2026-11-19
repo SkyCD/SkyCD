@@ -182,6 +182,16 @@ text.ScanCanceled: Nuskaitymas atšauktas.
 
 text.ScanFailedItems: "Nuskaitymo metu nepavyko apdoroti {0} elementų. Katalogas nepakeistas."
 
+text.LocationCreated: "Sukurta vieta {0}."
+text.LocationRenamed: "Vieta pervadinta į {0}."
+text.LocationMerged: "Vieta {0} sujungta į {1}."
+text.LocationDeleted: "Ištrinta vieta {0}."
+text.LocationDeletedInUse: "Ištrinta vieta {0} (naudota {1} įrašų)."
+text.LocationNameRequired: "Įveskite vietos pavadinimą."
+text.LocationFilterMatchCount: "{0} įrašų vietoje {1}."
+text.LocationFilterApplied: "Rodomi įrašai vietoje {0}."
+text.LocationFilterCleared: "Rodomos visos vietos."
+
 text.GenerateAiDescriptions: "Generuoti AI aprašymus..."
 text.AiDescriptionUnavailableStatus: "AI aprašymo papildinys nepasiekiamas."
 text.AiDescriptionBatchNoTargets: "Pasirinkite bent vieną katalogo failą aprašymams generuoti."

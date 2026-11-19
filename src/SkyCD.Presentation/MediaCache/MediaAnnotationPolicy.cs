@@ -44,7 +44,8 @@ public static class MediaAnnotationPolicy
         "Comments",
         "Tags",
         "Rating",
-        "Status"
+        "Status",
+        "LocationId"
     };
 
     public static bool IsScanFact(string key)

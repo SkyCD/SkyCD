@@ -106,12 +106,21 @@ public static class ZdcCatalogMapper
         AddIndexEntries(rows, catalog.Children, catalogId, "g", counts);
         counts.Records = counts.Groups + counts.Discs + counts.Entries;
 
+        var skippedReasons = new List<string>(readResult.Warnings);
+        WalkDiscs(catalog.Children, disc =>
+        {
+            if (disc.StorageLocation is not null && string.IsNullOrWhiteSpace(disc.StorageLocation))
+            {
+                skippedReasons.Add($"Disc '{disc.Name}': blank storage location value was ignored.");
+            }
+        });
+
         var summary = new ZdcImportSummary(
             TotalRecordsRead: counts.Records,
             ImportedRecordsCount: counts.Records,
             SkippedRecordsCount: 0,
             IsPartialReport: false,
-            SkippedReasons: readResult.Warnings,
+            SkippedReasons: skippedReasons,
             UnsupportedFields: CollectUnsupportedMembers(database).ToList(),
             DetectedVersion: "9.x");
 

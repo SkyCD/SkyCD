@@ -21,6 +21,9 @@ The import reconstructs the catalog tree the profile stores:
   created/modified stamps, description, volume label, file system, media
   type, volume serial, capacity/free space, options, scan flags `SO_A..SO_G`,
   keywords, storage location, index code, barcode, cover member, and rating.
+  The disc storage location (`L.DS`) travels as `ZdcStorageLocation` and is
+  canonicalized into SkyCD's location model on the host side (issue #647); the
+  raw key is retained on the disc row, so export writes `L.DS` back unchanged.
 - **Disc contents** — directories and files from the disc-tree member
   (`ZdcNodeKind = directory` / `file`) with attributes, timestamps,
   descriptions, keywords, and the size of each file.
@@ -45,11 +48,14 @@ importing generic rows never needs random identifiers.
 ## Diagnostics
 
 Missing covers are reported as warnings and the disc is kept. Unknown
-elements are reported and their contents skipped. A missing disc-tree member,
-duplicate tree reference, invalid number/flag/GUID, or a non-Windows-1252
-byte fails the import with a message naming the member and field. Non-zero
-file/entry type flags are reported in the import summary instead of being
-dropped.
+elements are reported and their contents skipped. A disc whose `DS` attribute
+is present but blank cannot be mapped to a physical storage location; the
+blank value is reported in the import summary (`Disc 'name': blank storage
+location value was ignored.`) instead of being silently dropped. A missing
+disc-tree member, duplicate tree reference, invalid number/flag/GUID, or a
+non-Windows-1252 byte fails the import with a message naming the member and
+field. Non-zero file/entry type flags are reported in the import summary
+instead of being dropped.
 
 ## Encoding and safety limits
 

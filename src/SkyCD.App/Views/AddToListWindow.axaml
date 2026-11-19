@@ -150,6 +150,20 @@
             <StackPanel Spacing="3">
                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
                 <TextBox Classes="source-field" Text="{Binding MediaName}" />
+                <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="3">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Location}}" />
+                    <ComboBox Classes="source-field"
+                              ItemsSource="{Binding LocationChoices}"
+                              SelectedItem="{Binding SelectedLocation}"
+                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Location}}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LocationItemViewModel">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
 
             <Grid Grid.Row="1">

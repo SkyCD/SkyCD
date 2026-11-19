@@ -34,7 +34,7 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
                 AdvancedCatalogField.ActiveLoan or AdvancedCatalogField.OverdueLoan => PresenceOperators,
                 AdvancedCatalogField.Name or AdvancedCatalogField.FullPath or AdvancedCatalogField.Extension
                     or AdvancedCatalogField.DocumentType or AdvancedCatalogField.Status
-                    or AdvancedCatalogField.Borrower => TextOperators,
+                    or AdvancedCatalogField.Borrower or AdvancedCatalogField.Location => TextOperators,
                 _ => AllOperators
             };
 
@@ -68,7 +68,7 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
         {
             SelectedOperator = AdvancedCatalogOperator.IsPresent;
         }
-        else if (value is AdvancedCatalogField.Borrower)
+        else if (value is AdvancedCatalogField.Borrower or AdvancedCatalogField.Location)
         {
             SelectedOperator = AdvancedCatalogOperator.Contains;
         }
