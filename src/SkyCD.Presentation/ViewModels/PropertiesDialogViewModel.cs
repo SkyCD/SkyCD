@@ -227,6 +227,18 @@ public partial class PropertiesDialogViewModel : ObservableObject
             return $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({bytes.ToString("N0", culture)} bytes)";
         }
 
+        if (string.Equals(key, "Attributes", StringComparison.OrdinalIgnoreCase) &&
+            FileAttributesFormatting.TryGetMask(value, out var attributeMask))
+        {
+            return FileAttributesFormatting.FormatFileAttributes(
+                attributeMask,
+                localizationKey =>
+                {
+                    var localized = localizer[localizationKey].Value;
+                    return string.Equals(localized, localizationKey, StringComparison.Ordinal) ? null : localized;
+                });
+        }
+
         if (value is bool boolValue)
         {
             return boolValue ? yesText : noText;

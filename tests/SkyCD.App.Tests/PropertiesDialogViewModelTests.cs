@@ -304,7 +304,6 @@ public class PropertiesDialogViewModelTests
     }
 
     [Theory]
-    [InlineData("Attributes")]
     [InlineData("SizeInBytes")]
     [InlineData("sizeBytesExtra")]
     public void Constructor_LeavesOtherNumericPropertiesUnchanged(string key)
@@ -313,6 +312,15 @@ public class PropertiesDialogViewModelTests
 
         Assert.Equal("1536", vm.InfoProperties[key]);
         Assert.Equal("1536", vm.GetProperties()[key]);
+    }
+
+    [Fact]
+    public void Constructor_RendersAttributeMaskInsteadOfRawNumber()
+    {
+        var vm = CreateWithCulture("1536", CultureInfo.GetCultureInfo("en-US"), "Attributes");
+
+        Assert.Equal("Sparse file, Reparse point", vm.InfoProperties["Attributes"]);
+        Assert.Equal("1536", vm.GetProperties()["Attributes"]);
     }
 
     [Theory]
@@ -480,5 +488,60 @@ public class PropertiesDialogViewModelTests
         {
             CultureInfo.CurrentUICulture = previous;
         }
+    }
+
+    [Fact]
+    public void Constructor_RendersAttributeMaskAsFlagNames()
+    {
+        var vm = CreateWithCulture("5242912", CultureInfo.GetCultureInfo("en"), "Attributes");
+
+        Assert.Equal("Archive, Unpinned, Recall on data access", vm.InfoProperties["Attributes"]);
+        Assert.Equal("5242912", vm.GetProperties()["Attributes"]);
+    }
+
+    [Fact]
+    public void Constructor_LocalizesAttributeMaskForLithuanian()
+    {
+        var vm = CreateWithCulture("5242912", CultureInfo.GetCultureInfo("lt-LT"), "Attributes");
+
+        Assert.Equal("Archyvinis, Neprisegtas, Atsisiunčiama skaitant duomenis", vm.InfoProperties["Attributes"]);
+    }
+
+    [Fact]
+    public void Constructor_RendersNumericAttributeValueAsFlagNames()
+    {
+        var vm = CreateWithCulture(5242912, CultureInfo.GetCultureInfo("en"), "Attributes");
+
+        Assert.Equal("Archive, Unpinned, Recall on data access", vm.InfoProperties["Attributes"]);
+    }
+
+    [Fact]
+    public void Constructor_RendersZeroAttributesAsNone()
+    {
+        var vm = CreateWithCulture("0", CultureInfo.GetCultureInfo("en"), "Attributes");
+
+        Assert.Equal("None", vm.InfoProperties["Attributes"]);
+    }
+
+    [Theory]
+    [InlineData("ReadOnly, Archive")]
+    [InlineData("Archive, ReparsePoint")]
+    public void Constructor_LeavesReadableAttributeTextUnchanged(string stored)
+    {
+        var vm = CreateWithCulture(stored, CultureInfo.GetCultureInfo("en"), "Attributes");
+
+        Assert.Equal(stored, vm.InfoProperties["Attributes"]);
+    }
+
+    [Fact]
+    public void Confirm_KeepsStoredAttributeValueRaw()
+    {
+        var vm = CreateWithCulture("5242912", CultureInfo.GetCultureInfo("en"), "Attributes");
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.True(vm.DialogAccepted);
+        Assert.Equal("Archive, Unpinned, Recall on data access", vm.InfoProperties["Attributes"]);
+        Assert.Equal("5242912", vm.GetProperties()["Attributes"]);
     }
 }
