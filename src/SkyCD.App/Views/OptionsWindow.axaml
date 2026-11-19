@@ -51,8 +51,7 @@
                     </Setter>
                 </ControlTheme>
             </Setter>
-            <Setter Property="Content"
-                    Value="{ReflectionBinding DataContext.AcpCardStatus, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" />
+            <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentSelected}}" />
         </Style>
     </Window.Styles>
 

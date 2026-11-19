@@ -305,7 +305,6 @@ public sealed class AcpDescriptionTests
             Assert.Equal(npmAgent, dialog.AcpCardAgent);
             dialog.SelectAcpAgent(detected);
             Assert.Equal(detected, dialog.AcpCardAgent);
-            var pendingStatus = dialog.AcpCardStatus;
             Assert.False(File.Exists(configurationPath));
 
             dialog.ConfirmCommand.Execute(null);
@@ -317,7 +316,6 @@ public sealed class AcpDescriptionTests
             Assert.True(plugin.GetPlan().IsEnabled);
             await dialog.LoadAcpSettingsAsync(plugin);
             Assert.Equal(executable, dialog.AcpCardAgent?.Executable);
-            Assert.NotEqual(pendingStatus, dialog.AcpCardStatus);
         }
         finally
         {

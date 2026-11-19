@@ -70,8 +70,7 @@ public static class UiKeys
     public const string LoadingAcpAgents = "core.ui.LoadingAcpAgents";
     public const string InstallingAcpAgent = "core.ui.InstallingAcpAgent";
     public const string UseAcpAgent = "core.ui.UseAcpAgent";
-    public const string AcpSelectionPending = "core.ui.AcpSelectionPending";
-    public const string AcpAgentInUse = "core.ui.AcpAgentInUse";
+    public const string AcpAgentSelected = "core.ui.AcpAgentSelected";
     public const string InstallAcpAgent = "core.ui.InstallAcpAgent";
     public const string LocateAcpAgent = "core.ui.LocateAcpAgent";
     public const string AcpFindExecutable = "core.ui.AcpFindExecutable";
