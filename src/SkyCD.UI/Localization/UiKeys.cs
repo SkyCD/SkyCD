@@ -286,4 +286,5 @@ public static class UiKeys
     public const string HiddenSystemPolicySkipHidden = "core.ui.HiddenSystemPolicySkipHidden";
     public const string HiddenSystemPolicySkipSystem = "core.ui.HiddenSystemPolicySkipSystem";
     public const string HiddenSystemPolicySkipHiddenAndSystem = "core.ui.HiddenSystemPolicySkipHiddenAndSystem";
+    public const string NoPluginDescription = "core.ui.NoPluginDescription";
 }

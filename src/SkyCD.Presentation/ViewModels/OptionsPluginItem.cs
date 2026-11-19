@@ -14,7 +14,8 @@ public sealed partial class OptionsPluginItem : ObservableObject
         bool supportsConfiguration = false,
         bool isEnabled = true,
         string? id = null,
-        string? authorUrl = null)
+        string? authorUrl = null,
+        string? description = null)
     {
         Name = name;
         Type = type;
@@ -23,6 +24,7 @@ public sealed partial class OptionsPluginItem : ObservableObject
         SupportsConfiguration = supportsConfiguration;
         this.isEnabled = isEnabled;
         Id = string.IsNullOrWhiteSpace(id) ? name : id;
+        Description = description ?? string.Empty;
     }
 
     public string Id { get; }
@@ -38,6 +40,8 @@ public sealed partial class OptionsPluginItem : ObservableObject
     public string ExtendedInfo { get; }
 
     public bool SupportsConfiguration { get; }
+
+    public string Description { get; }
 
     [ObservableProperty] private bool isEnabled;
 }
