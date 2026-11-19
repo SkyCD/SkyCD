@@ -1379,6 +1379,22 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void Properties_IsOfferedOnceInTopMenus_WithAltEnterShortcut()
+    {
+        var vm = CreateViewModel();
+
+        var propertiesItems = FlattenMenuItems(vm.FileMenuItems)
+            .Concat(FlattenMenuItems(vm.EditMenuItems))
+            .Where(item => ReferenceEquals(item.Command, vm.OpenPropertiesCommand))
+            .ToList();
+
+        var properties = Assert.Single(propertiesItems);
+        Assert.Contains(properties, vm.FileMenuItems);
+        Assert.Equal("Alt+Enter", properties.HotKey);
+        Assert.Equal("Alt+Enter", properties.InputGesture);
+    }
+
+    [Fact]
     public void TreeContextMenu_ListsAddAndDeleteOnceWithShortcuts()
     {
         var vm = CreateViewModel();
