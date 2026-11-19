@@ -346,8 +346,14 @@ public partial class OptionsDialogViewModel : ObservableObject
 
         RefreshFilteredPlugins();
         InfoMessage = LocalizationService.Current.Format(TextKeys.LoadedPluginS, Plugins.Count);
+        OnPropertyChanged(nameof(SelectedPluginDescription));
         ConfigurePluginCommand.NotifyCanExecuteChanged();
     }
+
+    public string SelectedPluginDescription =>
+        string.IsNullOrWhiteSpace(SelectedPlugin?.Description)
+            ? LocalizationService.Current.Get(UiKeys.NoPluginDescription)
+            : SelectedPlugin.Description;
 
     public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
     {
@@ -411,6 +417,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnSelectedPluginChanged(OptionsPluginItem? value)
     {
         pluginSelectionIsAuto = isAutoSelectingPlugin;
+        OnPropertyChanged(nameof(SelectedPluginDescription));
         ConfigurePluginCommand.NotifyCanExecuteChanged();
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
     }

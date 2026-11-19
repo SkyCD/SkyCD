@@ -261,4 +261,5 @@ public static class UiKeys
     public const string RegenerateExisting = "core.ui.RegenerateExisting";
     public const string Start = "core.ui.Start";
     public const string DescriptionResults = "core.ui.DescriptionResults";
+    public const string NoPluginDescription = "core.ui.NoPluginDescription";
 }
