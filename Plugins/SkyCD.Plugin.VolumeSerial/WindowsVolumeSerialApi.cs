@@ -12,14 +12,40 @@ namespace SkyCD.Plugin.VolumeSerial;
 [SupportedOSPlatform("windows")]
 internal sealed class WindowsVolumeSerialApi : IVolumeSerialApi
 {
+    private const uint SemFailCriticalErrors = 0x0001;
+
     public bool IsSupported => true;
 
     public bool TryGetVolumeSerial(string rootPath, out uint volumeSerial)
     {
         volumeSerial = 0;
-        return !string.IsNullOrWhiteSpace(rootPath)
-            && GetVolumeInformation(rootPath, null, 0, out volumeSerial, out _, out _, null, 0);
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            return false;
+        }
+
+        var previousMode = GetThreadErrorMode();
+        if (!SetThreadErrorMode(previousMode | SemFailCriticalErrors, out _))
+        {
+            return false;
+        }
+
+        try
+        {
+            return GetVolumeInformation(rootPath, null, 0, out volumeSerial, out _, out _, null, 0);
+        }
+        finally
+        {
+            SetThreadErrorMode(previousMode, out _);
+        }
     }
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetThreadErrorMode();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetThreadErrorMode(uint dwNewMode, out uint lpOldMode);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

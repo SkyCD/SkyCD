@@ -1603,9 +1603,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var availableDescriptors = pluginManager.GetPluginDescriptors()
-            .Where(static descriptor => descriptor.IsAvailable)
-            .Select(static descriptor => (descriptor.Id, IsEnabled: true))
+        var availableDescriptors = pluginManager.GetAvailablePluginIds<IFileFormatPluginCapability>()
+            .Select(static id => (id, IsEnabled: true))
             .ToArray();
         if (availableDescriptors.Length == 0)
         {

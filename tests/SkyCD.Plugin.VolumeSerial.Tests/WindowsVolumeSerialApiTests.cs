@@ -1,11 +1,50 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using Xunit;
 
 namespace SkyCD.Plugin.VolumeSerial.Tests;
 
 public sealed class WindowsVolumeSerialApiTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TryGetVolumeSerial_RestoresExistingThreadErrorMode(bool missingVolume)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        const uint semNoOpenFileErrorBox = 0x8000;
+        var originalMode = GetThreadErrorMode();
+        try
+        {
+            Assert.True(SetThreadErrorMode(originalMode | semNoOpenFileErrorBox, out _));
+            var expectedMode = GetThreadErrorMode();
+            var root = missingVolume
+                ? Path.Combine(Path.GetTempPath(), $"skycd-missing-volume-{Guid.NewGuid():N}")
+                : Path.GetPathRoot(Path.GetTempPath())!;
+
+            var success = new WindowsVolumeSerialApi().TryGetVolumeSerial(root, out _);
+
+            Assert.Equal(!missingVolume, success);
+            Assert.Equal(expectedMode, GetThreadErrorMode());
+        }
+        finally
+        {
+            SetThreadErrorMode(originalMode, out _);
+        }
+    }
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetThreadErrorMode();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetThreadErrorMode(uint dwNewMode, out uint lpOldMode);
+
     [Fact]
     public void TryGetVolumeSerial_CurrentVolume_RoundTripsLosslessly()
     {

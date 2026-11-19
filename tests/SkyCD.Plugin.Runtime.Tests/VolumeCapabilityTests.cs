@@ -51,12 +51,22 @@ public sealed class VolumeCapabilityTests
     public void ProvidersKeepCollidingKeysWithDeterministicPrecedence()
     {
         var manager = new VolumeExtensionManager([
-            new VolumeProvider("z", "2", new FakeVolumeCapability()),
-            new VolumeProvider("a", "1", new FakeVolumeCapability())]);
+            new VolumeProvider("z", "2", new FakeVolumeCapability { Text = "z-value" }),
+            new VolumeProvider("a", "1", new FakeVolumeCapability { Text = "a-value" })]);
 
         var values = manager.CaptureVolumeMetadata(Volume, default);
 
-        Assert.Equal("fake-serial", Assert.Single(values).Text);
+        Assert.Equal("a-value", Assert.Single(values).Text);
+    }
+
+    [Fact]
+    public void HigherPriorityProviderWinsCollisionsBeforePluginId()
+    {
+        var manager = new VolumeExtensionManager([
+            new VolumeProvider("a", "1", new FakeVolumeCapability { Text = "low" }),
+            new VolumeProvider("z", "1", new FakeVolumeCapability { Priority = 100, Text = "high" })]);
+
+        Assert.Equal("high", Assert.Single(manager.CaptureVolumeMetadata(Volume, default)).Text);
     }
 
     [Fact]
@@ -90,9 +100,11 @@ public sealed class VolumeCapabilityTests
 public sealed class FakeVolumeCapability : IVolumeMetadataCapability
 {
     public bool Fail { get; init; }
+    public int Priority { get; init; }
+    public string Text { get; init; } = "fake-serial";
 
     public VolumeDescriptor Descriptor => new(new MediaMetadataSchema("fake", 1,
-        [new MediaMetadataField("fakeSerial", MediaMetadataType.Text)]));
+        [new MediaMetadataField("fakeSerial", MediaMetadataType.Text)]), Priority);
 
     public VolumeExtractionResult Extract(VolumeMediaContext volume, CancellationToken cancellationToken)
     {
@@ -102,6 +114,6 @@ public sealed class FakeVolumeCapability : IVolumeMetadataCapability
         }
 
         return new VolumeExtractionResult(
-            [new MediaMetadataValue("fakeSerial", MediaMetadataType.Text, Text: "fake-serial")]);
+            [new MediaMetadataValue("fakeSerial", MediaMetadataType.Text, Text: Text)]);
     }
 }

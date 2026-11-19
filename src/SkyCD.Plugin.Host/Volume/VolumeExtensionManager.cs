@@ -61,6 +61,7 @@ public sealed class VolumeExtensionManager : IVolumeMetadataProvider
     }
 
     private IEnumerable<VolumeProvider> OrderedProviders() => providers
-        .OrderBy(static provider => provider.PluginId, StringComparer.Ordinal)
+        .OrderByDescending(static provider => provider.Capability.Descriptor.Priority)
+        .ThenBy(static provider => provider.PluginId, StringComparer.Ordinal)
         .ThenBy(static provider => provider.Capability.GetType().FullName, StringComparer.Ordinal);
 }

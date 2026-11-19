@@ -1,6 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.Logging.Abstractions;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.Repository;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Runtime.Documents;
+using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Runtime.Collections;
@@ -38,6 +44,34 @@ public sealed class VolumeSerialDiscoveryTests
         enabled.Import([plugin], [descriptor]);
         Assert.Single(enabled);
         Assert.Contains(Assert.Single(enabled).Capabilities, capability => capability is IVolumeMetadataCapability);
+    }
+
+    [Fact]
+    public void FileFormatFallback_DoesNotEnableDisabledVolumePlugin()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"skycd-volume-fallback-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var assemblyPath = typeof(VolumeSerialPlugin).Assembly.Location;
+        File.Copy(assemblyPath, Path.Combine(directory, Path.GetFileName(assemblyPath)));
+        using var databaseManager = new DatabaseManager();
+        databaseManager.Connect("default", Path.Combine(directory, "database"));
+        var repositoryManager = new RepositoryManager(databaseManager);
+        var repository = (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();
+        var manager = new PluginManager(NullLogger<PluginManager>.Instance,
+            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+            new DiscoveredPluginFactory(), repository);
+        manager.Discover(directory, new Version(3, 0, 0));
+        manager.SavePluginEnabledStates([("SkyCD.Plugin.VolumeSerial", false)]);
+        manager.Discover(directory, new Version(3, 0, 0));
+
+        var fallbackIds = manager.GetAvailablePluginIds<IFileFormatPluginCapability>();
+        Assert.Empty(fallbackIds);
+        Assert.Contains("SkyCD.Plugin.VolumeSerial", manager.GetAvailablePluginIds<IVolumeMetadataCapability>());
+        manager.SavePluginEnabledStates(fallbackIds.Select(static id => (id, true)));
+        manager.Discover(directory, new Version(3, 0, 0));
+
+        Assert.Empty(manager.Plugins);
+        Assert.False(Assert.Single(manager.GetPluginDescriptors()).IsEnabled);
     }
 
     [Fact]
