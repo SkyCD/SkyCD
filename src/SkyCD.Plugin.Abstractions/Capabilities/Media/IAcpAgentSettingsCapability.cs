@@ -17,8 +17,8 @@ public interface IAcpAgentSettingsCapability : IPluginCapability
     /// <summary>Installs a registry agent locally and returns its launch configuration.</summary>
     Task<AcpAgentChoice> InstallAgentAsync(string registryId, CancellationToken cancellationToken);
 
-    /// <summary>Saves the selected provider.</summary>
-    void SaveAgentSettings(AcpAgentChoice agent);
+    /// <summary>Saves the selected provider and activates it when explicitly chosen by the user.</summary>
+    void SaveAgentSettings(AcpAgentChoice agent, bool activate = false);
 }
 
 /// <summary>An agent displayed in the provider picker.</summary>

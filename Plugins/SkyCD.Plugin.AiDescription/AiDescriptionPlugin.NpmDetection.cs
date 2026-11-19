@@ -28,11 +28,17 @@ public sealed partial class AiDescriptionPlugin
                 : Path.Combine(directory, "..", "lib", "node_modules");
             var root = Path.GetFullPath(Path.Combine(modules, package));
             var script = FindPackageScript(root, package, segments[^1]);
-            if (script is not null)
+            if (script is not null && IsJavaScriptLauncher(script))
                 return new AcpAgentChoice(agent.Name, node, [script, .. agent.NpmArguments]);
         }
 
         return null;
+    }
+
+    private static bool IsJavaScriptLauncher(string path)
+    {
+        var extension = Path.GetExtension(path);
+        return extension is ".js" or ".cjs" or ".mjs";
     }
 
     private static string? FindPackageScript(string root, string package, string command)

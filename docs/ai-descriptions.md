@@ -6,8 +6,9 @@ capability using the existing media schema and durable cache infrastructure.
 Automatic metadata extraction never starts an AI agent. The plugin has no
 vendor API or model download, and plugin discovery uses assembly metadata.
 
-With the plugin enabled, select an installed agent in **Tools → Options → ACP
-agents** and save. The plugin uses that agent for explicit generation requests.
+With the plugin enabled, choose **Use agent** for an installed agent in
+**Tools → Options → ACP agents** and save to activate it for generation.
+Opening Options on its own preserves the saved generation preference.
 The **AI description configuration** command shows the advanced settings file,
 normally `%APPDATA%/SkyCD/ai-descriptions.json`.
 The same file configures model (where advertised), output language, prompt and

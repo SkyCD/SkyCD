@@ -19,7 +19,7 @@ namespace SkyCD.App.Tests;
 public sealed class AcpDescriptionTests
 {
     private static DescriptionContext Context(params DescriptionContextPart[] parts) => new("entry", "source", "context", new(Text: true, Images: true, Audio: true), parts);
-    private static readonly DescriptionAgentOptions Options = new() { MaxOutputCharacters = 100, ProcessingDestination = "unknown", Sources = new(Text: true, Images: true, Audio: true) };
+    private static readonly DescriptionAgentOptions Options = new() { Enabled = true, MaxOutputCharacters = 100, ProcessingDestination = "unknown", Sources = new(Text: true, Images: true, Audio: true) };
     private static string Json(object value) => JsonSerializer.Serialize(value);
     private static string Initialization(bool images = false, int version = 1) => Json(new
     {
@@ -137,7 +137,7 @@ public sealed class AcpDescriptionTests
         {
             await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
             Assert.Equal(0, calls);
-            var configured = new DescriptionAgentOptions { Executable = Environment.ProcessPath!, Sources = new(Text: true) };
+            var configured = new DescriptionAgentOptions { Enabled = true, Executable = Environment.ProcessPath!, Sources = new(Text: true) };
             await File.WriteAllTextAsync(path, Json(configured));
             await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
             Assert.Equal(1, calls);
@@ -291,13 +291,17 @@ public sealed class AcpDescriptionTests
             var npmAgent = dialog.AcpAgents.Single(agent => agent.Name == "NPM Agent");
             Assert.Equal(node, npmAgent.Executable);
             Assert.Equal(new[] { npmScript, "--acp" }, npmAgent.Arguments);
+            File.WriteAllText(Path.Combine(npmPackage.FullName, "cli.sh"), "#!/bin/sh");
+            File.WriteAllText(Path.Combine(npmPackage.FullName, "package.json"),
+                Json(new { name = "@test/agent", bin = "cli.sh" }));
+            Assert.False(plugin.GetAgentSettings().Agents.Single(agent => agent.Name == "NPM Agent").IsInstalled);
             dialog.AcpSearchText = "npm";
             Assert.Equal(npmAgent, Assert.Single(dialog.InstalledAcpAgents));
             Assert.Empty(dialog.AvailableAcpAgents);
             dialog.AcpSearchText = string.Empty;
             var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
             Assert.True(detected.IsInstalled);
-            dialog.SelectedAcpAgent = detected;
+            dialog.SelectAcpAgent(detected);
             Assert.False(File.Exists(configurationPath));
 
             dialog.ConfirmCommand.Execute(null);
@@ -307,6 +311,106 @@ public sealed class AcpDescriptionTests
             Assert.Equal(executable, saved.SelectedAgent?.Executable);
             Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
             Assert.True(plugin.GetPlan().IsEnabled);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SettingsRepairsPreserveLaunchArgumentsAndPrivateConfiguration()
+    {
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-repairs-");
+        try
+        {
+            var configuration = Path.Combine(directory.FullName, "settings.json");
+            var local = directory.CreateSubdirectory("acp-agents");
+            var executable = Path.Combine(local.FullName, OperatingSystem.IsWindows() ? "agent.exe" : "agent");
+            File.WriteAllText(executable, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            var arguments = Enumerable.Repeat("argument", 32).Append(new string('x', 513)).Append("--acp").ToArray();
+            var targets = new[] { "windows", "linux", "darwin" }
+                .SelectMany(os => new[] { "x86_64", "aarch64" }.Select(arch => os + "-" + arch))
+                .ToDictionary(platform => platform, _ => new { cmd = Path.GetFileName(executable), args = arguments });
+            File.WriteAllText(Path.Combine(directory.FullName, AcpAgentRegistry.FileName), Json(new
+            {
+                version = "1.0.0",
+                agents = new[] { new { id = "agent", name = "Agent", version = "1", distribution = new { binary = targets } } }
+            }));
+            var plugin = new AiDescriptionPlugin(configuration, (_, _, _) =>
+                throw new InvalidOperationException("Discovery must not launch processes."));
+            var detected = plugin.GetAgentSettings().Agents.First(agent => agent.Name == "Agent");
+            Assert.Equal(arguments, detected.Arguments);
+            plugin.SaveAgentSettings(detected);
+            Assert.Equal(arguments, plugin.GetAgentSettings().SelectedAgent!.Arguments);
+
+            File.WriteAllText(configuration, Json(new { Executable = executable, Arguments = (string[]?)null }));
+            var settings = plugin.GetAgentSettings();
+            Assert.Empty(settings.SelectedAgent!.Arguments);
+            var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
+            await dialog.LoadAcpSettingsAsync(plugin);
+            Assert.NotEmpty(dialog.AcpAgents);
+            Assert.Equal(executable, dialog.SelectedAcpAgent?.Executable);
+            Assert.Null(dialog.AcpRegistryStatus);
+            plugin.SaveAgentSettings(settings.SelectedAgent);
+            Assert.Empty(plugin.GetAgentSettings().SelectedAgent!.Arguments);
+            if (!OperatingSystem.IsWindows())
+                Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(configuration));
+            Assert.Empty(Directory.GetFiles(directory.FullName, "*.tmp"));
+
+            File.Delete(executable);
+            await dialog.LoadAcpSettingsAsync(plugin);
+            var cachedAgent = dialog.AcpAgents.First(agent => agent.Name == "Agent");
+            var attached = Path.Combine(directory.FullName, Path.GetFileName(executable));
+            File.WriteAllText(attached, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(attached, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            dialog.ChooseLocalAcpAgent(cachedAgent, attached);
+            Assert.Equal(arguments, dialog.SelectedAcpAgent!.Arguments);
+            dialog.ConfirmCommand.Execute(null);
+            Assert.True(dialog.DialogAccepted);
+            Assert.Equal(arguments, plugin.GetAgentSettings().SelectedAgent!.Arguments);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SavedConsentSurvivesProviderChangesAndGatesGeneration(bool enabled)
+    {
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-consent-");
+        try
+        {
+            var configuration = Path.Combine(directory.FullName, "settings.json");
+            var executable = Path.Combine(directory.FullName, OperatingSystem.IsWindows() ? "agent.exe" : "agent");
+            File.WriteAllText(executable, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            var calls = 0;
+            var plugin = new AiDescriptionPlugin(configuration, (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(new GeneratedDescription("description", "agent", null, "1", "1", "English", "test", "unknown", DateTimeOffset.UtcNow));
+            });
+            File.WriteAllText(configuration, Json(new { Enabled = enabled, Executable = executable }));
+            Assert.Equal(enabled, plugin.GetPlan().IsEnabled);
+            var selected = plugin.GetAgentSettings().SelectedAgent!;
+            plugin.SaveAgentSettings(selected);
+            plugin.SaveAgentSettings(selected with { Arguments = ["--acp"] });
+            Assert.Equal(enabled, JsonSerializer.Deserialize<DescriptionAgentOptions>(File.ReadAllText(configuration))!.Enabled);
+            Assert.Equal(enabled, plugin.GetPlan().IsEnabled);
+            if (enabled)
+                await plugin.GenerateAsync(Context(), default);
+            else
+            {
+                await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.GenerateAsync(Context(), default));
+                await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(
+                    AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = new DescriptionHost() }, default));
+            }
+            Assert.Equal(enabled ? 1 : 0, calls);
         }
         finally
         {
@@ -374,6 +478,7 @@ public sealed class AcpDescriptionTests
             dialog.ConfirmCommand.Execute(null);
             Assert.True(dialog.DialogAccepted);
             Assert.Equal(installed.Executable, plugin.GetAgentSettings().SelectedAgent?.Executable);
+            Assert.True(plugin.GetPlan().IsEnabled);
         }
         finally
         {

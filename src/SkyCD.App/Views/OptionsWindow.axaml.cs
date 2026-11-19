@@ -112,7 +112,7 @@ public partial class OptionsWindow : Window
     {
         if (sender is Button { DataContext: AcpAgentChoice { IsInstalled: true } agent } &&
             DataContext is OptionsDialogViewModel { CanChooseAcpAgent: true } vm)
-            vm.SelectedAcpAgent = agent;
+            vm.SelectAcpAgent(agent);
     }
 
     private void OnOpened(object? sender, EventArgs e)

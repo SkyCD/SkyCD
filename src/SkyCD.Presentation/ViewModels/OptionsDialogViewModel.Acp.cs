@@ -17,6 +17,7 @@ public partial class OptionsDialogViewModel
 {
     private IAcpAgentSettingsCapability? acpSettingsCapability;
     private AcpAgentSettings? initialAcpSettings;
+    private bool explicitlySelectedAcpAgent;
 
     public ObservableCollection<AcpAgentChoice> AcpAgents { get; } = [];
     public bool ShowAcpSection => SelectedTabIndex == 5 && IsCurrentCategoryVisibleInSearch;
@@ -97,7 +98,7 @@ public partial class OptionsDialogViewModel
         {
             var installed = await capability.InstallAgentAsync(id, cancellationToken);
             await ReadAcpSettingsAsync(capability, preserveSelection: true, cancellationToken);
-            SelectedAcpAgent = AcpAgents.FirstOrDefault(candidate => candidate.RegistryId == id && candidate.IsInstalled) ?? installed;
+            SelectAcpAgent(AcpAgents.FirstOrDefault(candidate => candidate.RegistryId == id && candidate.IsInstalled) ?? installed);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -167,8 +168,14 @@ public partial class OptionsDialogViewModel
         var local = agent with { Executable = path, CanInstall = false };
         AcpAgents.Remove(agent);
         AcpAgents.Add(local);
-        SelectedAcpAgent = local;
+        SelectAcpAgent(local);
         NotifyAcpAgentListsChanged();
+    }
+
+    public void SelectAcpAgent(AcpAgentChoice agent)
+    {
+        SelectedAcpAgent = agent;
+        explicitlySelectedAcpAgent = true;
     }
 
     private bool TrySaveAcpSettings()
@@ -176,7 +183,7 @@ public partial class OptionsDialogViewModel
         if (IsAcpLoading && InstallingAcpAgentName is not null) return false;
         AcpAlertMessage = null;
         if (initialAcpSettings is not { } initial || acpSettingsCapability is null ||
-            SelectedAcpAgent is not { } selected || Equals(initial.SelectedAgent, selected))
+            SelectedAcpAgent is not { } selected || (!explicitlySelectedAcpAgent && Equals(initial.SelectedAgent, selected)))
             return true;
 
         if (!selected.IsInstalled)
@@ -189,7 +196,7 @@ public partial class OptionsDialogViewModel
 
         try
         {
-            acpSettingsCapability.SaveAgentSettings(selected);
+            acpSettingsCapability.SaveAgentSettings(selected, activate: explicitlySelectedAcpAgent);
             return true;
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or JsonException)

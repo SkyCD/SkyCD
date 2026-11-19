@@ -273,7 +273,8 @@ public sealed partial class AiDescriptionPlugin
         var packageName = match.Groups["name"].Value;
         var root = Path.GetFullPath(Path.Combine(directory, "node_modules", packageName));
         var script = FindPackageScript(root, packageName, packageName.Split('/')[^1]);
-        if (script is null) throw new DescriptionAgentException("the npm package did not provide an ACP launch script");
+        if (script is null || !IsJavaScriptLauncher(script))
+            throw new DescriptionAgentException("the npm package did not provide a JavaScript ACP launch script");
         return new ManagedLaunch(name, Path.GetRelativePath(directory, script), true, agent.NpmArguments);
     }
 
