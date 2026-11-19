@@ -486,6 +486,52 @@ public sealed class AcpDescriptionTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SettingsSizeLimitPreservesExistingConfigurationAndCompleteArguments(bool existing)
+    {
+        var directory = Directory.CreateTempSubdirectory("skycd-acp-size-");
+        try
+        {
+            var configuration = Path.Combine(directory.FullName, "settings.json");
+            var executable = Path.Combine(directory.FullName, OperatingSystem.IsWindows() ? "agent.exe" : "agent");
+            File.WriteAllText(executable, "");
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            var plugin = new AiDescriptionPlugin(configuration, (_, _, _) =>
+                throw new InvalidOperationException("Saving must not launch an agent."));
+            var choice = new AcpAgentChoice("Agent", executable, []);
+            if (existing) plugin.SaveAgentSettings(choice);
+            var original = existing ? File.ReadAllBytes(configuration) : null;
+            foreach (var argument in new[] { new string('a', 70000), new string('漢', 12000) })
+            {
+                var exception = Assert.Throws<DescriptionAgentException>(() =>
+                    plugin.SaveAgentSettings(choice with { Arguments = [argument] }));
+                Assert.Contains("64 KiB", exception.Message);
+                Assert.Equal(existing, File.Exists(configuration));
+                if (existing) Assert.Equal(original, File.ReadAllBytes(configuration));
+                Assert.Empty(Directory.GetFiles(directory.FullName, "*.tmp"));
+            }
+
+            var overhead = JsonSerializer.SerializeToUtf8Bytes(
+                new DescriptionAgentOptions { Executable = executable, Arguments = [""] },
+                new JsonSerializerOptions { WriteIndented = true }).Length;
+            var largestArgument = new string('a', 65536 - overhead);
+            plugin.SaveAgentSettings(choice with { Arguments = [largestArgument] });
+            Assert.Equal(65536, new FileInfo(configuration).Length);
+            Assert.Equal(largestArgument, Assert.Single(plugin.GetAgentSettings().SelectedAgent!.Arguments));
+            var atLimit = File.ReadAllBytes(configuration);
+            Assert.Throws<DescriptionAgentException>(() =>
+                plugin.SaveAgentSettings(choice with { Arguments = [largestArgument + "a"] }));
+            Assert.Equal(atLimit, File.ReadAllBytes(configuration));
+            Assert.Empty(Directory.GetFiles(directory.FullName, "*.tmp"));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     private sealed class AgentArchiveHandler(byte[] content) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

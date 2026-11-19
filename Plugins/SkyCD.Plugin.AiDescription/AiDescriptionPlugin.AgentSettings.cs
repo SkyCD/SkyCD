@@ -134,6 +134,8 @@ public sealed partial class AiDescriptionPlugin
 
         if (activate) options = options with { Enabled = true };
         options.ValidateSettings();
+        var content = JsonSerializer.SerializeToUtf8Bytes(options, new JsonSerializerOptions { WriteIndented = true });
+        if (content.Length > 65536) throw new DescriptionAgentException("configuration exceeds 64 KiB");
         var fullPath = Path.GetFullPath(configurationPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var temporaryPath = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -143,8 +145,7 @@ public sealed partial class AiDescriptionPlugin
             if (!OperatingSystem.IsWindows())
                 fileOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             using (var stream = new FileStream(temporaryPath, fileOptions))
-            using (var writer = new StreamWriter(stream))
-                writer.Write(JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true }));
+                stream.Write(content);
             File.Move(temporaryPath, fullPath, overwrite: true);
         }
         finally
