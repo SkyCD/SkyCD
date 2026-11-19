@@ -24,6 +24,30 @@ public sealed record ScanTraversalOptions
     /// </summary>
     public IReadOnlyList<string> ExclusionPatterns { get; init; } = [];
 
+    /// <summary>
+    /// Entry-type aware exclusion rules matched against entry names. Kept alongside
+    /// <see cref="ExclusionPatterns"/> for callers that only need simple wildcards.
+    /// </summary>
+    public IReadOnlyList<ScanExclusionRule> ExclusionRules { get; init; } = [];
+
+    /// <summary>
+    /// Include-by-mask (whitelist) rules: when non-empty, an entry is accepted only when it
+    /// matches at least one inclusion rule for its entry kind.
+    /// </summary>
+    public IReadOnlyList<ScanExclusionRule> InclusionRules { get; init; } = [];
+
+    /// <summary>Skip recycle bin / trash entries during traversal.</summary>
+    public bool SkipRecycleBins { get; init; } = true;
+
+    /// <summary>Skip well-known system folders and files during traversal.</summary>
+    public bool SkipWellKnownSystemFolders { get; init; } = true;
+
+    /// <summary>Do not emit folder documents that end up without children.</summary>
+    public bool SkipEmptyFolders { get; init; } = false;
+
+    /// <summary>Skip files marked offline (online-only cloud placeholders).</summary>
+    public bool SkipOnlineOnlyCloudFiles { get; init; } = false;
+
     /// <summary>Maximum transient I/O retries per operation. Bounded to a non-negative value.</summary>
     public int MaxRetries { get; init; } = DefaultMaxRetries;
 

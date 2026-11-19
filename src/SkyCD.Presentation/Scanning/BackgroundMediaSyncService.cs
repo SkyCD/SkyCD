@@ -24,6 +24,7 @@ public sealed class BackgroundMediaSyncService : IDisposable
     private readonly Func<MediaScanOptions, CancellationToken, CatalogScanResult> scan;
     private readonly Func<IReadOnlyList<CatalogDocument>, CancellationToken, Func<bool>, Task> publish;
     private readonly Func<bool> canSync;
+    private readonly Func<ScanTraversalOptions>? traversalFactory;
     private readonly SemaphoreSlim gate = new(1, 1);
     private CancellationTokenSource? lifetime;
     private bool disposed;
@@ -34,12 +35,14 @@ public sealed class BackgroundMediaSyncService : IDisposable
         Func<bool>? canSync = null,
         IMediaDriveProvider? drives = null,
         Func<MediaScanOptions, CancellationToken, CatalogScanResult>? scan = null,
-        IVolumeMetadataProvider? volumeMetadata = null)
+        IVolumeMetadataProvider? volumeMetadata = null,
+        Func<ScanTraversalOptions>? traversalFactory = null)
     {
         this.repository = repository;
         this.publish = publish;
         this.canSync = canSync ?? (() => true);
         this.drives = drives ?? new SystemMediaDriveProvider();
+        this.traversalFactory = traversalFactory;
         var scanner = new MediaCatalogScanner(this.drives, volumeMetadata: volumeMetadata);
         this.scan = scan ?? ((options, token) => scanner.ScanDetailed(options, cancellationToken: token));
     }
@@ -120,12 +123,13 @@ public sealed class BackgroundMediaSyncService : IDisposable
                     {
                         var drive = drives.GetDrive(path);
                         if (drive is null || !Matches(root, drive)) return null;
+                        var traversal = (traversalFactory?.Invoke() ?? ScanTraversalOptions.Default) with
+                        {
+                            OperationTimeout = TimeSpan.FromMinutes(2),
+                            LinkFollowPolicy = LinkFollowPolicy.NeverFollowLinks
+                        };
                         var scanned = scan(new MediaScanOptions(path, root.Name, root.ParentId, root.Type,
-                            Traversal: new ScanTraversalOptions
-                            {
-                                OperationTimeout = TimeSpan.FromMinutes(2),
-                                LinkFollowPolicy = LinkFollowPolicy.NeverFollowLinks
-                            }), cancellationToken);
+                            Traversal: traversal), cancellationToken);
                         var currentDrive = drives.GetDrive(path);
                         return currentDrive is not null && Matches(root, currentDrive) ? scanned : null;
                     }, cancellationToken);

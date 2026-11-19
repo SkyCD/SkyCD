@@ -242,4 +242,6 @@ public static class TextKeys
     public const string AiDescriptionBatchSummary = "core.text.AiDescriptionBatchSummary";
     public const string AiDescriptionBatchCancelled = "core.text.AiDescriptionBatchCancelled";
     public const string AiDescriptionBatchFailed = "core.text.AiDescriptionBatchFailed";
+    public const string Scan = "core.text.Scan";
+    public const string AllRulesNeedPattern = "core.text.AllRulesNeedPattern";
 }
