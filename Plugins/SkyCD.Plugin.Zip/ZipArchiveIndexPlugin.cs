@@ -4,12 +4,30 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.Plugin.Abstractions.Capabilities.Archives;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Zip;
 
-public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
+/// <summary>
+/// Read-only ZIP archive plugin. Lists archive entries as a catalog hierarchy and safely extracts supported
+/// entries into a temporary directory so enabled metadata plugins can index them.
+/// </summary>
+public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability, IArchivePluginCapability
 {
+    private readonly ArchiveLimits limits;
+
+    public ZipArchiveIndexPlugin() : this(ArchiveLimits.Default)
+    {
+    }
+
+    public ZipArchiveIndexPlugin(ArchiveLimits limits)
+    {
+        ArgumentNullException.ThrowIfNull(limits);
+        limits.Validate();
+        this.limits = limits;
+    }
+
     public FileFormatDescriptor SupportedFormat =>
         new(
             FormatId: "skycd-zip",
@@ -18,6 +36,30 @@ public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/zip"],
             CanRead: true,
             CanWrite: false);
+
+    public ArchiveFormatDescriptor SupportedArchive =>
+        new(
+            FormatId: "skycd-zip",
+            DisplayName: "ZIP Archive",
+            Extensions: [".zip"],
+            MimeTypes: ["application/zip"],
+            limits);
+
+    public Task<ArchiveInspectionResult> InspectAsync(ArchiveInspectionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(ZipArchiveInspector.Inspect(request.Source, limits));
+    }
+
+    public Task<ArchiveExtractionResult> ExtractToTemporaryDirectoryAsync(ArchiveExtractionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return ZipArchiveInspector.ExtractAsync(request.Source, request.TargetDirectory, limits,
+            request.Progress, cancellationToken);
+    }
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
