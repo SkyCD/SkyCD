@@ -58,7 +58,7 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
         bool isLink = false)
     {
         var normalized = Normalize(path);
-        EnsureDirectory(Path.GetDirectoryName(normalized) ?? normalized);
+        EnsureDirectory(GetParentPath(normalized) ?? normalized);
 
         var entry = new ScanFileSystemEntry(
             FullPath: normalized,
@@ -210,7 +210,7 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
             return;
         }
 
-        var parent = Path.GetDirectoryName(normalizedPath);
+        var parent = GetParentPath(normalizedPath);
         if (string.IsNullOrWhiteSpace(parent))
         {
             return;
@@ -253,11 +253,35 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
         return string.IsNullOrEmpty(name) ? trimmed : name;
     }
 
+    /// <summary>
+    /// Parent of a normalized path. UNC paths are sliced by hand: Path.GetDirectoryName
+    /// collapses their two leading separators away on Unix.
+    /// </summary>
+    private static string? GetParentPath(string normalizedPath)
+    {
+        if (normalizedPath.StartsWith(@"\\", StringComparison.Ordinal) ||
+            normalizedPath.StartsWith("//", StringComparison.Ordinal))
+        {
+            var separator = normalizedPath.LastIndexOfAny(['\\', '/']);
+            return separator <= 1 ? null : normalizedPath[..separator];
+        }
+
+        return Path.GetDirectoryName(normalizedPath);
+    }
+
     private static string Normalize(string path)
     {
         var unified = path.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         var trimmed = unified.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (IsFilesystemRoot(trimmed))
+        {
+            return trimmed;
+        }
+
+        // UNC paths ("\\server\share", or "//server/share" once unified on Unix) keep their
+        // shape on every OS: Path.GetFullPath would collapse the two leading separators away.
+        if (trimmed.StartsWith(@"\\", StringComparison.Ordinal) ||
+            trimmed.StartsWith("//", StringComparison.Ordinal))
         {
             return trimmed;
         }

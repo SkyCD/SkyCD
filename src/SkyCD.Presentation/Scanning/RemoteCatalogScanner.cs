@@ -48,7 +48,8 @@ public sealed class RemoteCatalogScanner
             options.Anonymous,
             options.AuthMethod,
             options.KeyFilePath,
-            options.KeyFilePassphrase);
+            options.KeyFilePassphrase,
+            options.Domain);
         connector.ResolveCredentials(credentials);
         using var context = new ScanOperationContext(
             options.Traversal,
@@ -83,7 +84,7 @@ public sealed class RemoteCatalogScanner
                 permission: null,
                 modifiedUtc: null,
                 isRoot: true,
-                visited: new HashSet<string>(StringComparer.Ordinal),
+                visited: new HashSet<string>(connector.PathComparer),
                 listedRef: ref listedCount);
 
             if (tree is null)
@@ -139,7 +140,7 @@ public sealed class RemoteCatalogScanner
         catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteConnectionException
                 or RemoteSchemeNotSupportedException or RemoteDirectoryNotFoundException
                 or RemoteListingNotSupportedException or RemoteHostKeyException
-                or RemoteTlsException)
+                or RemoteTlsException or RemotePlatformNotSupportedException)
         {
             throw;
         }
@@ -205,10 +206,10 @@ public sealed class RemoteCatalogScanner
             throw;
         }
         catch (Exception ex) when (ex is RemoteAuthenticationException or RemoteSchemeNotSupportedException
-                or RemoteTlsException)
+                or RemoteTlsException or RemotePlatformNotSupportedException)
         {
-            // Rejected credentials, unsupported protocols and failed TLS protection are fatal
-            // for the whole scan.
+            // Rejected credentials, unsupported protocols, failed TLS protection and an
+            // unsupported host platform are fatal for the whole scan.
             throw;
         }
         catch (RemoteListingNotSupportedException) when (isRoot)

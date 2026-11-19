@@ -19,42 +19,47 @@
     <Grid RowDefinitions="*,Auto" Margin="14">
         <StackPanel Grid.Row="0" Spacing="8">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.EnterServerCredentials}}" />
-            <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+            <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
                 <TextBlock Grid.Row="0" Text="{i18n:Translate {x:Static i18n:UiKeys.Username}}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Username}" IsEnabled="{Binding IsCredentialEntryEnabled}" />
 
-                <TextBlock Grid.Row="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Password}}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Domain}}" VerticalAlignment="Center"
+                           IsVisible="{Binding IsSmb}" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Domain}" IsEnabled="{Binding IsCredentialEntryEnabled}"
+                         IsVisible="{Binding IsSmb}" />
+
+                <TextBlock Grid.Row="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Password}}" VerticalAlignment="Center"
                            IsVisible="{Binding IsPasswordAuthentication}" />
-                <TextBox Grid.Row="1" Grid.Column="1" PasswordChar="*" Text="{Binding Password}" IsEnabled="{Binding IsCredentialEntryEnabled}"
+                <TextBox Grid.Row="2" Grid.Column="1" PasswordChar="*" Text="{Binding Password}" IsEnabled="{Binding IsCredentialEntryEnabled}"
                          IsVisible="{Binding IsPasswordAuthentication}" />
 
-                <CheckBox Grid.Row="2"
+                <CheckBox Grid.Row="3"
                           Grid.ColumnSpan="2"
                           Content="{i18n:Translate {x:Static i18n:UiKeys.AnonymousAccess}}"
                           IsChecked="{Binding UseAnonymous}"
                           IsVisible="{Binding IsAnonymousAvailable}" />
 
-                <TextBlock Grid.Row="3" Text="{i18n:Translate {x:Static i18n:UiKeys.TlsMode}}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="4" Text="{i18n:Translate {x:Static i18n:UiKeys.TlsMode}}" VerticalAlignment="Center"
                            IsVisible="{Binding IsFtp}" />
-                <ComboBox Grid.Row="3" Grid.Column="1"
+                <ComboBox Grid.Row="4" Grid.Column="1"
                           ItemsSource="{Binding TlsModeNames}"
                           SelectedIndex="{Binding TlsModeIndex}"
                           IsVisible="{Binding IsFtp}" />
 
-                <TextBlock Grid.Row="4" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="5" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" VerticalAlignment="Center"
                            IsVisible="{Binding IsSftp}" />
-                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Port}" IsVisible="{Binding IsSftp}" />
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Port}" IsVisible="{Binding IsSftp}" />
 
-                <TextBlock Grid.Row="5" Text="{i18n:Translate {x:Static i18n:UiKeys.AuthenticationMethod}}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="6" Text="{i18n:Translate {x:Static i18n:UiKeys.AuthenticationMethod}}" VerticalAlignment="Center"
                            IsVisible="{Binding IsSftp}" />
-                <ComboBox Grid.Row="5" Grid.Column="1"
+                <ComboBox Grid.Row="6" Grid.Column="1"
                           ItemsSource="{Binding AuthMethodNames}"
                           SelectedIndex="{Binding AuthMethodIndex}"
                           IsVisible="{Binding IsSftp}" />
 
-                <TextBlock Grid.Row="6" Text="{i18n:Translate {x:Static i18n:UiKeys.KeyFile}}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="7" Text="{i18n:Translate {x:Static i18n:UiKeys.KeyFile}}" VerticalAlignment="Center"
                            IsVisible="{Binding IsKeyAuthentication}" />
-                <Grid Grid.Row="6" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                <Grid Grid.Row="7" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8"
                       IsVisible="{Binding IsKeyAuthentication}">
                     <TextBox Grid.Column="0" Text="{Binding KeyFilePath}" />
                     <Button Grid.Column="1"
@@ -62,14 +67,14 @@
                             Click="OnBrowseKeyFileClicked" />
                 </Grid>
 
-                <TextBlock Grid.Row="7" Text="{i18n:Translate {x:Static i18n:UiKeys.KeyPassphrase}}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="8" Text="{i18n:Translate {x:Static i18n:UiKeys.KeyPassphrase}}" VerticalAlignment="Center"
                            IsVisible="{Binding IsKeyAuthentication}" />
-                <TextBox Grid.Row="7" Grid.Column="1" PasswordChar="*" Text="{Binding KeyFilePassphrase}"
+                <TextBox Grid.Row="8" Grid.Column="1" PasswordChar="*" Text="{Binding KeyFilePassphrase}"
                          IsVisible="{Binding IsKeyAuthentication}" />
 
-                <TextBlock Grid.Row="8" Text="{i18n:Translate {x:Static i18n:UiKeys.HostKey}}" VerticalAlignment="Top"
+                <TextBlock Grid.Row="9" Text="{i18n:Translate {x:Static i18n:UiKeys.HostKey}}" VerticalAlignment="Top"
                            IsVisible="{Binding IsSftp}" />
-                <StackPanel Grid.Row="8" Grid.Column="1" Spacing="4" IsVisible="{Binding IsSftp}">
+                <StackPanel Grid.Row="9" Grid.Column="1" Spacing="4" IsVisible="{Binding IsSftp}">
                     <TextBlock Text="{Binding HostKeyStatus}" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding HostKeyFingerprint}" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="8">

@@ -33,6 +33,8 @@ public sealed class SftpCatalogConnector : IRemoteCatalogConnector
     /// <summary>SSH provides its own transport security; FTPS TLS modes do not apply.</summary>
     public RemoteTlsMode DefaultTlsMode => RemoteTlsMode.Off;
 
+    public StringComparer PathComparer => StringComparer.Ordinal;
+
     public string NormalizePath(string? path) => FtpPath.Normalize(path);
 
     public bool CanConfirmCredentials(RemoteCredentials credentials) =>

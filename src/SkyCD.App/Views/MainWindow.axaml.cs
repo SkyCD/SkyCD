@@ -707,7 +707,8 @@ public partial class MainWindow : Window
                 dialogVm.IncludeExtendedInfo,
                 authMethod: loginVm.AuthMethod,
                 keyFilePath: string.IsNullOrWhiteSpace(loginVm.KeyFilePath) ? null : loginVm.KeyFilePath,
-                keyFilePassphrase: string.IsNullOrEmpty(loginVm.KeyFilePassphrase) ? null : loginVm.KeyFilePassphrase);
+                keyFilePassphrase: string.IsNullOrEmpty(loginVm.KeyFilePassphrase) ? null : loginVm.KeyFilePassphrase,
+                domain: string.IsNullOrWhiteSpace(loginVm.Domain) ? null : loginVm.Domain);
             loginVm.Password = string.Empty;
             loginVm.KeyFilePassphrase = string.Empty;
 

@@ -8,6 +8,7 @@ public sealed class RemoteListingNotSupportedException(string path, string stage
     scheme.ToLowerInvariant() switch
     {
         "ftp" => LocalizationService.Current.Format(TextKeys.FtpListingNotSupported, path),
+        "smb" => LocalizationService.Current.Format(TextKeys.SmbListingNotSupported, path),
         "webdav" or "webdavs" => LocalizationService.Current.Format(TextKeys.WebDavListingNotSupported, path),
         _ => LocalizationService.Current.Format(TextKeys.RemoteListingNotSupported, scheme.ToUpperInvariant(), path),
     })
