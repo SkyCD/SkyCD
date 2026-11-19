@@ -96,7 +96,7 @@ public sealed class RemoteCatalogScanner
             var rootName = ResolveRootName(options, location);
             var rootId = $"{location.Scheme}-{Guid.NewGuid():N}";
             var documents = new List<CatalogDocument>();
-            var totalSize = AddChildren(context, tree, rootId, options.IncludeExtendedInfo, documents);
+            var (totalSize, rootEmittedChildren) = AddChildren(context, tree, rootId, options.IncludeExtendedInfo, documents);
             var rootProperties = new PropertiesCollection();
             if (options.IncludeExtendedInfo)
             {
@@ -112,7 +112,7 @@ public sealed class RemoteCatalogScanner
                 ParentId = options.TargetParentId,
                 Type = CatalogDocumentType.NetworkFolder,
                 Size = totalSize,
-                ChildrenCount = tree.Files.Count + tree.Directories.Count,
+                ChildrenCount = rootEmittedChildren,
                 Properties = rootProperties
             });
 
@@ -259,9 +259,9 @@ public sealed class RemoteCatalogScanner
         {
             context.ThrowIfCancellationRequested();
 
-            if (IsExcluded(context, entry.Name))
+            if (ShouldSkipEntry(context, entry.Name, entry.IsDirectory))
             {
-                ReportSkip(context, entry.FullName, "Excluded by pattern.", "process-entry");
+                ReportSkip(context, entry.FullName, "Excluded by scan settings.", "process-entry");
                 continue;
             }
 
@@ -293,7 +293,7 @@ public sealed class RemoteCatalogScanner
         return directory;
     }
 
-    private static long AddChildren(
+    private static (long TotalSize, int EmittedChildren) AddChildren(
         ScanOperationContext context,
         RemoteDirectory directory,
         string parentId,
@@ -301,6 +301,7 @@ public sealed class RemoteCatalogScanner
         List<CatalogDocument> documents)
     {
         long total = 0;
+        var emittedChildren = 0;
         foreach (var file in directory.Files)
         {
             var properties = new PropertiesCollection();
@@ -331,6 +332,7 @@ public sealed class RemoteCatalogScanner
                 Properties = properties
             });
             total += file.Size;
+            emittedChildren++;
             context.Statistics.IncrementDiscovered();
             context.Progress?.ReportLog(
                 OperationLogLevel.ItemProcessed,
@@ -342,7 +344,14 @@ public sealed class RemoteCatalogScanner
         foreach (var child in directory.Directories)
         {
             var childId = $"folder-{Guid.NewGuid():N}";
-            var childSize = AddChildren(context, child, childId, includeExtendedInfo, documents);
+            var (childSize, childEmittedChildren) = AddChildren(context, child, childId, includeExtendedInfo, documents);
+
+            if (context.Traversal.SkipEmptyFolders && childEmittedChildren == 0)
+            {
+                ReportSkip(context, child.FullName, "Empty folder excluded by policy.", "add-children");
+                continue;
+            }
+
             var properties = new PropertiesCollection();
             if (includeExtendedInfo)
             {
@@ -366,14 +375,15 @@ public sealed class RemoteCatalogScanner
                 ParentId = parentId,
                 Type = CatalogDocumentType.Folder,
                 Size = childSize,
-                ChildrenCount = child.Files.Count + child.Directories.Count,
+                ChildrenCount = childEmittedChildren,
                 Properties = properties
             });
             total += childSize;
+            emittedChildren++;
             context.Statistics.IncrementDiscovered();
         }
 
-        return total;
+        return (total, emittedChildren);
     }
 
     private static string ResolveRootName(RemoteScanOptions options, RemoteLocation location)
@@ -391,6 +401,37 @@ public sealed class RemoteCatalogScanner
 
         var slash = trimmed.LastIndexOf('/');
         return slash >= 0 ? trimmed[(slash + 1)..] : trimmed;
+    }
+
+    private static bool ShouldSkipEntry(ScanOperationContext context, string name, bool isDirectory)
+    {
+        if (IsExcluded(context, name))
+        {
+            return true;
+        }
+
+        if (context.Traversal.SkipRecycleBins && WellKnownScanExclusions.RecycleBinNames.Contains(name))
+        {
+            return true;
+        }
+
+        if (context.Traversal.SkipWellKnownSystemFolders)
+        {
+            var wellKnownNames = isDirectory
+                ? WellKnownScanExclusions.SystemFolderNames
+                : WellKnownScanExclusions.SystemFileNames;
+            if (wellKnownNames.Contains(name))
+            {
+                return true;
+            }
+        }
+
+        if (ScanExclusionRule.IsExcludedByAny(context.Traversal.ExclusionRules, name, isDirectory, ignoreCase: false))
+        {
+            return true;
+        }
+
+        return !ScanExclusionRule.PassesInclusion(context.Traversal.InclusionRules, name, isDirectory, ignoreCase: false);
     }
 
     private static bool IsExcluded(ScanOperationContext context, string name)

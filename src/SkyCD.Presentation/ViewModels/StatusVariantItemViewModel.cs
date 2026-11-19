@@ -25,8 +25,7 @@ public partial class StatusVariantItemViewModel : ObservableObject
     [ObservableProperty] private bool isDropHintVisible;
 
     public ObservableCollection<MultiSelectOptionItem> TypeOptions { get; } = [];
-    public ObservableCollection<MultiSelectOptionItem> IconOptionItems { get; } = [];
-    public IReadOnlyList<string> IconOptions { get; } = StatusIconCatalog.GetAllKeys();
+    public IReadOnlyList<string> IconOptions => StatusIconCatalog.GetAllKeys();
     public IReadOnlyList<string> ColorOptions { get; } =
     [
         "#000000", "#44546A", "#5B9BD5", "#70AD47", "#A5A5A5", "#FFC000", "#4472C4", "#ED7D31",
@@ -55,35 +54,6 @@ public partial class StatusVariantItemViewModel : ObservableObject
                 }
             };
             TypeOptions.Add(option);
-        }
-
-        foreach (var iconKey in IconOptions)
-        {
-            var option = new MultiSelectOptionItem
-            {
-                Label = iconKey
-            };
-            option.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName != nameof(MultiSelectOptionItem.IsSelected) || !option.IsSelected)
-                {
-                    return;
-                }
-
-                foreach (var candidate in IconOptionItems)
-                {
-                    if (!ReferenceEquals(candidate, option) && candidate.IsSelected)
-                    {
-                        candidate.IsSelected = false;
-                    }
-                }
-
-                if (!string.Equals(IconGlyph, option.Label, StringComparison.Ordinal))
-                {
-                    IconGlyph = option.Label;
-                }
-            };
-            IconOptionItems.Add(option);
         }
 
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
@@ -148,11 +118,6 @@ public partial class StatusVariantItemViewModel : ObservableObject
 
     partial void OnIconGlyphChanged(string value)
     {
-        foreach (var option in IconOptionItems)
-        {
-            option.IsSelected = string.Equals(option.Label, value, StringComparison.Ordinal);
-        }
-
         OnPropertyChanged(nameof(IconKind));
     }
 

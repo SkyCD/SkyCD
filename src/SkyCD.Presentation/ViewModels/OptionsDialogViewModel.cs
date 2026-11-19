@@ -66,6 +66,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         selectedLanguage = Languages[0];
+        RefreshScanLocalization();
         RefreshFilteredCategories();
         selectedSettingCategory = CurrentCategoryName;
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
@@ -153,7 +154,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses), LocalizationService.Current.Get(UiKeys.CustomProperties), LocalizationService.Current.Get(UiKeys.AcpAgents)];
+    public IReadOnlyList<string> SettingCategories => [LocalizationService.Current.Get(TextKeys.Plugins), LocalizationService.Current.Get(TextKeys.Language), LocalizationService.Current.Get(TextKeys.MCP), LocalizationService.Current.Get(TextKeys.Statuses), LocalizationService.Current.Get(UiKeys.CustomProperties), LocalizationService.Current.Get(UiKeys.AcpAgents), LocalizationService.Current.Get(TextKeys.Scan)];
 
     public string CurrentCategoryName =>
         SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
@@ -210,7 +211,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowPluginInfoSection ||
         ShowLanguageSection ||
         ShowMcpSection ||
-        ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection;
+        ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -315,6 +316,13 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         StatusAlertMessage = string.Empty;
+        if (ScanExclusionRules.Any(static rule => string.IsNullOrWhiteSpace(rule.Pattern)))
+        {
+            ScanAlertMessage = LocalizationService.Current.Get(TextKeys.AllRulesNeedPattern);
+            return;
+        }
+
+        ScanAlertMessage = string.Empty;
         if (!TrySaveAcpSettings()) return;
         DialogAccepted = true;
     }
@@ -541,6 +549,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(SettingCategories));
         McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
+        RefreshScanLocalization();
         isRefreshingLocalization = true;
         try
         {
@@ -621,6 +630,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowLanguageSection));
         OnPropertyChanged(nameof(HasVisibleCategoryContent));
         OnPropertyChanged(nameof(ShowAcpSection));
+        OnPropertyChanged(nameof(IsScanCategorySelected));
+        OnPropertyChanged(nameof(ShowScanSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }
 

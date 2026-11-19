@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Couchbase.Lite;
 using DryIoc;
@@ -554,6 +555,43 @@ public sealed class CouchbasePersistenceTests : IDisposable
     private sealed class DateContainerDocument
     {
         public DateTimeOffset Timestamp { get; set; }
+    }
+
+    [Fact]
+    public async Task InlineTreeRename_PersistsAcrossRepositoryInstancesAndIsUndoable()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositoryManager = provider.Resolve<RepositoryManager>();
+        var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
+        ClearCatalog(catalogRepository);
+        foreach (var entry in catalogRepository.CreateDefaultEntries())
+        {
+            catalogRepository.Save(entry.Id, entry);
+        }
+
+        using var viewModel = new MainWindowViewModel(repositoryManager);
+        var movies = viewModel.TreeNodes[0].Children.Single(node => node.Key == "movies");
+        viewModel.SelectedTreeNode = movies;
+
+        viewModel.RenameItemCommand.Execute("tree");
+        Assert.True(movies.IsRenaming);
+
+        movies.RenameText = "Films";
+        viewModel.CommitRename(movies);
+
+        Assert.False(movies.IsRenaming);
+        Assert.Equal("Films", movies.Title);
+        Assert.Equal("Films", catalogRepository.Get("movies")!.Name);
+
+        using (var reopened = new MainWindowViewModel(repositoryManager))
+        {
+            Assert.Equal("Films", reopened.TreeNodes[0].Children.Single(node => node.Key == "movies").Title);
+        }
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+
+        Assert.Equal("Movies", catalogRepository.Get("movies")!.Name);
     }
 
     private static void ClearCatalog(CatalogDocumentRepository catalogRepository)

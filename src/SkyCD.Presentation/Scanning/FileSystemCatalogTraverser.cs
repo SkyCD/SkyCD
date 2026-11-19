@@ -175,23 +175,13 @@ internal sealed class FileSystemCatalogTraverser
                 continue;
             }
 
-            if (subDir.IsLinkOrReparsePoint)
+            if (!TryEnterDirectory(subDir, out skipReason))
             {
-                if (context.Traversal.LinkFollowPolicy == LinkFollowPolicy.NeverFollowLinks)
+                if (skipReason is not null)
                 {
-                    ReportSkip(subDir.FullPath, "Directory link not followed (NeverFollowLinks policy).", "process-directory");
-                    continue;
+                    ReportSkip(subDir.FullPath, skipReason, "process-directory");
                 }
 
-                if (!visitedIdentities.Add(subDir.VisitedIdentity))
-                {
-                    ReportSkip(subDir.FullPath, "Directory link cycle detected.", "process-directory");
-                    continue;
-                }
-            }
-            else if (!visitedIdentities.Add(subDir.VisitedIdentity))
-            {
-                ReportSkip(subDir.FullPath, "Directory cycle detected.", "process-directory");
                 continue;
             }
 
@@ -212,6 +202,12 @@ internal sealed class FileSystemCatalogTraverser
                     includeExtendedInfo,
                     documents,
                     isRoot: false);
+
+                if (context.Traversal.SkipEmptyFolders && subDirDirectChildren == 0)
+                {
+                    ReportSkip(subDir.FullPath, "Empty folder excluded by policy.", "process-directory");
+                    continue;
+                }
 
                 var subDirDoc = new CatalogDocument
                 {
@@ -248,6 +244,36 @@ internal sealed class FileSystemCatalogTraverser
         }
 
         return (totalSize, (int)directChildrenCount, dirProperties);
+    }
+
+    private bool TryEnterDirectory(ScanFileSystemEntry subDir, out string? skipReason)
+    {
+        skipReason = null;
+
+        if (subDir.IsLinkOrReparsePoint)
+        {
+            if (context.Traversal.LinkFollowPolicy == LinkFollowPolicy.NeverFollowLinks)
+            {
+                skipReason = "Directory link not followed (NeverFollowLinks policy).";
+                return false;
+            }
+
+            if (!visitedIdentities.Add(subDir.VisitedIdentity))
+            {
+                skipReason = "Directory link cycle detected.";
+                return false;
+            }
+
+            return true;
+        }
+
+        if (!visitedIdentities.Add(subDir.VisitedIdentity))
+        {
+            skipReason = "Directory cycle detected.";
+            return false;
+        }
+
+        return true;
     }
 
     private void ProcessEntries(IReadOnlyList<ScanFileSystemEntry> entries, Action<ScanFileSystemEntry> process)
@@ -356,9 +382,27 @@ internal sealed class FileSystemCatalogTraverser
             return false;
         }
 
+        skipReason = CheckWellKnownExclusion(entry);
+        if (skipReason is not null)
+        {
+            return false;
+        }
+
         if (ShouldSkipHiddenOrSystem(entry.Attributes))
         {
             skipReason = "Hidden/system entry excluded by policy.";
+            return false;
+        }
+
+        if (context.Traversal.SkipOnlineOnlyCloudFiles && (entry.Attributes & FileAttributes.Offline) != 0)
+        {
+            skipReason = "Online-only cloud file excluded by policy.";
+            return false;
+        }
+
+        skipReason = CheckScanRules(entry);
+        if (skipReason is not null)
+        {
             return false;
         }
 
@@ -369,6 +413,43 @@ internal sealed class FileSystemCatalogTraverser
         }
 
         return true;
+    }
+
+    private string? CheckWellKnownExclusion(ScanFileSystemEntry entry)
+    {
+        if (context.Traversal.SkipRecycleBins && WellKnownScanExclusions.RecycleBinNames.Contains(entry.Name))
+        {
+            return "Recycle bin excluded by policy.";
+        }
+
+        if (context.Traversal.SkipWellKnownSystemFolders)
+        {
+            var wellKnownNames = entry.IsDirectory
+                ? WellKnownScanExclusions.SystemFolderNames
+                : WellKnownScanExclusions.SystemFileNames;
+            if (wellKnownNames.Contains(entry.Name))
+            {
+                return "Well-known system entry excluded by policy.";
+            }
+        }
+
+        return null;
+    }
+
+    private string? CheckScanRules(ScanFileSystemEntry entry)
+    {
+        var ignoreCase = OperatingSystem.IsWindows();
+        if (ScanExclusionRule.IsExcludedByAny(context.Traversal.ExclusionRules, entry.Name, entry.IsDirectory, ignoreCase))
+        {
+            return "Excluded by rule.";
+        }
+
+        if (!ScanExclusionRule.PassesInclusion(context.Traversal.InclusionRules, entry.Name, entry.IsDirectory, ignoreCase))
+        {
+            return "Not matched by any inclusion rule.";
+        }
+
+        return null;
     }
 
     private bool IsExcludedByPattern(string name)

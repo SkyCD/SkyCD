@@ -47,6 +47,10 @@ public static class TextKeys
     public const string Edit = "core.text.Edit";
     public const string Add = "core.text.Add";
     public const string Delete = "core.text.Delete";
+    public const string Rename = "core.text.Rename";
+    public const string Renamed = "core.text.Renamed";
+    public const string CatalogNameRequired = "core.text.CatalogNameRequired";
+    public const string RenameStaleEntry = "core.text.RenameStaleEntry";
     public const string Undo = "core.text.Undo";
     public const string Redo = "core.text.Redo";
     public const string UndoAction = "core.text.UndoAction";
@@ -242,4 +246,6 @@ public static class TextKeys
     public const string AiDescriptionBatchSummary = "core.text.AiDescriptionBatchSummary";
     public const string AiDescriptionBatchCancelled = "core.text.AiDescriptionBatchCancelled";
     public const string AiDescriptionBatchFailed = "core.text.AiDescriptionBatchFailed";
+    public const string Scan = "core.text.Scan";
+    public const string AllRulesNeedPattern = "core.text.AllRulesNeedPattern";
 }

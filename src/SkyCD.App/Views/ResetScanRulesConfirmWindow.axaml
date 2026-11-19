@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        x:Class="SkyCD.App.Views.ResetScanRulesConfirmWindow"
+        Width="430"
+        Height="170"
+        CanResize="False"
+        CanMinimize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
+        Title="{i18n:Translate {x:Static i18n:UiKeys.ResetRulesTitle}}">
+
+    <Grid RowDefinitions="*,Auto" Margin="16">
+        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ResetRulesConfirmation}}"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center" />
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,14,0,0">
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Yes}}"
+                    MinWidth="90"
+                    Click="OnYesClicked" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.No}}"
+                    MinWidth="90"
+                    IsCancel="True"
+                    Click="OnNoClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

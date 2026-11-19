@@ -53,6 +53,7 @@ public partial class MainWindow : Window
     private readonly AppOptionsDocumentRepository appOptionsRepository;
     private readonly CatalogDocumentRepository catalogRepository;
     private readonly StatusVariantDocumentRepository statusVariantRepository;
+    private readonly ScanExclusionRuleDocumentRepository scanExclusionRuleRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private readonly IMediaDriveProvider mediaDriveProvider;
@@ -75,6 +76,8 @@ public partial class MainWindow : Window
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
         statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
+        scanExclusionRuleRepository =
+            (ScanExclusionRuleDocumentRepository)repositoryManager.For<ScanExclusionRuleDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -134,6 +137,7 @@ public partial class MainWindow : Window
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
+            subscribedViewModel.RenameRequested -= OnRenameRequested;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -159,6 +163,7 @@ public partial class MainWindow : Window
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
+            subscribedViewModel.RenameRequested += OnRenameRequested;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
@@ -216,6 +221,58 @@ public partial class MainWindow : Window
             TreeViewFocus.FocusItem(treeView, subscribedViewModel.SelectedTreeNode);
             subscribedViewModel.ActivePane = ActivePane.Tree;
         }, DispatcherPriority.Loaded);
+    }
+
+    private void OnRenameRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var treeView = this.FindControl<TreeView>("MainTreeView");
+            if (treeView is null || subscribedViewModel?.SelectedTreeNode is not { IsRenaming: true } node)
+            {
+                return;
+            }
+
+            var container = TreeViewFocus.FindContainer(treeView, node) as TreeViewItem;
+            var editor = container?.GetVisualDescendants().OfType<TextBox>()
+                .FirstOrDefault(static textBox => textBox.IsVisible);
+            if (editor is null)
+            {
+                return;
+            }
+
+            editor.Focus();
+            editor.SelectAll();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OnRenameEditorKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (subscribedViewModel is null || sender is not TextBox { DataContext: BrowserTreeNode node })
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            subscribedViewModel.CommitRename(node);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            subscribedViewModel.CancelRename(node);
+        }
+    }
+
+    private void OnRenameEditorLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (subscribedViewModel is null || sender is not TextBox { DataContext: BrowserTreeNode node } || !node.IsRenaming)
+        {
+            return;
+        }
+
+        subscribedViewModel.CancelRename(node, restoreFocus: false);
     }
 
     private void OnTreeContextRequested(object? sender, ContextRequestedEventArgs e)
@@ -678,7 +735,7 @@ public partial class MainWindow : Window
             var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
                 ? null
                 : vm.SelectedTreeNode?.Key ?? "library";
-            var scanOptions = dialogVm.CreateInternetScanOptions(targetParentId);
+            var scanOptions = dialogVm.CreateInternetScanOptions(targetParentId, BuildScanTraversalOptions());
             dialogVm.ClearInternetSecrets();
 
             var scanner = new RemoteCatalogScanner();
@@ -771,6 +828,7 @@ public partial class MainWindow : Window
                 RootType: rootType,
                 IncludeMediaInfo: dialogVm.IncludeMediaInfo,
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                Traversal: BuildScanTraversalOptions(),
                 LocationId: dialogVm.SelectedLocationId);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
@@ -844,7 +902,8 @@ public partial class MainWindow : Window
                 TargetParentId: targetParentId,
                 RootType: rootType,
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
-                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo);
+                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                Traversal: BuildScanTraversalOptions());
 
             var scanner = new FolderCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
@@ -1121,11 +1180,13 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         e.Dialog.SetCustomProperties(options.CustomProperties);
+        LoadScanOptionsIntoDialog(e.Dialog, options);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
+        e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -1156,8 +1217,10 @@ public partial class MainWindow : Window
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
+            SaveScanOptionsFromDialog(e.Dialog, options);
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
+            scanExclusionRuleRepository.ReplaceAll(e.Dialog.GetScanExclusionRules());
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
@@ -1176,6 +1239,7 @@ public partial class MainWindow : Window
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
         e.Dialog.ConfigurePluginRequested -= OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
+        e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
@@ -1339,9 +1403,39 @@ public partial class MainWindow : Window
         return appOptionsRepository.GetOrCreateAppOptions();
     }
 
+    private ScanTraversalOptions BuildScanTraversalOptions()
+    {
+        return ScanSettingsApplicator.BuildTraversalOptions(
+            LoadAppOptions(),
+            scanExclusionRuleRepository.GetOrdered());
+    }
+
     private void SaveAppOptions(AppOptionsDocument options)
     {
         appOptionsRepository.Save(AppOptionsDocument.DocumentId, options);
+    }
+
+    private void LoadScanOptionsIntoDialog(OptionsDialogViewModel dialog, AppOptionsDocument options)
+    {
+        dialog.SetScanOptions(new ScanSettingsSnapshot(
+            options.SkipSymbolicLinks,
+            options.HiddenSystemFilePolicy,
+            options.SkipRecycleBins,
+            options.SkipWellKnownSystemFolders,
+            options.SkipEmptyFolders,
+            options.SkipOnlineOnlyCloudFiles));
+        dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
+    }
+
+    private void SaveScanOptionsFromDialog(OptionsDialogViewModel dialog, AppOptionsDocument options)
+    {
+        var scanSettings = dialog.GetScanOptions();
+        options.SkipSymbolicLinks = scanSettings.SkipSymbolicLinks;
+        options.HiddenSystemFilePolicy = scanSettings.HiddenSystemFilePolicy;
+        options.SkipRecycleBins = scanSettings.SkipRecycleBins;
+        options.SkipWellKnownSystemFolders = scanSettings.SkipWellKnownSystemFolders;
+        options.SkipEmptyFolders = scanSettings.SkipEmptyFolders;
+        options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
     }
 
     private void ApplyWindowBounds(AppOptionsDocument options)
@@ -1503,6 +1597,23 @@ public partial class MainWindow : Window
 
         statusVariantRepository.ReplaceAll(statusVariantRepository.CreateDefaultEntries());
         dialogVm.SetStatusVariants(statusVariantRepository.GetOrdered());
+    }
+
+    private async void OnResetScanExclusionRulesRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var confirmed = await ShowResetScanRulesPromptAsync();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        scanExclusionRuleRepository.ReplaceAll(scanExclusionRuleRepository.CreateDefaultEntries());
+        dialogVm.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
     }
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
@@ -2134,6 +2245,13 @@ public partial class MainWindow : Window
     private async Task<bool> ShowResetStatusesPromptAsync()
     {
         var dialog = new ResetStatusesConfirmWindow();
+        var result = await dialog.ShowDialog<bool?>(this);
+        return result == true;
+    }
+
+    private async Task<bool> ShowResetScanRulesPromptAsync()
+    {
+        var dialog = new ResetScanRulesConfirmWindow();
         var result = await dialog.ShowDialog<bool?>(this);
         return result == true;
     }

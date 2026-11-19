@@ -9,13 +9,12 @@ namespace SkyCD.Presentation.ViewModels;
 public static class StatusIconCatalog
 {
     private static readonly Lazy<IReadOnlyDictionary<string, object>> KindsByKey = new(BuildKindsMap);
-
-    public static IReadOnlyList<string> GetAllKeys()
-    {
-        return KindsByKey.Value.Keys
+    private static readonly Lazy<IReadOnlyList<string>> Keys = new(() =>
+        Array.AsReadOnly(KindsByKey.Value.Keys
             .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
+            .ToArray()));
+
+    public static IReadOnlyList<string> GetAllKeys() => Keys.Value;
 
     public static bool TryResolveKind(string? key, out object? kind)
     {

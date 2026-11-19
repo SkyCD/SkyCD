@@ -318,6 +318,33 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void StatusVariants_ShareIconCatalogAndPreserveUnknownGlyphs()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Known", IconGlyph = "Lucide:Star", IconColor = "#FF0000" },
+            new StatusVariantDocument { Name = "Unknown", IconGlyph = "missing:icon", IconColor = "#00FF00" }
+        ]);
+
+        var first = vm.StatusVariants[0];
+        var second = vm.StatusVariants[1];
+
+        Assert.Same(first.IconOptions, second.IconOptions);
+        Assert.Contains("Lucide:Star", first.IconOptions);
+        Assert.Equal("missing:icon", second.IconGlyph);
+        Assert.Equal("#00FF00", second.IconColor);
+
+        first.IconGlyph = "Lucide:Check";
+
+        var exported = vm.GetStatusVariants();
+        Assert.Equal("Lucide:Check", exported[0].IconGlyph);
+        Assert.Equal("#FF0000", exported[0].IconColor);
+        Assert.Equal("missing:icon", exported[1].IconGlyph);
+        Assert.Equal("#00FF00", exported[1].IconColor);
+    }
+
+    [Fact]
     public void StatusVariantItemType_AllowsMultipleSelections()
     {
         var vm = new OptionsDialogViewModel(["English"]);

@@ -48,6 +48,7 @@ public partial class App : Avalonia.Application
                 LocalizationService.Current.SetLanguage(options.Language);
                 InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
+                InitializeDefaultScanExclusionRules(appServiceProvider.Resolve<RepositoryManager>());
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
                 ApplyMcpSettings();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
@@ -100,6 +101,13 @@ public partial class App : Avalonia.Application
     {
         var statusRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
         statusRepository.EnsureDefaultStatuses();
+    }
+
+    private static void InitializeDefaultScanExclusionRules(RepositoryManager repositoryManager)
+    {
+        var scanRuleRepository =
+            (ScanExclusionRuleDocumentRepository)repositoryManager.For<ScanExclusionRuleDocument>();
+        scanRuleRepository.EnsureDefaultRules();
     }
 
     private static IContainer CreateAppServiceProvider()
