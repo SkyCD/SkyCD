@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Scd;
+using SkyCD.Plugin.Json;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
@@ -66,6 +67,59 @@ public sealed class CatalogLoadServiceTests
         Assert.Equal(5, count);
         Assert.Equal(progress.Values.Order(), progress.Values);
         Assert.Equal(100, progress.Values.Last());
+    }
+
+    [Fact]
+    public async Task NewCatalog_UsesAnEmptyWorkingCopy_AndSavesOnlyNewEntries()
+    {
+        var originalPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "text-sample.scd");
+        var originalBytes = await File.ReadAllBytesAsync(originalPath);
+        var formats = new FileFormatManager([new LegacyScdPlugin(), new JsonCatalogPlugin()]);
+        var loader = new CatalogLoadService(formats);
+        var original = await loader.LoadAsync(originalPath,
+            (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
+        CatalogImportTests.Persist(original, vm =>
+        {
+            Assert.NotEmpty(vm.TreeNodes);
+            Assert.NotEmpty(vm.BrowserItems);
+        });
+
+        using var newCatalog = MainWindowViewModel.CreateNewCatalog();
+        newCatalog.CompleteNewCatalog();
+        newCatalog.RefreshLocalization();
+        Assert.Empty(newCatalog.TreeNodes);
+        Assert.Empty(newCatalog.BrowserItems);
+        Assert.Empty(newCatalog.GetAllCatalogEntries());
+        Assert.Null(newCatalog.SelectedTreeNode);
+        Assert.Null(newCatalog.SelectedBrowserItem);
+        Assert.Null(newCatalog.CurrentCatalogPath);
+        Assert.False(newCatalog.IsDirtyDocument);
+
+        var newPath = Path.Combine(Path.GetTempPath(), $"skycd-new-catalog-{Guid.NewGuid():N}.json");
+        try
+        {
+            var added = newCatalog.AddTitleOnlyMedia("New disk", parentId: null);
+            await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries());
+            newCatalog.CompleteSaveCatalog(newPath);
+            var saved = await loader.LoadAsync(newPath, (payload, _) => CatalogImportTests.Extract(payload!),
+                new RecordingProgress());
+            Assert.Equal(added.Id, Assert.Single(saved).Id);
+            Assert.False(newCatalog.IsDirtyDocument);
+        }
+        finally
+        {
+            File.Delete(newPath);
+        }
+
+        var reopened = await loader.LoadAsync(originalPath,
+            (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
+        CatalogImportTests.Persist(reopened, vm =>
+        {
+            Assert.NotEmpty(vm.TreeNodes);
+            Assert.NotEmpty(vm.BrowserItems);
+        });
+        Assert.Equal(original.Select(entry => entry.Id), reopened.Select(entry => entry.Id));
+        Assert.Equal(originalBytes, await File.ReadAllBytesAsync(originalPath));
     }
 
     [Fact]

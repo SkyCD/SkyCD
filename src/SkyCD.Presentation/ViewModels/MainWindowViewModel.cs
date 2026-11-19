@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Couchbase.Lite;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
 using SkyCD.Couchbase;
@@ -78,6 +79,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void ToggleBackgroundMediaSync() => IsBackgroundMediaSyncEnabled = !IsBackgroundMediaSyncEnabled;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
+    private Database? temporaryCatalogDatabase;
     private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly CatalogUndoManager? undoManager;
@@ -480,7 +482,34 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             mediaCacheStore.Dispose();
         }
 
+        if (temporaryCatalogDatabase is { } database)
+        {
+            using (database) database.Delete();
+        }
+
         GC.SuppressFinalize(this);
+    }
+
+    public static MainWindowViewModel CreateNewCatalog()
+    {
+        var database = new Database($"skycd-new-catalog-{Guid.NewGuid():N}",
+            new DatabaseConfiguration { Directory = Path.GetTempPath() });
+        try
+        {
+            var collection = database.GetDefaultCollection();
+            var repository = new CatalogDocumentRepository();
+            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+            return new MainWindowViewModel(repository, new PropertyValueLocalizer(), CreateEmptyMenuExtensionManager(),
+                shouldSeedDefaultCatalog: false, new CatalogUndoManager(repository))
+            {
+                temporaryCatalogDatabase = database
+            };
+        }
+        catch
+        {
+            using (database) database.Delete();
+            throw;
+        }
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
@@ -851,7 +880,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return values.ToArray();
     }
 
-    private IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
+    public IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
 
     private void NavigateToFindResult(CatalogFindResult result)
@@ -893,12 +922,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void CompleteNewCatalog()
     {
+        inMemoryCatalogEntries?.Clear();
         commentsByObjectKey.Clear();
         addedItemsByNodeKey.Clear();
         deletedItemNamesByNodeKey.Clear();
         renamedBrowserItemNamesByNodeKey.Clear();
         CurrentCatalogPath = null;
         SelectedBrowserItem = null;
+        SelectedBrowserItems = new List<CatalogDocument>();
         ClipboardItem = null;
 
         // History describes edits to the catalog that was open. Carrying it into a new catalog would let Undo
@@ -906,6 +937,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // entries that no longer exist.
         ResetUndoHistory();
 
+        RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
         IsDirtyDocument = false;
         StatusText = LocalizationService.Current.Get(TextKeys.CreatedANewCatalog);
@@ -1555,7 +1587,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void AddImportedItem(string? suggestedName)
     {
-        var nodeKey = SelectedTreeNode?.Key ?? "library";
+        var nodeKey = SelectedTreeNode?.Key;
         var itemName = string.IsNullOrWhiteSpace(suggestedName)
             ? $"Imported Item {DateTime.Now:HHmmss}"
             : suggestedName.Trim();
