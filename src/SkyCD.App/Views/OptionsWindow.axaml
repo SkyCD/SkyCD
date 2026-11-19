@@ -25,6 +25,16 @@
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
+        <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
+        <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
+        <!-- The packaged IconPacks theme was compiled against an older Avalonia binding API. -->
+        <ControlTheme x:Key="{x:Type iconPacks:PackIconControl}" TargetType="iconPacks:PackIconControl">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <PathIcon Data="{TemplateBinding Data}" Foreground="{TemplateBinding Foreground}" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
     </Window.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -219,7 +229,12 @@
                                      SelectedItem="{Binding SelectedLanguage}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:LanguageItem">
-                                        <TextBlock Text="{Binding DisplayText}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                                    AutomationProperties.Name="{Binding Name}">
+                                            <Image Width="20" Height="16"
+                                                   Source="{Binding Flag, Converter={StaticResource LanguageFlagImageConverter}}" />
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
@@ -336,8 +351,17 @@
                                                     <multiSelect:MultiSelectDropdown Grid.Column="1"
                                                                                      ItemsSource="{Binding IconOptionItems}"
                                                                                      IsSingleSelect="True"
-                                                                                     ShowIconSymbols="True"
-                                                                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SelectIcon}}" />
+                                                                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SelectIcon}}">
+                                                        <multiSelect:MultiSelectDropdown.ItemPreviewTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <ContentControl Width="16" Height="16"
+                                                                                Foreground="{DynamicResource ThemeForegroundBrush}"
+                                                                                HorizontalContentAlignment="Stretch"
+                                                                                VerticalContentAlignment="Stretch"
+                                                                                Content="{Binding ., Converter={StaticResource StatusBadgeIconConverter}}" />
+                                                            </DataTemplate>
+                                                        </multiSelect:MultiSelectDropdown.ItemPreviewTemplate>
+                                                    </multiSelect:MultiSelectDropdown>
                                                     <multiSelect:MultiSelectDropdown Grid.Column="2"
                                                                                      ItemsSource="{Binding TypeOptions}"
                                                                                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SelectItemTypes}}" />

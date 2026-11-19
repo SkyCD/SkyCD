@@ -1,3 +1,4 @@
+using SkyCD.App.Converters;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -5,6 +6,18 @@ namespace SkyCD.App.Tests;
 
 public class LanguageItemTests
 {
+    [Theory]
+    [InlineData("🇬🇧", "GB")]
+    [InlineData("🇱🇹", "LT")]
+    [InlineData("🇿🇿", "globe")]
+    [InlineData("🌐", "globe")]
+    [InlineData("", "globe")]
+    [InlineData(null, "globe")]
+    public void ResolveAssetName_UsesFlagSequenceOrFallback(string? flag, string assetName)
+    {
+        Assert.Equal(assetName, LanguageFlagImageConverter.ResolveAssetName(flag));
+    }
+
     [Fact]
     public void Create_KnownLanguage_IncludesExpectedFlagInDisplayText()
     {

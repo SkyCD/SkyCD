@@ -7,6 +7,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -26,8 +27,8 @@ public partial class MultiSelectDropdown : UserControl
     public static readonly StyledProperty<bool> IsSingleSelectProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, bool>(nameof(IsSingleSelect));
 
-    public static readonly StyledProperty<bool> ShowIconSymbolsProperty =
-        AvaloniaProperty.Register<MultiSelectDropdown, bool>(nameof(ShowIconSymbols));
+    public static readonly StyledProperty<IDataTemplate?> ItemPreviewTemplateProperty =
+        AvaloniaProperty.Register<MultiSelectDropdown, IDataTemplate?>(nameof(ItemPreviewTemplate));
 
     private readonly ObservableCollection<MultiSelectOptionItem> filteredItems = [];
     private IEnumerable<MultiSelectOptionItem>? trackedItems;
@@ -63,10 +64,10 @@ public partial class MultiSelectDropdown : UserControl
         set => SetValue(IsSingleSelectProperty, value);
     }
 
-    public bool ShowIconSymbols
+    public IDataTemplate? ItemPreviewTemplate
     {
-        get => GetValue(ShowIconSymbolsProperty);
-        set => SetValue(ShowIconSymbolsProperty, value);
+        get => GetValue(ItemPreviewTemplateProperty);
+        set => SetValue(ItemPreviewTemplateProperty, value);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
