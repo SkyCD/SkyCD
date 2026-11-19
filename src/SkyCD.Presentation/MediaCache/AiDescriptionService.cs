@@ -12,11 +12,11 @@ namespace SkyCD.Presentation.MediaCache;
 /// <summary>
 /// Host-side AI description surface over the durable media cache. Reading and clearing never require a
 /// provider, so stored descriptions stay available offline and while the plugin is disabled. Generation
-/// only ever runs after an explicit request.
+/// runs on request or after a user-initiated catalog add with an enabled provider.
 /// </summary>
 public sealed class AiDescriptionService
 {
-    /// <summary>Bounded parallelism for an explicit selected-item pass.</summary>
+    /// <summary>Bounded parallelism for a batch generation pass.</summary>
     public const int MaxBatchConcurrency = 2;
 
     private const string ContextFingerprintKey = "AiDescriptionContextFingerprint";
@@ -108,7 +108,8 @@ public sealed class AiDescriptionService
     public async Task<AiDescriptionGenerationOutcome> GenerateAsync(
         string entryId,
         bool regenerate,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool attachOriginalFile = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
         cancellationToken.ThrowIfCancellationRequested();
@@ -124,7 +125,7 @@ public sealed class AiDescriptionService
 
         var descriptions = new CatalogDescriptionService(repository, store);
         var options = provider.ContextOptions ?? new DescriptionContextOptions();
-        var context = descriptions.Build(entryId, options);
+        var context = attachOriginalFile ? descriptions.BuildOriginal(entryId, options) : descriptions.Build(entryId, options);
         if (!regenerate && IsUnchanged(entryId, context))
         {
             return new AiDescriptionGenerationOutcome(Read(entryId), Skipped: true);
@@ -139,14 +140,15 @@ public sealed class AiDescriptionService
     }
 
     /// <summary>
-    /// Runs an explicit selected-item pass with bounded concurrency. Every entry settles with its own result;
+    /// Runs a batch with bounded concurrency. Every entry settles with its own result;
     /// cancellation stops new work and marks unfinished entries as cancelled instead of failing the pass.
     /// </summary>
     public async Task<AiDescriptionBatchResult> GenerateBatchAsync(
         IReadOnlyList<string> entryIds,
         bool regenerate,
         IProgress<AiDescriptionBatchProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool attachOriginalFiles = false)
     {
         ArgumentNullException.ThrowIfNull(entryIds);
         var ids = entryIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToArray();
@@ -172,7 +174,7 @@ public sealed class AiDescriptionService
             {
                 await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
                 acquired = true;
-                var outcome = await GenerateAsync(entryId, regenerate, cancellationToken).ConfigureAwait(false);
+                var outcome = await GenerateAsync(entryId, regenerate, cancellationToken, attachOriginalFiles).ConfigureAwait(false);
                 results[index] = new AiDescriptionBatchItemResult(entryId, ResolveName(entryId),
                     outcome.Skipped ? AiDescriptionBatchItemOutcome.Skipped : AiDescriptionBatchItemOutcome.Generated);
             }

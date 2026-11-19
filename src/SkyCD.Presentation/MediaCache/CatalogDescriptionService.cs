@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using SkyCD.Documents;
+using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
@@ -17,6 +19,38 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
     public const string SchemaId = "skycd.ai-description.metadata";
     public const string Capability = "generated-description";
     public const string DescriptionFieldKey = "AiDescription";
+
+    public DescriptionContext BuildOriginal(string entryId, DescriptionContextOptions options)
+    {
+        var entry = repository.Get(entryId) ?? throw new DescriptionContextChangedException();
+        if (entry.Type != CatalogDocumentType.File ||
+            !entry.Properties.TryGetValue(MediaMetadataService.SourcePathPropertyKey, out var source) ||
+            source?.ToString() is not { } path || !Path.IsPathFullyQualified(path))
+            throw new Exceptions.AiDescriptionUnavailableException("the original file is not available locally");
+
+        var catalog = repository.GetAll();
+        var byId = catalog.ToDictionary(document => document.Id, StringComparer.Ordinal);
+        var visited = new HashSet<string>(StringComparer.Ordinal) { entry.Id };
+        for (var parentId = entry.ParentId; parentId is not null && visited.Add(parentId) &&
+            byId.TryGetValue(parentId, out var parent); parentId = parent.ParentId)
+        {
+            if (parent.Type == CatalogDocumentType.NetworkFolder)
+                throw new Exceptions.AiDescriptionUnavailableException("the original file is not available locally");
+        }
+
+        var file = new FileInfo(path);
+        if (!file.Exists)
+            throw new Exceptions.AiDescriptionUnavailableException("the original file is not available locally");
+        if (file.Length != entry.Size || !MediaMetadataService.MatchesRecordedTimestamp(entry, file))
+            throw new DescriptionContextChangedException();
+
+        var original = new DescriptionOriginalFile(file.FullName, entry.Name, file.Length, file.LastWriteTimeUtc);
+        var contextHash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(original)));
+        return new DescriptionContext(entryId, MediaSourceFingerprint.ForCatalogEntry(entry, catalog), contextHash, options, [])
+        {
+            OriginalFile = original
+        };
+    }
 
     public DescriptionContext Build(string entryId, DescriptionContextOptions options)
     {
@@ -64,7 +98,7 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
 
     public void Save(DescriptionContext context, GeneratedDescription description)
     {
-        var current = Build(context.EntryId, context.Options);
+        var current = context.OriginalFile is null ? Build(context.EntryId, context.Options) : BuildOriginal(context.EntryId, context.Options);
         if (current.SourceFingerprint != context.SourceFingerprint || current.ContextFingerprint != context.ContextFingerprint)
             throw new DescriptionContextChangedException();
         if (string.IsNullOrWhiteSpace(description.Text) || description.Text.Length > 8000)
@@ -100,7 +134,7 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
         store.Save(new MediaCachePayload(record.WithRecalculatedSizes()));
     }
 
-    /// <summary>True for records produced by explicit AI description generation, not by automatic extraction.</summary>
+    /// <summary>True for records produced by AI description generation.</summary>
     public static bool IsGeneratedDescriptionRecord(MediaCacheRecord record) =>
         record is not null &&
         string.Equals(record.PluginId, PluginId, StringComparison.Ordinal) &&

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Couchbase.Lite;
@@ -15,6 +17,7 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.Plugin.AiDescription;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -102,6 +105,61 @@ public sealed class FolderScanningIntegrationTests : IDisposable
         Assert.Equal(MediaCacheRecordState.Captured, Assert.Single(viewModel.MediaCache.GetRecordsForEntry(firstFile.Id)).State);
         Assert.Empty(viewModel.MediaCache.GetRecordsForEntry(secondFile.Id));
         Assert.NotNull(catalog.Get(firstFile.Id));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AddingFolderDescribesEachOriginalFileWithoutCachedMetadataWhenProviderIsEnabled(bool enabled)
+    {
+        File.WriteAllText(Path.Combine(scanTestDirectory, "first.txt"), "first test file");
+        File.WriteAllText(Path.Combine(scanTestDirectory, "second.txt"), "second test file");
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var catalog = (CatalogDocumentRepository)repositories.For<CatalogDocument>();
+        foreach (var entry in catalog.CreateDefaultEntries()) catalog.Save(entry.Id, entry);
+        using var viewModel = new MainWindowViewModel(repositories);
+        var config = Path.Combine(appDataRoot, "test-agent.json");
+        await File.WriteAllTextAsync(config, JsonSerializer.Serialize(new DescriptionAgentOptions
+        {
+            Enabled = enabled,
+            Executable = Environment.ProcessPath!
+        }));
+        var contexts = new ConcurrentBag<DescriptionContext>();
+        var capability = new AiDescriptionPlugin(config, (_, context, _) =>
+        {
+            contexts.Add(context);
+            if (context.OriginalFile?.Name == "second.txt")
+                throw new DescriptionAgentException("test agent failed");
+            return Task.FromResult(new GeneratedDescription("A test description", "test agent", null, "1", "1", "English",
+                "content-based AI description", "local-inference", DateTimeOffset.UtcNow));
+        });
+        viewModel.RefreshDescriptionServices(new DescriptionExtensionManager([capability]));
+        var scanner = new FolderCatalogScanner();
+        var options = new FolderScanOptions(scanTestDirectory, TargetParentId: "library");
+
+        await viewModel.AddImportedDocumentsAsync(scanner.Scan(options));
+
+        var files = catalog.GetAll().Where(entry => entry.Name is "first.txt" or "second.txt").ToArray();
+        Assert.Equal(2, files.Length);
+        Assert.Equal(enabled ? 2 : 0, contexts.Count);
+        foreach (var context in contexts)
+        {
+            Assert.Empty(context.Parts);
+            var original = Assert.IsType<DescriptionOriginalFile>(context.OriginalFile);
+            Assert.Equal(Path.Combine(scanTestDirectory, original.Name), original.FullPath);
+            Assert.Equal($"{Path.GetFileNameWithoutExtension(original.Name)} test file", File.ReadAllText(original.FullPath));
+        }
+        var descriptions = new AiDescriptionService(catalog, viewModel.MediaCache);
+        Assert.Equal(enabled ? "A test description" : null,
+            descriptions.Read(files.Single(file => file.Name == "first.txt").Id).Text);
+        Assert.DoesNotContain(viewModel.MediaCache.GetRecordsForEntry(files.Single(file => file.Name == "second.txt").Id),
+            CatalogDescriptionService.IsGeneratedDescriptionRecord);
+
+        await viewModel.AddImportedDocumentsAsync(scanner.Scan(options));
+
+        Assert.Equal(enabled ? 2 : 0, contexts.Count);
     }
 
     private sealed class CountingMetadataCapability : IMediaMetadataCapability

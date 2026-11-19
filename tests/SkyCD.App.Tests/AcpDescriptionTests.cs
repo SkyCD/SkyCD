@@ -17,14 +17,14 @@ public sealed class AcpDescriptionTests
     private static DescriptionContext Context(params DescriptionContextPart[] parts) => new("entry", "source", "context", new(Text: true, Images: true, Audio: true), parts);
     private static readonly DescriptionAgentOptions Options = new() { MaxOutputCharacters = 100, ProcessingDestination = "unknown", Sources = new(Text: true, Images: true, Audio: true) };
     private static string Json(object value) => JsonSerializer.Serialize(value);
-    private static string Initialization(bool images = false, int version = 1) => Json(new
+    private static string Initialization(bool images = false, int version = 1, bool embeddedContext = false) => Json(new
     {
         jsonrpc = "2.0",
         id = 1,
         result = new
         {
             protocolVersion = version,
-            agentCapabilities = new { promptCapabilities = new { image = images, audio = false } },
+            agentCapabilities = new { promptCapabilities = new { image = images, audio = false, embeddedContext } },
             agentInfo = new { name = "fake", version = "1" }
         }
     });
@@ -55,6 +55,72 @@ public sealed class AcpDescriptionTests
         Assert.Contains("untrustedFileData", prompt[1].GetProperty("text").GetString());
         foreach (var message in messages) message.Dispose();
     }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task OriginalFileIsAttachedWithoutCachedContext(bool embeddedContext, bool largeFile)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            byte[] content = [0, 54, 255];
+            await File.WriteAllBytesAsync(path, content);
+            if (largeFile)
+            {
+                using var stream = File.OpenWrite(path);
+                stream.SetLength(4 * 1024 * 1024 + 1);
+            }
+            var file = new FileInfo(path);
+            var context = Context() with
+            {
+                OriginalFile = new DescriptionOriginalFile(path, "original.bin", file.Length, file.LastWriteTimeUtc)
+            };
+            using var writer = new StringWriter();
+            var inline = embeddedContext && !largeFile;
+            var transcript = (inline
+                ? string.Join('\n', Initialization(embeddedContext: embeddedContext), Session(), Chunk("Original"), Completed())
+                : string.Join('\n', Initialization(embeddedContext: embeddedContext), Session(), OriginalRead(path), Chunk("Original"), Completed())) + "\n";
+            var result = await new AcpDescriptionClient(new StringReader(transcript), writer, 100)
+                .DescribeAsync(Options, context, "/empty", CancellationToken.None);
+            Assert.Equal("Original", result.Text);
+            using var request = JsonDocument.Parse(writer.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries)[2]);
+            var prompt = request.RootElement.GetProperty("params").GetProperty("prompt");
+            Assert.Equal(2, prompt.GetArrayLength());
+            var attachment = prompt[1];
+            Assert.Equal(inline ? "resource" : "resource_link", attachment.GetProperty("type").GetString());
+            if (inline)
+            {
+                var resource = attachment.GetProperty("resource");
+                Assert.Equal(content, resource.GetProperty("blob").GetBytesFromBase64());
+                Assert.Equal(new Uri(path).AbsoluteUri, resource.GetProperty("uri").GetString());
+            }
+            else
+            {
+                Assert.Equal(new Uri(path).AbsoluteUri, attachment.GetProperty("uri").GetString());
+                Assert.Equal("original.bin", attachment.GetProperty("name").GetString());
+                var denied = string.Join('\n', Initialization(), Session(), OriginalRead(path + ".other"), Chunk("Original"), Completed()) + "\n";
+                await Assert.ThrowsAsync<DescriptionAgentException>(() => new AcpDescriptionClient(new StringReader(denied),
+                    new StringWriter(), 100).DescribeAsync(Options, context, "/empty", CancellationToken.None));
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static string OriginalRead(string path) => Json(new
+    {
+        jsonrpc = "2.0",
+        method = "session/update",
+        @params = new
+        {
+            sessionId = "s",
+            update = new { sessionUpdate = "tool_call", toolCallId = "read-1", kind = "read", locations = new[] { new { path } } }
+        }
+    });
 
     [Fact]
     public async Task AdvertisedImagesAreSentNativelyAndMetadataOnlyRequiresOptIn()

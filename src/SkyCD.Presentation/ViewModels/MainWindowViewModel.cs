@@ -1367,7 +1367,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
 
             return new CatalogScanPublisher().Publish(store, sessionId, catalogRepository, options, undoManager?.History);
-        }, null, cancellationToken, sessionId);
+        }, null, cancellationToken, sessionId, describeNewFiles: true);
 
         UpdateUndoRedoState();
         RefreshTreeNodes();
@@ -1403,7 +1403,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             PublishImportedDocuments(documents, cancellationToken);
             return true;
-        }, progress, cancellationToken);
+        }, progress, cancellationToken, describeNewFiles: true);
         RefreshPreview();
     }
 
@@ -1413,10 +1413,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IOperationProgress? progress,
         CancellationToken cancellationToken,
         string? sessionId = null,
-        Func<bool>? canPublish = null)
+        Func<bool>? canPublish = null,
+        bool describeNewFiles = false)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, metadataLifetime.Token);
         var token = linked.Token;
+        T result;
+        string[] addedFileIds = [];
         await metadataPublicationGate.WaitAsync(token);
         try
         {
@@ -1448,7 +1451,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         return default!;
                     }
 
-                    var result = publish();
+                    result = publish();
                     if (batchId is not null)
                     {
                         try
@@ -1468,7 +1471,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                             }
                         }
                     }
-                    return result;
+                    if (describeNewFiles && aiDescriptionService is not null)
+                    {
+                        var existingIds = existing.Select(entry => entry.Id).ToHashSet(StringComparer.Ordinal);
+                        var published = result is ScanPublishResult scan ? scan.PublishedDocuments : prepared;
+                        addedFileIds = published.Where(entry => entry.Type == CatalogDocumentType.File &&
+                            !existingIds.Contains(entry.Id)).Select(entry => entry.Id).ToArray();
+                    }
+                    break;
                 }
                 catch
                 {
@@ -1480,6 +1490,41 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         finally
         {
             metadataPublicationGate.Release();
+        }
+
+        await DescribeAddedFilesAsync(addedFileIds, progress, token);
+        return result;
+    }
+
+    private async Task DescribeAddedFilesAsync(string[] entryIds, IOperationProgress? progress, CancellationToken cancellationToken)
+    {
+        if (entryIds.Length == 0 || aiDescriptionService is not { } service || cancellationToken.IsCancellationRequested)
+            return;
+
+        try
+        {
+            if (!service.GetProviderInfo().IsEnabled) return;
+
+            var localization = LocalizationService.Current;
+            var stage = localization.Get(UiKeys.AiDescriptionBatch);
+            progress?.ReportStage(stage, stageCurrent: 0, stageTotal: entryIds.Length);
+            IProgress<AiDescriptionBatchProgress>? descriptionProgress = progress is null ? null :
+                new Progress<AiDescriptionBatchProgress>(item => progress.ReportItem(item.Item.Name,
+                    stagePercentage: 100.0 * item.Completed / item.Total, stageCurrent: item.Completed, stageTotal: item.Total));
+            var result = await Task.Run(() => service.GenerateBatchAsync(entryIds, regenerate: false,
+                descriptionProgress, cancellationToken, attachOriginalFiles: true));
+            var summary = localization.Format(TextKeys.AiDescriptionBatchSummary, result.GeneratedCount,
+                result.SkippedCount, result.FailedCount, result.CancelledCount);
+            if (result.FailedCount > 0) progress?.ReportWarning(summary, stage: stage);
+            else progress?.ReportInfo(summary, stage: stage);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The catalog publication has already completed.
+        }
+        catch (Exception exception)
+        {
+            progress?.ReportWarning(LocalizationService.Current.Format(TextKeys.AiDescriptionBatchFailed, exception.Message));
         }
     }
 
