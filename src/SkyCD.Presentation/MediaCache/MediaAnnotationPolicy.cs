@@ -25,6 +25,7 @@ public static class MediaAnnotationPolicy
         "RealDirectoryName",
         "Title",
         "VolumeLabel",
+        "VolumeSerialNumber",
         "RootDirectory",
         "AvailableFreeSpace",
         "TotalFreeSpace",

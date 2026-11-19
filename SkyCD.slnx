@@ -16,6 +16,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Legacy.Scd/SkyCD.Plugin.Legacy.Scd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Text/SkyCD.Plugin.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Hash/SkyCD.Plugin.Hash.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.VolumeSerial/SkyCD.Plugin.VolumeSerial.csproj"/>
     </Folder>
     <Folder Name="/Plugins/samples/">
         <Project Path="Plugins/SkyCD.Plugin.Csv/SkyCD.Plugin.Csv.csproj"/>
@@ -100,6 +101,7 @@
         <Project Path="tests/SkyCD.Plugin.PlainText.Tests/SkyCD.Plugin.PlainText.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Html.Tests/SkyCD.Plugin.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Hash.Tests/SkyCD.Plugin.Hash.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.VolumeSerial.Tests/SkyCD.Plugin.VolumeSerial.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Iso.Tests/SkyCD.Plugin.Iso.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Json.Tests/SkyCD.Plugin.Json.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Legacy.Ascd.Tests/SkyCD.Plugin.Legacy.Ascd.Tests.csproj"/>

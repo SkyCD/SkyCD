@@ -6,8 +6,10 @@ using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -67,6 +69,11 @@ public sealed class PluginServiceRegistrator
 
         registrator.RegisterInstance(new MediaExtensionManager(plugins.SelectMany(plugin =>
             plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability)))),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        registrator.RegisterInstance(new VolumeExtensionManager(plugins.SelectMany(plugin =>
+            plugin.Capabilities.OfType<IVolumeMetadataCapability>()
+                .Select(capability => new VolumeProvider(plugin.Id, plugin.Version.ToString(), capability)))),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>

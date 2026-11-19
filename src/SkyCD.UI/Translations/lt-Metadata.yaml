@@ -3,6 +3,7 @@ _flag: 🇱🇹
 metadata.ed2k: "eD2k maiša"
 metadata.tth: "Tiger medžio maiša"
 metadata.sha256: "SHA-256"
+metadata.VolumeSerialNumber: "Tomo serijos numeris"
 metadata.AiDescription: "AI aprašymas"
 metadata.AiDescriptionAgent: "AI aprašymo agentas"
 metadata.AiDescriptionModel: "AI aprašymo modelis"

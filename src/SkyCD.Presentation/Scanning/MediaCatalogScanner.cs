@@ -5,16 +5,20 @@ using System.Threading;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Presentation.Operations;
 
 namespace SkyCD.Presentation.Scanning;
 
 public sealed class MediaCatalogScanner(
     IMediaDriveProvider? driveProvider = null,
-    IScanFileSystem? fileSystem = null)
+    IScanFileSystem? fileSystem = null,
+    IVolumeMetadataProvider? volumeMetadata = null)
 {
     private readonly IMediaDriveProvider driveProvider = driveProvider ?? new SystemMediaDriveProvider();
     private readonly IScanFileSystem fileSystem = fileSystem ?? new RealScanFileSystem();
+    private readonly IVolumeMetadataProvider? volumeMetadataProvider = volumeMetadata;
 
     public IReadOnlyList<CatalogDocument> Scan(
         MediaScanOptions options,
@@ -76,6 +80,7 @@ public sealed class MediaCatalogScanner(
         if (options.IncludeMediaInfo)
         {
             PopulateMediaDriveProperties(rootProperties, driveInfo);
+            PopulateVolumeMetadata(rootProperties, driveInfo, cancellationToken);
         }
 
         var rootDoc = new CatalogDocument
@@ -118,6 +123,51 @@ public sealed class MediaCatalogScanner(
         if (!string.IsNullOrWhiteSpace(drive.DriveFormat))
         {
             properties["DriveFormat"] = drive.DriveFormat;
+        }
+    }
+
+    /// <summary>
+    /// Adds optional volume facts from enabled volume-aware plugins. Capture is best-effort: missing or
+    /// failed values are simply not written, so a later refresh can never erase a previously captured
+    /// serial with a fabricated placeholder, and an unexpected failure never breaks the scan.
+    /// </summary>
+    private void PopulateVolumeMetadata(PropertiesCollection properties, MediaDriveInfo drive,
+        CancellationToken cancellationToken)
+    {
+        if (volumeMetadataProvider is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var values = volumeMetadataProvider.CaptureVolumeMetadata(
+                new VolumeMediaContext(drive.RootDirectory, drive.Name, drive.VolumeLabel, drive.DriveFormat),
+                cancellationToken);
+            foreach (var value in values)
+            {
+                var text = value.Type switch
+                {
+                    MediaMetadataType.Text => value.Text,
+                    MediaMetadataType.Integer => value.Integer?.ToString(CultureInfo.InvariantCulture),
+                    MediaMetadataType.Number => value.Number?.ToString(CultureInfo.InvariantCulture),
+                    MediaMetadataType.Boolean => value.Boolean?.ToString(),
+                    MediaMetadataType.Timestamp => value.Timestamp?.ToString("O", CultureInfo.InvariantCulture),
+                    _ => null
+                };
+                if (text is not null)
+                {
+                    properties[value.Key] = text;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Volume capture is optional enrichment; plugin failures are reported at the provider boundary.
         }
     }
 }

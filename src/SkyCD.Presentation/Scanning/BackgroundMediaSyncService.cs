@@ -8,6 +8,7 @@ using System.Text.Json;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Presentation.Staging;
 
 namespace SkyCD.Presentation.Scanning;
@@ -32,13 +33,14 @@ public sealed class BackgroundMediaSyncService : IDisposable
         Func<IReadOnlyList<CatalogDocument>, CancellationToken, Func<bool>, Task> publish,
         Func<bool>? canSync = null,
         IMediaDriveProvider? drives = null,
-        Func<MediaScanOptions, CancellationToken, CatalogScanResult>? scan = null)
+        Func<MediaScanOptions, CancellationToken, CatalogScanResult>? scan = null,
+        IVolumeMetadataProvider? volumeMetadata = null)
     {
         this.repository = repository;
         this.publish = publish;
         this.canSync = canSync ?? (() => true);
         this.drives = drives ?? new SystemMediaDriveProvider();
-        var scanner = new MediaCatalogScanner(this.drives);
+        var scanner = new MediaCatalogScanner(this.drives, volumeMetadata: volumeMetadata);
         this.scan = scan ?? ((options, token) => scanner.ScanDetailed(options, cancellationToken: token));
     }
 

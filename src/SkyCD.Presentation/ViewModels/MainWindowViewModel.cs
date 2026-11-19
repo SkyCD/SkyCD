@@ -26,6 +26,7 @@ using SkyCD.UI.Controls.Preview;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
@@ -68,7 +69,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         return true;
                     }, null, token, canPublish: canPublish);
                     if (published) RefreshPreview();
-                }, () => !isDisposed && !IsProgressVisible);
+                }, () => !isDisposed && !IsProgressVisible, volumeMetadata: volumeMetadataProvider);
             backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
             backgroundMediaSync.Start();
         }
@@ -147,13 +148,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaMetadataService? mediaMetadataService;
+    private IVolumeMetadataProvider? volumeMetadataProvider;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
 
-    public void RefreshMediaServices(MediaExtensionManager updatedManager)
+    public void RefreshMediaServices(MediaExtensionManager updatedManager, IVolumeMetadataProvider? volumeMetadataProvider = null)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore);
+        this.volumeMetadataProvider = volumeMetadataProvider;
+        if (backgroundMediaSync is not null)
+        {
+            OnIsBackgroundMediaSyncEnabledChanged(IsBackgroundMediaSyncEnabled);
+        }
     }
 
     private static bool HasLocalSource(CatalogDocument entry, IReadOnlyDictionary<string, CatalogDocument> catalog)
