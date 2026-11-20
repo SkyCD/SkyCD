@@ -645,6 +645,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
         RefreshDetailsHeaderMenuItems();
+        ToolbarItemsChanged?.Invoke(this, EventArgs.Empty);
         StatusText = DefaultStatusText;
         entryPreview.RefreshLocalization();
         RefreshBrowserItemsForSelection();
@@ -3679,6 +3680,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             new MainMenuItemViewModel
                 { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", InputGesture = "Ctrl+Alt+O", Command = OpenOptionsCommand },
+            new MainMenuItemViewModel
+                { Header = LocalizationService.Current.Get(UiKeys.CustomizeToolbar), Command = CustomizeToolbarCommand },
             new MainMenuItemViewModel
                 { Header = LocalizationService.Current.Get(UiKeys.ManageContacts), Command = OpenContactsDialogCommand },
             new MainMenuItemViewModel
