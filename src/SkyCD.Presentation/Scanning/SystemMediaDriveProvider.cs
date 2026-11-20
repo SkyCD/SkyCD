@@ -30,6 +30,22 @@ public sealed class SystemMediaDriveProvider : IMediaDriveProvider
             // Ignore system enumeration errors
         }
 
+        try
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                result.AddRange(LinuxOpticalDriveProbe.GetDrives());
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                result.AddRange(MacOpticalDriveProbe.GetDrives());
+            }
+        }
+        catch
+        {
+            // Optical probe errors must never hide the mounted drives above.
+        }
+
         return result;
     }
 
@@ -38,6 +54,14 @@ public sealed class SystemMediaDriveProvider : IMediaDriveProvider
         if (string.IsNullOrWhiteSpace(drivePathOrName))
         {
             return null;
+        }
+
+        // An unmounted optical disc is addressed by its device node, which DriveInfo cannot describe.
+        if (drivePathOrName.StartsWith("/dev/", StringComparison.Ordinal))
+        {
+            return OperatingSystem.IsLinux() ? LinuxOpticalDriveProbe.GetDrive(drivePathOrName)
+                : OperatingSystem.IsMacOS() ? MacOpticalDriveProbe.GetDrive(drivePathOrName)
+                : null;
         }
 
         try

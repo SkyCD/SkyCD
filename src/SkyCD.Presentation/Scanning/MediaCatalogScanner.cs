@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
@@ -53,7 +54,10 @@ public sealed class MediaCatalogScanner(
             throw new MediaDriveNotReadyException(options.DrivePathOrName);
         }
 
-        if (!context.FileSystem.DirectoryExists(driveInfo.RootDirectory))
+        // An audio CD has no filesystem, so on Unix the drive is addressed by its device node ("/dev/sr0",
+        // "/dev/rdiskN"). The disc is catalogued as a single media root; its metadata is captured afterwards.
+        var hasFileSystem = context.FileSystem.DirectoryExists(driveInfo.RootDirectory);
+        if (!hasFileSystem && !IsOpticalDeviceRoot(driveInfo))
         {
             throw new MediaDriveInaccessibleException(options.DrivePathOrName, "Root directory does not exist or is not accessible");
         }
@@ -71,17 +75,30 @@ public sealed class MediaCatalogScanner(
         var rootId = $"media-{Guid.NewGuid():N}";
         var traverser = new FileSystemCatalogTraverser(context);
 
-        var (totalSize, directChildrenCount, rootProperties) = traverser.Traverse(
-            driveInfo.RootDirectory,
-            rootId,
-            options.IncludeSubfolders,
-            options.IncludeExtendedInfo,
-            documents);
+        long totalSize = 0;
+        int directChildrenCount = 0;
+        var rootProperties = new PropertiesCollection();
+        if (hasFileSystem)
+        {
+            (totalSize, directChildrenCount, rootProperties) = traverser.Traverse(
+                driveInfo.RootDirectory,
+                rootId,
+                options.IncludeSubfolders,
+                options.IncludeExtendedInfo,
+                documents);
+        }
 
         if (options.IncludeMediaInfo)
         {
             PopulateMediaDriveProperties(rootProperties, driveInfo);
             PopulateVolumeMetadata(rootProperties, driveInfo, cancellationToken);
+        }
+        else if (!hasFileSystem)
+        {
+            // These two keys identify the drive for media metadata capture; without a filesystem they are
+            // the only facts the entry can carry, so they do not depend on the optional media-info setting.
+            rootProperties["RootDirectory"] = driveInfo.RootDirectory;
+            rootProperties["DriveType"] = driveInfo.DriveType.ToString();
         }
 
         if (!string.IsNullOrWhiteSpace(options.LocationId))
@@ -116,6 +133,10 @@ public sealed class MediaCatalogScanner(
 
     public IReadOnlyList<CatalogDocument> Scan(MediaScanOptions options, IProgress<(string Status, int Percentage)> progress) =>
         Scan(options, progress is not null ? new OperationProgressAdapter(progress) : null);
+
+    private static bool IsOpticalDeviceRoot(MediaDriveInfo drive) =>
+        drive.DriveType == DriveType.CDRom &&
+        drive.RootDirectory.Trim().StartsWith("/dev/", StringComparison.Ordinal);
 
     private static void PopulateMediaDriveProperties(PropertiesCollection properties, MediaDriveInfo drive)
     {

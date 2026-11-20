@@ -8,6 +8,7 @@ using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.Plugin.Host.AudioCd;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
@@ -85,6 +86,17 @@ public sealed class PluginServiceRegistrator
         registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>
             plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        // Capture-time settings are read from the configuration store so a persisted change applies to the
+        // next scan without restarting the host.
+        registrator.RegisterDelegate<AudioCdExtensionManager>(resolver => new AudioCdExtensionManager(
+                plugins.SelectMany(plugin => plugin.Capabilities.OfType<IAudioCdMetadataCapability>()
+                    .Select(capability => new AudioCdProvider(plugin.Id, plugin.Version.ToString(), capability))),
+                resolver.Resolve<PluginConfigurationStore>().GetSettings),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterDelegate<IAudioCdMetadataProvider>(
+            resolver => resolver.Resolve<AudioCdExtensionManager>(),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.Register<FileFormatManager>(Reuse.Singleton,
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);

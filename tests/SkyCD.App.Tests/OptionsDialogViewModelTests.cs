@@ -326,6 +326,75 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void CustomProperties_CanBeAddedRemovedAndExported()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetCustomProperties(
+        [
+            new CustomPropertyDocument { Name = "Genre", DefaultValue = "Rock" }
+        ]);
+
+        Assert.Single(vm.CustomProperties);
+        Assert.Equal("Genre", vm.SelectedCustomProperty?.Name);
+        Assert.False(vm.ShowCustomPropertyAlert);
+
+        vm.AddCustomPropertyCommand.Execute(null);
+        Assert.Equal(2, vm.CustomProperties.Count);
+
+        vm.RemoveCustomPropertyCommand.Execute(null);
+        Assert.Single(vm.CustomProperties);
+
+        var exported = vm.GetCustomProperties();
+        Assert.Single(exported);
+        Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
+    }
+
+    [Fact]
+    public void Confirm_ShowsCustomPropertyAlert_WhenNameIsBlank()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddCustomPropertyCommand.Execute(null);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        Assert.True(vm.ShowCustomPropertyAlert);
+        Assert.False(string.IsNullOrWhiteSpace(vm.CustomPropertyAlertMessage));
+    }
+
+    [Fact]
+    public void Confirm_ShowsCustomPropertyAlert_WhenNamesAreDuplicated()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetCustomProperties(
+        [
+            new CustomPropertyDocument { Name = "Genre" },
+            new CustomPropertyDocument { Name = "genre" }
+        ]);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        Assert.True(vm.ShowCustomPropertyAlert);
+    }
+
+    [Fact]
+    public void Confirm_ClearsCustomPropertyAlert_WhenNamesBecomeValid()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddCustomPropertyCommand.Execute(null);
+        vm.ConfirmCommand.Execute(null);
+        Assert.True(vm.ShowCustomPropertyAlert);
+
+        vm.SelectedCustomProperty!.Name = "Genre";
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.True(vm.DialogAccepted);
+        Assert.False(vm.ShowCustomPropertyAlert);
+        Assert.Equal(string.Empty, vm.CustomPropertyAlertMessage);
+    }
+
+    [Fact]
     public void ResetStatusVariantsCommand_RaisesRequestedEvent()
     {
         var vm = new OptionsDialogViewModel(["English"]);
