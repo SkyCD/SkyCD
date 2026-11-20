@@ -98,6 +98,26 @@ public sealed class FileFormatCompatibilityTests
         }, new Progress<int>());
     }
 
+    [Fact]
+    public async Task BinCueImage_ResolvesCompanionImageAndImportsCatalog()
+    {
+        var manager = new FileFormatManager(CreateProviders());
+        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.cue");
+        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(Path.ChangeExtension(path, ".bin")));
+        Assert.Equal("skycd-bincue", manager.ResolveFormatId(null, path, forWrite: false));
+
+        var service = new CatalogLoadService(manager);
+        await service.LoadAsync(path, (payload, _) =>
+        {
+            var entries = CatalogImportTests.Extract(payload!);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
+            CatalogImportTests.Persist(entries);
+            return entries.Count;
+        }, new Progress<int>());
+    }
+
     [Theory]
     [InlineData("skycd-html", "catalog.html")]
     [InlineData("skycd-md", "catalog.md")]
@@ -187,6 +207,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Qcow2.Qcow2ImageIndexPlugin(),
         new SkyCD.Plugin.Daa.DaaImageIndexPlugin(),
         new SkyCD.Plugin.Ccd.CcdImageIndexPlugin(),
+        new SkyCD.Plugin.BinCue.BinCueImageIndexPlugin(),
         new SkyCD.Plugin.Vhd.VhdImageIndexPlugin(),
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
         new SkyCD.Plugin.Lha.LhaArchiveIndexPlugin(),
