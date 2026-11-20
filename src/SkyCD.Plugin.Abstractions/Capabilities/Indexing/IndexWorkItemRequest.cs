@@ -14,6 +14,9 @@ public sealed class IndexWorkItemRequest
     /// <summary>Gets the source length in bytes.</summary>
     public long SizeBytes { get; init; }
 
+    /// <summary>Gets the optional source file path, when the host catalogs a local file.</summary>
+    public string? SourcePath { get; init; }
+
     /// <summary>Gets the factory that opens a fresh readable stream for the source.</summary>
     public required Func<CancellationToken, Task<Stream>> OpenSource { get; init; }
 

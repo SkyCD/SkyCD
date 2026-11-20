@@ -64,7 +64,8 @@ internal sealed class OpenCommand : ICliPluginCapability
         {
             FormatId = resolvedFormat,
             Source = source,
-            FileName = Path.GetFileName(fullPath)
+            FileName = Path.GetFileName(fullPath),
+            SourcePath = fullPath
         }, cancellationToken);
 
         if (jsonOutput)
