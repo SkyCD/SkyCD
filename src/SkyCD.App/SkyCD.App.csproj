@@ -12,6 +12,9 @@
         <NoWarn>$(NoWarn);AVLN3001</NoWarn>
     </PropertyGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.App.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <AvaloniaResource Include="Assets\**" />
         <AvaloniaResource Include="Styles\**" />
         <None Update="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
