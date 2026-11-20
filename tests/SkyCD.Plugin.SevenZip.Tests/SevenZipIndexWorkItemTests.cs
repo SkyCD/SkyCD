@@ -36,7 +36,7 @@ public sealed class SevenZipIndexWorkItemTests
     [Fact]
     public async Task GetWorkItemsAsync_ExtractsArchiveFiles_AndCleansUpOnDispose()
     {
-        await using var source = new FileStream(SampleArchivePath, FileMode.Open);
+        await using var source = File.OpenRead(SampleArchivePath);
         var request = RequestFor(source, "sample.7z");
 
         var set = await new SevenZipArchiveIndexPlugin().GetWorkItemsAsync(request);
@@ -67,7 +67,7 @@ public sealed class SevenZipIndexWorkItemTests
     [Fact]
     public async Task GetWorkItemsAsync_EntryOverLimit_IsSkipped()
     {
-        await using var source = new FileStream(SampleArchivePath, FileMode.Open);
+        await using var source = File.OpenRead(SampleArchivePath);
         var plugin = new SevenZipArchiveIndexPlugin(
             new SevenZipIndexLimits(MaxEntries: 100, MaxEntryBytes: 1, MaxTotalBytes: 1024));
 
@@ -108,7 +108,7 @@ public sealed class SevenZipIndexWorkItemTests
     [Fact]
     public async Task GetWorkItemsAsync_Cancellation_Propagates()
     {
-        await using var source = new FileStream(SampleArchivePath, FileMode.Open);
+        await using var source = File.OpenRead(SampleArchivePath);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -120,7 +120,7 @@ public sealed class SevenZipIndexWorkItemTests
     [Fact]
     public async Task Sequence_RunsEnabledMetadataProviders_ForContributedItems()
     {
-        await using var source = new FileStream(SampleArchivePath, FileMode.Open);
+        await using var source = File.OpenRead(SampleArchivePath);
         var manager = new MediaExtensionManager([new MediaProvider("test", "1.0", new TestMetadataCapability())]);
         var sequence = new IndexWorkItemSequence(manager, [new SevenZipArchiveIndexPlugin()]);
 
@@ -137,7 +137,7 @@ public sealed class SevenZipIndexWorkItemTests
     [Fact]
     public async Task Sequence_WithoutMetadataProviders_ContributesNothing()
     {
-        await using var source = new FileStream(SampleArchivePath, FileMode.Open);
+        await using var source = File.OpenRead(SampleArchivePath);
         var sequence = new IndexWorkItemSequence(new MediaExtensionManager([]), [new SevenZipArchiveIndexPlugin()]);
 
         Assert.False(sequence.HasMetadataProviders);
