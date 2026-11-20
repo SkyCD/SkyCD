@@ -6,10 +6,12 @@ using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Localization;
+using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Formatting;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -20,7 +22,9 @@ public partial class PropertiesDialogViewModel : ObservableObject
         "Name",
         "RealDirectoryName",
         "Comment",
-        "LocationId"
+        "LocationId",
+        // The rating is edited with the star control at the top of the General tab.
+        StarRating.PropertyKey
     };
 
     private static readonly Regex TimestampPattern = new(
@@ -48,6 +52,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
         sourceProperties = new PropertiesCollection(infoProperties.ToDictionary(item => item.Key, item => item.Value));
         valueLocalizer = localizer ?? new PropertyValueLocalizer();
         InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
+        rating = ReadStoredRating();
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
@@ -116,6 +121,7 @@ public partial class PropertiesDialogViewModel : ObservableObject
     public PropertiesCollection GetProperties()
     {
         var result = new PropertiesCollection(sourceProperties);
+        ApplyRating(result);
         foreach (var property in CustomProperties)
         {
             if (!sourceProperties.TryGetValue(property.Name, out var original) ||
@@ -166,9 +172,47 @@ public partial class PropertiesDialogViewModel : ObservableObject
         InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
         OnPropertyChanged(nameof(InfoProperties));
         OnPropertyChanged(nameof(HasInfoTab));
+        OnPropertyChanged(nameof(RatingValueText));
     }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
+
+    /// <summary>
+    /// Draft rating shown by the star control. Picking or clearing stars changes only this view model; the
+    /// catalog entry receives the value through <see cref="GetProperties"/> when the dialog is confirmed, and
+    /// Cancel simply drops the view model so the stored rating is restored the next time properties open.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RatingValueText))]
+    private int rating;
+
+    /// <summary>Number of stars currently selected, 0 when the entry is unrated.</summary>
+    public string RatingValueText =>
+        Rating <= StarRating.Unrated
+            ? LocalizationService.Current.Get(UiKeys.RatingNotSet)
+            : LocalizationService.Current.Format(UiKeys.RatingValue, Rating, StarRating.MaximumValue);
+
+    private int ReadStoredRating() =>
+        sourceProperties.TryGetValue(StarRating.PropertyKey, out var stored) ? StarRating.Parse(stored) : StarRating.Unrated;
+
+    private void ApplyRating(PropertiesCollection result)
+    {
+        // Compare against the stored value so an unchanged draft leaves the property byte-for-byte intact.
+        var storedRating = result.TryGetValue(StarRating.PropertyKey, out var storedValue) ? StarRating.Parse(storedValue) : StarRating.Unrated;
+        if (Rating == storedRating)
+        {
+            return;
+        }
+
+        if (StarRating.ToStoredValue(Rating) is { } stars)
+        {
+            result[StarRating.PropertyKey] = stars;
+        }
+        else
+        {
+            result.Remove(StarRating.PropertyKey);
+        }
+    }
 
     [ObservableProperty] private string comments;
 
