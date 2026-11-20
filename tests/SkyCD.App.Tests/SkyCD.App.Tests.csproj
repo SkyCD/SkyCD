@@ -43,6 +43,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Vhd\SkyCD.Plugin.Vhd.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Vdi\SkyCD.Plugin.Vdi.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Arj\SkyCD.Plugin.Arj.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Ace\SkyCD.Plugin.Ace.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Lha\SkyCD.Plugin.Lha.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Gzip\SkyCD.Plugin.Gzip.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Zstd\SkyCD.Plugin.Zstd.csproj" />
