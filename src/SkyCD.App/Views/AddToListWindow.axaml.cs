@@ -2,7 +2,11 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
+using Avalonia.Layout;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -13,17 +17,19 @@ namespace SkyCD.App.Views;
 
 public partial class AddToListWindow : Window
 {
-    private readonly DispatcherTimer driveRefreshTimer = new()
+    private readonly DispatcherTimer refreshTimer = new()
     {
         Interval = TimeSpan.FromMilliseconds(500)
     };
 
+    private bool checkingClipboard;
+    private bool pastingUrl;
     private AddToListDialogViewModel? subscribedViewModel;
 
     public AddToListWindow()
     {
         InitializeComponent();
-        driveRefreshTimer.Tick += OnDriveRefreshTimerTick;
+        refreshTimer.Tick += OnRefreshTimerTick;
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Closed += OnClosed;
@@ -47,15 +53,16 @@ public partial class AddToListWindow : Window
         }
     }
 
-    private void OnOpened(object? sender, EventArgs e)
+    private async void OnOpened(object? sender, EventArgs e)
     {
         subscribedViewModel?.RefreshDrives();
-        driveRefreshTimer.Start();
+        refreshTimer.Start();
+        await RefreshClipboardAsync();
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
-        driveRefreshTimer.Stop();
+        refreshTimer.Stop();
         if (subscribedViewModel is not null)
         {
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -64,9 +71,102 @@ public partial class AddToListWindow : Window
         }
     }
 
-    private void OnDriveRefreshTimerTick(object? sender, EventArgs e)
+    private async void OnRefreshTimerTick(object? sender, EventArgs e)
     {
         subscribedViewModel?.RefreshDrives();
+        await RefreshClipboardAsync();
+    }
+
+    private async Task RefreshClipboardAsync()
+    {
+        if (checkingClipboard || pastingUrl || subscribedViewModel?.IsSourceInternet != true)
+        {
+            return;
+        }
+
+        checkingClipboard = true;
+        try
+        {
+            var text = Clipboard is { } clipboard ? await clipboard.TryGetTextAsync() : null;
+            PasteInternetUrlButton.IsEnabled = !pastingUrl && !string.IsNullOrEmpty(text);
+        }
+        catch (Exception)
+        {
+            // The platform may temporarily deny access while another application owns the clipboard.
+            PasteInternetUrlButton.IsEnabled = false;
+        }
+        finally
+        {
+            checkingClipboard = false;
+        }
+    }
+
+    private async void OnPasteInternetUrlClicked(object? sender, RoutedEventArgs e)
+    {
+        if (pastingUrl || subscribedViewModel is not { IsSourceInternet: true } vm)
+        {
+            return;
+        }
+
+        pastingUrl = true;
+        PasteInternetUrlButton.IsEnabled = false;
+        try
+        {
+            string? text = null;
+            string? errorKey = null;
+            try
+            {
+                text = Clipboard is { } clipboard ? await clipboard.TryGetTextAsync() : null;
+            }
+            catch (Exception)
+            {
+                errorKey = UiKeys.InternetClipboardUnavailable;
+            }
+
+            if (subscribedViewModel == vm && vm.IsSourceInternet &&
+                (errorKey ?? vm.FillInternetFromUrl(text)) is { } error)
+            {
+                await ShowClipboardErrorAsync(error);
+            }
+        }
+        finally
+        {
+            pastingUrl = false;
+            await RefreshClipboardAsync();
+        }
+    }
+
+    private Task ShowClipboardErrorAsync(string messageKey)
+    {
+        var localization = LocalizationService.Current;
+        var close = new Button
+        {
+            Content = localization.Get(UiKeys.Ok),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            IsDefault = true,
+            IsCancel = true,
+        };
+        var dialog = new Window
+        {
+            Title = localization.Get(UiKeys.PasteInternetUrl),
+            Width = 380,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(14),
+                Spacing = 12,
+                Children =
+                {
+                    new TextBlock { Text = localization.Get(messageKey), TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                    close,
+                },
+            },
+        };
+        close.Click += (_, _) => dialog.Close();
+        return dialog.ShowDialog(this);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

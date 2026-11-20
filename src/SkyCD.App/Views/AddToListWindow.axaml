@@ -2,6 +2,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
+        xmlns:converters="using:SkyCD.App.Converters"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:views="using:SkyCD.App.Views"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
         Width="445"
@@ -18,6 +22,7 @@
     </Design.DataContext>
 
     <Window.Resources>
+        <converters:InternetProtocolIconConverter x:Key="InternetProtocolIcon" />
         <ControlTheme x:Key="AddToListTabItemTheme" TargetType="TabItem">
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="11" />
@@ -146,7 +151,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,84,Auto,Auto" RowSpacing="6">
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
             <StackPanel Spacing="3">
                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
                 <TextBox Classes="source-field" Text="{Binding MediaName}" />
@@ -166,7 +171,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <Grid Grid.Row="1">
+            <Grid Grid.Row="1" MinHeight="84">
                 <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="3">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
                     <ComboBox Classes="source-field"
@@ -197,9 +202,50 @@
                               IsChecked="{Binding IncludeSubfolders}" />
                 </StackPanel>
 
-                <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="3">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.EnterInternetAddress}}" />
-                    <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="5">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <ComboBox ItemsSource="{Binding InternetProtocols}"
+                                  SelectedItem="{Binding InternetProtocol}"
+                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <iconPacks:PackIconControl Width="16" Height="16"
+                                                                   Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
+                                                                   VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Grid.Column="1"
+                                x:Name="PasteInternetUrlButton"
+                                IsEnabled="False"
+                                Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
+                                Click="OnPasteInternetUrlClicked" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,72" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="3">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                        <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                        <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
+                                 Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                    </Grid>
+                    <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
+                               Text="{i18n:Translate {x:Static i18n:UiKeys.InternetPath}}" />
+                    <TextBlock IsVisible="{Binding IsSmbInternetProtocol}"
+                               Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
+                    <TextBox Classes="source-field" Text="{Binding InternetPath}" />
+                    <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
+                    <StackPanel Spacing="4" IsVisible="{Binding !InternetCredentials.IsSftp}">
+                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
+                                Command="{Binding CheckInternetConnectionCommand}" />
+                        <TextBlock Text="{Binding InternetCheckStatus}" TextWrapping="Wrap"
+                                   IsVisible="{Binding InternetCheckStatus, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
                 </StackPanel>
 
                 <TextBlock IsVisible="{Binding IsSourceTitleOnly}"

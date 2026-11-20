@@ -35,11 +35,12 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             SourceMode = initialSourceMode;
         }
 
+        InternetCredentials.ConfirmCommand.CanExecuteChanged += OnInternetCredentialsChanged;
+        InternetCredentials.PropertyChanged += OnInternetCredentialPropertyChanged;
         RecomputeValidation();
         localizationSubscription = LocalizationObserver.Observe(this, static vm =>
         {
             vm.RecomputeValidation();
-            vm.OnPropertyChanged(nameof(SourceValueLabel));
             vm.RefreshLocationChoiceLabels();
         });
     }
@@ -116,8 +117,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool dialogAccepted;
 
     [ObservableProperty] private string? validationMessage;
-
-    public string SourceValueLabel => SourceMode == AddToListSourceMode.Internet ? LocalizationService.Current.Get(TextKeys.Address) : LocalizationService.Current.Get(TextKeys.Folder);
 
     public void RefreshDrives()
     {
@@ -206,6 +205,9 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
         isDisposed = true;
         driveProvider.DrivesChanged -= OnDrivesChanged;
+        InternetCredentials.ConfirmCommand.CanExecuteChanged -= OnInternetCredentialsChanged;
+        InternetCredentials.PropertyChanged -= OnInternetCredentialPropertyChanged;
+        CheckInternetConnectionCommand.Cancel();
         localizationSubscription.Dispose();
     }
 
@@ -264,7 +266,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         }
 
         RecomputeValidation();
-        OnPropertyChanged(nameof(SourceValueLabel));
         OnPropertyChanged(nameof(IsSourceMedia));
         OnPropertyChanged(nameof(IsSourceFolder));
         OnPropertyChanged(nameof(IsSourceInternet));
@@ -326,9 +327,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             AddToListSourceMode.Folder => string.IsNullOrWhiteSpace(SourceValue)
                 ? LocalizationService.Current.Get(TextKeys.FolderPathIsRequiredForFolderSource)
                 : null,
-            AddToListSourceMode.Internet => string.IsNullOrWhiteSpace(SourceValue)
-                ? LocalizationService.Current.Get(TextKeys.AddressIsRequiredForInternetSource)
-                : null,
+            AddToListSourceMode.Internet => GetInternetValidationMessage(),
             AddToListSourceMode.TitleOnly => string.IsNullOrWhiteSpace(MediaName)
                 ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForTitleOnly)
                 : null,

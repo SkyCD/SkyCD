@@ -726,53 +726,17 @@ public partial class MainWindow : Window
         var accepted = await dialog.ShowDialog<bool?>(this);
         if (accepted != true)
         {
+            dialogVm.ClearInternetSecrets();
             return;
         }
 
         if (dialogVm.SourceMode == AddToListSourceMode.Internet)
         {
-            LoginDialogViewModel loginVm;
-            try
-            {
-                loginVm = LoginDialogViewModel.FromAddress(dialogVm.SourceValue);
-            }
-            catch (Exception ex) when (ex is RemoteSchemeNotSupportedException or RemoteConnectionException)
-            {
-                vm.StatusText = SecretSanitizer.Sanitize(ex.Message);
-                return;
-            }
-
-            var loginDialog = new LoginWindow
-            {
-                DataContext = loginVm
-            };
-
-            var loginAccepted = await loginDialog.ShowDialog<bool?>(this);
-            if (loginAccepted != true)
-            {
-                loginVm.Password = string.Empty;
-                vm.StatusText = LocalizationService.Current.Get(TextKeys.LoginCanceled);
-                return;
-            }
-
             var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
                 ? null
                 : vm.SelectedTreeNode?.Key ?? "library";
-            var scanOptions = new RemoteScanOptions(
-                loginVm.EffectiveAddress,
-                loginVm.Username,
-                loginVm.Password,
-                loginVm.UseAnonymous,
-                string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
-                targetParentId,
-                dialogVm.IncludeExtendedInfo,
-                traversal: BuildScanTraversalOptions(),
-                authMethod: loginVm.AuthMethod,
-                keyFilePath: string.IsNullOrWhiteSpace(loginVm.KeyFilePath) ? null : loginVm.KeyFilePath,
-                keyFilePassphrase: string.IsNullOrEmpty(loginVm.KeyFilePassphrase) ? null : loginVm.KeyFilePassphrase,
-                domain: string.IsNullOrWhiteSpace(loginVm.Domain) ? null : loginVm.Domain);
-            loginVm.Password = string.Empty;
-            loginVm.KeyFilePassphrase = string.Empty;
+            var scanOptions = dialogVm.CreateInternetScanOptions(targetParentId, BuildScanTraversalOptions());
+            dialogVm.ClearInternetSecrets();
 
             var scanner = new RemoteCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
@@ -1777,11 +1741,6 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(dialogVm.SourceValue))
         {
             var value = dialogVm.SourceValue.Trim();
-            if (dialogVm.SourceMode == AddToListSourceMode.Internet)
-            {
-                return value;
-            }
-
             return Path.GetFileName(value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         }
 

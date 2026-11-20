@@ -95,14 +95,22 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         var progress = new RecordingProgress();
         var address = $"ftp://{Username}:{UrlPassword}@127.0.0.1:{server.Port}/";
 
-        var scanned = new RemoteCatalogScanner().Scan(new RemoteScanOptions(
-            address,
-            Username,
-            Password,
-            anonymous: false,
-            mediaName: "Remote Archive",
-            targetParentId: "library",
-            includeExtendedInfo: true), progress);
+        using var addDialog = new AddToListDialogViewModel(initialSourceMode: AddToListSourceMode.Internet)
+        {
+            MediaName = "Remote Archive",
+            IncludeExtendedInfo = true,
+        };
+        Assert.Null(addDialog.FillInternetFromUrl(address));
+        Assert.Equal(UrlPassword, addDialog.InternetCredentials.Password);
+        addDialog.InternetCredentials.Password = Password;
+        Assert.True(addDialog.CanConfirm);
+        Assert.True(addDialog.CheckInternetConnectionCommand.CanExecute(null));
+        await addDialog.CheckInternetConnectionCommand.ExecuteAsync(null);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InternetCheckSucceeded), addDialog.InternetCheckStatus);
+        var options = addDialog.CreateInternetScanOptions("library");
+        Assert.DoesNotContain(UrlPassword, options.Address, StringComparison.Ordinal);
+        Assert.DoesNotContain(Password, options.Address, StringComparison.Ordinal);
+        var scanned = new RemoteCatalogScanner().Scan(options, progress);
 
         Assert.Equal(8, scanned.Count);
         var root = scanned[0];

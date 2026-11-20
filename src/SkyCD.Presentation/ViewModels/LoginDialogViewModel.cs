@@ -36,7 +36,9 @@ public partial class LoginDialogViewModel : ObservableObject
         string.Equals(provider.Scheme, "ftp", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(provider.Scheme, "ftps", StringComparison.OrdinalIgnoreCase);
 
-    public bool IsAnonymousAvailable => !IsSftp;
+    public bool IsAnonymousAvailable => IsFtp;
+
+    public bool IsHostKeyTrustAvailable => CanTrustHostKey();
 
     public bool IsKeyAuthentication => IsSftp && AuthMethodIndex == 1;
 
@@ -50,6 +52,18 @@ public partial class LoginDialogViewModel : ObservableObject
         LocalizationService.Current.Get(UiKeys.Password),
         LocalizationService.Current.Get(UiKeys.PrivateKey),
     ];
+
+    public string[] FtpAuthenticationNames =>
+    [
+        LocalizationService.Current.Get(UiKeys.UsernameAndPassword),
+        LocalizationService.Current.Get(UiKeys.AnonymousAccess),
+    ];
+
+    public int FtpAuthenticationIndex
+    {
+        get => UseAnonymous ? 1 : 0;
+        set => UseAnonymous = value == 1;
+    }
 
     /// <summary>TLS mode chosen in this dialog; the scheme of the address selects the default.</summary>
     public RemoteTlsMode TlsMode => (RemoteTlsMode)TlsModeIndex;
@@ -74,7 +88,7 @@ public partial class LoginDialogViewModel : ObservableObject
                 return string.Empty;
             }
 
-            var address = new UriBuilder(location.Scheme, location.Host, Port, location.Path).Uri.GetComponents(
+            var address = new UriBuilder(location.Scheme, location.Host, Port, RemoteLocation.EscapePath(location.Path)).Uri.GetComponents(
                 UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped);
             return TlsMode == provider.DefaultTlsMode
                 ? address
@@ -143,21 +157,60 @@ public partial class LoginDialogViewModel : ObservableObject
         return viewModel;
     }
 
+    internal void SetProtocol(string scheme)
+    {
+        provider = RemoteCatalogProviderRegistry.Default.Get(scheme);
+        SetLocation(null);
+        TlsModeIndex = (int)provider.DefaultTlsMode;
+        AuthMethodIndex = 0;
+        UseAnonymous = false;
+        Domain = string.Empty;
+        Username = string.Empty;
+        Password = string.Empty;
+        KeyFilePath = string.Empty;
+        KeyFilePassphrase = string.Empty;
+        OnPropertyChanged(nameof(IsFtp));
+        OnPropertyChanged(nameof(IsSmb));
+        OnPropertyChanged(nameof(IsSftp));
+        OnPropertyChanged(nameof(IsAnonymousAvailable));
+        ConfirmCommand.NotifyCanExecuteChanged();
+    }
+
+    internal void SetLocation(RemoteLocation? value)
+    {
+        var endpointChanged = location?.Host != value?.Host || location?.Port != value?.Port;
+        location = value;
+        Port = value?.Port ?? provider.DefaultPort;
+        if (endpointChanged)
+        {
+            presentedHostKey = null;
+            HostKeyFingerprint = null;
+            SetHostKeyState(SftpHostKeyState.Unknown);
+            if (IsSftp && value is not null)
+            {
+                RefreshHostKeyState();
+            }
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanConfirm))]
     private void Confirm()
     {
         DialogAccepted = true;
     }
 
-    [RelayCommand]
+    private bool CanCheckHostKey() => IsSftp && location is not null && Port is >= 1 and <= 65535;
+
+    [RelayCommand(CanExecute = nameof(CanCheckHostKey))]
     private async Task CheckHostKeyAsync()
     {
-        if (location is null)
+        if (!CanCheckHostKey() || location is null)
         {
             return;
         }
 
         var host = location.Host;
+        var port = Port;
         HostKeyStatus = LocalizationService.Current.Format(TextKeys.HostKeyChecking, host);
         HostKeyFingerprint = null;
         presentedHostKey = null;
@@ -165,13 +218,23 @@ public partial class LoginDialogViewModel : ObservableObject
 
         try
         {
-            var presented = await Task.Run(() => hostKeys.FetchHostKey(host, Port, CancellationToken.None));
+            var presented = await Task.Run(() => hostKeys.FetchHostKey(host, port, CancellationToken.None));
+            if (location?.Host != host || Port != port)
+            {
+                return;
+            }
+
             presentedHostKey = presented;
             HostKeyFingerprint = presented.Fingerprint;
-            SetHostKeyState(hostKeys.Evaluate(host, Port, presented.Fingerprint));
+            SetHostKeyState(hostKeys.Evaluate(host, port, presented.Fingerprint));
         }
         catch (Exception ex)
         {
+            if (location?.Host != host || Port != port)
+            {
+                return;
+            }
+
             HostKeyIsTrusted = false;
             HostKeyTrustButtonLabel = LocalizationService.Current.Get(UiKeys.TrustHostKey);
             HostKeyStatus = LocalizationService.Current.Format(
@@ -230,6 +293,8 @@ public partial class LoginDialogViewModel : ObservableObject
     private void NotifyHostKeyChanged()
     {
         TrustHostKeyCommand.NotifyCanExecuteChanged();
+        CheckHostKeyCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(IsHostKeyTrustAvailable));
     }
 
     partial void OnUsernameChanged(string value)
@@ -250,6 +315,7 @@ public partial class LoginDialogViewModel : ObservableObject
     partial void OnUseAnonymousChanged(bool value)
     {
         OnPropertyChanged(nameof(IsCredentialEntryEnabled));
+        OnPropertyChanged(nameof(FtpAuthenticationIndex));
         ConfirmCommand.NotifyCanExecuteChanged();
     }
 
