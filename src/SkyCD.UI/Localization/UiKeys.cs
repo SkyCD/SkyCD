@@ -395,6 +395,7 @@ public static class UiKeys
     public const string RequiredColumn = "core.ui.RequiredColumn";
     public const string MoveUp = "core.ui.MoveUp";
     public const string MoveDown = "core.ui.MoveDown";
+    public const string Toolbar = "core.ui.Toolbar";
     public const string CustomizeToolbar = "core.ui.CustomizeToolbar";
     public const string CustomizeToolbarHint = "core.ui.CustomizeToolbarHint";
     public const string ToolbarCommands = "core.ui.ToolbarCommands";

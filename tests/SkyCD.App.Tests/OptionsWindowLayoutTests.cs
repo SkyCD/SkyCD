@@ -101,6 +101,49 @@ public class OptionsWindowLayoutTests
             element => (string?)element.Attribute("IsVisible") == "{Binding ShowCustomPropertiesSection}");
     }
 
+    [Fact]
+    public void ToolbarSection_HostsTheToolbarCustomizationControls()
+    {
+        var section = GetToolbarSection();
+        Assert.Equal("Auto,Auto,*", (string?)section.Attribute("RowDefinitions"));
+        Assert.Contains("UiKeys.CustomizeToolbarHint", section.ToString(), StringComparison.Ordinal);
+
+        var commands = section.Descendants(Avalonia + "Button")
+            .Select(button => button.Attribute("Command")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.Equal(
+        [
+            "{Binding Toolbar.AddCommand}",
+            "{Binding Toolbar.AddSeparatorCommand}",
+            "{Binding Toolbar.RemoveCommand}",
+            "{Binding Toolbar.MoveUpCommand}",
+            "{Binding Toolbar.MoveDownCommand}",
+            "{Binding Toolbar.ResetCommand}"
+        ], commands);
+        Assert.Contains("Toolbar.AvailableCommands", section.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Toolbar.SelectedItems", section.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ToolbarCategory_ShipsForEverySupportedCulture()
+    {
+        foreach (var culture in new[] { "en", "lt" })
+        {
+            var yaml = ReadRepoFile("src", "SkyCD.UI", "Translations", $"{culture}-UI.yaml");
+
+            Assert.Contains("ui.Toolbar:", yaml, StringComparison.Ordinal);
+        }
+    }
+
+    private static XElement GetToolbarSection()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+
+        return Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowToolbarSection}");
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();
