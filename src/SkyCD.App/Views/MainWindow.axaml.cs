@@ -1188,6 +1188,9 @@ public partial class MainWindow : Window
         e.Dialog.SetCustomProperties(options.CustomProperties);
         LoadScanOptionsIntoDialog(e.Dialog, options);
         e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IGeneratedDescriptionCapability>().Any());
+        e.Dialog.SetAiDescriptionImplementations(
+            ServiceProvider.Resolve<DescriptionExtensionManager>().Implementations,
+            options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
@@ -1202,7 +1205,8 @@ public partial class MainWindow : Window
         var dialog = new OptionsWindow
         {
             DataContext = e.Dialog,
-            AcpSettingsCapability = pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault()
+            AcpSettingsCapability = pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault(),
+            AiProviderSettingsCapability = pluginManager.GetCapabilities<IAiProviderSettingsCapability>().FirstOrDefault()
         };
 
         bool? accepted = false;
@@ -1228,6 +1232,8 @@ public partial class MainWindow : Window
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
             options.AiScanMaxFileSizeBytes = e.Dialog.AiScanMaxFileSizeMegabytes * 1024L * 1024L;
+            options.AiDescriptionImplementation = e.Dialog.SelectedAiDescriptionImplementation?.Id
+                                                  ?? options.AiDescriptionImplementation;
             SaveScanOptionsFromDialog(e.Dialog, options);
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
@@ -1704,6 +1710,8 @@ public partial class MainWindow : Window
 
         ServiceProvider.ReregisterPluginsService();
         fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
+        var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
+        descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
 
         if (DataContext is MainWindowViewModel viewModel)
         {
@@ -1711,7 +1719,7 @@ public partial class MainWindow : Window
             viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                 ServiceProvider.Resolve<VolumeExtensionManager>(),
                 ServiceProvider.Resolve<IndexWorkItemSequence>());
-            viewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+            viewModel.RefreshDescriptionServices(descriptionManager);
         }
     }
 
