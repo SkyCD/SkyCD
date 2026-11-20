@@ -32,6 +32,17 @@ public sealed class BinaryPlistReaderTests
         Assert.Equal("Plain comment", BinaryPlistReader.ReadString(data));
     }
 
+    [Fact]
+    public void ExtendedStringLengths_AreDecoded()
+    {
+        foreach (var value in new[] { "A comment of sixteen", new string('x', 300) })
+        {
+            Assert.Equal(value, BinaryPlistReader.ReadString(BinaryPlistFixtures.SingleString(value)));
+            Assert.Equal(value, BinaryPlistReader.ReadString(BinaryPlistFixtures.SingleString(value, utf16: true)));
+            Assert.Equal([value], BinaryPlistReader.ReadStrings(BinaryPlistFixtures.ArrayOfStrings(value)));
+        }
+    }
+
     [Theory]
     [InlineData(new byte[0])]
     [InlineData(new byte[] { 0x62, 0x70, 0x6C, 0x69, 0x73, 0x74 })]

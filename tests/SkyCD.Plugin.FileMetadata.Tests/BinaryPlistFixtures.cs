@@ -20,9 +20,7 @@ internal static class BinaryPlistFixtures
         foreach (var value in values)
         {
             offsets.Add((int)objects.Position);
-            var bytes = Encoding.ASCII.GetBytes(value);
-            objects.WriteByte((byte)(0x50 | bytes.Length));
-            objects.Write(bytes);
+            WriteStringObject(objects, value);
         }
 
         return Wrap(objects.ToArray(), offsets);
@@ -31,20 +29,47 @@ internal static class BinaryPlistFixtures
     public static byte[] SingleString(string value, bool utf16 = false)
     {
         using var objects = new MemoryStream();
-        if (utf16)
+        WriteStringObject(objects, value, utf16);
+
+        return Wrap(objects.ToArray(), [0]);
+    }
+
+    /// <summary>
+    /// Writes an ASCII or UTF-16 string object. Counts below 15 sit in the marker's low nibble; larger counts
+    /// use the 0xF escape followed by an integer object, because <c>0x50 | 16</c> would collide with the
+    /// UTF-16 marker <c>0x60</c>.
+    /// </summary>
+    private static void WriteStringObject(Stream stream, string value, bool utf16 = false)
+    {
+        var bytes = utf16 ? Encoding.BigEndianUnicode.GetBytes(value) : Encoding.ASCII.GetBytes(value);
+        var count = utf16 ? bytes.Length / 2 : bytes.Length;
+        var marker = (byte)(utf16 ? 0x60 : 0x50);
+        if (count < 15)
         {
-            var bytes = Encoding.BigEndianUnicode.GetBytes(value);
-            objects.WriteByte((byte)(0x60 | (bytes.Length / 2)));
-            objects.Write(bytes);
+            stream.WriteByte((byte)(marker | count));
         }
         else
         {
-            var bytes = Encoding.ASCII.GetBytes(value);
-            objects.WriteByte((byte)(0x50 | bytes.Length));
-            objects.Write(bytes);
+            stream.WriteByte((byte)(marker | 0x0F));
+            WriteIntegerObject(stream, count);
         }
 
-        return Wrap(objects.ToArray(), [0]);
+        stream.Write(bytes);
+    }
+
+    private static void WriteIntegerObject(Stream stream, int value)
+    {
+        if (value <= byte.MaxValue)
+        {
+            stream.WriteByte(0x10);
+            stream.WriteByte((byte)value);
+        }
+        else
+        {
+            stream.WriteByte(0x11);
+            stream.WriteByte((byte)(value >> 8));
+            stream.WriteByte((byte)value);
+        }
     }
 
     private static byte[] Wrap(byte[] objects, List<int> offsets)
