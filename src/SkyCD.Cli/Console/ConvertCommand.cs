@@ -74,7 +74,8 @@ internal sealed class ConvertCommand : ICliPluginCapability
         {
             FormatId = resolvedInputFormat,
             Source = source,
-            FileName = Path.GetFileName(fullInputPath)
+            FileName = Path.GetFileName(fullInputPath),
+            SourcePath = fullInputPath
         }, cancellationToken);
 
         var payload = readResult.Payload
