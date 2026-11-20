@@ -356,6 +356,12 @@ public static class UiKeys
     public const string SkipOnlineOnlyCloudFiles = "core.ui.SkipOnlineOnlyCloudFiles";
     public const string ShowScanErrorsAfterScan = "core.ui.ShowScanErrorsAfterScan";
     public const string SaveScanErrorsToComments = "core.ui.SaveScanErrorsToComments";
+    public const string ScanCompletionHeader = "core.ui.ScanCompletionHeader";
+    public const string EjectMediaAfterScan = "core.ui.EjectMediaAfterScan";
+    public const string ActivateMainWindowAfterScan = "core.ui.ActivateMainWindowAfterScan";
+    public const string PlaySoundAfterScan = "core.ui.PlaySoundAfterScan";
+    public const string MediaEjectionSupported = "core.ui.MediaEjectionSupported";
+    public const string MediaEjectionUnsupported = "core.ui.MediaEjectionUnsupported";
     public const string ScanIssues = "core.ui.ScanIssues";
     public const string ScanIssueWarning = "core.ui.ScanIssueWarning";
     public const string ScanIssueError = "core.ui.ScanIssueError";

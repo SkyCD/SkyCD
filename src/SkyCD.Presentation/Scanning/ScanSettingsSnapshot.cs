@@ -11,4 +11,7 @@ public sealed record ScanSettingsSnapshot(
     bool SkipEmptyFolders,
     bool SkipOnlineOnlyCloudFiles,
     bool ShowScanErrorsAfterScan,
-    bool SaveScanErrorsToComments);
+    bool SaveScanErrorsToComments,
+    bool EjectMediaAfterScan,
+    bool ActivateMainWindowAfterScan,
+    bool PlaySoundAfterScan);

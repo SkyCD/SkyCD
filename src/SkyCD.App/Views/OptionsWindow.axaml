@@ -649,6 +649,21 @@
                                       IsChecked="{Binding ShowScanErrorsAfterScan}" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SaveScanErrorsToComments}}"
                                       IsChecked="{Binding SaveScanErrorsToComments}" />
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanCompletionHeader}}"
+                                       Margin="0,8,0,0"
+                                       FontWeight="SemiBold" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.EjectMediaAfterScan}}"
+                                      IsChecked="{Binding EjectMediaAfterScan}"
+                                      IsEnabled="{Binding IsMediaEjectionSupported}" />
+                            <TextBlock Text="{Binding MediaEjectionSupportHint}"
+                                       Margin="28,0,0,0"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.75" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ActivateMainWindowAfterScan}}"
+                                      IsChecked="{Binding ActivateMainWindowAfterScan}" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.PlaySoundAfterScan}}"
+                                      IsChecked="{Binding PlaySoundAfterScan}" />
                         </StackPanel>
 
                         <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
