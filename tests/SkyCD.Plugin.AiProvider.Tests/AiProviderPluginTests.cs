@@ -29,7 +29,8 @@ public sealed class AiProviderPluginTests : IDisposable
 
         Assert.Equal(AiDescriptionImplementationIds.Provider, plugin.ImplementationId);
         Assert.Equal("AI provider", plugin.ImplementationName);
-        Assert.Contains(plugin.Providers, provider => provider.Id == "openai");
+        Assert.Contains(plugin.Providers, provider => provider.Id == "lmstudio");
+        Assert.Contains(plugin.Providers, provider => provider.Id == "colibri");
     }
 
     [Fact]
@@ -45,40 +46,40 @@ public sealed class AiProviderPluginTests : IDisposable
     }
 
     [Fact]
-    public void GetPlan_WhenCloudProviderEnabled_ReportsCloudDestination()
+    public void GetPlan_WhenLocalProviderEnabled_ReportsLocalInference()
     {
         var plugin = CreatePlugin();
-        plugin.SaveSettings(new AiProviderSettings { Enabled = true, ApiKey = "key" });
+        plugin.SaveSettings(new AiProviderSettings { Enabled = true });
 
         var plan = plugin.GetPlan();
 
         Assert.True(plan.IsEnabled);
-        Assert.Equal("OpenAI", plan.ProviderName);
-        Assert.Equal("cloud", plan.ProcessingDestination);
-        Assert.Equal("gpt-4o-mini", plan.Model);
+        Assert.Equal("LM Studio", plan.ProviderName);
+        Assert.Equal("local-inference", plan.ProcessingDestination);
+        Assert.Equal("google/gemma-4-e2b", plan.Model);
         Assert.Null(plan.UnavailableReason);
         Assert.True(plan.ContextOptions.Filename);
         Assert.True(plan.ContextOptions.Images);
     }
 
     [Fact]
-    public void GetPlan_WhenLoopbackProviderEnabled_ReportsLocalInference()
+    public void GetPlan_WhenCustomRemoteAddress_ReportsCloudDestination()
     {
         var plugin = CreatePlugin();
         plugin.SaveSettings(new AiProviderSettings
         {
             Enabled = true,
-            ProviderId = "ollama",
+            ProviderId = "custom",
             Protocol = "http",
-            Address = "127.0.0.1",
-            Port = 11434,
-            Model = "llama3.2"
+            Address = "192.168.1.50",
+            Port = 8000,
+            Model = "local-model"
         });
 
         var plan = plugin.GetPlan();
 
         Assert.True(plan.IsEnabled);
-        Assert.Equal("local-inference", plan.ProcessingDestination);
+        Assert.Equal("cloud", plan.ProcessingDestination);
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public sealed class AiProviderPluginTests : IDisposable
 
         var url = plugin.BuildEndpointUrl(new AiProviderSettings());
 
-        Assert.Equal("https://api.openai.com:443/v1", url);
+        Assert.Equal("http://127.0.0.1:1234/v1", url);
     }
 
     [Fact]
@@ -118,7 +119,8 @@ public sealed class AiProviderPluginTests : IDisposable
     {
         var plugin = CreatePlugin();
 
-        var error = await plugin.StartServerAsync(new AiProviderSettings(), CancellationToken.None);
+        var error = await plugin.StartServerAsync(new AiProviderSettings { ProviderId = "llamacpp" },
+            CancellationToken.None);
 
         Assert.NotNull(error);
         Assert.Contains("does not support", error);

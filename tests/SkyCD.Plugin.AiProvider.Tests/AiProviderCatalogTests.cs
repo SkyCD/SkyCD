@@ -38,8 +38,33 @@ public sealed class AiProviderCatalogTests
     {
         Assert.Equal(("ollama", "serve"), AiProviderCatalog.ServerCommand("ollama"));
         Assert.Equal(("lms", "server start"), AiProviderCatalog.ServerCommand("lmstudio"));
-        Assert.Null(AiProviderCatalog.ServerCommand("openai"));
+        Assert.Equal(("coli", "serve"), AiProviderCatalog.ServerCommand("colibri"));
+        Assert.Null(AiProviderCatalog.ServerCommand("llamacpp"));
         Assert.Null(AiProviderCatalog.ServerCommand("custom"));
+    }
+
+    [Fact]
+    public void Providers_AreLocalServicesOnly()
+    {
+        Assert.All(AiProviderCatalog.Providers, provider =>
+        {
+            Assert.Equal("http", provider.Protocol);
+            Assert.True(AiProviderCatalog.IsLoopback(new AiProviderSettings { Address = provider.Address }),
+                provider.Id);
+        });
+        Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "colibri");
+        Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "llamacpp");
+        Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "ollama");
+        Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "lmstudio");
+        Assert.DoesNotContain(AiProviderCatalog.Providers, provider => provider.Id == "openai");
+    }
+
+    [Fact]
+    public void SwitchingProviders_OffersSuggestedModels()
+    {
+        Assert.NotEmpty(AiProviderCatalog.Find("ollama")!.SuggestedModels!);
+        Assert.Equal("llama3.2", AiProviderCatalog.Find("ollama")!.DefaultModel);
+        Assert.NotEmpty(AiProviderCatalog.Find("colibri")!.SuggestedModels!);
     }
 
     [Fact]

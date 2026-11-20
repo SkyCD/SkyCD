@@ -44,13 +44,13 @@ public sealed class AiProviderClientTests
         var result = await client.GenerateAsync(Settings(), Context(), CancellationToken.None);
 
         Assert.Equal("A blue sunset over the sea.", result.Text);
-        Assert.Equal("OpenAI", result.Agent);
+        Assert.Equal("LM Studio", result.Agent);
         Assert.Equal("gpt-4o-mini", result.Model);
-        Assert.Equal("cloud", result.ProcessingDestination);
+        Assert.Equal("local-inference", result.ProcessingDestination);
         Assert.Equal("English", result.Language);
         Assert.False(string.IsNullOrWhiteSpace(result.PromptVersion));
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
-        Assert.Equal("https://api.openai.com/v1/chat/completions", handler.LastRequest.RequestUri!.ToString());
+        Assert.Equal("http://127.0.0.1:1234/v1/chat/completions", handler.LastRequest.RequestUri!.ToString());
         Assert.Equal("Bearer secret", handler.LastRequest.Headers.Authorization!.ToString());
         Assert.Contains("\"model\":\"gpt-4o-mini\"", handler.LastBody);
         Assert.Contains("holiday.jpg", handler.LastBody);
@@ -136,7 +136,7 @@ public sealed class AiProviderClientTests
         var models = await client.ListModelsAsync(Settings(), CancellationToken.None);
 
         Assert.Equal(new[] { "a", "b" }, models);
-        Assert.Equal("https://api.openai.com/v1/models", handler.LastRequest!.RequestUri!.ToString());
+        Assert.Equal("http://127.0.0.1:1234/v1/models", handler.LastRequest!.RequestUri!.ToString());
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public sealed class AiProviderClientTests
 
         Assert.True(result.IsConnected);
         Assert.Equal(new[] { "m1" }, result.Models);
-        Assert.Contains("OpenAI", result.Message);
+        Assert.Contains("LM Studio", result.Message);
     }
 
     [Fact]

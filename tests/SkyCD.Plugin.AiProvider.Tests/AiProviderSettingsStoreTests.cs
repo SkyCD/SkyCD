@@ -25,9 +25,9 @@ public sealed class AiProviderSettingsStoreTests : IDisposable
 
         var settings = store.Read();
 
-        Assert.Equal("openai", settings.ProviderId);
+        Assert.Equal("lmstudio", settings.ProviderId);
         Assert.False(settings.Enabled);
-        Assert.Equal("gpt-4o-mini", settings.Model);
+        Assert.Equal("google/gemma-4-e2b", settings.Model);
         Assert.True(settings.ResizeLargeImages);
     }
 

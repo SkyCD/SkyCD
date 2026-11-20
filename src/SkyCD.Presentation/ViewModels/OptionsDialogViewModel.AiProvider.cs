@@ -337,7 +337,13 @@ public partial class OptionsDialogViewModel
         AiProviderAddress = value.Address;
         AiProviderPort = value.Port;
         AiProviderCanStartServer = value.CanStartServer;
-        if (value.DefaultModel is not null)
+        if (value.SuggestedModels is { Count: > 0 })
+        {
+            ReplaceAiProviderModels(value.SuggestedModels);
+            AiProviderModel = value.DefaultModel ?? value.SuggestedModels[0];
+            AddAiProviderModel(AiProviderModel);
+        }
+        else if (value.DefaultModel is not null)
         {
             AiProviderModel = value.DefaultModel;
             AddAiProviderModel(value.DefaultModel);

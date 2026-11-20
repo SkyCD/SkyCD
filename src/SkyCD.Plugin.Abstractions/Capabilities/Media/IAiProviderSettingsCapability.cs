@@ -13,29 +13,30 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
 /// <param name="Port">Default TCP port.</param>
 /// <param name="DefaultModel">Model suggested when the provider is first selected.</param>
 /// <param name="CanStartServer">Whether the plugin can start a local provider server.</param>
+/// <param name="SuggestedModels">Models to offer when this provider is selected.</param>
 public sealed record AiProviderChoice(string Id, string Name, string Protocol, string Address, int Port,
-    string? DefaultModel, bool CanStartServer);
+    string? DefaultModel, bool CanStartServer, IReadOnlyList<string>? SuggestedModels = null);
 
 /// <summary>Persisted provider connection and generation settings.</summary>
 public sealed record AiProviderSettings
 {
     /// <summary>Selected provider preset id.</summary>
-    public string ProviderId { get; init; } = "openai";
+    public string ProviderId { get; init; } = "lmstudio";
 
     /// <summary>Connection protocol, <c>http</c> or <c>https</c>.</summary>
-    public string Protocol { get; init; } = "https";
+    public string Protocol { get; init; } = "http";
 
     /// <summary>Host name or address without scheme, port or path.</summary>
-    public string Address { get; init; } = "api.openai.com";
+    public string Address { get; init; } = "127.0.0.1";
 
     /// <summary>TCP port of the OpenAI-compatible endpoint.</summary>
-    public int Port { get; init; } = 443;
+    public int Port { get; init; } = 1234;
 
     /// <summary>Optional bearer token; empty for unauthenticated local providers.</summary>
     public string ApiKey { get; init; } = string.Empty;
 
     /// <summary>Model identifier sent with each request.</summary>
-    public string Model { get; init; } = "gpt-4o-mini";
+    public string Model { get; init; } = "google/gemma-4-e2b";
 
     /// <summary>Requested output language.</summary>
     public string Language { get; init; } = "English";
