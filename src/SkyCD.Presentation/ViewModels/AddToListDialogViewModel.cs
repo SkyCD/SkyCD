@@ -30,10 +30,9 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         RefreshLocationChoiceLabels();
         SelectedLocation = LocationChoices[0];
         RefreshDrives();
-        if (initialSourceMode != AddToListSourceMode.Media)
-        {
-            SourceMode = initialSourceMode;
-        }
+        SourceMode = initialSourceMode == AddToListSourceMode.Media && !CanUseMedia
+            ? AddToListSourceMode.Folder
+            : initialSourceMode;
 
         InternetCredentials.ConfirmCommand.CanExecuteChanged += OnInternetCredentialsChanged;
         InternetCredentials.PropertyChanged += OnInternetCredentialPropertyChanged;
@@ -93,6 +92,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public bool IsScanOptionsEnabled => SourceMode != AddToListSourceMode.TitleOnly;
 
+    public bool CanUseMedia => AvailableDrives.Count > 0;
+
     /// <summary>The location picker applies to media roots created from a drive or a title-only entry.</summary>
     public bool IsLocationPickerVisible => SourceMode is AddToListSourceMode.Media or AddToListSourceMode.TitleOnly;
 
@@ -122,6 +123,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public void RefreshDrives()
     {
+        var couldUseMedia = CanUseMedia;
         var newDrives = driveProvider.GetSupportedDrives();
 
         if (AreDrivesEqual(AvailableDrives, newDrives))
@@ -195,6 +197,16 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             SelectedDrive = AvailableDrives.Count > 0 ? AvailableDrives[0] : null;
         }
 
+        if (couldUseMedia != CanUseMedia)
+        {
+            OnPropertyChanged(nameof(CanUseMedia));
+        }
+
+        if (!CanUseMedia && SourceMode == AddToListSourceMode.Media)
+        {
+            SourceMode = AddToListSourceMode.Folder;
+        }
+
         RecomputeValidation();
     }
 
@@ -245,10 +257,17 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void SelectSource(string modeKey)
     {
-        if (Enum.TryParse<AddToListSourceMode>(modeKey, true, out var mode))
+        if (!Enum.TryParse<AddToListSourceMode>(modeKey, true, out var mode))
         {
-            SourceMode = mode;
+            return;
         }
+
+        if (mode == AddToListSourceMode.Media && !CanUseMedia)
+        {
+            return;
+        }
+
+        SourceMode = mode;
     }
 
     [RelayCommand]
