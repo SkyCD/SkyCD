@@ -23,14 +23,13 @@ public sealed class AiDescriptionUiContractTests
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
-        Assert.Contains("Header=\"{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("IsVisible=\"{Binding HasAiDescriptionTab}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding GenerateCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding CopyCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AdoptCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding ClearCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding StateText}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding ProvenanceText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding HasAiDescription}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding AiDescription.GenerateCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding AiDescription.CopyCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding AiDescription.AdoptCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding AiDescription.ClearCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding AiDescription.StateText}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("RtfText=\"{Binding Comments, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("RtfText=\"{Binding DescriptionText", xaml, StringComparison.Ordinal);
     }
@@ -148,7 +147,7 @@ public sealed class AiDescriptionUiContractTests
         dialog.InitializeAiDescription(service, "entry");
 
         Assert.NotNull(dialog.AiDescription);
-        Assert.True(dialog.HasAiDescriptionTab);
+        Assert.True(dialog.HasAiDescription);
         dialog.AiDescription!.AdoptCommand.Execute(null);
         Assert.Equal("Existing comment", dialog.Comments);
         dialog.AiDescription.AdoptCommand.Execute(null);

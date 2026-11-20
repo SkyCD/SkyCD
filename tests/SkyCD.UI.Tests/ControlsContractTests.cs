@@ -219,7 +219,7 @@ public class ControlsContractTests
             var list = table.GetVisualDescendants().OfType<ListBox>().Single();
             var scroller = list.GetVisualDescendants().OfType<ScrollViewer>().First();
             Assert.Equal(411, window.Bounds.Width);
-            Assert.Equal(426, window.Bounds.Height);
+            Assert.Equal(560, window.Bounds.Height);
             Assert.True(scroller.Extent.Height > scroller.Viewport.Height);
             Assert.True(scroller.Extent.Width <= scroller.Viewport.Width);
             Assert.True(table.Bounds.Width < window.Bounds.Width);
@@ -302,12 +302,12 @@ public class ControlsContractTests
         {
             Dispatcher.UIThread.RunJobs();
             var tabs = window.GetVisualDescendants().OfType<TabControl>().Single();
-            var customTab = Assert.IsType<TabItem>(tabs.Items[4]);
+            var customTab = Assert.IsType<TabItem>(tabs.Items[3]);
             Assert.False(customTab.IsVisible);
 
-            tabs.SelectedIndex = 2;
+            tabs.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
-            var table = Assert.IsType<PropertiesList>(Assert.IsType<TabItem>(tabs.Items[2]).Content);
+            var table = Assert.IsType<PropertiesList>(Assert.IsType<TabItem>(tabs.Items[1]).Content);
             Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Format");
             Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Audio");
             Assert.Empty(table.GetVisualDescendants().OfType<TextBox>());
@@ -360,9 +360,9 @@ public class ControlsContractTests
         window.Show();
         Dispatcher.UIThread.RunJobs();
         var tabs = window.GetVisualDescendants().OfType<TabControl>().Single();
-        tabs.SelectedIndex = 4;
+        tabs.SelectedIndex = 3;
         Dispatcher.UIThread.RunJobs();
-        var table = Assert.IsType<PropertiesList>(Assert.IsType<TabItem>(tabs.Items[4]).Content);
+        var table = Assert.IsType<PropertiesList>(Assert.IsType<TabItem>(tabs.Items[3]).Content);
         return (window, table);
     }
 
