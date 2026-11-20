@@ -120,6 +120,90 @@ public sealed class CatalogLoanIntegrationTests
         }
     }
 
+    [Fact]
+    public void ContactsPersistLoanLinksAndVCardDetailsAcrossReopen()
+    {
+        using var directory = new TemporaryDirectory();
+        string contactId;
+        const string itemId = "album";
+        using (var database = OpenDatabase(directory.Path))
+        {
+            var catalog = OpenCatalog(database);
+            catalog.Save(itemId, new CatalogDocument { Id = itemId, Name = "Album" });
+            var service = CatalogLoanService.Open(catalog);
+            var contact = service.CreateContact("Alice");
+            contactId = contact.Id;
+            contact.DisplayName = "Alice Example";
+            contact.Email = "alice@example.com";
+            contact.Company = "ACME";
+            contact.Phone = "+1 555 0100";
+            contact.Address = "1 Main St";
+            service.SaveContact(contact);
+            service.Lend(itemId, contactId, new DateOnly(2024, 5, 1), new DateOnly(2024, 5, 10), "Box");
+
+            var active = Assert.Single(service.GetActiveLoansForContact(contactId));
+            Assert.Equal("Album", service.GetEntryName(active.EntryId));
+            Assert.Contains("FN:Alice Example", service.ExportContacts(), StringComparison.Ordinal);
+            Assert.Throws<ContactEditException>(() => service.DeleteContact(contactId));
+        }
+
+        using (var reopened = OpenDatabase(directory.Path))
+        {
+            var catalog = OpenCatalog(reopened);
+            var service = CatalogLoanService.Open(catalog);
+            var contact = Assert.Single(service.GetContacts());
+            Assert.Equal(contactId, contact.Id);
+            Assert.Equal("Alice Example", contact.DisplayName);
+            Assert.Equal("alice@example.com", contact.Email);
+            Assert.Equal("ACME", contact.Company);
+            Assert.Equal("+1 555 0100", contact.Phone);
+            Assert.Equal("1 Main St", contact.Address);
+
+            var active = Assert.Single(service.GetActiveLoansForContact(contactId));
+            Assert.Equal(itemId, active.EntryId);
+            Assert.Equal("Album", service.GetEntryName(itemId));
+        }
+    }
+
+    [Fact]
+    public void VCardImportMergesByEmailAndUnusedContactsStayDeletable()
+    {
+        using var directory = new TemporaryDirectory();
+        using var database = OpenDatabase(directory.Path);
+        var service = CatalogLoanService.Open(OpenCatalog(database));
+
+        const string original = """
+            BEGIN:VCARD
+            VERSION:3.0
+            FN:Alice
+            EMAIL:alice@example.com
+            TEL;TYPE=VOICE:+1 555 0100
+            END:VCARD
+            """;
+        const string updated = """
+            BEGIN:VCARD
+            VERSION:3.0
+            FN:Alice Example
+            EMAIL:alice@example.com
+            TEL;TYPE=VOICE:+1 555 0200
+            ORG:ACME
+            END:VCARD
+            """;
+
+        Assert.Equal(new ContactImportResult(1, 0), service.ImportContacts(VCardCodec.Parse(original)));
+        Assert.Equal(new ContactImportResult(0, 1), service.ImportContacts(VCardCodec.Parse(updated)));
+
+        var contact = Assert.Single(service.GetContacts());
+        Assert.Equal("Alice Example", contact.DisplayName);
+        Assert.Equal("+1 555 0200", contact.Phone);
+        Assert.Equal("ACME", contact.Company);
+        Assert.Contains("TEL;TYPE=VOICE:+1 555 0200", service.ExportContacts(), StringComparison.Ordinal);
+        Assert.Throws<ContactEditException>(() => service.CreateContact("alice"));
+
+        service.DeleteContact(contact.Id);
+        Assert.Empty(service.GetContacts());
+    }
+
     private static Database OpenDatabase(string directory) =>
         new("lending", new DatabaseConfiguration { Directory = directory });
 
