@@ -14,9 +14,23 @@ public partial class MainWindowViewModel
 
     public event EventHandler<LoanDialogRequestedEventArgs>? LoansRequested;
 
+    public event EventHandler<ContactsDialogRequestedEventArgs>? ContactsRequested;
+
     private string? LendingEntryId => ActivePane == ActivePane.Tree
         ? SelectedTreeNode?.Key
         : SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
+
+    [RelayCommand]
+    private void OpenContactsDialog()
+    {
+        if (loanService is null || catalogRepository is null)
+        {
+            return;
+        }
+
+        var dialog = new ContactsDialogViewModel(loanService, RefreshLending);
+        ContactsRequested?.Invoke(this, new ContactsDialogRequestedEventArgs { Dialog = dialog });
+    }
 
     [RelayCommand]
     private void OpenLoans(string? action)
@@ -101,7 +115,9 @@ public partial class MainWindowViewModel
             new() { Header = LocalizationService.Current.Get(UiKeys.LoanHistory), Command = OpenLoansCommand },
             new() { Header = LocalizationService.Current.Get(UiKeys.ActiveLoans), Command = SetLendingFilterCommand, CommandParameter = "active" },
             new() { Header = LocalizationService.Current.Get(UiKeys.OverdueLoans), Command = SetLendingFilterCommand, CommandParameter = "overdue" },
-            new() { Header = LocalizationService.Current.Get(UiKeys.AllLoanStates), Command = SetLendingFilterCommand }
+            new() { Header = LocalizationService.Current.Get(UiKeys.AllLoanStates), Command = SetLendingFilterCommand },
+            new() { Header = "-" },
+            new() { Header = LocalizationService.Current.Get(UiKeys.ManageContacts), Command = OpenContactsDialogCommand }
         ]
     };
 }

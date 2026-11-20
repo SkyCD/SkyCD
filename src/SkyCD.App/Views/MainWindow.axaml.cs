@@ -137,6 +137,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.LoansRequested -= OnLoansRequested;
+            subscribedViewModel.ContactsRequested -= OnContactsRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
             subscribedViewModel.LocationsRequested -= OnLocationsRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
@@ -163,6 +164,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.LoansRequested += OnLoansRequested;
+            subscribedViewModel.ContactsRequested += OnContactsRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
             subscribedViewModel.LocationsRequested += OnLocationsRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
@@ -1153,6 +1155,12 @@ public partial class MainWindow : Window
     private async void OnLoansRequested(object? sender, LoanDialogRequestedEventArgs e)
     {
         var dialog = new LoansWindow { DataContext = e.Dialog };
+        await dialog.ShowDialog(this);
+    }
+
+    private async void OnContactsRequested(object? sender, ContactsDialogRequestedEventArgs e)
+    {
+        var dialog = new ContactsWindow { DataContext = e.Dialog };
         await dialog.ShowDialog(this);
     }
 

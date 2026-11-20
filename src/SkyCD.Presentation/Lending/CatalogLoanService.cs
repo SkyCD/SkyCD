@@ -85,6 +85,111 @@ public sealed class CatalogLoanService(
         .OrderBy(contact => contact.Name, StringComparer.OrdinalIgnoreCase)
         .ToArray();
 
+    public IReadOnlyList<BorrowerDocument> GetContacts() => GetBorrowers();
+
+    public BorrowerDocument? GetContact(string id) => borrowers.Get(id);
+
+    public bool IsContactInUse(string contactId) => loans.GetAll()
+        .Any(loan => string.Equals(loan.BorrowerId, contactId, StringComparison.Ordinal));
+
+    public string GetEntryName(string entryId) => catalog.Get(entryId)?.Name ?? entryId;
+
+    public IReadOnlyList<LoanDocument> GetActiveLoansForContact(string contactId) => loans.GetAll()
+        .Where(loan => loan.IsActive && string.Equals(loan.BorrowerId, contactId, StringComparison.Ordinal) &&
+            IsInCatalog(loan))
+        .OrderBy(loan => loan.DueDate ?? "9999-99-99", StringComparer.Ordinal)
+        .ThenBy(loan => loan.Id, StringComparer.Ordinal)
+        .ToArray();
+
+    internal BorrowerDocument CreateContact(string name)
+    {
+        BorrowerDocument? result = null;
+        borrowers.Collection.Database.InBatch(() =>
+        {
+            var trimmed = name.Trim();
+            if (trimmed.Length == 0 || GetBorrowers().Any(contact =>
+                string.Equals(contact.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ContactEditException();
+            }
+
+            result = new BorrowerDocument { Id = Guid.NewGuid().ToString("N"), Name = trimmed };
+            borrowers.Save(result.Id, result);
+        });
+        return result!;
+    }
+
+    internal void SaveContact(BorrowerDocument contact)
+    {
+        borrowers.Collection.Database.InBatch(() =>
+        {
+            var name = contact.Name.Trim();
+            if (string.IsNullOrWhiteSpace(contact.Id) || name.Length == 0 || borrowers.Get(contact.Id) is null ||
+                GetBorrowers().Any(other =>
+                    other.Id != contact.Id && string.Equals(other.Name, name, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ContactEditException();
+            }
+
+            contact.Name = name;
+            TrimFields(contact);
+            borrowers.Save(contact.Id, contact);
+        });
+    }
+
+    internal void DeleteContact(string id)
+    {
+        borrowers.Collection.Database.InBatch(() =>
+        {
+            if (string.IsNullOrWhiteSpace(id) || borrowers.Get(id) is null || IsContactInUse(id))
+            {
+                throw new ContactEditException();
+            }
+
+            using var document = borrowers.Collection.GetDocument(id);
+            if (document is not null)
+            {
+                borrowers.Collection.Delete(document);
+            }
+        });
+    }
+
+    internal ContactImportResult ImportContacts(IReadOnlyList<BorrowerDocument> contacted)
+    {
+        var added = 0;
+        var updated = 0;
+        var existing = GetBorrowers().ToList();
+        borrowers.Collection.Database.InBatch(() =>
+        {
+            foreach (var contact in contacted)
+            {
+                var name = contact.Name.Trim();
+                if (name.Length == 0)
+                {
+                    continue;
+                }
+
+                contact.Name = name;
+                TrimFields(contact);
+                var match = FindContact(existing, contact);
+                if (match is null)
+                {
+                    borrowers.Save(contact.Id, contact);
+                    existing.Add(contact);
+                    added++;
+                    continue;
+                }
+
+                MergeContact(match, contact);
+                borrowers.Save(match.Id, match);
+                updated++;
+            }
+        });
+        return new ContactImportResult(added, updated);
+    }
+
+    internal string ExportContacts() => VCardCodec.Write(GetBorrowers());
+
     public IReadOnlyList<LoanDocument> GetHistory(string entryId) => loans.GetAll()
         .Where(loan => loan.EntryId == entryId && IsInCatalog(loan))
         .OrderByDescending(loan => loan.IsActive)
@@ -191,4 +296,50 @@ public sealed class CatalogLoanService(
     }
 
     private static string FormatDate(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static BorrowerDocument? FindContact(IReadOnlyList<BorrowerDocument> contacts, BorrowerDocument incoming)
+    {
+        if (!string.IsNullOrWhiteSpace(incoming.Email))
+        {
+            var byEmail = contacts.FirstOrDefault(contact =>
+                string.Equals(contact.Email, incoming.Email, StringComparison.OrdinalIgnoreCase));
+            if (byEmail is not null)
+            {
+                return byEmail;
+            }
+        }
+
+        return contacts.FirstOrDefault(contact =>
+            string.Equals(contact.Name, incoming.Name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void MergeContact(BorrowerDocument target, BorrowerDocument source)
+    {
+        target.DisplayName = Prefer(source.DisplayName, target.DisplayName);
+        target.Comments = Prefer(source.Comments, target.Comments);
+        target.Phone = Prefer(source.Phone, target.Phone);
+        target.Fax = Prefer(source.Fax, target.Fax);
+        target.Email = Prefer(source.Email, target.Email);
+        target.WebPage = Prefer(source.WebPage, target.WebPage);
+        target.Messenger = Prefer(source.Messenger, target.Messenger);
+        target.Address = Prefer(source.Address, target.Address);
+        target.Company = Prefer(source.Company, target.Company);
+        target.Position = Prefer(source.Position, target.Position);
+    }
+
+    private static string Prefer(string incoming, string existing) => incoming.Length > 0 ? incoming : existing;
+
+    private static void TrimFields(BorrowerDocument contact)
+    {
+        contact.DisplayName = contact.DisplayName.Trim();
+        contact.Comments = contact.Comments.Trim();
+        contact.Phone = contact.Phone.Trim();
+        contact.Fax = contact.Fax.Trim();
+        contact.Email = contact.Email.Trim();
+        contact.WebPage = contact.WebPage.Trim();
+        contact.Messenger = contact.Messenger.Trim();
+        contact.Address = contact.Address.Trim();
+        contact.Company = contact.Company.Trim();
+        contact.Position = contact.Position.Trim();
+    }
 }
