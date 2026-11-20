@@ -97,7 +97,7 @@ public sealed class RarInternalsTests
 
         var entries = await RarHeaderScan.ListAsync(archive, CancellationToken.None);
 
-        Assert.Equal(["b.txt", "a\\c.txt"], entries.ConvertAll(entry => entry.Key));
+        Assert.Equal(["b.txt", "a/c.txt"], entries.ConvertAll(entry => entry.Key));
         Assert.Equal([2L, 3L], entries.ConvertAll(entry => entry.SizeBytes));
         Assert.All(entries, entry => Assert.NotNull(entry.ModifiedUtc));
     }

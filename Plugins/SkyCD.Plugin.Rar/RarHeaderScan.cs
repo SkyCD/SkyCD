@@ -85,8 +85,8 @@ internal static class RarHeaderScan
                 break;
             }
 
-            entries.Add(new RarListedEntry(entry.Key ?? string.Empty, entry.IsDirectory, TryGetLength(entry),
-                TryGetModified(entry)));
+            entries.Add(new RarListedEntry((entry.Key ?? string.Empty).Replace('\\', '/'), entry.IsDirectory,
+                TryGetLength(entry), TryGetModified(entry)));
             await Task.CompletedTask.ConfigureAwait(false);
         }
 
