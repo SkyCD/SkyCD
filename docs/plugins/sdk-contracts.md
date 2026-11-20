@@ -22,6 +22,13 @@
   - Declares CLI command contributions (`CliCommandContribution`)
   - Supports new command registration and extension-point contributions for built-in host commands
   - Executes contributed command handlers through `ExecuteCliCommandAsync` and `CliCommandContext`
+- `IIndexWorkItemProvider` (`Capabilities.Indexing`)
+  - Hooks into the host indexing sequence by contributing extra sources (`IndexWorkItem`) for one input,
+    such as files stored inside an archive.
+  - The host runs its existing metadata providers over every contributed item and disposes the provider's
+    `IndexWorkItemSet` afterwards, so temporary files never outlive indexing, including on failure or cancellation.
+  - Plugins return an empty set for inputs they do not handle; hosts never run contributed items without
+    an enabled metadata provider.
 - `IOwnershipProvider` (`Capabilities.Ownership`)
   - Synchronizes a store/library through `SyncAsync(CancellationToken)`.
 - `IAccountConnector` (`Capabilities.Accounts`)

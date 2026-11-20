@@ -27,6 +27,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Volume;
@@ -992,7 +993,8 @@ public partial class MainWindow : Window
         var newCatalog = MainWindowViewModel.CreateNewCatalog();
         newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
         newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-            ServiceProvider.Resolve<VolumeExtensionManager>());
+            ServiceProvider.Resolve<VolumeExtensionManager>(),
+            ServiceProvider.Resolve<IndexWorkItemSequence>());
         newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
         newCatalog.CompleteNewCatalog();
@@ -1388,7 +1390,8 @@ public partial class MainWindow : Window
             }, progress);
             reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                ServiceProvider.Resolve<VolumeExtensionManager>());
+                ServiceProvider.Resolve<VolumeExtensionManager>(),
+                ServiceProvider.Resolve<IndexWorkItemSequence>());
             var options = LoadAppOptions();
             reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
             reloadedViewModel.CurrentCatalogPath = localPath;
@@ -1706,7 +1709,8 @@ public partial class MainWindow : Window
         {
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                ServiceProvider.Resolve<VolumeExtensionManager>());
+                ServiceProvider.Resolve<VolumeExtensionManager>(),
+                ServiceProvider.Resolve<IndexWorkItemSequence>());
             viewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         }
     }

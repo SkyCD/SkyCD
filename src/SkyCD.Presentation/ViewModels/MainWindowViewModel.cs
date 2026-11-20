@@ -23,6 +23,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.UI.Controls.Preview;
+using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
@@ -161,10 +162,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
 
-    public void RefreshMediaServices(MediaExtensionManager updatedManager, IVolumeMetadataProvider? volumeMetadataProvider = null)
+    public void RefreshMediaServices(MediaExtensionManager updatedManager,
+        IVolumeMetadataProvider? volumeMetadataProvider = null, IndexWorkItemSequence? indexWorkItems = null)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
-        mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore);
+        mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore, workItems: indexWorkItems);
         this.volumeMetadataProvider = volumeMetadataProvider;
         if (backgroundMediaSync is not null)
         {
