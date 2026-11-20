@@ -93,6 +93,13 @@ public sealed class MediaCatalogScanner(
             PopulateMediaDriveProperties(rootProperties, driveInfo);
             PopulateVolumeMetadata(rootProperties, driveInfo, cancellationToken);
         }
+        else if (!hasFileSystem)
+        {
+            // These two keys identify the drive for media metadata capture; without a filesystem they are
+            // the only facts the entry can carry, so they do not depend on the optional media-info setting.
+            rootProperties["RootDirectory"] = driveInfo.RootDirectory;
+            rootProperties["DriveType"] = driveInfo.DriveType.ToString();
+        }
 
         if (!string.IsNullOrWhiteSpace(options.LocationId))
         {

@@ -174,7 +174,7 @@ public sealed class MediaCatalogScannerTests : IDisposable
         var drive = new MediaDriveInfo("/dev/sr0", null, "/dev/sr0", DriveType.CDRom, true, 0, 0, 0);
         var provider = new FakeDriveProvider([drive]);
         var scanner = new MediaCatalogScanner(provider);
-        var options = new MediaScanOptions("/dev/sr0", MediaName: "Audio CD");
+        var options = new MediaScanOptions("/dev/sr0", MediaName: "Audio CD", IncludeMediaInfo: false);
 
         var documents = scanner.Scan(options);
 
@@ -183,6 +183,8 @@ public sealed class MediaCatalogScannerTests : IDisposable
         Assert.Equal(CatalogDocumentType.Media, rootDoc.Type);
         Assert.Equal(0L, rootDoc.Size);
         Assert.Equal(0L, rootDoc.ChildrenCount);
+        Assert.Equal("/dev/sr0", rootDoc.Properties["RootDirectory"]?.ToString());
+        Assert.Equal("CDRom", rootDoc.Properties["DriveType"]?.ToString());
     }
 
     [Fact]
