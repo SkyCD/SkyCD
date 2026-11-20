@@ -1683,7 +1683,8 @@ public partial class MainWindow : Window
                         isEnabled: descriptor.IsEnabled,
                         id: loaded.Id,
                         authorUrl: loaded.Author?.Url,
-                        description: loaded.Description);
+                        description: loaded.Description,
+                        primaryExtension: loaded.PrimaryExtension);
                 }
 
                 var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
@@ -1699,7 +1700,8 @@ public partial class MainWindow : Window
                     isEnabled: descriptor.IsEnabled,
                     id: descriptor.Id,
                     authorUrl: descriptor.Author?.Url,
-                    description: descriptor.Description);
+                    description: descriptor.Description,
+                    primaryExtension: descriptor.PrimaryExtension);
             })
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();

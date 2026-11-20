@@ -28,6 +28,9 @@ public sealed class DiscoveredPlugin
 
     public string Description { get; init; } = string.Empty;
 
+    /// <summary>Primary format extension without a leading dot, used as the plugin's icon identity.</summary>
+    public string? PrimaryExtension { get; init; }
+
     public required string FileName { get; init; }
 
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
@@ -65,6 +68,7 @@ public sealed class DiscoveredPlugin
                 MaxHostVersion = MaxHostVersion?.ToString()
             },
             Description = Description,
+            PrimaryExtension = PrimaryExtension,
             AssemblyPath = FileName,
             IsEnabled = true,
             IsAvailable = true,
