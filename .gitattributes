@@ -76,3 +76,5 @@
 *.gif       binary
 *.pdf       binary
 *.dmg       binary
+*.bin       binary
+*.img       binary

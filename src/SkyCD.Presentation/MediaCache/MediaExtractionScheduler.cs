@@ -92,7 +92,7 @@ public sealed class MediaExtractionScheduler
             }
 
             var results = await manager.ProcessAsync(request.Item, request.OpenSource, progress, cancellationToken,
-                limits, request.ProviderSelection);
+                limits, request.ProviderSelection, request.SourcePath);
 
             // No usable result while captured data exists: a failure or a throwing provider must never
             // downgrade usable cached payloads.

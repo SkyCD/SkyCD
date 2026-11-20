@@ -133,6 +133,131 @@ internal static class ImageFixtures
         return stream.ToArray();
     }
 
+    /// <summary>
+    /// An XMP packet with the properties file managers share. The packet is a string rather than a fixture so
+    /// each test states exactly which keywords, caption and rating it expects to read back.
+    /// </summary>
+    public static string Xmp(
+        IReadOnlyList<string>? keywords = null,
+        string? description = null,
+        int? rating = null,
+        string? pdfKeywords = null)
+    {
+        var builder = new StringBuilder();
+        builder.Append("<?xpacket begin=\"\uFEFF\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>");
+        builder.Append("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">");
+        builder.Append("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">");
+        builder.Append("<rdf:Description rdf:about=\"\"");
+        builder.Append(" xmlns:dc=\"http://purl.org/dc/elements/1.1/\"");
+        builder.Append(" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"");
+        builder.Append(" xmlns:pdf=\"http://ns.adobe.com/pdf/1.3/\">");
+
+        if (keywords is not null)
+        {
+            builder.Append("<dc:subject><rdf:Bag>");
+            foreach (var keyword in keywords)
+            {
+                builder.Append("<rdf:li>").Append(Escape(keyword)).Append("</rdf:li>");
+            }
+
+            builder.Append("</rdf:Bag></dc:subject>");
+        }
+
+        if (description is not null)
+        {
+            builder.Append("<dc:description><rdf:Alt>");
+            builder.Append("<rdf:li xml:lang=\"x-default\">").Append(Escape(description)).Append("</rdf:li>");
+            builder.Append("</rdf:Alt></dc:description>");
+        }
+
+        if (rating is not null)
+        {
+            builder.Append("<xmp:Rating>").Append(rating.Value).Append("</xmp:Rating>");
+        }
+
+        if (pdfKeywords is not null)
+        {
+            builder.Append("<pdf:Keywords>").Append(Escape(pdfKeywords)).Append("</pdf:Keywords>");
+        }
+
+        builder.Append("</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end=\"w\"?>");
+        return builder.ToString();
+    }
+
+    /// <summary>Inserts an APP1 XMP segment after the JPEG start marker.</summary>
+    public static byte[] WithXmp(byte[] jpeg, string packet) =>
+        InsertAfterStartOfImage(jpeg, [0xFF, 0xE1],
+            [.. Encoding.ASCII.GetBytes("http://ns.adobe.com/xap/1.0/\0"), .. Encoding.UTF8.GetBytes(packet)]);
+
+    /// <summary>Inserts a COM comment segment after the JPEG start marker.</summary>
+    public static byte[] WithComment(byte[] jpeg, string comment) =>
+        InsertAfterStartOfImage(jpeg, [0xFF, 0xFE], Encoding.Latin1.GetBytes(comment));
+
+    /// <summary>Inserts an APP13 Photoshop block carrying the given IPTC-IIM datasets.</summary>
+    public static byte[] WithIptc(byte[] jpeg, params (byte Dataset, string Value)[] records)
+    {
+        using var iim = new MemoryStream();
+        foreach (var (dataset, value) in records)
+        {
+            var bytes = Encoding.Latin1.GetBytes(value);
+            iim.Write([0x1C, 0x02, dataset, (byte)(bytes.Length >> 8), (byte)(bytes.Length & 0xFF)]);
+            iim.Write(bytes);
+        }
+
+        var iimBytes = iim.ToArray();
+        using var block = new MemoryStream();
+        block.Write(Encoding.ASCII.GetBytes("8BIM"));
+        block.Write([0x04, 0x04, 0x00, 0x00]);
+        block.Write([(byte)(iimBytes.Length >> 24), (byte)(iimBytes.Length >> 16),
+            (byte)(iimBytes.Length >> 8), (byte)iimBytes.Length]);
+        block.Write(iimBytes);
+        if ((iimBytes.Length & 1) == 1)
+        {
+            block.WriteByte(0x00);
+        }
+
+        return InsertAfterStartOfImage(jpeg, [0xFF, 0xED],
+            [.. Encoding.ASCII.GetBytes("Photoshop 3.0\0"), .. block.ToArray()]);
+    }
+
+    /// <summary>Inserts an uncompressed <c>tEXt</c> chunk after the PNG header chunk.</summary>
+    public static byte[] WithPngText(byte[] png, string keyword, string text) =>
+        InsertPngChunk(png, "tEXt", [.. Encoding.Latin1.GetBytes(keyword), 0x00,
+            .. Encoding.Latin1.GetBytes(text)]);
+
+    /// <summary>Inserts an uncompressed international <c>iTXt</c> chunk carrying an XMP packet.</summary>
+    public static byte[] WithPngXmp(byte[] png, string packet) =>
+        InsertPngChunk(png, "iTXt", [.. Encoding.ASCII.GetBytes("XML:com.adobe.xmp\0\0\0\0\0"),
+            .. Encoding.UTF8.GetBytes(packet)]);
+
+    /// <summary>Appends a RIFF <c>XMP </c> chunk and fixes the container size field.</summary>
+    public static byte[] WithWebpXmp(byte[] webp, string packet)
+    {
+        var payload = Encoding.UTF8.GetBytes(packet);
+        var padded = payload.Length + (payload.Length & 1);
+        var result = new byte[webp.Length + 8 + padded];
+        webp.CopyTo(result, 0);
+        var position = webp.Length;
+        result[position] = (byte)'X';
+        result[position + 1] = (byte)'M';
+        result[position + 2] = (byte)'P';
+        result[position + 3] = (byte)' ';
+
+        var size = payload.Length;
+        result[position + 4] = (byte)size;
+        result[position + 5] = (byte)(size >> 8);
+        result[position + 6] = (byte)(size >> 16);
+        result[position + 7] = (byte)(size >> 24);
+        payload.CopyTo(result, position + 8);
+
+        var riffSize = result.Length - 8;
+        result[4] = (byte)riffSize;
+        result[5] = (byte)(riffSize >> 8);
+        result[6] = (byte)(riffSize >> 16);
+        result[7] = (byte)(riffSize >> 24);
+        return result;
+    }
+
     /// <summary>Bytes that are not an image at all, for malformed-input coverage.</summary>
     public static byte[] NotAnImage(int length = 64)
     {
@@ -357,4 +482,62 @@ internal static class ImageFixtures
         stream.Write(bytes, 0, Math.Min(bytes.Length, 19));
         stream.WriteByte(0);
     }
+
+    private static byte[] InsertAfterStartOfImage(byte[] jpeg, byte[] marker, byte[] payload)
+    {
+        var length = payload.Length + 2;
+        var header = new byte[] { marker[0], marker[1], (byte)(length >> 8), (byte)length };
+        var result = new byte[jpeg.Length + header.Length + payload.Length];
+        result[0] = jpeg[0];
+        result[1] = jpeg[1];
+        header.CopyTo(result, 2);
+        payload.CopyTo(result, 2 + header.Length);
+        Buffer.BlockCopy(jpeg, 2, result, 2 + header.Length + payload.Length, jpeg.Length - 2);
+        return result;
+    }
+
+    /// <summary>Inserts a chunk directly after the 25-byte IHDR, which is always the first PNG chunk.</summary>
+    private static byte[] InsertPngChunk(byte[] png, string type, byte[] payload)
+    {
+        var chunk = new byte[12 + payload.Length];
+        chunk[0] = (byte)(payload.Length >> 24);
+        chunk[1] = (byte)(payload.Length >> 16);
+        chunk[2] = (byte)(payload.Length >> 8);
+        chunk[3] = (byte)payload.Length;
+        Encoding.ASCII.GetBytes(type).CopyTo(chunk, 4);
+        payload.CopyTo(chunk, 8);
+        var crc = Crc32(chunk.AsSpan(4, 4 + payload.Length));
+        chunk[8 + payload.Length] = (byte)(crc >> 24);
+        chunk[9 + payload.Length] = (byte)(crc >> 16);
+        chunk[10 + payload.Length] = (byte)(crc >> 8);
+        chunk[11 + payload.Length] = (byte)crc;
+
+        const int insertAt = 8 + 12 + 13;
+        var result = new byte[png.Length + chunk.Length];
+        png.AsSpan(0, insertAt).CopyTo(result);
+        chunk.CopyTo(result, insertAt);
+        png.AsSpan(insertAt).CopyTo(result.AsSpan(insertAt + chunk.Length));
+        return result;
+    }
+
+    private static uint Crc32(ReadOnlySpan<byte> data)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in data)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+            }
+        }
+
+        return ~crc;
+    }
+
+    private static string Escape(string value) => value
+        .Replace("&", "&amp;", StringComparison.Ordinal)
+        .Replace("<", "&lt;", StringComparison.Ordinal)
+        .Replace(">", "&gt;", StringComparison.Ordinal)
+        .Replace("\"", "&quot;", StringComparison.Ordinal);
 }

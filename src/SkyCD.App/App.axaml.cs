@@ -55,7 +55,7 @@ public partial class App : Avalonia.Application
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
                 ApplyMcpSettings();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
-                var descriptionManager = appServiceProvider.Resolve<DescriptionExtensionManager>();
+                var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
                 descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
