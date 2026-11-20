@@ -75,3 +75,4 @@
 *.jpeg      binary
 *.gif       binary
 *.pdf       binary
+*.dmg       binary
