@@ -39,6 +39,7 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-arj", "catalog.arj", "catalog.arj")]
     [InlineData("skycd-lha", "catalog.lha", "catalog.lha")]
     [InlineData("skycd-lha", "catalog.lha", "catalog.lzh")]
+    [InlineData("skycd-rar", "catalog.rar", "catalog.rar")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
         var manager = new FileFormatManager(CreateProviders());
@@ -60,7 +61,7 @@ public sealed class FileFormatCompatibilityTests
             Assert.True(leaf.Size > 0);
         }
         if (format is "skycd-zip" or "skycd-tar" or "skycd-7z" or "skycd-iso" or "skycd-qcow2" or "skycd-daa"
-            or "skycd-arj" or "skycd-vhd" or "skycd-lha")
+            or "skycd-arj" or "skycd-vhd" or "skycd-lha" or "skycd-rar")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
@@ -189,6 +190,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Vhd.VhdImageIndexPlugin(),
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
         new SkyCD.Plugin.Lha.LhaArchiveIndexPlugin(),
+        new SkyCD.Plugin.Rar.RarArchiveIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()
     ];
