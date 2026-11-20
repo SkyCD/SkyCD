@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.Plugin.AudioCd.AudioCdConfigurationWindow"
+        Width="520"
+        Height="470"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8">
+        <TextBlock Text="Online sources" FontWeight="SemiBold" />
+        <StackPanel Grid.Row="1" Spacing="4">
+            <CheckBox x:Name="MusicBrainzCheckBox" Content="MusicBrainz" />
+            <CheckBox x:Name="GnudbCheckBox" Content="GnuDb" />
+            <CheckBox x:Name="OfflineCheckBox" Content="Work offline (never contact the sources)" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="2" Text="Disc record" FontWeight="SemiBold" Margin="0,8,0,0" />
+        <StackPanel Grid.Row="3" Spacing="4">
+            <CheckBox x:Name="DiscArtistTagsCheckBox" Content="Write the artist name as a tag" />
+            <CheckBox x:Name="DiscCoversCheckBox" Content="Download the cover image" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Cover size (px):" VerticalAlignment="Center" />
+                <NumericUpDown x:Name="DiscCoverSizeInput" Minimum="32" Maximum="2048" Increment="1" Width="140" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Grid.Row="4" Text="Track records" FontWeight="SemiBold" Margin="0,8,0,0" />
+        <StackPanel Grid.Row="5" Spacing="4">
+            <CheckBox x:Name="TrackArtistTagsCheckBox" Content="Write the artist name as a tag" />
+            <CheckBox x:Name="TrackCoversCheckBox" Content="Download the cover image" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Cover size (px):" VerticalAlignment="Center" />
+                <NumericUpDown x:Name="TrackCoverSizeInput" Minimum="32" Maximum="2048" Increment="1" Width="140" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Grid.Row="6" Text="Network" FontWeight="SemiBold" Margin="0,8,0,0" />
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Request timeout (seconds):" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="RequestTimeoutInput" Minimum="1" Maximum="30" Increment="1" Width="140" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="8"
+                   TextWrapping="Wrap"
+                   Opacity="0.75"
+                   Text="MusicBrainz allows one request per second; GnuDb is a free community database. Missing artwork and unmatched discs are skipped." />
+
+        <StackPanel Grid.Row="9" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+            <Button Content="_OK" MinWidth="75" IsDefault="True" Click="OnOkClicked" />
+            <Button Content="_Cancel" MinWidth="75" IsCancel="True" Click="OnCancelClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

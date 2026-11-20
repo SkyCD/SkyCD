@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: decoding and down-scaling Cover Art Archive images to the configured disc/track cover size. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+        <!-- MIT: the optional settings window, matching the host's own UI stack. -->
+        <PackageReference Include="Avalonia" Version="12.1.6"/>
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.6"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Audio CD Metadata Collection</AssemblyTitle>
+        <Description>Identifies audio CDs and their tracks during catalog scanning, optionally retrieves disc and track details from MusicBrainz and GnuDb, and stores artist tags and Cover Art Archive images under configurable per-disc and per-track options.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.AudioCd.Tests"/>
+    </ItemGroup>
+</Project>

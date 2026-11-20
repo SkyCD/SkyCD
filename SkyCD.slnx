@@ -10,6 +10,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Accounts.Microsoft365/SkyCD.Plugin.Accounts.Microsoft365.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Video/SkyCD.Plugin.Video.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Audio/SkyCD.Plugin.Audio.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.AudioCd/SkyCD.Plugin.AudioCd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.MotionDetector/SkyCD.Plugin.MotionDetector.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Pdf/SkyCD.Plugin.Pdf.csproj"/>
@@ -94,6 +95,7 @@
         <Project Path="tests/SkyCD.Plugin.Accounts.Tests/SkyCD.Plugin.Accounts.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Video.Tests/SkyCD.Plugin.Video.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Audio.Tests/SkyCD.Plugin.Audio.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.AudioCd.Tests/SkyCD.Plugin.AudioCd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Image.Tests/SkyCD.Plugin.Image.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.AiProvider.Tests/SkyCD.Plugin.AiProvider.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Text.Tests/SkyCD.Plugin.Text.Tests.csproj"/>
