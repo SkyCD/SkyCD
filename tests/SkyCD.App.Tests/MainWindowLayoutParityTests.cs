@@ -65,14 +65,15 @@ public class MainWindowLayoutParityTests
     public void MainWindow_Toolbar_MatchesLegacyCommandArtworkAndCompactStructure()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
+        var toolbarCommands = ReadRepoFile("src", "SkyCD.Presentation", "ViewModels", "MainWindowViewModel.Toolbar.cs");
 
-        Assert.Contains("ImageSrc=\"/Assets/new.png\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ImageSrc=\"/Assets/open.png\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ImageSrc=\"/Assets/save.png\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("\"/Assets/new.png\"", toolbarCommands, StringComparison.Ordinal);
+        Assert.Contains("\"/Assets/open.png\"", toolbarCommands, StringComparison.Ordinal);
+        Assert.Contains("\"/Assets/save.png\"", toolbarCommands, StringComparison.Ordinal);
 
-        Assert.DoesNotContain("ImageSrc=\"/Assets/add-from-media.png\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ImageSrc=\"/Assets/add-from-folder.png\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("ImageSrc=\"/Assets/add-from-internet.png\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Assets/add-from-media.png", toolbarCommands, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Assets/add-from-folder.png", toolbarCommands, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Assets/add-from-internet.png", toolbarCommands, StringComparison.Ordinal);
 
         // Ensure 68-DIP minwidth override and wide padding were removed from the view
         Assert.DoesNotContain("MinWidth=\"68\"", xaml, StringComparison.Ordinal);
