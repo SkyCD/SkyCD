@@ -15,6 +15,9 @@ public static class IWorkSchema
     public const string MetadataSchemaId = "skycd.iwork.metadata";
     public const int MetadataSchemaVersion = 1;
 
+    public const string PreviewSchemaId = "skycd.iwork.preview";
+    public const int PreviewSchemaVersion = 1;
+
     public const string Container = "Container";
     public const string DocumentType = "DocumentType";
     public const string IsPasswordProtected = "IsPasswordProtected";
@@ -60,4 +63,7 @@ public static class IWorkSchema
         new MediaMetadataField(IwaComponentCount, MediaMetadataType.Integer),
         new MediaMetadataField(SlideCount, MediaMetadataType.Integer)
     ]);
+
+    /// <summary>Preview results carry the embedded thumbnail rather than values, so the schema is identity only.</summary>
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }

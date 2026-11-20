@@ -129,12 +129,13 @@ References: [AbiWord formats](https://github.com/AbiWord/abiword/blob/6940426ea7
 [Aspose.Words](https://www.nuget.org/packages/Aspose.Words/),
 [GroupDocs formats](https://docs.groupdocs.com/parser/net/supported-document-formats/).
 
-## Apple iWork document metadata
+## Apple iWork document metadata and thumbnail
 
-`SkyCD.Plugin.IWork` implements `IMediaMetadataCapability` and is discovered from assembly
-metadata, without `plugin.json`. Enable it through the normal plugin pipeline. During indexing,
-its results use the existing media scheduler/cache and remain available offline with the item.
-It does not provide thumbnails, decode document content, or require iWork installed.
+`SkyCD.Plugin.IWork` implements `IMediaMetadataCapability` and `IMediaPreviewCapability` and is
+discovered from assembly metadata, without `plugin.json`. Enable it through the normal plugin
+pipeline. During indexing, its results use the existing media scheduler/cache and remain available
+offline with the item. It does not render pages, decode document content into text, or require
+iWork installed.
 
 ### Supported input and fields
 
@@ -150,58 +151,78 @@ Schema `skycd.iwork.metadata`, version 1:
 | Source | Field |
 | --- | --- |
 | Recognized package | `Container` (`iwork`) |
-| Extension, MIME type, or component inventory | `DocumentType` (`pages`, `numbers`, `keynote`) |
+| IWA component archive root; otherwise extension, MIME type, or component inventory | `DocumentType` (`pages`, `numbers`, `keynote`) |
 | Root `.iwpv2` verifier | `IsPasswordProtected` |
 | `Metadata/Properties.plist` `fileFormatVersion` | `FormatVersion` |
 | Latest non-template `Metadata/BuildVersionHistory.plist` entry | `ProducerBuild` |
 | `Metadata/DocumentIdentifier`, then `documentUUID` | `DocumentIdentifier` (canonical UUID) |
 | `Properties.plist` `language`, `locale` | `Language`, `Locale` |
 | `Properties.plist` `isMultiPage`, external-data flag | `IsMultiPage`, `HasExternalData` |
-| Root-level preview image | `HasPreview` |
-| Preview PNG/JPEG header | `PreviewWidth`, `PreviewHeight` (`px`) |
+| Recognized embedded thumbnail | `HasPreview` |
+| Preferred embedded raster preview | `PreviewWidth`, `PreviewHeight` (`px`) |
 | `Index` component and `Data/` entry counts | `IwaComponentCount`, `DataAssetCount` |
-| Keynote `Index/Slide-*` components | `SlideCount` |
+| Keynote slide projection | `SlideCount` |
 
-Absent or blank values are omitted, so "unknown" stays distinguishable from "none". Counts describe
-the package inventory, not rendered content: a component may belong to a template or another
-object, and `SlideCount` is the one count with a precise meaning. When a mislabelled package has no
-inventory marker either, `DocumentType` is omitted rather than guessed.
+Absent or blank values are omitted, so "unknown" stays distinguishable from "none". A parseable
+package takes its type from the component archive: a Pages/Numbers/Keynote document is identified
+even when the file is mislabelled. Only a protected package, which is not parsed, falls back to the
+filename, MIME type and component inventory.
+
+### Thumbnail preview
+
+Schema `skycd.iwork.preview`, version 1, carries identity only. The capability publishes the
+document's own embedded raster thumbnail (Apple's `preview.jpg` / `preview.png`, including the
+`preview-web`, `preview-micro` and Quick Look variants the reader recognizes) as one artifact with
+its declared MIME type, bounded by 4 MiB. Nothing is rendered. A package without a valid raster
+preview, or a protected package, returns an empty artifact list, which the host records as an
+explicit "no preview".
 
 ### Password protection, safety and limitations
 
 A protected modern package is still a readable ZIP: protection encrypts member payloads, not the
 container. `Metadata/Properties.plist` and `Metadata/DocumentIdentifier` stay plain, so the document
-is catalogued with `IsPasswordProtected = true` and its plain metadata. Encrypted members (build
-history, preview, data) are not decoded and their fields are omitted. No password is requested,
-guessed, or stored, and there is no credential path by design.
+is catalogued with `IsPasswordProtected = true` and its plain metadata. The component archive is not
+parsed for a protected package, so encrypted members (build history, preview, data) are never
+decoded and their fields are omitted; no thumbnail is published. No password is requested, guessed,
+or stored, and there is no credential path by design.
 
 The plugin works on .NET 10 on Windows, Linux and macOS without native dependencies. Sources are
-read once through the bounded `IMediaSource`; the plugin never receives a path and no IWA component
-is decoded. Property lists are parsed as XML with DOCTYPE processing disabled and no resolver, so
-the Apple DTD and any external entity are never fetched. Defaults: 64 MiB source, 1 MiB per
-metadata member, 32 MiB nested index, 64 KiB preview header; the host's own limits still apply.
+read once through the bounded `IMediaSource`; the plugin never receives a path, and OfficeIMO parses
+only the bytes it was given, so an external reference inside a package is never followed. Property
+lists are parsed as XML with DOCTYPE processing disabled and no resolver, so the Apple DTD and any
+external entity are never fetched. Defaults: 64 MiB source (also the parser's package bound), 1 MiB
+per metadata member, 32 MiB nested index, 4 MiB thumbnail; the host's own limits still apply.
 Damaged, truncated, empty or index-less ZIPs, legacy packages, oversized sources and short reads
 fail only that provider through the host's sanitized failure boundary. Cancellation propagates
 without publishing.
 
-Limitations: no title, author, subject or creation/modification dates, because the plain members
-do not carry them and compressed IWA components are not decoded. There is no OCR or text excerpt,
-one preview candidate is used per package, and preview dimensions describe Apple's stored thumbnail
-rather than the page size.
+Limitations: no title, author, subject or creation/modification dates, because the plain members do
+not carry them and the reader does not expose them; there is no OCR or text excerpt, and the
+thumbnail is Apple's stored image rather than a rendered page.
 
 ### Dependency evaluation (2026-11-20)
 
-The implementation uses .NET 10 `System.IO.Compression.ZipArchive` and `System.Xml.Linq`
-(MIT-licensed .NET runtime), plus the existing plugin abstraction project. `dotnet list
-Plugins/SkyCD.Plugin.IWork/SkyCD.Plugin.IWork.csproj package --include-transitive` reports no
-NuGet dependencies. No additional direct/transitive licenses, whitelist entries or policy changes
-are needed; the blocked-license, unknown-license and explicit-whitelist rules in
-`docs/legal/dependency-license-policy.json` remain unchanged.
+The implementation uses **OfficeIMO.IWork 3.6.2** (MIT, explicit `net10.0` assets, active
+maintenance) for the component archive: it identifies the application from the IWA root, reads the
+build history, projects Keynote slides and recognizes and validates embedded preview images. Its
+only dependency is `OfficeIMO.Core` 3.6.2 (also MIT, no further dependencies). Both pass the CI
+license gate: a CycloneDX SBOM generated for
+`Plugins/SkyCD.Plugin.IWork/SkyCD.Plugin.IWork.csproj` and checked with
+`tools/scripts/ci/check-license-compliance.ps1` against
+`docs/legal/dependency-license-policy.json` reports full compliance, and the blocked-license,
+unknown-license and explicit-whitelist rules are unchanged.
 
-No maintained .NET library exposing iWork package metadata was identified during evaluation. The
-members this plugin publishes are plain ZIP entries, so the runtime covers the need without adding
-a dependency, and no native or proprietary component is required or bundled.
+Alternatives considered:
+
+- **Custom ZIP and IWA parsing** (the previous iteration): no dependency, but document type had to
+  be guessed from component names, slide counts from `Index/Slide-*` filenames, and the preview
+  dimensions from a hand-written PNG/JPEG header sniffer. It could not identify a mislabelled
+  document from its IWA root and treated synthetic fixtures as evidence. Rejected in favour of the
+  maintained parser, which exercises real packages.
+- The library also ships creation, editing and preservation-aware saving. That surface is unused;
+  only the read path is called, with whole-content projections run on bounded sources.
 
 References: [iWork package format notes](https://github.com/obriensp/iWorkFileFormat),
 [OpenDocument.core iWork reader](https://github.com/opendocument-app/OpenDocument.core),
+[OfficeIMO.IWork](https://www.nuget.org/packages/OfficeIMO.IWork),
 [.NET runtime license](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).

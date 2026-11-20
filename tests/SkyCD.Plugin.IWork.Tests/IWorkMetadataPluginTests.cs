@@ -53,23 +53,29 @@ public class IWorkMetadataPluginTests
     public async Task NumbersPackage_ReportsItsTypeWithoutASlideCount()
     {
         var result = await ExtractAsync(
-            IWorkFixtures.Build(new PackageOptions { TableCount = 1 }), ".numbers");
+            IWorkFixtures.Build(new PackageOptions
+            {
+                Kind = FixtureDocumentKind.Numbers,
+                TableCount = 2
+            }), ".numbers");
 
         Assert.Equal("numbers", Text(result, IWorkSchema.DocumentType));
         Assert.DoesNotContain(result.Values, value => value.Key == IWorkSchema.SlideCount);
     }
 
     [Fact]
-    public async Task KeynotePackage_CountsSlidesButNotTemplates()
+    public async Task KeynotePackage_CountsItsSlides()
     {
         var result = await ExtractAsync(
-            IWorkFixtures.Build(new PackageOptions { SlideCount = 3, TemplateSlideCount = 2 }), ".key");
+            IWorkFixtures.Build(new PackageOptions
+            {
+                Kind = FixtureDocumentKind.Keynote,
+                SlideCount = 3
+            }), ".key");
 
         Assert.Equal("keynote", Text(result, IWorkSchema.DocumentType));
         Assert.Equal(3L, Integer(result, IWorkSchema.SlideCount));
-
-        // Document and Metadata plus three slides and two templates.
-        Assert.Equal(7L, Integer(result, IWorkSchema.IwaComponentCount));
+        Assert.Equal(2L, Integer(result, IWorkSchema.IwaComponentCount));
     }
 
     [Fact]
@@ -77,42 +83,28 @@ public class IWorkMetadataPluginTests
     {
         var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions
         {
+            Kind = FixtureDocumentKind.Keynote,
             NestedIndex = true,
             SlideCount = 2
         }), ".key");
 
         Assert.Equal("keynote", Text(result, IWorkSchema.DocumentType));
         Assert.Equal(2L, Integer(result, IWorkSchema.SlideCount));
-        Assert.Equal(4L, Integer(result, IWorkSchema.IwaComponentCount));
+        Assert.Equal(2L, Integer(result, IWorkSchema.IwaComponentCount));
         Assert.Equal(IWorkFixtures.DefaultProducerBuild, Text(result, IWorkSchema.ProducerBuild));
     }
 
     [Theory]
-    [InlineData(".dat", 2, 0, "keynote")]
-    [InlineData(".dat", 2, 1, "keynote")]
-    [InlineData(".dat", 0, 1, "numbers")]
-    [InlineData(".dat", 0, 0, null)]
-    public async Task MislabelledSource_InfersTheTypeFromTheComponentInventory(
-        string extension,
-        int slides,
-        int tables,
-        string? expected)
+    [InlineData(FixtureDocumentKind.Pages, "pages")]
+    [InlineData(FixtureDocumentKind.Numbers, "numbers")]
+    [InlineData(FixtureDocumentKind.Keynote, "keynote")]
+    public async Task MislabelledSource_IsIdentifiedFromTheComponentArchive(
+        FixtureDocumentKind kind,
+        string expected)
     {
-        var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions
-        {
-            SlideCount = slides,
-            TableCount = tables
-        }), extension);
+        var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions { Kind = kind }), ".dat");
 
         Assert.Equal(expected, Text(result, IWorkSchema.DocumentType));
-    }
-
-    [Fact]
-    public async Task MislabelledNumbersSource_IsInferredFromTableComponents()
-    {
-        var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions { TableCount = 1 }), ".dat");
-
-        Assert.Equal("numbers", Text(result, IWorkSchema.DocumentType));
     }
 
     [Fact]
@@ -145,6 +137,7 @@ public class IWorkMetadataPluginTests
     {
         var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions
         {
+            Kind = FixtureDocumentKind.Numbers,
             ProducerBuild = "Numbers 13.2"
         }), ".numbers");
 
@@ -156,8 +149,8 @@ public class IWorkMetadataPluginTests
     {
         var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions { JpegPreview = true }));
 
-        Assert.Equal(IWorkFixtures.PreviewWidth, Integer(result, IWorkSchema.PreviewWidth));
-        Assert.Equal(IWorkFixtures.PreviewHeight, Integer(result, IWorkSchema.PreviewHeight));
+        Assert.Equal(IWorkFixtures.JpegPreviewWidth, Integer(result, IWorkSchema.PreviewWidth));
+        Assert.Equal(IWorkFixtures.JpegPreviewHeight, Integer(result, IWorkSchema.PreviewHeight));
     }
 
     [Fact]
@@ -224,7 +217,11 @@ public class IWorkMetadataPluginTests
         {
             "missing-index" => IWorkFixtures.MissingIndex(),
             "notzip" => IWorkFixtures.NotZip(),
-            _ => IWorkFixtures.Truncated(IWorkFixtures.Build(new PackageOptions { SlideCount = 2 }))
+            _ => IWorkFixtures.Truncated(IWorkFixtures.Build(new PackageOptions
+            {
+                Kind = FixtureDocumentKind.Keynote,
+                SlideCount = 2
+            }))
         };
 
         await Assert.ThrowsAsync<IWorkDecodeException>(() => ExtractAsync(package));
@@ -275,6 +272,7 @@ public class IWorkMetadataPluginTests
         var schema = IWorkSchema.Metadata;
         var result = await ExtractAsync(IWorkFixtures.Build(new PackageOptions
         {
+            Kind = FixtureDocumentKind.Keynote,
             SlideCount = 2,
             DocumentUuidInProperties = IWorkFixtures.DefaultDocumentIdentifier
         }), ".key");
@@ -295,7 +293,11 @@ public class IWorkMetadataPluginTests
     [Fact]
     public async Task Extraction_LeavesTheSourceBytesUnchanged()
     {
-        var package = IWorkFixtures.Build(new PackageOptions { SlideCount = 2 });
+        var package = IWorkFixtures.Build(new PackageOptions
+        {
+            Kind = FixtureDocumentKind.Keynote,
+            SlideCount = 2
+        });
         var before = (byte[])package.Clone();
 
         await ExtractAsync(package);
@@ -306,7 +308,12 @@ public class IWorkMetadataPluginTests
     [Fact]
     public async Task ReadingNeverTouchesTheFilesystem_OnlyTheBoundedSource()
     {
-        var package = IWorkFixtures.Build(new PackageOptions { SlideCount = 5, DataAssets = 3 });
+        var package = IWorkFixtures.Build(new PackageOptions
+        {
+            Kind = FixtureDocumentKind.Keynote,
+            SlideCount = 5,
+            DataAssets = 3
+        });
         var source = new ByteArrayMediaSource(package);
 
         await new IWorkMetadataPlugin().ExtractAsync(

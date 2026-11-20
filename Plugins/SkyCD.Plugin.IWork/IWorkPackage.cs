@@ -104,9 +104,6 @@ internal sealed class IWorkPackage : IDisposable
     public byte[]? TryReadEntry(string name, int maxBytes) =>
         outerEntries.TryGetValue(name, out var entry) ? ReadEntry(entry, maxBytes) : null;
 
-    public byte[]? TryReadEntryPrefix(string name, int maxBytes) =>
-        outerEntries.TryGetValue(name, out var entry) ? ReadEntryPrefix(entry, maxBytes) : null;
-
     public void Dispose()
     {
         nested?.Dispose();
@@ -154,37 +151,6 @@ internal sealed class IWorkPackage : IDisposable
             var buffer = new byte[(int)entry.Length];
             stream.ReadExactly(buffer.AsSpan());
             return buffer;
-        }
-        catch (Exception exception) when (exception is InvalidDataException or IOException or NotSupportedException)
-        {
-            return null;
-        }
-    }
-
-    private static byte[]? ReadEntryPrefix(ZipArchiveEntry entry, int maxBytes)
-    {
-        if (entry.Length <= 0)
-        {
-            return null;
-        }
-
-        try
-        {
-            using var stream = entry.Open();
-            var buffer = new byte[maxBytes];
-            var total = 0;
-            while (total < maxBytes)
-            {
-                var read = stream.Read(buffer, total, maxBytes - total);
-                if (read <= 0)
-                {
-                    break;
-                }
-
-                total += read;
-            }
-
-            return total == 0 ? null : buffer[..total];
         }
         catch (Exception exception) when (exception is InvalidDataException or IOException or NotSupportedException)
         {

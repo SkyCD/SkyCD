@@ -11,17 +11,17 @@ public sealed record IWorkPluginOptions
         long maxSourceBytes = 64 * 1024 * 1024,
         int maxMetadataBytes = 1024 * 1024,
         int maxIndexBytes = 32 * 1024 * 1024,
-        int maxPreviewHeaderBytes = 64 * 1024)
+        int maxPreviewBytes = 4 * 1024 * 1024)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxSourceBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxMetadataBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxIndexBytes);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPreviewHeaderBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPreviewBytes);
 
         MaxSourceBytes = maxSourceBytes;
         MaxMetadataBytes = maxMetadataBytes;
         MaxIndexBytes = maxIndexBytes;
-        MaxPreviewHeaderBytes = maxPreviewHeaderBytes;
+        MaxPreviewBytes = maxPreviewBytes;
     }
 
     /// <summary>
@@ -36,8 +36,8 @@ public sealed record IWorkPluginOptions
     /// <summary>Upper bound of a nested <c>Index.zip</c> read in full before it is opened as an archive.</summary>
     public int MaxIndexBytes { get; }
 
-    /// <summary>How many leading bytes of a preview image are read to determine its dimensions.</summary>
-    public int MaxPreviewHeaderBytes { get; }
+    /// <summary>Upper bound of the thumbnail artifact published by the preview capability.</summary>
+    public int MaxPreviewBytes { get; }
 
     public static IWorkPluginOptions Default { get; } = new();
 }

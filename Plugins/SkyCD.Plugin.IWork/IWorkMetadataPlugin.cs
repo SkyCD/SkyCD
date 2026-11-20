@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using OfficeIMO.IWork;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.Plugin.IWork;
@@ -13,25 +15,16 @@ namespace SkyCD.Plugin.IWork;
 /// them.
 /// </summary>
 /// <remarks>
-/// Only the package's plain members are read: the two metadata property lists, the document identifier, the
-/// component inventory and the preview header. The plugin never decodes document content, never follows a
-/// reference and never resolves a credential. Fields the package does not carry are omitted rather than
+/// Plain metadata members are read directly, while the bounded OfficeIMO source reader parses the component
+/// archive for the application kind, the producer build history and the embedded previews. A protected
+/// package is not parsed because its members are encrypted; only its plain metadata is catalogued and no
+/// credential is requested, guessed or stored. Fields the package does not carry are omitted rather than
 /// published as empty values, so "unknown" stays distinguishable from "none".
 /// </remarks>
 public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
 {
     private const string PropertiesPlist = "Metadata/Properties.plist";
-    private const string BuildHistoryPlist = "Metadata/BuildVersionHistory.plist";
     private const string DocumentIdentifierEntry = "Metadata/DocumentIdentifier";
-
-    private static readonly string[] PreviewCandidates =
-    [
-        "preview.jpg",
-        "preview.jpeg",
-        "preview.png",
-        "preview-web.jpg",
-        "preview-micro.jpg"
-    ];
 
     private readonly IWorkPluginOptions options;
 
@@ -59,11 +52,12 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
             .ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
-        progress?.Report(new MediaProgress(0.4));
+        progress?.Report(new MediaProgress(0.3));
 
         using var package = IWorkPackage.Open(data, options);
+        using var document = IWorkDocumentLoader.TryOpen(package, data, options, cancellationToken);
 
-        var documentType = ResolveDocumentType(item, package);
+        var documentType = ResolveDocumentType(item, package, document);
         var values = new List<MediaMetadataValue>
         {
             new(IWorkSchema.Container, MediaMetadataType.Text, Text: "iwork"),
@@ -71,32 +65,44 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
             new(IWorkSchema.IwaComponentCount, MediaMetadataType.Integer,
                 Integer: CountIndexComponents(package)),
             new(IWorkSchema.DataAssetCount, MediaMetadataType.Integer, Integer: CountDataAssets(package)),
-            new(IWorkSchema.HasPreview, MediaMetadataType.Boolean, Boolean: HasPreview(package))
+            new(IWorkSchema.HasPreview, MediaMetadataType.Boolean, Boolean: HasPreview(package, document))
         };
 
         AddText(values, IWorkSchema.DocumentType, documentType);
-        if (string.Equals(documentType, "keynote", StringComparison.Ordinal))
-        {
-            values.Add(new MediaMetadataValue(IWorkSchema.SlideCount, MediaMetadataType.Integer,
-                Integer: CountSlides(package)));
-        }
 
         var properties = ReadDictionary(package, PropertiesPlist);
         AddProperties(values, properties);
-        AddProducerBuild(values, package);
+        AddProducerBuild(values, document);
         AddDocumentIdentifier(values, package, properties);
 
         cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(new MediaProgress(0.7));
 
-        AddPreviewDimensions(values, package, cancellationToken);
+        AddPreviewDimensions(values, document);
+        AddSlideCount(values, documentType, package, document, cancellationToken);
 
         progress?.Report(new MediaProgress(1));
         return new MediaExtractionResult(values);
     }
 
-    private static string? ResolveDocumentType(MediaItem item, IWorkPackage package)
+    private static string? ResolveDocumentType(
+        MediaItem item,
+        IWorkPackage package,
+        IWorkSourceDocument? document)
     {
+        // The parsed component archive identifies the application even when the source is mislabelled.
+        var detected = document?.Kind switch
+        {
+            IWorkDocumentKind.Pages => "pages",
+            IWorkDocumentKind.Numbers => "numbers",
+            IWorkDocumentKind.Keynote => "keynote",
+            _ => null
+        };
+        if (detected is not null)
+        {
+            return detected;
+        }
+
         var byExtension = item.Extension?.ToLowerInvariant() switch
         {
             ".pages" => "pages",
@@ -121,8 +127,8 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
             return byContentType;
         }
 
-        // A mislabelled source: infer from the component inventory the same way Apple's apps distinguish the
-        // Keynote and Numbers roots, which share an archive type.
+        // A protected, mislabelled source: only the plain inventory is available, so the component names are
+        // the same evidence Apple's applications leave for the Keynote and Numbers roots.
         if (package.IndexEntryNames.Any(name =>
                 IsComponent(name, "Index/Slide") || IsComponent(name, "Index/TemplateSlide")))
         {
@@ -141,7 +147,9 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
     private static long CountDataAssets(IWorkPackage package) =>
         package.EntryNames.Count(name => name.StartsWith("Data/", StringComparison.OrdinalIgnoreCase));
 
-    private static bool HasPreview(IWorkPackage package) => package.EntryNames.Any(IsPreviewEntry);
+    private static bool HasPreview(IWorkPackage package, IWorkSourceDocument? document) => document is not null
+        ? document.Previews.Count > 0
+        : package.EntryNames.Any(IsPreviewEntry);
 
     private static bool IsPreviewEntry(string name)
     {
@@ -187,11 +195,15 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
             properties.GetBoolean("hasExternalReferenceOrMissingOrUnmaterializedRemoteData"));
     }
 
-    private void AddProducerBuild(List<MediaMetadataValue> values, IWorkPackage package)
+    private static void AddProducerBuild(List<MediaMetadataValue> values, IWorkSourceDocument? document)
     {
-        var bytes = ReadEntry(package, BuildHistoryPlist);
-        var history = bytes is null ? null : IWorkPlist.TryReadRoot(bytes);
-        AddText(values, IWorkSchema.ProducerBuild, LatestProducerBuild(history));
+        // A protected package stores this member encrypted, and the reader never runs for it.
+        if (document is null)
+        {
+            return;
+        }
+
+        AddText(values, IWorkSchema.ProducerBuild, LatestProducerBuild(document.BuildVersions));
     }
 
     private void AddDocumentIdentifier(
@@ -204,32 +216,61 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
         AddText(values, IWorkSchema.DocumentIdentifier, identifier);
     }
 
-    private void AddPreviewDimensions(
-        List<MediaMetadataValue> values,
-        IWorkPackage package,
-        CancellationToken cancellationToken)
+    private static void AddPreviewDimensions(List<MediaMetadataValue> values, IWorkSourceDocument? document)
     {
-        if (package.IsPasswordProtected)
+        var preview = document?.PreferredRasterPreview;
+        if (preview?.PixelWidth is not { } width || preview.PixelHeight is not { } height)
         {
-            // Only the package inventory stays plain; the preview payload is encrypted like the document.
             return;
         }
 
-        foreach (var name in PreviewCandidates)
+        values.Add(new MediaMetadataValue(IWorkSchema.PreviewWidth, MediaMetadataType.Integer,
+            Integer: width));
+        values.Add(new MediaMetadataValue(IWorkSchema.PreviewHeight, MediaMetadataType.Integer,
+            Integer: height));
+    }
+
+    private static void AddSlideCount(
+        List<MediaMetadataValue> values,
+        string? documentType,
+        IWorkPackage package,
+        IWorkSourceDocument? document,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(documentType, "keynote", StringComparison.Ordinal))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var header = package.TryReadEntryPrefix(name, options.MaxPreviewHeaderBytes);
-            if (header is null || IWorkPreviewImage.TryReadDimensions(header) is not { } dimensions)
-            {
-                continue;
-            }
-
-            values.Add(new MediaMetadataValue(IWorkSchema.PreviewWidth, MediaMetadataType.Integer,
-                Integer: dimensions.Width));
-            values.Add(new MediaMetadataValue(IWorkSchema.PreviewHeight, MediaMetadataType.Integer,
-                Integer: dimensions.Height));
             return;
+        }
+
+        if (document is not null)
+        {
+            try
+            {
+                var slides = document.ReadKeynote().Slides.Count;
+                values.Add(new MediaMetadataValue(IWorkSchema.SlideCount, MediaMetadataType.Integer,
+                    Integer: slides));
+                return;
+            }
+            catch (InvalidDataException)
+            {
+                // Only projection limits surface this way; the component inventory below still describes the
+                // package in that case.
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (package.IsPasswordProtected)
+        {
+            // Encrypted slide components cannot be counted, and a zero count would claim the deck has none.
+            return;
+        }
+
+        var components = CountSlides(package);
+        if (components > 0)
+        {
+            values.Add(new MediaMetadataValue(IWorkSchema.SlideCount, MediaMetadataType.Integer,
+                Integer: components));
         }
     }
 
@@ -245,33 +286,19 @@ public sealed class IWorkMetadataPlugin : IMediaMetadataCapability
     private PlistDictionary? ReadDictionary(IWorkPackage package, string name) =>
         IWorkPlist.TryReadDictionary(ReadEntry(package, name) ?? []);
 
-    private static string? LatestProducerBuild(PlistNode? node)
+    private static string? LatestProducerBuild(IReadOnlyList<string> builds)
     {
-        if (node is PlistArray array)
+        for (var index = builds.Count - 1; index >= 0; index--)
         {
-            for (var index = array.Items.Count - 1; index >= 0; index--)
+            var candidate = builds[index];
+            if (!string.IsNullOrWhiteSpace(candidate) &&
+                !candidate.TrimStart().StartsWith("Template:", StringComparison.Ordinal))
             {
-                var candidate = array.Items[index] switch
-                {
-                    PlistString text => text.Value,
-                    PlistDictionary dictionary => dictionary.GetString("BuildVersion")
-                                                  ?? dictionary.GetString("Build Version"),
-                    _ => null
-                };
-
-                if (!string.IsNullOrWhiteSpace(candidate) &&
-                    !candidate.StartsWith("Template:", StringComparison.Ordinal))
-                {
-                    return candidate.Trim();
-                }
+                return candidate.Trim();
             }
-
-            return null;
         }
 
-        return node is PlistString single && !string.IsNullOrWhiteSpace(single.Value)
-            ? single.Value.Trim()
-            : null;
+        return null;
     }
 
     private static string? NormalizeIdentifier(string? text) =>

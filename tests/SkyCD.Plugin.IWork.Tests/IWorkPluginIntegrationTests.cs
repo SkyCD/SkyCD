@@ -121,6 +121,7 @@ public sealed class IWorkPluginIntegrationTests : IDisposable
     {
         var package = IWorkFixtures.Build(new PackageOptions
         {
+            Kind = FixtureDocumentKind.Keynote,
             SlideCount = 3,
             ProducerBuild = "Keynote 14.4"
         });
@@ -158,8 +159,46 @@ public sealed class IWorkPluginIntegrationTests : IDisposable
             Assert.Equal(IWorkFixtures.DefaultDocumentIdentifier,
                 FieldText(snapshot, IWorkSchema.DocumentIdentifier));
             Assert.Equal(3L, FieldInteger(snapshot, IWorkSchema.SlideCount));
-            Assert.Equal(5L, FieldInteger(snapshot, IWorkSchema.IwaComponentCount));
+            Assert.Equal(2L, FieldInteger(snapshot, IWorkSchema.IwaComponentCount));
             Assert.False(FieldBoolean(snapshot, IWorkSchema.IsPasswordProtected));
+        }
+    }
+
+    [Fact]
+    public async Task CapturedThumbnail_SurvivesReopen_WithoutThePluginOrTheSource()
+    {
+        var package = IWorkFixtures.Build();
+        using (var database = OpenDatabase())
+        {
+            var catalog = CreateCatalogRepository(database);
+            var entry = SeedCatalog(catalog, package.Length);
+            using var store = MediaCacheStore.Create(database);
+            var scheduler = new MediaExtractionScheduler(
+                new MediaExtensionManager(ProvidersWithPreview()), store);
+
+            var outcome = await scheduler.ProcessAsync(
+                MediaExtractionRequest.ForCatalogEntry(
+                    entry, _ => Task.FromResult<Stream>(new MemoryStream(package)), catalog.GetAll()));
+
+            Assert.True(outcome.Published);
+        }
+
+        using (var database = OpenDatabase())
+        {
+            var catalog = CreateCatalogRepository(database);
+            using var store = MediaCacheStore.Create(database);
+            var entry = catalog.GetAll().Single(document => document.Id == DocumentEntryId);
+
+            var resolver = new MediaPreviewResolver(store);
+            var snapshot = resolver.Resolve(entry);
+
+            Assert.Equal(MediaPreviewState.Ready, snapshot.State);
+            Assert.Equal(PreviewPayloadKind.Image, snapshot.PayloadKind);
+            Assert.Equal(PluginId, snapshot.ProviderId);
+            Assert.Equal("image/png", snapshot.Artifact!.ContentType);
+            Assert.True(resolver.TryReadPayload(snapshot, out var bytes));
+            Assert.Equal(0x89, bytes[0]);
+            Assert.Equal((byte)'P', bytes[1]);
         }
     }
 
@@ -184,14 +223,15 @@ public sealed class IWorkPluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsTheCapability_FromMetadataOnly()
+    public void AssemblyDiscovery_FindsTheCapabilities_FromMetadataOnly()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(IWorkMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
         Assert.Equal("Apple iWork Document Metadata", plugin.Name);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
-        Assert.Single(plugin.Capabilities);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
+        Assert.Equal(2, plugin.Capabilities.Count);
     }
 
     [Fact]
@@ -223,6 +263,12 @@ public sealed class IWorkPluginIntegrationTests : IDisposable
     private static MediaProvider[] Providers() =>
     [
         new MediaProvider(PluginId, "1.0.0", new IWorkMetadataPlugin())
+    ];
+
+    private static MediaProvider[] ProvidersWithPreview() =>
+    [
+        new MediaProvider(PluginId, "1.0.0", new IWorkMetadataPlugin()),
+        new MediaProvider(PluginId, "1.0.0", new IWorkPreviewPlugin())
     ];
 
     private static MediaExtensionManager CreateManager(MediaExecutionLimits? limits = null) =>

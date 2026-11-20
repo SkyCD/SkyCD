@@ -1,13 +1,26 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
+using OfficeIMO.IWork;
 
 namespace SkyCD.Plugin.IWork.Tests;
+
+/// <summary>Application the fixture creates.</summary>
+public enum FixtureDocumentKind
+{
+    Pages,
+    Numbers,
+    Keynote
+}
 
 /// <summary>Shape of a fixture package; each property models something a real iWork package may or may not carry.</summary>
 internal sealed record PackageOptions
 {
+    /// <summary>Which application writes the package, which drives the component archive the fixture creates.</summary>
+    public FixtureDocumentKind Kind { get; init; } = FixtureDocumentKind.Pages;
+
     /// <summary>Bundle layout: the component archive is stored as <c>Index.zip</c> instead of root <c>Index/</c>.</summary>
     public bool NestedIndex { get; init; }
 
@@ -31,12 +44,11 @@ internal sealed record PackageOptions
 
     public bool JpegPreview { get; init; }
 
-    public int SlideCount { get; init; }
+    /// <summary>Slides created in a Keynote fixture.</summary>
+    public int SlideCount { get; init; } = 1;
 
-    public int TemplateSlideCount { get; init; }
-
-    /// <summary>Number of table components, the inventory marker Numbers uses instead of slides.</summary>
-    public int TableCount { get; init; }
+    /// <summary>Sheets, each carrying one table, created in a Numbers fixture.</summary>
+    public int TableCount { get; init; } = 1;
 
     public int DataAssets { get; init; } = 1;
 
@@ -54,9 +66,14 @@ internal sealed record PackageOptions
 }
 
 /// <summary>
-/// Builds structurally valid iWork packages in memory. The suite commits no binary blobs, and every value a
-/// test asserts is written by the fixture, so nothing depends on an external document.
+/// Builds structurally valid iWork packages in memory with the same library the plugin reads them with, then
+/// rewrites the plain metadata members so every value a test asserts is one the fixture wrote.
 /// </summary>
+/// <remarks>
+/// The component archive is real IWA, so kind detection, slide counts and preview recognition exercise the
+/// production parser rather than a stand-in. No binary blobs are committed: the preview images are generated
+/// here, and the single JPEG is a complete baseline image encoded inline.
+/// </remarks>
 internal static class IWorkFixtures
 {
     public const string DefaultDocumentIdentifier = "0d6e2a3c-1b2f-4c3d-8e9f-0a1b2c3d4e5f";
@@ -64,9 +81,12 @@ internal static class IWorkFixtures
     public const string DefaultProducerBuild = "Pages 14.4";
     public const int PreviewWidth = 320;
     public const int PreviewHeight = 200;
+    public const int JpegPreviewWidth = 8;
+    public const int JpegPreviewHeight = 6;
 
-    // The plugin reads the component inventory, not the IWA streams themselves; a short header is enough.
-    private static readonly byte[] ComponentHeader = [0, 2, 0, 0, 8, 1];
+    private const string PropertiesPlist = "Metadata/Properties.plist";
+    private const string BuildHistoryPlist = "Metadata/BuildVersionHistory.plist";
+    private const string DocumentIdentifierEntry = "Metadata/DocumentIdentifier";
 
     public static byte[] Build(PackageOptions? options = null)
     {
@@ -76,7 +96,8 @@ internal static class IWorkFixtures
             return BuildLegacy();
         }
 
-        return options.NestedIndex ? BuildBundle(options) : BuildFlat(options);
+        var package = Rewrite(CreateDocument(options), archive => ApplyMetadata(archive, options));
+        return options.NestedIndex ? AsBundle(package) : package;
     }
 
     public static byte[] NotZip() => Encoding.ASCII.GetBytes("this is not an iWork package");
@@ -85,72 +106,76 @@ internal static class IWorkFixtures
 
     /// <summary>A ZIP that carries metadata but no component index at all.</summary>
     public static byte[] MissingIndex() => BuildZip(archive =>
-        AddEntry(archive, "Metadata/Properties.plist", PropertiesPlist(new PackageOptions())));
+        AddEntry(archive, PropertiesPlist, PropertiesPlistXml(new PackageOptions())));
 
-    private static byte[] BuildFlat(PackageOptions options) => BuildZip(outer =>
+    private static byte[] CreateDocument(PackageOptions options)
     {
-        AddIndex(outer, options);
-        AddPackageMetadata(outer, options);
-    });
-
-    private static byte[] BuildBundle(PackageOptions options)
-    {
-        var index = BuildZip(nested => AddIndex(nested, options));
-
-        return BuildZip(outer =>
+        switch (options.Kind)
         {
-            AddEntry(outer, "Index.zip", index);
-            AddPackageMetadata(outer, options);
-        });
-    }
+            case FixtureDocumentKind.Keynote:
+                {
+                    using var document = IWorkKeynoteDocument.Create();
+                    var slides = Math.Max(options.SlideCount, 1);
+                    for (var index = 1; index <= slides; index++)
+                    {
+                        document.AddSlide(index % 2 == 0 ? "000000" : "FFFFFF")
+                            .AddText($"Slide {index}", 10, 10, 400, 60);
+                    }
 
-    private static byte[] BuildLegacy() => BuildZip(archive =>
-    {
-        AddEntry(archive, "index.xml", Encoding.UTF8.GetBytes("<index/>"));
-        AddEntry(archive, "preview.jpg", PreviewJpeg(PreviewWidth, PreviewHeight));
-    });
+                    return document.ToBytes();
+                }
 
-    private static void AddIndex(ZipArchive archive, PackageOptions options)
-    {
-        AddEntry(archive, "Index/Document.iwa", ComponentHeader);
-        AddEntry(archive, "Index/Metadata.iwa", ComponentHeader);
+            case FixtureDocumentKind.Numbers:
+                {
+                    using var document = IWorkNumbersDocument.Create();
+                    var sheets = Math.Max(options.TableCount, 1);
+                    for (var index = 1; index <= sheets; index++)
+                    {
+                        document.AddSheet($"Sheet {index}").AddTable(IWorkTableData.Create(2, 2));
+                    }
 
-        for (var index = 1; index <= options.SlideCount; index++)
-        {
-            AddEntry(archive, $"Index/Slide-{100 + index}.iwa", ComponentHeader);
-        }
+                    return document.ToBytes();
+                }
 
-        for (var index = 1; index <= options.TemplateSlideCount; index++)
-        {
-            AddEntry(archive, $"Index/TemplateSlide-{200 + index}.iwa", ComponentHeader);
-        }
-
-        for (var index = 1; index <= options.TableCount; index++)
-        {
-            AddEntry(archive, $"Index/Tables/Table-{index}.iwa", ComponentHeader);
+            default:
+                {
+                    using var document = IWorkPagesDocument.Create();
+                    document.AddParagraph("SkyCD iWork fixture");
+                    return document.ToBytes();
+                }
         }
     }
 
-    private static void AddPackageMetadata(ZipArchive archive, PackageOptions options)
+    private static void ApplyMetadata(ZipArchive archive, PackageOptions options)
     {
         if (options.IncludeProperties)
         {
-            // Apple keeps this property list plain even in a protected package.
-            AddEntry(archive, "Metadata/Properties.plist", PropertiesPlist(options));
+            Replace(archive, PropertiesPlist, PropertiesPlistXml(options));
+        }
+        else
+        {
+            Delete(archive, PropertiesPlist);
+        }
+
+        if (options.IncludeBuildHistory)
+        {
+            // A protected package encrypts this member, so its payload is opaque rather than parseable.
+            Replace(archive, BuildHistoryPlist, options.PasswordProtected
+                ? OpaqueBlob()
+                : BuildHistoryPlistXml(options.ProducerBuild));
+        }
+        else
+        {
+            Delete(archive, BuildHistoryPlist);
         }
 
         if (options.IncludeIdentifier)
         {
-            AddEntry(archive, "Metadata/DocumentIdentifier",
-                Encoding.UTF8.GetBytes(options.DocumentIdentifierText));
+            Replace(archive, DocumentIdentifierEntry, Encoding.UTF8.GetBytes(options.DocumentIdentifierText));
         }
-
-        // A protected package encrypts these members, so their payload is opaque rather than parseable.
-        if (options.IncludeBuildHistory)
+        else
         {
-            AddEntry(archive, "Metadata/BuildVersionHistory.plist", options.PasswordProtected
-                ? OpaqueBlob()
-                : BuildHistoryPlist(options.ProducerBuild));
+            Delete(archive, DocumentIdentifierEntry);
         }
 
         for (var index = 1; index <= options.DataAssets; index++)
@@ -163,7 +188,7 @@ internal static class IWorkFixtures
             AddEntry(archive, options.JpegPreview ? "preview.jpg" : "preview.png", options.PasswordProtected
                 ? OpaqueBlob()
                 : options.JpegPreview
-                    ? PreviewJpeg(PreviewWidth, PreviewHeight)
+                    ? PreviewJpeg()
                     : PreviewPng(PreviewWidth, PreviewHeight));
         }
 
@@ -173,7 +198,46 @@ internal static class IWorkFixtures
         }
     }
 
-    private static byte[] PropertiesPlist(PackageOptions options)
+    /// <summary>Flat package rewritten as a bundle: the component archive becomes a nested <c>Index.zip</c>.</summary>
+    private static byte[] AsBundle(byte[] flat)
+    {
+        byte[] index;
+        using (var source = new ZipArchive(new MemoryStream(flat), ZipArchiveMode.Read))
+        {
+            using var indexStream = new MemoryStream();
+            using (var nested = new ZipArchive(indexStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                foreach (var entry in source.Entries.Where(entry => entry.FullName.StartsWith("Index/")))
+                {
+                    using var input = entry.Open();
+                    using var output = nested.CreateEntry(entry.FullName, CompressionLevel.Fastest).Open();
+                    input.CopyTo(output);
+                }
+            }
+
+            index = indexStream.ToArray();
+        }
+
+        return Rewrite(flat, archive =>
+        {
+            foreach (var entry in archive.Entries
+                         .Where(entry => entry.FullName.StartsWith("Index/"))
+                         .ToArray())
+            {
+                entry.Delete();
+            }
+
+            AddEntry(archive, "Index.zip", index);
+        });
+    }
+
+    private static byte[] BuildLegacy() => BuildZip(archive =>
+    {
+        AddEntry(archive, "index.xml", Encoding.UTF8.GetBytes("<index/>"));
+        AddEntry(archive, "preview.jpg", PreviewJpeg());
+    });
+
+    private static byte[] PropertiesPlistXml(PackageOptions options)
     {
         var builder = new StringBuilder();
         builder.Append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -185,12 +249,13 @@ internal static class IWorkFixtures
         AppendString(builder, "locale", options.Locale);
         AppendBoolean(builder, "isMultiPage", options.IsMultiPage);
         AppendBoolean(builder, "hasExternalReferenceOrMissingOrUnmaterializedRemoteData", options.HasExternalData);
-        AppendString(builder, "documentUUID", options.DocumentUuidInProperties);
+        AppendString(builder, "documentUUID",
+            options.DocumentUuidInProperties ?? options.DocumentIdentifierText);
         builder.Append("</dict>\n</plist>\n");
         return Encoding.UTF8.GetBytes(builder.ToString());
     }
 
-    private static byte[] BuildHistoryPlist(string producerBuild) => Encoding.UTF8.GetBytes(
+    private static byte[] BuildHistoryPlistXml(string producerBuild) => Encoding.UTF8.GetBytes(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<plist version=\"1.0\"><array>" +
         "<string>Template: Blank</string>" +
@@ -216,44 +281,80 @@ internal static class IWorkFixtures
         }
     }
 
-    /// <summary>PNG signature followed by an IHDR chunk carrying only the dimensions the sniffer reads.</summary>
+    /// <summary>A complete 24-bit PNG of the requested size, so the reader validates it like a real thumbnail.</summary>
     private static byte[] PreviewPng(int width, int height)
     {
-        var bytes = new byte[26];
-        byte[] signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        signature.CopyTo(bytes, 0);
-        WriteBigEndian(bytes, 16, width);
-        WriteBigEndian(bytes, 20, height);
-        return bytes;
+        var stride = width * 3 + 1;
+        var raw = new byte[stride * height];
+
+        using var compressed = new MemoryStream();
+        using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            zlib.Write(raw);
+        }
+
+        using var png = new MemoryStream();
+        png.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        Span<byte> header = stackalloc byte[13];
+        WriteBigEndian(header[0..4], width);
+        WriteBigEndian(header[4..8], height);
+        header[8] = 8;  // bit depth
+        header[9] = 2;  // RGB
+        WriteChunk(png, "IHDR"u8, header);
+        WriteChunk(png, "IDAT"u8, compressed.ToArray());
+        WriteChunk(png, "IEND"u8, []);
+        return png.ToArray();
+
+        static void WriteChunk(Stream output, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
+        {
+            Span<byte> length = stackalloc byte[4];
+            WriteBigEndian(length, data.Length);
+            output.Write(length);
+            output.Write(type);
+            output.Write(data);
+            Span<byte> crc = stackalloc byte[4];
+            WriteBigEndian(crc, unchecked((int)Crc32(type, data)));
+            output.Write(crc);
+        }
     }
 
-    /// <summary>SOI, a baseline SOF0 segment with the frame size, and EOI.</summary>
-    private static byte[] PreviewJpeg(int width, int height)
+    /// <summary>A complete baseline JPEG, 8 by 6 pixels, encoded inline as a constant.</summary>
+    private static byte[] PreviewJpeg() => Convert.FromBase64String(
+        "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAGAAgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDq6KKK/os/Kj//2Q==");
+
+    private static void WriteBigEndian(Span<byte> target, int value)
     {
-        var bytes = new byte[24];
-        bytes[0] = 0xFF;
-        bytes[1] = 0xD8;
-        bytes[2] = 0xFF;
-        bytes[3] = 0xC0;
-        bytes[4] = 0x00;
-        bytes[5] = 0x11;
-        bytes[6] = 0x08;
-        bytes[7] = (byte)(height >> 8);
-        bytes[8] = (byte)height;
-        bytes[9] = (byte)(width >> 8);
-        bytes[10] = (byte)width;
-        bytes[11] = 0x03;
-        bytes[21] = 0xFF;
-        bytes[22] = 0xD9;
-        return bytes;
+        target[0] = (byte)(value >> 24);
+        target[1] = (byte)(value >> 16);
+        target[2] = (byte)(value >> 8);
+        target[3] = (byte)value;
     }
 
-    private static void WriteBigEndian(byte[] buffer, int offset, int value)
+    private static uint Crc32(ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
     {
-        buffer[offset] = (byte)(value >> 24);
-        buffer[offset + 1] = (byte)(value >> 16);
-        buffer[offset + 2] = (byte)(value >> 8);
-        buffer[offset + 3] = (byte)value;
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in type)
+        {
+            crc = Step(crc, value);
+        }
+
+        foreach (var value in data)
+        {
+            crc = Step(crc, value);
+        }
+
+        return ~crc;
+
+        static uint Step(uint crc, byte value)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
+            }
+
+            return crc;
+        }
     }
 
     private static byte[] OpaqueBlob()
@@ -262,6 +363,26 @@ internal static class IWorkFixtures
         Array.Fill(blob, (byte)0x9A);
         return blob;
     }
+
+    private static byte[] Rewrite(byte[] source, Action<ZipArchive> mutate)
+    {
+        using var buffer = new MemoryStream();
+        buffer.Write(source);
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            mutate(archive);
+        }
+
+        return buffer.ToArray();
+    }
+
+    private static void Replace(ZipArchive archive, string name, byte[] content)
+    {
+        Delete(archive, name);
+        AddEntry(archive, name, content);
+    }
+
+    private static void Delete(ZipArchive archive, string name) => archive.GetEntry(name)?.Delete();
 
     private static byte[] BuildZip(Action<ZipArchive> write)
     {
