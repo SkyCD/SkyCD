@@ -18,6 +18,13 @@
                          TextChanged="OnInlineSearchTextChanged"
                          GotFocus="OnInlineSearchTextBoxGotFocus"
                          LostFocus="OnInlineSearchTextBoxLostFocus" />
+                <ContentControl x:Name="SelectedIconPreview"
+                                IsVisible="False"
+                                IsHitTestVisible="False"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                ContentTemplate="{Binding ItemPreviewTemplate, ElementName=Root}"
+                                Content="{Binding SelectedIconKey, ElementName=Root}" />
                 <TextBlock Grid.Column="1"
                            VerticalAlignment="Center"
                            Text="▾"
@@ -31,6 +38,7 @@
                Placement="BottomEdgeAlignedLeft"
                IsOpen="False"
                IsLightDismissEnabled="True"
+               Closed="OnDropdownPopupClosed"
                Topmost="False">
             <Border Background="{DynamicResource ThemeBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
