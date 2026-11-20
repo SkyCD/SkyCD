@@ -38,6 +38,7 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Lending;
+using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
@@ -54,6 +55,7 @@ public partial class MainWindow : Window
     private readonly CatalogDocumentRepository catalogRepository;
     private readonly StatusVariantDocumentRepository statusVariantRepository;
     private readonly ScanExclusionRuleDocumentRepository scanExclusionRuleRepository;
+    private readonly AiScanExclusionDocumentRepository aiScanExclusionRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private readonly IMediaDriveProvider mediaDriveProvider;
@@ -78,6 +80,8 @@ public partial class MainWindow : Window
         statusVariantRepository = (StatusVariantDocumentRepository)repositoryManager.For<StatusVariantDocument>();
         scanExclusionRuleRepository =
             (ScanExclusionRuleDocumentRepository)repositoryManager.For<ScanExclusionRuleDocument>();
+        aiScanExclusionRepository =
+            (AiScanExclusionDocumentRepository)repositoryManager.For<AiScanExclusionDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -1181,12 +1185,16 @@ public partial class MainWindow : Window
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         e.Dialog.SetCustomProperties(options.CustomProperties);
         LoadScanOptionsIntoDialog(e.Dialog, options);
+        e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IGeneratedDescriptionCapability>().Any());
+        e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
+        e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
+        e.Dialog.ResetAiScanExclusionsRequested += OnResetAiScanExclusionsRequested;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -1217,10 +1225,12 @@ public partial class MainWindow : Window
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
+            options.AiScanMaxFileSizeBytes = e.Dialog.AiScanMaxFileSizeMegabytes * 1024L * 1024L;
             SaveScanOptionsFromDialog(e.Dialog, options);
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             scanExclusionRuleRepository.ReplaceAll(e.Dialog.GetScanExclusionRules());
+            aiScanExclusionRepository.ReplaceAll(e.Dialog.GetAiScanExclusions());
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
@@ -1240,6 +1250,7 @@ public partial class MainWindow : Window
         e.Dialog.ConfigurePluginRequested -= OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
+        e.Dialog.ResetAiScanExclusionsRequested -= OnResetAiScanExclusionsRequested;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
     }
@@ -1614,6 +1625,23 @@ public partial class MainWindow : Window
 
         scanExclusionRuleRepository.ReplaceAll(scanExclusionRuleRepository.CreateDefaultEntries());
         dialogVm.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
+    }
+
+    private async void OnResetAiScanExclusionsRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        var confirmed = await ShowResetMimeExclusionsPromptAsync();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        aiScanExclusionRepository.ReplaceAll(aiScanExclusionRepository.CreateDefaultEntries());
+        dialogVm.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
     }
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
@@ -2254,6 +2282,20 @@ public partial class MainWindow : Window
         var dialog = new ResetScanRulesConfirmWindow();
         var result = await dialog.ShowDialog<bool?>(this);
         return result == true;
+    }
+
+    private async Task<bool> ShowResetMimeExclusionsPromptAsync()
+    {
+        var dialog = new ResetMimeExclusionsConfirmWindow();
+        var result = await dialog.ShowDialog<bool?>(this);
+        return result == true;
+    }
+
+    private static int ToAiScanMaxFileSizeMegabytes(long maxFileSizeBytes)
+    {
+        const long bytesPerMegabyte = 1024L * 1024L;
+        var normalized = maxFileSizeBytes > 0 ? maxFileSizeBytes : AiScanPolicy.DefaultMaxFileSizeBytes;
+        return (int)Math.Clamp(normalized / bytesPerMegabyte, 1, int.MaxValue);
     }
 
 }

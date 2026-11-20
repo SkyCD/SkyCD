@@ -304,5 +304,15 @@ public static class UiKeys
     public const string HiddenSystemPolicySkipHidden = "core.ui.HiddenSystemPolicySkipHidden";
     public const string HiddenSystemPolicySkipSystem = "core.ui.HiddenSystemPolicySkipSystem";
     public const string HiddenSystemPolicySkipHiddenAndSystem = "core.ui.HiddenSystemPolicySkipHiddenAndSystem";
+    public const string AiScanSettings = "core.ui.AiScanSettings";
+    public const string AiMimeExclusions = "core.ui.AiMimeExclusions";
+    public const string MimeType = "core.ui.MimeType";
+    public const string MaxAiScanFileSize = "core.ui.MaxAiScanFileSize";
+    public const string AddMimeType = "core.ui.AddMimeType";
+    public const string RemoveMimeType = "core.ui.RemoveMimeType";
+    public const string ResetMimeTypesTooltip = "core.ui.ResetMimeTypesTooltip";
+    public const string ResetMimeTypesTitle = "core.ui.ResetMimeTypesTitle";
+    public const string ResetMimeTypesConfirmation = "core.ui.ResetMimeTypesConfirmation";
+    public const string NewMimeType = "core.ui.NewMimeType";
     public const string NoPluginDescription = "core.ui.NoPluginDescription";
 }
