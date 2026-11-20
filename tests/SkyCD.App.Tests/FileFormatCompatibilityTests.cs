@@ -32,6 +32,7 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-tar", "sample.tar.gz", "catalog.tgz")]
     [InlineData("skycd-7z", "sample.7z", "catalog.7z")]
     [InlineData("skycd-iso", "catalog-sample.iso", "catalog.iso")]
+    [InlineData("skycd-nrg", "catalog-sample.nrg", "catalog.nrg")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
         var manager = new FileFormatManager(CreateProviders());
@@ -154,6 +155,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Tar.TarArchiveIndexPlugin(),
         new SkyCD.Plugin.SevenZip.SevenZipArchiveIndexPlugin(),
         new SkyCD.Plugin.Iso.IsoImageIndexPlugin(),
+        new SkyCD.Plugin.Nrg.NrgImageIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()
     ];
