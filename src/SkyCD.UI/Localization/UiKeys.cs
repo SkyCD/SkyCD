@@ -165,6 +165,11 @@ public static class UiKeys
     public const string General = "core.ui.General";
     public const string NameLabel = "core.ui.NameLabel";
     public const string CommentsLabel = "core.ui.CommentsLabel";
+    public const string RatingName = "core.ui.RatingName";
+    public const string RatingValue = "core.ui.RatingValue";
+    public const string RatingNotSet = "core.ui.RatingNotSet";
+    public const string RatingStar = "core.ui.RatingStar";
+    public const string RatingKeyboardHint = "core.ui.RatingKeyboardHint";
     public const string Property = "core.ui.Property";
     public const string Value = "core.ui.Value";
     public const string ResetStatusesTitle = "core.ui.ResetStatusesTitle";
