@@ -17,6 +17,9 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel
 {
+    /// <summary>Index of the AI provider category; it follows the AI description category.</summary>
+    private const int AiProviderCategoryIndex = AiDescriptionCategoryIndex + 1;
+
     private IAiProviderSettingsCapability? aiProviderCapability;
     private AiProviderSettings aiProviderSavedSettings = new();
     private bool isApplyingAiProviderSettings;
@@ -50,8 +53,13 @@ public partial class OptionsDialogViewModel
 
     public bool ShowAiDescriptionImplementationSection => AiDescriptionImplementations.Count > 1;
 
+    public bool IsAiProviderCategorySelected => SelectedTabIndex == AiProviderCategoryIndex;
+
     public bool ShowAiProviderSection =>
-        ShowAiDescriptionSection && IsAiProviderImplementationSelected && aiProviderCapability is not null;
+        IsAiDescriptionAvailable &&
+        IsAiProviderCategorySelected &&
+        IsCurrentCategoryVisibleInSearch &&
+        aiProviderCapability is not null;
 
     public bool ShowAiProviderAlert => !string.IsNullOrWhiteSpace(AiProviderAlertMessage);
 
@@ -310,7 +318,7 @@ public partial class OptionsDialogViewModel
         }
         catch (Exception exception) when (IsAiProviderFailure(exception))
         {
-            SelectedTabIndex = AiDescriptionCategoryIndex;
+            SelectedTabIndex = AiProviderCategoryIndex;
             AiProviderAlertMessage = LocalizationService.Current.Format(UiKeys.AiProviderSaveError,
                 exception.Message);
             return false;
@@ -392,6 +400,7 @@ public partial class OptionsDialogViewModel
     private void NotifyAiProviderVisibilityChanged()
     {
         OnPropertyChanged(nameof(IsAiProviderImplementationSelected));
+        OnPropertyChanged(nameof(IsAiProviderCategorySelected));
         OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(ShowAiProviderAlert));
     }
