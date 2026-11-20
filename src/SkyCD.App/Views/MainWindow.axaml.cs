@@ -760,6 +760,7 @@ public partial class MainWindow : Window
             var scanOptions = dialogVm.CreateInternetScanOptions(targetParentId, BuildScanTraversalOptions());
             dialogVm.ClearInternetSecrets();
 
+            var scanErrorOptions = LoadAppOptions();
             var scanner = new RemoteCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
@@ -768,11 +769,13 @@ public partial class MainWindow : Window
             };
             progressDialog.Show(this);
 
+            IReadOnlyList<ScanIssue> scanIssues = [];
             try
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                if (scanResult.Statistics.Failed > 0)
+                scanIssues = progressVm.GetScanIssues();
+                if (scanResult.Statistics.Failed > 0 && !scanErrorOptions.ShowScanErrorsAfterScan)
                 {
                     vm.StatusText = LocalizationService.Current.Format(TextKeys.ScanFailedItems, scanResult.Statistics.Failed);
                     progressVm.ReportError(vm.StatusText);
@@ -789,6 +792,11 @@ public partial class MainWindow : Window
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
                 await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
                 progressVm.CanCancel = false;
+
+                if (scanErrorOptions.SaveScanErrorsToComments)
+                {
+                    vm.ApplyScanIssuesToComments(progressVm.GetScanIssues());
+                }
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
@@ -811,6 +819,11 @@ public partial class MainWindow : Window
             {
                 progressVm.FinishCancellation();
                 progressDialog.Close();
+            }
+
+            if (scanErrorOptions.ShowScanErrorsAfterScan && scanIssues.Count > 0)
+            {
+                await new ScanIssuesWindow(scanIssues).ShowDialog(this);
             }
 
             return;
@@ -857,6 +870,7 @@ public partial class MainWindow : Window
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
                 volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
+            var scanErrorOptions = LoadAppOptions();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
@@ -864,11 +878,13 @@ public partial class MainWindow : Window
             };
             progressDialog.Show(this);
 
+            IReadOnlyList<ScanIssue> scanIssues = [];
             try
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                if (scanResult.Statistics.Failed > 0)
+                scanIssues = progressVm.GetScanIssues();
+                if (scanResult.Statistics.Failed > 0 && !scanErrorOptions.ShowScanErrorsAfterScan)
                 {
                     vm.StatusText = LocalizationService.Current.Format(TextKeys.ScanFailedItems, scanResult.Statistics.Failed);
                     progressVm.ReportError(vm.StatusText);
@@ -885,6 +901,11 @@ public partial class MainWindow : Window
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
                 await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
                 progressVm.CanCancel = false;
+
+                if (scanErrorOptions.SaveScanErrorsToComments)
+                {
+                    vm.ApplyScanIssuesToComments(progressVm.GetScanIssues());
+                }
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
@@ -906,6 +927,11 @@ public partial class MainWindow : Window
             {
                 progressVm.FinishCancellation();
                 progressDialog.Close();
+            }
+
+            if (scanErrorOptions.ShowScanErrorsAfterScan && scanIssues.Count > 0)
+            {
+                await new ScanIssuesWindow(scanIssues).ShowDialog(this);
             }
             return;
         }
@@ -931,6 +957,7 @@ public partial class MainWindow : Window
                 Traversal: BuildScanTraversalOptions());
 
             var scanner = new FolderCatalogScanner();
+            var scanErrorOptions = LoadAppOptions();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
@@ -938,11 +965,13 @@ public partial class MainWindow : Window
             };
             progressDialog.Show(this);
 
+            IReadOnlyList<ScanIssue> scanIssues = [];
             try
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                if (scanResult.Statistics.Failed > 0)
+                scanIssues = progressVm.GetScanIssues();
+                if (scanResult.Statistics.Failed > 0 && !scanErrorOptions.ShowScanErrorsAfterScan)
                 {
                     vm.StatusText = LocalizationService.Current.Format(TextKeys.ScanFailedItems, scanResult.Statistics.Failed);
                     progressVm.ReportError(vm.StatusText);
@@ -959,6 +988,11 @@ public partial class MainWindow : Window
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
                 await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
                 progressVm.CanCancel = false;
+
+                if (scanErrorOptions.SaveScanErrorsToComments)
+                {
+                    vm.ApplyScanIssuesToComments(progressVm.GetScanIssues());
+                }
 
                 progressVm.ReportStage(LocalizationService.Current.Get(TextKeys.UpdatingIndexes), stagePercentage: 100, overallPercentage: 100);
                 progressVm.ReportInfo(LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
@@ -980,6 +1014,11 @@ public partial class MainWindow : Window
             {
                 progressVm.FinishCancellation();
                 progressDialog.Close();
+            }
+
+            if (scanErrorOptions.ShowScanErrorsAfterScan && scanIssues.Count > 0)
+            {
+                await new ScanIssuesWindow(scanIssues).ShowDialog(this);
             }
             return;
         }
@@ -1484,7 +1523,9 @@ public partial class MainWindow : Window
             options.SkipRecycleBins,
             options.SkipWellKnownSystemFolders,
             options.SkipEmptyFolders,
-            options.SkipOnlineOnlyCloudFiles));
+            options.SkipOnlineOnlyCloudFiles,
+            options.ShowScanErrorsAfterScan,
+            options.SaveScanErrorsToComments));
         dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
     }
 
@@ -1497,6 +1538,8 @@ public partial class MainWindow : Window
         options.SkipWellKnownSystemFolders = scanSettings.SkipWellKnownSystemFolders;
         options.SkipEmptyFolders = scanSettings.SkipEmptyFolders;
         options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
+        options.ShowScanErrorsAfterScan = scanSettings.ShowScanErrorsAfterScan;
+        options.SaveScanErrorsToComments = scanSettings.SaveScanErrorsToComments;
     }
 
     private void ApplyWindowBounds(AppOptionsDocument options)

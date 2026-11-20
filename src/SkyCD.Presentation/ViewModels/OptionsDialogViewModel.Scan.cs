@@ -32,6 +32,10 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private bool skipOnlineOnlyCloudFiles;
 
+    [ObservableProperty] private bool showScanErrorsAfterScan = true;
+
+    [ObservableProperty] private bool saveScanErrorsToComments;
+
     public bool ShowScanAlert => !string.IsNullOrWhiteSpace(ScanAlertMessage);
 
     public bool IsOnlineOnlyCloudFilesOptionVisible => OperatingSystem.IsWindows();
@@ -105,6 +109,8 @@ public partial class OptionsDialogViewModel
         SkipWellKnownSystemFolders = settings.SkipWellKnownSystemFolders;
         SkipEmptyFolders = settings.SkipEmptyFolders;
         SkipOnlineOnlyCloudFiles = settings.SkipOnlineOnlyCloudFiles;
+        ShowScanErrorsAfterScan = settings.ShowScanErrorsAfterScan;
+        SaveScanErrorsToComments = settings.SaveScanErrorsToComments;
     }
 
     public ScanSettingsSnapshot GetScanOptions()
@@ -116,7 +122,9 @@ public partial class OptionsDialogViewModel
             SkipRecycleBins,
             SkipWellKnownSystemFolders,
             SkipEmptyFolders,
-            SkipOnlineOnlyCloudFiles);
+            SkipOnlineOnlyCloudFiles,
+            ShowScanErrorsAfterScan,
+            SaveScanErrorsToComments);
     }
 
     partial void OnSelectedScanExclusionRuleChanged(ScanExclusionRuleItemViewModel? value)

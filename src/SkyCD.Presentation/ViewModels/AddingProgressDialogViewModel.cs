@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading;
@@ -7,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Presentation.Operations;
+using SkyCD.Presentation.Scanning;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -113,6 +115,19 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     private int selectedTabIndex;
 
     public ObservableCollection<OperationLogEntry> LogEntries { get; } = new();
+
+    private readonly List<ScanIssue> scanIssues = new();
+
+    /// <summary>
+    /// Every warning and error reported so far, independent of the bounded log entry list.
+    /// </summary>
+    public IReadOnlyList<ScanIssue> GetScanIssues()
+    {
+        lock (gate)
+        {
+            return scanIssues.ToArray();
+        }
+    }
 
     public AddingProgressDialogViewModel()
     {
@@ -376,6 +391,11 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
                     break;
             }
 
+            if (TryCreateScanIssue(entry) is { } issue)
+            {
+                scanIssues.Add(issue);
+            }
+
             while (LogEntries.Count >= MaxLogEntries && LogEntries.Count > 0)
             {
                 LogEntries.RemoveAt(0);
@@ -385,6 +405,14 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
             UpdateSummaryText();
         }
     }
+
+    private static ScanIssue? TryCreateScanIssue(OperationLogEntry entry) => entry.Level switch
+    {
+        OperationLogLevel.Warning => new ScanIssue(ScanIssueSeverity.Warning, entry.ItemPath, entry.Message),
+        OperationLogLevel.Error => new ScanIssue(ScanIssueSeverity.Error, entry.ItemPath, entry.Message),
+        OperationLogLevel.ItemFailed => new ScanIssue(ScanIssueSeverity.Error, entry.ItemPath, entry.Message),
+        _ => null
+    };
 
     private void UpdateSummaryText()
     {

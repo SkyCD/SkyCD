@@ -349,6 +349,15 @@ public static class UiKeys
     public const string SkipWellKnownSystemFolders = "core.ui.SkipWellKnownSystemFolders";
     public const string SkipEmptyFolders = "core.ui.SkipEmptyFolders";
     public const string SkipOnlineOnlyCloudFiles = "core.ui.SkipOnlineOnlyCloudFiles";
+    public const string ShowScanErrorsAfterScan = "core.ui.ShowScanErrorsAfterScan";
+    public const string SaveScanErrorsToComments = "core.ui.SaveScanErrorsToComments";
+    public const string ScanIssues = "core.ui.ScanIssues";
+    public const string ScanIssueWarning = "core.ui.ScanIssueWarning";
+    public const string ScanIssueError = "core.ui.ScanIssueError";
+    public const string ScanIssuesIntro = "core.ui.ScanIssuesIntro";
+    public const string ScanIssuesSaveAsText = "core.ui.ScanIssuesSaveAsText";
+    public const string ScanIssuesSaved = "core.ui.ScanIssuesSaved";
+    public const string ScanIssuesSaveFailed = "core.ui.ScanIssuesSaveFailed";
     public const string EntryTypeFile = "core.ui.EntryTypeFile";
     public const string EntryTypeFolder = "core.ui.EntryTypeFolder";
     public const string EntryTypeBoth = "core.ui.EntryTypeBoth";

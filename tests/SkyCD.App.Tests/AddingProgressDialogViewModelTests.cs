@@ -201,6 +201,29 @@ public class AddingProgressDialogViewModelTests
     }
 
     [Fact]
+    public void ScanIssues_CollectWarningsAndErrorsBeyondBoundedLogRetention()
+    {
+        var vm = new AddingProgressDialogViewModel
+        {
+            MaxLogEntries = 2
+        };
+
+        vm.ReportInfo("Starting scan", itemPath: "/root");
+        vm.ReportSkipped("/root/ignored.tmp", "Filtered");
+        vm.ReportWarning("Metadata unreadable", itemPath: "/root/a.jpg");
+        vm.ReportError("Access denied", itemPath: "/root/b.bin");
+        vm.ReportFailed("/root/c.dat", "CRC mismatch");
+
+        var issues = vm.GetScanIssues();
+
+        Assert.Equal(3, issues.Count);
+        Assert.Equal(new ScanIssue(ScanIssueSeverity.Warning, "/root/a.jpg", "Metadata unreadable"), issues[0]);
+        Assert.Equal(new ScanIssue(ScanIssueSeverity.Error, "/root/b.bin", "Access denied"), issues[1]);
+        Assert.Equal(new ScanIssue(ScanIssueSeverity.Error, "/root/c.dat", "Failed: CRC mismatch"), issues[2]);
+        Assert.Equal(2, vm.LogEntries.Count);
+    }
+
+    [Fact]
     public void ClearLog_EmptiesVisibleLogEntries()
     {
         var vm = new AddingProgressDialogViewModel();

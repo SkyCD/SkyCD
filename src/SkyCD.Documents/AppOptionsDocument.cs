@@ -46,6 +46,12 @@ public sealed class AppOptionsDocument
 
     public bool SkipOnlineOnlyCloudFiles { get; set; } = false;
 
+    /// <summary>Show the collected scan errors and warnings once a scan finishes.</summary>
+    public bool ShowScanErrorsAfterScan { get; set; } = true;
+
+    /// <summary>Write scan errors into the comment of every affected catalog entry.</summary>
+    public bool SaveScanErrorsToComments { get; set; } = false;
+
     /// <summary>Files larger than this are skipped by AI description scanning. Default: 1 GiB.</summary>
     public long AiScanMaxFileSizeBytes { get; set; } = 1024L * 1024L * 1024L;
 
