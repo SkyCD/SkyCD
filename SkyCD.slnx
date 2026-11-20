@@ -44,6 +44,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Qcow2/SkyCD.Plugin.Qcow2.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Dmg/SkyCD.Plugin.Dmg.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Daa/SkyCD.Plugin.Daa.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Mdf/SkyCD.Plugin.Mdf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Ccd/SkyCD.Plugin.Ccd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.BinCue/SkyCD.Plugin.BinCue.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vhd/SkyCD.Plugin.Vhd.csproj"/>
@@ -152,6 +153,7 @@
         <Project Path="tests/SkyCD.Plugin.Qcow2.Tests/SkyCD.Plugin.Qcow2.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Dmg.Tests/SkyCD.Plugin.Dmg.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Daa.Tests/SkyCD.Plugin.Daa.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Mdf.Tests/SkyCD.Plugin.Mdf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Ccd.Tests/SkyCD.Plugin.Ccd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.BinCue.Tests/SkyCD.Plugin.BinCue.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Vhd.Tests/SkyCD.Plugin.Vhd.Tests.csproj"/>
