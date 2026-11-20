@@ -6,7 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Documents;
+using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 
 namespace SkyCD.Presentation.MediaCache;
@@ -18,11 +20,16 @@ public sealed class MediaMetadataService
     private const int FileBufferBytes = 128 * 1024;
     private readonly MediaExtensionManager manager;
     private readonly MediaExtractionScheduler scheduler;
+    private readonly IndexWorkItemSequence? workItems;
+    private readonly TimeProvider timeProvider;
 
-    public MediaMetadataService(MediaExtensionManager manager, IMediaCacheStore store, TimeProvider? timeProvider = null)
+    public MediaMetadataService(MediaExtensionManager manager, IMediaCacheStore store, TimeProvider? timeProvider = null,
+        IndexWorkItemSequence? workItems = null)
     {
         this.manager = manager ?? throw new ArgumentNullException(nameof(manager));
         scheduler = new MediaExtractionScheduler(manager, store, timeProvider);
+        this.timeProvider = timeProvider ?? TimeProvider.System;
+        this.workItems = workItems;
     }
 
     public bool CanCollect => manager.HasMetadataProviders;
@@ -95,9 +102,101 @@ public sealed class MediaMetadataService
             stored = true;
         }
 
+        await IndexWorkItemMetadataAsync(entry, path, file, catalog, batchId, cancellationToken).ConfigureAwait(false);
+
         return failure ?? (stored
             ? new MediaMetadataOutcome(entry.Id, Stored: true, MediaMetadataSkipReason.None, FailureReason: null)
             : MediaMetadataOutcome.Skipped(entry.Id, MediaMetadataSkipReason.NoProvider));
+    }
+
+    /// <summary>
+    /// Runs plugin-contributed work items for the source and stores their metadata on the owning entry.
+    /// Item results use an item-scoped fingerprint so several contained files keep separate records.
+    /// </summary>
+    private async Task IndexWorkItemMetadataAsync(
+        CatalogDocument entry,
+        string path,
+        FileInfo file,
+        IReadOnlyList<CatalogDocument> catalog,
+        string? batchId,
+        CancellationToken cancellationToken)
+    {
+        if (workItems is not { HasMetadataProviders: true } sequence)
+        {
+            return;
+        }
+
+        var indexed = await sequence.ProcessAsync(new IndexWorkItemRequest
+        {
+            FileName = Path.GetFileName(path),
+            SizeBytes = file.Length,
+            OpenSource = token => OpenReadAsync(path, token)
+        }, cancellationToken).ConfigureAwait(false);
+
+        if (indexed.Count == 0)
+        {
+            return;
+        }
+
+        var store = scheduler.Store;
+        var ownsBatch = batchId is null;
+        var effectiveBatch = batchId ?? store.BeginBatch().BatchId;
+        try
+        {
+            var now = timeProvider.GetUtcNow();
+            var entryFingerprint = MediaSourceFingerprint.ForCatalogEntry(entry, catalog);
+            foreach (var item in indexed)
+            {
+                var fingerprint = MediaSourceFingerprint.Create(
+                    entryFingerprint, item.Name, item.SizeBytes, item.ModifiedUtc);
+                var priority = item.Results.Count;
+                foreach (var result in item.Results)
+                {
+                    priority--;
+                    if (result.Failed || result.Metadata is null)
+                    {
+                        continue;
+                    }
+
+                    var schema = result.Schema;
+                    var record = new MediaCacheRecord
+                    {
+                        Id = MediaCacheRecord.CreateId(fingerprint, result.PluginId, result.PluginVersion,
+                            result.Capability, schema?.Id, schema?.Version ?? 0),
+                        EntryId = entry.Id,
+                        Fingerprint = fingerprint,
+                        PluginId = result.PluginId,
+                        PluginVersion = result.PluginVersion,
+                        Capability = result.Capability,
+                        SchemaId = schema?.Id,
+                        SchemaVersion = schema?.Version ?? 0,
+                        Priority = priority,
+                        State = MediaCacheRecordState.Captured,
+                        CapturedAtUtc = now,
+                        LastUsedAtUtc = now,
+                        SourceLength = item.SizeBytes,
+                        Metadata = result.Metadata.Values.Select(MediaMetadataValueRecord.From).ToList(),
+                        SchemaFields = (schema?.Fields ?? []).Select(MediaMetadataFieldRecord.From).ToList()
+                    };
+                    record.MetadataBytes = record.CalculateMetadataBytes();
+                    store.Stage(effectiveBatch, new MediaCachePayload(record));
+                }
+            }
+
+            if (ownsBatch)
+            {
+                store.PublishBatch(effectiveBatch);
+            }
+        }
+        catch
+        {
+            if (ownsBatch)
+            {
+                store.DiscardBatch(effectiveBatch);
+            }
+
+            throw;
+        }
     }
 
     private static Task<Stream> OpenReadAsync(string path, CancellationToken cancellationToken)

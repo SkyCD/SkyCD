@@ -1,27 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Archives;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 
 namespace SkyCD.Plugin.Zip;
 
 /// <summary>
-/// Read-only ZIP archive plugin. Lists archive entries as a catalog hierarchy and safely extracts supported
-/// entries into a temporary directory so enabled metadata plugins can index them.
+/// Read-only ZIP archive plugin. Lists archive entries as a catalog hierarchy and, when the host has
+/// metadata providers enabled, hooks into the indexing sequence by contributing safely extracted entries
+/// as extra work items.
 /// </summary>
-public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability, IArchivePluginCapability
+public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability, IIndexWorkItemProvider
 {
-    private readonly ArchiveLimits limits;
+    private readonly ZipIndexLimits limits;
 
-    public ZipArchiveIndexPlugin() : this(ArchiveLimits.Default)
+    public ZipArchiveIndexPlugin() : this(ZipIndexLimits.Default)
     {
     }
 
-    public ZipArchiveIndexPlugin(ArchiveLimits limits)
+    public ZipArchiveIndexPlugin(ZipIndexLimits limits)
     {
         ArgumentNullException.ThrowIfNull(limits);
         limits.Validate();
@@ -37,28 +39,16 @@ public sealed class ZipArchiveIndexPlugin : IFileFormatPluginCapability, IArchiv
             CanRead: true,
             CanWrite: false);
 
-    public ArchiveFormatDescriptor SupportedArchive =>
-        new(
-            FormatId: "skycd-zip",
-            DisplayName: "ZIP Archive",
-            Extensions: [".zip"],
-            MimeTypes: ["application/zip"],
-            limits);
-
-    public Task<ArchiveInspectionResult> InspectAsync(ArchiveInspectionRequest request,
+    public Task<IndexWorkItemSet> GetWorkItemsAsync(IndexWorkItemRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(ZipArchiveInspector.Inspect(request.Source, limits));
-    }
+        if (!string.Equals(Path.GetExtension(request.FileName), ".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(IndexWorkItemSet.Empty);
+        }
 
-    public Task<ArchiveExtractionResult> ExtractToTemporaryDirectoryAsync(ArchiveExtractionRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        return ZipArchiveInspector.ExtractAsync(request.Source, request.TargetDirectory, limits,
-            request.Progress, cancellationToken);
+        return ZipIndexWorkItems.CreateAsync(request, limits, cancellationToken);
     }
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,

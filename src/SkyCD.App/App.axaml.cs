@@ -16,6 +16,7 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Volume;
@@ -54,7 +55,8 @@ public partial class App : Avalonia.Application
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                    ServiceProvider.Resolve<VolumeExtensionManager>());
+                    ServiceProvider.Resolve<VolumeExtensionManager>(),
+                    ServiceProvider.Resolve<IndexWorkItemSequence>());
                 mainWindowViewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
                 mainWindow.DataContext = mainWindowViewModel;

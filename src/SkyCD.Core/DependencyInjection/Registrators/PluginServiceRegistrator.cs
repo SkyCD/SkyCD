@@ -5,8 +5,10 @@ using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Volume;
@@ -67,8 +69,12 @@ public sealed class PluginServiceRegistrator
         discoveredPlugins.AddRange(plugins.Where(static plugin => plugin is not null));
         discoveredPlugins.RegisterPluginServices(registrator);
 
-        registrator.RegisterInstance(new MediaExtensionManager(plugins.SelectMany(plugin =>
-            plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability)))),
+        var mediaManager = new MediaExtensionManager(plugins.SelectMany(plugin =>
+            plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability))));
+        registrator.RegisterInstance(mediaManager, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        registrator.RegisterInstance(new IndexWorkItemSequence(mediaManager, plugins.SelectMany(plugin =>
+                plugin.Capabilities.OfType<IIndexWorkItemProvider>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.RegisterInstance(new VolumeExtensionManager(plugins.SelectMany(plugin =>
