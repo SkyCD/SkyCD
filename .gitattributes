@@ -67,9 +67,13 @@
 *.nupkg     binary
 *.zip       binary
 *.7z        binary
+*.rar       binary
+*.vdi       binary
 *.ico       binary
 *.png       binary
 *.jpg       binary
 *.jpeg      binary
 *.gif       binary
 *.pdf       binary
+*.bin       binary
+*.img       binary

@@ -6,20 +6,41 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpCompress.Archives.SevenZip;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 
 namespace SkyCD.Plugin.SevenZip;
 
-public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
+/// <summary>
+/// Read-only 7z archive plugin. Lists archive entries as a catalog hierarchy and, when the host has
+/// metadata providers enabled, hooks into the indexing sequence by contributing safely extracted entries
+/// as extra work items.
+/// </summary>
+public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability, IIndexWorkItemProvider
 {
     private readonly ISevenZipEntryReader _entryReader;
+    private readonly SevenZipIndexLimits limits;
 
-    public SevenZipArchiveIndexPlugin() : this(new SharpCompressSevenZipEntryReader())
+    public SevenZipArchiveIndexPlugin() : this(new SharpCompressSevenZipEntryReader(), SevenZipIndexLimits.Default)
     {
     }
 
     public SevenZipArchiveIndexPlugin(ISevenZipEntryReader entryReader)
+        : this(entryReader, SevenZipIndexLimits.Default)
     {
+    }
+
+    public SevenZipArchiveIndexPlugin(SevenZipIndexLimits limits)
+        : this(new SharpCompressSevenZipEntryReader(), limits)
+    {
+    }
+
+    public SevenZipArchiveIndexPlugin(ISevenZipEntryReader entryReader, SevenZipIndexLimits limits)
+    {
+        ArgumentNullException.ThrowIfNull(entryReader);
+        ArgumentNullException.ThrowIfNull(limits);
+        limits.Validate();
         _entryReader = entryReader;
+        this.limits = limits;
     }
 
     public FileFormatDescriptor SupportedFormat =>
@@ -30,6 +51,18 @@ public sealed class SevenZipArchiveIndexPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/x-7z-compressed", "application/x-7z", "application/7z"],
             CanRead: true,
             CanWrite: false);
+
+    public Task<IndexWorkItemSet> GetWorkItemsAsync(IndexWorkItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!string.Equals(Path.GetExtension(request.FileName), ".7z", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(IndexWorkItemSet.Empty);
+        }
+
+        return SevenZipIndexWorkItems.CreateAsync(request, limits, cancellationToken);
+    }
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)

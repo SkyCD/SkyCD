@@ -16,6 +16,12 @@ public sealed class AppOptionsDocument
 
     public BrowserOptionsDocument Browser { get; set; } = new();
 
+    /// <summary>
+    /// Customized toolbar layout. <c>null</c> means the default layout has never been changed; an empty list is
+    /// a toolbar the user deliberately cleared.
+    /// </summary>
+    public System.Collections.Generic.List<ToolbarItemDocument>? Toolbar { get; set; }
+
     public string PluginPath { get; set; } = string.Empty;
 
     public string Language { get; set; } = "English";

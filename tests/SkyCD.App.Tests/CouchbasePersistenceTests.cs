@@ -35,6 +35,31 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
+    public void ToolbarLayout_PersistsCustomCommandsAndSeparatorsAcrossRepositoryInstances()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+        var options = optionsRepository.GetOrCreateAppOptions();
+        Assert.Null(options.Toolbar);
+        options.Toolbar =
+        [
+            ToolbarItemDocument.Command(ToolbarCommandIds.Refresh),
+            ToolbarItemDocument.Separator(),
+            ToolbarItemDocument.Command(ToolbarCommandIds.Options)
+        ];
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var restored = optionsRepository.GetOrCreateAppOptions();
+
+        Assert.Collection(restored.Toolbar!,
+            entry => Assert.Equal(ToolbarCommandIds.Refresh, entry.CommandId),
+            entry => Assert.Equal(ToolbarItemDocument.SeparatorKind, entry.Kind),
+            entry => Assert.Equal(ToolbarCommandIds.Options, entry.CommandId));
+    }
+
+    [Fact]
     public void CustomProperties_PersistSettingsAndAcceptedEditsAcrossRepositoryInstances()
     {
         using var provider = new Container();
