@@ -55,10 +55,10 @@ public class MainWindowLayoutParityTests
     [Fact]
     public void MainWindow_RestoresSavedTreePaneWidth_WhenValid()
     {
-        var csCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml.cs");
+        var csCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindowBoundsResolver.cs");
 
-        Assert.Contains("if (options.Window.TreePaneWidth is > 0)", csCode, StringComparison.Ordinal);
-        Assert.DoesNotContain("if (options.Window.TreePaneWidth is >= 160)", csCode, StringComparison.Ordinal);
+        Assert.Contains("savedTreeWidth > 0", csCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("is >= 160", csCode, StringComparison.Ordinal);
     }
 
     [Fact]
