@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
@@ -124,6 +125,12 @@ public partial class MultiSelectDropdown : UserControl
             return;
         }
 
+        if (change.Property == ItemPreviewTemplateProperty)
+        {
+            UpdateSelectedIconPreview();
+            return;
+        }
+
         if (change.Property == IconKeysProperty || change.Property == IsIconPickerProperty)
         {
             RefreshFilteredItems();
@@ -221,7 +228,8 @@ public partial class MultiSelectDropdown : UserControl
 
         searchText = InlineSearchTextBox.Text?.Trim() ?? string.Empty;
         if (IsIconPicker && !DropdownPopup.IsOpen &&
-            string.Equals(searchText, SelectedIconKey ?? PlaceholderText ?? string.Empty, StringComparison.Ordinal))
+            (string.Equals(searchText, SelectedIconKey ?? PlaceholderText ?? string.Empty, StringComparison.Ordinal) ||
+             (string.IsNullOrEmpty(searchText) && !string.IsNullOrWhiteSpace(SelectedIconKey))))
         {
             return;
         }
@@ -241,6 +249,7 @@ public partial class MultiSelectDropdown : UserControl
         suppressInlineTextProcessing = false;
         searchText = string.Empty;
         DropdownPopup.IsOpen = true;
+        UpdateSelectedIconPreview();
         RefreshFilteredItems();
     }
 
@@ -359,15 +368,17 @@ public partial class MultiSelectDropdown : UserControl
     {
         if (IsIconPicker)
         {
-            var iconSummary = string.IsNullOrWhiteSpace(SelectedIconKey)
-                ? PlaceholderText ?? string.Empty
-                : SelectedIconKey;
+            var hasIcon = !string.IsNullOrWhiteSpace(SelectedIconKey);
+            var iconSummary = hasIcon
+                ? string.Empty
+                : PlaceholderText ?? string.Empty;
             suppressInlineTextProcessing = true;
             InlineSearchTextBox.Text = iconSummary;
             suppressInlineTextProcessing = false;
+            AutomationProperties.SetName(InlineSearchTextBox, hasIcon ? SelectedIconKey! : iconSummary);
+            UpdateSelectedIconPreview();
             return;
         }
-
         var selected = (ItemsSource ?? [])
             .Where(static item => item.IsSelected)
             .ToArray();
@@ -378,6 +389,21 @@ public partial class MultiSelectDropdown : UserControl
         suppressInlineTextProcessing = true;
         InlineSearchTextBox.Text = summary;
         suppressInlineTextProcessing = false;
+        UpdateSelectedIconPreview();
+    }
+
+    private void UpdateSelectedIconPreview()
+    {
+        SelectedIconPreview.IsVisible = IsIconPicker &&
+            ItemPreviewTemplate is not null &&
+            !string.IsNullOrWhiteSpace(SelectedIconKey) &&
+            !DropdownPopup.IsOpen;
+    }
+
+    private void OnDropdownPopupClosed(object? sender, EventArgs e)
+    {
+        searchText = string.Empty;
+        RefreshSelectedItemsView();
     }
 
     private void OnItemsListPointerPressed(object? sender, PointerPressedEventArgs e)

@@ -44,8 +44,23 @@ public sealed class CatalogDocument
         Status = Status,
         Properties = new PropertiesCollection(Properties),
         lendingState = lendingState,
-        locationName = locationName
+        locationName = locationName,
+        displayName = displayName
     };
+
+    private string? displayName;
+
+    /// <summary>
+    /// Name shown in the browser when a plugin captured a preferred title (for example a comic series).
+    /// Computed by the browser projection and never serialized, so the catalogued file name — which merges,
+    /// renames and deletions rely on — is untouched.
+    /// </summary>
+    public string DisplayName => displayName ?? Name;
+
+    public void SetDisplayName(string? name) =>
+        displayName = string.IsNullOrWhiteSpace(name) || string.Equals(name, Name, System.StringComparison.Ordinal)
+            ? null
+            : name;
 
     private (string Borrower, bool Overdue)? lendingState;
 

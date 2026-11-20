@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.Plugin.Host.Media;
@@ -18,12 +20,15 @@ public sealed class MediaExtensionManager
 {
     private readonly MediaProvider[] providers;
     private readonly MediaExecutionLimits limits;
+    private readonly Func<string, IReadOnlyDictionary<string, string?>>? settingsSource;
     private readonly SemaphoreSlim slots;
 
-    public MediaExtensionManager(IEnumerable<MediaProvider> providers, MediaExecutionLimits? limits = null)
+    public MediaExtensionManager(IEnumerable<MediaProvider> providers, MediaExecutionLimits? limits = null,
+        Func<string, IReadOnlyDictionary<string, string?>>? settingsSource = null)
     {
         this.providers = providers.Where(p => p.Capability is IMediaMetadataCapability or IMediaPreviewCapability).ToArray();
         this.limits = limits ?? new MediaExecutionLimits();
+        this.settingsSource = settingsSource;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.SourceBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.ArtifactBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.Concurrency);
@@ -33,6 +38,11 @@ public sealed class MediaExtensionManager
 
     public bool HasMetadataProviders => providers.Any(provider =>
         provider.Capability is IMediaMetadataCapability);
+
+    /// <summary>True when a preview would be produced by an indexing pass.</summary>
+    public bool HasIndexingPreviewProviders => providers.Any(provider =>
+        provider.Capability is IMediaPreviewCapability preview &&
+        preview.Descriptor is { IsOptIn: false, IndexTimePreview: true });
 
     /// <summary>The factory must return a new readable stream; the host owns and disposes it.</summary>
     /// <summary>
@@ -49,6 +59,7 @@ public sealed class MediaExtensionManager
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.SourceBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.ArtifactBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.TimeoutMilliseconds);
+        ApplySettings();
 
         var results = new List<(int Priority, MediaProviderResult Result)>();
         foreach (var provider in OrderedProviders())
@@ -94,6 +105,7 @@ public sealed class MediaExtensionManager
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        var revisions = SettingsRevisions(ApplySettings());
         var identities = new List<MediaProviderIdentity>();
         foreach (var provider in OrderedProviders())
         {
@@ -110,10 +122,77 @@ public sealed class MediaExtensionManager
                 descriptor.Schema.Id,
                 descriptor.Schema.Version,
                 descriptor.Priority,
-                descriptor.Schema.Fields));
+                descriptor.Schema.Fields,
+                revisions.TryGetValue(provider.PluginId, out var revision) ? revision : string.Empty));
         }
 
         return identities;
+    }
+
+    /// <summary>
+    /// Pushes the persisted settings of each plugin to its capability before descriptors are resolved, so a
+    /// configured extension list or an enabled/disabled option is visible to matching and extraction alike.
+    /// Returns the settings that were pushed, keyed by plugin.
+    /// </summary>
+    private Dictionary<string, IReadOnlyDictionary<string, string?>> ApplySettings()
+    {
+        var byPlugin = new Dictionary<string, IReadOnlyDictionary<string, string?>>(StringComparer.OrdinalIgnoreCase);
+        if (settingsSource is null)
+        {
+            return byPlugin;
+        }
+
+        foreach (var provider in providers)
+        {
+            if (provider.Capability is not IPluginSettingsConsumer consumer)
+            {
+                continue;
+            }
+
+            try
+            {
+                if (!byPlugin.TryGetValue(provider.PluginId, out var settings))
+                {
+                    settings = settingsSource(provider.PluginId)
+                               ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+                    byPlugin[provider.PluginId] = settings;
+                }
+
+                consumer.ApplySettings(settings);
+            }
+            catch (Exception exception)
+            {
+                PluginFailure.Publish(provider.Capability.GetType(), "media-settings", exception);
+            }
+        }
+
+        return byPlugin;
+    }
+
+    /// <summary>
+    /// Stable per-plugin digest of the persisted settings; empty when none are stored. Providers report it in
+    /// their identity, so changing an option makes earlier cached results stale like a schema change does.
+    /// </summary>
+    private static Dictionary<string, string> SettingsRevisions(
+        Dictionary<string, IReadOnlyDictionary<string, string?>> settingsByPlugin)
+    {
+        var revisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (pluginId, settings) in settingsByPlugin)
+        {
+            if (settings.Count == 0)
+            {
+                continue;
+            }
+
+            var canonical = string.Join('\n', settings
+                .Where(setting => !string.IsNullOrWhiteSpace(setting.Key))
+                .OrderBy(setting => setting.Key, StringComparer.Ordinal)
+                .Select(setting => setting.Key + '=' + setting.Value));
+            revisions[pluginId] = Convert.ToHexString(SHA256.HashData(Encoding.Unicode.GetBytes(canonical)))
+                .ToLowerInvariant();
+        }
+
+        return revisions;
     }
 
     private IEnumerable<MediaProvider> OrderedProviders() => providers
@@ -161,8 +240,7 @@ public sealed class MediaExtensionManager
                             throw new MediaLimitExceededException("metadata schema");
                     }
                 }
-                if (selection is not (MediaProviderSelection.StandardMetadata or MediaProviderSelection.OptInMetadata) &&
-                    provider.Capability is IMediaPreviewCapability previewCapability)
+                if (provider.Capability is IMediaPreviewCapability previewCapability && RunsPreview(selection, descriptor))
                 {
                     var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
                     long bytes = 0;
@@ -203,11 +281,24 @@ public sealed class MediaExtensionManager
         {
             MediaProviderSelection.Standard => !descriptor.IsOptIn,
             MediaProviderSelection.OptInOnly => descriptor.IsOptIn,
-            MediaProviderSelection.StandardMetadata => provider.Capability is IMediaMetadataCapability && !descriptor.IsOptIn,
+            MediaProviderSelection.StandardMetadata => !descriptor.IsOptIn &&
+                (provider.Capability is IMediaMetadataCapability ||
+                 (provider.Capability is IMediaPreviewCapability && descriptor.IndexTimePreview)),
             MediaProviderSelection.OptInMetadata => provider.Capability is IMediaMetadataCapability && descriptor.IsOptIn,
             _ => true
         };
     }
+
+    /// <summary>
+    /// Whether this pass may generate the provider's preview. A metadata-only pass never runs previews it
+    /// was not explicitly made responsible for; indexing runs only providers that opted into indexing.
+    /// </summary>
+    private static bool RunsPreview(MediaProviderSelection selection, MediaDescriptor descriptor) => selection switch
+    {
+        MediaProviderSelection.OptInMetadata => false,
+        MediaProviderSelection.StandardMetadata => descriptor is { IsOptIn: false, IndexTimePreview: true },
+        _ => true
+    };
 
     private static void ValidateSchema(MediaMetadataSchema schema)
     {

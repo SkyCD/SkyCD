@@ -20,17 +20,36 @@ public enum MediaMetadataType
     Timestamp
 }
 
+/// <summary>
+/// Optional meaning beyond display. <see cref="PreferredName"/> lets the host show the value instead of the
+/// catalogued file name, and <see cref="Tags"/> lets it turn the value into catalog tags. A provider only
+/// publishes values for these roles while the matching user option is enabled; the host applies nothing
+/// that was not published.
+/// </summary>
+public enum MediaMetadataFieldRole
+{
+    /// <summary>Display only; the host applies no catalog effect.</summary>
+    None,
+    /// <summary>A user-facing name that may replace the file name in the catalog browser.</summary>
+    PreferredName,
+    /// <summary>One or more tag names separated by semicolons or commas.</summary>
+    Tags
+}
+
 /// <summary>Keys are stable within a provider and schema version; units use stable symbols such as s or px.</summary>
-public sealed record MediaMetadataField(string Key, MediaMetadataType Type, string? Unit = null);
+public sealed record MediaMetadataField(string Key, MediaMetadataType Type, string? Unit = null,
+    MediaMetadataFieldRole Role = MediaMetadataFieldRole.None);
 /// <summary>A stable provider-local schema identity and positive version.</summary>
 public sealed record MediaMetadataSchema(string Id, int Version, IReadOnlyList<MediaMetadataField> Fields);
 /// <summary>
 /// Supported extensions/MIME types, output schema and descending selection priority. The <c>*</c> entry
 /// matches any source. Opt-in providers are listed among an item's providers but are never executed by an
 /// implicit extraction pass, so expensive whole-source work only runs on an explicit request.
+/// <paramref name="IndexTimePreview"/> marks a preview the indexing pass also produces and stores with the
+/// captured metadata, for artwork the catalog itself presents. Other previews wait for an explicit request.
 /// </summary>
 public sealed record MediaDescriptor(IReadOnlyList<string> Extensions, IReadOnlyList<string> ContentTypes,
-    MediaMetadataSchema Schema, int Priority = 0, bool IsOptIn = false);
+    MediaMetadataSchema Schema, int Priority = 0, bool IsOptIn = false, bool IndexTimePreview = false);
 /// <summary>Source facts without filesystem paths or persistence identifiers.</summary>
 public sealed record MediaItem(string Extension, string? ContentType, long Length);
 

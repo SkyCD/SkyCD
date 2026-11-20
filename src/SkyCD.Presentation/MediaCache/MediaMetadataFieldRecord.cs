@@ -15,6 +15,12 @@ public sealed class MediaMetadataFieldRecord
 
     public string? Unit { get; set; }
 
+    /// <summary>
+    /// Persisted <see cref="MediaMetadataField.Role"/>, so a display name or tag value captured while an
+    /// option was enabled stays recognizable after the plugin or option changes.
+    /// </summary>
+    public MediaMetadataFieldRole Role { get; set; }
+
     public static MediaMetadataFieldRecord From(MediaMetadataField field)
     {
         ArgumentNullException.ThrowIfNull(field);
@@ -23,9 +29,10 @@ public sealed class MediaMetadataFieldRecord
         {
             Key = field.Key,
             Type = field.Type,
-            Unit = field.Unit
+            Unit = field.Unit,
+            Role = field.Role
         };
     }
 
-    public MediaMetadataField ToField() => new(Key, Type, Unit);
+    public MediaMetadataField ToField() => new(Key, Type, Unit, Role);
 }
