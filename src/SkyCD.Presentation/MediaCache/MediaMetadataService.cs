@@ -130,6 +130,7 @@ public sealed class MediaMetadataService
         {
             FileName = Path.GetFileName(path),
             SizeBytes = file.Length,
+            SourcePath = path,
             OpenSource = token => OpenReadAsync(path, token)
         }, cancellationToken).ConfigureAwait(false);
 
