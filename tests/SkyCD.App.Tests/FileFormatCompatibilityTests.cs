@@ -41,6 +41,8 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-arj", "catalog.arj", "catalog.arj")]
     [InlineData("skycd-lha", "catalog.lha", "catalog.lha")]
     [InlineData("skycd-lha", "catalog.lha", "catalog.lzh")]
+    [InlineData("skycd-gzip", "catalog.gz", "catalog.gz")]
+    [InlineData("skycd-gzip", "catalog.gz", "catalog.gzip")]
     [InlineData("skycd-rar", "catalog.rar", "catalog.rar")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
@@ -215,6 +217,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Vdi.VdiImageIndexPlugin(),
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
         new SkyCD.Plugin.Lha.LhaArchiveIndexPlugin(),
+        new SkyCD.Plugin.Gzip.GzipArchiveIndexPlugin(),
         new SkyCD.Plugin.Rar.RarArchiveIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()

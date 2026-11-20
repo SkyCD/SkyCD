@@ -50,6 +50,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Vdi/SkyCD.Plugin.Vdi.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Arj/SkyCD.Plugin.Arj.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Lha/SkyCD.Plugin.Lha.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Gzip/SkyCD.Plugin.Gzip.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Rar/SkyCD.Plugin.Rar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Markdown/SkyCD.Plugin.Markdown.csproj"/>
@@ -169,6 +170,7 @@
         <Project Path="tests/SkyCD.Plugin.SevenZip.Tests/SkyCD.Plugin.SevenZip.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Arj.Tests/SkyCD.Plugin.Arj.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Lha.Tests/SkyCD.Plugin.Lha.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Gzip.Tests/SkyCD.Plugin.Gzip.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Rar.Tests/SkyCD.Plugin.Rar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Tar.Tests/SkyCD.Plugin.Tar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Toml.Tests/SkyCD.Plugin.Toml.Tests.csproj"/>
