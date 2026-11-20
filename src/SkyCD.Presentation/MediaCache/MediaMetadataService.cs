@@ -129,6 +129,7 @@ public sealed class MediaMetadataService
         var indexed = await sequence.ProcessAsync(new IndexWorkItemRequest
         {
             FileName = Path.GetFileName(path),
+            SourcePath = path,
             SizeBytes = file.Length,
             OpenSource = token => OpenReadAsync(path, token)
         }, cancellationToken).ConfigureAwait(false);
