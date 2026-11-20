@@ -153,6 +153,8 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowStatusAlert => !string.IsNullOrWhiteSpace(StatusAlertMessage);
 
+    public bool ShowCustomPropertyAlert => !string.IsNullOrWhiteSpace(CustomPropertyAlertMessage);
+
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
     public IReadOnlyList<string> SettingCategories
@@ -545,6 +547,11 @@ public partial class OptionsDialogViewModel : ObservableObject
     partial void OnStatusAlertMessageChanged(string value)
     {
         OnPropertyChanged(nameof(ShowStatusAlert));
+    }
+
+    partial void OnCustomPropertyAlertMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowCustomPropertyAlert));
     }
 
     private bool MatchesSearch(params string[] terms)
