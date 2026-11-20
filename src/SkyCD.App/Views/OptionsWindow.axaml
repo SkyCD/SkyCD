@@ -5,6 +5,8 @@
         xmlns:media="clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.Plugin.Abstractions"
         xmlns:hostmedia="clr-namespace:SkyCD.Plugin.Host.Media;assembly=SkyCD.Plugin.Host"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.OptionsWindow"
@@ -58,6 +60,7 @@
 
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
+        <converters:PluginIconConverter x:Key="PluginIconConverter" />
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
@@ -212,9 +215,9 @@
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
                                     <Grid RowDefinitions="Auto,*">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
                                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.On}}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" FontWeight="SemiBold" />
                                             </Grid>
                                         </Border>
                                         <ListBox Grid.Row="1"
@@ -224,11 +227,27 @@
                                                 <DataTemplate x:DataType="vm:OptionsPluginItem">
                                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
                                                             Padding="8,6">
-                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
                                                             <CheckBox
                                                                 IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 VerticalAlignment="Top" Margin="0,2,0,0" />
-                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                            <Panel Grid.Column="1"
+                                                                   Width="24"
+                                                                   Height="24"
+                                                                   VerticalAlignment="Top">
+                                                                <Image
+                                                                    Source="{Binding IconKey, Converter={StaticResource PluginIconConverter}}"
+                                                                    IsVisible="{Binding HasIcon}" />
+                                                                <iconPacks:PackIconControl
+                                                                    Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
+                                                                    Width="20"
+                                                                    Height="20"
+                                                                    Foreground="#9CA3AF"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    IsVisible="{Binding !HasIcon}" />
+                                                            </Panel>
+                                                            <StackPanel Grid.Column="2" Spacing="2">
                                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                                            TextTrimming="CharacterEllipsis" />
                                                                 <TextBlock Text="{Binding Type}" Foreground="#9CA3AF"
@@ -475,28 +494,81 @@
                         </Border>
                     </Grid>
 
-                    <StackPanel Grid.Row="2" IsVisible="{Binding ShowCustomPropertiesSection}" Spacing="8">
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" FontSize="15" />
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomPropertiesDescription}}" TextWrapping="Wrap" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="+" Command="{Binding AddCustomPropertyCommand}" ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddProperty}}" />
-                            <Button Content="-" Command="{Binding RemoveCustomPropertyCommand}" ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveProperty}}" />
-                        </StackPanel>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PropertyName}}" /><TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.DefaultValue}}" />
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowCustomPropertiesSection}"
+                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
-                        <ListBox ItemsSource="{Binding CustomProperties}" SelectedItem="{Binding SelectedCustomProperty}" MaxHeight="400">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
+
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomPropertiesDescription}}"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="8">
+                                <Button Content="+"
+                                        FontSize="16"
+                                        Width="34"
+                                        Height="28"
+                                        Command="{Binding AddCustomPropertyCommand}"
+                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddProperty}}" />
+                                <Button Content="-"
+                                        FontSize="16"
+                                        Width="34"
+                                        Height="28"
+                                        Command="{Binding RemoveCustomPropertyCommand}"
+                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveProperty}}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Border BorderBrush="#2E2E2E"
+                                BorderThickness="1"
+                                Grid.Row="2">
+                            <Grid RowDefinitions="Auto,*">
+                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                        <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBox Grid.Column="1" Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PropertyName}}" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{i18n:Translate {x:Static i18n:UiKeys.DefaultValue}}"
+                                                   FontWeight="SemiBold" />
                                     </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <TextBlock Text="{Binding CustomPropertyAlertMessage}" TextWrapping="Wrap" Foreground="#DC2626" />
-                    </StackPanel>
+                                </Border>
+                                <ListBox Grid.Row="1"
+                                         ItemsSource="{Binding CustomProperties}"
+                                         SelectedItem="{Binding SelectedCustomProperty}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
+                                            <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                    <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <TextBox Grid.Column="1" Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+
+                        <Border IsVisible="{Binding ShowCustomPropertyAlert}"
+                                Grid.Row="3"
+                                Background="#7F1D1D"
+                                BorderBrush="#DC2626"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4">
+                            <TextBlock Text="{Binding CustomPropertyAlertMessage}"
+                                       Foreground="#FEE2E2"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </Grid>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">
                         <TextBox Margin="0,0,0,12"
@@ -652,6 +724,64 @@
                             <TextBlock Text="{Binding ScanAlertMessage}"
                                        Foreground="#FEE2E2"
                                        TextWrapping="Wrap" />
+                        </Border>
+                    </Grid>
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowDetailsColumnsSection}"
+                          RowDefinitions="Auto,Auto,Auto,*"
+                          RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumns}}" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <TextBlock Grid.Row="1"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumnsDescription}}"
+                                   TextWrapping="Wrap"
+                                   Opacity="0.8" />
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                            <Button Content="↑"
+                                    FontSize="16"
+                                    Width="34"
+                                    Height="28"
+                                    Command="{Binding MoveDetailsColumnUpCommand}"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.MoveUp}}" />
+                            <Button Content="↓"
+                                    FontSize="16"
+                                    Width="34"
+                                    Height="28"
+                                    Command="{Binding MoveDetailsColumnDownCommand}"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.MoveDown}}" />
+                        </StackPanel>
+
+                        <Border Grid.Row="3"
+                                BorderBrush="#2E2E2E"
+                                BorderThickness="1">
+                            <ListBox ItemsSource="{Binding DetailsColumns}"
+                                     SelectedItem="{Binding SelectedDetailsColumn}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DetailsColumnOptionItemViewModel">
+                                        <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                                <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                                          IsEnabled="{Binding IsRemovable}"
+                                                          VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Header}"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding RequiredLabel}"
+                                                           IsVisible="{Binding IsRequired}"
+                                                           Opacity="0.7"
+                                                           VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </Border>
                     </Grid>
                     <ScrollViewer Grid.Row="2"

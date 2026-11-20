@@ -27,4 +27,14 @@ public sealed class DiscoveredPluginFactoryTests
         Assert.Equal(new Version(3, 0, 0), plugin.MinHostVersion);
         Assert.Equal(new Version(3, 0, 0), plugin.MaxHostVersion);
     }
+
+    [Fact]
+    public void BuildFromAssembly_ResolvesPrimaryExtensionFromFileFormatCapability()
+    {
+        var factory = new DiscoveredPluginFactory();
+
+        var plugin = factory.BuildFromAssembly(Assembly.GetExecutingAssembly());
+
+        Assert.Equal("test", plugin.PrimaryExtension);
+    }
 }

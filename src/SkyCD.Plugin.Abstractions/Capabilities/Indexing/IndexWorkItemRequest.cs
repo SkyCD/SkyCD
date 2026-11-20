@@ -11,6 +11,9 @@ public sealed class IndexWorkItemRequest
     /// <summary>Gets the source file name, including its extension.</summary>
     public required string FileName { get; init; }
 
+    /// <summary>Gets the optional source file path when the host can provide one.</summary>
+    public string? SourcePath { get; init; }
+
     /// <summary>Gets the source length in bytes.</summary>
     public long SizeBytes { get; init; }
 

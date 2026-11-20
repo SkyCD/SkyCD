@@ -69,6 +69,26 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void OptionsPluginItem_BuildsIconKeyFromPrimaryExtension()
+    {
+        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json");
+
+        Assert.Equal("json", plugin.PrimaryExtension);
+        Assert.Equal("ext:json", plugin.IconKey);
+        Assert.True(plugin.HasIcon);
+    }
+
+    [Fact]
+    public void OptionsPluginItem_UsesNoIconKeyWithoutPrimaryExtension()
+    {
+        var plugin = new OptionsPluginItem("Accounts", "SkyCD", "accounts v2.0.0");
+
+        Assert.Null(plugin.PrimaryExtension);
+        Assert.Null(plugin.IconKey);
+        Assert.False(plugin.HasIcon);
+    }
+
+    [Fact]
     public void SetPlugins_RespectsPreviouslyDisabledPluginIds()
     {
         var vm = new OptionsDialogViewModel(["English"]);
@@ -303,6 +323,75 @@ public class OptionsDialogViewModelTests
 
         Assert.True(vm.DialogAccepted);
         Assert.False(vm.ShowStatusAlert);
+    }
+
+    [Fact]
+    public void CustomProperties_CanBeAddedRemovedAndExported()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetCustomProperties(
+        [
+            new CustomPropertyDocument { Name = "Genre", DefaultValue = "Rock" }
+        ]);
+
+        Assert.Single(vm.CustomProperties);
+        Assert.Equal("Genre", vm.SelectedCustomProperty?.Name);
+        Assert.False(vm.ShowCustomPropertyAlert);
+
+        vm.AddCustomPropertyCommand.Execute(null);
+        Assert.Equal(2, vm.CustomProperties.Count);
+
+        vm.RemoveCustomPropertyCommand.Execute(null);
+        Assert.Single(vm.CustomProperties);
+
+        var exported = vm.GetCustomProperties();
+        Assert.Single(exported);
+        Assert.False(string.IsNullOrWhiteSpace(exported[0].Name));
+    }
+
+    [Fact]
+    public void Confirm_ShowsCustomPropertyAlert_WhenNameIsBlank()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddCustomPropertyCommand.Execute(null);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        Assert.True(vm.ShowCustomPropertyAlert);
+        Assert.False(string.IsNullOrWhiteSpace(vm.CustomPropertyAlertMessage));
+    }
+
+    [Fact]
+    public void Confirm_ShowsCustomPropertyAlert_WhenNamesAreDuplicated()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetCustomProperties(
+        [
+            new CustomPropertyDocument { Name = "Genre" },
+            new CustomPropertyDocument { Name = "genre" }
+        ]);
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        Assert.True(vm.ShowCustomPropertyAlert);
+    }
+
+    [Fact]
+    public void Confirm_ClearsCustomPropertyAlert_WhenNamesBecomeValid()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.AddCustomPropertyCommand.Execute(null);
+        vm.ConfirmCommand.Execute(null);
+        Assert.True(vm.ShowCustomPropertyAlert);
+
+        vm.SelectedCustomProperty!.Name = "Genre";
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.True(vm.DialogAccepted);
+        Assert.False(vm.ShowCustomPropertyAlert);
+        Assert.Equal(string.Empty, vm.CustomPropertyAlertMessage);
     }
 
     [Fact]
