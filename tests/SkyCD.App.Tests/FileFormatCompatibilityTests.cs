@@ -35,7 +35,12 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-nrg", "catalog-sample.nrg", "catalog.nrg")]
     [InlineData("skycd-qcow2", "catalog-sample.qcow2", "catalog.qcow2")]
     [InlineData("skycd-daa", "catalog-sample.daa", "catalog.daa")]
+    [InlineData("skycd-vhd", "catalog-sample.vhd", "catalog.vhd")]
+    [InlineData("skycd-vdi", "catalog.vdi", "catalog.vdi")]
     [InlineData("skycd-arj", "catalog.arj", "catalog.arj")]
+    [InlineData("skycd-lha", "catalog.lha", "catalog.lha")]
+    [InlineData("skycd-lha", "catalog.lha", "catalog.lzh")]
+    [InlineData("skycd-rar", "catalog.rar", "catalog.rar")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
         var manager = new FileFormatManager(CreateProviders());
@@ -57,7 +62,7 @@ public sealed class FileFormatCompatibilityTests
             Assert.True(leaf.Size > 0);
         }
         if (format is "skycd-zip" or "skycd-tar" or "skycd-7z" or "skycd-iso" or "skycd-qcow2" or "skycd-daa"
-            or "skycd-arj")
+            or "skycd-arj" or "skycd-vhd" or "skycd-vdi" or "skycd-lha" or "skycd-rar")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
@@ -72,6 +77,46 @@ public sealed class FileFormatCompatibilityTests
         Assert.Equal(entries.Select(entry => entry.Name), roundTrip.Select(entry => entry.Name));
         Assert.Equal(entries.Select(entry => entry.Type), roundTrip.Select(entry => entry.Type));
         Assert.Equal(entries.Select(entry => entry.Size), roundTrip.Select(entry => entry.Size));
+    }
+
+    [Fact]
+    public async Task CloneCdImage_ResolvesCompanionImageAndImportsCatalog()
+    {
+        var manager = new FileFormatManager(CreateProviders());
+        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.ccd");
+        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(Path.ChangeExtension(path, ".img")));
+        Assert.Equal("skycd-ccd", manager.ResolveFormatId(null, path, forWrite: false));
+
+        var service = new CatalogLoadService(manager);
+        await service.LoadAsync(path, (payload, _) =>
+        {
+            var entries = CatalogImportTests.Extract(payload!);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
+            CatalogImportTests.Persist(entries);
+            return entries.Count;
+        }, new Progress<int>());
+    }
+
+    [Fact]
+    public async Task BinCueImage_ResolvesCompanionImageAndImportsCatalog()
+    {
+        var manager = new FileFormatManager(CreateProviders());
+        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.cue");
+        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(Path.ChangeExtension(path, ".bin")));
+        Assert.Equal("skycd-bincue", manager.ResolveFormatId(null, path, forWrite: false));
+
+        var service = new CatalogLoadService(manager);
+        await service.LoadAsync(path, (payload, _) =>
+        {
+            var entries = CatalogImportTests.Extract(payload!);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
+            CatalogImportTests.Persist(entries);
+            return entries.Count;
+        }, new Progress<int>());
     }
 
     [Theory]
@@ -162,7 +207,13 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Nrg.NrgImageIndexPlugin(),
         new SkyCD.Plugin.Qcow2.Qcow2ImageIndexPlugin(),
         new SkyCD.Plugin.Daa.DaaImageIndexPlugin(),
+        new SkyCD.Plugin.Ccd.CcdImageIndexPlugin(),
+        new SkyCD.Plugin.BinCue.BinCueImageIndexPlugin(),
+        new SkyCD.Plugin.Vhd.VhdImageIndexPlugin(),
+        new SkyCD.Plugin.Vdi.VdiImageIndexPlugin(),
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
+        new SkyCD.Plugin.Lha.LhaArchiveIndexPlugin(),
+        new SkyCD.Plugin.Rar.RarArchiveIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()
     ];
