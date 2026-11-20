@@ -169,6 +169,23 @@ public sealed class MediaCatalogScannerTests : IDisposable
     }
 
     [Fact]
+    public void Scan_OpticalDeviceRoot_WithoutFileSystem_ReturnsTheMediaRootOnly()
+    {
+        var drive = new MediaDriveInfo("/dev/sr0", null, "/dev/sr0", DriveType.CDRom, true, 0, 0, 0);
+        var provider = new FakeDriveProvider([drive]);
+        var scanner = new MediaCatalogScanner(provider);
+        var options = new MediaScanOptions("/dev/sr0", MediaName: "Audio CD");
+
+        var documents = scanner.Scan(options);
+
+        var rootDoc = Assert.Single(documents);
+        Assert.Equal("Audio CD", rootDoc.Name);
+        Assert.Equal(CatalogDocumentType.Media, rootDoc.Type);
+        Assert.Equal(0L, rootDoc.Size);
+        Assert.Equal(0L, rootDoc.ChildrenCount);
+    }
+
+    [Fact]
     public void Scan_ReportsProgress()
     {
         File.WriteAllText(Path.Combine(testDirectory, "item.txt"), "data");

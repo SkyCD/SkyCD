@@ -97,13 +97,13 @@ public sealed class AudioCdMetadataService
                 continue;
             }
 
-            var rootPath = ReadProperty(document.Properties, RootDirectoryPropertyKey);
-            if (!IsDriveRoot(rootPath) || !IsOpticalDrive(document))
+            var rootPath = ReadProperty(document.Properties, RootDirectoryPropertyKey)?.Trim();
+            if (string.IsNullOrEmpty(rootPath) || !IsOpticalDrive(document))
             {
                 continue;
             }
 
-            roots[rootPath!] = new AudioCdDiscRoot(rootPath!, document);
+            roots[RootKey(rootPath)] = new AudioCdDiscRoot(rootPath, document);
         }
 
         foreach (var document in documents)
@@ -120,13 +120,16 @@ public sealed class AudioCdMetadataService
                 continue;
             }
 
-            var rootPath = Path.GetPathRoot(fullName);
-            if (!IsDriveRoot(rootPath) || roots.ContainsKey(rootPath!))
+            // The disc root is the directory holding the virtual track file. Deriving it from the path keeps the
+            // inference identical on Windows ("E:\") and on Unix, where a disc root can be a device path.
+            var rootPath = Path.GetDirectoryName(fullName);
+            var rootKey = rootPath is null ? null : RootKey(rootPath);
+            if (rootKey is null || roots.ContainsKey(rootKey))
             {
                 continue;
             }
 
-            roots[rootPath!] = new AudioCdDiscRoot(rootPath!, FindContainer(documents, document.ParentId));
+            roots[rootKey] = new AudioCdDiscRoot(rootPath!, FindContainer(documents, document.ParentId));
         }
 
         return roots.Values.ToList();
@@ -263,18 +266,7 @@ public sealed class AudioCdMetadataService
                    StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsDriveRoot(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return false;
-        }
-
-        // A drive root keeps its trailing separator ("E:\"), so it is not trimmed like a normal directory.
-        var trimmed = path.Trim();
-        return trimmed.Length is 2 or 3 && char.IsLetter(trimmed[0]) && trimmed[1] == ':' &&
-               (trimmed.Length == 2 || trimmed[2] is '\\' or '/');
-    }
+    private static string RootKey(string path) => Path.TrimEndingDirectorySeparator(path.Trim());
 
     private static bool TryReadTrackNumber(string fileName, out int number)
     {

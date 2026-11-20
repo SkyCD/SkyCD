@@ -23,7 +23,7 @@ public sealed class AudioCdMetadataPlugin : IAudioCdMetadataCapability
     private readonly Func<AudioCdSettings, AudioCdMetadataResolver> resolverFactory;
 
     public AudioCdMetadataPlugin()
-        : this(new WindowsDiscTocReader(), CreateResolver)
+        : this(new PlatformDiscTocReader(), CreateResolver)
     {
     }
 

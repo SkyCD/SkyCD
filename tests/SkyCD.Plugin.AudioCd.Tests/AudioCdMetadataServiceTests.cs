@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,15 +31,30 @@ public sealed class AudioCdMetadataServiceTests
     [Fact]
     public void OpticalDriveRoot_IsFound_AndVirtualTrackFilesImplyTheRoot()
     {
+        var trackRoot = Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-root")) +
+                        Path.DirectorySeparatorChar;
         var optical = AudioCdMetadataService.FindDiscRoots(
             [Root("media-1", @"E:\", "CDRom"), File("file-1", "Track01.cda", @"E:\Track01.cda", "media-1")]);
         var tracksOnly = AudioCdMetadataService.FindDiscRoots(
-            [Root("media-2", @"F:\", null), File("file-2", "Track01.cda", @"F:\Track01.cda", "media-2")]);
+        [
+            Root("media-2", trackRoot, null),
+            File("file-2", "Track01.cda", Path.Combine(trackRoot, "Track01.cda"), "media-2")
+        ]);
 
         var disc = Assert.Single(optical);
         Assert.Equal(@"E:\", disc.RootPath);
         Assert.Equal("media-1", disc.RootDocument!.Id);
-        Assert.Equal(@"F:\", Assert.Single(tracksOnly).RootPath);
+        Assert.Equal(trackRoot.TrimEnd(Path.DirectorySeparatorChar), Assert.Single(tracksOnly).RootPath);
+    }
+
+    [Fact]
+    public void UnixDeviceRoot_IsFoundWithoutTrackFiles()
+    {
+        var linux = AudioCdMetadataService.FindDiscRoots([Root("media-1", "/dev/sr0", "CDRom")]);
+        var mac = AudioCdMetadataService.FindDiscRoots([Root("media-1", "/dev/rdisk4", "cdrom")]);
+
+        Assert.Equal("/dev/sr0", Assert.Single(linux).RootPath);
+        Assert.Equal("/dev/rdisk4", Assert.Single(mac).RootPath);
     }
 
     [Fact]
@@ -116,12 +132,16 @@ public sealed class AudioCdMetadataServiceTests
             store.BeginBatch().BatchId));
     }
 
+    private static readonly string DiscRoot =
+        Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-disc")) +
+        Path.DirectorySeparatorChar;
+
     private static IReadOnlyList<CatalogDocument> DiscDocuments() =>
     [
-        Root("media-1", @"E:\", "CDRom"),
-        File("file-1", "Track01.cda", @"E:\Track01.cda", "media-1"),
-        File("file-2", "Track02.cda", @"E:\Track02.cda", "media-1"),
-        File("file-3", "Track03.cda", @"E:\Track03.cda", "media-1")
+        Root("media-1", DiscRoot, "CDRom"),
+        File("file-1", "Track01.cda", Path.Combine(DiscRoot, "Track01.cda"), "media-1"),
+        File("file-2", "Track02.cda", Path.Combine(DiscRoot, "Track02.cda"), "media-1"),
+        File("file-3", "Track03.cda", Path.Combine(DiscRoot, "Track03.cda"), "media-1")
     ];
 
     private static CatalogDocument Root(string id, string rootDirectory, string? driveType)

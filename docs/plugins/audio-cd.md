@@ -12,11 +12,17 @@ and implemented capability types only — there is no `plugin.json`.
 
 ## Identification
 
-The table of contents is read on Windows through the in-box MCI cdaudio device (`winmm.dll`,
-`mciSendStringW`): track count and per-track lengths, folded back into absolute CD frames from the standard
-150-frame lead-in. MCI reports the last track one frame short, so the lead-out gains that frame back. No COM
-interop, native package, or drive-letter heuristic is involved, and nothing is read from the disc's data
-track.
+The table of contents is read with the in-box facilities of each supported operating system; no COM interop,
+native package or helper binary is involved:
+
+| OS | Reader | Mechanism |
+|---|---|---|
+| Windows | `WindowsDiscTocReader` | MCI cdaudio device (`winmm.dll`, `mciSendStringW`): track count and per-track lengths, folded back into absolute CD frames from the standard 150-frame lead-in. MCI reports the last track one frame short, so the lead-out gains that frame back. |
+| Linux | `LinuxDiscTocReader` | `CDROMREADTOCHDR` / `CDROMREADTOCENTRY` ioctls on the drive's device node (`/dev/srN`); a mounted disc is resolved through `/proc/self/mounts`. |
+| macOS | `MacDiscTocReader` | IOKit (`IOCDMedia`) locates the media's BSD node, then `DKIOCCDREADTOC` returns the TOC in SCSI layout. Raw device access may require the operator group. |
+
+`PlatformDiscTocReader` selects the reader for the current OS; an unsupported platform simply returns no
+record. None of the readers reads the disc's data session.
 
 The same TOC yields both identifiers the online sources use:
 
@@ -31,11 +37,16 @@ when the sources were offline during the scan.
 
 Disc roots are found two ways, because a drive may be scanned either as a media root or as a plain folder:
 
-- a folder/media entry whose properties carry a drive-root `RootDirectory` and `DriveType` of `CDRom`;
-- a `.cda` track file whose full path root is a drive root (the shell's virtual track files).
+- a folder/media entry whose properties carry a non-empty `RootDirectory` and `DriveType` of `CDRom` — a
+  drive letter on Windows, a device node such as `/dev/sr0` or `/dev/rdisk4` on Linux and macOS;
+- a `.cda` track file next to its siblings (the shell's virtual track files); the containing directory is
+  the disc root.
 
 Non-optical drives, folders and files are ignored. Track records attach to the `.cda` files directly under the
-disc root, matched by their trailing number.
+disc root, matched by their trailing number. Because an audio CD has no filesystem, the host also offers it
+for scanning directly from its device node on Linux (sysfs, only drives with a readable disc that is not
+mounted) and macOS (IOKit, media present); such a scan produces the media root, and its disc-level metadata
+is captured even though there are no file entries.
 
 ## Metadata schema
 
@@ -120,8 +131,11 @@ already manages, and published atomically with the file records:
 - `AudioCdExtensionManager` (`src/SkyCD.Plugin.Host/AudioCd/`) — generic host manager: priority order,
   per-plugin settings resolution, failure isolation through `PluginFailure.Publish`, cancellation passthrough,
   registered as `IAudioCdMetadataProvider`;
-- `AudioCdMetadataService` (`src/SkyCD.Presentation/MediaCache/`) — disc-root discovery, artifact staging
-  (`preview:0`), and per-entry fingerprints, mirroring the file metadata service;
+- `AudioCdMetadataService` (`src/SkyCD.Presentation/MediaCache/`) — platform-neutral disc-root discovery,
+  artifact staging (`preview:0`), and per-entry fingerprints, mirroring the file metadata service;
+- `SystemMediaDriveProvider` / `MediaCatalogScanner` — on Unix an audio CD exists only as a device node;
+  sysfs and IOKit probes offer it for scanning, and the scanner catalogues it as a media root without
+  traversing a filesystem;
 - `DiscoveredPluginFactory` gains an `IAudioCdMetadataCapability.PrimaryExtension` fallback so the plugin has
   an icon identity (`cda`) without a file-format capability;
 - `MainWindowViewModel.StageMetadataAsync` runs the disc step before the file loop and reports failures as a
@@ -158,6 +172,9 @@ Alternatives considered:
   cancellation, and measured throttle spacing — for MusicBrainz, GnuDb (including 211 multi-match and
   continuation lines) and Cover Art Archive;
 - cover renderer: pass-through without upscaling, downscale to the requested edge, undecodable input;
+- TOC readers: Linux mount-table resolution (longest mount, escaped names) and frame assembly, macOS CDTOC
+  parsing (audio/data, truncated length, raw-device conversion), and the platform dispatcher — all driven by
+  captured struct/buffer data, so no optical drive is needed in CI;
 - plugin behaviour: disc/track field values, disc vs track tag gating, disc vs track cover sizes, cover
   downloads skipped when disabled, missing artwork, offline, unreachable-then-GnuDb fallback, cancellation,
   assembly discovery without a manifest;
@@ -168,10 +185,14 @@ Alternatives considered:
 
 ## Known limitations
 
-- **Windows only.** The TOC reader is the in-box MCI device. Other platforms, multi-session discs and
-  drives MCI cannot open are reported as unidentified rather than guessed.
-- **CD-Extra / data tracks** are invisible to MCI; the disc id therefore covers its audio session only.
-  Enhanced CDs with a mixed layout may not match a source.
+- **Audio-only discs.** Windows MCI ignores data tracks; the Linux and macOS readers reject a mixed-mode or
+  CD-Extra layout outright. Enhanced CDs may therefore not match a source and are reported as unidentified
+  rather than partially guessed.
+- **Raw device permissions (macOS).** Reading the TOC of an unmounted disc opens `/dev/rdiskN`, which may
+  require the operator group; a refused read is reported as unidentified.
+- **No track entries on device scans.** A Unix audio CD has no filesystem, so a device-root scan has no
+  `.cda` entries to attach track records to; the disc record still carries the identificators, track count
+  and per-track lengths.
 - **No fuzzy matching or manual disc-id entry.** Only exact disc-id lookups are performed; a pressed disc
   whose TOC differs by a frame will not match.
 - **GnuDb multi-match** (`211`) uses the first entry offered; no scoring across candidates.
