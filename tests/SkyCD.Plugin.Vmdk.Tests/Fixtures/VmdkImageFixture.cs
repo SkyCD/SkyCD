@@ -44,10 +44,10 @@ internal sealed class VmdkImageFixture : IDisposable
             foreach (var (path, content) in files)
             {
                 var rawPath = path.Replace('/', '\\');
-                var parent = Path.GetDirectoryName(rawPath);
+                var parent = Path.GetDirectoryName(path.Replace('\\', '/'));
                 if (!string.IsNullOrEmpty(parent))
                 {
-                    fileSystem.CreateDirectory(parent);
+                    fileSystem.CreateDirectory(parent.Replace('/', '\\'));
                 }
 
                 using var writer = new StreamWriter(
