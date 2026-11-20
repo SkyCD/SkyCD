@@ -70,8 +70,7 @@ public sealed class McpServerHostTests
     {
         using var host = new McpServerHost();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-        var firstPort = GetFreeTcpPort();
-        var secondPort = GetFreeTcpPort();
+        var (firstPort, secondPort) = GetTwoFreeTcpPorts();
 
         host.Configure(enabled: true, firstPort);
         var firstUrl = host.BaseUrl;
@@ -110,6 +109,17 @@ public sealed class McpServerHostTests
         using var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
         listener.Start();
         return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
+    private static (int First, int Second) GetTwoFreeTcpPorts()
+    {
+        // Hold both listeners at once so the OS cannot hand out the same port twice.
+        using var first = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        using var second = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        first.Start();
+        second.Start();
+        return (((System.Net.IPEndPoint)first.LocalEndpoint).Port,
+            ((System.Net.IPEndPoint)second.LocalEndpoint).Port);
     }
 
     private static async Task<string> RetryGetStringAsync(HttpClient client, string url)

@@ -83,21 +83,7 @@
                       ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
         </Menu>
 
-        <ct:ClassicToolbar DockPanel.Dock="Top">
-            <ct:ClassicToolbar.Items>
-                <ct:ClassicToolbarButton Command="{Binding NewCatalogCommand}"
-                                         ImageSrc="/Assets/new.png"
-                                         Text="{i18n:Translate {x:Static i18n:UiKeys.NewToolbar}}" />
-                <ct:ClassicToolbarButton Command="{Binding OpenCatalogCommand}"
-                                         ImageSrc="/Assets/open.png"
-                                         Text="{i18n:Translate {x:Static i18n:UiKeys.OpenToolbar}}" />
-                <ct:ClassicToolbarButton Command="{Binding SaveCatalogCommand}"
-                                         ImageSrc="/Assets/save.png"
-                                         Text="{i18n:Translate {x:Static i18n:UiKeys.SaveToolbar}}" />
-                <ct:ClassicToolbarButton Command="{Binding FindCatalogCommand}"
-                                         Text="{i18n:Translate {x:Static i18n:UiKeys.Find}}" />
-            </ct:ClassicToolbar.Items>
-        </ct:ClassicToolbar>
+        <ct:ClassicToolbar x:Name="MainToolbar" DockPanel.Dock="Top" />
 
         <cs:StatusBar x:Name="MainStatusBar"
                       DockPanel.Dock="Bottom"

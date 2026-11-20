@@ -16,6 +16,9 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DryIoc;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
@@ -43,6 +46,7 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
+using SkyCD.UI.Controls.Toolbars;
 using SkyCD.UI.Controls.Tree;
 
 namespace SkyCD.App.Views;
@@ -66,6 +70,7 @@ public partial class MainWindow : Window
     private bool isSessionStateLoaded;
     private Task? catalogLoadTask;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
+    private readonly Dictionary<string, IImage> toolbarIcons = new(StringComparer.Ordinal);
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
@@ -145,6 +150,9 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
             subscribedViewModel.RenameRequested -= OnRenameRequested;
             subscribedViewModel.DetailsColumnsChanged -= OnDetailsColumnsChanged;
+            subscribedViewModel.CustomizeToolbarRequested -= OnCustomizeToolbarRequested;
+            subscribedViewModel.ToolbarItemsChanged -= OnToolbarItemsChanged;
+            subscribedViewModel.ToolbarLayoutChanged -= OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -173,10 +181,14 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.RenameRequested += OnRenameRequested;
             subscribedViewModel.DetailsColumnsChanged += OnDetailsColumnsChanged;
+            subscribedViewModel.CustomizeToolbarRequested += OnCustomizeToolbarRequested;
+            subscribedViewModel.ToolbarItemsChanged += OnToolbarItemsChanged;
+            subscribedViewModel.ToolbarLayoutChanged += OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
             subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
+            subscribedViewModel.LoadToolbarLayout(appOptions.Toolbar);
             UpdateWindowTitle();
         }
     }
@@ -196,6 +208,79 @@ public partial class MainWindow : Window
         var options = LoadAppOptions();
         options.Browser.DetailsColumns = viewModel.GetDetailsColumnSettings().ToList();
         SaveAppOptions(options);
+    }
+
+    private void OnToolbarItemsChanged(object? sender, EventArgs e)
+    {
+        if (sender is MainWindowViewModel viewModel)
+        {
+            RebuildToolbar(viewModel);
+        }
+    }
+
+    private void OnToolbarLayoutChanged(object? sender, EventArgs e)
+    {
+        if (sender is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var options = LoadAppOptions();
+        options.Toolbar = viewModel.ToolbarEntries.ToList();
+        SaveAppOptions(options);
+    }
+
+    private async void OnCustomizeToolbarRequested(object? sender, ToolbarCustomizeRequestedEventArgs e)
+    {
+        var dialog = new ToolbarCustomizationWindow { DataContext = e.Dialog };
+        if (await dialog.ShowDialog<bool>(this) && DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.ApplyToolbarLayout(e.Dialog.GetLayout());
+        }
+    }
+
+    private void RebuildToolbar(MainWindowViewModel viewModel)
+    {
+        var commands = viewModel.ToolbarCommands().ToDictionary(command => command.Id, StringComparer.OrdinalIgnoreCase);
+        MainToolbar.Items.Clear();
+        foreach (var entry in viewModel.ToolbarEntries)
+        {
+            if (string.Equals(entry.Kind, ToolbarItemDocument.SeparatorKind, StringComparison.OrdinalIgnoreCase))
+            {
+                MainToolbar.Items.Add(new ClassicToolbarSeparator());
+                continue;
+            }
+
+            if (entry.CommandId is not { } commandId || !commands.TryGetValue(commandId, out var descriptor))
+            {
+                continue;
+            }
+
+            MainToolbar.Items.Add(new ClassicToolbarButton
+            {
+                Command = descriptor.Command,
+                CommandParameter = descriptor.CommandParameter,
+                Text = descriptor.Label,
+                ImageSrc = LoadToolbarIcon(descriptor.IconPath)
+            });
+        }
+    }
+
+    private IImage? LoadToolbarIcon(string? assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath))
+        {
+            return null;
+        }
+
+        if (toolbarIcons.TryGetValue(assetPath, out var cached))
+        {
+            return cached;
+        }
+
+        var icon = new Bitmap(AssetLoader.Open(new Uri($"avares://SkyCD.App{assetPath}")));
+        toolbarIcons[assetPath] = icon;
+        return icon;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
