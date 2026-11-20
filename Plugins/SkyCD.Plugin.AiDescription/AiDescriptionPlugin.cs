@@ -9,11 +9,15 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
 namespace SkyCD.Plugin.AiDescription;
 
-public sealed partial class AiDescriptionPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner, IAcpAgentSettingsCapability
+public sealed partial class AiDescriptionPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner, IAcpAgentSettingsCapability, IAiDescriptionImplementationCapability
 {
     public const string PluginVersion = "1.0.0";
     private readonly string configurationPath;
     private readonly Func<DescriptionAgentOptions, DescriptionContext, CancellationToken, Task<GeneratedDescription>> generate;
+
+    public string ImplementationId => AiDescriptionImplementationIds.Acp;
+
+    public string ImplementationName => "ACP agent";
 
     public AiDescriptionPlugin() : this(Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData),
         "SkyCD", "ai-descriptions.json"), AcpDescriptionClient.GenerateAsync)

@@ -23,8 +23,11 @@ public partial class OptionsWindow : Window
     private readonly CancellationTokenSource acpLifetime = new();
     private bool hasOpened;
     private bool startedAcpLoad;
+    private bool startedAiProviderLoad;
 
     public IAcpAgentSettingsCapability? AcpSettingsCapability { get; init; }
+
+    public IAiProviderSettingsCapability? AiProviderSettingsCapability { get; init; }
 
     public OptionsWindow()
     {
@@ -32,6 +35,7 @@ public partial class OptionsWindow : Window
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
         Opened += OnLoadAcpAgents;
+        Opened += OnLoadAiProviderSettings;
         Closed += (_, _) =>
         {
             acpLifetime.Cancel();
@@ -66,6 +70,10 @@ public partial class OptionsWindow : Window
         {
             await LoadAcpAgentsIfVisibleAsync();
         }
+        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAiDescriptionSection))
+        {
+            LoadAiProviderSettingsIfVisible();
+        }
     }
 
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
@@ -90,7 +98,25 @@ public partial class OptionsWindow : Window
     private async void OnLoadAcpAgents(object? sender, EventArgs e)
     {
         hasOpened = true;
+        LoadAiProviderSettingsIfVisible();
         await LoadAcpAgentsIfVisibleAsync();
+    }
+
+    private void OnLoadAiProviderSettings(object? sender, EventArgs e)
+    {
+        hasOpened = true;
+        LoadAiProviderSettingsIfVisible();
+    }
+
+    private void LoadAiProviderSettingsIfVisible()
+    {
+        if (!hasOpened || startedAiProviderLoad || DataContext is not OptionsDialogViewModel { ShowAiDescriptionSection: true } vm)
+        {
+            return;
+        }
+
+        startedAiProviderLoad = true;
+        vm.LoadAiProviderSettings(AiProviderSettingsCapability);
     }
 
     private async Task LoadAcpAgentsIfVisibleAsync()

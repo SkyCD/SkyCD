@@ -49,4 +49,7 @@ public sealed class AppOptionsDocument
     /// <summary>Files larger than this are skipped by AI description scanning. Default: 1 GiB.</summary>
     public long AiScanMaxFileSizeBytes { get; set; } = 1024L * 1024L * 1024L;
 
+    /// <summary>Selected AI description implementation id; the ACP agent is used when unset.</summary>
+    public string AiDescriptionImplementation { get; set; } = "acp";
+
 }

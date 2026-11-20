@@ -54,11 +54,13 @@ public partial class App : Avalonia.Application
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
                 ApplyMcpSettings();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
+                var descriptionManager = appServiceProvider.Resolve<DescriptionExtensionManager>();
+                descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                     ServiceProvider.Resolve<VolumeExtensionManager>(),
                     ServiceProvider.Resolve<IndexWorkItemSequence>());
-                mainWindowViewModel.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+                mainWindowViewModel.RefreshDescriptionServices(descriptionManager);
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;

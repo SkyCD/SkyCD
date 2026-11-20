@@ -352,6 +352,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         AiDescriptionAlertMessage = string.Empty;
+        if (!TrySaveAiProviderSettings()) return;
         if (!TrySaveAcpSettings()) return;
         DialogAccepted = true;
     }
@@ -663,6 +664,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowScanSection));
         OnPropertyChanged(nameof(IsAiDescriptionCategorySelected));
         OnPropertyChanged(nameof(ShowAiDescriptionSection));
+        OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }
 
