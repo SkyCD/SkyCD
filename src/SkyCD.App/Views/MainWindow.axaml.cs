@@ -850,6 +850,8 @@ public partial class MainWindow : Window
                 RootType: rootType,
                 IncludeMediaInfo: dialogVm.IncludeMediaInfo,
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                IncludeSubfolders: dialogVm.IncludeSubfolders,
+                IncludeFiles: dialogVm.IncludeFiles,
                 Traversal: BuildScanTraversalOptions(),
                 LocationId: dialogVm.SelectedLocationId);
 
@@ -924,6 +926,7 @@ public partial class MainWindow : Window
                 TargetParentId: targetParentId,
                 RootType: rootType,
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
+                IncludeFiles: dialogVm.IncludeFiles,
                 IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
                 Traversal: BuildScanTraversalOptions());
 

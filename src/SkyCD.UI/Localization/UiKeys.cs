@@ -55,6 +55,9 @@ public static class UiKeys
     public const string IncludeMediaInfo = "core.ui.IncludeMediaInfo";
     public const string SelectFolder = "core.ui.SelectFolder";
     public const string IncludeSubfolders = "core.ui.IncludeSubfolders";
+    public const string AddFolders = "core.ui.AddFolders";
+    public const string AddFiles = "core.ui.AddFiles";
+    public const string SelectedRootAlwaysAdded = "core.ui.SelectedRootAlwaysAdded";
     public const string EnterInternetAddress = "core.ui.EnterInternetAddress";
     public const string AddContents = "core.ui.AddContents";
     public const string AsNewMedia = "core.ui.AsNewMedia";

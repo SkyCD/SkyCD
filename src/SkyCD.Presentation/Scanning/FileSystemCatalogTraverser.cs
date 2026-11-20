@@ -31,7 +31,8 @@ internal sealed class FileSystemCatalogTraverser
     public (long TotalSize, int DirectChildrenCount, PropertiesCollection Properties) Traverse(
         string rootPath,
         string currentDocId,
-        bool includeSubfolders,
+        bool includeFolders,
+        bool includeFiles,
         bool includeExtendedInfo,
         List<CatalogDocument> documents)
     {
@@ -56,7 +57,8 @@ internal sealed class FileSystemCatalogTraverser
         return TraverseDirectory(
             rootEntry,
             currentDocId,
-            includeSubfolders,
+            includeFolders,
+            includeFiles,
             includeExtendedInfo,
             documents,
             isRoot: true);
@@ -65,7 +67,8 @@ internal sealed class FileSystemCatalogTraverser
     private (long TotalSize, int DirectChildrenCount, PropertiesCollection Properties) TraverseDirectory(
         ScanFileSystemEntry directory,
         string currentDocId,
-        bool includeSubfolders,
+        bool includeFolders,
+        bool includeFiles,
         bool includeExtendedInfo,
         List<CatalogDocument> documents,
         bool isRoot)
@@ -81,76 +84,14 @@ internal sealed class FileSystemCatalogTraverser
             PopulateDirectoryProperties(dirProperties, directory);
         }
 
-        var files = EnumerateEntries(
-            directory.FullPath,
-            stage: "enumerate-files",
-            fatalOnExhaustion: isRoot,
-            enumerate: () => context.FileSystem.EnumerateFiles(directory.FullPath));
+        if (includeFiles)
+        {
+            var (fileSize, fileCount) = TraverseFiles(directory, currentDocId, includeExtendedInfo, documents, isRoot);
+            totalSize += fileSize;
+            directChildrenCount += fileCount;
+        }
 
-        ProcessEntries(
-            files,
-            entry =>
-            {
-                if (!TryAcceptEntry(entry, out var skipReason))
-                {
-                    if (skipReason is not null)
-                    {
-                        ReportSkip(entry.FullPath, skipReason, "process-file");
-                    }
-
-                    return;
-                }
-
-                try
-                {
-                    context.ThrowIfCancellationRequested();
-                    var fileProperties = new PropertiesCollection
-                    {
-                        ["FullName"] = entry.FullPath,
-                        ["LastWriteTime"] = entry.LastWriteTime.ToString("O")
-                    };
-                    if (includeExtendedInfo)
-                    {
-                        PopulateFileProperties(fileProperties, entry);
-                    }
-
-                    var fileDoc = new CatalogDocument
-                    {
-                        Id = $"file-{Guid.NewGuid():N}",
-                        Name = entry.Name,
-                        ParentId = currentDocId,
-                        Type = CatalogDocumentType.File,
-                        Size = entry.Length,
-                        ChildrenCount = 0,
-                        Properties = fileProperties
-                    };
-
-                    lock (documentsGate)
-                    {
-                        documents.Add(fileDoc);
-                    }
-
-                    Interlocked.Add(ref totalSize, entry.Length);
-                    Interlocked.Increment(ref directChildrenCount);
-                    context.Statistics.IncrementDiscovered();
-                    context.Progress?.ReportItem(entry.FullPath);
-                    context.Progress?.ReportLog(
-                        OperationLogLevel.ItemProcessed,
-                        $"Added file: {entry.Name}",
-                        itemPath: entry.FullPath,
-                        stage: "process-file");
-                }
-                catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex) when (IsPerItemFailure(ex))
-                {
-                    ReportFail(entry.FullPath, ex.Message, "process-file", ex);
-                }
-            });
-
-        if (!includeSubfolders)
+        if (!includeFolders)
         {
             return (totalSize, (int)directChildrenCount, dirProperties);
         }
@@ -198,7 +139,8 @@ internal sealed class FileSystemCatalogTraverser
                 var (subDirSize, subDirDirectChildren, subDirProperties) = TraverseDirectory(
                     subDir,
                     subDirId,
-                    includeSubfolders: true,
+                    includeFolders: true,
+                    includeFiles,
                     includeExtendedInfo,
                     documents,
                     isRoot: false);
@@ -244,6 +186,88 @@ internal sealed class FileSystemCatalogTraverser
         }
 
         return (totalSize, (int)directChildrenCount, dirProperties);
+    }
+
+    private (long TotalSize, int FileCount) TraverseFiles(
+        ScanFileSystemEntry directory,
+        string parentDocId,
+        bool includeExtendedInfo,
+        List<CatalogDocument> documents,
+        bool isRoot)
+    {
+        long totalSize = 0;
+        int fileCount = 0;
+
+        var files = EnumerateEntries(
+            directory.FullPath,
+            stage: "enumerate-files",
+            fatalOnExhaustion: isRoot,
+            enumerate: () => context.FileSystem.EnumerateFiles(directory.FullPath));
+
+        ProcessEntries(
+            files,
+            entry =>
+            {
+                if (!TryAcceptEntry(entry, out var skipReason))
+                {
+                    if (skipReason is not null)
+                    {
+                        ReportSkip(entry.FullPath, skipReason, "process-file");
+                    }
+
+                    return;
+                }
+
+                try
+                {
+                    context.ThrowIfCancellationRequested();
+                    var fileProperties = new PropertiesCollection
+                    {
+                        ["FullName"] = entry.FullPath,
+                        ["LastWriteTime"] = entry.LastWriteTime.ToString("O")
+                    };
+                    if (includeExtendedInfo)
+                    {
+                        PopulateFileProperties(fileProperties, entry);
+                    }
+
+                    var fileDoc = new CatalogDocument
+                    {
+                        Id = $"file-{Guid.NewGuid():N}",
+                        Name = entry.Name,
+                        ParentId = parentDocId,
+                        Type = CatalogDocumentType.File,
+                        Size = entry.Length,
+                        ChildrenCount = 0,
+                        Properties = fileProperties
+                    };
+
+                    lock (documentsGate)
+                    {
+                        documents.Add(fileDoc);
+                    }
+
+                    Interlocked.Add(ref totalSize, entry.Length);
+                    Interlocked.Increment(ref fileCount);
+                    context.Statistics.IncrementDiscovered();
+                    context.Progress?.ReportItem(entry.FullPath);
+                    context.Progress?.ReportLog(
+                        OperationLogLevel.ItemProcessed,
+                        $"Added file: {entry.Name}",
+                        itemPath: entry.FullPath,
+                        stage: "process-file");
+                }
+                catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex) when (IsPerItemFailure(ex))
+                {
+                    ReportFail(entry.FullPath, ex.Message, "process-file", ex);
+                }
+            });
+
+        return (totalSize, fileCount);
     }
 
     private bool TryEnterDirectory(ScanFileSystemEntry subDir, out string? skipReason)

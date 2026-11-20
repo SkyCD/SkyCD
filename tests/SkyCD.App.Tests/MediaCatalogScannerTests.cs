@@ -169,6 +169,43 @@ public sealed class MediaCatalogScannerTests : IDisposable
     }
 
     [Fact]
+    public void Scan_IncludeChoices_FilterFilesAndFoldersInsideTheSelectedDrive()
+    {
+        File.WriteAllText(Path.Combine(testDirectory, "track1.cda"), "audio-data");
+        var subDir = Path.Combine(testDirectory, "DataTrack");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(subDir, "readme.txt"), "disc info");
+
+        var drive = new MediaDriveInfo("D:\\", "MusicDisc", testDirectory, DriveType.CDRom, true, 0, 0, 700_000_000);
+        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]));
+
+        var foldersOnly = scanner.Scan(new MediaScanOptions(
+            DrivePathOrName: "D:\\",
+            IncludeSubfolders: true,
+            IncludeFiles: false));
+        var foldersOnlyRoot = Assert.Single(foldersOnly, doc => doc.ParentId == null);
+        Assert.Equal(0L, foldersOnlyRoot.Size);
+        Assert.DoesNotContain(foldersOnly, doc => doc.Type == CatalogDocumentType.File);
+        Assert.Contains(foldersOnly, doc => doc.Name == "DataTrack");
+
+        var filesOnly = scanner.Scan(new MediaScanOptions(
+            DrivePathOrName: "D:\\",
+            IncludeSubfolders: false,
+            IncludeFiles: true));
+        var filesOnlyRoot = Assert.Single(filesOnly, doc => doc.ParentId == null);
+        Assert.Equal(10L, filesOnlyRoot.Size);
+        Assert.Contains(filesOnly, doc => doc.Name == "track1.cda");
+        Assert.DoesNotContain(filesOnly, doc => doc.Name == "DataTrack");
+
+        var rootOnly = scanner.Scan(new MediaScanOptions(
+            DrivePathOrName: "D:\\",
+            IncludeSubfolders: false,
+            IncludeFiles: false));
+        Assert.Single(rootOnly);
+        Assert.Equal(0L, rootOnly[0].Size);
+    }
+
+    [Fact]
     public void Scan_OpticalDeviceRoot_WithoutFileSystem_ReturnsTheMediaRootOnly()
     {
         var drive = new MediaDriveInfo("/dev/sr0", null, "/dev/sr0", DriveType.CDRom, true, 0, 0, 0);

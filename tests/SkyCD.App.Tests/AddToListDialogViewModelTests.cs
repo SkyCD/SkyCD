@@ -445,6 +445,26 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void FileAndFolderChoices_DefaultToIncludingBothAndCanBeTurnedOff()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]))
+        {
+            SourceMode = AddToListSourceMode.Folder,
+            SourceValue = "C:\\Music"
+        };
+
+        Assert.True(vm.IncludeSubfolders);
+        Assert.True(vm.IncludeFiles);
+
+        vm.IncludeSubfolders = false;
+        vm.IncludeFiles = false;
+
+        Assert.False(vm.IncludeSubfolders);
+        Assert.False(vm.IncludeFiles);
+        Assert.True(vm.CanConfirm);
+    }
+
+    [Fact]
     public void ValidFolderFlow_CanConfirmAndAccept()
     {
         var vm = new AddToListDialogViewModel

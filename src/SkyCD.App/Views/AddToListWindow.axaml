@@ -186,6 +186,13 @@
                     </ComboBox>
                     <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
                               IsChecked="{Binding IncludeMediaInfo}" />
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
+                              IsChecked="{Binding IncludeSubfolders}" />
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                              IsChecked="{Binding IncludeFiles}" />
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                               Foreground="#666666"
+                               TextWrapping="Wrap" />
                 </StackPanel>
 
                 <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="3">
@@ -198,8 +205,13 @@
                                 Width="28"
                                 Click="OnBrowseFolderClicked" />
                     </Grid>
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeSubfolders}}"
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
                               IsChecked="{Binding IncludeSubfolders}" />
+                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                              IsChecked="{Binding IncludeFiles}" />
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                               Foreground="#666666"
+                               TextWrapping="Wrap" />
                 </StackPanel>
 
                 <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="5">

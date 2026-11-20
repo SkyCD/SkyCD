@@ -106,7 +106,9 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private bool includeMediaInfo = true;
 
-    [ObservableProperty] private bool includeSubfolders;
+    [ObservableProperty] private bool includeSubfolders = true;
+
+    [ObservableProperty] private bool includeFiles = true;
 
     [ObservableProperty] private bool includeExtendedInfo;
 
