@@ -46,7 +46,7 @@ public class SevenZipArchiveIndexPluginTests
     {
         var service = CreateService();
         var sevenZipPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "7z", "sample.7z");
-        await using var source = new FileStream(sevenZipPath, FileMode.Open);
+        await using var source = File.OpenRead(sevenZipPath);
 
         var result = await service.ReadAsync(new FileFormatReadRequest
         {
