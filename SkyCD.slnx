@@ -57,6 +57,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Gzip/SkyCD.Plugin.Gzip.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Zstd/SkyCD.Plugin.Zstd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Bzip2/SkyCD.Plugin.Bzip2.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Zoo/SkyCD.Plugin.Zoo.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Xz/SkyCD.Plugin.Xz.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Rar/SkyCD.Plugin.Rar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Json/SkyCD.Plugin.Json.csproj"/>
@@ -185,6 +186,7 @@
         <Project Path="tests/SkyCD.Plugin.Gzip.Tests/SkyCD.Plugin.Gzip.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Zstd.Tests/SkyCD.Plugin.Zstd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Bzip2.Tests/SkyCD.Plugin.Bzip2.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Zoo.Tests/SkyCD.Plugin.Zoo.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Xz.Tests/SkyCD.Plugin.Xz.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Rar.Tests/SkyCD.Plugin.Rar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Tar.Tests/SkyCD.Plugin.Tar.Tests.csproj"/>
