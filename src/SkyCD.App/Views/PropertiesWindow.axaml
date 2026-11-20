@@ -9,7 +9,7 @@
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
         Width="411"
-        Height="426"
+        Height="560"
         CanResize="False"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
@@ -38,7 +38,7 @@
     <Grid RowDefinitions="*,Auto" Margin="0">
         <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
-                <Grid Margin="10,8,10,10" RowDefinitions="Auto,Auto,Auto,*" ColumnDefinitions="Auto,8,*">
+                <Grid Margin="10,8,10,10" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="Auto,8,*">
                     <Border Grid.RowSpan="2"
                             Width="{Binding #NameFields.Bounds.Height}"
                             Height="{Binding #NameFields.Bounds.Height}"
@@ -66,47 +66,36 @@
                                        Grid.ColumnSpan="3"
                                        Margin="0,0,0,0"
                                        RtfText="{Binding Comments, Mode=TwoWay}" />
-                </Grid>
-            </TabItem>
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}"
-                     IsVisible="{Binding HasAiDescriptionTab}">
-                <ScrollViewer Margin="8">
-                    <StackPanel Spacing="8" DataContext="{Binding AiDescription}"
-                                x:DataType="vm:AiDescriptionViewModel">
-                        <TextBlock Text="{Binding StateText}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding ProviderText}" TextWrapping="Wrap" FontSize="11"
+
+                    <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Spacing="4" Margin="0,8,0,0"
+                                IsVisible="{Binding HasAiDescription}">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding AiDescription.StateText}" FontSize="11"
                                    Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <TextBlock Text="{Binding ContextText}" TextWrapping="Wrap" FontSize="11"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <TextBox Text="{Binding DescriptionText}"
-                                 IsReadOnly="True"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 Height="150"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" />
-                        <TextBlock Text="{Binding ProvenanceText}" TextWrapping="Wrap" FontSize="11"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
-                                   Foreground="Firebrick" />
-                        <TextBlock Text="{Binding AdoptionHint}" IsVisible="{Binding IsAdoptionPending}"
-                                   TextWrapping="Wrap" Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Button Content="{Binding GenerateButtonText}"
-                                    Command="{Binding GenerateCommand}"
-                                    IsEnabled="{Binding CanGenerate}" />
+                        <TextBlock Text="{Binding AiDescription.DescriptionText}"
+                                   TextWrapping="Wrap"
+                                   MaxHeight="60"
+                                   TextTrimming="CharacterEllipsis" />
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Button Content="{Binding AiDescription.GenerateButtonText}"
+                                    Command="{Binding AiDescription.GenerateCommand}"
+                                    IsEnabled="{Binding AiDescription.CanGenerate}"
+                                    Padding="6,2" />
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CopyDescription}}"
-                                    Command="{Binding CopyCommand}"
-                                    IsEnabled="{Binding CanCopy}" />
+                                    Command="{Binding AiDescription.CopyCommand}"
+                                    IsEnabled="{Binding AiDescription.CanCopy}"
+                                    Padding="6,2" />
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AdoptAsComment}}"
-                                    Command="{Binding AdoptCommand}"
-                                    IsEnabled="{Binding CanAdopt}" />
+                                    Command="{Binding AiDescription.AdoptCommand}"
+                                    IsEnabled="{Binding AiDescription.CanAdopt}"
+                                    Padding="6,2" />
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Clear}}"
-                                    Command="{Binding ClearCommand}"
-                                    IsEnabled="{Binding CanClear}" />
+                                    Command="{Binding AiDescription.ClearCommand}"
+                                    IsEnabled="{Binding AiDescription.CanClear}"
+                                    Padding="6,2" />
                         </StackPanel>
                     </StackPanel>
-                </ScrollViewer>
+                </Grid>
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Properties}}" IsVisible="{Binding HasInfoTab}">
                 <cp:PropertiesList Margin="8,8,8,10"

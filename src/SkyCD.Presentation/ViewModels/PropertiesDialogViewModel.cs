@@ -60,18 +60,18 @@ public partial class PropertiesDialogViewModel : ObservableObject
     /// <summary>Optional AI description surface; absent when no description service is available.</summary>
     [ObservableProperty] private AiDescriptionViewModel? aiDescription;
 
-    public bool HasAiDescriptionTab => AiDescription is not null;
+    public bool HasAiDescription => AiDescription is not null;
 
     /// <summary>Raised with text the view should place on the clipboard.</summary>
     public event Action<string>? CopyTextRequested;
 
     partial void OnAiDescriptionChanged(AiDescriptionViewModel? value)
     {
-        OnPropertyChanged(nameof(HasAiDescriptionTab));
+        OnPropertyChanged(nameof(HasAiDescription));
     }
 
     /// <summary>
-    /// Attaches the offline AI description tab. Reading and clearing stay available without a provider;
+    /// Attaches the offline AI description field. Reading and clearing stay available without a provider;
     /// adopting writes only the comment editor, so the user still confirms the Properties dialog.
     /// </summary>
     public void InitializeAiDescription(AiDescriptionService service, string entryId)
