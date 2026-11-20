@@ -49,6 +49,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Vhd/SkyCD.Plugin.Vhd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vdi/SkyCD.Plugin.Vdi.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Arj/SkyCD.Plugin.Arj.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Ace/SkyCD.Plugin.Ace.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Lha/SkyCD.Plugin.Lha.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Gzip/SkyCD.Plugin.Gzip.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Zstd/SkyCD.Plugin.Zstd.csproj"/>
@@ -170,6 +171,7 @@
         <Project Path="tests/SkyCD.Plugin.Sample.Configuration.Tests/SkyCD.Plugin.Sample.Configuration.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.SevenZip.Tests/SkyCD.Plugin.SevenZip.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Arj.Tests/SkyCD.Plugin.Arj.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Ace.Tests/SkyCD.Plugin.Ace.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Lha.Tests/SkyCD.Plugin.Lha.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Gzip.Tests/SkyCD.Plugin.Gzip.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Zstd.Tests/SkyCD.Plugin.Zstd.Tests.csproj"/>
