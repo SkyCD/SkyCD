@@ -128,3 +128,80 @@ References: [AbiWord formats](https://github.com/AbiWord/abiword/blob/6940426ea7
 [SharpZipLib](https://www.nuget.org/packages/SharpZipLib),
 [Aspose.Words](https://www.nuget.org/packages/Aspose.Words/),
 [GroupDocs formats](https://docs.groupdocs.com/parser/net/supported-document-formats/).
+
+## Apple iWork document metadata
+
+`SkyCD.Plugin.IWork` implements `IMediaMetadataCapability` and is discovered from assembly
+metadata, without `plugin.json`. Enable it through the normal plugin pipeline. During indexing,
+its results use the existing media scheduler/cache and remain available offline with the item.
+It does not provide thumbnails, decode document content, or require iWork installed.
+
+### Supported input and fields
+
+- `.pages`, `.numbers`, `.key`: modern iWork packages, a ZIP container with either the component
+  archive stored directly as `Index/*.iwa` or bundled as a nested `Index.zip`.
+- MIME `application/x-iwork-pages-sffpages`, `application/x-iwork-numbers-sffnumbers` and
+  `application/x-iwork-keynote-sffkey` also select the plugin, independently of the filename.
+- Legacy iWork '09 packages (`index.xml` / `index.apxl`) are recognized and reported as unsupported
+  rather than partially catalogued. Other formats are not claimed.
+
+Schema `skycd.iwork.metadata`, version 1:
+
+| Source | Field |
+| --- | --- |
+| Recognized package | `Container` (`iwork`) |
+| Extension, MIME type, or component inventory | `DocumentType` (`pages`, `numbers`, `keynote`) |
+| Root `.iwpv2` verifier | `IsPasswordProtected` |
+| `Metadata/Properties.plist` `fileFormatVersion` | `FormatVersion` |
+| Latest non-template `Metadata/BuildVersionHistory.plist` entry | `ProducerBuild` |
+| `Metadata/DocumentIdentifier`, then `documentUUID` | `DocumentIdentifier` (canonical UUID) |
+| `Properties.plist` `language`, `locale` | `Language`, `Locale` |
+| `Properties.plist` `isMultiPage`, external-data flag | `IsMultiPage`, `HasExternalData` |
+| Root-level preview image | `HasPreview` |
+| Preview PNG/JPEG header | `PreviewWidth`, `PreviewHeight` (`px`) |
+| `Index` component and `Data/` entry counts | `IwaComponentCount`, `DataAssetCount` |
+| Keynote `Index/Slide-*` components | `SlideCount` |
+
+Absent or blank values are omitted, so "unknown" stays distinguishable from "none". Counts describe
+the package inventory, not rendered content: a component may belong to a template or another
+object, and `SlideCount` is the one count with a precise meaning. When a mislabelled package has no
+inventory marker either, `DocumentType` is omitted rather than guessed.
+
+### Password protection, safety and limitations
+
+A protected modern package is still a readable ZIP: protection encrypts member payloads, not the
+container. `Metadata/Properties.plist` and `Metadata/DocumentIdentifier` stay plain, so the document
+is catalogued with `IsPasswordProtected = true` and its plain metadata. Encrypted members (build
+history, preview, data) are not decoded and their fields are omitted. No password is requested,
+guessed, or stored, and there is no credential path by design.
+
+The plugin works on .NET 10 on Windows, Linux and macOS without native dependencies. Sources are
+read once through the bounded `IMediaSource`; the plugin never receives a path and no IWA component
+is decoded. Property lists are parsed as XML with DOCTYPE processing disabled and no resolver, so
+the Apple DTD and any external entity are never fetched. Defaults: 64 MiB source, 1 MiB per
+metadata member, 32 MiB nested index, 64 KiB preview header; the host's own limits still apply.
+Damaged, truncated, empty or index-less ZIPs, legacy packages, oversized sources and short reads
+fail only that provider through the host's sanitized failure boundary. Cancellation propagates
+without publishing.
+
+Limitations: no title, author, subject or creation/modification dates, because the plain members
+do not carry them and compressed IWA components are not decoded. There is no OCR or text excerpt,
+one preview candidate is used per package, and preview dimensions describe Apple's stored thumbnail
+rather than the page size.
+
+### Dependency evaluation (2026-11-20)
+
+The implementation uses .NET 10 `System.IO.Compression.ZipArchive` and `System.Xml.Linq`
+(MIT-licensed .NET runtime), plus the existing plugin abstraction project. `dotnet list
+Plugins/SkyCD.Plugin.IWork/SkyCD.Plugin.IWork.csproj package --include-transitive` reports no
+NuGet dependencies. No additional direct/transitive licenses, whitelist entries or policy changes
+are needed; the blocked-license, unknown-license and explicit-whitelist rules in
+`docs/legal/dependency-license-policy.json` remain unchanged.
+
+No maintained .NET library exposing iWork package metadata was identified during evaluation. The
+members this plugin publishes are plain ZIP entries, so the runtime covers the need without adding
+a dependency, and no native or proprietary component is required or bundled.
+
+References: [iWork package format notes](https://github.com/obriensp/iWorkFileFormat),
+[OpenDocument.core iWork reader](https://github.com/opendocument-app/OpenDocument.core),
+[.NET runtime license](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
