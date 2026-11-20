@@ -43,6 +43,8 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-lha", "catalog.lha", "catalog.lzh")]
     [InlineData("skycd-gzip", "catalog.gz", "catalog.gz")]
     [InlineData("skycd-gzip", "catalog.gz", "catalog.gzip")]
+    [InlineData("skycd-zstd", "catalog.zst", "catalog.zst")]
+    [InlineData("skycd-zstd", "catalog.zst", "catalog.tzst")]
     [InlineData("skycd-rar", "catalog.rar", "catalog.rar")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
@@ -218,6 +220,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
         new SkyCD.Plugin.Lha.LhaArchiveIndexPlugin(),
         new SkyCD.Plugin.Gzip.GzipArchiveIndexPlugin(),
+        new SkyCD.Plugin.Zstd.ZstdArchiveIndexPlugin(),
         new SkyCD.Plugin.Rar.RarArchiveIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()
