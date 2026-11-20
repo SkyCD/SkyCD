@@ -20,6 +20,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Volume;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Localization;
 using SkyCD.UI.Localization;
 
@@ -59,7 +60,8 @@ public partial class App : Avalonia.Application
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                     ServiceProvider.Resolve<VolumeExtensionManager>(),
-                    ServiceProvider.Resolve<IndexWorkItemSequence>());
+                    ServiceProvider.Resolve<IndexWorkItemSequence>(),
+                    ServiceProvider.Resolve<IAudioCdMetadataProvider>());
                 mainWindowViewModel.RefreshDescriptionServices(descriptionManager);
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
                 mainWindow.DataContext = mainWindowViewModel;

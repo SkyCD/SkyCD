@@ -162,15 +162,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaMetadataService? mediaMetadataService;
     private IVolumeMetadataProvider? volumeMetadataProvider;
+    private AudioCdMetadataService? audioCdMetadataService;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
 
     public void RefreshMediaServices(MediaExtensionManager updatedManager,
-        IVolumeMetadataProvider? volumeMetadataProvider = null, IndexWorkItemSequence? indexWorkItems = null)
+        IVolumeMetadataProvider? volumeMetadataProvider = null, IndexWorkItemSequence? indexWorkItems = null,
+        IAudioCdMetadataProvider? audioCdMetadataProvider = null)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore, workItems: indexWorkItems);
         this.volumeMetadataProvider = volumeMetadataProvider;
+        audioCdMetadataService = audioCdMetadataProvider is null
+            ? null
+            : new AudioCdMetadataService(audioCdMetadataProvider, mediaCacheStore);
         if (backgroundMediaSync is not null)
         {
             OnIsBackgroundMediaSyncEnabledChanged(IsBackgroundMediaSyncEnabled);
@@ -1712,14 +1717,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CancellationToken cancellationToken,
         string? sessionId)
     {
-        if (mediaMetadataService is not { CanCollect: true } service)
-        {
-            return null;
-        }
+        var service = mediaMetadataService is { CanCollect: true } ? mediaMetadataService : null;
+        var audioCdService = audioCdMetadataService is { CanCollect: true } ? audioCdMetadataService : null;
 
         var byId = catalog.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
-        var files = documents.Where(entry => HasLocalSource(entry, byId)).ToArray();
-        if (files.Length == 0)
+        IReadOnlyList<CatalogDocument> files = service is null
+            ? []
+            : documents.Where(entry => HasLocalSource(entry, byId)).ToArray();
+        IReadOnlyList<AudioCdDiscRoot> discs = audioCdService is null
+            ? []
+            : AudioCdMetadataService.FindDiscRoots(documents);
+        if (files.Count == 0 && discs.Count == 0)
         {
             return null;
         }
@@ -1737,21 +1745,39 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         try
         {
-            for (var index = 0; index < files.Length; index++)
+            if (audioCdService is not null && discs.Count > 0)
+            {
+                progress?.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata));
+                try
+                {
+                    await audioCdService.CollectAsync(documents, catalog, batchId, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    progress?.ReportWarning(exception.Message);
+                }
+            }
+
+            for (var index = 0; index < files.Count; index++)
             {
                 await Task.Yield();
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
-                    stagePercentage: index * 100d / files.Length, stageCurrent: index, stageTotal: files.Length);
+                    stagePercentage: index * 100d / files.Count, stageCurrent: index, stageTotal: files.Count);
                 progress?.ReportItem(files[index].Name);
                 try
                 {
                     var currentIndex = index;
                     var itemProgress = progress is null ? null : new Progress<MediaProgress>(value =>
                         progress.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
-                            stagePercentage: (currentIndex + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Length,
-                            stageCurrent: currentIndex, stageTotal: files.Length));
-                    var outcome = await service.CollectAsync(files[index], catalog, itemProgress, cancellationToken, batchId);
+                            stagePercentage: (currentIndex + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Count,
+                            stageCurrent: currentIndex, stageTotal: files.Count));
+                    var outcome = await service!.CollectAsync(files[index], catalog, itemProgress, cancellationToken,
+                        batchId);
                     if (outcome.SkipReason == MediaMetadataSkipReason.Failed)
                     {
                         progress?.ReportWarning(outcome.FailureReason ?? outcome.SkipReason.ToString(), itemPath: files[index].Name);

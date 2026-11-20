@@ -1011,7 +1011,8 @@ public partial class MainWindow : Window
         newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
         newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
             ServiceProvider.Resolve<VolumeExtensionManager>(),
-            ServiceProvider.Resolve<IndexWorkItemSequence>());
+            ServiceProvider.Resolve<IndexWorkItemSequence>(),
+            ServiceProvider.Resolve<IAudioCdMetadataProvider>());
         newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
         newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
@@ -1432,7 +1433,8 @@ public partial class MainWindow : Window
             reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                 ServiceProvider.Resolve<VolumeExtensionManager>(),
-                ServiceProvider.Resolve<IndexWorkItemSequence>());
+                ServiceProvider.Resolve<IndexWorkItemSequence>(),
+                ServiceProvider.Resolve<IAudioCdMetadataProvider>());
             var options = LoadAppOptions();
             reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
             reloadedViewModel.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
@@ -1756,7 +1758,8 @@ public partial class MainWindow : Window
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                 ServiceProvider.Resolve<VolumeExtensionManager>(),
-                ServiceProvider.Resolve<IndexWorkItemSequence>());
+                ServiceProvider.Resolve<IndexWorkItemSequence>(),
+                ServiceProvider.Resolve<IAudioCdMetadataProvider>());
             viewModel.RefreshDescriptionServices(descriptionManager);
         }
     }
