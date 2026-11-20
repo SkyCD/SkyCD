@@ -228,7 +228,8 @@ public partial class MultiSelectDropdown : UserControl
 
         searchText = InlineSearchTextBox.Text?.Trim() ?? string.Empty;
         if (IsIconPicker && !DropdownPopup.IsOpen &&
-            string.Equals(searchText, SelectedIconKey ?? PlaceholderText ?? string.Empty, StringComparison.Ordinal))
+            (string.Equals(searchText, SelectedIconKey ?? PlaceholderText ?? string.Empty, StringComparison.Ordinal) ||
+             (string.IsNullOrEmpty(searchText) && !string.IsNullOrWhiteSpace(SelectedIconKey))))
         {
             return;
         }
