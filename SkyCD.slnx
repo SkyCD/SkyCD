@@ -18,6 +18,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Pdf/SkyCD.Plugin.Pdf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WordPerfect/SkyCD.Plugin.WordPerfect.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Works/SkyCD.Plugin.Works.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.OpenOffice/SkyCD.Plugin.OpenOffice.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Markdown.Metadata/SkyCD.Plugin.Markdown.Metadata.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.IWork/SkyCD.Plugin.IWork.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Rtf/SkyCD.Plugin.Rtf.csproj"/>
@@ -114,6 +115,7 @@
         <Project Path="tests/SkyCD.Plugin.Pdf.Tests/SkyCD.Plugin.Pdf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WordPerfect.Tests/SkyCD.Plugin.WordPerfect.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Works.Tests/SkyCD.Plugin.Works.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.OpenOffice.Tests/SkyCD.Plugin.OpenOffice.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.IWork.Tests/SkyCD.Plugin.IWork.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Rtf.Tests/SkyCD.Plugin.Rtf.Tests.csproj"/>
         <Project Path="tests/SkyCD.App.Tests/SkyCD.App.Tests.csproj"/>
