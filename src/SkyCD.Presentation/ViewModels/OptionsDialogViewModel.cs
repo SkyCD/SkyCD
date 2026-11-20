@@ -66,6 +66,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         selectedLanguage = Languages[0];
+        SetDetailsColumns(settings: null);
         RefreshScanLocalization();
         RefreshFilteredCategories();
         selectedSettingCategory = CurrentCategoryName;
@@ -166,7 +167,8 @@ public partial class OptionsDialogViewModel : ObservableObject
                 LocalizationService.Current.Get(TextKeys.Statuses),
                 LocalizationService.Current.Get(UiKeys.CustomProperties),
                 LocalizationService.Current.Get(UiKeys.AcpAgents),
-                LocalizationService.Current.Get(TextKeys.Scan)
+                LocalizationService.Current.Get(TextKeys.Scan),
+                LocalizationService.Current.Get(UiKeys.DetailsColumns)
             ];
             if (IsAiDescriptionAvailable)
             {
@@ -233,7 +235,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowAiDescriptionSection;
+        ShowDetailsColumnsSection || ShowAiDescriptionSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -580,6 +582,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(SettingCategories));
         McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
         RefreshScanLocalization();
+        RefreshDetailsColumnsLocalization();
         isRefreshingLocalization = true;
         try
         {
@@ -654,6 +657,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowMcpSection));
         OnPropertyChanged(nameof(ShowStatusesSection));
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
+        OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
+        OnPropertyChanged(nameof(ShowDetailsColumnsSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));

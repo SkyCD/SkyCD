@@ -128,6 +128,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     // RefreshTopMenuState, which mutates the cached items in place.
     private IReadOnlyList<MainMenuItemViewModel> browserContextMenuItems = [];
     private IReadOnlyList<MainMenuItemViewModel> treeContextMenuItems = [];
+    private List<DetailsColumnSettingDocument> detailsColumnSettings = DetailsColumnsCatalog.CreateDefaultSettings();
+    private IReadOnlyList<MainMenuItemViewModel> detailsHeaderMenuItems = [];
     private static string DefaultStatusText => LocalizationService.Current.Get(TextKeys.Done);
     private const string ItemStatusNamePropertyKey = "StatusName";
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
@@ -145,6 +147,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
     public event EventHandler<AiDescriptionBatchDialogRequestedEventArgs>? AiDescriptionBatchRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
+    public event EventHandler? DetailsColumnsChanged;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
     public event EventHandler<LocationsDialogRequestedEventArgs>? LocationsRequested;
@@ -278,6 +281,59 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         topMenuItems = BuildTopMenuItems();
         browserContextMenuItems = BuildBrowserContextMenuItems();
         treeContextMenuItems = BuildTreeContextMenuItems();
+        RefreshDetailsHeaderMenuItems();
+    }
+
+    private void RefreshDetailsHeaderMenuItems()
+    {
+        if (detailsHeaderMenuItems.Count == 0)
+        {
+            var items = new List<MainMenuItemViewModel>(DetailsColumnsCatalog.All.Count + 2);
+            foreach (var definition in DetailsColumnsCatalog.All)
+            {
+                items.Add(new MainMenuItemViewModel
+                {
+                    Key = "details_column_" + definition.Id,
+                    Command = ToggleDetailsColumnCommand,
+                    CommandParameter = definition.Id,
+                    ToggleType = MenuItemToggleType.CheckBox
+                });
+            }
+
+            items.Add(Separator());
+            items.Add(new MainMenuItemViewModel
+            {
+                Key = "details_columns_options",
+                Command = OpenDetailsColumnsOptionsCommand
+            });
+            detailsHeaderMenuItems = items;
+        }
+
+        var visibility = detailsColumnSettings.ToDictionary(
+            static setting => setting.Id,
+            static setting => setting.IsVisible,
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in detailsHeaderMenuItems)
+        {
+            if (item.Key == "details_columns_options")
+            {
+                item.Header = LocalizationService.Current.Get(UiKeys.ConfigureColumns);
+                continue;
+            }
+
+            var definition = DetailsColumnsCatalog.Find(item.CommandParameter as string);
+            if (definition is null)
+            {
+                continue;
+            }
+
+            item.Header = definition.IsRequired
+                ? LocalizationService.Current.Format(UiKeys.DetailsColumnRequiredHeader, definition.Header)
+                : definition.Header;
+            item.IsEnabled = !definition.IsRequired;
+            item.IsChecked = visibility.TryGetValue(definition.Id, out var isVisible) && isVisible;
+        }
     }
 
     private MainWindowViewModel(
@@ -582,6 +638,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (isDisposed) return;
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
+        RefreshDetailsHeaderMenuItems();
         StatusText = DefaultStatusText;
         entryPreview.RefreshLocalization();
         RefreshBrowserItemsForSelection();
@@ -692,31 +749,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private ObservableCollection<BrowserTreeNode> treeNodes = new ObservableCollection<BrowserTreeNode>();
     public IReadOnlyList<BrowserTreeNode> TreeNodes => treeNodes;
 
+    /// <summary>Visible details columns in the configured order.</summary>
     public IReadOnlyList<BrowserDetailsColumn> BrowserDetailsColumns =>
-    [
-        new()
-        {
-            Header = LocalizationService.Current.Get(TextKeys.Name2), ValuePath = "Name",
-            Width = new Avalonia.Controls.GridLength(500, Avalonia.Controls.GridUnitType.Pixel)
-        },
-        new()
-        {
-            Header = LocalizationService.Current.Get(TextKeys.Size), ValuePath = "DisplaySize",
-            Width = new Avalonia.Controls.GridLength(100, Avalonia.Controls.GridUnitType.Pixel),
-            HeaderAlignment = Avalonia.Layout.HorizontalAlignment.Right,
-            ValueAlignment = Avalonia.Layout.HorizontalAlignment.Right
-        },
-        new()
-        {
-            Header = LocalizationService.Current.Get(UiKeys.LentTo), ValuePath = nameof(CatalogDocument.LentTo),
-            Width = new Avalonia.Controls.GridLength(140, Avalonia.Controls.GridUnitType.Pixel)
-        },
-        new()
-        {
-            Header = LocalizationService.Current.Get(UiKeys.Location), ValuePath = nameof(CatalogDocument.Location),
-            Width = new Avalonia.Controls.GridLength(140, Avalonia.Controls.GridUnitType.Pixel)
-        }
-    ];
+        DetailsColumnsCatalog.CreateVisibleColumns(detailsColumnSettings);
+
+    /// <summary>
+    /// Cached menu for the details list header. The item instances are mutated in place so an open
+    /// context menu keeps its items while visibility changes.
+    /// </summary>
+    public IReadOnlyList<MainMenuItemViewModel> DetailsHeaderMenuItems => detailsHeaderMenuItems;
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
@@ -2351,6 +2392,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenOptions()
     {
+        ShowOptions(preselectSettingCategory: null);
+    }
+
+    [RelayCommand]
+    private void OpenDetailsColumnsOptions()
+    {
+        ShowOptions(LocalizationService.Current.Get(UiKeys.DetailsColumns));
+    }
+
+    private void ShowOptions(string? preselectSettingCategory)
+    {
         if (OptionsRequested is null)
         {
             StatusText = LocalizationService.Current.Get(TextKeys.OptionsDialogIsNotImplementedYet);
@@ -2361,6 +2413,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,
+            PreselectSettingCategory = preselectSettingCategory,
             Complete = (accepted, pluginPath, language) =>
             {
                 if (!accepted)
@@ -2371,6 +2424,46 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 StatusText = LocalizationService.Current.Format(TextKeys.OptionsSavedLanguage, language);
             }
         });
+    }
+
+    [RelayCommand]
+    private void ToggleDetailsColumn(string? columnId)
+    {
+        var definition = DetailsColumnsCatalog.Find(columnId);
+        if (definition is null || definition.IsRequired)
+        {
+            return;
+        }
+
+        var setting = detailsColumnSettings.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, definition.Id, StringComparison.OrdinalIgnoreCase));
+        if (setting is null)
+        {
+            return;
+        }
+
+        setting.IsVisible = !setting.IsVisible;
+        OnPropertyChanged(nameof(BrowserDetailsColumns));
+        RefreshDetailsHeaderMenuItems();
+        DetailsColumnsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void ApplyDetailsColumnSettings(IEnumerable<DetailsColumnSettingDocument>? settings)
+    {
+        detailsColumnSettings = DetailsColumnsCatalog.Normalize(settings);
+        OnPropertyChanged(nameof(BrowserDetailsColumns));
+        RefreshDetailsHeaderMenuItems();
+    }
+
+    public IReadOnlyList<DetailsColumnSettingDocument> GetDetailsColumnSettings()
+    {
+        return detailsColumnSettings
+            .Select(static setting => new DetailsColumnSettingDocument
+            {
+                Id = setting.Id,
+                IsVisible = setting.IsVisible
+            })
+            .ToArray();
     }
 
     [RelayCommand]
