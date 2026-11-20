@@ -26,7 +26,8 @@ public sealed class MediaExtensionManager
     public MediaExtensionManager(IEnumerable<MediaProvider> providers, MediaExecutionLimits? limits = null,
         Func<string, IReadOnlyDictionary<string, string?>>? settingsSource = null)
     {
-        this.providers = providers.Where(p => p.Capability is IMediaMetadataCapability or IMediaPreviewCapability).ToArray();
+        this.providers = providers.Where(p => p.Capability is IMediaMetadataCapability
+            or ILocalMediaMetadataCapability or IMediaPreviewCapability).ToArray();
         this.limits = limits ?? new MediaExecutionLimits();
         this.settingsSource = settingsSource;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.SourceBytes);
@@ -36,8 +37,7 @@ public sealed class MediaExtensionManager
         slots = new SemaphoreSlim(this.limits.Concurrency);
     }
 
-    public bool HasMetadataProviders => providers.Any(provider =>
-        provider.Capability is IMediaMetadataCapability);
+    public bool HasMetadataProviders => providers.Any(IsMetadataProvider);
 
     /// <summary>True when a preview would be produced by an indexing pass.</summary>
     public bool HasIndexingPreviewProviders => providers.Any(provider =>
@@ -48,12 +48,13 @@ public sealed class MediaExtensionManager
     /// <summary>
     /// Runs matching providers. A per-call <paramref name="limits"/> override exists for explicit operations
     /// such as whole-file hashing, whose source budget and duration are set by the requested file rather than
-    /// by the preview defaults.
+    /// by the preview defaults. <paramref name="sourcePath"/> is the validated local path of the source while
+    /// it is available; providers that read OS-assigned metadata need it and are skipped without it.
     /// </summary>
     public async Task<IReadOnlyList<MediaProviderResult>> ProcessAsync(MediaItem item,
         Func<CancellationToken, Task<Stream>> openSource, IProgress<MediaProgress>? progress = null,
         CancellationToken cancellationToken = default, MediaExecutionLimits? limits = null,
-        MediaProviderSelection selection = MediaProviderSelection.Standard)
+        MediaProviderSelection selection = MediaProviderSelection.Standard, string? sourcePath = null)
     {
         var effective = limits ?? this.limits;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.SourceBytes);
@@ -72,7 +73,8 @@ public sealed class MediaExtensionManager
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(effective.TimeoutMilliseconds);
-            var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective, selection);
+            var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective, selection,
+                sourcePath);
 
             try
             {
@@ -202,14 +204,18 @@ public sealed class MediaExtensionManager
     private static MediaDescriptor? ResolveDescriptor(IPluginCapability capability) => capability switch
     {
         IMediaMetadataCapability metadata => metadata.Descriptor,
+        ILocalMediaMetadataCapability local => local.Descriptor,
         IMediaPreviewCapability preview => preview.Descriptor,
         _ => null
     };
 
+    private static bool IsMetadataProvider(MediaProvider provider) =>
+        provider.Capability is IMediaMetadataCapability or ILocalMediaMetadataCapability;
+
     private async Task<(int Priority, MediaProviderResult Result)?> RunAsync(MediaProvider provider,
         MediaItem item, Func<CancellationToken, Task<Stream>> openSource,
         IProgress<MediaProgress>? progress, CancellationToken token, MediaExecutionLimits limits,
-        MediaProviderSelection selection)
+        MediaProviderSelection selection, string? sourcePath)
     {
         await slots.WaitAsync(token);
         try
@@ -221,38 +227,41 @@ public sealed class MediaExtensionManager
                 var descriptor = ResolveDescriptor(provider.Capability);
                 if (descriptor is null || !Matches(descriptor, item)) return null;
                 ValidateSchema(descriptor.Schema);
-                await using var stream = await openSource(token);
-                var source = new BoundedSource(stream, item.Length, limits.SourceBytes, token);
                 MediaExtractionResult? extraction = null;
                 MediaPreviewResult? artifacts = null;
-                if (provider.Capability is IMediaMetadataCapability metadataCapability)
+                if (provider.Capability is ILocalMediaMetadataCapability localCapability)
                 {
-                    var raw = await metadataCapability.ExtractAsync(item, source, progress, token);
-                    extraction = new MediaExtractionResult(raw.Values.ToArray());
-                    if (extraction.Values.Sum(v => (long)Encoding.UTF8.GetByteCount(v.Text ?? string.Empty) + Encoding.UTF8.GetByteCount(v.Key) + 32) > limits.ArtifactBytes)
-                        throw new MediaLimitExceededException("metadata bytes");
-                    if (extraction.Values.Select(v => v.Key).Distinct(StringComparer.Ordinal).Count() != extraction.Values.Count)
-                        throw new MediaLimitExceededException("duplicate metadata key");
-                    foreach (var value in extraction.Values)
-                    {
-                        var field = descriptor.Schema.Fields.SingleOrDefault(f => f.Key == value.Key);
-                        if (field is null || field.Type != value.Type || !ValidValue(value))
-                            throw new MediaLimitExceededException("metadata schema");
-                    }
+                    // OS-assigned metadata is addressed by path; without one this provider has nothing to
+                    // read, and reporting a failure would wrongly downgrade cached values.
+                    if (string.IsNullOrWhiteSpace(sourcePath)) return null;
+                    var raw = await localCapability.ExtractAsync(
+                        new LocalMediaContext(sourcePath, item.Extension, item.ContentType, item.Length),
+                        progress, token);
+                    extraction = ValidateExtraction(descriptor, raw, limits);
                 }
-                if (provider.Capability is IMediaPreviewCapability previewCapability && RunsPreview(selection, descriptor))
+                else
                 {
-                    var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
-                    long bytes = 0;
-                    var copies = new List<MediaPreviewArtifact>();
-                    foreach (var artifact in raw.Artifacts)
+                    await using var stream = await openSource(token);
+                    var source = new BoundedSource(stream, item.Length, limits.SourceBytes, token);
+                    if (provider.Capability is IMediaMetadataCapability metadataCapability)
                     {
-                        bytes = checked(bytes + artifact.Data.Length);
-                        if (bytes > limits.ArtifactBytes || string.IsNullOrWhiteSpace(artifact.ContentType))
-                            throw new MediaLimitExceededException("artifact bytes");
-                        copies.Add(new MediaPreviewArtifact(artifact.ContentType, artifact.Data.ToArray()));
+                        var raw = await metadataCapability.ExtractAsync(item, source, progress, token);
+                        extraction = ValidateExtraction(descriptor, raw, limits);
                     }
-                    artifacts = new MediaPreviewResult(copies.ToArray());
+                    if (provider.Capability is IMediaPreviewCapability previewCapability && RunsPreview(selection, descriptor))
+                    {
+                        var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
+                        long bytes = 0;
+                        var copies = new List<MediaPreviewArtifact>();
+                        foreach (var artifact in raw.Artifacts)
+                        {
+                            bytes = checked(bytes + artifact.Data.Length);
+                            if (bytes > limits.ArtifactBytes || string.IsNullOrWhiteSpace(artifact.ContentType))
+                                throw new MediaLimitExceededException("artifact bytes");
+                            copies.Add(new MediaPreviewArtifact(artifact.ContentType, artifact.Data.ToArray()));
+                        }
+                        artifacts = new MediaPreviewResult(copies.ToArray());
+                    }
                 }
                 return ((int Priority, MediaProviderResult Result)?)(descriptor.Priority,
                     new MediaProviderResult(provider.PluginId, provider.PluginVersion,
@@ -282,9 +291,9 @@ public sealed class MediaExtensionManager
             MediaProviderSelection.Standard => !descriptor.IsOptIn,
             MediaProviderSelection.OptInOnly => descriptor.IsOptIn,
             MediaProviderSelection.StandardMetadata => !descriptor.IsOptIn &&
-                (provider.Capability is IMediaMetadataCapability ||
+                (IsMetadataProvider(provider) ||
                  (provider.Capability is IMediaPreviewCapability && descriptor.IndexTimePreview)),
-            MediaProviderSelection.OptInMetadata => provider.Capability is IMediaMetadataCapability && descriptor.IsOptIn,
+            MediaProviderSelection.OptInMetadata => IsMetadataProvider(provider) && descriptor.IsOptIn,
             _ => true
         };
     }
@@ -306,6 +315,24 @@ public sealed class MediaExtensionManager
             schema.Fields.Any(f => string.IsNullOrWhiteSpace(f.Key) || !Enum.IsDefined(f.Type)) ||
             schema.Fields.Select(f => f.Key).Distinct(StringComparer.Ordinal).Count() != schema.Fields.Count)
             throw new MediaLimitExceededException("metadata schema");
+    }
+
+    private static MediaExtractionResult ValidateExtraction(MediaDescriptor descriptor, MediaExtractionResult raw,
+        MediaExecutionLimits limits)
+    {
+        var extraction = new MediaExtractionResult(raw.Values.ToArray());
+        if (extraction.Values.Sum(v => (long)Encoding.UTF8.GetByteCount(v.Text ?? string.Empty) + Encoding.UTF8.GetByteCount(v.Key) + 32) > limits.ArtifactBytes)
+            throw new MediaLimitExceededException("metadata bytes");
+        if (extraction.Values.Select(v => v.Key).Distinct(StringComparer.Ordinal).Count() != extraction.Values.Count)
+            throw new MediaLimitExceededException("duplicate metadata key");
+        foreach (var value in extraction.Values)
+        {
+            var field = descriptor.Schema.Fields.SingleOrDefault(f => f.Key == value.Key);
+            if (field is null || field.Type != value.Type || !ValidValue(value))
+                throw new MediaLimitExceededException("metadata schema");
+        }
+
+        return extraction;
     }
 
     private static bool ValidValue(MediaMetadataValue value) =>

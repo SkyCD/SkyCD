@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.MediaMetadata;
 
 /// <summary>
 /// Finds the XMP packet inside a file's prefix. XMP is written either as a wrapped packet

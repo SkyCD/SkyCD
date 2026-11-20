@@ -1,4 +1,5 @@
 using System.Text;
+using SkyCD.Plugin.MediaMetadata;
 using Xunit;
 
 namespace SkyCD.Plugin.FileMetadata.Tests;

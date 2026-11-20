@@ -1,6 +1,7 @@
 using System;
+using SkyCD.Plugin.MediaMetadata;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.Image;
 
 /// <summary>Walks the RIFF chunks of a WebP file for its XMP and EXIF payloads.</summary>
 internal static class WebpMetadataReader

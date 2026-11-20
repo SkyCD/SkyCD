@@ -11,7 +11,7 @@ Two independently discovered capabilities in one assembly:
 
 | Capability | Type | Schema |
 |---|---|---|
-| Typed image metadata | `ImageMetadataPlugin : IMediaMetadataCapability` | `skycd.image.metadata` v1 |
+| Typed image metadata and embedded tags | `ImageMetadataPlugin : IMediaMetadataCapability` | `skycd.image.metadata` v2 |
 | Bounded thumbnail | `ImagePreviewPlugin : IMediaPreviewCapability` | `skycd.image.preview` v1 |
 
 Both claim extensions `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif` and MIME types `image/jpeg`, `image/png`,
@@ -34,14 +34,42 @@ test asserts none exists.
 | `FrameCount` | Integer | – | Frames in the container; 1 for a still image |
 | `IsAnimated` | Boolean | – | `FrameCount > 1` |
 | `CapturedAt` | Timestamp | – | EXIF capture date; **omitted entirely** when the source has none |
+| `Tags` | Text | – | Embedded keywords joined with `; `; omitted when the source carries none |
+| `Comment` | Text | – | Embedded caption or comment; omitted when the source carries none |
+| `Rating` | Integer | – | Embedded star rating 1–5; omitted when absent or rejected |
 
 `Width`/`Height` are the oriented dimensions, so a 4000×3000 photo stored with orientation 6 reports
 3000×4000 — the size a viewer shows. `Orientation` and `RotationDegrees` are published alongside so a host
 can tell whether the numbers were already corrected.
 
+Version 2 added `Tags`, `Comment` and `Rating`. `Tags` carries the `Tags` role, so the host assigns
+the keywords as catalog tags through the existing media-cache effects. There is no hierarchical
+expansion: `lr:hierarchicalSubject` is not read, so `Places|Beach|Sunset` stays one keyword. Other
+formats' tags — TIFF and RAW carriers, bare XMP sidecars — and OS-assigned properties belong to
+`SkyCD.Plugin.FileMetadata` (see `docs/plugins/file-metadata.md`); each carrier is claimed once.
+
 Provenance is not a field: it is the record identity the host stores (plugin id, plugin version, capability
 type, schema id, schema version), per `docs/architecture/media-cache-lifecycle.md`. A capture date is never
 invented — an absent EXIF date produces no `CapturedAt` value rather than a fallback to the file timestamp.
+
+## Embedded tag carriers
+
+Tags are read from the same buffered bytes the metadata pass already holds, chosen by magic bytes
+rather than extension:
+
+| Container | Carriers |
+|---|---|
+| JPEG | APP1 Exif (TIFF: `XPKeywords`, `XPComment`, `ImageDescription`, `UserComment`, `Rating`, `RatingPercent`), APP1 XMP, APP13 Photoshop/IPTC-IIM, COM comment |
+| PNG | `tEXt` and uncompressed `iTXt` (`Keywords`, `Comment`, `Description`), uncompressed XMP `iTXt`, `eXIf` |
+| WebP | `XMP ` packet, `EXIF` chunk |
+| GIF | none — no portable tag carrier |
+
+Compressed PNG text (`zTXt`, compressed `iTXt`) is not inflated: decompression is left to dedicated
+editors rather than paid in an index pass. XMP provides `dc:subject`, `pdf:Keywords`,
+`dc:description`, `exif:UserComment`, `xmp:Rating` and `MicrosoftPhoto:Rating`; IPTC-IIM provides
+2:25 keywords and 2:120 caption; TIFF ratings use the Shell 1–99 scale, negative values mean
+"rejected" and are ignored. The parsers are shared source files from `Plugins/Shared/MediaMetadata/`,
+also compiled into `SkyCD.Plugin.FileMetadata` for TIFF/RAW carriers and XMP sidecars.
 
 ## Preview artifacts
 
@@ -75,7 +103,8 @@ consequence is that a source must fit inside the host's source budget to be proc
 budget's purpose; a regression test asserts that an exhausted budget surfaces as an exception rather than a
 crash.
 
-- Metadata extraction decodes no pixels: geometry comes from the container header, tags from EXIF.
+- Metadata extraction decodes no pixels: geometry comes from the container header, tags from header
+  directories and metadata segments, and JPEG reading stops at Start-Of-Scan.
 - A source above `ImagePluginOptions.MaxSourceBytes` (64 MiB, deliberately above the host's 16 MiB default)
   is rejected before a single byte is charged, so the host budget is what normally binds.
 - Cancellation is checked before the first read, after decode and before encode. Decode itself is not
@@ -107,7 +136,10 @@ allow-list.
 ## Limitations
 
 - JPEG, PNG, WebP and GIF only. TIFF, HEIF, AVIF and RAW are not claimed; Skia can decode some of them but
-  they are out of the documented initial scope.
+  they are out of the documented initial scope. TIFF/RAW tags, XMP sidecars and OS-assigned properties are
+  the file metadata plugin's job.
+- Tags are whatever portable carriers the container holds. A tool that stores keywords only in a format
+  the reader does not parse (compressed PNG text, maker notes) leaves them uncached.
 - EXIF local time carries no zone unless `OffsetTimeOriginal` is present. When it is absent the value is
   stored with a zero offset rather than being guessed from the host's time zone.
 - Animated WebP and APNG report a frame count but, like GIF, are previewed by the first frame only.
@@ -128,3 +160,5 @@ pixel level, a transparent PNG, an animated GIF with a hand-written LZW stream, 
 a valid image whose EXIF directory is corrupt, oversized sources, cancellation, an exhausted host budget
 surfacing as a failure rather than a crash, assembly discovery without a manifest, and offline retrieval
 through the real scheduler and Couchbase Lite store with the database reopened and the plugin unloaded.
+Tag fixtures cover JPEG XMP, IPTC and COM segments, PNG `tEXt` and XMP `iTXt` chunks, WebP `XMP ` chunks,
+and a GIF asserting that no tag fields are published.

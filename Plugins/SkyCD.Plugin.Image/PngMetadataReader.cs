@@ -1,6 +1,7 @@
 using System;
+using SkyCD.Plugin.MediaMetadata;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.Image;
 
 /// <summary>
 /// Walks PNG chunks for the text chunks that image tools use for keywords, comments and XMP, and for the

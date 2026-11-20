@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.MediaMetadata;
 
 namespace SkyCD.Plugin.Image;
 
 /// <summary>
-/// Extracts typed image metadata from the container header and EXIF, without rendering pixels. Dimensions
-/// are reported as displayed, so a rotated photo reports the size the user sees rather than the stored one;
-/// the stored orientation and the rotation needed to reach it are published alongside.
+/// Extracts typed image metadata from the container header, EXIF and the portable tag carriers, without
+/// rendering pixels. Dimensions are reported as displayed, so a rotated photo reports the size the user sees
+/// rather than the stored one; the stored orientation and the rotation needed to reach it are published
+/// alongside, followed by the keywords, comment and rating the file itself carries.
 /// </summary>
 public sealed class ImageMetadataPlugin : IMediaMetadataCapability
 {
@@ -60,6 +62,21 @@ public sealed class ImageMetadataPlugin : IMediaMetadataCapability
         {
             values.Add(new MediaMetadataValue(
                 ImageSchema.CapturedAt, MediaMetadataType.Timestamp, Timestamp: timestamp));
+        }
+
+        MetadataScan? tags = null;
+        try
+        {
+            tags = ImageTagsReader.Scan(data);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // A damaged container must never fail the item; the image keeps its geometry without tags.
+        }
+
+        if (tags is not null)
+        {
+            values.AddRange(MetadataValues.Build(tags, ImageSchema.Tags, ImageSchema.Comment, ImageSchema.Rating));
         }
 
         return new MediaExtractionResult(values);

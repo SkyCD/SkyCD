@@ -11,7 +11,7 @@ namespace SkyCD.Presentation.MediaCache;
 /// <summary>
 /// One host-scheduled extraction pass for a catalog entry. The caller supplies a factory that returns a
 /// fresh readable stream per provider, exactly as <see cref="SkyCD.Plugin.Host.Media.MediaExtensionManager"/>
-/// expects; nothing in the cache layer needs a filesystem path.
+/// expects. Providers that read OS-assigned metadata take <see cref="SourcePath"/> instead of bytes.
 /// </summary>
 public sealed class MediaExtractionRequest
 {
@@ -22,6 +22,12 @@ public sealed class MediaExtractionRequest
     public required MediaItem Item { get; init; }
 
     public required Func<CancellationToken, Task<Stream>> OpenSource { get; init; }
+
+    /// <summary>
+    /// Local path of the source while a scan has it available. Only OS metadata providers receive it, and
+    /// it is never stored; without it those providers are skipped rather than cached as failures.
+    /// </summary>
+    public string? SourcePath { get; init; }
 
     /// <summary>
     /// An existing batch to stage into, normally the batch of the running scan so results are published
@@ -60,11 +66,15 @@ public sealed class MediaExtractionRequest
             Item = new MediaItem(MediaSourceFingerprint.GetExtension(entry), ReadContentType(entry), entry.Size,
                 GroupKey: GroupKeyFor(entry)),
             OpenSource = openSource,
+            SourcePath = ReadString(entry.Properties, MediaMetadataService.SourcePathPropertyKey),
             BatchId = batchId,
             ForceRefresh = forceRefresh,
             ProviderSelection = providerSelection
         };
     }
+
+    private static string? ReadString(SkyCD.Documents.Collections.PropertiesCollection properties, string key) =>
+        properties.TryGetValue(key, out var value) && value is not null ? value.ToString() : null;
 
     private static string? ReadContentType(CatalogDocument entry)
     {

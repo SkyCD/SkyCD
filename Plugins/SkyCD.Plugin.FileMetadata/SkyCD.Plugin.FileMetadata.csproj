@@ -3,11 +3,8 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <!-- Configuration surface only; extraction never touches UI types. No general metadata library is -->
-        <!-- referenced: the obvious candidate drags in an XMP toolkit whose NuGet license the policy gate -->
-        <!-- reports as unknown, so the handful of portable tags read here are parsed directly. -->
-        <PackageReference Include="Avalonia" Version="12.1.6"/>
-        <PackageReference Include="Avalonia.Desktop" Version="12.1.6"/>
+        <!-- Shared with the image plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
+        <Compile Include="..\Shared\MediaMetadata\*.cs" Link="Shared\MediaMetadata\%(Filename)%(Extension)"/>
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -16,7 +13,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>File Metadata</AssemblyTitle>
-        <Description>Reads portable keywords, hierarchical tags, comments and ratings from XMP, IPTC, PNG text chunks and TIFF tags, so metadata written by Windows, Lightroom, digiKam and similar tools travels with the file.</Description>
+        <Description>Reads the tags, comment and rating a user assigned through Windows, Linux or macOS file properties, and the portable tags stored inside TIFF containers, TIFF-based RAW files and XMP sidecars.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

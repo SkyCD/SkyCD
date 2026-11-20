@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.MediaMetadata;
 
 /// <summary>
 /// Decoding helpers shared by the container readers. Metadata written by different tools is inconsistently

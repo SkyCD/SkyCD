@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.MediaMetadata;
 
 /// <summary>
 /// Reads IPTC-IIM records, the keyword/caption format written by Photo Mechanic, XnView, Windows Explorer

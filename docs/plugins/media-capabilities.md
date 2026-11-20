@@ -19,8 +19,9 @@ ID, schema version and field key. Never flatten results into a dictionary keyed 
 name, or silently replace previously stored metadata. A failed provider does not suppress others.
 
 The caller supplies a factory for a fresh readable stream per provider. The host owns each
-returned stream and disposes it after the worker exits. Plugins receive bounded read access,
-not a path, UI control or persistence entity. Reads charge a cumulative byte budget, including
+returned stream and disposes it after the worker exits. Byte-reading plugins receive bounded read
+access, not a path, UI control or persistence entity; the only path-addressed contract is
+`ILocalMediaMetadataCapability`, described below. Reads charge a cumulative byte budget, including
 repeated reads. Non-seekable streams support sequential reads. Preview data is copied before
 return, with an aggregate artifact byte limit; metadata text is also bounded. Progress and
 cancellation use the standard .NET interfaces.
@@ -40,6 +41,27 @@ requires a separate process. Plugins must honor cancellation and avoid retaining
 The host stores results durably and keeps them available offline; plugins hold no state of their
 own. See `docs/architecture/media-cache-lifecycle.md` for how a descriptor's schema id and version
 key the stored result, and why bumping the schema version is what invalidates cached data.
+
+## OS-assigned metadata
+
+Some metadata is not in the file at all: Explorer tags, comments and ratings, or the extended
+attributes a file manager writes beside the bytes. Such values cannot be read through
+`IMediaSource`, so `ILocalMediaMetadataCapability` is the one path-addressed contract. The host
+passes a `LocalMediaContext(Path, Extension, ContentType, Length)` instead of a stream, and only
+while the source is available locally and the path has been validated.
+
+The path is host-owned: a provider must not persist, log or publish it, and it must never appear in
+a value or artifact name. When no path is available — an offline entry, or an index pass over
+cached facts — the provider is **skipped**: it contributes no result at all, not an empty one and
+not a failure. A failure would mark values already captured for that entry as stale, so a platform
+that simply has nothing to say must stay silent. Extraction is read-only; a provider never writes
+attributes back.
+
+Descriptors, schema and value validation, sanitized failure reporting, cancellation and the output
+limits are identical to `IMediaMetadataCapability`. Selection treats these providers as metadata
+providers for `MediaProviderSelection.StandardMetadata` and `OptInMetadata`; whole-file hashing and
+preview passes do not select them. Adding the interface and its context record is a MINOR SDK
+addition under `docs/plugins/sdk-versioning-policy.md`; existing capabilities are unchanged.
 
 ## AbiWord document metadata
 

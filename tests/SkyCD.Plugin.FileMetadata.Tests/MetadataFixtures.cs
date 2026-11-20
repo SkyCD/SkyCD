@@ -13,7 +13,6 @@ internal static class MetadataFixtures
 {
     public static string Xmp(
         IReadOnlyList<string>? keywords = null,
-        IReadOnlyList<string>? hierarchical = null,
         string? description = null,
         int? rating = null,
         int? microsoftRating = null,
@@ -26,7 +25,6 @@ internal static class MetadataFixtures
         builder.Append("<rdf:Description rdf:about=\"\"");
         builder.Append(" xmlns:dc=\"http://purl.org/dc/elements/1.1/\"");
         builder.Append(" xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"");
-        builder.Append(" xmlns:lr=\"http://ns.adobe.com/lightroom/1.0/\"");
         builder.Append(" xmlns:pdf=\"http://ns.adobe.com/pdf/1.3/\"");
         builder.Append(" xmlns:MicrosoftPhoto=\"http://ns.microsoft.com/photo/1.0/\">");
 
@@ -39,17 +37,6 @@ internal static class MetadataFixtures
             }
 
             builder.Append("</rdf:Bag></dc:subject>");
-        }
-
-        if (hierarchical is not null)
-        {
-            builder.Append("<lr:hierarchicalSubject><rdf:Bag>");
-            foreach (var path in hierarchical)
-            {
-                builder.Append("<rdf:li>").Append(Escape(path)).Append("</rdf:li>");
-            }
-
-            builder.Append("</rdf:Bag></lr:hierarchicalSubject>");
         }
 
         if (description is not null)
@@ -79,34 +66,6 @@ internal static class MetadataFixtures
         return builder.ToString();
     }
 
-    public static byte[] Jpeg(string? xmp = null, string? comment = null, byte[]? iim = null)
-    {
-        using var stream = new MemoryStream();
-        stream.Write([0xFF, 0xD8]);
-
-        if (xmp is not null)
-        {
-            var payload = Concat(Encoding.ASCII.GetBytes("http://ns.adobe.com/xap/1.0/\0"),
-                Encoding.UTF8.GetBytes(xmp));
-            WriteSegment(stream, 0xE1, payload);
-        }
-
-        if (iim is not null)
-        {
-            WriteSegment(stream, 0xED, PhotoshopResource(iim));
-        }
-
-        if (comment is not null)
-        {
-            WriteSegment(stream, 0xFE, Encoding.Latin1.GetBytes(comment));
-        }
-
-        // Minimal Start-Of-Scan followed by a byte of entropy data and End-Of-Image.
-        WriteSegment(stream, 0xDA, [0x01, 0x01, 0x00]);
-        stream.Write([0x00, 0xFF, 0xD9]);
-        return stream.ToArray();
-    }
-
     public static byte[] Iim(params (byte Dataset, string Value)[] records)
     {
         using var stream = new MemoryStream();
@@ -119,50 +78,6 @@ internal static class MetadataFixtures
             stream.Write(bytes);
         }
 
-        return stream.ToArray();
-    }
-
-    public static byte[] PhotoshopResource(byte[] iim)
-    {
-        using var block = new MemoryStream();
-        block.Write(Encoding.ASCII.GetBytes("8BIM"));
-        block.WriteByte(0x04);
-        block.WriteByte(0x04);
-        block.WriteByte(0x00);
-        block.WriteByte(0x00);
-        WriteUInt32BigEndian(block, (uint)iim.Length);
-        block.Write(iim);
-        if ((iim.Length & 1) == 1)
-        {
-            block.WriteByte(0x00);
-        }
-
-        return Concat(Encoding.ASCII.GetBytes("Photoshop 3.0\0"), block.ToArray());
-    }
-
-    public static byte[] Png(
-        IReadOnlyList<(string Keyword, string Text)>? text = null,
-        string? xmp = null)
-    {
-        using var stream = new MemoryStream();
-        stream.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-        WriteChunk(stream, "IHDR", [0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]);
-        if (text is not null)
-        {
-            foreach (var (keyword, value) in text)
-            {
-                WriteChunk(stream, "tEXt", Concat(Encoding.Latin1.GetBytes(keyword + "\0"),
-                    Encoding.Latin1.GetBytes(value)));
-            }
-        }
-
-        if (xmp is not null)
-        {
-            WriteChunk(stream, "iTXt", Concat(Encoding.ASCII.GetBytes("XML:com.adobe.xmp\0\0\0\0\0"),
-                Encoding.UTF8.GetBytes(xmp)));
-        }
-
-        WriteChunk(stream, "IEND", []);
         return stream.ToArray();
     }
 
@@ -188,6 +103,10 @@ internal static class MetadataFixtures
             : new[] { (byte)(value >> 8), (byte)value };
         return new TiffEntry(tag, 3, 1, bytes);
     }
+
+    /// <summary>A BYTE or UNDEFINED payload, as TIFF-based RAW tools store IPTC-IIM and XMP packets.</summary>
+    public static TiffEntry Raw(ushort tag, byte[] value, ushort type = 1) =>
+        new(tag, type, (uint)value.Length, value);
 
     public static byte[] Tiff(bool littleEndian, params TiffEntry[] entries)
     {
@@ -227,26 +146,6 @@ internal static class MetadataFixtures
         return stream.ToArray();
     }
 
-    private static byte[] Concat(byte[] first, byte[] second) => [.. first, .. second];
-
-    private static void WriteSegment(Stream stream, byte marker, byte[] payload)
-    {
-        var length = payload.Length + 2;
-        stream.WriteByte(0xFF);
-        stream.WriteByte(marker);
-        stream.WriteByte((byte)(length >> 8));
-        stream.WriteByte((byte)(length & 0xFF));
-        stream.Write(payload);
-    }
-
-    private static void WriteChunk(Stream stream, string type, byte[] payload)
-    {
-        WriteUInt32BigEndian(stream, (uint)payload.Length);
-        stream.Write(Encoding.ASCII.GetBytes(type));
-        stream.Write(payload);
-        stream.Write([0, 0, 0, 0]);
-    }
-
     private static void WriteUInt16(Stream stream, ushort value, bool littleEndian)
     {
         if (littleEndian)
@@ -272,16 +171,11 @@ internal static class MetadataFixtures
         }
         else
         {
-            WriteUInt32BigEndian(stream, value);
+            stream.WriteByte((byte)(value >> 24));
+            stream.WriteByte((byte)(value >> 16));
+            stream.WriteByte((byte)(value >> 8));
+            stream.WriteByte((byte)value);
         }
-    }
-
-    private static void WriteUInt32BigEndian(Stream stream, uint value)
-    {
-        stream.WriteByte((byte)(value >> 24));
-        stream.WriteByte((byte)(value >> 16));
-        stream.WriteByte((byte)(value >> 8));
-        stream.WriteByte((byte)value);
     }
 
     private static string Escape(string value) => value

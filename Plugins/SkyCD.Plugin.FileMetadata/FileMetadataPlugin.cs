@@ -1,56 +1,33 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.MediaMetadata;
 
 namespace SkyCD.Plugin.FileMetadata;
 
 /// <summary>
-/// Publishes the keywords, hierarchical tags, comment and rating that travel inside a file, so the catalog
-/// keeps the metadata a user already assigned in Windows Explorer, Lightroom, digiKam, Photo Mechanic or an
-/// XMP sidecar. Sources without any of these tags yield an empty result instead of a failure, and each field
-/// has its own option, matching the reference options dialog.
+/// Publishes the keywords, comment and rating that travel inside the carriers the image plugin does not
+/// present: TIFF containers, the TIFF-based RAW formats and standalone XMP sidecars. Sources without any of
+/// these tags yield an empty result instead of a failure, and damaged containers never fail the item.
 /// </summary>
 /// <remarks>
-/// The source is read once, bounded, and discarded; nothing is written back. Metadata stored outside the
-/// file — macOS Finder tags in extended attributes, Linux gvfs/Tracker databases, Windows shell properties
-/// that live in sidecar stores rather than the file — is out of reach through the host's path-less
-/// <see cref="IMediaSource"/> and is therefore not claimed. See <c>docs/plugins/file-metadata.md</c>.
+/// Metadata the user assigned through the operating system is not part of the file bytes; it is read by
+/// <see cref="OsMetadataPlugin"/>, which is addressed by path. See <c>docs/plugins/file-metadata.md</c>.
 /// </remarks>
-public sealed class FileMetadataPlugin : IMediaMetadataCapability, IPluginSettingsConsumer
+public sealed class FileMetadataPlugin : IMediaMetadataCapability
 {
     private const int ProviderPriority = 10;
     private const int ChunkBytes = 256 * 1024;
 
-    private readonly FileMetadataOptions options;
-    private volatile FileMetadataSettings settings = FileMetadataSettings.Default;
+    /// <summary>
+    /// Only a bounded prefix is read, because these tags sit in header directories and early file regions;
+    /// the cap keeps a scan cheap even on multi-gigabyte RAW files.
+    /// </summary>
+    private const int MaxScanBytes = 1024 * 1024;
 
-    public FileMetadataPlugin()
-        : this(FileMetadataOptions.Default)
-    {
-    }
-
-    public FileMetadataPlugin(FileMetadataOptions options)
-    {
-        this.options = options ?? throw new ArgumentNullException(nameof(options));
-    }
-
-    public MediaDescriptor Descriptor
-    {
-        get
-        {
-            var current = settings;
-            return current.CollectionEnabled
-                ? new MediaDescriptor(current.Extensions, FileMetadataSchema.ContentTypes, FileMetadataSchema.Schema,
-                    Priority: ProviderPriority)
-                : new MediaDescriptor([], [], FileMetadataSchema.Schema, Priority: ProviderPriority);
-        }
-    }
-
-    public void ApplySettings(IReadOnlyDictionary<string, string?> settings) =>
-        this.settings = FileMetadataSettings.From(settings);
+    public MediaDescriptor Descriptor => new(FileMetadataSchema.EmbeddedExtensions,
+        FileMetadataSchema.EmbeddedContentTypes, FileMetadataSchema.Embedded, Priority: ProviderPriority);
 
     public async Task<MediaExtractionResult> ExtractAsync(
         MediaItem item,
@@ -58,13 +35,6 @@ public sealed class FileMetadataPlugin : IMediaMetadataCapability, IPluginSettin
         IProgress<MediaProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var current = settings;
-        if (!current.CollectionEnabled)
-        {
-            progress?.Report(new MediaProgress(1));
-            return new MediaExtractionResult([]);
-        }
-
         var length = source.Length > 0 ? source.Length : item.Length;
         if (length <= 0)
         {
@@ -72,7 +42,7 @@ public sealed class FileMetadataPlugin : IMediaMetadataCapability, IPluginSettin
             return new MediaExtractionResult([]);
         }
 
-        var data = await ReadPrefixAsync(source, (int)Math.Min(length, options.MaxScanBytes), cancellationToken)
+        var data = await ReadPrefixAsync(source, (int)Math.Min(length, MaxScanBytes), cancellationToken)
             .ConfigureAwait(false);
         progress?.Report(new MediaProgress(0.6));
 
@@ -88,84 +58,8 @@ public sealed class FileMetadataPlugin : IMediaMetadataCapability, IPluginSettin
         }
 
         progress?.Report(new MediaProgress(1));
-        return new MediaExtractionResult(BuildValues(scan, current));
-    }
-
-    internal static IReadOnlyList<MediaMetadataValue> BuildValues(MetadataScan scan, FileMetadataSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(scan);
-        ArgumentNullException.ThrowIfNull(settings);
-
-        var values = new List<MediaMetadataValue>();
-        if (settings.KeywordsEnabled)
-        {
-            AddTagValue(values, FileMetadataSchema.Keywords, scan.Keywords);
-            AddTagValue(values, FileMetadataSchema.HierarchicalKeywords,
-                ExpandHierarchical(scan.HierarchicalPaths, settings.SplitHierarchicalTags));
-        }
-
-        if (settings.CommentsEnabled && !string.IsNullOrWhiteSpace(scan.Comment))
-        {
-            values.Add(new MediaMetadataValue(FileMetadataSchema.Comment, MediaMetadataType.Text,
-                Text: scan.Comment));
-        }
-
-        if (settings.RatingsEnabled && scan.Rating is { } rating)
-        {
-            values.Add(new MediaMetadataValue(FileMetadataSchema.Rating, MediaMetadataType.Integer,
-                Integer: rating));
-        }
-
-        return values;
-    }
-
-    /// <summary>
-    /// Ready-to-publish hierarchical tags. Splitting emits cumulative prefixes, so filtering on an upper level
-    /// still finds the item while the leaf keeps its full context.
-    /// </summary>
-    internal static IReadOnlyList<string> ExpandHierarchical(IReadOnlyList<string> paths, bool split)
-    {
-        ArgumentNullException.ThrowIfNull(paths);
-        if (!split)
-        {
-            return paths;
-        }
-
-        var tags = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in paths)
-        {
-            var prefix = string.Empty;
-            foreach (var level in path.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                prefix = prefix.Length == 0 ? level : prefix + " / " + level;
-                if (prefix.Length > FileMetadataSchema.MaxTagLength)
-                {
-                    break;
-                }
-
-                if (tags.Count == FileMetadataSchema.MaxTagCount)
-                {
-                    return tags;
-                }
-
-                if (seen.Add(prefix))
-                {
-                    tags.Add(prefix);
-                }
-            }
-        }
-
-        return tags;
-    }
-
-    private static void AddTagValue(List<MediaMetadataValue> values, string key, IReadOnlyList<string> tags)
-    {
-        if (tags.Count > 0)
-        {
-            values.Add(new MediaMetadataValue(key, MediaMetadataType.Text,
-                Text: string.Join("; ", tags)));
-        }
+        return new MediaExtractionResult(MetadataValues.Build(scan, FileMetadataSchema.Tags,
+            FileMetadataSchema.Comment, FileMetadataSchema.Rating));
     }
 
     /// <summary>Reads at most <paramref name="length"/> bytes in bounded chunks, honoring cancellation.</summary>

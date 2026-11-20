@@ -7,23 +7,22 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.MediaMetadata;
 
 /// <summary>Portable properties read from one XMP packet.</summary>
 internal sealed record XmpMetadata(
     IReadOnlyList<string> Keywords,
-    IReadOnlyList<string> HierarchicalKeywords,
     string? Comment,
     int? Rating)
 {
-    public static XmpMetadata Empty { get; } = new([], [], null, null);
+    public static XmpMetadata Empty { get; } = new([], null, null);
 }
 
 /// <summary>
-/// Reads the properties that file managers agree on: <c>dc:subject</c>, <c>lr:hierarchicalSubject</c>,
-/// <c>dc:description</c>, <c>xmp:Rating</c> and their Microsoft/IPTC counterparts. The XML parser is
-/// configured without DTD processing or an external resolver, and the packet was already bounded by the
-/// caller, so a hostile file can waste at most one bounded parse.
+/// Reads the properties that file managers agree on: <c>dc:subject</c>, <c>dc:description</c>,
+/// <c>xmp:Rating</c> and their Microsoft/IPTC counterparts. The XML parser is configured without DTD
+/// processing or an external resolver, and the packet was already bounded by the caller, so a hostile file
+/// can waste at most one bounded parse.
 /// </summary>
 internal static class XmpMetadataReader
 {
@@ -32,7 +31,6 @@ internal static class XmpMetadataReader
     private static readonly XNamespace Dc = "http://purl.org/dc/elements/1.1/";
     private static readonly XNamespace Xmp = "http://ns.adobe.com/xap/1.0/";
     private static readonly XNamespace Exif = "http://ns.adobe.com/exif/1.0/";
-    private static readonly XNamespace Lightroom = "http://ns.adobe.com/lightroom/1.0/";
     private static readonly XNamespace Pdf = "http://ns.adobe.com/pdf/1.3/";
     private static readonly XNamespace MicrosoftPhoto = "http://ns.microsoft.com/photo/1.0/";
 
@@ -81,12 +79,6 @@ internal static class XmpMetadataReader
             keywords.AddRange(SplitDelimited(property.Value));
         }
 
-        var hierarchical = new List<string>();
-        foreach (var property in Find(document, Lightroom, "hierarchicalSubject"))
-        {
-            hierarchical.AddRange(ReadList(property));
-        }
-
         var comment = Find(document, Dc, "description")
             .Select(ReadLocalized)
             .FirstOrDefault(value => value.Length > 0);
@@ -97,7 +89,7 @@ internal static class XmpMetadataReader
                 .FirstOrDefault(value => value.Length > 0);
         }
 
-        metadata = new XmpMetadata(keywords, hierarchical, comment, ReadRating(document));
+        metadata = new XmpMetadata(keywords, comment, ReadRating(document));
         return true;
     }
 

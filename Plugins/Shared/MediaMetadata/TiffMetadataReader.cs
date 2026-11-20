@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.MediaMetadata;
 
 /// <summary>
 /// Reads IFD0 and one Exif sub-directory of a TIFF container, which is also the payload of JPEG Exif and

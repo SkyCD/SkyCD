@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.MediaMetadata;
 
 /// <summary>Locates and merges an XMP packet into the scan; used by every container reader.</summary>
 internal static class XmpPacketReader
@@ -16,11 +16,6 @@ internal static class XmpPacketReader
         foreach (var keyword in metadata.Keywords)
         {
             scan.AddKeyword(keyword);
-        }
-
-        foreach (var path in metadata.HierarchicalKeywords)
-        {
-            scan.AddHierarchical(path);
         }
 
         if (metadata.Comment is not null)

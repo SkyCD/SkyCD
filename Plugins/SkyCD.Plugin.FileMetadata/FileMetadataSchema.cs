@@ -4,51 +4,46 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 namespace SkyCD.Plugin.FileMetadata;
 
 /// <summary>
-/// Stable schema identity, field keys and claimed source types published by the file metadata plugin. Field
-/// keys and their meaning are part of the cached-data contract, because the host keys stored results by
-/// schema id and version.
+/// Stable schema identities, field keys and claimed source types published by the file metadata plugin.
+/// Field keys and their meaning are part of the cached-data contract, because the host keys stored results
+/// by schema id and version.
 /// </summary>
 public static class FileMetadataSchema
 {
-    public const string SchemaId = "skycd.file.metadata";
-    public const int SchemaVersion = 1;
+    /// <summary>Tags, comment and rating stored inside TIFF containers and XMP sidecars.</summary>
+    public const string EmbeddedSchemaId = "skycd.file.metadata";
+    public const int EmbeddedSchemaVersion = 1;
 
-    /// <summary>Flat keywords separated by semicolons, as written by Windows, Lightroom, digiKam and IPTC.</summary>
-    public const string Keywords = "Keywords";
+    /// <summary>Tags, comment and rating a user assigned through the operating system.</summary>
+    public const string OsSchemaId = "skycd.file.os-metadata";
+    public const int OsSchemaVersion = 1;
 
-    /// <summary>
-    /// Hierarchical keyword paths. Each published tag is one semicolon-free token; the plugin joins levels
-    /// with <c>" / "</c> so a flat catalog tag list keeps the hierarchy readable.
-    /// </summary>
-    public const string HierarchicalKeywords = "HierarchicalKeywords";
-
-    /// <summary>The user comment or caption; omitted entirely when the source carries none.</summary>
+    public const string Tags = "Tags";
     public const string Comment = "Comment";
-
-    /// <summary>Star rating from 0 to 5, normalized from the 0–99 scale some Windows tools persist.</summary>
     public const string Rating = "Rating";
 
-    public const int MaxCommentLength = 2000;
-    public const int MaxTagLength = 128;
-    public const int MaxTagCount = 64;
-
     /// <summary>
-    /// Extensions the plugin claims. XMP sidecars are first-class sources; RAW containers are TIFF based and
-    /// carry the same XP/EXIF tags as ordinary TIFF files.
+    /// TIFF containers, including the TIFF-based RAW formats, and standalone XMP sidecars. The image
+    /// formats the image plugin presents are read there instead, so every carrier is claimed once.
     /// </summary>
-    public static readonly IReadOnlyList<string> DefaultExtensions =
+    public static readonly IReadOnlyList<string> EmbeddedExtensions =
+        [".tif", ".tiff", ".dng", ".cr2", ".nef", ".arw", ".xmp"];
+
+    public static readonly IReadOnlyList<string> EmbeddedContentTypes = ["image/tiff", "application/rdf+xml"];
+
+    /// <summary>OS-assigned metadata can exist next to any file a user catalogues.</summary>
+    public static readonly IReadOnlyList<string> AnyExtensions = ["*"];
+
+    public static MediaMetadataSchema Embedded { get; } =
+        new(EmbeddedSchemaId, EmbeddedSchemaVersion, Fields());
+
+    public static MediaMetadataSchema Os { get; } =
+        new(OsSchemaId, OsSchemaVersion, Fields());
+
+    private static MediaMetadataField[] Fields() =>
     [
-        ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".xmp", ".dng", ".cr2", ".nef", ".arw"
+        new(Tags, MediaMetadataType.Text, Role: MediaMetadataFieldRole.Tags),
+        new(Comment, MediaMetadataType.Text),
+        new(Rating, MediaMetadataType.Integer)
     ];
-
-    public static readonly IReadOnlyList<string> ContentTypes =
-        ["image/jpeg", "image/png", "image/tiff", "image/webp"];
-
-    public static MediaMetadataSchema Schema { get; } = new(SchemaId, SchemaVersion,
-    [
-        new MediaMetadataField(Keywords, MediaMetadataType.Text, Role: MediaMetadataFieldRole.Tags),
-        new MediaMetadataField(HierarchicalKeywords, MediaMetadataType.Text, Role: MediaMetadataFieldRole.Tags),
-        new MediaMetadataField(Comment, MediaMetadataType.Text),
-        new MediaMetadataField(Rating, MediaMetadataType.Integer)
-    ]);
 }

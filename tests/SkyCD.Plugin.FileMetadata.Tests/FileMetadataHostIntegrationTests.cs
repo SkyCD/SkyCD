@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Documents;
@@ -18,92 +17,115 @@ using Xunit;
 namespace SkyCD.Plugin.FileMetadata.Tests;
 
 /// <summary>
-/// End-to-end coverage inside the host pipeline: extension matching, settings-driven behavior, catalog tag
-/// effects and discovery without a manifest.
+/// End-to-end coverage inside the host pipeline: which sources each capability claims, how the path-addressed
+/// OS reader is selected, catalog tag effects and discovery without a manifest.
 /// </summary>
 public sealed class FileMetadataHostIntegrationTests
 {
     private const string PluginId = "SkyCD.Plugin.FileMetadata";
 
     [Fact]
-    public void Host_ClaimsTheConfiguredExtensionsOnly()
+    public void Host_ClaimsEmbeddedCarriersOnceAndOsMetadataForEverySource()
     {
-        var manager = CreateManager(FileMetadataSettings.Default);
+        var manager = CreateManager();
 
-        Assert.Single(manager.ResolveProviders(new MediaItem(".jpg", null, 10)));
-        Assert.Single(manager.ResolveProviders(new MediaItem(".XMP", null, 10)));
-        Assert.Single(manager.ResolveProviders(new MediaItem(".tif", null, 10)));
-        Assert.Empty(manager.ResolveProviders(new MediaItem(".txt", null, 10)));
+        var tiff = manager.ResolveProviders(new MediaItem(".TIF", null, 10));
+        Assert.Equal(
+            [FileMetadataSchema.EmbeddedSchemaId, FileMetadataSchema.OsSchemaId],
+            tiff.Select(identity => identity.SchemaId));
+
+        var jpeg = manager.ResolveProviders(new MediaItem(".jpg", null, 10));
+        Assert.Equal([FileMetadataSchema.OsSchemaId], jpeg.Select(identity => identity.SchemaId));
+
+        Assert.Contains(manager.ResolveProviders(new MediaItem(".txt", null, 10)),
+            identity => identity.SchemaId == FileMetadataSchema.OsSchemaId);
     }
 
     [Fact]
-    public void DisabledCollection_LeavesNoProvidersForAnySource()
+    public async Task IndexingPass_ReturnsEmbeddedMetadataWithoutAPath()
     {
-        var manager = CreateManager(FileMetadataSettings.Default, collectionEnabled: false);
-
-        Assert.Empty(manager.ResolveProviders(new MediaItem(".jpg", null, 10)));
-    }
-
-    [Fact]
-    public async Task IndexingPass_ReturnsMetadataFromTheExtractor()
-    {
-        var photo = MetadataFixtures.Jpeg(MetadataFixtures.Xmp(
-            keywords: ["sunset"],
-            hierarchical: ["Places|Beach"],
-            description: "Evening",
-            rating: 4));
-        var manager = CreateManager(FileMetadataSettings.Default);
+        var tiff = MetadataFixtures.Tiff(littleEndian: true,
+            MetadataFixtures.Utf16(0x9C9E, "sunset; beach", littleEndian: true),
+            MetadataFixtures.Short(0x4746, 4, littleEndian: true));
+        var manager = CreateManager();
 
         var results = await manager.ProcessAsync(
-            new MediaItem(".jpg", null, photo.Length),
-            Open(photo),
+            new MediaItem(".tif", null, tiff.Length),
+            Open(tiff),
             selection: MediaProviderSelection.StandardMetadata);
 
         var result = Assert.Single(results);
         Assert.False(result.Failed);
-        Assert.Contains(result.Metadata!.Values, value => value.Key == FileMetadataSchema.Keywords);
+        Assert.Contains(result.Metadata!.Values, value => value.Key == FileMetadataSchema.Tags);
         Assert.Contains(result.Metadata.Values, value => value.Key == FileMetadataSchema.Rating);
+    }
+
+    [Fact]
+    public async Task OsProvider_RunsWithoutReadingTheStream_WhenAPathIsSupplied()
+    {
+        var tiff = MetadataFixtures.Tiff(littleEndian: true,
+            MetadataFixtures.Utf16(0x9C9E, "sunset", littleEndian: true));
+        var manager = CreateManager();
+        var opened = 0;
+        Task<Stream> OpenTracked(CancellationToken _)
+        {
+            Interlocked.Increment(ref opened);
+            return Task.FromResult<Stream>(new MemoryStream(tiff, writable: false));
+        }
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".tif", null, tiff.Length),
+            OpenTracked,
+            selection: MediaProviderSelection.StandardMetadata,
+            sourcePath: Path.Combine(Path.GetTempPath(), $"skycd-missing-{Guid.NewGuid():N}.tif"));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.False(result.Failed));
+        Assert.Contains(results, result => result.Schema!.Id == FileMetadataSchema.OsSchemaId);
+        Assert.Equal(1, opened);
+    }
+
+    [Fact]
+    public async Task WithoutAPath_TheOsProviderIsSkippedInsteadOfCachedAsAFailure()
+    {
+        var tiff = MetadataFixtures.Tiff(littleEndian: true,
+            MetadataFixtures.Utf16(0x9C9E, "archive", littleEndian: true));
+        var manager = CreateManager();
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".tif", null, tiff.Length),
+            Open(tiff),
+            selection: MediaProviderSelection.StandardMetadata);
+
+        Assert.DoesNotContain(results, result => result.Failed);
+        Assert.DoesNotContain(results, result => result.Schema?.Id == FileMetadataSchema.OsSchemaId);
     }
 
     [Fact]
     public async Task Scheduler_StoresMetadataThatTheCatalogTurnsIntoTags()
     {
-        var photo = MetadataFixtures.Jpeg(MetadataFixtures.Xmp(
-            keywords: ["sunset", "beach"],
-            hierarchical: ["Places|Beach|Sunset"],
-            rating: 5));
-        var entry = CreateEntry(photo);
+        var tiff = MetadataFixtures.Tiff(littleEndian: true,
+            MetadataFixtures.Utf16(0x9C9E, "sunset; beach", littleEndian: true),
+            MetadataFixtures.Short(0x4746, 5, littleEndian: true));
+        var entry = CreateEntry(tiff);
         using var store = new InMemoryMediaCacheStore();
-        var scheduler = new MediaExtractionScheduler(CreateManager(FileMetadataSettings.Default), store);
+        var scheduler = new MediaExtractionScheduler(CreateManager(), store);
 
         var outcome = await scheduler.ProcessAsync(MediaExtractionRequest.ForCatalogEntry(
             entry,
-            Open(photo),
-            new[] { entry }));
+            Open(tiff),
+            [entry]));
 
         Assert.True(outcome.Published);
-        var record = Assert.Single(store.GetRecordsForEntry(entry.Id));
-        Assert.Equal(MediaCacheRecordState.Captured, record.State);
-        Assert.Equal(FileMetadataSchema.SchemaId, record.SchemaId);
+        var records = store.GetRecordsForEntry(entry.Id);
+        Assert.Contains(records, record =>
+            record.State == MediaCacheRecordState.Captured &&
+            record.SchemaId == FileMetadataSchema.EmbeddedSchemaId);
+        Assert.All(records, record => Assert.NotEqual(MediaCacheRecordState.Failed, record.State));
 
-        var tags = MediaMetadataCatalogEffects.ResolveTagNames(store.GetRecordsForEntry(entry.Id));
+        var tags = MediaMetadataCatalogEffects.ResolveTagNames(records);
         Assert.Contains("sunset", tags);
         Assert.Contains("beach", tags);
-        Assert.Contains("Places", tags);
-        Assert.Contains("Places / Beach", tags);
-        Assert.Contains("Places / Beach / Sunset", tags);
-    }
-
-    [Fact]
-    public void SettingsRevision_ChangesWithThePersistedOptions()
-    {
-        var item = new MediaItem(".jpg", null, 10);
-        var first = CreateManager(FileMetadataSettings.Default).ResolveProviders(item);
-        var second = CreateManager(new FileMetadataSettings(true, true, splitHierarchicalTags: false, true, true,
-            [".jpg"])).ResolveProviders(item);
-
-        Assert.All(first, identity => Assert.NotEmpty(identity.SettingsRevision));
-        Assert.NotEqual(first[0].SettingsRevision, second[0].SettingsRevision);
     }
 
     [Fact]
@@ -115,7 +137,8 @@ public sealed class FileMetadataHostIntegrationTests
         Assert.Equal("File Metadata", plugin.Name);
         Assert.Equal(2, plugin.Capabilities.Count);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
-        Assert.Contains(plugin.Capabilities, capability => capability is IPluginConfigurationCapability);
+        Assert.Contains(plugin.Capabilities, capability => capability is ILocalMediaMetadataCapability);
+        Assert.DoesNotContain(plugin.Capabilities, capability => capability is IPluginConfigurationCapability);
     }
 
     [Fact]
@@ -127,17 +150,11 @@ public sealed class FileMetadataHostIntegrationTests
         Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
-    private static MediaExtensionManager CreateManager(FileMetadataSettings settings, bool? collectionEnabled = null)
-    {
-        var dictionary = new Dictionary<string, string?>(settings.ToDictionary())
-        {
-            [FileMetadataSettings.CollectionEnabledKey] =
-                (collectionEnabled ?? settings.CollectionEnabled) ? "true" : "false"
-        };
-        return new MediaExtensionManager(
-            [new MediaProvider(PluginId, "1.0.0", new FileMetadataPlugin())],
-            settingsSource: _ => dictionary);
-    }
+    private static MediaExtensionManager CreateManager() =>
+        new([
+            new MediaProvider(PluginId, "1.0.0", new FileMetadataPlugin()),
+            new MediaProvider(PluginId, "1.0.0", new OsMetadataPlugin())
+        ]);
 
     private static Func<CancellationToken, Task<Stream>> Open(byte[] data) =>
         _ => Task.FromResult<Stream>(new MemoryStream(data, writable: false));
@@ -145,13 +162,13 @@ public sealed class FileMetadataHostIntegrationTests
     private static CatalogDocument CreateEntry(byte[] data) => new()
     {
         Id = "photo-entry",
-        Name = "photo.jpg",
+        Name = "scan.tif",
         ParentId = "photos-folder",
         Type = CatalogDocumentType.File,
         Size = data.Length,
         Properties = new PropertiesCollection
         {
-            ["FullName"] = @"D:\Photos\photo.jpg",
+            ["FullName"] = @"D:\Photos\scan.tif",
             ["LastWriteTime"] = new DateTimeOffset(2024, 3, 1, 12, 0, 0, TimeSpan.Zero).ToString("O")
         }
     };

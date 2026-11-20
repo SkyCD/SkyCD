@@ -1,6 +1,7 @@
 using System;
+using SkyCD.Plugin.MediaMetadata;
 
-namespace SkyCD.Plugin.FileMetadata;
+namespace SkyCD.Plugin.Image;
 
 /// <summary>
 /// Walks JPEG marker segments for the four metadata carriers that are portable between tools: an APP1 Exif

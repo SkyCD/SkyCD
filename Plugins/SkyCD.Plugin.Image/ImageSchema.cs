@@ -11,7 +11,9 @@ namespace SkyCD.Plugin.Image;
 public static class ImageSchema
 {
     public const string MetadataSchemaId = "skycd.image.metadata";
-    public const int MetadataSchemaVersion = 1;
+
+    /// <summary>Version 2 adds the embedded <c>Tags</c>, <c>Comment</c> and <c>Rating</c> fields.</summary>
+    public const int MetadataSchemaVersion = 2;
 
     public const string PreviewSchemaId = "skycd.image.preview";
     public const int PreviewSchemaVersion = 1;
@@ -42,6 +44,15 @@ public static class ImageSchema
     /// <summary>Capture date from EXIF when present; omitted entirely when the source has none.</summary>
     public const string CapturedAt = "CapturedAt";
 
+    /// <summary>Embedded keywords joined with <c>; </c>; omitted when the source carries none.</summary>
+    public const string Tags = "Tags";
+
+    /// <summary>Embedded caption or comment; omitted entirely when the source carries none.</summary>
+    public const string Comment = "Comment";
+
+    /// <summary>Embedded star rating from 0 to 5; omitted when the source carries none.</summary>
+    public const string Rating = "Rating";
+
     /// <summary>Extensions the plugin claims, including the leading dot.</summary>
     public static readonly IReadOnlyList<string> Extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
@@ -59,7 +70,10 @@ public static class ImageSchema
         new MediaMetadataField(RotationDegrees, MediaMetadataType.Integer, "deg"),
         new MediaMetadataField(FrameCount, MediaMetadataType.Integer),
         new MediaMetadataField(IsAnimated, MediaMetadataType.Boolean),
-        new MediaMetadataField(CapturedAt, MediaMetadataType.Timestamp)
+        new MediaMetadataField(CapturedAt, MediaMetadataType.Timestamp),
+        new MediaMetadataField(Tags, MediaMetadataType.Text, Role: MediaMetadataFieldRole.Tags),
+        new MediaMetadataField(Comment, MediaMetadataType.Text),
+        new MediaMetadataField(Rating, MediaMetadataType.Integer)
     ]);
 
     /// <summary>
