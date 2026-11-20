@@ -25,14 +25,16 @@ public class Issue161UiContractTests
         var buttonType = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbarButton.cs");
         var separatorType = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbarSeparator.cs");
         var appXaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
+        var appCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml.cs");
 
         Assert.Contains("ItemsSource=\"{Binding Items, ElementName=Root}\"", controlXaml, StringComparison.Ordinal);
         Assert.Contains("AvaloniaList<IClassicToolbarItem>", controlCode, StringComparison.Ordinal);
         Assert.Contains("interface IClassicToolbarItem", itemInterface, StringComparison.Ordinal);
         Assert.Contains("IClassicToolbarItem", buttonType, StringComparison.Ordinal);
         Assert.Contains("IClassicToolbarItem", separatorType, StringComparison.Ordinal);
-        Assert.Contains("<ct:ClassicToolbar.Items>", appXaml, StringComparison.Ordinal);
-        Assert.Contains("<ct:ClassicToolbarButton", appXaml, StringComparison.Ordinal);
+        Assert.Contains("<ct:ClassicToolbar x:Name=\"MainToolbar\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("MainToolbar.Items.Add(new ClassicToolbarButton", appCode, StringComparison.Ordinal);
+        Assert.Contains("MainToolbar.Items.Add(new ClassicToolbarSeparator", appCode, StringComparison.Ordinal);
     }
 
     [Fact]
