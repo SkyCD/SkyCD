@@ -147,8 +147,8 @@ public sealed class OsMetadataPluginTests
         }
 
         using var file = new TemporaryFile(".jpg");
-        Assert.Equal(0, LinuxXattrs.Set("user.xdg.tags", file.Path, Encoding.UTF8.GetBytes("sunset, beach")));
-        Assert.Equal(0, LinuxXattrs.Set("user.xdg.comment", file.Path, Encoding.UTF8.GetBytes("From Dolphin")));
+        Assert.Equal(0, LinuxXattrs.Set(file.Path, "user.xdg.tags", Encoding.UTF8.GetBytes("sunset, beach")));
+        Assert.Equal(0, LinuxXattrs.Set(file.Path, "user.xdg.comment", Encoding.UTF8.GetBytes("From Dolphin")));
 
         var result = await ReadAsync(file.Path);
 
@@ -168,8 +168,8 @@ public sealed class OsMetadataPluginTests
         using var file = new TemporaryFile(".jpg");
         var tags = BinaryPlistFixtures.ArrayOfStrings("Red\n6", "Work\n4");
         var comment = BinaryPlistFixtures.SingleString("Note from Finder");
-        Assert.Equal(0, MacXattrs.Set("com.apple.metadata:_kMDItemUserTags", file.Path, tags));
-        Assert.Equal(0, MacXattrs.Set("com.apple.metadata:kMDItemFinderComment", file.Path, comment));
+        Assert.Equal(0, MacXattrs.Set(file.Path, "com.apple.metadata:_kMDItemUserTags", tags));
+        Assert.Equal(0, MacXattrs.Set(file.Path, "com.apple.metadata:kMDItemFinderComment", comment));
 
         var result = await ReadAsync(file.Path);
 
@@ -223,23 +223,23 @@ public sealed class OsMetadataPluginTests
     [SupportedOSPlatform("linux")]
     private static class LinuxXattrs
     {
-        public static int Set(string name, string path, byte[] value) =>
-            SetXattr(name, path, value, (nuint)value.Length, 0);
+        public static int Set(string path, string name, byte[] value) =>
+            SetXattr(path, name, value, (nuint)value.Length, 0);
 
         [DllImport("libc", SetLastError = true, EntryPoint = "setxattr")]
-        private static extern int SetXattr([MarshalAs(UnmanagedType.LPUTF8Str)] string name,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string path, byte[] value, nuint size, int flags);
+        private static extern int SetXattr([MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string name, byte[] value, nuint size, int flags);
     }
 
     [SupportedOSPlatform("macos")]
     private static class MacXattrs
     {
-        public static int Set(string name, string path, byte[] value) =>
-            SetXattr(name, path, value, (nuint)value.Length, 0, 0);
+        public static int Set(string path, string name, byte[] value) =>
+            SetXattr(path, name, value, (nuint)value.Length, 0, 0);
 
         [DllImport("libc", SetLastError = true, EntryPoint = "setxattr")]
-        private static extern int SetXattr([MarshalAs(UnmanagedType.LPUTF8Str)] string name,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string path, byte[] value, nuint size, uint position,
+        private static extern int SetXattr([MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string name, byte[] value, nuint size, uint position,
             int options);
     }
 }
