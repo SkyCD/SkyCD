@@ -66,6 +66,48 @@ public sealed class AiDescriptionUiContractTests
     }
 
     [Fact]
+    public void AiDescriptionPlugin_NoLongerContributesToolsMenuItems()
+    {
+        var plugin = ReadRepoFile("Plugins", "SkyCD.Plugin.AiDescription", "AiDescriptionPlugin.cs");
+
+        Assert.DoesNotContain("Generate AI description for selected file", plugin, StringComparison.Ordinal);
+        Assert.DoesNotContain("AI description configuration", plugin, StringComparison.Ordinal);
+        Assert.DoesNotContain("IMenuPluginCapability", plugin, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OptionsWindow_ExposesAiScanExclusionSettings()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+
+        Assert.Contains("IsVisible=\"{Binding ShowAiDescriptionSection}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding AiScanMaxFileSizeMegabytes, UpdateSourceTrigger=PropertyChanged}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding AiScanExclusions}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding ResetAiScanExclusionsCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding AddAiScanExclusionCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding RemoveAiScanExclusionCommand}\"", xaml, StringComparison.Ordinal);
+
+        foreach (var language in new[] { "en", "lt" })
+        {
+            var ui = ReadRepoFile("src", "SkyCD.UI", "Translations", $"{language}-UI.yaml");
+            var text = ReadRepoFile("src", "SkyCD.UI", "Translations", $"{language}-Text.yaml");
+
+            foreach (var key in new[]
+                     {
+                         "ui.AiScanSettings:", "ui.AiMimeExclusions:", "ui.MimeType:",
+                         "ui.MaxAiScanFileSize:", "ui.AddMimeType:", "ui.RemoveMimeType:",
+                         "ui.ResetMimeTypesTooltip:", "ui.ResetMimeTypesTitle:",
+                         "ui.ResetMimeTypesConfirmation:", "ui.NewMimeType:"
+                     })
+            {
+                Assert.Contains(key, ui, StringComparison.Ordinal);
+            }
+
+            Assert.Contains("text.AllMimeTypesNeedValue:", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void LocalizationCatalogs_ContainAiDescriptionLabels()
     {
         foreach (var language in new[] { "en", "lt" })

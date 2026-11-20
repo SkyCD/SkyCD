@@ -244,4 +244,5 @@ public static class TextKeys
     public const string AiDescriptionBatchFailed = "core.text.AiDescriptionBatchFailed";
     public const string Scan = "core.text.Scan";
     public const string AllRulesNeedPattern = "core.text.AllRulesNeedPattern";
+    public const string AllMimeTypesNeedValue = "core.text.AllMimeTypesNeedValue";
 }

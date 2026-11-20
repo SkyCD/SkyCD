@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using System.Collections.Generic;
 using SkyCD.Plugin.AiDescription;
 using Xunit;
 
@@ -188,12 +187,12 @@ public sealed class AcpDescriptionTests
     }
 
     [Fact]
-    public async Task ExplicitCommandDefaultsToDisabledAndProviderFailureNeverReplacesAcceptedDescription()
+    public async Task GenerationRequiresConfigurationAndPropagatesProviderFailureWithoutSaving()
     {
         var directory = Path.Combine(Path.GetTempPath(), "skycd-description-options-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "settings.json");
         var calls = 0;
-        var host = new DescriptionHost();
         var plugin = new AiDescriptionPlugin(path, (_, _, _) =>
         {
             calls++;
@@ -201,14 +200,12 @@ public sealed class AcpDescriptionTests
         });
         try
         {
-            await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
+            await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.GenerateAsync(Context(), default));
             Assert.Equal(0, calls);
             var configured = new DescriptionAgentOptions { Enabled = true, Executable = Environment.ProcessPath!, Sources = new(Text: true) };
             await File.WriteAllTextAsync(path, Json(configured));
-            await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = host }));
+            await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.GenerateAsync(Context(), default));
             Assert.Equal(1, calls);
-            Assert.Equal("Earlier accepted description", host.Stored);
-            Assert.Contains(host.Notifications, text => text.Contains("unknown"));
         }
         finally { Directory.Delete(directory, true); }
     }
@@ -317,7 +314,7 @@ public sealed class AcpDescriptionTests
             var configurationPath = Path.Combine(directory.FullName, "settings.json");
             var plugin = new AiDescriptionPlugin(configurationPath, (_, _, _) =>
                 throw new InvalidOperationException("Options must never launch the agent."));
-            Assert.DoesNotContain(plugin.GetMenuContributions(), item => item.CommandId == "ai-description.registry");
+            Assert.DoesNotContain(typeof(AiDescriptionPlugin).GetInterfaces(), type => type == typeof(IMenuPluginCapability));
             Assert.NotNull(plugin.GetAgentSettings().RegistryStatus);
 
             var localAgents = directory.CreateSubdirectory("acp-agents");
@@ -476,11 +473,7 @@ public sealed class AcpDescriptionTests
             if (enabled)
                 await plugin.GenerateAsync(Context(), default);
             else
-            {
                 await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.GenerateAsync(Context(), default));
-                await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.ExecuteMenuCommandAsync(
-                    AiDescriptionPlugin.CommandId, new MenuCommandContext { HostApi = new DescriptionHost() }, default));
-            }
             Assert.Equal(enabled ? 1 : 0, calls);
         }
         finally
@@ -665,21 +658,6 @@ public sealed class AcpDescriptionTests
             OnRequest?.Invoke();
             if (FailDownload) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway));
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) });
-        }
-    }
-
-    private sealed class DescriptionHost : IDescriptionHostApi
-    {
-        public string Stored { get; private set; } = "Earlier accepted description";
-        public List<string> Notifications { get; } = [];
-        public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task NotifyAsync(string message, CancellationToken cancellationToken = default) { Notifications.Add(message); return Task.CompletedTask; }
-        public Task<DescriptionContext> GetDescriptionContextAsync(DescriptionContextOptions options, CancellationToken cancellationToken) =>
-            Task.FromResult(Context(new DescriptionContextPart("content-text", "text/plain", "Seeded context")));
-        public Task SaveGeneratedDescriptionAsync(DescriptionContext context, GeneratedDescription description, CancellationToken cancellationToken)
-        {
-            Stored = description.Text;
-            return Task.CompletedTask;
         }
     }
 }

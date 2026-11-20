@@ -24,15 +24,18 @@ public sealed class AiDescriptionService
     private readonly CatalogDocumentRepository repository;
     private readonly IMediaCacheStore store;
     private readonly IGeneratedDescriptionCapability? capability;
+    private readonly Func<AiScanPolicy>? scanPolicyFactory;
 
     public AiDescriptionService(
         CatalogDocumentRepository repository,
         IMediaCacheStore store,
-        IGeneratedDescriptionCapability? capability = null)
+        IGeneratedDescriptionCapability? capability = null,
+        Func<AiScanPolicy>? scanPolicyFactory = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.store = store ?? throw new ArgumentNullException(nameof(store));
         this.capability = capability;
+        this.scanPolicyFactory = scanPolicyFactory;
     }
 
     /// <summary>Reports the configured provider and the context an explicit pass would use.</summary>
@@ -121,6 +124,12 @@ public sealed class AiDescriptionService
         if (!provider.IsEnabled)
         {
             throw new AiDescriptionUnavailableException(provider.UnavailableReason ?? "generation is disabled");
+        }
+
+        var entry = repository.Get(entryId);
+        if (entry is not null && !(scanPolicyFactory?.Invoke() ?? AiScanPolicy.Unrestricted).ShouldScan(entry))
+        {
+            return new AiDescriptionGenerationOutcome(Read(entryId), Skipped: true);
         }
 
         var descriptions = new CatalogDescriptionService(repository, store);

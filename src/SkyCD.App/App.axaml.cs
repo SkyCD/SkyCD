@@ -49,6 +49,7 @@ public partial class App : Avalonia.Application
                 InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultScanExclusionRules(appServiceProvider.Resolve<RepositoryManager>());
+                InitializeDefaultAiScanExclusions(appServiceProvider.Resolve<RepositoryManager>());
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
                 ApplyMcpSettings();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
@@ -108,6 +109,13 @@ public partial class App : Avalonia.Application
         var scanRuleRepository =
             (ScanExclusionRuleDocumentRepository)repositoryManager.For<ScanExclusionRuleDocument>();
         scanRuleRepository.EnsureDefaultRules();
+    }
+
+    private static void InitializeDefaultAiScanExclusions(RepositoryManager repositoryManager)
+    {
+        var aiScanExclusionRepository =
+            (AiScanExclusionDocumentRepository)repositoryManager.For<AiScanExclusionDocument>();
+        aiScanExclusionRepository.EnsureDefaultEntries();
     }
 
     private static IContainer CreateAppServiceProvider()

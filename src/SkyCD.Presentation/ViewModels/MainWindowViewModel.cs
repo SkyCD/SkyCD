@@ -93,6 +93,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly VirtualCollectionService? collectionService;
     private readonly VirtualCollectionDocumentRepository? collectionRepository;
     private readonly Func<ScanTraversalOptions>? scanTraversalFactory;
+    private readonly Func<AiScanPolicy>? aiScanPolicyFactory;
     private readonly bool shouldSeedDefaultCatalog;
     private readonly List<CatalogDocument>? inMemoryCatalogEntries;
     private readonly IStringLocalizer propertyValueLocalizer;
@@ -189,11 +190,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    private bool CanGenerateDescriptions() =>
-        aiDescriptionService is not null && GetSelectedBrowserItems().Any(IsDescriptionTarget);
+    private bool CanGenerateDescriptions()
+    {
+        if (aiDescriptionService is null)
+        {
+            return false;
+        }
 
-    private static bool IsDescriptionTarget(CatalogDocument entry) =>
-        entry.Type != CatalogDocumentType.Folder;
+        var policy = aiScanPolicyFactory?.Invoke() ?? AiScanPolicy.Unrestricted;
+        return GetSelectedBrowserItems().Any(entry => IsDescriptionTarget(entry, policy));
+    }
+
+    private static bool IsDescriptionTarget(CatalogDocument entry, AiScanPolicy policy) =>
+        entry.Type != CatalogDocumentType.Folder && policy.ShouldScan(entry);
 
     /// <summary>
     /// Opens the explicit batch dialog for the current selection. Nothing is generated until the user
@@ -208,7 +217,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var entries = GetSelectedBrowserItems().Where(IsDescriptionTarget).ToArray();
+        var policy = aiScanPolicyFactory?.Invoke() ?? AiScanPolicy.Unrestricted;
+        var entries = GetSelectedBrowserItems().Where(entry => IsDescriptionTarget(entry, policy)).ToArray();
         if (entries.Length == 0)
         {
             StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionBatchNoTargets);
@@ -255,7 +265,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         aiDescriptionService = catalogRepository is null
             ? null
-            : new AiDescriptionService(catalogRepository, mediaCacheStore, descriptionExtensionManager.Capability);
+            : new AiDescriptionService(catalogRepository, mediaCacheStore, descriptionExtensionManager.Capability,
+                aiScanPolicyFactory);
     }
 
     private void RebuildMenuItems()
@@ -290,6 +301,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, entries => ProjectLocations(ProjectLending(entries)))
             : null;
         this.scanTraversalFactory = CreateScanTraversalFactory(this.catalogRepository);
+        this.aiScanPolicyFactory = CreateAiScanPolicyFactory(this.catalogRepository);
         this.propertyValueLocalizer =
             propertyValueLocalizer ?? throw new ArgumentNullException(nameof(propertyValueLocalizer));
         this.menuExtensionManager = menuExtensionManager ?? throw new ArgumentNullException(nameof(menuExtensionManager));
@@ -394,6 +406,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return () => ScanSettingsApplicator.BuildTraversalOptions(
             appOptions.GetOrCreateAppOptions(),
             scanRules.GetOrdered());
+    }
+
+    private static Func<AiScanPolicy>? CreateAiScanPolicyFactory(CatalogDocumentRepository catalog)
+    {
+        var appOptions = OpenSiblingRepository<AppOptionsDocument, AppOptionsDocumentRepository>(catalog);
+        var exclusions = OpenSiblingRepository<AiScanExclusionDocument, AiScanExclusionDocumentRepository>(catalog);
+        if (appOptions is null || exclusions is null)
+        {
+            return null;
+        }
+
+        return () => new AiScanPolicy(
+            exclusions.GetOrdered().Select(static entry => entry.MimeType),
+            appOptions.GetOrCreateAppOptions().AiScanMaxFileSizeBytes);
     }
 
     private static TRepository? OpenSiblingRepository<TDocument, TRepository>(CatalogDocumentRepository catalog)
@@ -3387,8 +3413,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             };
 
             var result = await menuExtensionManager.ExecuteAsync(commandId, context,
-                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan
-                    : commandId == "ai-description.generate" ? TimeSpan.FromMinutes(6) : TimeSpan.FromSeconds(30), cancellation.Token);
+                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), cancellation.Token);
 
             if (result.TimedOut)
             {
