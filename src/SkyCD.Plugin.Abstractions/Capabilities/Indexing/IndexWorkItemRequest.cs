@@ -11,11 +11,14 @@ public sealed class IndexWorkItemRequest
     /// <summary>Gets the source file name, including its extension.</summary>
     public required string FileName { get; init; }
 
-    /// <summary>Gets the optional source file path when the host can provide one.</summary>
-    public string? SourcePath { get; init; }
-
     /// <summary>Gets the source length in bytes.</summary>
     public long SizeBytes { get; init; }
+
+    /// <summary>
+    /// Gets the optional source path, which lets providers resolve companion files stored next to the
+    /// source, such as a disk image's backing file.
+    /// </summary>
+    public string? SourcePath { get; init; }
 
     /// <summary>Gets the factory that opens a fresh readable stream for the source.</summary>
     public required Func<CancellationToken, Task<Stream>> OpenSource { get; init; }
