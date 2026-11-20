@@ -10,6 +10,10 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.Tar;
 
+/// <summary>
+/// Read-only TAR archive plugin. Lists archive entries as a catalog hierarchy. Archive entries are offered to
+/// metadata providers by the separate <c>skycd.tar-metadata</c> plugin.
+/// </summary>
 public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
     public FileFormatDescriptor SupportedFormat =>
@@ -43,6 +47,7 @@ public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 
             while (reader.GetNextEntry(copyData: false) is { } entry)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var normalizedPath = (entry.Name ?? string.Empty).Replace('\\', '/').TrimEnd('/');
                 if (string.IsNullOrWhiteSpace(normalizedPath))
                 {
@@ -107,6 +112,10 @@ public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
                 Success = true,
                 Payload = ordered
             });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
