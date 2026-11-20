@@ -3,6 +3,7 @@
     <Folder Name="/Plugins/functional/">
         <Project Path="Plugins/SkyCD.Plugin.AbiWord/SkyCD.Plugin.AbiWord.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Fonts/SkyCD.Plugin.Fonts.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.FileMetadata/SkyCD.Plugin.FileMetadata.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Access/SkyCD.Plugin.Access.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.AiDescription/SkyCD.Plugin.AiDescription.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.AiProvider/SkyCD.Plugin.AiProvider.csproj"/>
@@ -15,6 +16,7 @@
         <Project Path="Plugins/SkyCD.Plugin.EBook/SkyCD.Plugin.EBook.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.AudioCd/SkyCD.Plugin.AudioCd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Xmp/SkyCD.Plugin.Xmp.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.MotionDetector/SkyCD.Plugin.MotionDetector.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Executable/SkyCD.Plugin.Executable.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Pdf/SkyCD.Plugin.Pdf.csproj"/>
@@ -109,6 +111,7 @@
     <Folder Name="/tests/">
         <Project Path="tests/SkyCD.Plugin.AbiWord.Tests/SkyCD.Plugin.AbiWord.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Fonts.Tests/SkyCD.Plugin.Fonts.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.FileMetadata.Tests/SkyCD.Plugin.FileMetadata.Tests.csproj"/>
         <Project Path="tests/SkyCD.Acp.FakeAgent/SkyCD.Acp.FakeAgent.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Accounts.Tests/SkyCD.Plugin.Accounts.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Video.Tests/SkyCD.Plugin.Video.Tests.csproj"/>
@@ -117,6 +120,7 @@
         <Project Path="tests/SkyCD.Plugin.EBook.Tests/SkyCD.Plugin.EBook.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.AudioCd.Tests/SkyCD.Plugin.AudioCd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Image.Tests/SkyCD.Plugin.Image.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Xmp.Tests/SkyCD.Plugin.Xmp.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.AiProvider.Tests/SkyCD.Plugin.AiProvider.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Text.Tests/SkyCD.Plugin.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.MotionDetector.Tests/SkyCD.Plugin.MotionDetector.Tests.csproj"/>

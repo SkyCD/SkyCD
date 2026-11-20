@@ -248,7 +248,7 @@ public sealed class ImagePluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsBothCapabilities_FromMetadataOnly()
+    public void AssemblyDiscovery_FindsEveryCapability_FromMetadataOnly()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(ImageMetadataPlugin).Assembly);
 
@@ -257,7 +257,8 @@ public sealed class ImagePluginIntegrationTests : IDisposable
         Assert.Equal("Image Preview and Metadata", plugin.Name);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
-        Assert.Equal(2, plugin.Capabilities.Count);
+        Assert.Contains(plugin.Capabilities, capability => capability is ContainerTagsPlugin);
+        Assert.Equal(3, plugin.Capabilities.Count);
     }
 
     [Fact]

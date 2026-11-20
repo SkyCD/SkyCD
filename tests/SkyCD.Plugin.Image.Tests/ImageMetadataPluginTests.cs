@@ -18,7 +18,9 @@ public class ImageMetadataPluginTests
         Assert.Equal(ImageSchema.Extensions, descriptor.Extensions);
         Assert.Equal(ImageSchema.ContentTypes, descriptor.ContentTypes);
         Assert.Equal("skycd.image.metadata", descriptor.Schema.Id);
-        Assert.Equal(1, descriptor.Schema.Version);
+        Assert.Equal(2, descriptor.Schema.Version);
+        Assert.Equal(MediaMetadataFieldRole.Tags,
+            descriptor.Schema.Fields.Single(field => field.Key == ImageSchema.Tags).Role);
         Assert.Contains(descriptor.Extensions, extension => extension == ".jpg");
         Assert.Contains(descriptor.Extensions, extension => extension == ".png");
         Assert.Contains(descriptor.Extensions, extension => extension == ".webp");
@@ -103,6 +105,105 @@ public class ImageMetadataPluginTests
         var result = await ExtractAsync(ImageFixtures.Jpeg(16, 16), ".jpg", "image/jpeg");
 
         Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.CapturedAt);
+    }
+
+    [Fact]
+    public async Task JpegXmp_ProvidesTagsCommentAndRating()
+    {
+        var image = ImageFixtures.WithXmp(
+            ImageFixtures.Jpeg(24, 16),
+            ImageFixtures.Xmp(
+                keywords: ["sunset", "beach"],
+                description: "Golden hour over the bay",
+                rating: 4));
+
+        var result = await ExtractAsync(image, ".jpg", "image/jpeg");
+
+        Assert.Equal("sunset; beach", Text(result, ImageSchema.Tags));
+        Assert.Equal("Golden hour over the bay", Text(result, ImageSchema.Comment));
+        Assert.Equal(4L, Integer(result, ImageSchema.Rating));
+        Assert.Equal(24L, Integer(result, ImageSchema.Width));
+    }
+
+    [Fact]
+    public async Task JpegPhotoshopIptc_ProvidesKeywordsAndCaption()
+    {
+        var image = ImageFixtures.WithIptc(ImageFixtures.Jpeg(8, 8),
+            (25, "alpha"), (25, "beta"), (120, "Caption written by the IPTC editor"));
+
+        var result = await ExtractAsync(image, ".jpg", "image/jpeg");
+
+        Assert.Equal("alpha; beta", Text(result, ImageSchema.Tags));
+        Assert.Equal("Caption written by the IPTC editor", Text(result, ImageSchema.Comment));
+    }
+
+    [Fact]
+    public async Task JpegCommentSegment_IsUsedWhenThePacketHasNoCaption()
+    {
+        var image = ImageFixtures.WithComment(ImageFixtures.Jpeg(8, 8), "Legacy comment");
+
+        var result = await ExtractAsync(image, ".jpg", "image/jpeg");
+
+        Assert.Equal("Legacy comment", Text(result, ImageSchema.Comment));
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Tags);
+    }
+
+    [Fact]
+    public async Task JpegWithoutPortableTags_OmitsTheTagFields()
+    {
+        var result = await ExtractAsync(ImageFixtures.Jpeg(8, 8), ".jpg", "image/jpeg");
+
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Tags);
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Comment);
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Rating);
+    }
+
+    [Fact]
+    public async Task PngTextChunks_ProvideKeywordsAndComment()
+    {
+        var image = ImageFixtures.WithPngText(ImageFixtures.OpaquePng(8, 8), "Keywords", "cats, dogs");
+        image = ImageFixtures.WithPngText(image, "Comment", "Two pets on a sofa");
+
+        var result = await ExtractAsync(image, ".png", "image/png");
+
+        Assert.Equal("cats; dogs", Text(result, ImageSchema.Tags));
+        Assert.Equal("Two pets on a sofa", Text(result, ImageSchema.Comment));
+        Assert.Equal(8L, Integer(result, ImageSchema.Width));
+    }
+
+    [Fact]
+    public async Task PngXmpChunk_ProvidesRating()
+    {
+        var image = ImageFixtures.WithPngXmp(ImageFixtures.TransparentPng(8, 8),
+            ImageFixtures.Xmp(keywords: ["mountain"], rating: 5));
+
+        var result = await ExtractAsync(image, ".png", "image/png");
+
+        Assert.Equal("mountain", Text(result, ImageSchema.Tags));
+        Assert.Equal(5L, Integer(result, ImageSchema.Rating));
+    }
+
+    [Fact]
+    public async Task WebpXmp_ProvidesTagsAndComment()
+    {
+        var image = ImageFixtures.WithWebpXmp(ImageFixtures.Webp(16, 16),
+            ImageFixtures.Xmp(keywords: ["archive"], description: "Stored losslessly"));
+
+        var result = await ExtractAsync(image, ".webp", "image/webp");
+
+        Assert.Equal("archive", Text(result, ImageSchema.Tags));
+        Assert.Equal("Stored losslessly", Text(result, ImageSchema.Comment));
+        Assert.Equal("webp", Text(result, ImageSchema.Format));
+    }
+
+    [Fact]
+    public async Task GifCarriesNoPortableTags()
+    {
+        var result = await ExtractAsync(ImageFixtures.AnimatedGif(4, 4, frameCount: 2), ".gif", "image/gif");
+
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Tags);
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Comment);
+        Assert.DoesNotContain(result.Values, field => field.Key == ImageSchema.Rating);
     }
 
     [Fact]

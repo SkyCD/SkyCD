@@ -121,6 +121,62 @@ public sealed class MediaCapabilityTests
         }
     }
 
+    [Fact]
+    public async Task LocalMetadataProvider_IsSkippedWithoutAPathInsteadOfFailing()
+    {
+        var provider = new FakeLocalMetadataCapability();
+        var manager = new MediaExtensionManager([new MediaProvider("test", "1", provider)]);
+
+        Assert.True(manager.HasMetadataProviders);
+        var results = await manager.ProcessAsync(new MediaItem(".fake", null, 3), Open,
+            selection: MediaProviderSelection.StandardMetadata);
+
+        Assert.Empty(results);
+        Assert.Equal(0, provider.Calls);
+    }
+
+    [Fact]
+    public async Task LocalMetadataProvider_ReceivesTheValidatedContext()
+    {
+        var provider = new FakeLocalMetadataCapability();
+        var manager = new MediaExtensionManager([new MediaProvider("test", "1", provider)]);
+        var path = Path.Combine(Path.GetTempPath(), "evidence.bin");
+
+        var results = await manager.ProcessAsync(new MediaItem(".fake", "application/fake", 3), Open,
+            selection: MediaProviderSelection.StandardMetadata, sourcePath: path);
+
+        var result = Assert.Single(results);
+        Assert.False(result.Failed);
+        Assert.Equal(path, Assert.Single(result.Metadata!.Values).Text);
+        Assert.Equal(path, provider.Context!.Path);
+        Assert.Equal(".fake", provider.Context.Extension);
+        Assert.Equal("application/fake", provider.Context.ContentType);
+        Assert.Equal(3, provider.Context.Length);
+    }
+
+    [Fact]
+    public async Task LocalMetadataProvider_IsIsolatedWhenItBreaksTheSchema()
+    {
+        var manager = new MediaExtensionManager(
+            [new MediaProvider("test", "1", new FakeLocalMetadataCapability { InvalidKey = true })],
+            new MediaExecutionLimits());
+
+        var result = Assert.Single(await manager.ProcessAsync(new MediaItem(".fake", null, 3), Open,
+            selection: MediaProviderSelection.StandardMetadata, sourcePath: "somewhere.bin"));
+
+        Assert.True(result.Failed);
+    }
+
+    [Fact]
+    public void LocalMetadataProvider_IsResolvedForStandardMetadataOnly()
+    {
+        var manager = new MediaExtensionManager([new MediaProvider("test", "1", new FakeLocalMetadataCapability())]);
+        var item = new MediaItem(".fake", null, 3);
+
+        Assert.Single(manager.ResolveProviders(item, MediaProviderSelection.StandardMetadata));
+        Assert.Empty(manager.ResolveProviders(item, MediaProviderSelection.OptInMetadata));
+    }
+
     private sealed class BlockedMediaCapability(TaskCompletionSource entered, TaskCompletionSource release) : IMediaMetadataCapability
     {
         public MediaDescriptor Descriptor => new([".fake"], [], new MediaMetadataSchema("blocked", 1, []));
@@ -163,6 +219,26 @@ public sealed class FakeMediaCapability : IMediaMetadataCapability
         var bytes = await source.ReadAsync(0, 3, cancellationToken);
         progress?.Report(new MediaProgress(1));
         return new MediaExtractionResult([new("length", MediaMetadataType.Integer, Integer: bytes.Length)]);
+    }
+}
+
+public sealed class FakeLocalMetadataCapability : ILocalMediaMetadataCapability
+{
+    public bool InvalidKey { get; init; }
+    public int Calls { get; private set; }
+    public LocalMediaContext? Context { get; private set; }
+
+    public MediaDescriptor Descriptor => new(["*"], [],
+        new MediaMetadataSchema("local-test", 1, [new("evidence", MediaMetadataType.Text)]));
+
+    public Task<MediaExtractionResult> ExtractAsync(LocalMediaContext source,
+        IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+    {
+        Calls++;
+        Context = source;
+        var key = InvalidKey ? "unknown" : "evidence";
+        return Task.FromResult(new MediaExtractionResult(
+            [new MediaMetadataValue(key, MediaMetadataType.Text, Text: source.Path)]));
     }
 }
 
