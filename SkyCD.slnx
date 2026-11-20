@@ -16,6 +16,7 @@
         <Project Path="Plugins/SkyCD.Plugin.AudioCd/SkyCD.Plugin.AudioCd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Image/SkyCD.Plugin.Image.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.MotionDetector/SkyCD.Plugin.MotionDetector.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Executable/SkyCD.Plugin.Executable.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Pdf/SkyCD.Plugin.Pdf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.WordPerfect/SkyCD.Plugin.WordPerfect.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Works/SkyCD.Plugin.Works.csproj"/>
@@ -119,6 +120,7 @@
         <Project Path="tests/SkyCD.Plugin.AiProvider.Tests/SkyCD.Plugin.AiProvider.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Text.Tests/SkyCD.Plugin.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.MotionDetector.Tests/SkyCD.Plugin.MotionDetector.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Executable.Tests/SkyCD.Plugin.Executable.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Pdf.Tests/SkyCD.Plugin.Pdf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.WordPerfect.Tests/SkyCD.Plugin.WordPerfect.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Works.Tests/SkyCD.Plugin.Works.Tests.csproj"/>
