@@ -35,6 +35,12 @@ public sealed class MediaCacheRecord
 
     public int SchemaVersion { get; set; }
 
+    /// <summary>
+    /// Digest of the persisted plugin settings the result was produced under; empty when the plugin has none.
+    /// Together with the provider identity it is what makes a changed option invalidate this result.
+    /// </summary>
+    public string SettingsRevision { get; set; } = string.Empty;
+
     /// <summary>Descriptor priority reported by the provider, used to order competing values.</summary>
     public int Priority { get; set; }
 
@@ -94,7 +100,11 @@ public sealed class MediaCacheRecord
     }
 
     /// <summary>Provider identity within one fingerprint; a change means previously captured data is stale.</summary>
-    public string CreateIdentityKey() => CreateIdentityKey(PluginId, PluginVersion, Capability, SchemaId, SchemaVersion);
+    public string CreateIdentityKey()
+    {
+        var key = CreateIdentityKey(PluginId, PluginVersion, Capability, SchemaId, SchemaVersion);
+        return string.IsNullOrEmpty(SettingsRevision) ? key : key + '|' + SettingsRevision;
+    }
 
     public static string CreateIdentityKey(
         string pluginId,

@@ -287,8 +287,9 @@ public sealed class MediaExtractionScheduler
             var provider = ResolveIdentity(result, identities);
             var schemaId = result.Schema?.Id ?? provider?.SchemaId;
             var schemaVersion = result.Schema?.Version ?? provider?.SchemaVersion ?? 0;
-            var identityKey = MediaCacheRecord.CreateIdentityKey(
-                result.PluginId, result.PluginVersion, result.Capability, schemaId, schemaVersion);
+            var identityKey = IdentityKey(
+                result.PluginId, result.PluginVersion, result.Capability, schemaId, schemaVersion,
+                provider?.SettingsRevision);
 
             var record = new MediaCacheRecord
             {
@@ -306,6 +307,7 @@ public sealed class MediaExtractionScheduler
                 Capability = result.Capability,
                 SchemaId = schemaId,
                 SchemaVersion = schemaVersion,
+                SettingsRevision = provider?.SettingsRevision ?? string.Empty,
                 Priority = priorityByIdentity.TryGetValue(identityKey, out var priority) ? priority : 0,
                 CapturedAtUtc = now,
                 LastUsedAtUtc = now,
@@ -426,8 +428,20 @@ public sealed class MediaExtractionScheduler
         return superseded;
     }
 
-    private static string IdentityKey(MediaProviderIdentity identity) => MediaCacheRecord.CreateIdentityKey(
-        identity.PluginId, identity.PluginVersion, identity.Capability, identity.SchemaId, identity.SchemaVersion);
+    private static string IdentityKey(MediaProviderIdentity identity) => IdentityKey(
+        identity.PluginId, identity.PluginVersion, identity.Capability, identity.SchemaId,
+        identity.SchemaVersion, identity.SettingsRevision);
+
+    /// <summary>
+    /// Stored identity of a result: provider, schema and — when the plugin has persisted settings — the
+    /// settings digest the host used, so a changed option re-extracts instead of silently reusing stale output.
+    /// </summary>
+    private static string IdentityKey(string pluginId, string pluginVersion, string capability,
+        string? schemaId, int schemaVersion, string? settingsRevision)
+    {
+        var key = MediaCacheRecord.CreateIdentityKey(pluginId, pluginVersion, capability, schemaId, schemaVersion);
+        return string.IsNullOrEmpty(settingsRevision) ? key : key + '|' + settingsRevision;
+    }
 
     private static MediaProviderIdentity? ResolveIdentity(
         MediaProviderResult result,

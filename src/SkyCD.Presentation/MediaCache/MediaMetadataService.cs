@@ -32,7 +32,11 @@ public sealed class MediaMetadataService
         this.workItems = workItems;
     }
 
-    public bool CanCollect => manager.HasMetadataProviders;
+    /// <summary>
+    /// True when an indexing pass would store anything: extracted metadata or a preview a provider marks as
+    /// index-time, such as cover art.
+    /// </summary>
+    public bool CanCollect => manager.HasMetadataProviders || manager.HasIndexingPreviewProviders;
 
     public async Task<MediaMetadataOutcome> CollectAsync(
         CatalogDocument entry,

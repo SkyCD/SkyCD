@@ -508,7 +508,7 @@ public partial class BrowserItemsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
-            name.Bind(TextBlock.TextProperty, new Binding("Name"));
+            name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
             panel.Children.Add(name);
 
             return panel;
@@ -554,7 +554,7 @@ public partial class BrowserItemsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
-            name.Bind(TextBlock.TextProperty, new Binding("Name"));
+            name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
             panel.Children.Add(name);
 
             return panel;
@@ -585,7 +585,7 @@ public partial class BrowserItemsView : UserControl
                 Margin = new Thickness(0, 4, 0, 0),
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            name.Bind(TextBlock.TextProperty, new Binding("Name"));
+            name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
             panel.Children.Add(name);
 
             return panel;
@@ -620,7 +620,7 @@ public partial class BrowserItemsView : UserControl
                 FontSize = 13,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
-            name.Bind(TextBlock.TextProperty, new Binding("Name"));
+            name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
             details.Children.Add(name);
 
             var type = new TextBlock

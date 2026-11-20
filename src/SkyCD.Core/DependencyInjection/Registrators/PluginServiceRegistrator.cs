@@ -46,7 +46,8 @@ public sealed class PluginServiceRegistrator
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 
-    public static void RegisterServices(IRegistrator registrator, IReadOnlyList<DiscoveredPlugin> plugins, OAuthService oauthService)
+    public static void RegisterServices(IRegistrator registrator, IReadOnlyList<DiscoveredPlugin> plugins, OAuthService oauthService,
+        PluginConfigurationStore? configurationStore = null)
     {
         foreach (var plugin in plugins.Where(static plugin => plugin is not null))
         {
@@ -70,7 +71,8 @@ public sealed class PluginServiceRegistrator
         discoveredPlugins.RegisterPluginServices(registrator);
 
         var mediaManager = new MediaExtensionManager(plugins.SelectMany(plugin =>
-            plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability))));
+            plugin.Capabilities.Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability))),
+            settingsSource: configurationStore is null ? null : configurationStore.GetSettings);
         registrator.RegisterInstance(mediaManager, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.RegisterInstance(new IndexWorkItemSequence(mediaManager, plugins.SelectMany(plugin =>

@@ -43,7 +43,9 @@ public static class ServiceProvider
         var plugins = pluginManager.Plugins.ToList();
 
         var child = MainContainer.CreateChild();
-        PluginServiceRegistrator.RegisterServices(child, plugins, MainContainer.Resolve<SkyCD.Core.OAuth.OAuthService>());
+        PluginServiceRegistrator.RegisterServices(child, plugins,
+            MainContainer.Resolve<SkyCD.Core.OAuth.OAuthService>(),
+            MainContainer.Resolve<SkyCD.Plugin.Runtime.Configuration.PluginConfigurationStore>());
 
         return child;
     }

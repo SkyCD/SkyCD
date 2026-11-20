@@ -168,6 +168,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore, workItems: indexWorkItems);
         this.volumeMetadataProvider = volumeMetadataProvider;
+        InvalidateMediaCatalogEffects();
         if (backgroundMediaSync is not null)
         {
             OnIsBackgroundMediaSyncEnabledChanged(IsBackgroundMediaSyncEnabled);
@@ -696,7 +697,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [
         new()
         {
-            Header = LocalizationService.Current.Get(TextKeys.Name2), ValuePath = "Name",
+            Header = LocalizationService.Current.Get(TextKeys.Name2), ValuePath = nameof(CatalogDocument.DisplayName),
             Width = new Avalonia.Controls.GridLength(500, Avalonia.Controls.GridUnitType.Pixel)
         },
         new()
@@ -1587,12 +1588,24 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         return default!;
                     }
 
+                    IReadOnlyList<MediaCacheRecord> stagedRecords =
+                        batchId is null ? [] : mediaCacheStore.GetStagedRecords(batchId);
                     result = publish();
                     if (batchId is not null)
                     {
                         try
                         {
                             mediaCacheStore.PublishBatch(batchId);
+                            InvalidateMediaCatalogEffects();
+                            try
+                            {
+                                ApplyPluginTags(stagedRecords, prepared);
+                                RefreshBrowserItemsForSelection();
+                            }
+                            catch (Exception exception)
+                            {
+                                progress?.ReportWarning(exception.Message);
+                            }
                         }
                         catch (Exception exception)
                         {
@@ -3043,6 +3056,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         items = ProjectLocations(ProjectLending(items)).Where(MatchesLendingFilter).Where(MatchesLocationFilter).ToArray();
+        ApplyPreferredNames(items);
 
         if (items.Length == 0)
         {
@@ -3057,12 +3071,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var refreshedItems = NormalizeSortMode(CurrentSortMode) switch
         {
             "Type" => items.OrderBy(static item => item.DisplayType)
-                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
             "Size" => items.OrderBy(static item => item.Size)
-                .ThenBy(static item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            _ => items.OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray()
+            _ => items.OrderBy(static item => item.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray()
         };
 
         BrowserItems.Clear();
