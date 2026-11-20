@@ -68,6 +68,7 @@
 *.zip       binary
 *.7z        binary
 *.rar       binary
+*.vdi       binary
 *.ico       binary
 *.png       binary
 *.jpg       binary
