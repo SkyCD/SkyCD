@@ -40,3 +40,91 @@ requires a separate process. Plugins must honor cancellation and avoid retaining
 The host stores results durably and keeps them available offline; plugins hold no state of their
 own. See `docs/architecture/media-cache-lifecycle.md` for how a descriptor's schema id and version
 key the stored result, and why bumping the schema version is what invalidates cached data.
+
+## AbiWord document metadata
+
+`SkyCD.Plugin.AbiWord` implements `IMediaMetadataCapability` and is discovered from assembly
+metadata, without `plugin.json`. Enable it through the normal plugin pipeline. During indexing,
+its results use the existing media scheduler/cache and remain available offline with the item.
+It does not provide thumbnails, render documents, extract body text, or require AbiWord installed.
+
+### Supported input and fields
+
+- `.abw`: native AbiWord XML, with either the AWML namespace or no namespace for older documents.
+- `.zabw`: native single-member gzip-compressed AbiWord XML. Compression is detected from bytes,
+  so plain XML or gzip under either supported extension works.
+- MIME `application/x-abiword` also selects the plugin, independently of the filename.
+- `.abw.gz` is not selected by extension alone: the host currently supplies only `.gz`.
+  Such a source works when its MIME type is supplied; rename to `.zabw` for filename-only indexing.
+  Generic `.gz`, ZIP archives, and other word-processor formats are not claimed.
+
+Schema `skycd.abiword.metadata`, version 1, contains text fields:
+
+| Source | Field |
+| --- | --- |
+| Recognized container | `Container` (`abw`, also for compressed input) |
+| Root `version` attribute | `FormatVersion` |
+| `dc.title`, `dc.creator`, `dc.subject`, `dc.description` | `Title`, `Author`, `Subject`, `Description` |
+| `dc.publisher`, `dc.contributor`, `dc.rights` | `Publisher`, `Contributor`, `Rights` |
+| `dc.type`, `dc.format`, `dc.source`, `dc.language` | `Type`, `Format`, `Source`, `Language` |
+| `dc.relation`, `dc.identifier`, `dc.coverage` | `Relation`, `Identifier`, `Coverage` |
+| `dc.date`, `abiword.date_last_changed` | `Date`, `LastChanged` |
+| `abiword.keywords`, `abiword.generator` | `Keywords`, `Generator` |
+
+Only direct `abiword/metadata/m` entries in the document namespace are read. Unknown/custom
+keys and body content are ignored; absent/blank values are omitted. Values are trimmed;
+repeated keys keep the last nonblank value. Dates remain text because AbiWord can store
+ctime-style local dates without a timezone. `dc.date` is a lifecycle date, not necessarily
+creation time; missing/stale dates are not replaced with filesystem timestamps.
+
+### Safety and limitations
+
+The plugin works on .NET 10 on Windows, Linux and macOS without native dependencies. XML
+encoding declarations/BOMs are respected. Standard AbiWord DOCTYPE declarations are ignored,
+not resolved; external resources are never loaded and custom entities are not expanded.
+The entire XML document is parsed before metadata is published. Invalid XML, damaged gzip,
+unsupported containers, nested metadata markup, or exceeded limits fail only that provider
+through the host's sanitized failure boundary. Cancellation propagates without publishing.
+
+Defaults: 16 MiB source bytes, 32 MiB decoded bytes/XML characters, 64 XML nesting levels,
+and 4,096 characters per metadata field. `AbiWordPluginOptions` configures the byte/field
+limits; host source/output/time limits still apply. Gzip checksum validation is provided by
+`GZipStream`, with an additional size-footer check for truncated trailers. Concatenated gzip
+members and trailing data are not supported. No partial metadata is published on failure.
+
+Native ABW password encryption was not established in the inspected upstream format. No
+password is requested, guessed, or stored and decryption is not supported. Encrypted or
+externally wrapped non-XML input produces an unsupported/read failure, not a false claim
+that every damaged file requires a password. AbiWord's `styles="locked"` is a style lock,
+not encryption, and does not prevent metadata reading.
+
+### Dependency evaluation (2026-11-20)
+
+The implementation uses .NET 10 `System.Xml.XmlReader` and `System.IO.Compression.GZipStream`
+(MIT-licensed .NET runtime), plus the existing plugin abstraction project. `dotnet list
+Plugins/SkyCD.Plugin.AbiWord/SkyCD.Plugin.AbiWord.csproj package --include-transitive` reports
+no NuGet dependencies. No additional direct/transitive licenses, whitelist entries or policy
+changes are needed; the blocked-license, unknown-license and explicit-whitelist rules in
+`docs/legal/dependency-license-policy.json` remain unchanged.
+
+Alternatives considered before adoption:
+
+- **SharpZipLib 1.4.2**: MIT, dependency-free net6.0 assets compatible with .NET 10. It supplies
+  gzip but no AbiWord semantics; its latest release is from 2023 and recent maintenance was
+  not established. It adds no useful capability over the runtime here.
+- **Aspose.Words 26.11.0**: maintained releases and explicit net10.0 assets, but the published
+  format list does not establish ABW support. Its proprietary EULA is not policy-approved.
+- **GroupDocs.Parser 26.10.0**: current release with a .NET 10 package variant, but its format
+  matrix does not establish ABW metadata support. Its proprietary EULA is not policy-approved.
+- Neither EULA package is whitelisted; their transitive graphs were not certified after
+  direct-license/functional rejection. AbiWord itself is GPL-2.0-or-later and is not linked,
+  bundled, or copied into this implementation; upstream files are format references only.
+
+References: [AbiWord formats](https://github.com/AbiWord/abiword/blob/6940426ea7fd3810f1aa5477fa93c2d4278dea7d/abiword.1#L72-L73),
+[metadata keys](https://github.com/AbiWord/abiword/blob/6940426ea7fd3810f1aa5477fa93c2d4278dea7d/src/text/ptbl/xp/pd_Document.h#L95-L165),
+[metadata writer](https://github.com/AbiWord/abiword/blob/6940426ea7fd3810f1aa5477fa93c2d4278dea7d/src/wp/impexp/xp/ie_exp_AbiWord_1.cpp#L1173-L1213),
+[upstream document](https://github.com/AbiWord/abiword/blob/6940426ea7fd3810f1aa5477fa93c2d4278dea7d/test/wp/table.abw#L1-L19),
+[.NET runtime license](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT),
+[SharpZipLib](https://www.nuget.org/packages/SharpZipLib),
+[Aspose.Words](https://www.nuget.org/packages/Aspose.Words/),
+[GroupDocs formats](https://docs.groupdocs.com/parser/net/supported-document-formats/).

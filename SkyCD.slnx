@@ -1,6 +1,7 @@
 <Solution>
     <Folder Name="/Plugins/"/>
     <Folder Name="/Plugins/functional/">
+        <Project Path="Plugins/SkyCD.Plugin.AbiWord/SkyCD.Plugin.AbiWord.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Access/SkyCD.Plugin.Access.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.AiDescription/SkyCD.Plugin.AiDescription.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Accounts/SkyCD.Plugin.Accounts.csproj"/>
@@ -82,6 +83,7 @@
         <Project Path="src/SkyCD.Presentation/SkyCD.Presentation.csproj"/>
     </Folder>
     <Folder Name="/tests/">
+        <Project Path="tests/SkyCD.Plugin.AbiWord.Tests/SkyCD.Plugin.AbiWord.Tests.csproj"/>
         <Project Path="tests/SkyCD.Acp.FakeAgent/SkyCD.Acp.FakeAgent.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Accounts.Tests/SkyCD.Plugin.Accounts.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Video.Tests/SkyCD.Plugin.Video.Tests.csproj"/>
