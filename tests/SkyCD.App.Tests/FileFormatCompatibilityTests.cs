@@ -77,6 +77,26 @@ public sealed class FileFormatCompatibilityTests
         Assert.Equal(entries.Select(entry => entry.Size), roundTrip.Select(entry => entry.Size));
     }
 
+    [Fact]
+    public async Task CloneCdImage_ResolvesCompanionImageAndImportsCatalog()
+    {
+        var manager = new FileFormatManager(CreateProviders());
+        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.ccd");
+        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(Path.ChangeExtension(path, ".img")));
+        Assert.Equal("skycd-ccd", manager.ResolveFormatId(null, path, forWrite: false));
+
+        var service = new CatalogLoadService(manager);
+        await service.LoadAsync(path, (payload, _) =>
+        {
+            var entries = CatalogImportTests.Extract(payload!);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
+            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
+            CatalogImportTests.Persist(entries);
+            return entries.Count;
+        }, new Progress<int>());
+    }
+
     [Theory]
     [InlineData("skycd-html", "catalog.html")]
     [InlineData("skycd-md", "catalog.md")]
@@ -165,6 +185,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Nrg.NrgImageIndexPlugin(),
         new SkyCD.Plugin.Qcow2.Qcow2ImageIndexPlugin(),
         new SkyCD.Plugin.Daa.DaaImageIndexPlugin(),
+        new SkyCD.Plugin.Ccd.CcdImageIndexPlugin(),
         new SkyCD.Plugin.Vhd.VhdImageIndexPlugin(),
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
         new SkyCD.Plugin.Lha.LhaArchiveIndexPlugin(),

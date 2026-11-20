@@ -38,6 +38,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Nrg/SkyCD.Plugin.Nrg.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Qcow2/SkyCD.Plugin.Qcow2.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Daa/SkyCD.Plugin.Daa.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Ccd/SkyCD.Plugin.Ccd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vhd/SkyCD.Plugin.Vhd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Arj/SkyCD.Plugin.Arj.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Lha/SkyCD.Plugin.Lha.csproj"/>
@@ -135,6 +136,7 @@
         <Project Path="tests/SkyCD.Plugin.Nrg.Tests/SkyCD.Plugin.Nrg.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Qcow2.Tests/SkyCD.Plugin.Qcow2.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Daa.Tests/SkyCD.Plugin.Daa.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Ccd.Tests/SkyCD.Plugin.Ccd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Vhd.Tests/SkyCD.Plugin.Vhd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Json.Tests/SkyCD.Plugin.Json.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Legacy.Ascd.Tests/SkyCD.Plugin.Legacy.Ascd.Tests.csproj"/>
