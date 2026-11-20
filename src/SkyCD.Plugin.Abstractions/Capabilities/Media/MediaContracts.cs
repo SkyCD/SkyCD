@@ -50,8 +50,12 @@ public sealed record MediaMetadataSchema(string Id, int Version, IReadOnlyList<M
 /// </summary>
 public sealed record MediaDescriptor(IReadOnlyList<string> Extensions, IReadOnlyList<string> ContentTypes,
     MediaMetadataSchema Schema, int Priority = 0, bool IsOptIn = false, bool IndexTimePreview = false);
-/// <summary>Source facts without filesystem paths or persistence identifiers.</summary>
-public sealed record MediaItem(string Extension, string? ContentType, long Length);
+/// <summary>
+/// Source facts without filesystem paths or persistence identifiers. <paramref name="GroupKey"/> is an
+/// opaque, already-hashed token for the group the source belongs to, such as its containing folder, and is
+/// only used by providers that enforce a per-group limit; plugins must never persist or display it.
+/// </summary>
+public sealed record MediaItem(string Extension, string? ContentType, long Length, string? GroupKey = null);
 
 /// <summary>Only bounded bytes are exposed, never a filesystem path or persistence model.</summary>
 public interface IMediaSource
