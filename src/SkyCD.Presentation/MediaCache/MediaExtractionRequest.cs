@@ -57,7 +57,8 @@ public sealed class MediaExtractionRequest
         {
             EntryId = entry.Id,
             Fingerprint = MediaSourceFingerprint.ForCatalogEntry(entry, catalog),
-            Item = new MediaItem(MediaSourceFingerprint.GetExtension(entry), ReadContentType(entry), entry.Size),
+            Item = new MediaItem(MediaSourceFingerprint.GetExtension(entry), ReadContentType(entry), entry.Size,
+                GroupKey: GroupKeyFor(entry)),
             OpenSource = openSource,
             BatchId = batchId,
             ForceRefresh = forceRefresh,
@@ -75,4 +76,14 @@ public sealed class MediaExtractionRequest
         var contentType = value.ToString();
         return string.IsNullOrWhiteSpace(contentType) ? null : contentType;
     }
+
+    /// <summary>
+    /// Hash of the containing folder, used by providers enforcing per-folder limits. The real identifier never
+    /// leaves the host, and a missing parent yields no group.
+    /// </summary>
+    private static string? GroupKeyFor(CatalogDocument entry) =>
+        string.IsNullOrEmpty(entry.ParentId)
+            ? null
+            : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes(entry.ParentId)))[..16].ToLowerInvariant();
 }
