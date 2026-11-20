@@ -7,16 +7,17 @@ Tests: `tests/SkyCD.Plugin.Image.Tests/`.
 
 ## What it provides
 
-Two independently discovered capabilities in one assembly:
+Three independently discovered capabilities in one assembly:
 
-| Capability | Type | Schema |
-|---|---|---|
-| Typed image metadata and embedded tags | `ImageMetadataPlugin : IMediaMetadataCapability` | `skycd.image.metadata` v2 |
-| Bounded thumbnail | `ImagePreviewPlugin : IMediaPreviewCapability` | `skycd.image.preview` v1 |
+| Capability | Type | Schema | Claims |
+|---|---|---|---|
+| Typed image metadata and embedded tags | `ImageMetadataPlugin : IMediaMetadataCapability` | `skycd.image.metadata` v2 | `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`; `image/jpeg`, `image/png`, `image/webp`, `image/gif` |
+| Bounded thumbnail | `ImagePreviewPlugin : IMediaPreviewCapability` | `skycd.image.preview` v1 | same as metadata |
+| Tags from TIFF and TIFF-based RAW containers | `ContainerTagsPlugin : IMediaMetadataCapability` | `skycd.image.tags` v1 | `.tif`, `.tiff`, `.dng`, `.cr2`, `.nef`, `.arw`; `image/tiff` |
 
-Both claim extensions `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif` and MIME types `image/jpeg`, `image/png`,
-`image/webp`, `image/gif`. Selection is by descriptor, so an unsupported type is never claimed and the host
-records its own `unsupported` marker instead.
+Selection is by descriptor, so an unsupported type is never claimed and the host records its own
+`unsupported` marker instead. The tags-only capability never decodes pixels, so it can claim TIFF-based RAW
+files that the decoder cannot present.
 
 Discovery uses assembly metadata and the implemented capability types only. There is no `plugin.json`, and a
 test asserts none exists.
@@ -44,9 +45,9 @@ can tell whether the numbers were already corrected.
 
 Version 2 added `Tags`, `Comment` and `Rating`. `Tags` carries the `Tags` role, so the host assigns
 the keywords as catalog tags through the existing media-cache effects. There is no hierarchical
-expansion: `lr:hierarchicalSubject` is not read, so `Places|Beach|Sunset` stays one keyword. Other
-formats' tags — TIFF and RAW carriers, bare XMP sidecars — and OS-assigned properties belong to
-`SkyCD.Plugin.FileMetadata` (see `docs/plugins/file-metadata.md`); each carrier is claimed once.
+expansion: `lr:hierarchicalSubject` is not read, so `Places|Beach|Sunset` stays one keyword. Bare XMP
+sidecars are claimed by a separate plugin (`docs/plugins/xmp.md`), and OS-assigned properties by
+`SkyCD.Plugin.FileMetadata` (`docs/plugins/file-metadata.md`); each carrier is claimed once.
 
 Provenance is not a field: it is the record identity the host stores (plugin id, plugin version, capability
 type, schema id, schema version), per `docs/architecture/media-cache-lifecycle.md`. A capture date is never
@@ -69,7 +70,26 @@ editors rather than paid in an index pass. XMP provides `dc:subject`, `pdf:Keywo
 `dc:description`, `exif:UserComment`, `xmp:Rating` and `MicrosoftPhoto:Rating`; IPTC-IIM provides
 2:25 keywords and 2:120 caption; TIFF ratings use the Shell 1–99 scale, negative values mean
 "rejected" and are ignored. The parsers are shared source files from `Plugins/Shared/MediaMetadata/`,
-also compiled into `SkyCD.Plugin.FileMetadata` for TIFF/RAW carriers and XMP sidecars.
+compiled into this assembly and into the XMP sidecar plugin, which needs the same XMP and IPTC code.
+
+## Tags from TIFF and TIFF-based RAW
+
+`ContainerTagsPlugin` covers the containers the decoder is not asked to present. It selects by magic bytes,
+not extension: a file named `.tif` that does not start with a TIFF header publishes no values instead of
+failing the pass.
+
+| Key | Type | Meaning |
+|---|---|---|
+| `Tags` | Text | Keywords joined with `; `; omitted when none |
+| `Comment` | Text | Caption or comment; omitted when none |
+| `Rating` | Integer | Star rating 1–5 from the Shell 1–99 or 1–5 scales; omitted when absent or rejected |
+
+Carriers read from the TIFF directory structure: `XPKeywords`/`XPComment` (UCS-2LE), `ImageDescription`,
+`UserComment`, `Rating` and `RatingPercent`, plus the embedded XMP (tag 700) and IPTC-IIM (tag 33723)
+blobs, which are parsed with the same readers as the JPEG path. Maker notes are not parsed: they are
+per-vendor and not portable. The scan reads at most the first 1 MiB of the source, in 256 KiB chunks and
+through the host's budget, so a RAW file is never buffered whole. Damaged directories contribute nothing
+rather than failing extraction.
 
 ## Preview artifacts
 
@@ -135,9 +155,9 @@ allow-list.
 
 ## Limitations
 
-- JPEG, PNG, WebP and GIF only. TIFF, HEIF, AVIF and RAW are not claimed; Skia can decode some of them but
-  they are out of the documented initial scope. TIFF/RAW tags, XMP sidecars and OS-assigned properties are
-  the file metadata plugin's job.
+- JPEG, PNG, WebP and GIF are decoded. TIFF, HEIF, AVIF and RAW are never decoded; TIFF-based containers
+  are claimed by the tags-only capability, and OS-assigned properties are the file metadata plugin's job.
+  HEIF and AVIF are not claimed at all.
 - Tags are whatever portable carriers the container holds. A tool that stores keywords only in a format
   the reader does not parse (compressed PNG text, maker notes) leaves them uncached.
 - EXIF local time carries no zone unless `OffsetTimeOriginal` is present. When it is absent the value is
@@ -161,4 +181,9 @@ a valid image whose EXIF directory is corrupt, oversized sources, cancellation, 
 surfacing as a failure rather than a crash, assembly discovery without a manifest, and offline retrieval
 through the real scheduler and Couchbase Lite store with the database reopened and the plugin unloaded.
 Tag fixtures cover JPEG XMP, IPTC and COM segments, PNG `tEXt` and XMP `iTXt` chunks, WebP `XMP ` chunks,
-and a GIF asserting that no tag fields are published.
+and a GIF asserting that no tag fields are published. `ContainerTagsPluginTests` hand-assembles TIFF
+directories carrying the XP tags, `RatingPercent`, `Rating`, embedded XMP (tag 700) and IPTC (tag 33723),
+and covers non-TIFF bytes under a `.tif` name, malformed and absurd directories, an empty source, the 1 MiB
+prefix bound, cancellation, progress, and the descriptor claiming TIFF and RAW extensions only.
+`ImagePluginIntegrationTests` also asserts that discovery finds all three capabilities from assembly
+metadata alone.

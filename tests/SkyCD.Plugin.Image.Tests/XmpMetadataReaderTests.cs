@@ -2,7 +2,7 @@ using System.Text;
 using SkyCD.Plugin.MediaMetadata;
 using Xunit;
 
-namespace SkyCD.Plugin.FileMetadata.Tests;
+namespace SkyCD.Plugin.Image.Tests;
 
 public sealed class XmpMetadataReaderTests
 {

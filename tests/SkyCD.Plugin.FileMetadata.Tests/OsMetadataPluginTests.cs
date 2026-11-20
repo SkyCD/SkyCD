@@ -19,7 +19,7 @@ namespace SkyCD.Plugin.FileMetadata.Tests;
 public sealed class OsMetadataPluginTests
 {
     [Fact]
-    public void Descriptor_ClaimsEverySourceAndRunsAfterTheEmbeddedReader()
+    public void Descriptor_ClaimsEverySourceAndSortsAfterEmbeddedProviders()
     {
         var descriptor = new OsMetadataPlugin().Descriptor;
 
@@ -27,7 +27,7 @@ public sealed class OsMetadataPluginTests
         Assert.Equal(FileMetadataSchema.OsSchemaId, descriptor.Schema.Id);
         Assert.Equal(MediaMetadataFieldRole.Tags,
             descriptor.Schema.Fields.Single(field => field.Key == FileMetadataSchema.Tags).Role);
-        Assert.True(descriptor.Priority < new FileMetadataPlugin().Descriptor.Priority);
+        Assert.True(descriptor.Priority < 10, "OS values must yield to an embedded value for the same field.");
     }
 
     [Fact]

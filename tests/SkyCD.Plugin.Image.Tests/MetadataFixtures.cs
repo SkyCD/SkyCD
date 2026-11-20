@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace SkyCD.Plugin.FileMetadata.Tests;
+namespace SkyCD.Plugin.Image.Tests;
 
 /// <summary>
 /// Builds byte-accurate fixtures in memory so every reader is exercised against the real container layout

@@ -1,144 +1,94 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Documents;
-using SkyCD.Documents.Collections;
-using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.Presentation.MediaCache;
 using Xunit;
 
 namespace SkyCD.Plugin.FileMetadata.Tests;
 
 /// <summary>
-/// End-to-end coverage inside the host pipeline: which sources each capability claims, how the path-addressed
-/// OS reader is selected, catalog tag effects and discovery without a manifest.
+/// End-to-end coverage inside the host pipeline: which sources the OS capability claims, how the path-addressed
+/// reader is selected and skipped, and discovery without a manifest. Embedded formats are covered by the
+/// plugins that claim them.
 /// </summary>
 public sealed class FileMetadataHostIntegrationTests
 {
     private const string PluginId = "SkyCD.Plugin.FileMetadata";
 
     [Fact]
-    public void Host_ClaimsEmbeddedCarriersOnceAndOsMetadataForEverySource()
+    public void Host_ClaimsOsMetadataForEverySource()
     {
         var manager = CreateManager();
 
-        var tiff = manager.ResolveProviders(new MediaItem(".TIF", null, 10));
-        Assert.Equal(
-            [FileMetadataSchema.EmbeddedSchemaId, FileMetadataSchema.OsSchemaId],
-            tiff.Select(identity => identity.SchemaId));
-
-        var jpeg = manager.ResolveProviders(new MediaItem(".jpg", null, 10));
-        Assert.Equal([FileMetadataSchema.OsSchemaId], jpeg.Select(identity => identity.SchemaId));
-
-        Assert.Contains(manager.ResolveProviders(new MediaItem(".txt", null, 10)),
-            identity => identity.SchemaId == FileMetadataSchema.OsSchemaId);
+        foreach (var item in new[]
+                 {
+                     new MediaItem(".tif", null, 10), new MediaItem(".jpg", null, 10),
+                     new MediaItem(".txt", null, 10), new MediaItem(string.Empty, null, 10)
+                 })
+        {
+            Assert.Equal([FileMetadataSchema.OsSchemaId],
+                manager.ResolveProviders(item).Select(identity => identity.SchemaId));
+        }
     }
 
     [Fact]
-    public async Task IndexingPass_ReturnsEmbeddedMetadataWithoutAPath()
+    public async Task WithoutAPath_TheOsProviderIsSkippedAndNothingIsRead()
     {
-        var tiff = MetadataFixtures.Tiff(littleEndian: true,
-            MetadataFixtures.Utf16(0x9C9E, "sunset; beach", littleEndian: true),
-            MetadataFixtures.Short(0x4746, 4, littleEndian: true));
-        var manager = CreateManager();
-
-        var results = await manager.ProcessAsync(
-            new MediaItem(".tif", null, tiff.Length),
-            Open(tiff),
-            selection: MediaProviderSelection.StandardMetadata);
-
-        var result = Assert.Single(results);
-        Assert.False(result.Failed);
-        Assert.Contains(result.Metadata!.Values, value => value.Key == FileMetadataSchema.Tags);
-        Assert.Contains(result.Metadata.Values, value => value.Key == FileMetadataSchema.Rating);
-    }
-
-    [Fact]
-    public async Task OsProvider_RunsWithoutReadingTheStream_WhenAPathIsSupplied()
-    {
-        var tiff = MetadataFixtures.Tiff(littleEndian: true,
-            MetadataFixtures.Utf16(0x9C9E, "sunset", littleEndian: true));
         var manager = CreateManager();
         var opened = 0;
         Task<Stream> OpenTracked(CancellationToken _)
         {
             Interlocked.Increment(ref opened);
-            return Task.FromResult<Stream>(new MemoryStream(tiff, writable: false));
+            return Task.FromResult<Stream>(new MemoryStream([1, 2, 3], writable: false));
         }
 
         var results = await manager.ProcessAsync(
-            new MediaItem(".tif", null, tiff.Length),
+            new MediaItem(".tif", null, 3),
             OpenTracked,
-            selection: MediaProviderSelection.StandardMetadata,
-            sourcePath: Path.Combine(Path.GetTempPath(), $"skycd-missing-{Guid.NewGuid():N}.tif"));
-
-        Assert.Equal(2, results.Count);
-        Assert.All(results, result => Assert.False(result.Failed));
-        Assert.Contains(results, result => result.Schema!.Id == FileMetadataSchema.OsSchemaId);
-        Assert.Equal(1, opened);
-    }
-
-    [Fact]
-    public async Task WithoutAPath_TheOsProviderIsSkippedInsteadOfCachedAsAFailure()
-    {
-        var tiff = MetadataFixtures.Tiff(littleEndian: true,
-            MetadataFixtures.Utf16(0x9C9E, "archive", littleEndian: true));
-        var manager = CreateManager();
-
-        var results = await manager.ProcessAsync(
-            new MediaItem(".tif", null, tiff.Length),
-            Open(tiff),
             selection: MediaProviderSelection.StandardMetadata);
 
-        Assert.DoesNotContain(results, result => result.Failed);
-        Assert.DoesNotContain(results, result => result.Schema?.Id == FileMetadataSchema.OsSchemaId);
+        Assert.Empty(results);
+        Assert.Equal(0, opened);
     }
 
     [Fact]
-    public async Task Scheduler_StoresMetadataThatTheCatalogTurnsIntoTags()
+    public async Task WithAPath_TheProviderRunsWithoutReadingTheStream()
     {
-        var tiff = MetadataFixtures.Tiff(littleEndian: true,
-            MetadataFixtures.Utf16(0x9C9E, "sunset; beach", littleEndian: true),
-            MetadataFixtures.Short(0x4746, 5, littleEndian: true));
-        var entry = CreateEntry(tiff);
-        using var store = new InMemoryMediaCacheStore();
-        var scheduler = new MediaExtractionScheduler(CreateManager(), store);
+        var manager = CreateManager();
+        var opened = 0;
+        Task<Stream> OpenTracked(CancellationToken _)
+        {
+            Interlocked.Increment(ref opened);
+            return Task.FromResult<Stream>(new MemoryStream([1, 2, 3], writable: false));
+        }
 
-        var outcome = await scheduler.ProcessAsync(MediaExtractionRequest.ForCatalogEntry(
-            entry,
-            Open(tiff),
-            [entry]));
+        var results = await manager.ProcessAsync(
+            new MediaItem(".txt", null, 3),
+            OpenTracked,
+            selection: MediaProviderSelection.StandardMetadata,
+            sourcePath: Path.Combine(Path.GetTempPath(), $"skycd-missing-{Guid.NewGuid():N}.txt"));
 
-        Assert.True(outcome.Published);
-        var records = store.GetRecordsForEntry(entry.Id);
-        Assert.Contains(records, record =>
-            record.State == MediaCacheRecordState.Captured &&
-            record.SchemaId == FileMetadataSchema.EmbeddedSchemaId);
-        Assert.All(records, record => Assert.NotEqual(MediaCacheRecordState.Failed, record.State));
-
-        var tags = MediaMetadataCatalogEffects.ResolveTagNames(records);
-        Assert.Contains("sunset", tags);
-        Assert.Contains("beach", tags);
+        var result = Assert.Single(results);
+        Assert.False(result.Failed);
+        Assert.Equal(FileMetadataSchema.OsSchemaId, result.Schema!.Id);
+        Assert.Equal(0, opened);
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsBothCapabilitiesWithoutAManifest()
+    public void AssemblyDiscovery_FindsTheOsCapabilityWithoutAManifest()
     {
-        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(FileMetadataPlugin).Assembly);
+        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(OsMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
         Assert.Equal("File Metadata", plugin.Name);
-        Assert.Equal(2, plugin.Capabilities.Count);
-        Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
-        Assert.Contains(plugin.Capabilities, capability => capability is ILocalMediaMetadataCapability);
-        Assert.DoesNotContain(plugin.Capabilities, capability => capability is IPluginConfigurationCapability);
+        var capability = Assert.Single(plugin.Capabilities);
+        Assert.IsAssignableFrom<ILocalMediaMetadataCapability>(capability);
+        Assert.DoesNotContain(plugin.Capabilities, found => found is IPluginConfigurationCapability);
     }
 
     [Fact]
@@ -151,27 +101,7 @@ public sealed class FileMetadataHostIntegrationTests
     }
 
     private static MediaExtensionManager CreateManager() =>
-        new([
-            new MediaProvider(PluginId, "1.0.0", new FileMetadataPlugin()),
-            new MediaProvider(PluginId, "1.0.0", new OsMetadataPlugin())
-        ]);
-
-    private static Func<CancellationToken, Task<Stream>> Open(byte[] data) =>
-        _ => Task.FromResult<Stream>(new MemoryStream(data, writable: false));
-
-    private static CatalogDocument CreateEntry(byte[] data) => new()
-    {
-        Id = "photo-entry",
-        Name = "scan.tif",
-        ParentId = "photos-folder",
-        Type = CatalogDocumentType.File,
-        Size = data.Length,
-        Properties = new PropertiesCollection
-        {
-            ["FullName"] = @"D:\Photos\scan.tif",
-            ["LastWriteTime"] = new DateTimeOffset(2024, 3, 1, 12, 0, 0, TimeSpan.Zero).ToString("O")
-        }
-    };
+        new([new MediaProvider(PluginId, "1.0.0", new OsMetadataPlugin())]);
 
     private static string FindPluginProjectDirectory()
     {

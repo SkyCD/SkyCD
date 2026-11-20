@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the image plugin, which reads the same packet out of JPEG, PNG, WebP and TIFF. -->
+        <Compile Include="..\Shared\MediaMetadata\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\MetadataValues.cs" Link="Shared\MediaMetadata\MetadataValues.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\SourcePrefix.cs" Link="Shared\MediaMetadata\SourcePrefix.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\XmpMetadataReader.cs" Link="Shared\MediaMetadata\XmpMetadataReader.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\XmpPacketLocator.cs" Link="Shared\MediaMetadata\XmpPacketLocator.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\XmpPacketReader.cs" Link="Shared\MediaMetadata\XmpPacketReader.cs"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>XMP Sidecar Metadata</AssemblyTitle>
+        <Description>Reads the keywords, description and rating from standalone XMP sidecar files, so a photo's catalog tags travel with the sidecar even when the image formats are read elsewhere.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+</Project>

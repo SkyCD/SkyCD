@@ -7,13 +7,14 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
 
-namespace SkyCD.Plugin.FileMetadata.Tests;
+namespace SkyCD.Plugin.Image.Tests;
 
 /// <summary>
-/// Covers the portable tags that travel inside TIFF containers, TIFF-based RAW files and standalone XMP
-/// sidecars. The image formats the image plugin presents are not claimed here.
+/// Covers the portable tags stored in TIFF containers and the TIFF-based RAW formats. Those pixels are not
+/// decoded for previews, so this capability publishes tags only, from a bounded header prefix. Standalone XMP
+/// sidecars belong to the separate XMP plugin.
 /// </summary>
-public sealed class FileMetadataPluginTests
+public sealed class ContainerTagsPluginTests
 {
     [Fact]
     public async Task TiffXpTags_AreReadFromLittleEndianDirectories()
@@ -25,9 +26,9 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".tif")).Values;
 
-        Assert.Equal("Scanned photograph", Text(values, FileMetadataSchema.Comment));
-        Assert.Equal("family; holiday", Text(values, FileMetadataSchema.Tags));
-        Assert.Equal(4L, Integer(values, FileMetadataSchema.Rating));
+        Assert.Equal("Scanned photograph", Text(values, ImageSchema.Comment));
+        Assert.Equal("family; holiday", Text(values, ImageSchema.Tags));
+        Assert.Equal(4L, Integer(values, ImageSchema.Rating));
     }
 
     [Fact]
@@ -40,8 +41,8 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".tiff")).Values;
 
-        Assert.Equal("archive; 1999", Text(values, FileMetadataSchema.Tags));
-        Assert.Equal(2L, Integer(values, FileMetadataSchema.Rating));
+        Assert.Equal("archive; 1999", Text(values, ImageSchema.Tags));
+        Assert.Equal(2L, Integer(values, ImageSchema.Rating));
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".tif")).Values;
 
-        Assert.Equal(3L, Integer(values, FileMetadataSchema.Rating));
+        Assert.Equal(3L, Integer(values, ImageSchema.Rating));
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".tif")).Values;
 
-        Assert.Equal(2L, Integer(values, FileMetadataSchema.Rating));
+        Assert.Equal(2L, Integer(values, ImageSchema.Rating));
     }
 
     [Fact]
@@ -79,9 +80,9 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".dng")).Values;
 
-        Assert.Equal("raw; edited", Text(values, FileMetadataSchema.Tags));
-        Assert.Equal("Developed in-camera", Text(values, FileMetadataSchema.Comment));
-        Assert.Equal(5L, Integer(values, FileMetadataSchema.Rating));
+        Assert.Equal("raw; edited", Text(values, ImageSchema.Tags));
+        Assert.Equal("Developed in-camera", Text(values, ImageSchema.Comment));
+        Assert.Equal(5L, Integer(values, ImageSchema.Rating));
     }
 
     [Fact]
@@ -94,19 +95,8 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".tif")).Values;
 
-        Assert.Equal("alpha; beta", Text(values, FileMetadataSchema.Tags));
-        Assert.Equal("Caption written by the IPTC editor", Text(values, FileMetadataSchema.Comment));
-    }
-
-    [Fact]
-    public async Task XmpSidecar_IsReadWithoutAContainer()
-    {
-        var data = Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(keywords: ["sidecar"], rating: 3));
-
-        var values = (await ExtractAsync(data, ".xmp")).Values;
-
-        Assert.Equal("sidecar", Text(values, FileMetadataSchema.Tags));
-        Assert.Equal(3L, Integer(values, FileMetadataSchema.Rating));
+        Assert.Equal("alpha; beta", Text(values, ImageSchema.Tags));
+        Assert.Equal("Caption written by the IPTC editor", Text(values, ImageSchema.Comment));
     }
 
     [Fact]
@@ -117,39 +107,18 @@ public sealed class FileMetadataPluginTests
 
         var values = (await ExtractAsync(data, ".arw")).Values;
 
-        Assert.Equal(4L, Integer(values, FileMetadataSchema.Rating));
-    }
-
-    [Fact]
-    public async Task RejectedXmpRating_IsOmitted()
-    {
-        var data = Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(rating: -1));
-
-        var values = (await ExtractAsync(data, ".xmp")).Values;
-
-        Assert.Empty(values);
-    }
-
-    [Fact]
-    public async Task PdfKeywords_AreSplitIntoSeparateTags()
-    {
-        var data = Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(pdfKeywords: "invoice, scanned"));
-
-        var values = (await ExtractAsync(data, ".xmp")).Values;
-
-        Assert.Equal("invoice; scanned", Text(values, FileMetadataSchema.Tags));
+        Assert.Equal(4L, Integer(values, ImageSchema.Rating));
     }
 
     [Fact]
     public async Task ContainerIsRecognizedByMagicBytes_NotTheExtension()
     {
-        // A TIFF payload saved under a sidecar name is still read as a container.
-        var data = MetadataFixtures.Tiff(littleEndian: true,
-            MetadataFixtures.Utf16(0x9C9E, "misnamed", littleEndian: true));
+        // The extension does not claim this payload; without a TIFF header nothing is parsed.
+        var data = Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(keywords: ["not a container"]));
 
-        var values = (await ExtractAsync(data, ".xmp")).Values;
+        var result = await ExtractAsync(data, ".tif");
 
-        Assert.Equal("misnamed", Text(values, FileMetadataSchema.Tags));
+        Assert.Empty(result.Values);
     }
 
     [Theory]
@@ -178,8 +147,7 @@ public sealed class FileMetadataPluginTests
     [Fact]
     public async Task EmptySource_ReturnsNoValues()
     {
-        var plugin = new FileMetadataPlugin();
-        var result = await plugin.ExtractAsync(new MediaItem(".tif", null, 0),
+        var result = await new ContainerTagsPlugin().ExtractAsync(new MediaItem(".tif", null, 0),
             new ByteArrayMediaSource([]), null, CancellationToken.None);
 
         Assert.Empty(result.Values);
@@ -189,12 +157,13 @@ public sealed class FileMetadataPluginTests
     public async Task OnlyTheBoundedPrefixIsScanned()
     {
         var filler = new byte[1024 * 1024];
-        var packet = Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(keywords: ["beyond the prefix"]));
-        var data = new byte[filler.Length + packet.Length];
+        var tiff = MetadataFixtures.Tiff(littleEndian: true,
+            MetadataFixtures.Utf16(0x9C9E, "beyond the prefix", littleEndian: true));
+        var data = new byte[filler.Length + tiff.Length];
         filler.CopyTo(data, 0);
-        packet.CopyTo(data, filler.Length);
+        tiff.CopyTo(data, filler.Length);
 
-        var result = await ExtractAsync(data, ".xmp");
+        var result = await ExtractAsync(data, ".tif");
 
         Assert.Empty(result.Values);
     }
@@ -205,7 +174,7 @@ public sealed class FileMetadataPluginTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new FileMetadataPlugin().ExtractAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new ContainerTagsPlugin().ExtractAsync(
             new MediaItem(".tif", null, 10),
             new ByteArrayMediaSource(MetadataFixtures.Tiff(littleEndian: true)),
             null,
@@ -216,9 +185,9 @@ public sealed class FileMetadataPluginTests
     public async Task Progress_ReachesCompletion()
     {
         var reports = new RecordingProgress();
-        await new FileMetadataPlugin().ExtractAsync(
-            new MediaItem(".xmp", null, 10),
-            new ByteArrayMediaSource(Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(keywords: ["done"]))),
+        await new ContainerTagsPlugin().ExtractAsync(
+            new MediaItem(".tif", null, 10),
+            new ByteArrayMediaSource(MetadataFixtures.Tiff(littleEndian: true)),
             reports,
             CancellationToken.None);
 
@@ -227,24 +196,24 @@ public sealed class FileMetadataPluginTests
     }
 
     [Fact]
-    public void Descriptor_ClaimsOnlyTheCarriersTheImagePluginDoesNotPresent()
+    public void Descriptor_ClaimsTiffContainersAndTheRawFormats()
     {
-        var descriptor = new FileMetadataPlugin().Descriptor;
+        var descriptor = new ContainerTagsPlugin().Descriptor;
 
-        Assert.Equal(
-            [".tif", ".tiff", ".dng", ".cr2", ".nef", ".arw", ".xmp"],
-            descriptor.Extensions);
+        Assert.Equal([".tif", ".tiff", ".dng", ".cr2", ".nef", ".arw"], descriptor.Extensions);
+        Assert.Equal(["image/tiff"], descriptor.ContentTypes);
         Assert.DoesNotContain(".jpg", descriptor.Extensions);
         Assert.DoesNotContain(".png", descriptor.Extensions);
-        Assert.Equal(FileMetadataSchema.EmbeddedSchemaId, descriptor.Schema.Id);
+        Assert.DoesNotContain(".xmp", descriptor.Extensions);
+        Assert.Equal(ImageSchema.ContainerTagsSchemaId, descriptor.Schema.Id);
         Assert.Equal(MediaMetadataFieldRole.Tags,
-            descriptor.Schema.Fields.Single(field => field.Key == FileMetadataSchema.Tags).Role);
+            descriptor.Schema.Fields.Single(field => field.Key == ImageSchema.Tags).Role);
         Assert.Equal(MediaMetadataType.Integer,
-            descriptor.Schema.Fields.Single(field => field.Key == FileMetadataSchema.Rating).Type);
+            descriptor.Schema.Fields.Single(field => field.Key == ImageSchema.Rating).Type);
     }
 
     private static async Task<MediaExtractionResult> ExtractAsync(byte[] data, string extension) =>
-        await new FileMetadataPlugin().ExtractAsync(new MediaItem(extension, null, data.Length),
+        await new ContainerTagsPlugin().ExtractAsync(new MediaItem(extension, null, data.Length),
             new ByteArrayMediaSource(data), null, CancellationToken.None);
 
     private static string? Text(IReadOnlyList<MediaMetadataValue> values, string key) =>

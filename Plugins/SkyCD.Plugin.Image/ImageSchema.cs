@@ -18,6 +18,10 @@ public static class ImageSchema
     public const string PreviewSchemaId = "skycd.image.preview";
     public const int PreviewSchemaVersion = 1;
 
+    /// <summary>Tags read from TIFF containers the thumbnail decoder does not present.</summary>
+    public const string ContainerTagsSchemaId = "skycd.image.tags";
+    public const int ContainerTagsSchemaVersion = 1;
+
     /// <summary>Oriented width in pixels, after applying EXIF rotation.</summary>
     public const string Width = "Width";
 
@@ -56,9 +60,18 @@ public static class ImageSchema
     /// <summary>Extensions the plugin claims, including the leading dot.</summary>
     public static readonly IReadOnlyList<string> Extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
+    /// <summary>
+    /// TIFF containers, including the TIFF-based RAW formats. Their geometry is not decoded, but their tag
+    /// carriers are in every photo tool's path, so they are claimed by a tags-only capability.
+    /// </summary>
+    public static readonly IReadOnlyList<string> ContainerExtensions =
+        [".tif", ".tiff", ".dng", ".cr2", ".nef", ".arw"];
+
     /// <summary>MIME types the plugin claims.</summary>
     public static readonly IReadOnlyList<string> ContentTypes =
         ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+    public static readonly IReadOnlyList<string> ContainerContentTypes = ["image/tiff"];
 
     public static MediaMetadataSchema Metadata { get; } = new(MetadataSchemaId, MetadataSchemaVersion,
     [
@@ -81,4 +94,13 @@ public static class ImageSchema
     /// </summary>
     public static MediaMetadataSchema Preview { get; } =
         new(PreviewSchemaId, PreviewSchemaVersion, []);
+
+    /// <summary>Same fields as the metadata schema, published for containers whose pixels are not decoded.</summary>
+    public static MediaMetadataSchema ContainerTags { get; } =
+        new(ContainerTagsSchemaId, ContainerTagsSchemaVersion,
+        [
+            new MediaMetadataField(Tags, MediaMetadataType.Text, Role: MediaMetadataFieldRole.Tags),
+            new MediaMetadataField(Comment, MediaMetadataType.Text),
+            new MediaMetadataField(Rating, MediaMetadataType.Integer)
+        ]);
 }

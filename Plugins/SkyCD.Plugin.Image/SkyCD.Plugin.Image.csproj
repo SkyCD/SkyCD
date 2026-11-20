@@ -3,7 +3,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <!-- Shared with the file metadata plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
+        <!-- Shared with the XMP sidecar plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
         <Compile Include="..\Shared\MediaMetadata\*.cs" Link="Shared\MediaMetadata\%(Filename)%(Extension)"/>
     </ItemGroup>
     <ItemGroup>

@@ -3,8 +3,10 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <!-- Shared with the image plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
-        <Compile Include="..\Shared\MediaMetadata\*.cs" Link="Shared\MediaMetadata\%(Filename)%(Extension)"/>
+        <!-- Only the core scan model is shared; container parsers live with the plugins that claim them. -->
+        <Compile Include="..\Shared\MediaMetadata\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\MetadataValues.cs" Link="Shared\MediaMetadata\MetadataValues.cs"/>
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -13,7 +15,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>File Metadata</AssemblyTitle>
-        <Description>Reads the tags, comment and rating a user assigned through Windows, Linux or macOS file properties, and the portable tags stored inside TIFF containers, TIFF-based RAW files and XMP sidecars.</Description>
+        <Description>Reads the tags, comment and rating a user or a colleague assigned through Windows file properties, Linux extended attributes or macOS Finder properties, so the catalog keeps the metadata that is not stored in the file bytes.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
