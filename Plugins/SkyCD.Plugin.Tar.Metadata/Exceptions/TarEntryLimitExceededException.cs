@@ -1,7 +1,6 @@
-using System;
 using System.IO;
 
-namespace SkyCD.Plugin.Tar.Exceptions;
+namespace SkyCD.Plugin.Tar.Metadata.Exceptions;
 
 /// <summary>
 /// Raised when an archive entry expands past the configured entry size limit while extracting.

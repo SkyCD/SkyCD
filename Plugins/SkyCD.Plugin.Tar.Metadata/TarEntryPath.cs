@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace SkyCD.Plugin.Tar;
+namespace SkyCD.Plugin.Tar.Metadata;
 
 /// <summary>
 /// Normalizes and validates archive entry paths so extraction cannot escape the temporary directory.

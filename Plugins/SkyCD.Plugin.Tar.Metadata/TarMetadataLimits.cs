@@ -1,15 +1,15 @@
 using System;
 
-namespace SkyCD.Plugin.Tar;
+namespace SkyCD.Plugin.Tar.Metadata;
 
 /// <summary>Bounds applied while extracting TAR entries for host indexing.</summary>
-public sealed record TarIndexLimits(
+public sealed record TarMetadataLimits(
     int MaxEntries = 100_000,
     long MaxEntryBytes = 268_435_456,
     long MaxTotalBytes = 1_073_741_824)
 {
     /// <summary>Gets the limits used when none are configured.</summary>
-    public static TarIndexLimits Default { get; } = new();
+    public static TarMetadataLimits Default { get; } = new();
 
     /// <summary>Throws when any bound is not positive.</summary>
     public void Validate()

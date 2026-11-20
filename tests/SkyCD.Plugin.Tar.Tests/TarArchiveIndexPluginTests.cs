@@ -1,20 +1,26 @@
 using System;
 using System.Collections.Generic;
-using System.Formats.Tar;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Tar;
 using Xunit;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.Tar.Tests;
 
 public class TarArchiveIndexPluginTests
 {
+    [Fact]
+    public void Capability_IsFileFormatOnly_WithoutIndexWorkItems()
+    {
+        Assert.Equal("skycd-tar", new TarArchiveIndexPlugin().SupportedFormat.FormatId);
+        Assert.DoesNotContain(typeof(TarArchiveIndexPlugin).GetInterfaces(),
+            type => typeof(IIndexWorkItemProvider).IsAssignableFrom(type));
+    }
+
     [Fact]
     public void OpenFormats_IncludeTarVariants_ButSaveFormatsDoNot()
     {
@@ -76,42 +82,6 @@ public class TarArchiveIndexPluginTests
         Assert.True(tarGzResult.Success);
         var tarGzRows = Assert.IsType<List<Dictionary<string, object?>>>(tarGzResult.Payload);
         Assert.Contains(tarGzRows, row => Equals(row["kind"], "file") && Equals(row["sizeBytes"], "5"));
-    }
-
-    private static MemoryStream CreateTarFixture(bool gzip)
-    {
-        var output = new MemoryStream();
-        Stream target;
-        IDisposable? compression = null;
-        if (gzip)
-        {
-            compression = new GZipStream(output, CompressionLevel.SmallestSize, leaveOpen: true);
-            target = (Stream)compression;
-        }
-        else
-        {
-            target = output;
-        }
-
-        using (compression)
-        using (var writer = new TarWriter(target, TarEntryFormat.Pax, leaveOpen: true))
-        {
-            var directory = new PaxTarEntry(TarEntryType.Directory, "root/deep/");
-            writer.WriteEntry(directory);
-
-            var fileBytes = Encoding.UTF8.GetBytes("hello");
-            var fileStream = new MemoryStream(fileBytes);
-            var file = new PaxTarEntry(TarEntryType.RegularFile, "root\\deep\\įrašas.txt")
-            {
-                DataStream = fileStream,
-                ModificationTime = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc))
-            };
-
-            writer.WriteEntry(file);
-        }
-
-        output.Position = 0;
-        return output;
     }
 
     private static FileFormatManager CreateService()

@@ -12,23 +12,21 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
-using SkyCD.Plugin.Tar;
+using SkyCD.Plugin.Tar.Metadata;
 using Xunit;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.Tar.Metadata.Tests;
 
-public sealed class TarArchiveIndexTests
+public sealed class TarMetadataWorkItemProviderTests
 {
     [Fact]
-    public void AssemblyDiscovery_RegistersFileFormatAndWorkItemProviders_OnSameInstance()
+    public void AssemblyDiscovery_ExposesOnlyWorkItemProvider_WithTarMetadataId()
     {
-        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(TarArchiveIndexPlugin).Assembly);
+        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(TarMetadataWorkItemProvider).Assembly);
 
-        var workItems = Assert.Single(plugin.Capabilities.OfType<IIndexWorkItemProvider>());
-        var fileFormat = Assert.Single(plugin.Capabilities.OfType<IFileFormatPluginCapability>());
-
-        Assert.Same(workItems, fileFormat);
-        Assert.Equal("skycd-tar", fileFormat.SupportedFormat.FormatId);
+        Assert.Equal("skycd.tar-metadata", plugin.Id);
+        Assert.IsType<TarMetadataWorkItemProvider>(Assert.Single(plugin.Capabilities.OfType<IIndexWorkItemProvider>()));
+        Assert.Empty(plugin.Capabilities.OfType<IFileFormatPluginCapability>());
     }
 
     [Theory]
@@ -42,7 +40,7 @@ public sealed class TarArchiveIndexTests
             new Entry("/absolute.txt", "evil"),
             new Entry("folder/../../escape2.txt", "evil"));
 
-        var set = await new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(tar, fileName));
+        var set = await new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(tar, fileName));
 
         var item = Assert.Single(set.Items);
         Assert.Equal("safe.txt", item.Name);
@@ -69,7 +67,7 @@ public sealed class TarArchiveIndexTests
     {
         using var tar = CreateTar(false, new Entry("root/deep/notes.txt", "hello", Modified));
 
-        var set = await new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
+        var set = await new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
 
         try
         {
@@ -92,7 +90,7 @@ public sealed class TarArchiveIndexTests
             new Entry("real.txt", "payload"),
             new Entry("link.txt", Content: null, Type: TarEntryType.SymbolicLink, LinkName: "../outside.txt"));
 
-        var set = await new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
+        var set = await new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
 
         try
         {
@@ -110,7 +108,7 @@ public sealed class TarArchiveIndexTests
     {
         using var broken = new MemoryStream(Encoding.UTF8.GetBytes("not a tar archive"));
 
-        var set = await new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(broken, "broken.tar"));
+        var set = await new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(broken, "broken.tar"));
 
         Assert.Empty(set.Items);
         await set.DisposeAsync();
@@ -120,7 +118,7 @@ public sealed class TarArchiveIndexTests
     public async Task GetWorkItemsAsync_EntryOverLimit_IsSkipped_WhileSafeEntryIsReturned()
     {
         using var tar = CreateTar(false, new Entry("small.txt", "ok"), new Entry("large.txt", new string('x', 64)));
-        var plugin = new TarArchiveIndexPlugin(new TarIndexLimits(MaxEntries: 100, MaxEntryBytes: 8,
+        var plugin = new TarMetadataWorkItemProvider(new TarMetadataLimits(MaxEntries: 100, MaxEntryBytes: 8,
             MaxTotalBytes: 1024));
 
         var set = await plugin.GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
@@ -141,7 +139,7 @@ public sealed class TarArchiveIndexTests
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("plain text"));
 
-        var set = await new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(stream, "notes.txt"));
+        var set = await new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(stream, "notes.txt"));
 
         Assert.Empty(set.Items);
         await set.DisposeAsync();
@@ -155,7 +153,7 @@ public sealed class TarArchiveIndexTests
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(tar, "sample.tar"), cancellation.Token));
+            new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(tar, "sample.tar"), cancellation.Token));
     }
 
     [Fact]
@@ -164,7 +162,7 @@ public sealed class TarArchiveIndexTests
         var before = IndexDirectories();
         using var tar = CreateTar(false, new Entry("notes.txt", "hello"));
 
-        var set = await new TarArchiveIndexPlugin().GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
+        var set = await new TarMetadataWorkItemProvider().GetWorkItemsAsync(RequestFor(tar, "sample.tar"));
         var indexDirectory = Assert.Single(IndexDirectories().Except(before));
         Assert.True(Directory.Exists(indexDirectory));
 
@@ -177,8 +175,9 @@ public sealed class TarArchiveIndexTests
     public async Task Sequence_RunsEnabledMetadataProviders_ForContributedItems()
     {
         using var tar = CreateTar(false, new Entry("folder/notes.txt", "metadata-source"));
+        var before = IndexDirectories();
         var manager = new MediaExtensionManager([new MediaProvider("test", "1.0", new TestMetadataCapability())]);
-        var sequence = new IndexWorkItemSequence(manager, [new TarArchiveIndexPlugin()]);
+        var sequence = new IndexWorkItemSequence(manager, [new TarMetadataWorkItemProvider()]);
 
         var indexed = await sequence.ProcessAsync(RequestFor(tar, "sample.tar"));
 
@@ -189,6 +188,7 @@ public sealed class TarArchiveIndexTests
         Assert.NotNull(providerResult.Metadata);
         Assert.Contains(providerResult.Metadata!.Values, value =>
             value.Key == "indexed" && value.Text == "yes");
+        Assert.Empty(IndexDirectories().Except(before));
     }
 
     private static readonly DateTimeOffset Modified =

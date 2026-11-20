@@ -7,30 +7,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 
 namespace SkyCD.Plugin.Tar;
 
 /// <summary>
-/// Read-only TAR archive plugin. Lists archive entries as a catalog hierarchy and, when the host has
-/// metadata providers enabled, hooks into the indexing sequence by contributing safely extracted entries
-/// as extra work items.
+/// Read-only TAR archive plugin. Lists archive entries as a catalog hierarchy. Archive entries are offered to
+/// metadata providers by the separate <c>skycd.tar-metadata</c> plugin.
 /// </summary>
-public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability, IIndexWorkItemProvider
+public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
-    private readonly TarIndexLimits limits;
-
-    public TarArchiveIndexPlugin() : this(TarIndexLimits.Default)
-    {
-    }
-
-    public TarArchiveIndexPlugin(TarIndexLimits limits)
-    {
-        ArgumentNullException.ThrowIfNull(limits);
-        limits.Validate();
-        this.limits = limits;
-    }
-
     public FileFormatDescriptor SupportedFormat =>
         new(
             FormatId: "skycd-tar",
@@ -39,18 +24,6 @@ public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability, IIndexW
             MimeTypes: ["application/x-tar", "application/gzip"],
             CanRead: true,
             CanWrite: false);
-
-    public Task<IndexWorkItemSet> GetWorkItemsAsync(IndexWorkItemRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        if (!IsTarName(request.FileName) && !IsTarName(request.SourcePath))
-        {
-            return Task.FromResult(IndexWorkItemSet.Empty);
-        }
-
-        return TarIndexWorkItems.CreateAsync(request, limits, cancellationToken);
-    }
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
@@ -153,12 +126,6 @@ public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability, IIndexW
             });
         }
     }
-
-    private static bool IsTarName(string? name) =>
-        !string.IsNullOrWhiteSpace(name)
-        && (name.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
-            || name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)
-            || name.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase));
 
     private static Stream EnsureTarStream(Stream source)
     {

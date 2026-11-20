@@ -7,21 +7,21 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
-using SkyCD.Plugin.Tar.Exceptions;
+using SkyCD.Plugin.Tar.Metadata.Exceptions;
 
-namespace SkyCD.Plugin.Tar;
+namespace SkyCD.Plugin.Tar.Metadata;
 
 /// <summary>
 /// Extracts TAR entries into a unique temporary directory with bounded resource usage and exposes each
 /// extracted file as a host index work item. Disposing the returned set deletes the directory.
 /// </summary>
-internal static class TarIndexWorkItems
+internal static class TarMetadataWorkItems
 {
     private const int CopyBufferBytes = 81_920;
 
     public static async Task<IndexWorkItemSet> CreateAsync(
         IndexWorkItemRequest request,
-        TarIndexLimits limits,
+        TarMetadataLimits limits,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -82,7 +82,7 @@ internal static class TarIndexWorkItems
     private static async Task<IndexWorkItem?> ExtractEntryAsync(
         TarEntry entry,
         string tempRoot,
-        TarIndexLimits limits,
+        TarMetadataLimits limits,
         ExtractionBudget budget,
         CancellationToken cancellationToken)
     {
@@ -275,7 +275,7 @@ internal static class TarIndexWorkItems
     {
         private long totalBytes;
 
-        public bool TryReserve(long bytes, TarIndexLimits limits)
+        public bool TryReserve(long bytes, TarMetadataLimits limits)
         {
             if (bytes < 0 || bytes > limits.MaxEntryBytes || totalBytes + bytes > limits.MaxTotalBytes)
             {
