@@ -645,6 +645,10 @@
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipOnlineOnlyCloudFiles}}"
                                       IsChecked="{Binding SkipOnlineOnlyCloudFiles}"
                                       IsVisible="{Binding IsOnlineOnlyCloudFilesOptionVisible}" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ShowScanErrorsAfterScan}}"
+                                      IsChecked="{Binding ShowScanErrorsAfterScan}" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SaveScanErrorsToComments}}"
+                                      IsChecked="{Binding SaveScanErrorsToComments}" />
                         </StackPanel>
 
                         <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">

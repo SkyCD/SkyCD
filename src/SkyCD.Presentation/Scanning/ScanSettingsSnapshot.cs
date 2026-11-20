@@ -9,4 +9,6 @@ public sealed record ScanSettingsSnapshot(
     bool SkipRecycleBins,
     bool SkipWellKnownSystemFolders,
     bool SkipEmptyFolders,
-    bool SkipOnlineOnlyCloudFiles);
+    bool SkipOnlineOnlyCloudFiles,
+    bool ShowScanErrorsAfterScan,
+    bool SaveScanErrorsToComments);

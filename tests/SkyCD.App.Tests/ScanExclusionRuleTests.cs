@@ -395,6 +395,8 @@ public sealed class ScanExclusionRuleTests : IDisposable
         options.SkipWellKnownSystemFolders = false;
         options.SkipEmptyFolders = true;
         options.SkipOnlineOnlyCloudFiles = true;
+        options.ShowScanErrorsAfterScan = false;
+        options.SaveScanErrorsToComments = true;
         optionsRepository.Save(AppOptionsDocument.DocumentId, options);
 
         var restored = optionsRepository.GetOrCreateAppOptions();
@@ -404,6 +406,8 @@ public sealed class ScanExclusionRuleTests : IDisposable
         Assert.False(restored.SkipWellKnownSystemFolders);
         Assert.True(restored.SkipEmptyFolders);
         Assert.True(restored.SkipOnlineOnlyCloudFiles);
+        Assert.False(restored.ShowScanErrorsAfterScan);
+        Assert.True(restored.SaveScanErrorsToComments);
     }
 
     [Fact]
@@ -411,7 +415,7 @@ public sealed class ScanExclusionRuleTests : IDisposable
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true));
+        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true, false, true));
         vm.SetScanExclusionRules(
         [
             new ScanExclusionRuleDocument { Pattern = "*.tmp", EntryType = "File", IsInclude = false },
@@ -425,6 +429,8 @@ public sealed class ScanExclusionRuleTests : IDisposable
         Assert.False(scanOptions.SkipWellKnownSystemFolders);
         Assert.True(scanOptions.SkipEmptyFolders);
         Assert.True(scanOptions.SkipOnlineOnlyCloudFiles);
+        Assert.False(scanOptions.ShowScanErrorsAfterScan);
+        Assert.True(scanOptions.SaveScanErrorsToComments);
 
         var rules = vm.GetScanExclusionRules();
         Assert.Equal(2, rules.Count);

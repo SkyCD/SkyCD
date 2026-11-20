@@ -1590,6 +1590,36 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshPreview();
     }
 
+    /// <summary>
+    /// Appends scan errors to the comments of the catalog entries they affected.
+    /// </summary>
+    public int ApplyScanIssuesToComments(IReadOnlyList<ScanIssue> issues)
+    {
+        ArgumentNullException.ThrowIfNull(issues);
+        if (issues.Count == 0)
+        {
+            return 0;
+        }
+
+        if (catalogRepository is not null)
+        {
+            var changed = ScanIssueComments.Apply(catalogRepository.GetAll(), issues);
+            foreach (var document in changed)
+            {
+                catalogRepository.Save(document.Id, document);
+            }
+
+            if (changed.Count > 0)
+            {
+                RefreshBrowserItemsForSelection();
+            }
+
+            return changed.Count;
+        }
+
+        return inMemoryCatalogEntries is null ? 0 : ScanIssueComments.Apply(inMemoryCatalogEntries, issues).Count;
+    }
+
     private async Task<T> PublishWithMetadataAsync<T>(
         IReadOnlyList<CatalogDocument> documents,
         Func<T> publish,
