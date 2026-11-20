@@ -27,5 +27,14 @@ public sealed class ServiceProviderTests
         Assert.NotNull(list);
         Assert.NotNull(byId);
     }
+
+    [Fact]
+    public void Resolve_ReturnsDescriptionExtensionManager()
+    {
+        ServiceProvider.ReregisterPluginsService();
+        var manager = ServiceProvider.Resolve<SkyCD.Plugin.Host.Media.DescriptionExtensionManager>();
+
+        Assert.NotNull(manager);
+    }
 }
 
