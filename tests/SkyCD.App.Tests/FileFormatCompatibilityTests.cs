@@ -50,6 +50,7 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-bzip2", "catalog.bz2", "catalog.bz")]
     [InlineData("skycd-xz", "catalog.xz", "catalog.xz")]
     [InlineData("skycd-xz", "catalog.xz", "catalog.txz")]
+    [InlineData("skycd-cab", "catalog.cab", "catalog.cab")]
     [InlineData("skycd-rar", "catalog.rar", "catalog.rar")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
@@ -72,7 +73,7 @@ public sealed class FileFormatCompatibilityTests
             Assert.True(leaf.Size > 0);
         }
         if (format is "skycd-zip" or "skycd-tar" or "skycd-7z" or "skycd-iso" or "skycd-qcow2" or "skycd-dmg"
-            or "skycd-daa" or "skycd-arj" or "skycd-vhd" or "skycd-vdi" or "skycd-lha" or "skycd-rar" or "skycd-ace")
+            or "skycd-daa" or "skycd-arj" or "skycd-vhd" or "skycd-vdi" or "skycd-lha" or "skycd-cab" or "skycd-rar" or "skycd-ace")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
@@ -250,6 +251,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Zstd.ZstdArchiveIndexPlugin(),
         new SkyCD.Plugin.Bzip2.Bzip2ArchiveIndexPlugin(),
         new SkyCD.Plugin.Xz.XzArchiveIndexPlugin(),
+        new SkyCD.Plugin.Cab.CabArchiveIndexPlugin(),
         new SkyCD.Plugin.Rar.RarArchiveIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()
