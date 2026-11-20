@@ -58,7 +58,7 @@ public class BrowserViewModesTests
         };
         var listBox = view.FindControl<ListBox>("IconGridListBox")!;
         var template = listBox.ItemTemplate!;
-        var item = new TestBrowserItem { Name = "TestSmall.txt" };
+        var item = new TestBrowserItem { Name = "TestSmall.txt", DisplayName = "TestSmall.txt" };
         var rendered = template.Build(item)!;
         rendered.DataContext = item;
         Dispatcher.UIThread.RunJobs();
@@ -91,7 +91,7 @@ public class BrowserViewModesTests
         };
         var listBox = view.FindControl<ListBox>("IconGridListBox")!;
         var template = listBox.ItemTemplate!;
-        var item = new TestBrowserItem { Name = "TestLargeLongFilename.iso" };
+        var item = new TestBrowserItem { Name = "TestLargeLongFilename.iso", DisplayName = "TestLargeLongFilename.iso" };
         var rendered = template.Build(item)!;
         rendered.DataContext = item;
         Dispatcher.UIThread.RunJobs();
@@ -129,6 +129,7 @@ public class BrowserViewModesTests
         var item = new TestBrowserItem
         {
             Name = "Track01.flac",
+            DisplayName = "Track01.flac",
             DisplayType = "Audio File",
             DisplaySize = "34.5 MB"
         };
@@ -317,6 +318,7 @@ public class BrowserViewModesTests
     {
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
         public string DisplayType { get; set; } = "";
         public string DisplaySize { get; set; } = "";
         public string IconGlyph { get; set; } = "file";
