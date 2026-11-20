@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SkyCD.UI.Controls.Selectors.MultiSelectDropdown;
@@ -53,4 +54,99 @@ public sealed class MultiSelectDropdownTests
             window.Close();
         }
     }
+
+    [AvaloniaFact]
+    public void IconPickerShowsSelectedIconInFieldInsteadOfIdentifierText()
+    {
+        var dropdown = CreateIconPicker("Lucide:Star");
+        var window = new Window { Content = dropdown };
+        window.Show();
+
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var preview = dropdown.FindControl<ContentControl>("SelectedIconPreview")!;
+
+            Assert.True(preview.IsVisible);
+            Assert.Equal("Lucide:Star", preview.Content);
+            Assert.Equal(string.Empty, search.Text);
+            Assert.Equal("Lucide:Star", AutomationProperties.GetName(search));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void IconPickerShowsPlaceholderWhenNoIconIsSelected()
+    {
+        var dropdown = CreateIconPicker(selectedIconKey: null);
+        var window = new Window { Content = dropdown };
+        window.Show();
+
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var preview = dropdown.FindControl<ContentControl>("SelectedIconPreview")!;
+
+            Assert.False(preview.IsVisible);
+            Assert.Null(preview.Content);
+            Assert.Equal("Select icon", search.Text);
+            Assert.Equal("Select icon", AutomationProperties.GetName(search));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void IconPickerRemainsSearchableAndUpdatesIconWhenSelectionChanges()
+    {
+        var dropdown = CreateIconPicker(selectedIconKey: null);
+        var window = new Window { Content = dropdown };
+        window.Show();
+
+        try
+        {
+            var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var preview = dropdown.FindControl<ContentControl>("SelectedIconPreview")!;
+            var iconList = dropdown.FindControl<ListBox>("IconItemsListBox")!;
+
+            search.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(preview.IsVisible);
+
+            iconList.SelectedIndex = 1;
+            search.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.Enter,
+                KeyModifiers = KeyModifiers.None
+            });
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("Lucide:Heart", dropdown.SelectedIconKey);
+            Assert.True(preview.IsVisible);
+            Assert.Equal("Lucide:Heart", preview.Content);
+            Assert.Equal(string.Empty, search.Text);
+            Assert.Equal("Lucide:Heart", AutomationProperties.GetName(search));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static MultiSelectDropdown CreateIconPicker(string? selectedIconKey) => new()
+    {
+        IsIconPicker = true,
+        IconKeys = ["Lucide:Star", "Lucide:Heart"],
+        SelectedIconKey = selectedIconKey,
+        PlaceholderText = "Select icon",
+        ItemPreviewTemplate = new FuncDataTemplate<string>((_, _) => new Border { Width = 16, Height = 16 })
+    };
 }

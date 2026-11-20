@@ -40,7 +40,10 @@ public class OptionsIconPickerTests
             var list = picker.FindControl<ListBox>("IconItemsListBox")!;
             var popup = picker.FindControl<Popup>("DropdownPopup")!;
 
-            Assert.Equal("Lucide:Check", search.Text);
+            Assert.Equal(string.Empty, search.Text);
+            var preview = picker.FindControl<ContentControl>("SelectedIconPreview")!;
+            Assert.True(preview.IsVisible);
+            Assert.Equal("Lucide:Check", preview.Content);
             Assert.Null(list.ItemsSource);
             Assert.True(search.Focus());
             Dispatcher.UIThread.RunJobs();

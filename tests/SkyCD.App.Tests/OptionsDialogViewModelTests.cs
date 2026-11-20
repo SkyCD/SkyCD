@@ -434,6 +434,24 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void StatusVariants_KeepSelectedIconWhenSavedAndReopened()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetStatusVariants(
+        [
+            new StatusVariantDocument { Name = "Watched", IconGlyph = "Lucide:Star" }
+        ]);
+        vm.StatusVariants[0].IconGlyph = "Lucide:Check";
+
+        var reopened = new OptionsDialogViewModel(["English"]);
+        reopened.SetStatusVariants(vm.GetStatusVariants());
+
+        var restored = Assert.Single(reopened.StatusVariants);
+        Assert.Equal("Lucide:Check", restored.IconGlyph);
+        Assert.Contains("Lucide:Check", restored.IconOptions);
+    }
+
+    [Fact]
     public void StatusVariantItemType_AllowsMultipleSelections()
     {
         var vm = new OptionsDialogViewModel(["English"]);
