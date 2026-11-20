@@ -35,6 +35,7 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-nrg", "catalog-sample.nrg", "catalog.nrg")]
     [InlineData("skycd-qcow2", "catalog-sample.qcow2", "catalog.qcow2")]
     [InlineData("skycd-daa", "catalog-sample.daa", "catalog.daa")]
+    [InlineData("skycd-vhd", "catalog-sample.vhd", "catalog.vhd")]
     [InlineData("skycd-arj", "catalog.arj", "catalog.arj")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
@@ -57,7 +58,7 @@ public sealed class FileFormatCompatibilityTests
             Assert.True(leaf.Size > 0);
         }
         if (format is "skycd-zip" or "skycd-tar" or "skycd-7z" or "skycd-iso" or "skycd-qcow2" or "skycd-daa"
-            or "skycd-arj")
+            or "skycd-arj" or "skycd-vhd")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
@@ -162,6 +163,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.Nrg.NrgImageIndexPlugin(),
         new SkyCD.Plugin.Qcow2.Qcow2ImageIndexPlugin(),
         new SkyCD.Plugin.Daa.DaaImageIndexPlugin(),
+        new SkyCD.Plugin.Vhd.VhdImageIndexPlugin(),
         new SkyCD.Plugin.Arj.ArjArchiveIndexPlugin(),
         new SkyCD.Plugin.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.Markdown.MarkdownCatalogExportPlugin()
