@@ -384,4 +384,13 @@ public static class UiKeys
     public const string RequiredColumn = "core.ui.RequiredColumn";
     public const string MoveUp = "core.ui.MoveUp";
     public const string MoveDown = "core.ui.MoveDown";
+    public const string CustomizeToolbar = "core.ui.CustomizeToolbar";
+    public const string CustomizeToolbarHint = "core.ui.CustomizeToolbarHint";
+    public const string ToolbarCommands = "core.ui.ToolbarCommands";
+    public const string ToolbarButtons = "core.ui.ToolbarButtons";
+    public const string AddSeparator = "core.ui.AddSeparator";
+    public const string AddToolbarButton = "core.ui.AddToolbarButton";
+    public const string Separator = "core.ui.Separator";
+    public const string RemoveToolbarButton = "core.ui.RemoveToolbarButton";
+    public const string ResetToolbar = "core.ui.ResetToolbar";
 }
