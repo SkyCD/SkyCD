@@ -121,6 +121,69 @@ public sealed class FolderCatalogScannerTests : IDisposable
     }
 
     [Fact]
+    public void Scan_WhenIncludeFilesFalse_ReturnsFoldersWithoutFileEntries()
+    {
+        File.WriteAllText(Path.Combine(testDirectory, "root.txt"), "abc");
+        var subDir = Path.Combine(testDirectory, "Sub");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(subDir, "inside.txt"), "123");
+
+        var scanner = new FolderCatalogScanner();
+        var documents = scanner.Scan(new FolderScanOptions(
+            FolderPath: testDirectory,
+            IncludeSubfolders: true,
+            IncludeFiles: false));
+
+        var rootDoc = Assert.Single(documents, doc => doc.ParentId == "library");
+        var subDirDoc = Assert.Single(documents, doc => doc.Type == CatalogDocumentType.Folder && doc.Id != rootDoc.Id);
+        Assert.Equal(rootDoc.Id, subDirDoc.ParentId);
+        Assert.Equal(1, rootDoc.ChildrenCount);
+        Assert.Equal(0L, rootDoc.Size);
+        Assert.Equal(0, subDirDoc.ChildrenCount);
+        Assert.DoesNotContain(documents, doc => doc.Type == CatalogDocumentType.File);
+    }
+
+    [Fact]
+    public void Scan_WhenIncludeFoldersFalse_ReturnsOnlyDirectFiles()
+    {
+        File.WriteAllText(Path.Combine(testDirectory, "root.txt"), "abc");
+        var subDir = Path.Combine(testDirectory, "Sub");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(subDir, "inside.txt"), "123");
+
+        var scanner = new FolderCatalogScanner();
+        var documents = scanner.Scan(new FolderScanOptions(
+            FolderPath: testDirectory,
+            IncludeSubfolders: false,
+            IncludeFiles: true));
+
+        var rootDoc = Assert.Single(documents, doc => doc.ParentId == "library");
+        Assert.Equal(1, rootDoc.ChildrenCount);
+        Assert.Equal(3L, rootDoc.Size);
+        var fileDoc = Assert.Single(documents, doc => doc.Type == CatalogDocumentType.File);
+        Assert.Equal("root.txt", fileDoc.Name);
+        Assert.DoesNotContain(documents, doc => doc.Name == "Sub" || doc.Name == "inside.txt");
+    }
+
+    [Fact]
+    public void Scan_WhenFilesAndFoldersExcluded_ReturnsTheSelectedRootOnly()
+    {
+        File.WriteAllText(Path.Combine(testDirectory, "root.txt"), "abc");
+        Directory.CreateDirectory(Path.Combine(testDirectory, "Sub"));
+
+        var scanner = new FolderCatalogScanner();
+        var documents = scanner.Scan(new FolderScanOptions(
+            FolderPath: testDirectory,
+            IncludeSubfolders: false,
+            IncludeFiles: false));
+
+        var rootDoc = Assert.Single(documents);
+        Assert.Equal(Path.GetFileName(testDirectory), rootDoc.Name);
+        Assert.Equal(0, rootDoc.ChildrenCount);
+        Assert.Equal(0L, rootDoc.Size);
+    }
+
+    [Fact]
     public void Scan_WithIncludeExtendedInfo_PopulatesFileAndFolderProperties()
     {
         var filePath = Path.Combine(testDirectory, "sample.txt");

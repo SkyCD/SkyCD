@@ -84,6 +84,7 @@ public sealed class MediaCatalogScanner(
                 driveInfo.RootDirectory,
                 rootId,
                 options.IncludeSubfolders,
+                options.IncludeFiles,
                 options.IncludeExtendedInfo,
                 documents);
         }

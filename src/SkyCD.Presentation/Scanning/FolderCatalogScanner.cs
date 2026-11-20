@@ -56,6 +56,7 @@ public sealed class FolderCatalogScanner(IScanFileSystem? fileSystem = null)
             options.FolderPath,
             rootId,
             options.IncludeSubfolders,
+            options.IncludeFiles,
             options.IncludeExtendedInfo,
             documents);
 
