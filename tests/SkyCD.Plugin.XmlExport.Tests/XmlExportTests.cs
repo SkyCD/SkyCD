@@ -536,7 +536,7 @@ public class XmlExportTests
         var service = CreateService();
         var payload = new List<Dictionary<string, object?>> { Row(("name", "a.txt")) };
         var reported = new List<int>();
-        var progress = new Progress<int>(reported.Add);
+        IProgress<int> progress = new InlineProgress(reported.Add);
 
         await using var target = new MemoryStream();
         var result = await service.WriteAsync(new FileFormatWriteRequest
@@ -606,5 +606,10 @@ public class XmlExportTests
         }
 
         return errors;
+    }
+
+    private sealed class InlineProgress(Action<int> report) : IProgress<int>
+    {
+        public void Report(int value) => report(value);
     }
 }
