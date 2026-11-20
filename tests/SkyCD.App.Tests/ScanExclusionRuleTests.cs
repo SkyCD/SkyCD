@@ -415,7 +415,8 @@ public sealed class ScanExclusionRuleTests : IDisposable
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true, false, true));
+        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true, false, true,
+            false, false, false));
         vm.SetScanExclusionRules(
         [
             new ScanExclusionRuleDocument { Pattern = "*.tmp", EntryType = "File", IsInclude = false },

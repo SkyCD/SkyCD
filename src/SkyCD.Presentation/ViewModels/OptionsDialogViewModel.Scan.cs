@@ -36,6 +36,21 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private bool saveScanErrorsToComments;
 
+    [ObservableProperty] private bool ejectMediaAfterScan;
+
+    [ObservableProperty] private bool activateMainWindowAfterScan;
+
+    [ObservableProperty] private bool playSoundAfterScan;
+
+    [ObservableProperty] private bool isMediaEjectionSupported = true;
+
+    /// <summary>Explains where media ejection applies, or why the option is unavailable on this platform.</summary>
+    public string MediaEjectionSupportHint => LocalizationService.Current.Get(
+        IsMediaEjectionSupported ? UiKeys.MediaEjectionSupported : UiKeys.MediaEjectionUnsupported);
+
+    /// <summary>Disables the eject option where the platform cannot eject media; the persisted value stays untouched.</summary>
+    public void SetMediaEjectionSupported(bool supported) => IsMediaEjectionSupported = supported;
+
     public bool ShowScanAlert => !string.IsNullOrWhiteSpace(ScanAlertMessage);
 
     public bool IsOnlineOnlyCloudFilesOptionVisible => OperatingSystem.IsWindows();
@@ -111,6 +126,9 @@ public partial class OptionsDialogViewModel
         SkipOnlineOnlyCloudFiles = settings.SkipOnlineOnlyCloudFiles;
         ShowScanErrorsAfterScan = settings.ShowScanErrorsAfterScan;
         SaveScanErrorsToComments = settings.SaveScanErrorsToComments;
+        EjectMediaAfterScan = settings.EjectMediaAfterScan;
+        ActivateMainWindowAfterScan = settings.ActivateMainWindowAfterScan;
+        PlaySoundAfterScan = settings.PlaySoundAfterScan;
     }
 
     public ScanSettingsSnapshot GetScanOptions()
@@ -124,7 +142,15 @@ public partial class OptionsDialogViewModel
             SkipEmptyFolders,
             SkipOnlineOnlyCloudFiles,
             ShowScanErrorsAfterScan,
-            SaveScanErrorsToComments);
+            SaveScanErrorsToComments,
+            EjectMediaAfterScan,
+            ActivateMainWindowAfterScan,
+            PlaySoundAfterScan);
+    }
+
+    partial void OnIsMediaEjectionSupportedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(MediaEjectionSupportHint));
     }
 
     partial void OnSelectedScanExclusionRuleChanged(ScanExclusionRuleItemViewModel? value)
@@ -149,5 +175,6 @@ public partial class OptionsDialogViewModel
         HiddenSystemPolicyOptions.Add(LocalizationService.Current.Get(UiKeys.HiddenSystemPolicySkipHidden));
         HiddenSystemPolicyOptions.Add(LocalizationService.Current.Get(UiKeys.HiddenSystemPolicySkipSystem));
         HiddenSystemPolicyOptions.Add(LocalizationService.Current.Get(UiKeys.HiddenSystemPolicySkipHiddenAndSystem));
+        OnPropertyChanged(nameof(MediaEjectionSupportHint));
     }
 }

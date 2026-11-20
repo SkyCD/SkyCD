@@ -58,6 +58,15 @@ public sealed class AppOptionsDocument
     /// <summary>Write scan errors into the comment of every affected catalog entry.</summary>
     public bool SaveScanErrorsToComments { get; set; } = false;
 
+    /// <summary>Eject the scanned medium once the scan finishes successfully, where the platform and drive allow it.</summary>
+    public bool EjectMediaAfterScan { get; set; } = false;
+
+    /// <summary>Bring the main window to the foreground once the scan finishes successfully.</summary>
+    public bool ActivateMainWindowAfterScan { get; set; } = false;
+
+    /// <summary>Play a sound once the scan finishes successfully.</summary>
+    public bool PlaySoundAfterScan { get; set; } = false;
+
     /// <summary>Files larger than this are skipped by AI description scanning. Default: 1 GiB.</summary>
     public long AiScanMaxFileSizeBytes { get; set; } = 1024L * 1024L * 1024L;
 

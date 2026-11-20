@@ -22,6 +22,7 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
@@ -64,6 +65,8 @@ public partial class MainWindow : Window
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private readonly IMediaDriveProvider mediaDriveProvider;
+    private readonly SystemMediaEjector mediaEjector = new();
+    private readonly ScanCompletionService scanCompletionService;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -91,6 +94,10 @@ public partial class MainWindow : Window
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
+        scanCompletionService = new ScanCompletionService(
+            mediaEjector,
+            new DesktopMainWindowLocator(),
+            ServiceProvider.Resolve<ILogger<ScanCompletionService>>());
         InitializeComponent();
         AttachPaneFocusHandlers();
         AddHandler(InputElement.KeyDownEvent, OnMainWindowKeyDown, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
@@ -855,6 +862,7 @@ public partial class MainWindow : Window
             progressDialog.Show(this);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
+            var scanCompleted = false;
             try
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
@@ -888,6 +896,7 @@ public partial class MainWindow : Window
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+                scanCompleted = true;
             }
             catch (OperationCanceledException)
             {
@@ -904,6 +913,11 @@ public partial class MainWindow : Window
             {
                 progressVm.FinishCancellation();
                 progressDialog.Close();
+            }
+
+            if (scanCompleted)
+            {
+                ApplyScanCompletionEffects(scanErrorOptions, mediaSource: null);
             }
 
             if (scanErrorOptions.ShowScanErrorsAfterScan && scanIssues.Count > 0)
@@ -964,6 +978,7 @@ public partial class MainWindow : Window
             progressDialog.Show(this);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
+            var scanCompleted = false;
             try
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
@@ -997,6 +1012,7 @@ public partial class MainWindow : Window
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+                scanCompleted = true;
             }
             catch (OperationCanceledException)
             {
@@ -1012,6 +1028,11 @@ public partial class MainWindow : Window
             {
                 progressVm.FinishCancellation();
                 progressDialog.Close();
+            }
+
+            if (scanCompleted)
+            {
+                ApplyScanCompletionEffects(scanErrorOptions, selectedDrivePath);
             }
 
             if (scanErrorOptions.ShowScanErrorsAfterScan && scanIssues.Count > 0)
@@ -1051,6 +1072,7 @@ public partial class MainWindow : Window
             progressDialog.Show(this);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
+            var scanCompleted = false;
             try
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
@@ -1084,6 +1106,7 @@ public partial class MainWindow : Window
                 await Task.Delay(50);
 
                 vm.StatusText = LocalizationService.Current.Get(TextKeys.Done);
+                scanCompleted = true;
             }
             catch (OperationCanceledException)
             {
@@ -1099,6 +1122,11 @@ public partial class MainWindow : Window
             {
                 progressVm.FinishCancellation();
                 progressDialog.Close();
+            }
+
+            if (scanCompleted)
+            {
+                ApplyScanCompletionEffects(scanErrorOptions, mediaSource: null);
             }
 
             if (scanErrorOptions.ShowScanErrorsAfterScan && scanIssues.Count > 0)
@@ -1342,6 +1370,7 @@ public partial class MainWindow : Window
             ? mainViewModel.GetDetailsColumnSettings()
             : options.Browser.DetailsColumns);
         LoadScanOptionsIntoDialog(e.Dialog, options);
+        e.Dialog.SetMediaEjectionSupported(mediaEjector.IsPlatformSupported);
         e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IGeneratedDescriptionCapability>().Any());
         e.Dialog.SetAiDescriptionImplementations(
             ServiceProvider.Resolve<DescriptionExtensionManager>().Implementations,
@@ -1610,7 +1639,10 @@ public partial class MainWindow : Window
             options.SkipEmptyFolders,
             options.SkipOnlineOnlyCloudFiles,
             options.ShowScanErrorsAfterScan,
-            options.SaveScanErrorsToComments));
+            options.SaveScanErrorsToComments,
+            options.EjectMediaAfterScan,
+            options.ActivateMainWindowAfterScan,
+            options.PlaySoundAfterScan));
         dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
     }
 
@@ -1625,6 +1657,24 @@ public partial class MainWindow : Window
         options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
         options.ShowScanErrorsAfterScan = scanSettings.ShowScanErrorsAfterScan;
         options.SaveScanErrorsToComments = scanSettings.SaveScanErrorsToComments;
+        options.EjectMediaAfterScan = scanSettings.EjectMediaAfterScan;
+        options.ActivateMainWindowAfterScan = scanSettings.ActivateMainWindowAfterScan;
+        options.PlaySoundAfterScan = scanSettings.PlaySoundAfterScan;
+    }
+
+    /// <summary>
+    /// Runs the completion actions the user enabled (eject, activate, sound) after a scan and its import
+    /// finished successfully. Failures are logged inside the service and never disturb the finished scan.
+    /// </summary>
+    private void ApplyScanCompletionEffects(AppOptionsDocument options, string? mediaSource)
+    {
+        var settings = ScanCompletionSettings.FromOptions(options);
+        if (!settings.HasAnyAction)
+        {
+            return;
+        }
+
+        scanCompletionService.Complete(settings, mediaSource);
     }
 
     private void ApplyWindowBounds(AppOptionsDocument options)
