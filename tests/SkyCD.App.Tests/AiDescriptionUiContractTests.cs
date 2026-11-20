@@ -107,6 +107,22 @@ public sealed class AiDescriptionUiContractTests
     }
 
     [Fact]
+    public void OptionsWindow_ExposesSeparateAiProviderCategory()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+
+        Assert.Contains("IsVisible=\"{Binding ShowAiProviderSection}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains(
+            "Text=\"{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}\"", xaml, StringComparison.Ordinal);
+
+        foreach (var language in new[] { "en", "lt" })
+        {
+            var ui = ReadRepoFile("src", "SkyCD.UI", "Translations", $"{language}-UI.yaml");
+            Assert.Contains("ui.AiProviderCategory:", ui, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void LocalizationCatalogs_ContainAiDescriptionLabels()
     {
         foreach (var language in new[] { "en", "lt" })

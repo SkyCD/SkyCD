@@ -108,6 +108,7 @@ public static class UiKeys
     public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
     public const string AiImplementation = "core.ui.AiImplementation";
     public const string AiProvider = "core.ui.AiProvider";
+    public const string AiProviderCategory = "core.ui.AiProviderCategory";
     public const string AiProviderSettings = "core.ui.AiProviderSettings";
     public const string AiProviderAddress = "core.ui.AiProviderAddress";
     public const string AiProviderEndpoint = "core.ui.AiProviderEndpoint";

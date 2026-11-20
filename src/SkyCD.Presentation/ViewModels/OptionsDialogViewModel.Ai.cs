@@ -44,7 +44,7 @@ public partial class OptionsDialogViewModel
         }
 
         IsAiDescriptionAvailable = available;
-        if (!available && IsAiDescriptionCategorySelected)
+        if (!available && SelectedTabIndex >= AiDescriptionCategoryIndex)
         {
             SelectedTabIndex = AiDescriptionCategoryIndex - 1;
         }
