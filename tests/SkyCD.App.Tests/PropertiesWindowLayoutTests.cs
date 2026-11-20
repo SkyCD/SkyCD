@@ -32,7 +32,7 @@ public class PropertiesWindowLayoutTests
         var window = XDocument.Parse(xaml).Root!;
 
         Assert.Equal("411", (string?)window.Attribute("Width"));
-        Assert.Equal("426", (string?)window.Attribute("Height"));
+        Assert.Equal("560", (string?)window.Attribute("Height"));
         Assert.Equal("False", (string?)window.Attribute("CanResize"));
         Assert.Equal("False", (string?)window.Attribute("CanMinimize"));
         Assert.Equal("CenterOwner", (string?)window.Attribute("WindowStartupLocation"));
