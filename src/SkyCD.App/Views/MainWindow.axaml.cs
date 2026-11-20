@@ -144,6 +144,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
             subscribedViewModel.RenameRequested -= OnRenameRequested;
+            subscribedViewModel.DetailsColumnsChanged -= OnDetailsColumnsChanged;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
@@ -171,6 +172,7 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.RenameRequested += OnRenameRequested;
+            subscribedViewModel.DetailsColumnsChanged += OnDetailsColumnsChanged;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
@@ -182,6 +184,18 @@ public partial class MainWindow : Window
     private void OnExitRequested(object? sender, EventArgs e)
     {
         Close();
+    }
+
+    private void OnDetailsColumnsChanged(object? sender, EventArgs e)
+    {
+        if (sender is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var options = LoadAppOptions();
+        options.Browser.DetailsColumns = viewModel.GetDetailsColumnSettings().ToList();
+        SaveAppOptions(options);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -651,6 +665,7 @@ public partial class MainWindow : Window
             options.Browser.ViewMode,
             options.Browser.SortMode,
             options.IsStatusBarVisible);
+        vm.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
         vm.SetStatusVariants(statusVariantRepository.GetOrdered());
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
@@ -999,6 +1014,7 @@ public partial class MainWindow : Window
             ServiceProvider.Resolve<IndexWorkItemSequence>());
         newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
         newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
+        newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
         newCatalog.CompleteNewCatalog();
         DataContext = newCatalog;
     }
@@ -1194,6 +1210,9 @@ public partial class MainWindow : Window
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
         e.Dialog.SetStatusVariants(statusVariantRepository.GetOrdered());
         e.Dialog.SetCustomProperties(options.CustomProperties);
+        e.Dialog.SetDetailsColumns(DataContext is MainWindowViewModel mainViewModel
+            ? mainViewModel.GetDetailsColumnSettings()
+            : options.Browser.DetailsColumns);
         LoadScanOptionsIntoDialog(e.Dialog, options);
         e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IGeneratedDescriptionCapability>().Any());
         e.Dialog.SetAiDescriptionImplementations(
@@ -1202,6 +1221,11 @@ public partial class MainWindow : Window
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
+        if (!string.IsNullOrWhiteSpace(e.PreselectSettingCategory))
+        {
+            e.Dialog.SettingsSearchText = string.Empty;
+            e.Dialog.SelectedSettingCategory = e.PreselectSettingCategory;
+        }
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
@@ -1239,6 +1263,7 @@ public partial class MainWindow : Window
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
+            options.Browser.DetailsColumns = e.Dialog.GetDetailsColumns().ToList();
             options.AiScanMaxFileSizeBytes = e.Dialog.AiScanMaxFileSizeMegabytes * 1024L * 1024L;
             options.AiDescriptionImplementation = e.Dialog.SelectedAiDescriptionImplementation?.Id
                                                   ?? options.AiDescriptionImplementation;
@@ -1255,6 +1280,7 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.SetStatusVariants(statusVariantRepository.GetOrdered());
+                vm.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
             }
 
             // Trigger UI refresh to apply new language
@@ -1367,6 +1393,7 @@ public partial class MainWindow : Window
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
         options.Browser.ViewMode = vm.CurrentViewMode;
         options.Browser.SortMode = vm.CurrentSortMode;
+        options.Browser.DetailsColumns = vm.GetDetailsColumnSettings().ToList();
         if (!string.IsNullOrWhiteSpace(vm.CurrentCatalogPath))
         {
             options.LastOpenedCatalogPath = vm.CurrentCatalogPath;
@@ -1408,6 +1435,7 @@ public partial class MainWindow : Window
                 ServiceProvider.Resolve<IndexWorkItemSequence>());
             var options = LoadAppOptions();
             reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
+            reloadedViewModel.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
             reloadedViewModel.CurrentCatalogPath = localPath;
             options.LastOpenedCatalogPath = localPath;
             SaveAppOptions(options);
@@ -1683,7 +1711,8 @@ public partial class MainWindow : Window
                         isEnabled: descriptor.IsEnabled,
                         id: loaded.Id,
                         authorUrl: loaded.Author?.Url,
-                        description: loaded.Description);
+                        description: loaded.Description,
+                        primaryExtension: loaded.PrimaryExtension);
                 }
 
                 var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
@@ -1699,7 +1728,8 @@ public partial class MainWindow : Window
                     isEnabled: descriptor.IsEnabled,
                     id: descriptor.Id,
                     authorUrl: descriptor.Author?.Url,
-                    description: descriptor.Description);
+                    description: descriptor.Description,
+                    primaryExtension: descriptor.PrimaryExtension);
             })
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();

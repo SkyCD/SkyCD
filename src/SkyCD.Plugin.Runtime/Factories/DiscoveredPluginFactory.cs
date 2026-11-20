@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
@@ -38,9 +40,80 @@ public sealed class DiscoveredPluginFactory
             MinHostVersion = metadata.MinHostVersion,
             MaxHostVersion = metadata.MaxHostVersion,
             Description = metadata.Description,
+            PrimaryExtension = ResolvePrimaryExtension(capabilities),
             FileName = metadata.FileName,
             Capabilities = capabilities
         };
+    }
+
+    private static string? ResolvePrimaryExtension(IReadOnlyList<IPluginCapability> capabilities)
+    {
+        foreach (var capability in capabilities.OfType<IFileFormatPluginCapability>())
+        {
+            var extension = TryResolveFirstExtension(() => capability.SupportedFormat.Extensions);
+            if (extension is not null)
+            {
+                return extension;
+            }
+        }
+
+        foreach (var capability in capabilities.OfType<IMediaMetadataCapability>())
+        {
+            var extension = TryResolveFirstExtension(() => capability.Descriptor.Extensions);
+            if (extension is not null)
+            {
+                return extension;
+            }
+        }
+
+        foreach (var capability in capabilities.OfType<IMediaPreviewCapability>())
+        {
+            var extension = TryResolveFirstExtension(() => capability.Descriptor.Extensions);
+            if (extension is not null)
+            {
+                return extension;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryResolveFirstExtension(Func<IEnumerable<string>> extensionsProvider)
+    {
+        try
+        {
+            foreach (var candidate in extensionsProvider())
+            {
+                var normalized = NormalizeExtension(candidate);
+                if (normalized is not null)
+                {
+                    return normalized;
+                }
+            }
+        }
+        catch
+        {
+            // A capability that cannot describe itself simply has no usable icon.
+        }
+
+        return null;
+    }
+
+    private static string? NormalizeExtension(string? value)
+    {
+        var candidate = value?.Trim().TrimStart('.');
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return null;
+        }
+
+        var lastDot = candidate.LastIndexOf('.');
+        if (lastDot >= 0)
+        {
+            candidate = candidate[(lastDot + 1)..];
+        }
+
+        return string.IsNullOrWhiteSpace(candidate) ? null : candidate.ToLowerInvariant();
     }
 
     private static IReadOnlyList<IPluginCapability> DiscoverCapabilitiesFromAssembly(Assembly assembly)

@@ -69,6 +69,26 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
+    public void OptionsPluginItem_BuildsIconKeyFromPrimaryExtension()
+    {
+        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json");
+
+        Assert.Equal("json", plugin.PrimaryExtension);
+        Assert.Equal("ext:json", plugin.IconKey);
+        Assert.True(plugin.HasIcon);
+    }
+
+    [Fact]
+    public void OptionsPluginItem_UsesNoIconKeyWithoutPrimaryExtension()
+    {
+        var plugin = new OptionsPluginItem("Accounts", "SkyCD", "accounts v2.0.0");
+
+        Assert.Null(plugin.PrimaryExtension);
+        Assert.Null(plugin.IconKey);
+        Assert.False(plugin.HasIcon);
+    }
+
+    [Fact]
     public void SetPlugins_RespectsPreviouslyDisabledPluginIds()
     {
         var vm = new OptionsDialogViewModel(["English"]);

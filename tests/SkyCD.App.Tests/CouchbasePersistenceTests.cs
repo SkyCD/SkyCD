@@ -377,7 +377,13 @@ public sealed class CouchbasePersistenceTests : IDisposable
             Browser = new BrowserOptionsDocument
             {
                 ViewMode = BrowserViewMode.Tiles,
-                SortMode = "Type"
+                SortMode = "Type",
+                DetailsColumns =
+                [
+                    new DetailsColumnSettingDocument { Id = "location", IsVisible = true },
+                    new DetailsColumnSettingDocument { Id = "name", IsVisible = true },
+                    new DetailsColumnSettingDocument { Id = "size", IsVisible = false }
+                ]
             },
             PluginPath = @"C:\plugins\custom",
             IsMcpServerEnabled = false,
@@ -421,6 +427,12 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.Equal(expected.IsStatusBarVisible, actual.IsStatusBarVisible);
         Assert.Equal(expected.Browser.ViewMode, actual.Browser.ViewMode);
         Assert.Equal(expected.Browser.SortMode, actual.Browser.SortMode);
+        Assert.Equal(expected.Browser.DetailsColumns.Count, actual.Browser.DetailsColumns.Count);
+        for (var i = 0; i < expected.Browser.DetailsColumns.Count; i++)
+        {
+            Assert.Equal(expected.Browser.DetailsColumns[i].Id, actual.Browser.DetailsColumns[i].Id);
+            Assert.Equal(expected.Browser.DetailsColumns[i].IsVisible, actual.Browser.DetailsColumns[i].IsVisible);
+        }
         Assert.Equal(expected.PluginPath, actual.PluginPath);
         Assert.Equal(expected.IsMcpServerEnabled, actual.IsMcpServerEnabled);
         Assert.Equal(expected.McpPort, actual.McpPort);

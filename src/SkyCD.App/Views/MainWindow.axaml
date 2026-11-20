@@ -57,6 +57,11 @@
                 <StaticResource ResourceKey="DynamicMenuItemTheme" />
             </ContextMenu.ItemContainerTheme>
         </ContextMenu>
+        <ContextMenu x:Key="DetailsHeaderContextMenu" ItemsSource="{Binding DetailsHeaderMenuItems}">
+            <ContextMenu.ItemContainerTheme>
+                <StaticResource ResourceKey="DynamicMenuItemTheme" />
+            </ContextMenu.ItemContainerTheme>
+        </ContextMenu>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
@@ -219,6 +224,7 @@
                                          ThumbnailProvider="{Binding BrowserThumbnailProvider}"
                                          ContextRequested="OnBrowserContextRequested"
                                          ListContextMenu="{DynamicResource BrowserContextMenu}"
+                                         HeaderContextMenu="{DynamicResource DetailsHeaderContextMenu}"
                                          DoubleTapped="OnBrowserListDoubleTapped"
                                          GotFocus="OnBrowserGotFocus"
                                          PointerPressed="OnBrowserPointerPressed">
