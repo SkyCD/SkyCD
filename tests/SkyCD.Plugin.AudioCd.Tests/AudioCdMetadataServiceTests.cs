@@ -31,10 +31,15 @@ public sealed class AudioCdMetadataServiceTests
     [Fact]
     public void OpticalDriveRoot_IsFound_AndVirtualTrackFilesImplyTheRoot()
     {
+        var opticalRoot = Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-disc")) +
+                          Path.DirectorySeparatorChar;
         var trackRoot = Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-root")) +
                         Path.DirectorySeparatorChar;
         var optical = AudioCdMetadataService.FindDiscRoots(
-            [Root("media-1", @"E:\", "CDRom"), File("file-1", "Track01.cda", @"E:\Track01.cda", "media-1")]);
+        [
+            Root("media-1", opticalRoot, "CDRom"),
+            File("file-1", "Track01.cda", Path.Combine(opticalRoot, "Track01.cda"), "media-1")
+        ]);
         var tracksOnly = AudioCdMetadataService.FindDiscRoots(
         [
             Root("media-2", trackRoot, null),
@@ -42,7 +47,7 @@ public sealed class AudioCdMetadataServiceTests
         ]);
 
         var disc = Assert.Single(optical);
-        Assert.Equal(@"E:\", disc.RootPath);
+        Assert.Equal(opticalRoot, disc.RootPath);
         Assert.Equal("media-1", disc.RootDocument!.Id);
         Assert.Equal(trackRoot.TrimEnd(Path.DirectorySeparatorChar), Assert.Single(tracksOnly).RootPath);
     }
