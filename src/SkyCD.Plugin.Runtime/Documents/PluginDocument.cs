@@ -21,6 +21,8 @@ public sealed class PluginDocument
 
     public string Description { get; set; } = string.Empty;
 
+    public string? PrimaryExtension { get; set; }
+
     public string AssemblyPath { get; set; } = string.Empty;
 
     public bool IsEnabled { get; set; } = true;

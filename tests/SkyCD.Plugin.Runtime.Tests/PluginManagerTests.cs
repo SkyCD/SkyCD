@@ -72,6 +72,36 @@ public class PluginManagerTests
         Assert.Equal(Assembly.GetExecutingAssembly().GetName().Version, target.Version);
     }
 
+    [Fact]
+    public void Discover_PersistsPrimaryExtensionInDescriptor()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"skycd-plugin-icon-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var assemblyPath = Assembly.GetExecutingAssembly().Location;
+            File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
+
+            var manager = new PluginManager(
+                NullLogger<PluginManager>.Instance,
+                new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+                new DiscoveredPluginFactory(),
+                CreatePluginRepository());
+            manager.Discover(root, new Version(3, 0, 0));
+
+            var descriptor = Assert.Single(manager.GetPluginDescriptors());
+            Assert.Equal("test", descriptor.PrimaryExtension);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     private static IRepository<PluginDocument> CreatePluginRepository()
     {
         var databaseManager = new DatabaseManager();

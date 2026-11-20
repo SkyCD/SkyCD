@@ -5,6 +5,8 @@
         xmlns:media="clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.Plugin.Abstractions"
         xmlns:hostmedia="clr-namespace:SkyCD.Plugin.Host.Media;assembly=SkyCD.Plugin.Host"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.OptionsWindow"
@@ -58,6 +60,7 @@
 
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
+        <converters:PluginIconConverter x:Key="PluginIconConverter" />
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
@@ -212,9 +215,9 @@
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
                                     <Grid RowDefinitions="Auto,*">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
                                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.On}}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" FontWeight="SemiBold" />
                                             </Grid>
                                         </Border>
                                         <ListBox Grid.Row="1"
@@ -224,11 +227,27 @@
                                                 <DataTemplate x:DataType="vm:OptionsPluginItem">
                                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
                                                             Padding="8,6">
-                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
                                                             <CheckBox
                                                                 IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 VerticalAlignment="Top" Margin="0,2,0,0" />
-                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                            <Panel Grid.Column="1"
+                                                                   Width="24"
+                                                                   Height="24"
+                                                                   VerticalAlignment="Top">
+                                                                <Image
+                                                                    Source="{Binding IconKey, Converter={StaticResource PluginIconConverter}}"
+                                                                    IsVisible="{Binding HasIcon}" />
+                                                                <iconPacks:PackIconControl
+                                                                    Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
+                                                                    Width="20"
+                                                                    Height="20"
+                                                                    Foreground="#9CA3AF"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    IsVisible="{Binding !HasIcon}" />
+                                                            </Panel>
+                                                            <StackPanel Grid.Column="2" Spacing="2">
                                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                                            TextTrimming="CharacterEllipsis" />
                                                                 <TextBlock Text="{Binding Type}" Foreground="#9CA3AF"
