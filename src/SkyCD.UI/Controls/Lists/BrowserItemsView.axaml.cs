@@ -46,6 +46,10 @@ public partial class BrowserItemsView : UserControl
     public static readonly StyledProperty<ContextMenu?> ListContextMenuProperty =
         AvaloniaProperty.Register<BrowserItemsView, ContextMenu?>(nameof(ListContextMenu));
 
+    /// <summary>Menu shown when the details header is right-clicked.</summary>
+    public static readonly StyledProperty<ContextMenu?> HeaderContextMenuProperty =
+        AvaloniaProperty.Register<BrowserItemsView, ContextMenu?>(nameof(HeaderContextMenu));
+
     public static readonly StyledProperty<double> ListMinWidthProperty =
         AvaloniaProperty.Register<BrowserItemsView, double>(nameof(ListMinWidth), 240);
 
@@ -221,6 +225,12 @@ public partial class BrowserItemsView : UserControl
         set => SetValue(ListContextMenuProperty, value);
     }
 
+    public ContextMenu? HeaderContextMenu
+    {
+        get => GetValue(HeaderContextMenuProperty);
+        set => SetValue(HeaderContextMenuProperty, value);
+    }
+
     public double ListMinWidth
     {
         get => GetValue(ListMinWidthProperty);
@@ -298,6 +308,7 @@ public partial class BrowserItemsView : UserControl
             }
         }
         else if (change.Property == IconConverterProperty || change.Property == StatusIconConverterProperty || change.Property == DetailsColumnsProperty ||
+                 change.Property == HeaderContextMenuProperty ||
                  change.Property == ThumbnailProviderProperty)
         {
             UpdateListTemplate();
@@ -648,12 +659,17 @@ public partial class BrowserItemsView : UserControl
         });
     }
 
-    private static object BuildDetailsHeaderContent(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
+    private object BuildDetailsHeaderContent(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
     {
         var grid = new Grid
         {
             ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns, isHeader: true)
         };
+
+        if (HeaderContextMenu is not null)
+        {
+            grid.ContextMenu = HeaderContextMenu;
+        }
 
         for (var i = 0; i < detailsColumns.Count; i++)
         {

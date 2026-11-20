@@ -365,4 +365,11 @@ public static class UiKeys
     public const string ResetMimeTypesConfirmation = "core.ui.ResetMimeTypesConfirmation";
     public const string NewMimeType = "core.ui.NewMimeType";
     public const string NoPluginDescription = "core.ui.NoPluginDescription";
+    public const string DetailsColumns = "core.ui.DetailsColumns";
+    public const string DetailsColumnsDescription = "core.ui.DetailsColumnsDescription";
+    public const string DetailsColumnRequiredHeader = "core.ui.DetailsColumnRequiredHeader";
+    public const string ConfigureColumns = "core.ui.ConfigureColumns";
+    public const string RequiredColumn = "core.ui.RequiredColumn";
+    public const string MoveUp = "core.ui.MoveUp";
+    public const string MoveDown = "core.ui.MoveDown";
 }
