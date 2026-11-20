@@ -24,7 +24,7 @@ public static class DetailsColumnsCatalog
         {
             Id = NameId,
             HeaderKey = TextKeys.Name2,
-            ValuePath = "Name",
+            ValuePath = nameof(CatalogDocument.DisplayName),
             Width = new GridLength(500, GridUnitType.Pixel),
             IsRequired = true
         },
