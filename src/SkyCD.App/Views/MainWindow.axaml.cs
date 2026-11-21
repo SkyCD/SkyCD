@@ -68,6 +68,7 @@ public partial class MainWindow : Window
     private readonly IMediaDriveProvider mediaDriveProvider;
     private readonly SystemMediaEjector mediaEjector = new();
     private readonly ScanCompletionService scanCompletionService;
+    private readonly PluginMarketplaceService pluginMarketplaceService;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -82,9 +83,11 @@ public partial class MainWindow : Window
         RepositoryManager repositoryManager,
         PluginManager pluginManager,
         FileFormatManager fileFormatManager,
+        PluginMarketplaceService pluginMarketplaceService,
         IMediaDriveProvider? mediaDriveProvider = null)
     {
         this.repositoryManager = repositoryManager;
+        this.pluginMarketplaceService = pluginMarketplaceService;
         this.mediaDriveProvider = mediaDriveProvider ?? new SystemMediaDriveProvider();
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
@@ -1389,7 +1392,7 @@ public partial class MainWindow : Window
         {
             e.Dialog.SetLocations(locationsViewModel.GetLocationSnapshots());
         }
-        e.Dialog.SetPluginMarketplace(ServiceProvider.Resolve<PluginMarketplaceService>());
+        e.Dialog.SetPluginMarketplace(pluginMarketplaceService);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
