@@ -281,6 +281,7 @@ public static class UiKeys
     public const string RenameLocation = "core.ui.RenameLocation";
     public const string MergeLocations = "core.ui.MergeLocations";
     public const string DeleteLocation = "core.ui.DeleteLocation";
+    public const string LocationUnsaved = "core.ui.LocationUnsaved";
     public const string LocationNone = "core.ui.LocationNone";
     public const string AllLocations = "core.ui.AllLocations";
     public const string Collections = "core.ui.Collections";

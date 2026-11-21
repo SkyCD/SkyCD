@@ -153,7 +153,6 @@ public partial class MainWindow : Window
             subscribedViewModel.LoansRequested -= OnLoansRequested;
             subscribedViewModel.ContactsRequested -= OnContactsRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
-            subscribedViewModel.LocationsRequested -= OnLocationsRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
@@ -183,7 +182,6 @@ public partial class MainWindow : Window
             subscribedViewModel.LoansRequested += OnLoansRequested;
             subscribedViewModel.ContactsRequested += OnContactsRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
-            subscribedViewModel.LocationsRequested += OnLocationsRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
@@ -1344,16 +1342,6 @@ public partial class MainWindow : Window
         await dialog.ShowDialog(this);
     }
 
-    private async void OnLocationsRequested(object? sender, LocationsDialogRequestedEventArgs e)
-    {
-        var dialog = new LocationsWindow
-        {
-            DataContext = e.Dialog
-        };
-        var accepted = await dialog.ShowDialog<bool?>(this);
-        e.Complete(accepted == true);
-    }
-
     private async void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e)
     {
         var options = LoadAppOptions();
@@ -1379,6 +1367,10 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel toolbarViewModel)
         {
             e.Dialog.SetToolbarCustomization(toolbarViewModel.ToolbarCommands(), toolbarViewModel.ToolbarEntries);
+        }
+        if (DataContext is MainWindowViewModel locationsViewModel)
+        {
+            e.Dialog.SetLocations(locationsViewModel.GetLocationSnapshots());
         }
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         if (!string.IsNullOrWhiteSpace(e.PreselectSettingCategory))
@@ -1447,6 +1439,7 @@ public partial class MainWindow : Window
             {
                 vm.SetStatusVariants(statusVariantRepository.GetOrdered());
                 vm.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
+                vm.ApplyLocationChanges(e.Dialog.BuildLocationChangeSet());
             }
 
             // Trigger UI refresh to apply new language

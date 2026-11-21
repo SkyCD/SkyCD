@@ -150,7 +150,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? DetailsColumnsChanged;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
     public event EventHandler<TagsDialogRequestedEventArgs>? TagsRequested;
-    public event EventHandler<LocationsDialogRequestedEventArgs>? LocationsRequested;
     public event EventHandler? ExitRequested;
     public event EventHandler? FocusBrowserRequested;
     public event EventHandler? FocusTreeRequested;
@@ -2934,33 +2933,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenLocationsDialog()
     {
-        if (locationService is null || locationRepository is null || catalogRepository is null)
-        {
-            return;
-        }
-
-        var dialog = new LocationsDialogViewModel(
-            locationService,
-            undoManager,
-            catalogRepository,
-            locationRepository,
-            onChanged: () =>
-            {
-                IsDirtyDocument = true;
-                UpdateUndoRedoState();
-                RefreshLocations();
-            },
-            navigate: NavigateToDocument);
-        LocationsRequested?.Invoke(this, new LocationsDialogRequestedEventArgs
-        {
-            Dialog = dialog,
-            Complete = _ =>
-            {
-                IsDirtyDocument = true;
-                UpdateUndoRedoState();
-                RefreshLocations();
-            }
-        });
+        ShowOptions(LocalizationService.Current.Get(UiKeys.Locations));
     }
 
     private void NavigateToDocument(CatalogDocument document)
