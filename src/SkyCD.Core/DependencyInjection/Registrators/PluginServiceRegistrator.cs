@@ -14,10 +14,13 @@ using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.Plugin.Abstractions.Capabilities.Import;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.AudioCd;
+using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
@@ -148,6 +151,16 @@ public sealed class PluginServiceRegistrator
 
         registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>
             plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        // Catalog feature contributions (decorations, columns, search fields, entry commands) and post-import
+        // hooks aggregate over enabled plugins. The managers are domain-neutral: no specific feature is referenced.
+        registrator.RegisterInstance(new CatalogFeatureExtensionManager(plugins.SelectMany(plugin =>
+            plugin.Capabilities.OfType<ICatalogFeaturePluginCapability>())),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        registrator.RegisterInstance(new CatalogImportExtensionManager(plugins.SelectMany(plugin =>
+            plugin.Capabilities.OfType<ICatalogImportPluginCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         // Capture-time settings are read from the configuration store so a persisted change applies to the
