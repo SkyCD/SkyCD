@@ -9,6 +9,7 @@ namespace SkyCD.App.Tests;
 public class OptionsWindowLayoutTests
 {
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
+    private static readonly XNamespace Xaml2006 = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
     public void CustomPropertiesSection_UsesFullHeightStatusesGridLayout()
@@ -142,6 +143,41 @@ public class OptionsWindowLayoutTests
 
         return Assert.Single(document.Descendants(),
             element => (string?)element.Attribute("IsVisible") == "{Binding ShowToolbarSection}");
+    }
+
+    [Fact]
+    public void AiDescriptionSection_UsesFullHeightGridWithStarSizedMimeList()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+        var section = Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowAiDescriptionSection}");
+
+        Assert.Equal("Grid", section.Name.LocalName);
+        Assert.Equal("Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+        Assert.Null(section.Attribute("Height"));
+
+        var listBorder = Assert.Single(section.Descendants(Avalonia + "Border"),
+            border => (string?)border.Attribute(Xaml2006 + "Name") == "AiScanExclusionsListBorder");
+        Assert.Null(listBorder.Attribute("Height"));
+
+        var listHost = listBorder.Parent!;
+        Assert.Equal("Grid", listHost.Name.LocalName);
+        Assert.Equal("Auto,*", (string?)listHost.Attribute("RowDefinitions"));
+        Assert.Equal("2", (string?)listHost.Attribute("Grid.Row"));
+        Assert.Equal("1", (string?)listBorder.Attribute("Grid.Row"));
+
+        var list = Assert.Single(listBorder.Descendants(Avalonia + "ListBox"));
+        Assert.Null(list.Attribute("Height"));
+        Assert.Equal("Auto", (string?)list.Attribute("ScrollViewer.VerticalScrollBarVisibility"));
+
+        // The divider above the MIME group and the alert below it keep their place.
+        var divider = Assert.Single(section.Elements(Avalonia + "Border"),
+            border => (string?)border.Attribute("Grid.Row") == "1");
+        Assert.Equal("1", (string?)divider.Attribute("Height"));
+        var alert = Assert.Single(section.Elements(Avalonia + "Border"),
+            border => (string?)border.Attribute("IsVisible") == "{Binding ShowAiDescriptionAlert}");
+        Assert.Equal("3", (string?)alert.Attribute("Grid.Row"));
     }
 
     private static string ReadRepoFile(params string[] parts)
