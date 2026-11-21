@@ -25,6 +25,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 
@@ -104,6 +105,11 @@ public sealed class CliHost(
         FileFormatManager fileFormatManager;
         lock (PluginRuntimeLock)
         {
+            // Staged catalog installs and updates become visible to assembly discovery only here, before the scan.
+            PluginServiceRegistrator.ApplyPendingOperationsBeforeDiscoveryAsync(
+                    ServiceProvider.Resolve<IPluginPackageInstaller>())
+                .GetAwaiter()
+                .GetResult();
             var pluginManager = ServiceProvider.Resolve<PluginManager>();
             var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
             pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);

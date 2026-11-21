@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <AssemblyName>SkyCD.Plugin.SlipSlice</AssemblyName>
+        <RootNamespace>Tests.PluginSlice</RootNamespace>
+        <AssemblyVersion>2.5.0.0</AssemblyVersion>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Foreign/ is a sibling fixture project, not slice source. -->
+        <Compile Remove="Foreign/**/*.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIdAttribute">
+            <_Parameter1>skycd.plugin.slip-slice</_Parameter1>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MinHostVersionAttribute">
+            <_Parameter1>3.0.0</_Parameter1>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MaxHostVersionAttribute">
+            <_Parameter1>4.0.0</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
+</Project>

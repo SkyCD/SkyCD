@@ -29,4 +29,20 @@
             <_Parameter1>3.0.0</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
+    <ItemGroup>
+        <!-- Slice plugin assemblies packaged by staged-install fixtures and copied next to the tests. -->
+        <Compile Remove="Slice/**/*.cs"/>
+        <None Include="Slice/**/*.cs"/>
+        <ProjectReference Include="Slice/SkyCD.Plugin.SlipSlice.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Slice/Foreign/SkyCD.Plugin.ForeignSlice.csproj" ReferenceOutputAssembly="false"/>
+    </ItemGroup>
+    <!-- Copy after the referenced slice projects are built; a plain None copy can run first on a clean tree. -->
+    <Target Name="CopySliceAssemblies" AfterTargets="Build">
+        <Copy SourceFiles="$(MSBuildThisFileDirectory)Slice/bin/$(Configuration)/net10.0/SkyCD.Plugin.SlipSlice.dll"
+              DestinationFiles="$(OutDir)Slice.dll"
+              SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(MSBuildThisFileDirectory)Slice/Foreign/bin/$(Configuration)/net10.0/SkyCD.Plugin.ForeignSlice.dll"
+              DestinationFiles="$(OutDir)ForeignSlice.dll"
+              SkipUnchangedFiles="true"/>
+    </Target>
 </Project>

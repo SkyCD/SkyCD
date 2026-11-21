@@ -1,6 +1,8 @@
 # Plugin Runtime Loading
 
 ## Discovery Flow
+0. Apply staged catalog installs and updates. `ApplyPendingOperationsBeforeDiscoveryAsync` activates
+   pending operations before the scan; see [catalog install staging](catalog-install-staging.md).
 1. Enumerate configured plugin directories and scan DLLs recursively.
 2. Skip SDK contract assemblies, intermediate (`obj`), and reference outputs.
 3. Load each assembly once, reusing an already loaded assembly when available.

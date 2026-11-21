@@ -12,7 +12,9 @@ using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Core.DependencyInjection;
+using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
@@ -95,6 +97,12 @@ public partial class App : Avalonia.Application
         var translations = appServiceProvider!.Resolve<PluginTranslationRegistry>();
         pluginManager.PluginsChanged += (_, _) => translations.Refresh(pluginManager.Plugins);
         var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
+
+        // Staged catalog installs and updates become visible to assembly discovery only here, before the scan.
+        PluginServiceRegistrator.ApplyPendingOperationsBeforeDiscoveryAsync(
+                ServiceProvider.Resolve<IPluginPackageInstaller>())
+            .GetAwaiter()
+            .GetResult();
 
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
