@@ -86,7 +86,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private Database? temporaryCatalogDatabase;
     private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
-    private readonly OpenCatalogState? openCatalogState;
+    private OpenCatalogState? openCatalogState;
     private readonly CatalogUndoManager? undoManager;
     private readonly CatalogTagService? tagService;
     private readonly TagDocumentRepository? tagRepository;
@@ -347,15 +347,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IStringLocalizer propertyValueLocalizer,
         MenuExtensionManager menuExtensionManager,
         bool shouldSeedDefaultCatalog,
-        CatalogUndoManager? undoManager = null,
-        OpenCatalogState? openCatalogState = null)
+        CatalogUndoManager? undoManager = null)
     {
         this.catalogRepository = catalogRepository as CatalogDocumentRepository
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.undoManager = undoManager;
-        this.openCatalogState = openCatalogState;
-        openCatalogState?.Attach(this.catalogRepository);
         loanService = this.catalogRepository.Collection is not null ? CatalogLoanService.Open(this.catalogRepository) : null;
         this.tagRepository = CreateTagDocuments(this.catalogRepository);
         this.tagService = this.tagRepository is not null
@@ -410,6 +407,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             // Best effort cleanup of abandoned staging sessions on startup
         }
+    }
+
+    /// <summary>
+    /// Connects the host-owned open-catalog state that the plugin catalog and storage APIs project from.
+    /// </summary>
+    public void AttachOpenCatalogState(OpenCatalogState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        openCatalogState = state;
+        state.Attach(catalogRepository);
+        state.Path = CurrentCatalogPath;
     }
 
     public MainWindowViewModel(

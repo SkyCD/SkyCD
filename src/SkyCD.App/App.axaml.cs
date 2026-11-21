@@ -64,6 +64,7 @@ public partial class App : Avalonia.Application
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
                 ApplyMcpSettings();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
+                mainWindowViewModel.AttachOpenCatalogState(appServiceProvider.Resolve<OpenCatalogState>());
                 var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
                 descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
