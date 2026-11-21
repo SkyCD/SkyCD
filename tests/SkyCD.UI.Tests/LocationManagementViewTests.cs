@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using DryIoc;
@@ -13,8 +12,8 @@ using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Locations;
-using SkyCD.Presentation.UndoRedo;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.UI.Tests;
@@ -89,6 +88,13 @@ public sealed class LocationManagementViewTests : IDisposable
         return new Fixture(repositories, catalog, locations, service, viewModel, garage.Id, shelf.Id);
     }
 
+    private static OptionsDialogViewModel OpenLocationsOptions(MainWindowViewModel viewModel)
+    {
+        var options = new OptionsDialogViewModel(["English"]);
+        options.SetLocations(viewModel.GetLocationSnapshots());
+        return options;
+    }
+
     private static void Save(CatalogDocumentRepository catalog, CatalogDocument document)
     {
         catalog.Save(document.Id, document);
@@ -109,110 +115,220 @@ public sealed class LocationManagementViewTests : IDisposable
         }
     }
 
+    private static string[] StoredNames(LocationDocumentRepository locations) =>
+        locations.GetOrdered().Select(location => location.Name).ToArray();
+
     [AvaloniaFact]
-    public void ManagerDialog_CreateRenameMergeDelete_Persist()
+    public void OptionsLocations_CreateRenameMergeDelete_ApplyOnSave()
     {
         var fixture = CreateFixture();
-        var undo = new CatalogUndoManager(fixture.Catalog);
-        var dialog = new LocationsDialogViewModel(
-            fixture.Service, undo, fixture.Catalog, fixture.Locations);
-        Assert.True(dialog.LocationsAvailable);
-        Assert.Equal(2, dialog.Locations.Count);
-        Assert.Equal(3, dialog.Locations.Single(location => location.LocationId == fixture.GarageId).UsageCount);
+        var options = OpenLocationsOptions(fixture.ViewModel);
+        Dispatcher.UIThread.RunJobs();
 
-        dialog.NewLocationName = "Attic";
-        dialog.CreateLocationCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        var attic = Assert.Single(dialog.Locations, location => location.Name == "Attic");
+        // The page lists the stored locations with effective usage counts (folder plus inheriting files).
+        Assert.Equal(["Garage", "Shelf"], options.Locations.Select(location => location.Name).ToArray());
+        Assert.Equal(3, options.Locations.Single(location => location.LocationId == fixture.GarageId).UsageCount);
+        Assert.Equal(1, options.Locations.Single(location => location.LocationId == fixture.ShelfId).UsageCount);
 
-        dialog.SelectedLocation = attic;
+        options.NewLocationName = "Attic";
+        options.CreateLocationCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        dialog.RenameTo = "Loft";
-        dialog.RenameLocationCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.Contains(dialog.Locations, location => location.Name == "Loft");
+        var attic = Assert.Single(options.Locations, location => location.Name == "Attic");
+        Assert.False(attic.IsStored);
 
-        dialog.MergeTarget = dialog.Locations.Single(location => location.LocationId == fixture.GarageId);
-        dialog.MergeLocationsCommand.Execute(null);
+        options.SelectedLocation = attic;
         Dispatcher.UIThread.RunJobs();
-        Assert.DoesNotContain(dialog.Locations, location => location.Name == "Loft");
+        options.RenameTo = "Loft";
+        options.RenameLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(options.Locations, location => location.Name == "Loft");
+        Assert.DoesNotContain(options.BuildLocationChangeSet().Changes,
+            change => change is LocationChange.Rename { LocationId: var id } && id == attic.LocationId);
+        Assert.Contains(options.BuildLocationChangeSet().Changes,
+            change => change is LocationChange.Create { Name: "Loft" });
 
-        dialog.SelectedLocation = dialog.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
         Dispatcher.UIThread.RunJobs();
-        dialog.DeleteLocationCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.DoesNotContain(dialog.Locations, location => location.Name == "Shelf");
-        Assert.Null(fixture.Service.GetEntryOwnLocationId("drama"));
-        Assert.Contains("Garage", dialog.Locations.Select(location => location.Name));
 
-        using var second = new MainWindowViewModel(fixture.Repositories);
-        Assert.Contains(fixture.Service.GetLocations(), location => location.Name == "Garage");
-        _ = second;
+        // Unsaved rows have no stored definition, so they cannot be merged away yet.
+        options.SelectedLocation = options.Locations.Single(location => location.Name == "Loft");
+        Dispatcher.UIThread.RunJobs();
+        options.MergeTarget = garage;
+        options.MergeLocationsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(options.Locations, location => location.Name == "Loft");
+        Assert.DoesNotContain(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Merge);
+
+        // Deleting an unsaved row drops its pending creation.
+        options.DeleteLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.DoesNotContain(options.Locations, location => location.Name == "Loft");
+        Assert.DoesNotContain(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create);
+
+        // A row created in this session is only created on save, under the name it carries then.
+        options.NewLocationName = "Attic";
+        options.CreateLocationCommand.Execute(null);
+        options.SelectedLocation = options.Locations.Single(location => location.Name == "Attic");
+        Dispatcher.UIThread.RunJobs();
+        options.RenameTo = "Loft";
+        options.RenameLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(options.Locations, location => location.Name == "Loft");
+        Assert.Contains(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create { Name: "Loft" });
+
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        Dispatcher.UIThread.RunJobs();
+        options.MergeTarget = garage;
+        options.MergeLocationsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.DoesNotContain(options.Locations, location => location.Name == "Shelf");
+        Assert.Equal(4, garage.UsageCount);
+        Assert.Equal(LocalizationService.Current.Format(TextKeys.LocationMerged, "Shelf", "Garage"), options.LocationsStatusText);
+
+        // With the merged row gone from the list, the remaining target becomes the selection.
+        Assert.DoesNotContain(options.Locations, location => location.LocationId == fixture.ShelfId);
+        Assert.Same(garage, options.SelectedLocation);
+        Assert.Equal("Garage", options.RenameTo);
+
+        // Nothing reached the store until the dialog is saved.
+        Assert.Equal(["Garage", "Shelf"], StoredNames(fixture.Locations));
+
+        fixture.ViewModel.ApplyLocationChanges(options.BuildLocationChangeSet());
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(["Garage", "Loft"], StoredNames(fixture.Locations));
+        Assert.Equal(fixture.GarageId, fixture.Service.GetEntryOwnLocationId("scifi"));
+        Assert.Equal(fixture.GarageId, fixture.Service.GetEntryOwnLocationId("drama"));
+        Assert.Equal(2, fixture.ViewModel.GetLocationSnapshots().Count);
+
+        // The location menus and filters pick the new definitions up right away.
+        var locationsMenu = Assert.Single(fixture.ViewModel.BrowserContextMenuItems, item => item.Key == "edit_locations");
+        Assert.Contains(locationsMenu.Items, item => item.Header == "Garage (4)");
+        Assert.Contains(locationsMenu.Items, item => item.Header == "Loft (0)");
     }
 
     [AvaloniaFact]
-    public void ManagerDialog_ShowItemsUsesSearchContractAndNavigates()
+    public void OptionsLocations_MergeReassignsEntriesToTarget()
     {
         var fixture = CreateFixture();
-        CatalogDocument? navigated = null;
-        var dialog = new LocationsDialogViewModel(
-            fixture.Service,
-            new CatalogUndoManager(fixture.Catalog),
-            fixture.Catalog,
-            fixture.Locations,
-            navigate: document => navigated = document);
-
-        dialog.SelectedLocation = dialog.Locations.Single(location => location.LocationId == fixture.GarageId);
-        Dispatcher.UIThread.RunJobs();
-        dialog.ShowItemsCommand.Execute(null);
+        var options = OpenLocationsOptions(fixture.ViewModel);
         Dispatcher.UIThread.RunJobs();
 
-        // The folder carries the assignment and both children inherit it.
-        Assert.Equal(3, dialog.FilterResults.Count);
-        Assert.Contains(dialog.FilterResults, match => match.Document.Id == "interstellar");
-        Assert.Contains(dialog.FilterResults, match => match.Document.Id == "odyssey");
-        Assert.Contains(dialog.FilterResults, match => match.Document.Id == "scifi");
-
-        dialog.SelectedResult = dialog.FilterResults.First(match => match.Document.Id == "interstellar");
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
         Dispatcher.UIThread.RunJobs();
-        dialog.NavigateToSelectedCommand.Execute(null);
-        Assert.Equal("interstellar", navigated?.Id);
+        options.MergeTarget = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.MergeLocationsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        fixture.ViewModel.ApplyLocationChanges(options.BuildLocationChangeSet());
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(fixture.GarageId, fixture.Service.GetEntryOwnLocationId("drama"));
+        Assert.Equal(fixture.GarageId, fixture.Service.GetEntryOwnLocationId("scifi"));
+        Assert.Equal(["Garage"], StoredNames(fixture.Locations));
     }
 
     [AvaloniaFact]
-    public void ManagerDialog_CancelLeavesAppliedChangesAndStaysUnaccepted()
+    public void OptionsLocations_RenameAndMerge_RecordUndoActions()
     {
         var fixture = CreateFixture();
-        var dialog = new LocationsDialogViewModel(
-            fixture.Service, new CatalogUndoManager(fixture.Catalog), fixture.Catalog, fixture.Locations);
-
-        Assert.False(dialog.DialogAccepted);
-
-        dialog.NewLocationName = "Basement";
-        dialog.CreateLocationCommand.Execute(null);
+        var options = OpenLocationsOptions(fixture.ViewModel);
         Dispatcher.UIThread.RunJobs();
 
-        // Closing without confirming reports "not accepted" but changes already applied, mirroring the
-        // tags manager: definition edits save immediately and closing changes nothing further.
-        Assert.False(dialog.DialogAccepted);
-        Assert.Contains(fixture.Service.GetLocations(), location => location.Name == "Basement");
-
-        dialog.ConfirmCommand.Execute(null);
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.GarageId);
         Dispatcher.UIThread.RunJobs();
-        Assert.True(dialog.DialogAccepted);
+        options.RenameTo = "Carport";
+        options.RenameLocationCommand.Execute(null);
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        Dispatcher.UIThread.RunJobs();
+        options.MergeTarget = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.MergeLocationsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        fixture.ViewModel.ApplyLocationChanges(options.BuildLocationChangeSet());
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(fixture.ViewModel.CanUndo);
+        Assert.Equal(["Carport"], StoredNames(fixture.Locations));
+        Assert.Equal(fixture.GarageId, fixture.Service.GetEntryOwnLocationId("scifi"));
     }
 
     [AvaloniaFact]
-    public void OpenLocationsDialogCommand_RaisesRequestWithPopulatedDialog()
+    public void OptionsLocations_Cancel_DiscardsStagedChanges()
     {
         var fixture = CreateFixture();
-        LocationsDialogViewModel? dialog = null;
-        bool? completed = null;
-        fixture.ViewModel.LocationsRequested += (_, args) =>
+        var options = OpenLocationsOptions(fixture.ViewModel);
+        Dispatcher.UIThread.RunJobs();
+
+        options.NewLocationName = "Basement";
+        options.CreateLocationCommand.Execute(null);
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        Dispatcher.UIThread.RunJobs();
+        options.RenameTo = "Garage 2";
+        options.RenameLocationCommand.Execute(null);
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        Dispatcher.UIThread.RunJobs();
+        options.DeleteLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        // Cancelling never calls the host, so neither the definitions nor the assignments may move.
+        Assert.False(options.DialogAccepted);
+        Assert.Equal(["Garage", "Shelf"], StoredNames(fixture.Locations));
+        Assert.Equal(fixture.GarageId, fixture.Service.GetEntryOwnLocationId("scifi"));
+        Assert.Equal(fixture.ShelfId, fixture.Service.GetEntryOwnLocationId("drama"));
+        Assert.False(fixture.ViewModel.IsDirtyDocument);
+
+        // An empty change set is also a no-op when the dialog happens to be accepted without edits.
+        var unchanged = OpenLocationsOptions(fixture.ViewModel);
+        Assert.True(unchanged.BuildLocationChangeSet().IsEmpty);
+        fixture.ViewModel.ApplyLocationChanges(unchanged.BuildLocationChangeSet());
+        Assert.Equal(["Garage", "Shelf"], StoredNames(fixture.Locations));
+    }
+
+    [AvaloniaFact]
+    public void OptionsLocations_ValidatesAgainstStagedList()
+    {
+        var fixture = CreateFixture();
+        var options = OpenLocationsOptions(fixture.ViewModel);
+        Dispatcher.UIThread.RunJobs();
+
+        options.NewLocationName = "   ";
+        options.CreateLocationCommand.Execute(null);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.LocationNameRequired), options.LocationsStatusText);
+
+        options.NewLocationName = "SHELF";
+        options.CreateLocationCommand.Execute(null);
+        Assert.Equal("A location named 'SHELF' already exists. Location names are unique ignoring case.", options.LocationsStatusText);
+        Assert.Equal(2, options.Locations.Count);
+
+        // A staged name is taken too, before anything is stored.
+        options.NewLocationName = "Attic";
+        options.CreateLocationCommand.Execute(null);
+        options.NewLocationName = "Attic";
+        options.CreateLocationCommand.Execute(null);
+        Assert.Equal(new LocationDuplicateNameException("Attic").Message, options.LocationsStatusText);
+        Assert.Equal(3, options.Locations.Count);
+        Assert.Single(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create { Name: "Attic" });
+
+        // Deleting a location that is still in use reports how many entries it has.
+        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        Dispatcher.UIThread.RunJobs();
+        options.DeleteLocationCommand.Execute(null);
+        Assert.Equal(LocalizationService.Current.Format(TextKeys.LocationDeletedInUse, "Garage", 3), options.LocationsStatusText);
+        Assert.Contains(options.BuildLocationChangeSet().Changes,
+            change => change is LocationChange.Delete { LocationId: var id } && id == fixture.GarageId);
+        Assert.Equal(["Garage", "Shelf"], StoredNames(fixture.Locations));
+    }
+
+    [AvaloniaFact]
+    public void OpenLocationsDialogCommand_OpensOptionsWithLocationsCategory()
+    {
+        var fixture = CreateFixture();
+        OptionsDialogRequestedEventArgs? request = null;
+        fixture.ViewModel.OptionsRequested += (_, args) =>
         {
-            dialog = args.Dialog;
-            args.Complete(false);
-            completed = false;
+            request = args;
+            args.Dialog.SetLocations(fixture.ViewModel.GetLocationSnapshots());
         };
 
         fixture.ViewModel.SelectedTreeNode = FindNode(fixture.ViewModel, "scifi");
@@ -220,9 +336,20 @@ public sealed class LocationManagementViewTests : IDisposable
         fixture.ViewModel.OpenLocationsDialogCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
-        Assert.NotNull(dialog);
-        Assert.Equal(2, dialog.Locations.Count);
-        Assert.False(completed);
+        Assert.NotNull(request);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.Locations), request!.PreselectSettingCategory);
+        request.Dialog.SelectedSettingCategory = request.PreselectSettingCategory;
+        Assert.True(request.Dialog.IsLocationsCategorySelected);
+        Assert.True(request.Dialog.ShowLocationsSection);
+
+        // The Tools toolbar command and the Locations context submenu keep their labels and open the same page.
+        var toolbarLocation = Assert.Single(fixture.ViewModel.ToolbarCommands(), command => command.Id == "locations");
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.ManageLocations), toolbarLocation.Label);
+        Assert.Same(fixture.ViewModel.OpenLocationsDialogCommand, toolbarLocation.Command);
+
+        var locationsMenu = Assert.Single(fixture.ViewModel.BrowserContextMenuItems, item => item.Key == "edit_locations");
+        var manageItem = Assert.Single(locationsMenu.Items, item => item.Header == LocalizationService.Current.Get(UiKeys.ManageLocations));
+        Assert.Same(fixture.ViewModel.OpenLocationsDialogCommand, manageItem.Command);
     }
 
     [AvaloniaFact]

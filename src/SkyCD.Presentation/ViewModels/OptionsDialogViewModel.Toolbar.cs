@@ -7,7 +7,7 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel
 {
-    private const int ToolbarCategoryIndex = 8;
+    private const int ToolbarCategoryIndex = 9;
 
     public ToolbarCustomizationViewModel? Toolbar { get; private set; }
 
