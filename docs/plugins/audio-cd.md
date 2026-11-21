@@ -7,7 +7,7 @@ Tests: `tests/SkyCD.Plugin.AudioCd.Tests/`.
 
 An audio CD has no filesystem to read tags from, so identification and enrichment exist only at the volume
 level. The plugin contributes one `IAudioCdMetadataCapability` (disc and track records plus cover art) and one
-`IPluginConfigurationCapability` (the Options → Plugins → Configure dialog). Discovery uses assembly metadata
+`IPluginConfigurationCapability` (the embedded Options → Audio CD Metadata page). Discovery uses assembly metadata
 and implemented capability types only — there is no `plugin.json`.
 
 ## Identification
@@ -104,6 +104,10 @@ published broken when decoding fails.
 
 ## Settings
 
+Enable the plugin to show its embedded **Audio CD Metadata** Options category. Navigation keeps the draft;
+Options Save persists and applies it, while Cancel/close leaves stored settings unchanged.
+See [SDK configuration contracts](sdk-contracts.md#embedded-options-configuration-v3-migration-828).
+
 Persisted through the plugin configuration store and applied on the next scan (no restart):
 
 | Key | Default | Meaning |
@@ -149,7 +153,7 @@ already manages, and published atomically with the file records:
 |---|---|---|---|
 | SkiaSharp | 3.119.4 | MIT | Decode and downscale cover art |
 | SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
-| Avalonia, Avalonia.Desktop | 12.1.6 | MIT | Settings dialog, same pattern as Sample.Configuration |
+| Avalonia, Avalonia.Desktop | 12.1.6 | MIT | Embedded settings page, same pattern as Sample.Configuration |
 
 All three families are already policy-allowed and already used by the repo (`SkyCD.Plugin.Image` uses
 SkiaSharp; every UI plugin uses Avalonia), so no policy whitelist entry or change is needed. Network and JSON

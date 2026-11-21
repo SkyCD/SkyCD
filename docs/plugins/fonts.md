@@ -70,6 +70,10 @@ it when the relevant settings change. The real folder identifier never reaches t
 
 ## Settings
 
+Enable the plugin to show **Options → Font Metadata and Previews**. Its embedded draft survives navigation;
+Options Save persists and applies it, while Cancel/close leaves stored settings unchanged.
+See [SDK configuration contracts](sdk-contracts.md#embedded-options-configuration-v3-migration-828).
+
 Persisted by the host's plugin configuration store under the plugin id:
 
 | Key | Values | Default |

@@ -14,9 +14,9 @@ public interface IPluginConfigurationCapability : IPluginCapability
     PluginConfigurationDescriptor Configuration { get; }
 
     /// <summary>
-    /// Opens the plugin configuration surface and returns the settings accepted by the user.
+    /// Creates an isolated Options draft. Must not open a window, save settings or change consumers.
     /// </summary>
-    Task<PluginConfigurationResult> ConfigureAsync(
+    Task<PluginConfigurationPage> CreatePageAsync(
         PluginConfigurationRequest request,
         CancellationToken cancellationToken = default);
 }

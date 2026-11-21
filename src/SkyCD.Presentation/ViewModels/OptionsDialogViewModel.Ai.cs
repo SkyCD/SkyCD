@@ -26,7 +26,7 @@ public partial class OptionsDialogViewModel
 
     public bool ShowAiDescriptionAlert => !string.IsNullOrWhiteSpace(AiDescriptionAlertMessage);
 
-    public bool IsAiDescriptionCategorySelected => SelectedTabIndex == AiDescriptionCategoryIndex;
+    public bool IsAiDescriptionCategorySelected => SelectedBuiltInIndex == AiDescriptionCategoryIndex;
 
     public bool ShowAiDescriptionSection =>
         IsAiDescriptionAvailable &&
@@ -43,13 +43,15 @@ public partial class OptionsDialogViewModel
             return;
         }
 
+        var aiWasSelected = SelectedBuiltInIndex >= AiDescriptionCategoryIndex;
         IsAiDescriptionAvailable = available;
-        if (!available && SelectedTabIndex >= AiDescriptionCategoryIndex)
+        if (!available && aiWasSelected)
         {
-            SelectedTabIndex = AiDescriptionCategoryIndex - 1;
+            RefreshCategoriesPreservingSelection(ToolbarCategoryId);
+            return;
         }
 
-        RefreshFilteredCategories();
+        RefreshCategoriesPreservingSelection(SelectedSettingCategory?.Id);
         NotifySettingsVisibilityChanged();
     }
 

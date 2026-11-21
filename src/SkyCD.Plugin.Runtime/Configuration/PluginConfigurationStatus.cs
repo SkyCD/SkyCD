@@ -5,7 +5,7 @@ namespace SkyCD.Plugin.Runtime.Configuration;
 /// </summary>
 public enum PluginConfigurationStatus
 {
-    /// <summary>The user accepted the configuration and the settings were persisted.</summary>
+    /// <summary>The requested creation or validation operation succeeded. No implicit persistence.</summary>
     Succeeded,
 
     /// <summary>The user dismissed the configuration surface without accepting changes.</summary>

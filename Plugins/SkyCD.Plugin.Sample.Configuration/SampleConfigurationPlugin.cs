@@ -1,70 +1,36 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 
 namespace SkyCD.Plugin.Sample.Configuration;
 
-/// <summary>
-/// Sample plugin that contributes a configuration surface to the host.
-/// </summary>
+/// <summary>Demonstrates an embedded, session-local Options draft with no UI dependency for headless use.</summary>
 public sealed class SampleConfigurationPlugin : IPluginConfigurationCapability
 {
     public PluginConfigurationDescriptor Configuration { get; } = new(
-        "sample.configuration.general",
-        "Sample Configuration",
-        Width: 420,
-        Height: 240);
+        "sample.configuration.general", "Sample Configuration");
 
-    public async Task<PluginConfigurationResult> ConfigureAsync(
-        PluginConfigurationRequest request,
+    public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!request.ConfigurationId.Equals(Configuration.ConfigurationId, StringComparison.OrdinalIgnoreCase))
-        {
-            return new PluginConfigurationResult
-            {
-                Success = false,
-                Error = $"Unsupported configuration '{request.ConfigurationId}'."
-            };
-        }
-
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
         var editor = new SampleConfigurationEditor(request.CurrentSettings);
-        var lifetime = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-        if (lifetime?.MainWindow is null)
-        {
-            // Headless hosts (CLI, tests) cannot show a window and keep the current values.
-            return new PluginConfigurationResult
+        SampleConfigurationPage? view = null;
+        return Task.FromResult(new PluginConfigurationPage(
+            () => view = new SampleConfigurationPage(editor),
+            token =>
             {
-                Success = true,
-                Settings = editor.BuildSettings()
-            };
-        }
-
-        var window = new SampleConfigurationWindow(editor)
-        {
-            Title = Configuration.Title,
-            Width = Configuration.Width,
-            Height = Configuration.Height
-        };
-
-        var accepted = await window.ShowDialog<bool?>(lifetime.MainWindow);
-        if (accepted != true)
-        {
-            return new PluginConfigurationResult
-            {
-                Success = true,
-                Canceled = true
-            };
-        }
-
-        return new PluginConfigurationResult
-        {
-            Success = true,
-            Settings = editor.BuildSettings()
-        };
+                token.ThrowIfCancellationRequested();
+                view?.UpdateDraft();
+                return Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = request.ConfigurationId.Equals(Configuration.ConfigurationId, StringComparison.OrdinalIgnoreCase),
+                    Error = request.ConfigurationId.Equals(Configuration.ConfigurationId, StringComparison.OrdinalIgnoreCase)
+                        ? null : $"Unsupported configuration '{request.ConfigurationId}'.",
+                    Settings = editor.BuildSettings()
+                });
+            }));
     }
 }

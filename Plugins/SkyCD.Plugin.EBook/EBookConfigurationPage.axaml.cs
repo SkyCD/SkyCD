@@ -1,19 +1,18 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 
 namespace SkyCD.Plugin.EBook;
 
-public partial class EBookConfigurationWindow : Window
+public partial class EBookConfigurationPage : UserControl
 {
     private readonly EBookConfigurationEditor editor;
 
-    public EBookConfigurationWindow()
+    public EBookConfigurationPage()
         : this(new EBookConfigurationEditor())
     {
     }
 
-    public EBookConfigurationWindow(EBookConfigurationEditor editor)
+    public EBookConfigurationPage(EBookConfigurationEditor editor)
     {
         this.editor = editor;
         InitializeComponent();
@@ -34,7 +33,7 @@ public partial class EBookConfigurationWindow : Window
         ExtensionsTextBox.Text = editor.Extensions;
     }
 
-    private void OnOkClicked(object? sender, RoutedEventArgs e)
+    public void UpdateDraft()
     {
         editor.CollectionEnabled = CollectionEnabledCheckBox.IsChecked == true;
         editor.TagAuthors = TagAuthorsCheckBox.IsChecked == true;
@@ -51,12 +50,6 @@ public partial class EBookConfigurationWindow : Window
         }
 
         editor.Extensions = ExtensionsTextBox.Text ?? string.Empty;
-        Close(true);
-    }
-
-    private void OnCancelClicked(object? sender, RoutedEventArgs e)
-    {
-        Close(false);
     }
 
     private static int IndexOf(EBookNameSource source)

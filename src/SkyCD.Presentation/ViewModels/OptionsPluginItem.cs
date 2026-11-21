@@ -11,7 +11,6 @@ public sealed partial class OptionsPluginItem : ObservableObject
         string name,
         string type,
         string extendedInfo,
-        bool supportsConfiguration = false,
         bool isEnabled = true,
         string? id = null,
         string? authorUrl = null,
@@ -22,7 +21,6 @@ public sealed partial class OptionsPluginItem : ObservableObject
         Type = type;
         AuthorUrl = authorUrl;
         ExtendedInfo = extendedInfo;
-        SupportsConfiguration = supportsConfiguration;
         this.isEnabled = isEnabled;
         Id = string.IsNullOrWhiteSpace(id) ? name : id;
         Description = description ?? string.Empty;
@@ -47,8 +45,6 @@ public sealed partial class OptionsPluginItem : ObservableObject
     public bool HasIcon => IconKey is not null;
 
     public string ExtendedInfo { get; }
-
-    public bool SupportsConfiguration { get; }
 
     public string Description { get; }
 

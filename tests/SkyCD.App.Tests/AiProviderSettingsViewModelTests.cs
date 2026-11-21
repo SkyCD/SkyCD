@@ -75,8 +75,8 @@ public class AiProviderSettingsViewModelTests
             [new("acp", "ACP"), new("provider", "AI provider")], "acp");
 
         var categories = vm.SettingCategories.ToList();
-        var descriptionIndex = categories.IndexOf("AI description");
-        var providerIndex = categories.IndexOf("AI provider");
+        var descriptionIndex = categories.FindIndex(category => category.Title == "AI description");
+        var providerIndex = categories.FindIndex(category => category.Title == "AI provider");
         Assert.Equal(descriptionIndex + 1, providerIndex);
 
         vm.SelectedTabIndex = descriptionIndex;
@@ -100,7 +100,8 @@ public class AiProviderSettingsViewModelTests
 
         vm.SetAiDescriptionAvailable(false);
 
-        Assert.DoesNotContain("AI provider", vm.SettingCategories);
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Title == "AI provider");
+        Assert.Equal(9, vm.SelectedTabIndex);
         Assert.True(vm.IsToolbarCategorySelected);
         Assert.False(vm.ShowAiProviderSection);
     }
@@ -114,8 +115,8 @@ public class AiProviderSettingsViewModelTests
 
         vm.SettingsSearchText = "provider";
 
-        Assert.Equal(["AI provider"], vm.FilteredSettingCategories);
-        Assert.Equal("AI provider", vm.SelectedSettingCategory);
+        Assert.Equal(["AI provider"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal("AI provider", vm.SelectedSettingCategory?.Title);
         Assert.True(vm.IsAiProviderCategorySelected);
         Assert.True(vm.ShowAiProviderSection);
     }

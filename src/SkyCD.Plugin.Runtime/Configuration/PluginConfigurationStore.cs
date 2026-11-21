@@ -58,6 +58,17 @@ public sealed class PluginConfigurationStore(IRepository<PluginConfigurationDocu
         });
     }
 
+    /// <summary>Persists all validated Options drafts atomically, leaving existing settings intact on failure.</summary>
+    public void SaveBatch(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string?>> settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (settings.Count == 0) return;
+        repository.Collection.Database.InBatch(() =>
+        {
+            foreach (var (id, values) in settings) SaveSettings(id, values);
+        });
+    }
+
     /// <summary>
     /// Removes the persisted settings of the given plugin.
     /// </summary>

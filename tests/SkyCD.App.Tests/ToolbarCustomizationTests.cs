@@ -181,10 +181,11 @@ public class ToolbarCustomizationTests
         var options = new OptionsDialogViewModel(["English"]);
         var toolbarCategory = LocalizationService.Current.Get(UiKeys.Toolbar);
 
-        Assert.Contains(toolbarCategory, options.SettingCategories);
+        Assert.Contains(options.SettingCategories, category => category.Title == toolbarCategory);
         Assert.False(options.ShowToolbarSection);
 
-        options.SelectedSettingCategory = toolbarCategory;
+        options.SelectedSettingCategory = options.SettingCategories.Single(
+            category => category.Title == toolbarCategory);
 
         Assert.True(options.IsToolbarCategorySelected);
         Assert.True(options.ShowToolbarSection);
@@ -199,13 +200,13 @@ public class ToolbarCustomizationTests
 
         options.SettingsSearchText = "toolbar";
 
-        Assert.Contains(toolbarCategory, options.FilteredSettingCategories);
-        Assert.Equal(toolbarCategory, options.SelectedSettingCategory);
+        Assert.Contains(options.FilteredSettingCategories, category => category.Title == toolbarCategory);
+        Assert.Equal(toolbarCategory, options.SelectedSettingCategory?.Title);
         Assert.True(options.ShowToolbarSection);
 
         options.SettingsSearchText = "customize";
 
-        Assert.Contains(toolbarCategory, options.FilteredSettingCategories);
+        Assert.Contains(options.FilteredSettingCategories, category => category.Title == toolbarCategory);
     }
 
     [Fact]

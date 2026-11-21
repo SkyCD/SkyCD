@@ -338,7 +338,8 @@ public sealed class LocationManagementViewTests : IDisposable
 
         Assert.NotNull(request);
         Assert.Equal(LocalizationService.Current.Get(UiKeys.Locations), request!.PreselectSettingCategory);
-        request.Dialog.SelectedSettingCategory = request.PreselectSettingCategory;
+        request.Dialog.SelectedSettingCategory = request.Dialog.SettingCategories.Single(
+            category => category.Title == request.PreselectSettingCategory);
         Assert.True(request.Dialog.IsLocationsCategorySelected);
         Assert.True(request.Dialog.ShowLocationsSection);
 

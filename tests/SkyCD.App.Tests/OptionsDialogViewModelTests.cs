@@ -31,41 +31,19 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
-    public void SetPlugins_SelectsFirstPluginAndEnablesConfigure()
+    public void SetPlugins_SelectsFirstPlugin()
     {
         var vm = new OptionsDialogViewModel(["English"]);
         var plugins = new[]
         {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0",
-                supportsConfiguration: true),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0",
-                supportsConfiguration: true)
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0")
         };
 
         vm.SetPlugins(plugins);
 
         Assert.Equal(2, vm.Plugins.Count);
         Assert.Equal("JSON", vm.SelectedPlugin?.Name);
-        Assert.True(vm.ConfigurePluginCommand.CanExecute(null));
-    }
-
-    [Fact]
-    public void SetPlugins_DisablesConfigureWhenPluginDoesntSupportConfiguration()
-    {
-        var vm = new OptionsDialogViewModel(["English"]);
-        var plugins = new[]
-        {
-            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "skycd.plugin.json v2.0.0",
-                supportsConfiguration: false),
-            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "skycd.plugin.xml v2.0.0",
-                supportsConfiguration: false)
-        };
-
-        vm.SetPlugins(plugins);
-
-        Assert.Equal(2, vm.Plugins.Count);
-        Assert.Equal("JSON", vm.SelectedPlugin?.Name);
-        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
     }
 
     [Fact]
@@ -151,7 +129,7 @@ public class OptionsDialogViewModelTests
 
         vm.SettingsSearchText = "plug";
 
-        Assert.Equal(["Plugins"], vm.FilteredSettingCategories);
+        Assert.Equal(["Plugins"], vm.FilteredSettingCategories.Select(category => category.Title));
         Assert.True(vm.ShowPluginPathSection);
         Assert.True(vm.ShowPluginListSection);
         Assert.True(vm.ShowPluginActionsSection);
@@ -181,8 +159,8 @@ public class OptionsDialogViewModelTests
 
         vm.SettingsSearchText = "lang";
 
-        Assert.Equal(["Language"], vm.FilteredSettingCategories);
-        Assert.Equal("Language", vm.SelectedSettingCategory);
+        Assert.Equal(["Language"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal("Language", vm.SelectedSettingCategory?.Title);
         Assert.Equal(1, vm.SelectedTabIndex);
         Assert.True(vm.ShowLanguageSection);
     }
@@ -194,8 +172,8 @@ public class OptionsDialogViewModelTests
 
         vm.SettingsSearchText = "mcp";
 
-        Assert.Equal(["MCP"], vm.FilteredSettingCategories);
-        Assert.Equal("MCP", vm.SelectedSettingCategory);
+        Assert.Equal(["MCP"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal("MCP", vm.SelectedSettingCategory?.Title);
         Assert.Equal(2, vm.SelectedTabIndex);
         Assert.True(vm.ShowMcpSection);
     }
@@ -207,8 +185,8 @@ public class OptionsDialogViewModelTests
 
         vm.SettingsSearchText = "status";
 
-        Assert.Equal(["Statuses"], vm.FilteredSettingCategories);
-        Assert.Equal("Statuses", vm.SelectedSettingCategory);
+        Assert.Equal(["Statuses"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal("Statuses", vm.SelectedSettingCategory?.Title);
         Assert.Equal(3, vm.SelectedTabIndex);
         Assert.True(vm.ShowStatusesSection);
     }
@@ -517,20 +495,19 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
-    public void PluginFilterText_WithoutMatchClearsSelectionAndDisablesConfigure()
+    public void PluginFilterText_WithoutMatchClearsSelection()
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetPlugins(
         [
             new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0",
-                supportsConfiguration: true, id: "plugin.json")
+                id: "plugin.json")
         ]);
 
         vm.PluginFilterText = "terminal";
 
         Assert.Empty(vm.FilteredPlugins);
         Assert.Null(vm.SelectedPlugin);
-        Assert.False(vm.ConfigurePluginCommand.CanExecute(null));
     }
 
     [Fact]

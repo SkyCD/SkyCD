@@ -34,7 +34,7 @@ public partial class OptionsDialogViewModel
 
     private readonly List<LocationChange> stagedLocationChanges = [];
 
-    public bool IsLocationsCategorySelected => SelectedTabIndex == LocationsCategoryIndex;
+    public bool IsLocationsCategorySelected => SelectedBuiltInIndex == LocationsCategoryIndex;
 
     public bool ShowLocationsSection =>
         IsLocationsCategorySelected &&

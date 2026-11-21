@@ -7,11 +7,12 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel
 {
+    private const string ToolbarCategoryId = "toolbar";
     private const int ToolbarCategoryIndex = 9;
 
     public ToolbarCustomizationViewModel? Toolbar { get; private set; }
 
-    public bool IsToolbarCategorySelected => SelectedTabIndex == ToolbarCategoryIndex;
+    public bool IsToolbarCategorySelected => SelectedBuiltInIndex == ToolbarCategoryIndex;
 
     public bool ShowToolbarSection =>
         IsToolbarCategorySelected &&
@@ -19,8 +20,6 @@ public partial class OptionsDialogViewModel
 
     /// <summary>Raised when Save accepts an edited toolbar layout; the shell applies and persists it.</summary>
     public event EventHandler<ToolbarLayoutAppliedEventArgs>? ToolbarLayoutApplied;
-
-    private string ToolbarCategoryName => LocalizationService.Current.Get(UiKeys.Toolbar);
 
     public void SetToolbarCustomization(
         IReadOnlyList<ToolbarCommandDescriptor>? commands,
