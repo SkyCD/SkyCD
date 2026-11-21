@@ -124,7 +124,7 @@ public sealed class EComicSettingsTests
     public async Task ConfigurationPlugin_ReturnsSettingsForItsOwnSurface()
     {
         var plugin = new EComicConfigurationPlugin();
-        var result = await plugin.ConfigureAsync(new PluginConfigurationRequest
+        using var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
         {
             ConfigurationId = "ecomic.settings",
             CurrentSettings = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -134,6 +134,7 @@ public sealed class EComicSettingsTests
             }
         });
 
+        var result = await page.AcceptAsync();
         Assert.True(result.Success);
         Assert.False(result.Canceled);
         Assert.Equal("series", result.Settings[EComicSettings.NameSourceKey]);
@@ -144,11 +145,12 @@ public sealed class EComicSettingsTests
     public async Task ConfigurationPlugin_RejectsAForeignConfigurationId()
     {
         var plugin = new EComicConfigurationPlugin();
-        var result = await plugin.ConfigureAsync(new PluginConfigurationRequest
+        using var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
         {
             ConfigurationId = "someone.else"
         });
 
+        var result = await page.AcceptAsync();
         Assert.False(result.Success);
         Assert.Contains("someone.else", result.Error, StringComparison.Ordinal);
     }
@@ -160,7 +162,5 @@ public sealed class EComicSettingsTests
 
         Assert.Equal("ecomic.settings", descriptor.ConfigurationId);
         Assert.Equal("eComic Metadata", descriptor.Title);
-        Assert.True(descriptor.Width > 0);
-        Assert.True(descriptor.Height > 0);
     }
 }

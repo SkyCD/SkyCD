@@ -20,7 +20,7 @@ public partial class OptionsDialogViewModel
     private bool explicitlySelectedAcpAgent;
 
     public ObservableCollection<AcpAgentChoice> AcpAgents { get; } = [];
-    public bool ShowAcpSection => SelectedTabIndex == 5 && IsCurrentCategoryVisibleInSearch;
+    public bool ShowAcpSection => SelectedBuiltInIndex == 5 && IsCurrentCategoryVisibleInSearch;
     public bool CanChooseAcpAgent => initialAcpSettings is not null && !IsAcpLoading;
     public IReadOnlyList<AcpAgentChoice> InstalledAcpAgents { get; private set; } = [];
     public IReadOnlyList<AcpAgentChoice> AvailableAcpAgents { get; private set; } = [];

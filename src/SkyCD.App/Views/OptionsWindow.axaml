@@ -132,6 +132,7 @@
         </Border>
 
         <Grid Grid.Row="1"
+              IsEnabled="{Binding !ConfirmCommand.IsRunning}"
               Margin="14,10,14,10"
               ColumnDefinitions="250,*"
               ColumnSpacing="14">
@@ -148,8 +149,8 @@
                              ItemsSource="{Binding FilteredSettingCategories}"
                              SelectedItem="{Binding SelectedSettingCategory}">
                         <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" Margin="8,5" />
+                            <DataTemplate x:DataType="vm:OptionsSettingCategory">
+                                <TextBlock Text="{Binding Title}" Margin="8,5" TextWrapping="Wrap" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -279,9 +280,6 @@
                                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
                                                 MinWidth="90"
                                                 Command="{Binding RefreshPluginsCommand}" />
-                                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Configure}}"
-                                                MinWidth="90"
-                                                Command="{Binding ConfigurePluginCommand}" />
                                     </StackPanel>
                                     <Border Grid.Row="2"
                                             BorderBrush="#2E2E2E"
@@ -308,14 +306,23 @@
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
                                     MinWidth="90"
                                     Command="{Binding RefreshPluginsCommand}" />
-                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Configure}}"
-                                    MinWidth="90"
-                                    Command="{Binding ConfigurePluginCommand}" />
                         </StackPanel>
                         <TextBlock IsVisible="{Binding ShowPluginInfoSection}"
                                    Text="{Binding InfoMessage}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
+
+                    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" RowSpacing="8"
+                          IsVisible="{Binding ShowPluginSettingsSection}">
+                        <ProgressBar IsIndeterminate="True" Height="3"
+                                     IsVisible="{Binding SelectedPluginPage.IsLoading}" />
+                        <TextBlock Grid.Row="1" Text="{Binding SelectedPluginPage.Error}"
+                                   IsVisible="{Binding SelectedPluginPage.HasError}" TextWrapping="Wrap" />
+                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+                            <ContentControl Content="{Binding SelectedPluginPage.Content}"
+                                            HorizontalContentAlignment="Stretch" />
+                        </ScrollViewer>
+                    </Grid>
 
                     <StackPanel Grid.Row="2"
                                 IsVisible="{Binding ShowLanguageSection}"

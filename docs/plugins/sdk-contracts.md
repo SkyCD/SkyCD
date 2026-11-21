@@ -48,6 +48,36 @@
   - Enumerating actions does not execute them; the host explicitly invokes a selected handler.
   - These contracts do not add a store UI, credential storage, or an execution scheduler.
 
+## Embedded Options configuration (v3 migration, #828)
+
+`IPluginConfigurationCapability.CreatePageAsync(request, cancellationToken)` replaces the former
+modal `ConfigureAsync` contract. Recompile configuration plugins against this v3 SDK; remove their
+configuration Windows and the descriptor's Width/Height arguments. Other capabilities are unchanged.
+
+- `PluginConfigurationDescriptor(ConfigurationId, Title)` identifies one page per plugin. Keep the ID
+  stable; the host uses plugin ID plus configuration ID, not the possibly duplicated/translated title.
+- Return a fresh `PluginConfigurationPage` for each Options session. Its `createContent` callback must
+  return an embeddable Avalonia `Control`, never a `Window`. The framework-neutral `object` boundary
+  keeps Avalonia out of the abstractions/runtime assemblies. Content is created lazily on the UI thread.
+- Load `request.CurrentSettings` into a private editor. The page and control are retained when navigating,
+  searching, or disabling/re-enabling the plugin within the same dialog.
+- The page's `AcceptAsync` callback validates and returns a snapshot in `PluginConfigurationResult`.
+  It may run repeatedly after a failed Save. It must not save, change consumers, or perform external side
+  effects. A failure stays inline on that page and prevents Options from closing.
+- The host validates all visited, enabled pages before committing through `PluginConfigurationStore`,
+  then applies settings to `IPluginSettingsConsumer` instances. Unvisited or disabled pages are not saved.
+  Cancel/close disposes drafts without accepting them; supply a disposal callback for owned resources.
+- Creation and acceptance must honor cancellation and return promptly. Asynchronous timeouts appear inline;
+  the host disposes late-created pages. Synchronous UI callbacks must not block: in-process plugins cannot
+  be forcibly terminated. Timed-out pages require reopening Options before another attempt.
+- CLI/headless hosts use `PluginConfigurationStore.GetSettings` / `SaveSettings` without creating a page.
+  They may also create/accept a page without accessing `Content` to normalize a settings dictionary.
+  `PluginConfigurationManager.SaveSettings` additionally refreshes currently loaded consumers.
+
+See `Plugins/SkyCD.Plugin.Sample.Configuration/SampleConfigurationPlugin.cs` and
+`SampleConfigurationPage.axaml` for the editor, lazy control and acceptance callbacks. The four production
+examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
+
 ## Runtime Discovery
 - Runtime scans assemblies for concrete capability classes with public parameterless constructors.
 - Identity and version constraints come from assembly metadata; no manifest is required.
@@ -68,7 +98,6 @@
 - Host executes CLI plugin handlers with timeout and exception isolation, including deterministic command collision checks.
 
 ## Sample Plugin
-- `Plugins/SkyCD.Plugin.Json`
-- Compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
-- `Plugins/samples/SkyCD.Plugin.Sample.Modal`
-- Demonstrates modal registration + typed request/response payload contracts (`IModalPluginCapability`).
+- `Plugins/SkyCD.Plugin.Json` compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
+- `Plugins/SkyCD.Plugin.Sample.Modal` demonstrates modal registration and typed request/response payload contracts (`IModalPluginCapability`).
+- `Plugins/SkyCD.Plugin.Sample.Configuration` demonstrates embedded Options drafts (see above).

@@ -1,19 +1,18 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 
 namespace SkyCD.Plugin.AudioCd;
 
-public partial class AudioCdConfigurationWindow : Window
+public partial class AudioCdConfigurationPage : UserControl
 {
     private readonly AudioCdConfigurationEditor editor;
 
-    public AudioCdConfigurationWindow()
+    public AudioCdConfigurationPage()
         : this(new AudioCdConfigurationEditor())
     {
     }
 
-    public AudioCdConfigurationWindow(AudioCdConfigurationEditor editor)
+    public AudioCdConfigurationPage(AudioCdConfigurationEditor editor)
     {
         this.editor = editor;
         InitializeComponent();
@@ -30,7 +29,7 @@ public partial class AudioCdConfigurationWindow : Window
         RequestTimeoutInput.Value = editor.RequestTimeoutSeconds;
     }
 
-    private void OnOkClicked(object? sender, RoutedEventArgs e)
+    public void UpdateDraft()
     {
         editor.MusicBrainzEnabled = MusicBrainzCheckBox.IsChecked == true;
         editor.GnuDbEnabled = GnudbCheckBox.IsChecked == true;
@@ -42,12 +41,6 @@ public partial class AudioCdConfigurationWindow : Window
         editor.DiscCoverSize = ToInt(DiscCoverSizeInput.Value, editor.DiscCoverSize);
         editor.TrackCoverSize = ToInt(TrackCoverSizeInput.Value, editor.TrackCoverSize);
         editor.RequestTimeoutSeconds = ToInt(RequestTimeoutInput.Value, editor.RequestTimeoutSeconds);
-        Close(true);
-    }
-
-    private void OnCancelClicked(object? sender, RoutedEventArgs e)
-    {
-        Close(false);
     }
 
     private static int ToInt(decimal? value, int fallback) =>

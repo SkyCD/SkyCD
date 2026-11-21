@@ -1,18 +1,17 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 
 namespace SkyCD.Plugin.Fonts;
 
-public partial class FontConfigurationWindow : Window
+public partial class FontConfigurationPage : UserControl
 {
     private readonly FontConfigurationEditor editor;
 
-    public FontConfigurationWindow()
+    public FontConfigurationPage()
         : this(new FontConfigurationEditor())
     {
     }
 
-    public FontConfigurationWindow(FontConfigurationEditor editor)
+    public FontConfigurationPage(FontConfigurationEditor editor)
     {
         this.editor = editor;
         InitializeComponent();
@@ -27,7 +26,7 @@ public partial class FontConfigurationWindow : Window
         ExtensionsTextBox.Text = editor.Extensions;
     }
 
-    private void OnOkClicked(object? sender, RoutedEventArgs e)
+    public void UpdateDraft()
     {
         editor.CollectionEnabled = CollectionEnabledCheckBox.IsChecked == true;
         editor.PreviewsEnabled = PreviewsEnabledCheckBox.IsChecked == true;
@@ -43,11 +42,6 @@ public partial class FontConfigurationWindow : Window
         }
 
         editor.Extensions = ExtensionsTextBox.Text ?? string.Empty;
-        Close(true);
     }
 
-    private void OnCancelClicked(object? sender, RoutedEventArgs e)
-    {
-        Close(false);
-    }
 }

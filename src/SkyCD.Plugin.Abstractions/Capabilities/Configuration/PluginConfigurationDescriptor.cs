@@ -5,6 +5,4 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 /// </summary>
 public sealed record PluginConfigurationDescriptor(
     string ConfigurationId,
-    string Title,
-    int Width = 480,
-    int Height = 320);
+    string Title);

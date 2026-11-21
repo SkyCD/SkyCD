@@ -1377,19 +1377,19 @@ public partial class MainWindow : Window
             options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
-        e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
-        if (!string.IsNullOrWhiteSpace(e.PreselectSettingCategory))
-        {
-            e.Dialog.SettingsSearchText = string.Empty;
-            e.Dialog.SelectedSettingCategory = e.PreselectSettingCategory;
-        }
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
-        e.Dialog.ConfigurePluginRequested += OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested += OnResetAiScanExclusionsRequested;
         RefreshPlugins(e.Dialog);
+        e.Dialog.RestoreSettingCategory(options.OptionsCategoryId, options.OptionsTabIndex);
+        if (!string.IsNullOrWhiteSpace(e.PreselectSettingCategory))
+        {
+            e.Dialog.SettingsSearchText = string.Empty;
+            e.Dialog.SelectedSettingCategory = e.Dialog.SettingCategories.FirstOrDefault(category =>
+                category.BuiltInIndex >= 0 && category.Title == e.PreselectSettingCategory);
+        }
 
         var dialog = new OptionsWindow
         {
@@ -1419,7 +1419,8 @@ public partial class MainWindow : Window
             options.McpPort = e.Dialog.McpPort;
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
-            options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedTabIndex);
+            options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedSettingCategory?.BuiltInIndex ?? 0);
+            options.OptionsCategoryId = e.Dialog.SelectedSettingCategory?.Id;
             options.Browser.DetailsColumns = e.Dialog.GetDetailsColumns().ToList();
             options.AiScanMaxFileSizeBytes = e.Dialog.AiScanMaxFileSizeMegabytes * 1024L * 1024L;
             options.AiDescriptionImplementation = e.Dialog.SelectedAiDescriptionImplementation?.Id
@@ -1446,7 +1447,6 @@ public partial class MainWindow : Window
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
-        e.Dialog.ConfigurePluginRequested -= OnConfigurePluginRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested -= OnResetAiScanExclusionsRequested;
@@ -1790,37 +1790,6 @@ public partial class MainWindow : Window
         RefreshPlugins(dialogVm);
     }
 
-    private async void OnConfigurePluginRequested(object? sender, ConfigurePluginRequestedEventArgs e)
-    {
-        if (sender is not OptionsDialogViewModel dialogVm)
-        {
-            return;
-        }
-
-        var configurationManager = ServiceProvider.Resolve<PluginConfigurationManager>();
-        var outcome = await configurationManager.ConfigureAsync(e.PluginId, PluginConfigurationTimeout);
-        dialogVm.InfoMessage = DescribeConfigurationOutcome(e.PluginName, outcome);
-    }
-
-    private static string DescribeConfigurationOutcome(string pluginName, PluginConfigurationOutcome outcome)
-    {
-        return outcome.Status switch
-        {
-            PluginConfigurationStatus.Succeeded =>
-                LocalizationService.Current.Format(TextKeys.PluginConfigurationSaved, pluginName),
-            PluginConfigurationStatus.Canceled =>
-                LocalizationService.Current.Format(TextKeys.PluginConfigurationCanceled, pluginName),
-            PluginConfigurationStatus.NotSupported =>
-                LocalizationService.Current.Format(TextKeys.PluginConfigurationNotSupported, pluginName),
-            PluginConfigurationStatus.TimedOut =>
-                LocalizationService.Current.Format(TextKeys.PluginConfigurationTimedOut, pluginName),
-            _ => LocalizationService.Current.Format(
-                TextKeys.PluginConfigurationFailed,
-                pluginName,
-                outcome.Error ?? string.Empty)
-        };
-    }
-
     private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
@@ -1890,7 +1859,6 @@ public partial class MainWindow : Window
                         loaded.Name,
                         string.IsNullOrWhiteSpace(loaded.Author?.Name) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : loaded.Author.Name,
                         $"{loaded.Id} v{loaded.Version}",
-                        supportsConfiguration: configurationManager.SupportsConfiguration(loaded.Id),
                         isEnabled: descriptor.IsEnabled,
                         id: loaded.Id,
                         authorUrl: loaded.Author?.Url,
@@ -1907,7 +1875,6 @@ public partial class MainWindow : Window
                     descriptor.Name,
                     authorSummary,
                     extendedInfo,
-                    supportsConfiguration: configurationManager.SupportsConfiguration(descriptor.Id),
                     isEnabled: descriptor.IsEnabled,
                     id: descriptor.Id,
                     authorUrl: descriptor.Author?.Url,
@@ -1918,6 +1885,7 @@ public partial class MainWindow : Window
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
+        dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
     }
 
     private void SyncPluginRuntimeState()
@@ -1930,6 +1898,7 @@ public partial class MainWindow : Window
         pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
 
         ServiceProvider.ReregisterPluginsService();
+        ServiceProvider.Resolve<PluginConfigurationManager>().RefreshConsumers();
         fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
         var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
         descriptionManager.SelectImplementation(options.AiDescriptionImplementation);

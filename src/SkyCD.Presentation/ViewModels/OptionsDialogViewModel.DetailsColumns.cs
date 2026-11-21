@@ -15,7 +15,7 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private DetailsColumnOptionItemViewModel? selectedDetailsColumn;
 
-    public bool IsDetailsColumnsCategorySelected => SelectedTabIndex == DetailsColumnsCategoryIndex;
+    public bool IsDetailsColumnsCategorySelected => SelectedBuiltInIndex == DetailsColumnsCategoryIndex;
 
     public bool ShowDetailsColumnsSection =>
         IsDetailsColumnsCategorySelected &&

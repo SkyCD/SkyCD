@@ -1,19 +1,18 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 
 namespace SkyCD.Plugin.EComic;
 
-public partial class EComicConfigurationWindow : Window
+public partial class EComicConfigurationPage : UserControl
 {
     private readonly EComicConfigurationEditor editor;
 
-    public EComicConfigurationWindow()
+    public EComicConfigurationPage()
         : this(new EComicConfigurationEditor())
     {
     }
 
-    public EComicConfigurationWindow(EComicConfigurationEditor editor)
+    public EComicConfigurationPage(EComicConfigurationEditor editor)
     {
         this.editor = editor;
         InitializeComponent();
@@ -34,7 +33,7 @@ public partial class EComicConfigurationWindow : Window
         ExtensionsTextBox.Text = editor.Extensions;
     }
 
-    private void OnOkClicked(object? sender, RoutedEventArgs e)
+    public void UpdateDraft()
     {
         editor.CollectionEnabled = CollectionEnabledCheckBox.IsChecked == true;
         editor.TagWriters = TagWritersCheckBox.IsChecked == true;
@@ -51,12 +50,6 @@ public partial class EComicConfigurationWindow : Window
         }
 
         editor.Extensions = ExtensionsTextBox.Text ?? string.Empty;
-        Close(true);
-    }
-
-    private void OnCancelClicked(object? sender, RoutedEventArgs e)
-    {
-        Close(false);
     }
 
     private static int IndexOf(EComicNameSource source)

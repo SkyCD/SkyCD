@@ -62,8 +62,6 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
         Assert.Equal("sample.configuration.general", plugin.Configuration.ConfigurationId);
         Assert.Equal("Sample Configuration", plugin.Configuration.Title);
-        Assert.Equal(420, plugin.Configuration.Width);
-        Assert.Equal(240, plugin.Configuration.Height);
     }
 
     [Fact]
@@ -79,33 +77,37 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         var registration = registrations.Single(r => r.PluginId == "SkyCD.Plugin.Sample.Configuration");
         Assert.Equal("Sample Configuration", registration.Descriptor.Title);
         Assert.Equal("sample.configuration.general", registration.Descriptor.ConfigurationId);
-        Assert.True(configurationManager.SupportsConfiguration("SkyCD.Plugin.Sample.Configuration"));
-        Assert.False(configurationManager.SupportsConfiguration("SkyCD.Plugin.NonExistent"));
-        Assert.False(configurationManager.SupportsConfiguration(null));
     }
 
     [Fact]
-    public async Task ConfigureAsync_SavesSettings_WhenSuccessful()
+    public async Task PageSession_SavesSettings_WhenSuccessful()
     {
         CopyPluginAssembly(typeof(SampleConfigurationPlugin).Assembly);
 
         pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-        var outcome = await configurationManager.ConfigureAsync("SkyCD.Plugin.Sample.Configuration", TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Sample.Configuration", TimeSpan.FromSeconds(5));
+        using var page = outcome.Page!;
+        outcome = await configurationManager.AcceptPageAsync("SkyCD.Plugin.Sample.Configuration", page, TimeSpan.FromSeconds(5));
 
         Assert.Equal(PluginConfigurationStatus.Succeeded, outcome.Status);
         Assert.NotNull(outcome.Settings);
         Assert.Equal(SampleConfigurationEditor.DefaultGreeting, outcome.Settings[SampleConfigurationEditor.GreetingKey]);
         Assert.Equal(SampleConfigurationEditor.DefaultSignature, outcome.Settings[SampleConfigurationEditor.SignatureKey]);
 
-        // Verify settings were persisted into the store
+        Assert.Empty(configurationStore.GetSettings("SkyCD.Plugin.Sample.Configuration"));
+        configurationManager.SaveSettings(new Dictionary<string, IReadOnlyDictionary<string, string?>>
+        {
+            ["SkyCD.Plugin.Sample.Configuration"] = outcome.Settings
+        });
+        // Verify only explicit Save persists the draft.
         var persisted = configurationStore.GetSettings("SkyCD.Plugin.Sample.Configuration");
         Assert.Equal(SampleConfigurationEditor.DefaultGreeting, persisted[SampleConfigurationEditor.GreetingKey]);
         Assert.Equal(SampleConfigurationEditor.DefaultSignature, persisted[SampleConfigurationEditor.SignatureKey]);
     }
 
     [Fact]
-    public async Task ConfigureAsync_PassesExistingSettingsToPlugin()
+    public async Task PageSession_PassesExistingSettingsToPlugin()
     {
         CopyPluginAssembly(typeof(SampleConfigurationPlugin).Assembly);
 
@@ -118,7 +120,9 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
         pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-        var outcome = await configurationManager.ConfigureAsync("SkyCD.Plugin.Sample.Configuration", TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Sample.Configuration", TimeSpan.FromSeconds(5));
+        using var page = outcome.Page!;
+        outcome = await configurationManager.AcceptPageAsync("SkyCD.Plugin.Sample.Configuration", page, TimeSpan.FromSeconds(5));
 
         Assert.Equal(PluginConfigurationStatus.Succeeded, outcome.Status);
         Assert.NotNull(outcome.Settings);
@@ -127,7 +131,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
     }
 
     [Fact]
-    public async Task ConfigureAsync_DoesNotPersistSettings_WhenCanceled()
+    public async Task PageSession_DoesNotPersistSettings_WhenCanceled()
     {
         CopyPluginAssembly(Assembly.GetExecutingAssembly());
 
@@ -143,7 +147,9 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         // Use test plugin with canceling capability
         TestStubConfigurationCapability.Mode = TestStubMode.Cancel;
 
-        var outcome = await configurationManager.ConfigureAsync(pluginId, TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync(pluginId, TimeSpan.FromSeconds(5));
+        using var page = outcome.Page!;
+        outcome = await configurationManager.AcceptPageAsync(pluginId, page, TimeSpan.FromSeconds(5));
 
         Assert.Equal(PluginConfigurationStatus.Canceled, outcome.Status);
 
@@ -153,20 +159,20 @@ public sealed class SampleConfigurationPluginTests : IDisposable
     }
 
     [Fact]
-    public async Task ConfigureAsync_ReturnsNotSupported_ForUnsupportedPlugin()
+    public async Task PageSession_ReturnsNotSupported_ForUnsupportedPlugin()
     {
         CopyPluginAssembly(typeof(SampleConfigurationPlugin).Assembly);
 
         pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-        var outcome = await configurationManager.ConfigureAsync("SkyCD.Plugin.Unsupported", TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Unsupported", TimeSpan.FromSeconds(5));
 
         Assert.Equal(PluginConfigurationStatus.NotSupported, outcome.Status);
         Assert.Contains("does not provide a configuration surface", outcome.Error);
     }
 
     [Fact]
-    public async Task ConfigureAsync_SurfacesPluginFailures_WithoutCrashingHost()
+    public async Task PageSession_SurfacesPluginFailures_WithoutCrashingHost()
     {
         CopyPluginAssembly(Assembly.GetExecutingAssembly());
 
@@ -181,7 +187,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         {
             pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-            var outcome = await configurationManager.ConfigureAsync(pluginId, TimeSpan.FromSeconds(5));
+            var outcome = await configurationManager.CreatePageAsync(pluginId, TimeSpan.FromSeconds(5));
 
             Assert.Equal(PluginConfigurationStatus.Failed, outcome.Status);
             Assert.NotNull(reportedFailure);
@@ -194,7 +200,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
     }
 
     [Fact]
-    public async Task ConfigureAsync_SurfacesPluginTimeout_WithoutCrashingHost()
+    public async Task PageSession_SurfacesPluginTimeout_WithoutCrashingHost()
     {
         CopyPluginAssembly(Assembly.GetExecutingAssembly());
 
@@ -209,7 +215,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         {
             pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-            var outcome = await configurationManager.ConfigureAsync(pluginId, TimeSpan.FromMilliseconds(50));
+            var outcome = await configurationManager.CreatePageAsync(pluginId, TimeSpan.FromMilliseconds(50));
 
             Assert.Equal(PluginConfigurationStatus.TimedOut, outcome.Status);
             Assert.NotNull(reportedFailure);
@@ -250,8 +256,67 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         Assert.Empty(empty);
     }
 
+    [Fact]
+    public async Task PageSession_CallerCancellationPropagatesWithoutSaving()
+    {
+        CopyPluginAssembly(Assembly.GetExecutingAssembly());
+        pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
+        TestStubConfigurationCapability.Mode = TestStubMode.Delay;
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => configurationManager.CreatePageAsync(
+            Assembly.GetExecutingAssembly().GetName().Name!, TimeSpan.FromSeconds(5), cancellation.Token));
+    }
+
+    [Fact]
+    public async Task PageSession_TimeoutDisposesLatePageFromCancellationIgnoringPlugin()
+    {
+        CopyPluginAssembly(Assembly.GetExecutingAssembly());
+        pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
+        TestStubConfigurationCapability.Mode = TestStubMode.Deferred;
+        var deferred = new TaskCompletionSource<PluginConfigurationPage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestStubConfigurationCapability.DeferredPage = deferred.Task;
+        var outcome = await configurationManager.CreatePageAsync(Assembly.GetExecutingAssembly().GetName().Name!,
+            TimeSpan.FromMilliseconds(50));
+        var disposed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        deferred.SetResult(new PluginConfigurationPage(() => new object(),
+            _ => Task.FromResult(new PluginConfigurationResult { Success = true }), () => disposed.SetResult()));
+        await disposed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(PluginConfigurationStatus.TimedOut, outcome.Status);
+        Assert.Empty(configurationStore.GetSettings(Assembly.GetExecutingAssembly().GetName().Name!));
+    }
+
+    [Fact]
+    public void Store_BatchFailureRollsBackEarlierWrites()
+    {
+        configurationStore.SaveSettings("first", new Dictionary<string, string?> { ["value"] = "original" });
+        Assert.Throws<ArgumentException>(() => configurationStore.SaveBatch(
+            new Dictionary<string, IReadOnlyDictionary<string, string?>>
+            {
+                ["first"] = new Dictionary<string, string?> { ["value"] = "changed" },
+                [""] = new Dictionary<string, string?> { ["value"] = "invalid plugin id" }
+            }));
+        Assert.Equal("original", configurationStore.GetSettings("first")["value"]);
+    }
+
+    [Fact]
+    public async Task Page_DisposeWithoutContentOrAccept_IsHeadlessAndDoesNotSave()
+    {
+        var plugin = new SampleConfigurationPlugin();
+        using var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
+        {
+            ConfigurationId = plugin.Configuration.ConfigurationId,
+            CurrentSettings = new Dictionary<string, string?> { ["greeting"] = "draft" }
+        });
+        page.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => { _ = page.AcceptAsync(); });
+        Assert.Empty(configurationStore.GetSettings("SkyCD.Plugin.Sample.Configuration"));
+    }
+
     public void Dispose()
     {
+        databaseManager.GetDatabase().Dispose();
+        databaseManager.Dispose();
         if (Directory.Exists(testDirectory))
         {
             try
@@ -277,16 +342,33 @@ public enum TestStubMode
     Success,
     Cancel,
     Throw,
-    Delay
+    Delay,
+    Deferred
 }
 
 public sealed class TestStubConfigurationCapability : IPluginConfigurationCapability
 {
     public static TestStubMode Mode { get; set; } = TestStubMode.Success;
+    public static Task<PluginConfigurationPage>? DeferredPage { get; set; }
 
     public PluginConfigurationDescriptor Configuration => new("tests.sample.config", "Test Stub Configuration");
 
-    public async Task<PluginConfigurationResult> ConfigureAsync(
+    public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (Mode == TestStubMode.Deferred) return DeferredPage!;
+        if (Mode == TestStubMode.Throw) throw new InvalidOperationException("Test plugin failure during configuration");
+        if (Mode == TestStubMode.Delay) return DelayedPageAsync(cancellationToken);
+        return Task.FromResult(new PluginConfigurationPage(() => new object(), token => AcceptAsync(request, token)));
+    }
+
+    private static async Task<PluginConfigurationPage> DelayedPageAsync(CancellationToken token)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10), token);
+        return new PluginConfigurationPage(() => new object(), _ => Task.FromResult(new PluginConfigurationResult { Success = true }));
+    }
+
+    private static async Task<PluginConfigurationResult> AcceptAsync(
         PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)
     {

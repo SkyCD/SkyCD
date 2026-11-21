@@ -124,7 +124,7 @@ public sealed class EBookSettingsTests
     public async Task ConfigurationPlugin_ReturnsSettingsForItsOwnSurface()
     {
         var plugin = new EBookConfigurationPlugin();
-        var result = await plugin.ConfigureAsync(new PluginConfigurationRequest
+        using var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
         {
             ConfigurationId = "ebook.settings",
             CurrentSettings = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -134,6 +134,7 @@ public sealed class EBookSettingsTests
             }
         });
 
+        var result = await page.AcceptAsync();
         Assert.True(result.Success);
         Assert.False(result.Canceled);
         Assert.Equal("author", result.Settings[EBookSettings.NameSourceKey]);
@@ -144,11 +145,12 @@ public sealed class EBookSettingsTests
     public async Task ConfigurationPlugin_RejectsAForeignConfigurationId()
     {
         var plugin = new EBookConfigurationPlugin();
-        var result = await plugin.ConfigureAsync(new PluginConfigurationRequest
+        using var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
         {
             ConfigurationId = "someone.else"
         });
 
+        var result = await page.AcceptAsync();
         Assert.False(result.Success);
         Assert.Contains("someone.else", result.Error, StringComparison.Ordinal);
     }
@@ -160,7 +162,5 @@ public sealed class EBookSettingsTests
 
         Assert.Equal("ebook.settings", descriptor.ConfigurationId);
         Assert.Equal("eBook Metadata", descriptor.Title);
-        Assert.True(descriptor.Width > 0);
-        Assert.True(descriptor.Height > 0);
     }
 }
