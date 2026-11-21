@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using Hst.Compression.Lha;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Lha.Import;
+using SkyCD.Plugin.Lha.Models;
+using SkyCD.Plugin.Lha.Parsing;
 
 namespace SkyCD.Plugin.Lha;
 

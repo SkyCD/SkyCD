@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.DiskExplorer.Html.Export;
+using SkyCD.Plugin.DiskExplorer.Html.Parsing;
 
 namespace SkyCD.Plugin.DiskExplorer.Html;
 

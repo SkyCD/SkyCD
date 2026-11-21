@@ -2,6 +2,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using SkyCD.Plugin.NeoFinder.Text.Import;
+using SkyCD.Plugin.NeoFinder.Text.Models;
 
 namespace SkyCD.Plugin.NeoFinder.Text.Tests;
 

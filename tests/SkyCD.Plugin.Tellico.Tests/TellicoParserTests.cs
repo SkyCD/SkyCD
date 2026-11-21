@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Tellico;
 using SkyCD.Plugin.Tellico.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Tellico.Models;
+using SkyCD.Plugin.Tellico.Parsing;
 
 namespace SkyCD.Plugin.Tellico.Tests;
 

@@ -12,6 +12,9 @@ using SkyCD.Plugin.DiskExplorer.Delimited.Exceptions;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.DiskExplorer.Delimited.Models;
+using SkyCD.Plugin.DiskExplorer.Delimited.Parsing;
+using SkyCD.Plugin.DiskExplorer.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

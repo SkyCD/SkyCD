@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Legacy.Ascd.Models;
 
 namespace SkyCD.Plugin.Legacy.Ascd;
 

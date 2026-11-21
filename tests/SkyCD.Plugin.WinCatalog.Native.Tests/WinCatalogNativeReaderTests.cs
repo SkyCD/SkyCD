@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using SkyCD.Plugin.WinCatalog.Native.Models;
 
 namespace SkyCD.Plugin.WinCatalog.Native.Tests;
 

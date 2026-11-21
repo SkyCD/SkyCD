@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
+using SkyCD.Plugin.EComic.Models;
 
 namespace SkyCD.Plugin.EComic.Tests;
 

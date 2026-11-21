@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Dmg.Import;
+using SkyCD.Plugin.Dmg.Models;
 
 namespace SkyCD.Plugin.Dmg;
 

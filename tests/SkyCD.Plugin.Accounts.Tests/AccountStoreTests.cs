@@ -2,6 +2,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
 using System;
 using System.IO;
 using Xunit;
+using SkyCD.Plugin.Accounts.Models;
 
 namespace SkyCD.Plugin.Accounts.Tests;
 

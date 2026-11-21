@@ -6,6 +6,7 @@ using SkiaSharp;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Image.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Image.Models;
 
 namespace SkyCD.Plugin.Image.Tests;
 

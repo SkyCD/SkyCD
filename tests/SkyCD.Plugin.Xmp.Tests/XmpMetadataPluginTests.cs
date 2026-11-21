@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
+using SkyCD.Plugin.Xmp.Models;
 
 namespace SkyCD.Plugin.Xmp.Tests;
 

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.EBook.Models;
 
 namespace SkyCD.Plugin.EBook.Tests;
 

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using Xunit;
+using SkyCD.Plugin.EBook.Configuration;
+using SkyCD.Plugin.EBook.Models;
+using SkyCD.Plugin.EBook.Parsing;
 
 namespace SkyCD.Plugin.EBook.Tests;
 

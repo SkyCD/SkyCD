@@ -9,6 +9,8 @@ using DiscUtils.Iso9660;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Daa.Exceptions;
+using SkyCD.Plugin.Daa.Models;
+using SkyCD.Plugin.Daa.Parsing;
 
 namespace SkyCD.Plugin.Daa;
 

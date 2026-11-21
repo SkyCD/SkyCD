@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Text.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Text.Models;
 
 namespace SkyCD.Plugin.Text.Tests;
 

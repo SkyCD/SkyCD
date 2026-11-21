@@ -12,6 +12,7 @@ using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.XmlExport;
 using Xunit;
+using SkyCD.Plugin.XmlExport.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

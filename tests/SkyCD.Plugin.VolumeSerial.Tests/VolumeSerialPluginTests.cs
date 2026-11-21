@@ -3,6 +3,8 @@ using System.Threading;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using Xunit;
+using SkyCD.Plugin.VolumeSerial.Models;
+using SkyCD.Plugin.VolumeSerial.Sources;
 
 namespace SkyCD.Plugin.VolumeSerial.Tests;
 

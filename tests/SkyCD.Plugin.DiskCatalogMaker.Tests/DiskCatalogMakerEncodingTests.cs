@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using Xunit;
+using SkyCD.Plugin.DiskCatalogMaker.Models;
 
 namespace SkyCD.Plugin.DiskCatalogMaker.Tests;
 

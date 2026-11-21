@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Basenji.Vdb.Parsing;
 
 namespace SkyCD.Plugin.Basenji.Vdb;
 

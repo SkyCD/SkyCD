@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.AbiWord.Exceptions;
 using Xunit;
+using SkyCD.Plugin.AbiWord.Models;
 
 namespace SkyCD.Plugin.AbiWord.Tests;
 

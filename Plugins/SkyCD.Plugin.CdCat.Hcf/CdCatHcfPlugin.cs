@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.CdCat.Hcf.Parsing;
 
 namespace SkyCD.Plugin.CdCat.Hcf;
 

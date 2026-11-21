@@ -9,6 +9,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Xmp.Models;
 
 namespace SkyCD.Plugin.Xmp.Tests;
 

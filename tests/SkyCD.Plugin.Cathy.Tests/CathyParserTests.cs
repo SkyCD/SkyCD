@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using SkyCD.Plugin.Cathy.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Cathy.Import;
+using SkyCD.Plugin.Cathy.Parsing;
 
 namespace SkyCD.Plugin.Cathy.Tests;
 

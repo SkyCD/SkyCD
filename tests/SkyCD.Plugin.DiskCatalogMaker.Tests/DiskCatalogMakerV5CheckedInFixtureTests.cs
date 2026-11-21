@@ -7,6 +7,9 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.DiskCatalogMaker;
 using SkyCD.Plugin.DiskCatalogMaker.Exceptions;
 using Xunit;
+using SkyCD.Plugin.DiskCatalogMaker.Import;
+using SkyCD.Plugin.DiskCatalogMaker.Models;
+using SkyCD.Plugin.DiskCatalogMaker.Parsing;
 
 namespace SkyCD.Plugin.DiskCatalogMaker.Tests;
 

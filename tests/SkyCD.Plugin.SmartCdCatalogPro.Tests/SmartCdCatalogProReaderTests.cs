@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.SmartCdCatalogPro;
 using Xunit;
+using SkyCD.Plugin.SmartCdCatalogPro.Models;
 
 namespace SkyCD.Plugin.SmartCdCatalogPro.Tests;
 

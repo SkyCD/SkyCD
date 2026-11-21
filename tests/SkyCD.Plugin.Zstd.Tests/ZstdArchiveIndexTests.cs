@@ -13,6 +13,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Zstd;
 using SkyCD.Plugin.Zstd.Tests;
 using Xunit;
+using SkyCD.Plugin.Zstd.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

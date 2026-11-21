@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 using DiscUtils.Iso9660;
+using SkyCD.Plugin.Nrg.Parsing;
 
 namespace SkyCD.Plugin.Nrg.Tests;
 

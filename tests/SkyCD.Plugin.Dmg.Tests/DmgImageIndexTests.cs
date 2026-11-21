@@ -8,6 +8,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Dmg.Models;
 
 namespace SkyCD.Plugin.Dmg.Tests;
 

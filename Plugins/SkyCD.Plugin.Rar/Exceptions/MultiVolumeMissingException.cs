@@ -1,6 +1,6 @@
 using SharpCompress.Common;
 
-namespace SkyCD.Plugin.Rar;
+namespace SkyCD.Plugin.Rar.Exceptions;
 
 /// <summary>
 /// Raised when an archive entry continues in a companion volume that is not available.

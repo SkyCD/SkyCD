@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.WordPerfect.Exceptions;
 using Xunit;
+using SkyCD.Plugin.WordPerfect.Models;
 
 namespace SkyCD.Plugin.WordPerfect.Tests;
 

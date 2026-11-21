@@ -13,6 +13,10 @@ using SkyCD.Plugin.Abstractions.Capabilities.Actions;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.Ownership;
 using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.Plugin.Accounts.JetBrains.Exceptions;
+using SkyCD.Plugin.Accounts.JetBrains.Models;
+using SkyCD.Plugin.Accounts.JetBrains.Parsing;
+using SkyCD.Plugin.Accounts.JetBrains.Sources;
 
 namespace SkyCD.Plugin.Accounts.JetBrains;
 

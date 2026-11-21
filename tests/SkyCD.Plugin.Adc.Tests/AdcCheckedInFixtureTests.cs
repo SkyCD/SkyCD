@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using SkyCD.Plugin.Adc.Models;
 
 namespace SkyCD.Plugin.Adc.Tests;
 

@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Legacy.Scd;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Legacy.Cscd.Models;
+using SkyCD.Plugin.Legacy.Scd.Models;
 
 namespace SkyCD.Plugin.Legacy.Cscd;
 

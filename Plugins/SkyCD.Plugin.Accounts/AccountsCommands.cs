@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.Plugin.Abstractions.Capabilities.Cli;
 using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.Plugin.Accounts.Import;
 
 namespace SkyCD.Plugin.Accounts;
 

@@ -6,6 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Zoo.Import;
+using SkyCD.Plugin.Zoo.Models;
+using SkyCD.Plugin.Zoo.Parsing;
 
 namespace SkyCD.Plugin.Zoo;
 

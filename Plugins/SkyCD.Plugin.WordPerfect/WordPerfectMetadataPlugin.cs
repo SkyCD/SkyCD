@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.WordPerfect.Exceptions;
+using SkyCD.Plugin.WordPerfect.Models;
+using SkyCD.Plugin.WordPerfect.Parsing;
 
 namespace SkyCD.Plugin.WordPerfect;
 

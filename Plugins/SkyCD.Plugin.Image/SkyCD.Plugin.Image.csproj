@@ -4,7 +4,7 @@
     </ItemGroup>
     <ItemGroup>
         <!-- Shared with the XMP sidecar plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
-        <Compile Include="..\Shared\MediaMetadata\*.cs" Link="Shared\MediaMetadata\%(Filename)%(Extension)"/>
+        <Compile Include="..\Shared\MediaMetadata\**\*.cs" Link="Shared\MediaMetadata\%(RecursiveDir)%(Filename)%(Extension)"/>
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: decoding, orientation-aware scaling and thumbnail encoding. -->

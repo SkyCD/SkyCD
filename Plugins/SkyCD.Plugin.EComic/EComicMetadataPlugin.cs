@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.EComic.Exceptions;
+using SkyCD.Plugin.EComic.Models;
 
 namespace SkyCD.Plugin.EComic;
 

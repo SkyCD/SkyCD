@@ -3,6 +3,8 @@ using System.Linq;
 using SkyCD.Plugin.DiskCatalogMaker;
 using SkyCD.Plugin.DiskCatalogMaker.Exceptions;
 using Xunit;
+using SkyCD.Plugin.DiskCatalogMaker.Models;
+using SkyCD.Plugin.DiskCatalogMaker.Parsing;
 
 namespace SkyCD.Plugin.DiskCatalogMaker.Tests;
 

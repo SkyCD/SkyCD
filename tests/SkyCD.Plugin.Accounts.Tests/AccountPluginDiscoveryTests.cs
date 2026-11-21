@@ -11,6 +11,7 @@ using SkyCD.Plugin.Accounts.Microsoft365;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Accounts.Models;
 
 namespace SkyCD.Plugin.Accounts.Tests;
 

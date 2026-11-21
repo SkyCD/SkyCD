@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Video.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Video.Models;
 
 namespace SkyCD.Plugin.Video.Tests;
 

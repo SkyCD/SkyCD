@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using UCanAccess.File;
+using SkyCD.Plugin.Access.Exceptions;
+using SkyCD.Plugin.Access.Models;
 using FileDataType = UCanAccess.File.DataType;
 
 namespace SkyCD.Plugin.Access;

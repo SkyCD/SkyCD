@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.WhereIsIt.Exceptions;
+using SkyCD.Plugin.WhereIsIt.Import;
+using SkyCD.Plugin.WhereIsIt.Parsing;
 
 namespace SkyCD.Plugin.WhereIsIt;
 

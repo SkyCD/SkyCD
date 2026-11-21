@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.WinCatalog.Xml.Exceptions;
+using SkyCD.Plugin.WinCatalog.Xml.Import;
+using SkyCD.Plugin.WinCatalog.Xml.Parsing;
 
 namespace SkyCD.Plugin.WinCatalog.Xml;
 

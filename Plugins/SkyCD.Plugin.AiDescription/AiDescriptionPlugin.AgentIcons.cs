@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using SkyCD.Plugin.AiDescription.Models;
+using SkyCD.Plugin.AiDescription.Sources;
 
 namespace SkyCD.Plugin.AiDescription;
 

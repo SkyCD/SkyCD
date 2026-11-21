@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using SharpCompress.Compressors.Xz;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Xz.Import;
+using SkyCD.Plugin.Xz.Models;
+using SkyCD.Plugin.Xz.Parsing;
 
 namespace SkyCD.Plugin.Xz;
 

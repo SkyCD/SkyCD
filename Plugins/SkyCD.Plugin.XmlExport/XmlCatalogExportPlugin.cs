@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Xml;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.XmlExport.Exceptions;
+using SkyCD.Plugin.XmlExport.Export;
+using SkyCD.Plugin.XmlExport.Models;
 
 namespace SkyCD.Plugin.XmlExport;
 
@@ -124,14 +126,14 @@ public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
             ArgumentNullException.ThrowIfNull(request.Rows);
             var rows = new List<Dictionary<string, object?>>(request.Rows);
             return (rows,
-                XmlExport.ResolveDatabaseName(request.DatabaseName, fileName, "(database)"),
-                XmlExport.ValidateStylesheet("(database)", request.Stylesheet));
+                XmlExportRules.ResolveDatabaseName(request.DatabaseName, fileName, "(database)"),
+                XmlExportRules.ValidateStylesheet("(database)", request.Stylesheet));
         }
 
         if (payload is IEnumerable<Dictionary<string, object?>> bareRows)
         {
             return (new List<Dictionary<string, object?>>(bareRows),
-                XmlExport.ResolveDatabaseName(null, fileName, "(database)"),
+                XmlExportRules.ResolveDatabaseName(null, fileName, "(database)"),
                 null);
         }
 
@@ -145,7 +147,7 @@ public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
         {
             var row = rows[index];
             var identity = DescribeRow(row, index);
-            var name = XmlExport.GetValue(row, "name");
+            var name = XmlExportRules.GetValue(row, "name");
             if (string.IsNullOrWhiteSpace(name))
             {
                 throw new XmlExportInvalidValueException(identity, "Name",
@@ -158,25 +160,25 @@ public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
             var node = new CatalogNode
             {
                 Identity = identity,
-                NodeId = XmlExport.GetValue(row, "nodeid"),
-                ParentId = XmlExport.GetValue(row, "parentid"),
-                ElementName = XmlExport.MapKindElement(XmlExport.GetValue(row, "kind")),
+                NodeId = XmlExportRules.GetValue(row, "nodeid"),
+                ParentId = XmlExportRules.GetValue(row, "parentid"),
+                ElementName = XmlExportRules.MapKindElement(XmlExportRules.GetValue(row, "kind")),
                 Name = trimmedName,
-                Size = XmlExport.FormatSize(identity, "Size", sizeRaw),
-                Date = XmlExport.FormatTimestamp(identity, "Date", dateValue)
+                Size = XmlExportRules.FormatSize(identity, "Size", sizeRaw),
+                Date = XmlExportRules.FormatTimestamp(identity, "Date", dateValue)
             };
 
-            XmlExport.ValidateText(identity, "Name", trimmedName);
+            XmlExportRules.ValidateText(identity, "Name", trimmedName);
             foreach (var (key, value) in row)
             {
-                if (XmlExport.IsStructuralCatalogKey(key) || value is null)
+                if (XmlExportRules.IsStructuralCatalogKey(key) || value is null)
                 {
                     continue;
                 }
 
-                var text = XmlExport.ToDisplayText(value) ?? string.Empty;
-                XmlExport.ValidateText(identity, key, key);
-                XmlExport.ValidateText(identity, key, text);
+                var text = XmlExportRules.ToDisplayText(value) ?? string.Empty;
+                XmlExportRules.ValidateText(identity, key, key);
+                XmlExportRules.ValidateText(identity, key, text);
                 node.Metadata.Add((key, text));
             }
 
@@ -250,13 +252,13 @@ public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
 
     private static string DescribeRow(Dictionary<string, object?> row, int index)
     {
-        var name = XmlExport.GetValue(row, "name");
+        var name = XmlExportRules.GetValue(row, "name");
         if (!string.IsNullOrWhiteSpace(name))
         {
             return name.Trim();
         }
 
-        var nodeId = XmlExport.GetValue(row, "nodeid");
+        var nodeId = XmlExportRules.GetValue(row, "nodeid");
         return !string.IsNullOrWhiteSpace(nodeId) ? $"node {nodeId.Trim()}" : $"row {index + 1}";
     }
 
@@ -264,7 +266,7 @@ public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
     {
         foreach (var key in keys)
         {
-            var value = XmlExport.GetValue(row, key);
+            var value = XmlExportRules.GetValue(row, key);
             if (value is not null)
             {
                 return value;

@@ -13,6 +13,7 @@ using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.Mdf.Models;
 
 namespace SkyCD.Plugin.Mdf.Tests;
 

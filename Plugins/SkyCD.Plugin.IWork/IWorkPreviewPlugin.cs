@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using OfficeIMO.IWork;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.IWork.Exceptions;
+using SkyCD.Plugin.IWork.Models;
+using SkyCD.Plugin.IWork.Parsing;
 
 namespace SkyCD.Plugin.IWork;
 

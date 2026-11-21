@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Xunit;
+using SkyCD.Plugin.VolumeSerial.Models;
+using SkyCD.Plugin.VolumeSerial.Sources;
 
 namespace SkyCD.Plugin.VolumeSerial.Tests;
 

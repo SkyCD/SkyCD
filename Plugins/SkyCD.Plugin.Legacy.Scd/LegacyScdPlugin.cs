@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Legacy.Scd.Exceptions;
+using SkyCD.Plugin.Legacy.Scd.Models;
+using SkyCD.Plugin.Legacy.Scd.Parsing;
 
 namespace SkyCD.Plugin.Legacy.Scd;
 

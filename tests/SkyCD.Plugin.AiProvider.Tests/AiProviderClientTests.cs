@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.AiProvider.Exceptions;
+using SkyCD.Plugin.AiProvider.Sources;
 
 namespace SkyCD.Plugin.AiProvider.Tests;
 

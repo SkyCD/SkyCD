@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using SkyCD.Plugin.Accounts.Models;
 
 namespace SkyCD.Plugin.Accounts.Tests;
 

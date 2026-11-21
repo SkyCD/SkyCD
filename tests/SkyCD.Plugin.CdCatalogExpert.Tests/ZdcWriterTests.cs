@@ -6,6 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using Xunit;
+using SkyCD.Plugin.CdCatalogExpert.Export;
+using SkyCD.Plugin.CdCatalogExpert.Models;
+using SkyCD.Plugin.CdCatalogExpert.Parsing;
 
 namespace SkyCD.Plugin.CdCatalogExpert.Tests;
 

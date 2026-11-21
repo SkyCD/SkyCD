@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Vvv.Exceptions;
+using SkyCD.Plugin.Vvv.Import;
+using SkyCD.Plugin.Vvv.Parsing;
 
 namespace SkyCD.Plugin.Vvv;
 

@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.GCstar.Import;
+using SkyCD.Plugin.GCstar.Parsing;
 
 namespace SkyCD.Plugin.GCstar;
 

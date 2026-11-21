@@ -1,4 +1,5 @@
 using System;
+using SkyCD.Plugin.AbeMeda.Native.Models;
 
 namespace SkyCD.Plugin.AbeMeda.Native.Exceptions;
 

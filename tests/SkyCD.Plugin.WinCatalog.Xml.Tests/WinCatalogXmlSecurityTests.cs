@@ -6,6 +6,7 @@ using System.Xml;
 using SkyCD.Plugin.WinCatalog.Xml;
 using SkyCD.Plugin.WinCatalog.Xml.Exceptions;
 using Xunit;
+using SkyCD.Plugin.WinCatalog.Xml.Parsing;
 
 namespace SkyCD.Plugin.WinCatalog.Xml.Tests;
 

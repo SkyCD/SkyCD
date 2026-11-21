@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using SharpCompress.Archives.SevenZip;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.SevenZip.Import;
+using SkyCD.Plugin.SevenZip.Models;
+using SkyCD.Plugin.SevenZip.Parsing;
 
 namespace SkyCD.Plugin.SevenZip;
 

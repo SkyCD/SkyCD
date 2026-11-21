@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using CsvHelper;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Csv.Exceptions;
+using SkyCD.Plugin.Csv.Models;
 
 namespace SkyCD.Plugin.Csv;
 

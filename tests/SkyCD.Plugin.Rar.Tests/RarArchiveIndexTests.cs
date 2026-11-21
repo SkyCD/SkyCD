@@ -12,6 +12,7 @@ using SkyCD.Plugin.Rar;
 using SkyCD.Plugin.Rar.Tests;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Rar.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

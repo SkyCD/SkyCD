@@ -8,6 +8,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.AbeMeda.Native.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.AbeMeda.Native.Models;
+using SkyCD.Plugin.AbeMeda.Native.Parsing;
 
 namespace SkyCD.Plugin.AbeMeda.Native.Tests;
 

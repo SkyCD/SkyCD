@@ -18,6 +18,7 @@ using SkyCD.UI.Localization;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using Xunit;
+using SkyCD.Plugin.Legacy.Scd.Models;
 
 namespace SkyCD.App.Tests;
 

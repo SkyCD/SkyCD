@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Csv;
 using SkyCD.Plugin.WinCatalog.Csv.Exceptions;
+using SkyCD.Plugin.Csv.Parsing;
+using SkyCD.Plugin.WinCatalog.Csv.Import;
+using SkyCD.Plugin.WinCatalog.Csv.Models;
+using SkyCD.Plugin.WinCatalog.Csv.Parsing;
 
 namespace SkyCD.Plugin.WinCatalog.Csv;
 

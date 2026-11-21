@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using Xunit;
+using SkyCD.Plugin.WinCatalog.Csv.Models;
 
 namespace SkyCD.Plugin.WinCatalog.Csv.Tests;
 

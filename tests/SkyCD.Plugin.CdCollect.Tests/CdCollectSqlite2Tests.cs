@@ -10,6 +10,8 @@ using SkyCD.Plugin.CdCollect.Exceptions;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.CdCollect.Models;
+using SkyCD.Plugin.CdCollect.Parsing;
 
 namespace SkyCD.Plugin.CdCollect.Tests;
 

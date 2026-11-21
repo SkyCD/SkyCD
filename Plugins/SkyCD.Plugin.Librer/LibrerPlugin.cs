@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Librer.Parsing;
 
 namespace SkyCD.Plugin.Librer;
 

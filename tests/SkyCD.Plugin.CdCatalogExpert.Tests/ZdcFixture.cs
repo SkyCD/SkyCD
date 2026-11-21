@@ -4,6 +4,8 @@ using System.IO;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.CdCatalogExpert;
+using SkyCD.Plugin.CdCatalogExpert.Export;
+using SkyCD.Plugin.CdCatalogExpert.Models;
 
 namespace SkyCD.Plugin.CdCatalogExpert.Tests;
 

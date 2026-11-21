@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using SkiaSharp;
 using SkyCD.Plugin.AudioCd;
 using SkyCD.Plugin.AudioCd.Sources;
+using SkyCD.Plugin.AudioCd.Models;
+using SkyCD.Plugin.AudioCd.Parsing;
 
 namespace SkyCD.Plugin.AudioCd.Tests;
 

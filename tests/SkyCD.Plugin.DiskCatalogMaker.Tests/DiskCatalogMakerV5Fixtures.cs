@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using SkyCD.Plugin.DiskCatalogMaker;
+using SkyCD.Plugin.DiskCatalogMaker.Models;
+using SkyCD.Plugin.DiskCatalogMaker.Parsing;
 
 namespace SkyCD.Plugin.DiskCatalogMaker.Tests;
 

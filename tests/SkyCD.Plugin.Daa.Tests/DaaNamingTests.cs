@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Xunit;
+using SkyCD.Plugin.Daa.Models;
 
 namespace SkyCD.Plugin.Daa.Tests;
 

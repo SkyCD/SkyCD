@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Adc;
+using SkyCD.Plugin.Adc.Models;
 
 namespace SkyCD.Plugin.Adc.Tests;
 

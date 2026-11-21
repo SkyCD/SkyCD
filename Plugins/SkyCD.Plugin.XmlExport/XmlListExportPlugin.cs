@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Xml;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.XmlExport.Exceptions;
+using SkyCD.Plugin.XmlExport.Export;
+using SkyCD.Plugin.XmlExport.Models;
 
 namespace SkyCD.Plugin.XmlExport;
 
@@ -103,14 +105,14 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
         {
             ArgumentNullException.ThrowIfNull(request.Rows);
             return (request.Rows,
-                XmlExport.ResolveDatabaseName(request.DatabaseName, fileName, "(database)"),
-                XmlExport.ValidateStylesheet("(database)", request.Stylesheet),
+                XmlExportRules.ResolveDatabaseName(request.DatabaseName, fileName, "(database)"),
+                XmlExportRules.ValidateStylesheet("(database)", request.Stylesheet),
                 request.Columns is { Count: > 0 } columns ? columns : null);
         }
 
         if (payload is IEnumerable<Dictionary<string, object?>> rows)
         {
-            return (rows, XmlExport.ResolveDatabaseName(null, fileName, "(database)"), null, null);
+            return (rows, XmlExportRules.ResolveDatabaseName(null, fileName, "(database)"), null, null);
         }
 
         throw new XmlExportException("Payload must be result rows or an XML export request.");
@@ -120,7 +122,7 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
         IReadOnlyList<string>? columns, int index)
     {
         var identity = DescribeRow(row, index);
-        var type = XmlExport.MapKindType(identity, XmlExport.GetValue(row, "kind"));
+        var type = XmlExportRules.MapKindType(identity, XmlExportRules.GetValue(row, "kind"));
 
         await writer.WriteStartElementAsync(null, "Item", null);
         await writer.WriteAttributeStringAsync(null, "Type", null, type);
@@ -136,7 +138,7 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
         {
             foreach (var (key, _) in row)
             {
-                if (XmlExport.IsStructuralListKey(key))
+                if (XmlExportRules.IsStructuralListKey(key))
                 {
                     continue;
                 }
@@ -155,13 +157,13 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
         var raw = ResolveColumnValue(row, column, canonical);
         string? text;
 
-        if (canonical is not null && XmlExport.IsSizeKey(canonical))
+        if (canonical is not null && XmlExportRules.IsSizeKey(canonical))
         {
-            text = XmlExport.FormatSize(identity, column, raw).ToString(CultureInfo.InvariantCulture);
+            text = XmlExportRules.FormatSize(identity, column, raw).ToString(CultureInfo.InvariantCulture);
         }
-        else if (canonical is not null && XmlExport.IsDateKey(canonical))
+        else if (canonical is not null && XmlExportRules.IsDateKey(canonical))
         {
-            text = XmlExport.FormatTimestamp(identity, column, raw);
+            text = XmlExportRules.FormatTimestamp(identity, column, raw);
         }
         else
         {
@@ -173,11 +175,11 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
             text = string.Empty;
         }
 
-        XmlExport.ValidateText(identity, column, text);
+        XmlExportRules.ValidateText(identity, column, text);
         await writer.WriteStartElementAsync(null, element, null);
         if (canonical is null && !element.Equals(column, StringComparison.Ordinal))
         {
-            XmlExport.ValidateText(identity, column, column);
+            XmlExportRules.ValidateText(identity, column, column);
             await writer.WriteAttributeStringAsync(null, "Label", null, column);
         }
 
@@ -197,27 +199,27 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
             return "Name";
         }
 
-        if (XmlExport.IsSizeKey(column))
+        if (XmlExportRules.IsSizeKey(column))
         {
             canonical = "size";
             return "Size";
         }
 
-        if (XmlExport.IsDateKey(column))
+        if (XmlExportRules.IsDateKey(column))
         {
             canonical = "modified";
             return "Modified";
         }
 
         canonical = null;
-        return XmlExport.NormalizeElementName(column, out _);
+        return XmlExportRules.NormalizeElementName(column, out _);
     }
 
     private static string? ResolveColumnValue(Dictionary<string, object?> row, string column, string? canonical)
     {
         if (row.TryGetValue(column, out var direct))
         {
-            return XmlExport.ToDisplayText(direct);
+            return XmlExportRules.ToDisplayText(direct);
         }
 
         if (canonical is not null)
@@ -231,7 +233,7 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
             };
             foreach (var alias in aliases)
             {
-                var aliased = XmlExport.GetValue(row, alias);
+                var aliased = XmlExportRules.GetValue(row, alias);
                 if (aliased is not null)
                 {
                     return aliased;
@@ -241,12 +243,12 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
             return null;
         }
 
-        return XmlExport.GetValue(row, column);
+        return XmlExportRules.GetValue(row, column);
     }
 
     private static string DescribeRow(Dictionary<string, object?> row, int index)
     {
-        var name = XmlExport.GetValue(row, "name");
+        var name = XmlExportRules.GetValue(row, "name");
         return !string.IsNullOrWhiteSpace(name) ? name.Trim() : $"row {index + 1}";
     }
 }

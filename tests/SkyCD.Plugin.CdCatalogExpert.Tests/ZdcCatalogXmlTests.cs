@@ -6,6 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.CdCatalogExpert.Exceptions;
 using Xunit;
+using SkyCD.Plugin.CdCatalogExpert.Export;
+using SkyCD.Plugin.CdCatalogExpert.Models;
+using SkyCD.Plugin.CdCatalogExpert.Parsing;
 
 namespace SkyCD.Plugin.CdCatalogExpert.Tests;
 

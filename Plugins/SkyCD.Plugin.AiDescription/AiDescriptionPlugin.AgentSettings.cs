@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.AiDescription.Exceptions;
+using SkyCD.Plugin.AiDescription.Sources;
+using SkyCD.Plugin.AiDescription.Models;
 
 namespace SkyCD.Plugin.AiDescription;
 

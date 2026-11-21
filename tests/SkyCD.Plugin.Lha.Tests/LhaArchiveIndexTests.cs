@@ -14,6 +14,7 @@ using SkyCD.Plugin.Lha;
 using SkyCD.Plugin.Lha.Tests;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Lha.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

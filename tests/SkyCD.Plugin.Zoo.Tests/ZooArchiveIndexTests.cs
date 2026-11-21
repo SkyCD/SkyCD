@@ -13,6 +13,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Zoo;
 using SkyCD.Plugin.Zoo.Tests;
 using Xunit;
+using SkyCD.Plugin.Zoo.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

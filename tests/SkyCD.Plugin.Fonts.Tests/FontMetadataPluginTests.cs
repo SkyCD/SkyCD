@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
+using SkyCD.Plugin.Fonts.Models;
 
 namespace SkyCD.Plugin.Fonts.Tests;
 

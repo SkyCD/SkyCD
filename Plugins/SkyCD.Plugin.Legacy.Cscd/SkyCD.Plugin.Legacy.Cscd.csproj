@@ -2,7 +2,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
         <!-- Text and compressed text use the same legacy size conversion rules. -->
-        <Compile Include="..\SkyCD.Plugin.Legacy.Scd\LegacyScdSize.cs" Link="LegacyScdSize.cs"/>
+        <Compile Include="..\SkyCD.Plugin.Legacy.Scd\Models\LegacyScdSize.cs" Link="LegacyScdSize.cs"/>
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>

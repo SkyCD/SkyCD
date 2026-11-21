@@ -4,6 +4,7 @@ using System.IO;
 using SkyCD.Plugin.CdCat.Hcf;
 using SkyCD.Plugin.CdCat.Hcf.Exceptions;
 using Xunit;
+using SkyCD.Plugin.CdCat.Hcf.Parsing;
 
 namespace SkyCD.Plugin.CdCat.Hcf.Tests;
 

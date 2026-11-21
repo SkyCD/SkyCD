@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.OpenOffice.Exceptions;
+using SkyCD.Plugin.OpenOffice.Models;
+using SkyCD.Plugin.OpenOffice.Parsing;
 
 namespace SkyCD.Plugin.OpenOffice;
 

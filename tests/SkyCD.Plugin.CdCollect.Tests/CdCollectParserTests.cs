@@ -4,6 +4,7 @@ using System.IO;
 using SkyCD.Plugin.CdCollect;
 using SkyCD.Plugin.CdCollect.Exceptions;
 using Xunit;
+using SkyCD.Plugin.CdCollect.Parsing;
 
 namespace SkyCD.Plugin.CdCollect.Tests;
 

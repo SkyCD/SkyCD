@@ -5,6 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Katalog.CsvIdx;
+using SkyCD.Plugin.Katalog.CsvIdx.Import;
+using SkyCD.Plugin.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.Katalog.Sqlite.Parsing;
 
 namespace SkyCD.Plugin.Katalog.Sqlite;
 

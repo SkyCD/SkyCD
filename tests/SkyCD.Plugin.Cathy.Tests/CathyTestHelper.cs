@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using SkyCD.Plugin.Cathy.Parsing;
 
 namespace SkyCD.Plugin.Cathy.Tests;
 

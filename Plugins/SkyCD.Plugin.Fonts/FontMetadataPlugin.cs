@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Fonts.Exceptions;
+using SkyCD.Plugin.Fonts.Models;
+using SkyCD.Plugin.Fonts.Parsing;
 
 namespace SkyCD.Plugin.Fonts;
 

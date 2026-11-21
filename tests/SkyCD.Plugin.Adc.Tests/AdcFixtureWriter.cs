@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using SkyCD.Plugin.Adc;
+using SkyCD.Plugin.Adc.Models;
 
 namespace SkyCD.Plugin.Adc.Tests;
 

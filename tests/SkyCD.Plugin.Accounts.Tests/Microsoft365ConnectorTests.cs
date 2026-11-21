@@ -15,6 +15,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.Ownership;
 using SkyCD.Plugin.Abstractions.OAuth;
 using SkyCD.Plugin.Accounts.Microsoft365;
 using Xunit;
+using SkyCD.Plugin.Accounts.Microsoft365.Models;
+using SkyCD.Plugin.Accounts.Microsoft365.Parsing;
 
 namespace SkyCD.Plugin.Accounts.Tests;
 

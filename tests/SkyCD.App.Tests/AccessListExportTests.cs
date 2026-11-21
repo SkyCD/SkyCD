@@ -14,6 +14,7 @@ using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using UCanAccess.File;
 using Xunit;
+using SkyCD.Plugin.Access.Models;
 
 namespace SkyCD.App.Tests;
 

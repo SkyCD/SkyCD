@@ -5,6 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Gzip.Import;
+using SkyCD.Plugin.Gzip.Models;
+using SkyCD.Plugin.Gzip.Parsing;
 
 namespace SkyCD.Plugin.Gzip;
 

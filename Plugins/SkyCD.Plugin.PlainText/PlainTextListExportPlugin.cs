@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.PlainText.Exceptions;
+using SkyCD.Plugin.PlainText.Models;
 
 namespace SkyCD.Plugin.PlainText;
 

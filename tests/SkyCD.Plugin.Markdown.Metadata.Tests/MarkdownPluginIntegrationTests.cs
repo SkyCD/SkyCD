@@ -6,6 +6,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Markdown.Metadata.Models;
 
 namespace SkyCD.Plugin.Markdown.Metadata.Tests;
 

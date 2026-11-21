@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Csv;
 using Xunit;
+using SkyCD.Plugin.Csv.Parsing;
 
 namespace SkyCD.Plugin.Host.Tests;
 

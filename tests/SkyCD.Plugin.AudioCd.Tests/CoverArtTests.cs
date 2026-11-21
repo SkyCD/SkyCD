@@ -7,6 +7,7 @@ using SkiaSharp;
 using SkyCD.Plugin.AudioCd;
 using SkyCD.Plugin.AudioCd.Sources;
 using Xunit;
+using SkyCD.Plugin.AudioCd.Export;
 
 namespace SkyCD.Plugin.AudioCd.Tests;
 

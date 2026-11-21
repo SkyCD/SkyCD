@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Qcow2.Import;
+using SkyCD.Plugin.Qcow2.Models;
 
 namespace SkyCD.Plugin.Qcow2;
 
