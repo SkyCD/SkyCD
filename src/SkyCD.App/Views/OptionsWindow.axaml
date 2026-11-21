@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:marketplace="clr-namespace:SkyCD.Presentation.Marketplace;assembly=SkyCD.Presentation"
         xmlns:media="clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.Plugin.Abstractions"
         xmlns:hostmedia="clr-namespace:SkyCD.Plugin.Host.Media;assembly=SkyCD.Plugin.Host"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
@@ -176,8 +177,21 @@
                     </TextBlock>
 
                     <StackPanel Grid.Row="1"
-                                IsVisible="{Binding ShowPluginPathSection}"
+                                IsVisible="{Binding ShowPluginViewSwitcher}"
                                 Spacing="8">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4"
+                                    HorizontalAlignment="Right">
+                            <ToggleButton Content="{i18n:Translate {x:Static i18n:UiKeys.Installed}}"
+                                          IsChecked="{Binding !IsMarketplaceBrowseSelected}"
+                                          Command="{Binding ShowInstalledPluginsCommand}"
+                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" />
+                            <ToggleButton Content="{i18n:Translate {x:Static i18n:UiKeys.BrowseCatalog}}"
+                                          IsChecked="{Binding IsMarketplaceBrowseSelected}"
+                                          Command="{Binding ShowMarketplacePluginsCommand}"
+                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.BrowseCatalog}}" />
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding ShowInstalledPluginPathSection}" Spacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ProjectSettings}}" FontSize="15" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
@@ -190,10 +204,11 @@
                                     MinWidth="90"
                                     Command="{Binding BrowsePluginPathCommand}" />
                         </Grid>
+                        </StackPanel>
                     </StackPanel>
 
                     <Grid Grid.Row="2"
-                          IsVisible="{Binding ShowPluginListSection}"
+                          IsVisible="{Binding ShowInstalledPluginListSection}"
                           RowDefinitions="Auto,Auto,*"
                           RowSpacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
@@ -295,6 +310,160 @@
                         </Border>
                     </Grid>
 
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowMarketplaceSection}"
+                          RowDefinitions="Auto,Auto,Auto,Auto,*"
+                          RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="15" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <TextBox Width="260"
+                                     Text="{Binding MarketplaceFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMarketplacePlugins}}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMarketplacePlugins}}" />
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       Foreground="#9CA3AF"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding MarketplaceStatusMessage}"
+                                       IsVisible="{Binding ShowMarketplaceStatusMessage}" />
+                            <Button Grid.Column="2"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
+                                    MinWidth="90"
+                                    Command="{Binding RefreshMarketplaceCommand}" />
+                        </Grid>
+
+                        <Border Grid.Row="2"
+                                IsVisible="{Binding IsInstallConfirmationVisible}"
+                                BorderBrush="#5795D6"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="10">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding ConfirmationPrompt}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}"
+                                           Foreground="#9CA3AF"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginRunsCodeNotice}}"
+                                           Foreground="#9CA3AF"
+                                           TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
+                                            MinWidth="90"
+                                            Command="{Binding ConfirmMarketplaceInstallCommand}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                                            MinWidth="90"
+                                            Command="{Binding CancelMarketplaceInstallCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <ProgressBar Grid.Row="3"
+                                     Height="3"
+                                     IsIndeterminate="True"
+                                     IsVisible="{Binding IsMarketplaceLoading}" />
+
+                        <Border Grid.Row="4"
+                                BorderBrush="#2E2E2E"
+                                BorderThickness="1">
+                            <Grid ColumnDefinitions="2*,3*">
+                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
+                                    <Grid RowDefinitions="Auto,*">
+                                        <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontWeight="SemiBold" />
+                                        </Border>
+                                        <ListBox Grid.Row="1"
+                                                 ItemsSource="{Binding FilteredMarketplacePlugins}"
+                                                 SelectedItem="{Binding SelectedMarketplacePlugin}"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="marketplace:MarketplacePluginItem">
+                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
+                                                            Padding="8,6">
+                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                            <StackPanel Spacing="2">
+                                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Publisher}" Foreground="#9CA3AF"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Source}" Foreground="#8C8C8C"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding VersionSummary}" Foreground="#8C8C8C"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" Text="{Binding StatusLabel}"
+                                                                       Foreground="#9CA3AF" VerticalAlignment="Top" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <TextBlock Grid.Row="1"
+                                                   Text="{i18n:Translate {x:Static i18n:TextKeys.PluginCatalogEmpty}}"
+                                                   Foreground="#9CA3AF"
+                                                   TextWrapping="Wrap"
+                                                   Margin="16"
+                                                   VerticalAlignment="Top"
+                                                   IsVisible="{Binding ShowMarketplaceEmptyState}" />
+                                    </Grid>
+                                </Border>
+
+                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="12">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Title}" FontSize="18"
+                                                   FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Publisher}" Foreground="#9CA3AF" />
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}" Foreground="#8C8C8C" />
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.CompatibilityMessage}"
+                                                   Foreground="#8C8C8C" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.StatusLabel}"
+                                                   Foreground="#9CA3AF" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Spacing="6">
+                                        <ProgressBar Height="3"
+                                                     IsIndeterminate="True"
+                                                     IsVisible="{Binding SelectedMarketplacePlugin.IsBusy}" />
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.StatusMessage}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#CFCFCF"
+                                                   IsVisible="{Binding SelectedMarketplacePlugin.HasStatusMessage}" />
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.ErrorMessage}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#E58383"
+                                                   IsVisible="{Binding SelectedMarketplacePlugin.HasError}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
+                                                    MinWidth="90"
+                                                    IsVisible="{Binding SelectedMarketplacePlugin.ShowPrimaryAction}"
+                                                    Command="{Binding RequestMarketplaceInstallCommand}"
+                                                    CommandParameter="{Binding SelectedMarketplacePlugin}" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:TextKeys.PluginRetryAction}}"
+                                                    MinWidth="90"
+                                                    IsVisible="{Binding SelectedMarketplacePlugin.ShowRetryAction}"
+                                                    Command="{Binding RequestMarketplaceInstallCommand}"
+                                                    CommandParameter="{Binding SelectedMarketplacePlugin}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border Grid.Row="2"
+                                            BorderBrush="#2E2E2E"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="10">
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Summary}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#CFCFCF"
+                                                   IsVisible="{Binding SelectedMarketplacePlugin.HasSummary}" />
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
                     <StackPanel Grid.Row="3"
                                 IsVisible="False"
                                 Spacing="6">
@@ -307,7 +476,7 @@
                                     MinWidth="90"
                                     Command="{Binding RefreshPluginsCommand}" />
                         </StackPanel>
-                        <TextBlock IsVisible="{Binding ShowPluginInfoSection}"
+                        <TextBlock IsVisible="{Binding ShowInstalledPluginInfoSection}"
                                    Text="{Binding InfoMessage}"
                                    TextWrapping="Wrap" />
                     </StackPanel>

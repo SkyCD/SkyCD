@@ -137,8 +137,10 @@ public static class UiKeys
     public const string ProjectSettings = "core.ui.ProjectSettings";
     public const string PluginPath = "core.ui.PluginPath";
     public const string Browse = "core.ui.Browse";
+    public const string BrowseCatalog = "core.ui.BrowseCatalog";
     public const string Plugins = "core.ui.Plugins";
     public const string FilterPlugins = "core.ui.FilterPlugins";
+    public const string FilterMarketplacePlugins = "core.ui.FilterMarketplacePlugins";
     public const string On = "core.ui.On";
     public const string Installed = "core.ui.Installed";
     public const string Refresh = "core.ui.Refresh";
