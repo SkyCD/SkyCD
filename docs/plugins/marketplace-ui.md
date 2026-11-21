@@ -68,3 +68,12 @@ finishes with no items.
 - Desktop wiring is `SkyCD.App.Marketplace.PluginMarketplaceService` over `PluginCatalog`,
   `IPluginPackageInstaller` and `IPluginInstallStateSource`; `PluginCatalog` is registered as a singleton in
   `PluginServiceRegistrator` with the running host version.
+
+## Screenshots
+Browse view with update, incompatible and unavailable entries:
+
+![Browse view](../screenshots/marketplace-browse.png)
+
+Restart-required state after staging an install:
+
+![Restart required](../screenshots/marketplace-restart-required.png)
