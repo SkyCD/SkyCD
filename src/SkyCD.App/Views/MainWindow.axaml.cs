@@ -216,6 +216,22 @@ public partial class MainWindow : Window
         SaveAppOptions(options);
     }
 
+    private void OnDetailsColumnReordered(object? sender, DetailsColumnReorderedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.MoveDetailsColumn(e.ColumnId, e.TargetIndex);
+        }
+    }
+
+    private void OnDetailsColumnResized(object? sender, DetailsColumnResizedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.ResizeDetailsColumn(e.ColumnId, e.Width);
+        }
+    }
+
     private void OnToolbarItemsChanged(object? sender, EventArgs e)
     {
         if (sender is MainWindowViewModel viewModel)

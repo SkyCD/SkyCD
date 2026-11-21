@@ -9,7 +9,7 @@
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
         Width="445"
-        SizeToContent="Height"
+        Height="480"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         CanMinimize="False"
@@ -96,13 +96,16 @@
     </Window.Styles>
 
     <Grid Margin="8"
+          RowDefinitions="*,Auto"
           ColumnDefinitions="89,*"
           ColumnSpacing="8">
-        <Border BorderBrush="#B0B0B0"
+        <Border x:Name="SourcePanel"
+                Grid.Row="0"
+                Grid.Column="0"
+                BorderBrush="#B0B0B0"
                 BorderThickness="1"
-                Padding="2"
-                VerticalAlignment="Top">
-            <StackPanel>
+                Padding="2">
+            <StackPanel VerticalAlignment="Top">
                 <Button Classes="source"
                         Classes.selected="{Binding IsSourceMedia}"
                         IsEnabled="{Binding CanUseMedia}"
@@ -155,118 +158,121 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
-            <StackPanel Spacing="3">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
-                <TextBox Classes="source-field" Text="{Binding MediaName}" />
-                <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="3">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Location}}" />
-                    <ComboBox Classes="source-field"
-                              ItemsSource="{Binding LocationChoices}"
-                              SelectedItem="{Binding SelectedLocation}"
-                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Location}}"
-                              HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:LocationItemViewModel">
-                                <TextBlock Text="{Binding Name}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-            </StackPanel>
-
-            <Grid Grid.Row="1" MinHeight="84">
-                <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="3">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
-                    <ComboBox Classes="source-field"
-                              ItemsSource="{Binding AvailableDrives}"
-                              SelectedItem="{Binding SelectedDrive}"
-                              HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding DisplayName}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
-                              IsChecked="{Binding IncludeMediaInfo}" />
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
-                              IsChecked="{Binding IncludeSubfolders}" />
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
-                              IsChecked="{Binding IncludeFiles}" />
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                               Foreground="#666666"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-
-                <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="3">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                        <TextBox Classes="source-field" Text="{Binding SourceValue}" />
-                        <Button Grid.Column="1"
-                                Classes="source-field"
-                                Content="..."
-                                Width="28"
-                                Click="OnBrowseFolderClicked" />
-                    </Grid>
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
-                              IsChecked="{Binding IncludeSubfolders}" />
-                    <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
-                              IsChecked="{Binding IncludeFiles}" />
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                               Foreground="#666666"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-
-                <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="5">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                        <ComboBox ItemsSource="{Binding InternetProtocols}"
-                                  SelectedItem="{Binding InternetProtocol}"
-                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
+        <Grid Grid.Row="0" Grid.Column="1" RowDefinitions="Auto,*,Auto">
+            <Grid RowDefinitions="Auto,6,Auto">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
+                    <TextBox Classes="source-field" Text="{Binding MediaName}" />
+                    <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="3">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Location}}" />
+                        <ComboBox Classes="source-field"
+                                  ItemsSource="{Binding LocationChoices}"
+                                  SelectedItem="{Binding SelectedLocation}"
+                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Location}}"
                                   HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <iconPacks:PackIconControl Width="16" Height="16"
-                                                                   Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
-                                                                   VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                                    </StackPanel>
+                                <DataTemplate x:DataType="vm:LocationItemViewModel">
+                                    <TextBlock Text="{Binding Name}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <Button Grid.Column="1"
-                                x:Name="PasteInternetUrlButton"
-                                IsEnabled="False"
-                                Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
-                                Click="OnPasteInternetUrlClicked" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,72" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="3">
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
-                        <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
-                        <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
-                        <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
-                                 Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
-                    </Grid>
-                    <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
-                               Text="{i18n:Translate {x:Static i18n:UiKeys.InternetPath}}" />
-                    <TextBlock IsVisible="{Binding IsSmbInternetProtocol}"
-                               Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
-                    <TextBox Classes="source-field" Text="{Binding InternetPath}" />
-                    <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
-                    <StackPanel Spacing="4" IsVisible="{Binding !InternetCredentials.IsSftp}">
-                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
-                                Command="{Binding CheckInternetConnectionCommand}" />
-                        <TextBlock Text="{Binding InternetCheckStatus}" TextWrapping="Wrap"
-                                   IsVisible="{Binding InternetCheckStatus, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock IsVisible="{Binding IsSourceTitleOnly}"
-                           Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
-                           TextWrapping="Wrap" />
+                <Grid Grid.Row="1" MinHeight="84">
+                    <StackPanel IsVisible="{Binding IsSourceMedia}" Spacing="3" VerticalAlignment="Top">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
+                        <ComboBox Classes="source-field"
+                                  ItemsSource="{Binding AvailableDrives}"
+                                  SelectedItem="{Binding SelectedDrive}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
+                                  IsChecked="{Binding IncludeMediaInfo}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
+                                  IsChecked="{Binding IncludeSubfolders}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                                  IsChecked="{Binding IncludeFiles}" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                                   Foreground="#666666"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsSourceFolder}" Spacing="3" VerticalAlignment="Top">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                            <Button Grid.Column="1"
+                                    Classes="source-field"
+                                    Content="..."
+                                    Width="28"
+                                    Click="OnBrowseFolderClicked" />
+                        </Grid>
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
+                                  IsChecked="{Binding IncludeSubfolders}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                                  IsChecked="{Binding IncludeFiles}" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                                   Foreground="#666666"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsSourceInternet}" Spacing="5" VerticalAlignment="Top">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <ComboBox ItemsSource="{Binding InternetProtocols}"
+                                      SelectedItem="{Binding InternetProtocol}"
+                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <iconPacks:PackIconControl Width="16" Height="16"
+                                                                       Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
+                                                                       VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="1"
+                                    x:Name="PasteInternetUrlButton"
+                                    IsEnabled="False"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
+                                    Click="OnPasteInternetUrlClicked" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,72" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="3">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                            <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                            <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
+                                     Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                        </Grid>
+                        <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.InternetPath}}" />
+                        <TextBlock IsVisible="{Binding IsSmbInternetProtocol}"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
+                        <TextBox Classes="source-field" Text="{Binding InternetPath}" />
+                        <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
+                        <StackPanel Spacing="4" IsVisible="{Binding !InternetCredentials.IsSftp}">
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
+                                    Command="{Binding CheckInternetConnectionCommand}" />
+                            <TextBlock Text="{Binding InternetCheckStatus}" TextWrapping="Wrap"
+                                       IsVisible="{Binding InternetCheckStatus, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock IsVisible="{Binding IsSourceTitleOnly}"
+                               VerticalAlignment="Top"
+                               Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
+                               TextWrapping="Wrap" />
+                </Grid>
             </Grid>
 
             <Grid Grid.Row="2">
@@ -277,7 +283,7 @@
                                 <Border BorderBrush="#B0B0B0" BorderThickness="1">
                                     <ContentPresenter Name="PART_SelectedContentHost"
                                                       HorizontalContentAlignment="Stretch"
-                                                      VerticalContentAlignment="Stretch" />
+                                                      VerticalContentAlignment="Top" />
                                 </Border>
                                 <!-- Leave room for the dialog actions beside the tab headers. -->
                                 <ItemsPresenter Name="PART_ItemsPresenter"
@@ -318,12 +324,13 @@
                             Click="OnCancelClicked" />
                 </StackPanel>
             </Grid>
-
-            <TextBlock Grid.Row="3"
-                       MinHeight="14"
-                       Foreground="#B00000"
-                       Text="{Binding ValidationMessage}"
-                       TextWrapping="Wrap" />
         </Grid>
+
+        <TextBlock Grid.Row="1"
+                   Grid.ColumnSpan="2"
+                   MinHeight="14"
+                   Foreground="#B00000"
+                   Text="{Binding ValidationMessage}"
+                   TextWrapping="Wrap" />
     </Grid>
 </Window>

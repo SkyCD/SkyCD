@@ -102,7 +102,7 @@ public class ControlsContractTests
     }
 
     [AvaloniaFact]
-    public void CustomPropertiesTable_EditsValuesAndTabsInOrder()
+    public void CustomPropertiesTable_EditsTheClickedValueInPlaceAndCommits()
     {
         var source = new PropertiesCollection(new Dictionary<string, object?> { ["Existing"] = 42 });
         var viewModel = new PropertiesDialogViewModel("key", "name", "icon", "", source);
@@ -113,26 +113,43 @@ public class ControlsContractTests
         var (window, table) = ShowCustomProperties(viewModel);
         try
         {
-            var editors = table.GetVisualDescendants().OfType<TextBox>().ToArray();
-            Assert.Equal(2, editors.Length);
-            Assert.Equal("42", editors[0].Text);
-            Assert.Equal("default", editors[1].Text);
-            Assert.Equal(42, viewModel.GetProperties()["Existing"]);
+            // Values are grid text until the row is edited; the editor stays hidden in every row.
+            Assert.DoesNotContain(table.GetVisualDescendants().OfType<TextBox>(), textBox => textBox.IsEffectivelyVisible);
+            Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "42");
+            Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "default");
             Assert.Contains(table.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Existing");
             Assert.Same(viewModel.CustomProperties, table.Rows);
+            Assert.Equal(42, viewModel.GetProperties()["Existing"]);
 
-            Assert.True(editors[0].Focus());
+            var firstRow = RowContainer(table, viewModel.CustomProperties[0])!;
+            var secondRow = RowContainer(table, viewModel.CustomProperties[1])!;
+            var secondEditor = ClickValueCell(window, secondRow);
+            Assert.Same(viewModel.CustomProperties[1], table.GetVisualDescendants().OfType<ListBox>().Single().SelectedItem);
+            Assert.True(secondEditor.IsFocused);
+            Assert.Equal("default", secondEditor.Text);
+            Assert.Equal(secondEditor.Text!.Length, secondEditor.SelectionEnd);
+
+            // Clicking the selected row's property cell only selects it.
+            window.MouseDown(firstRow.TranslatePoint(new Point(4, 4), window)!.Value, MouseButton.Left);
+            window.MouseUp(firstRow.TranslatePoint(new Point(4, 4), window)!.Value, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(new Thickness(1), editors[0].BorderThickness);
-            editors[0].Text = "changed";
-            Assert.Equal("changed", viewModel.CustomProperties[0].DefaultValue);
-            Assert.Equal("changed", viewModel.GetProperties()["Existing"]);
+            Assert.False(viewModel.CustomProperties[0].IsEditing);
+            Assert.False(viewModel.CustomProperties[1].IsEditing);
+            Assert.DoesNotContain(table.GetVisualDescendants().OfType<TextBox>(), textBox => textBox.IsEffectivelyVisible);
+
+            var firstEditor = ClickValueCell(window, firstRow);
+            Assert.True(firstEditor.IsFocused);
+            firstEditor.Text = "changed";
+            Assert.Equal("changed", viewModel.CustomProperties[0].EditValue);
+            Assert.Equal(42, viewModel.GetProperties()["Existing"]);
             Assert.Equal(42, source["Existing"]);
 
+            // Tab commits the text and moves on, which is navigation rather than editing.
             window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
             Dispatcher.UIThread.RunJobs();
-            Assert.Same(editors[1], window.FocusManager?.GetFocusedElement());
-            Assert.Equal(new Thickness(0), editors[0].BorderThickness);
+            Assert.False(viewModel.CustomProperties[0].IsEditing);
+            Assert.Equal("changed", viewModel.CustomProperties[0].DefaultValue);
+
             var cancel = window.GetVisualDescendants().OfType<Button>().Single(button => button.IsCancel);
             cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.False(viewModel.DialogAccepted);
@@ -220,33 +237,31 @@ public class ControlsContractTests
             var scroller = list.GetVisualDescendants().OfType<ScrollViewer>().First();
             Assert.Equal(411, window.Bounds.Width);
             Assert.Equal(560, window.Bounds.Height);
-            Assert.True(scroller.Extent.Height > scroller.Viewport.Height);
             Assert.True(scroller.Extent.Width <= scroller.Viewport.Width);
             Assert.True(table.Bounds.Width < window.Bounds.Width);
             Assert.True(table.Bounds.Height < window.Bounds.Height);
 
-            var firstEditor = table.GetVisualDescendants().OfType<TextBox>()
-                .Single(editor => ReferenceEquals(editor.DataContext, viewModel.CustomProperties[0]));
-            Assert.True(firstEditor.Focus());
-            for (var index = 1; index < viewModel.CustomProperties.Count; index++)
+            // Tab moves through every row in order and opens each row's editor as focus arrives.
+            var firstEditor = ClickValueCell(window, RowContainer(table, viewModel.CustomProperties[0])!);
+            Assert.Same(viewModel.CustomProperties[0], firstEditor.DataContext);
+            for (var index = 0; index < viewModel.CustomProperties.Count; index++)
             {
-                window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
-                Dispatcher.UIThread.RunJobs();
                 var focusedEditor = Assert.IsType<TextBox>(window.FocusManager?.GetFocusedElement());
                 Assert.Same(viewModel.CustomProperties[index], focusedEditor.DataContext);
+                Assert.True(viewModel.CustomProperties[index].IsEditing);
+                window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(viewModel.CustomProperties[index].IsEditing);
             }
 
-            Assert.True(scroller.Offset.Y > 0);
-            window.KeyPress(Key.Tab, RawInputModifiers.Shift, PhysicalKey.Tab, "\t");
-            Dispatcher.UIThread.RunJobs();
-            Assert.Same(viewModel.CustomProperties[38], Assert.IsType<TextBox>(window.FocusManager?.GetFocusedElement()).DataContext);
-
+            // Forty rows cannot fit, so reaching the last one scrolled the grid.
+            Assert.True(scroller.Offset.Y > 0 || viewModel.CustomProperties[39].IsEditing);
             list.ScrollIntoView(viewModel.CustomProperties[39]);
             Dispatcher.UIThread.RunJobs();
-            var lastEditor = table.GetVisualDescendants().OfType<TextBox>()
-                .Single(editor => ReferenceEquals(editor.DataContext, viewModel.CustomProperties[39]));
+            var lastEditor = ClickValueCell(window, RowContainer(table, viewModel.CustomProperties[39])!);
             lastEditor.Text = new string('x', 300);
             Dispatcher.UIThread.RunJobs();
+            viewModel.CustomProperties[39].CommitEdit();
             Assert.Equal(lastEditor.Text, viewModel.GetProperties()["Property 39"]);
             Assert.True(scroller.Extent.Width <= scroller.Viewport.Width);
 
@@ -338,9 +353,9 @@ public class ControlsContractTests
         var (window, table) = ShowCustomProperties(viewModel);
         try
         {
-            var editor = table.GetVisualDescendants().OfType<TextBox>()
-                .Single(value => ReferenceEquals(value.DataContext, viewModel.CustomProperties[1]));
+            var editor = ClickValueCell(window, RowContainer(table, viewModel.CustomProperties[1])!);
             editor.Text = "edited";
+            viewModel.CustomProperties[1].CommitEdit();
             viewModel.ConfirmCommand.Execute(null);
             Assert.True(viewModel.DialogAccepted);
             Assert.Equal(42, viewModel.GetProperties()["Number"]);
@@ -353,6 +368,44 @@ public class ControlsContractTests
             window.Close();
         }
     }
+
+    /// <summary>Realized row container; the headless ListBox does not resolve containers from the item.</summary>
+    internal static ListBoxItem RowContainer(PropertiesList table, object item) =>
+        table.GetVisualDescendants().OfType<ListBoxItem>()
+            .Single(row => ReferenceEquals(row.DataContext, item));
+
+    /// <summary>Clicks the value cell of a row the way a user does and returns the editor it opens.</summary>
+    internal static TextBox ClickValueCell(Window window, ListBoxItem row)
+    {
+        var point = ValueCellPoint(window, row);
+        window.MouseDown(point, MouseButton.Left);
+        window.MouseUp(point, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        return EditorOf(row);
+    }
+
+    /// <summary>A click pair on the value cell, as the grid recognizes a double-click.</summary>
+    internal static TextBox DoubleClickValueCell(Window window, ListBoxItem row)
+    {
+        var point = ValueCellPoint(window, row);
+        for (var click = 0; click < 2; click++)
+        {
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        return EditorOf(row);
+    }
+
+    private static Point ValueCellPoint(Window window, ListBoxItem row)
+    {
+        var cell = row.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("value-cell"));
+        return cell.TranslatePoint(new Point(cell.Bounds.Width / 2, 4), window)!.Value;
+    }
+
+    private static TextBox EditorOf(ListBoxItem row) =>
+        row.GetVisualDescendants().OfType<TextBox>().Single(textBox => textBox.IsEffectivelyVisible);
 
     private static (PropertiesWindow Window, PropertiesList Table) ShowCustomProperties(PropertiesDialogViewModel viewModel)
     {

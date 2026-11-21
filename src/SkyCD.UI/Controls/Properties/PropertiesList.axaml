@@ -39,7 +39,8 @@
                 </Grid>
             </Border>
 
-            <ListBox Grid.Row="1"
+            <ListBox x:Name="RowsListBox"
+                     Grid.Row="1"
                      Classes.editable-rows="{Binding !RowIsTabStop, ElementName=Root}"
                      BorderThickness="0"
                      Padding="0"
@@ -69,7 +70,9 @@
                                 <ContentPresenter Content="{Binding}"
                                                   ContentTemplate="{Binding PropertyCellTemplate, ElementName=Root}" />
                             </Border>
+                            <!-- The value-cell class lets in-place editing find the editable column. -->
                             <Border Grid.Column="1"
+                                    Classes="value-cell"
                                     BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="0,0,0,1"
                                     Padding="8,4">

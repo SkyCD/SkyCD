@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -318,6 +319,186 @@ public class DetailsListViewTests
         Assert.Equal(5, detailsListView.SelectedItems?.Count);
 
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void CatalogColumns_CarryIdRequiredFlagAndSavedPixelWidth()
+    {
+        var settings = new List<DetailsColumnSettingDocument>
+        {
+            new() { Id = DetailsColumnsCatalog.NameId, IsVisible = true, Width = 640 },
+            new() { Id = DetailsColumnsCatalog.SizeId, IsVisible = true, Width = 175 },
+            new() { Id = DetailsColumnsCatalog.TypeId, IsVisible = false },
+            new() { Id = DetailsColumnsCatalog.StatusId, IsVisible = false },
+            new() { Id = DetailsColumnsCatalog.LentToId, IsVisible = true },
+            new() { Id = DetailsColumnsCatalog.LocationId, IsVisible = true }
+        };
+
+        var columns = DetailsColumnsCatalog.CreateVisibleColumns(settings);
+
+        Assert.Equal(
+        [
+            DetailsColumnsCatalog.NameId,
+            DetailsColumnsCatalog.SizeId,
+            DetailsColumnsCatalog.LentToId,
+            DetailsColumnsCatalog.LocationId
+        ], columns.Select(column => column.Id));
+        Assert.True(columns[0].IsRequired);
+        Assert.False(columns[1].IsRequired);
+        Assert.Equal(new GridLength(640, GridUnitType.Pixel), columns[0].Width);
+        Assert.Equal(new GridLength(175, GridUnitType.Pixel), columns[1].Width);
+        Assert.Equal(new GridLength(140, GridUnitType.Pixel), columns[2].Width);
+
+        var view = new BrowserItemsView
+        {
+            DetailsColumns = columns,
+            ViewMode = BrowserViewMode.Details
+        };
+        var detailsListView = view.FindControl<DetailsListView>("DetailsListView")!;
+        var headerGrid = Assert.IsType<Grid>(detailsListView.HeaderContent);
+        Assert.Equal(new GridLength(175, GridUnitType.Pixel), headerGrid.ColumnDefinitions[1].Width);
+    }
+
+    [AvaloniaFact]
+    public void SplitterDrag_RaisesColumnResizedWithNewWidth()
+    {
+        var (window, view, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 300),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 100));
+
+        try
+        {
+            var raised = new List<DetailsColumnResizedEventArgs>();
+            view.DetailsColumnResized += (_, e) => raised.Add(e);
+
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            var splitter = sizeCell.GetVisualChildren().OfType<Border>().Last(border => border.Cursor is not null);
+            var grip = splitter.TranslatePoint(new Point(4, 10), window);
+            Assert.NotNull(grip);
+
+            // A plain click on the splitter must not report a resize.
+            window.MouseDown(grip!.Value, MouseButton.Left);
+            window.MouseUp(grip.Value, MouseButton.Left);
+            Assert.Empty(raised);
+
+            var sizeColumn = view.DetailsColumns!.ElementAt(1);
+            window.MouseDown(grip.Value, MouseButton.Left);
+            window.MouseMove(grip.Value + new Vector(60, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseUp(grip.Value + new Vector(60, 0), MouseButton.Left);
+
+            var resized = Assert.Single(raised);
+            Assert.Equal(DetailsColumnsCatalog.SizeId, resized.ColumnId);
+            Assert.Equal(160, resized.Width, 3);
+            Assert.Equal(new GridLength(160, GridUnitType.Pixel), sizeColumn.Width);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void HeaderDrag_RaisesReorderedWithTargetIndex()
+    {
+        var (window, view, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
+            CreateCatalogColumn(DetailsColumnsCatalog.LentToId, required: false, width: 100),
+            CreateCatalogColumn(DetailsColumnsCatalog.LocationId, required: false, width: 140));
+
+        try
+        {
+            var reordered = new List<DetailsColumnReorderedEventArgs>();
+            view.DetailsColumnReordered += (_, e) => reordered.Add(e);
+
+            // Drag the Size header onto the Location header.
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            var locationCell = Assert.IsType<Grid>(headerGrid.Children[3]);
+            var start = sizeCell.TranslatePoint(new Point(30, 10), window);
+            var drop = locationCell.TranslatePoint(new Point(30, 10), window);
+            Assert.NotNull(start);
+            Assert.NotNull(drop);
+
+            window.MouseDown(start!.Value, MouseButton.Left);
+            window.MouseMove(start.Value + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(drop!.Value, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(drop.Value, MouseButton.Left);
+
+            var move = Assert.Single(reordered);
+            Assert.Equal(DetailsColumnsCatalog.SizeId, move.ColumnId);
+            Assert.Equal(3, move.TargetIndex);
+
+            // A plain click on a reorderable header is not a reorder.
+            reordered.Clear();
+            var lentCell = Assert.IsType<Grid>(headerGrid.Children[2]);
+            var lentPoint = lentCell.TranslatePoint(new Point(30, 10), window);
+            Assert.NotNull(lentPoint);
+            window.MouseDown(lentPoint!.Value, MouseButton.Left);
+            window.MouseUp(lentPoint.Value, MouseButton.Left);
+            Assert.Empty(reordered);
+
+            // Dropping inside the dragged header itself is not a reorder.
+            window.MouseDown(lentPoint.Value, MouseButton.Left);
+            window.MouseMove(lentPoint.Value + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(lentPoint.Value + new Vector(3, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseUp(lentPoint.Value + new Vector(3, 0), MouseButton.Left);
+            Assert.Empty(reordered);
+
+            // Dropping before the leading required column clamps to the first movable slot.
+            var namePoint = headerGrid.TranslatePoint(new Point(10, 10), window);
+            Assert.NotNull(namePoint);
+            window.MouseDown(lentPoint.Value, MouseButton.Left);
+            window.MouseMove(lentPoint.Value + new Vector(-20, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(namePoint!.Value, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(namePoint.Value, MouseButton.Left);
+
+            move = Assert.Single(reordered);
+            Assert.Equal(DetailsColumnsCatalog.LentToId, move.ColumnId);
+            Assert.Equal(1, move.TargetIndex);
+
+            // The required Name header is not draggable.
+            reordered.Clear();
+            window.MouseDown(namePoint.Value, MouseButton.Left);
+            window.MouseMove(drop.Value, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(drop.Value, MouseButton.Left);
+            Assert.Empty(reordered);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static BrowserDetailsColumn CreateCatalogColumn(string id, bool required, double width)
+    {
+        return new BrowserDetailsColumn
+        {
+            Id = id,
+            Header = id,
+            ValuePath = "Name",
+            Width = new GridLength(width, GridUnitType.Pixel),
+            IsRequired = required
+        };
+    }
+
+    private static (Window Window, BrowserItemsView View, Grid HeaderGrid) ShowDetailsColumns(
+        params BrowserDetailsColumn[] columns)
+    {
+        var view = new BrowserItemsView
+        {
+            DetailsColumns = columns,
+            ItemsSource = CreateSeededItems(5),
+            ViewMode = BrowserViewMode.Details
+        };
+        var window = new Window { Width = 900, Height = 400, Content = view };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var detailsListView = view.FindControl<DetailsListView>("DetailsListView")!;
+        var headerGrid = Assert.IsType<Grid>(detailsListView.HeaderContent);
+        Assert.True(headerGrid.Bounds.Width > 0, "the details header must be laid out");
+
+        return (window, view, headerGrid);
     }
 
     [AvaloniaFact]

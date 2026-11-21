@@ -37,7 +37,8 @@ public partial class OptionsDialogViewModel
                 Id = definition.Id,
                 Header = definition.DisplayHeader,
                 IsVisible = setting.IsVisible,
-                IsRequired = definition.IsRequired
+                IsRequired = definition.IsRequired,
+                Width = setting.Width
             });
         }
 
@@ -51,7 +52,8 @@ public partial class OptionsDialogViewModel
             .Select(item => new DetailsColumnSettingDocument
             {
                 Id = item.Id,
-                IsVisible = item.IsRequired || item.IsVisible
+                IsVisible = item.IsRequired || item.IsVisible,
+                Width = item.Width
             })
             .ToArray();
     }
