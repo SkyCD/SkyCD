@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.CdPlayer.Ini.Parsing;
 
 namespace SkyCD.Plugin.CdPlayer.Ini;
 

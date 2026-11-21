@@ -9,6 +9,10 @@ using SharpCompress.Readers;
 using SharpCompress.Readers.Rar;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Rar.Exceptions;
+using SkyCD.Plugin.Rar.Import;
+using SkyCD.Plugin.Rar.Models;
+using SkyCD.Plugin.Rar.Parsing;
 
 namespace SkyCD.Plugin.Rar;
 

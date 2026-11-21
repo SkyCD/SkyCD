@@ -4,9 +4,9 @@
     </ItemGroup>
     <ItemGroup>
         <!-- Only the core scan model is shared; container parsers live with the plugins that claim them. -->
-        <Compile Include="..\Shared\MediaMetadata\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
-        <Compile Include="..\Shared\MediaMetadata\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>
-        <Compile Include="..\Shared\MediaMetadata\MetadataValues.cs" Link="Shared\MediaMetadata\MetadataValues.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Models\MetadataValues.cs" Link="Shared\MediaMetadata\MetadataValues.cs"/>
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>

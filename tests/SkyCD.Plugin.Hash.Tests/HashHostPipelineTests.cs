@@ -13,6 +13,7 @@ using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
+using SkyCD.Plugin.Hash.Models;
 
 namespace SkyCD.Plugin.Hash.Tests;
 

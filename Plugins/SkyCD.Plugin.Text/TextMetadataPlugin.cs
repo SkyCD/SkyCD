@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Text.Models;
+using SkyCD.Plugin.Text.Parsing;
 
 namespace SkyCD.Plugin.Text;
 

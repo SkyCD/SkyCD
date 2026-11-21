@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using SkyCD.Formatting.Rtf;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Rtf.Exceptions;
+using SkyCD.Plugin.Rtf.Models;
+using SkyCD.Plugin.Rtf.Parsing;
 
 namespace SkyCD.Plugin.Rtf;
 

@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using SkyCD.Plugin.BrokenX.Export;
+using SkyCD.Plugin.BrokenX.Models;
+using SkyCD.Plugin.BrokenX.Parsing;
 
 namespace SkyCD.Plugin.BrokenX.Tests;
 

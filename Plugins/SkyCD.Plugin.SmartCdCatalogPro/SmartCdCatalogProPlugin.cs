@@ -3,6 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.SmartCdCatalogPro.Import;
+using SkyCD.Plugin.SmartCdCatalogPro.Models;
+using SkyCD.Plugin.SmartCdCatalogPro.Parsing;
 
 namespace SkyCD.Plugin.SmartCdCatalogPro;
 

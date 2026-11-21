@@ -15,6 +15,7 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
+using SkyCD.Plugin.Text.Models;
 
 namespace SkyCD.Plugin.Text.Tests;
 

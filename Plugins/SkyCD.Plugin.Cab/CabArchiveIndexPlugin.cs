@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Cab.Import;
+using SkyCD.Plugin.Cab.Models;
 
 namespace SkyCD.Plugin.Cab;
 

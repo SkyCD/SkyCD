@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
+using SkyCD.Plugin.EBook.Models;
+using SkyCD.Plugin.EBook.Parsing;
 
 namespace SkyCD.Plugin.EBook.Tests;
 

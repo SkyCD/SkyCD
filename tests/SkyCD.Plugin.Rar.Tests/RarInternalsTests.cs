@@ -8,6 +8,8 @@ using SkyCD.Plugin.Rar;
 using SkyCD.Plugin.Rar.Exceptions;
 using SkyCD.Plugin.Rar.Tests;
 using Xunit;
+using SkyCD.Plugin.Rar.Models;
+using SkyCD.Plugin.Rar.Parsing;
 
 namespace SkyCD.Plugin.Rar.Tests;
 

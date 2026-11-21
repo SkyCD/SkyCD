@@ -11,6 +11,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Nrg.Models;
 
 namespace SkyCD.Plugin.Nrg.Tests;
 

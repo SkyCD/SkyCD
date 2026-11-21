@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Pdf.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Pdf.Export;
+using SkyCD.Plugin.Pdf.Models;
 
 namespace SkyCD.Plugin.Pdf.Tests;
 

@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Vdi.Import;
+using SkyCD.Plugin.Vdi.Models;
 
 namespace SkyCD.Plugin.Vdi;
 

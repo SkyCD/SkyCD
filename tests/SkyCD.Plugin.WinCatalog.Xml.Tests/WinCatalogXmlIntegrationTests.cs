@@ -16,6 +16,7 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.WinCatalog.Xml;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.WinCatalog.Xml.Models;
 
 namespace SkyCD.Plugin.WinCatalog.Xml.Tests;
 

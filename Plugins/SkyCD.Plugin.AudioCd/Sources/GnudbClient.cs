@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.Plugin.AudioCd.Models;
 
 namespace SkyCD.Plugin.AudioCd.Sources;
 

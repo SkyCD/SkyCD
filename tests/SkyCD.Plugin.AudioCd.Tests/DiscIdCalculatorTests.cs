@@ -2,6 +2,8 @@ using System.Text.RegularExpressions;
 using SkyCD.Plugin.AudioCd;
 using SkyCD.Plugin.AudioCd.Exceptions;
 using Xunit;
+using SkyCD.Plugin.AudioCd.Models;
+using SkyCD.Plugin.AudioCd.Parsing;
 
 namespace SkyCD.Plugin.AudioCd.Tests;
 

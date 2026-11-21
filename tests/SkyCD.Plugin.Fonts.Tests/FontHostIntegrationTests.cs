@@ -13,6 +13,8 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Controls.Preview;
 using SkiaSharp;
 using Xunit;
+using SkyCD.Plugin.Fonts.Export;
+using SkyCD.Plugin.Fonts.Models;
 
 namespace SkyCD.Plugin.Fonts.Tests;
 

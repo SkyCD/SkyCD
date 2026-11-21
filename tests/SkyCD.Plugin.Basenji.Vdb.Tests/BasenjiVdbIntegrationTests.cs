@@ -17,6 +17,7 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.Basenji.Vdb.Models;
 
 namespace SkyCD.Plugin.Basenji.Vdb.Tests;
 

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using Xunit;
+using SkyCD.Plugin.EasyDiskCatalog.Models;
 
 namespace SkyCD.Plugin.EasyDiskCatalog.Tests;
 

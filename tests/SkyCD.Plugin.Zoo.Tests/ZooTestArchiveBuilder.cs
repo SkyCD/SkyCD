@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using SkyCD.Plugin.Zoo.Parsing;
 
 namespace SkyCD.Plugin.Zoo.Tests;
 

@@ -10,6 +10,8 @@ using SkyCD.Plugin.AudioCd;
 using SkyCD.Plugin.AudioCd.Sources;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.AudioCd.Export;
+using SkyCD.Plugin.AudioCd.Models;
 
 namespace SkyCD.Plugin.AudioCd.Tests;
 

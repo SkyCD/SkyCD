@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using SkyCD.Plugin.Adc.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Adc.Models;
+using SkyCD.Plugin.Adc.Parsing;
 
 namespace SkyCD.Plugin.Adc.Tests;
 

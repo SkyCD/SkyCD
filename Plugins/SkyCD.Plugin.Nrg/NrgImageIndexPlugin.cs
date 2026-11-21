@@ -6,6 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Nrg.Import;
+using SkyCD.Plugin.Nrg.Models;
+using SkyCD.Plugin.Nrg.Parsing;
 
 namespace SkyCD.Plugin.Nrg;
 

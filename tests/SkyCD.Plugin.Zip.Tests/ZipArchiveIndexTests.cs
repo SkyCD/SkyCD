@@ -13,6 +13,7 @@ using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Zip;
 using Xunit;
+using SkyCD.Plugin.Zip.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

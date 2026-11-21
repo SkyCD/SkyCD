@@ -7,6 +7,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Pdf.Exceptions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Exceptions;
+using SkyCD.Plugin.Pdf.Models;
+using SkyCD.Plugin.Pdf.Parsing;
 
 namespace SkyCD.Plugin.Pdf;
 

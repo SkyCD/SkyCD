@@ -9,6 +9,9 @@ using SkyCD.Plugin.AbeMeda;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.AbeMeda.Import;
+using SkyCD.Plugin.AbeMeda.Models;
+using SkyCD.Plugin.AbeMeda.Parsing;
 
 namespace SkyCD.Plugin.Host.Tests;
 

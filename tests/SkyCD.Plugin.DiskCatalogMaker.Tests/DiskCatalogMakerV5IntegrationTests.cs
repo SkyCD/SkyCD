@@ -17,6 +17,7 @@ using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.DiskCatalogMaker.Models;
 
 namespace SkyCD.Plugin.DiskCatalogMaker.Tests;
 

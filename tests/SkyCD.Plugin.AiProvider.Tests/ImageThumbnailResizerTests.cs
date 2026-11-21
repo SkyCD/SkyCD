@@ -1,6 +1,8 @@
 using SkiaSharp;
 using Xunit;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.AiProvider.Exceptions;
+using SkyCD.Plugin.AiProvider.Export;
 
 namespace SkyCD.Plugin.AiProvider.Tests;
 

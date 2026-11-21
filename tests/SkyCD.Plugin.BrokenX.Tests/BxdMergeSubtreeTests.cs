@@ -1,6 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
+using SkyCD.Plugin.BrokenX.Export;
+using SkyCD.Plugin.BrokenX.Import;
+using SkyCD.Plugin.BrokenX.Models;
+using SkyCD.Plugin.BrokenX.Parsing;
 
 namespace SkyCD.Plugin.BrokenX.Tests;
 

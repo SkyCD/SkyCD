@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using SkyCD.Plugin.Yaml.Models;
 
 namespace SkyCD.Plugin.Yaml;
 

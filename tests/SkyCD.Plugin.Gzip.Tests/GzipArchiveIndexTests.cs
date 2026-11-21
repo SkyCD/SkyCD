@@ -14,6 +14,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Gzip.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.Plugin.Sample.Configuration.Configuration.SampleConfigurationPage">
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+        <TextBlock Text="Greeting" FontWeight="SemiBold" />
+        <TextBox Grid.Row="1" x:Name="GreetingTextBox" />
+        <TextBlock Grid.Row="2" Text="Signature" FontWeight="SemiBold" />
+        <TextBox Grid.Row="3" x:Name="SignatureTextBox" />
+    </Grid>
+</UserControl>

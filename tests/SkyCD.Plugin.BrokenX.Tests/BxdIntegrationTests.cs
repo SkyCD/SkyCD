@@ -13,6 +13,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.BrokenX.Models;
 
 namespace SkyCD.Plugin.BrokenX.Tests;
 

@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using SkyCD.Plugin.Basenji.Vdb.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Basenji.Vdb.Parsing;
 
 namespace SkyCD.Plugin.Basenji.Vdb.Tests;
 

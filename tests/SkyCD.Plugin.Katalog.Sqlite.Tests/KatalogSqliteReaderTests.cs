@@ -8,6 +8,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Katalog.CsvIdx;
 using SkyCD.Plugin.Katalog.Sqlite.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.Katalog.Sqlite.Parsing;
 
 namespace SkyCD.Plugin.Katalog.Sqlite.Tests;
 

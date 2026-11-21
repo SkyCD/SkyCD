@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
+using SkyCD.Plugin.Fonts.Configuration;
+using SkyCD.Plugin.Fonts.Models;
 
 namespace SkyCD.Plugin.Fonts.Tests;
 

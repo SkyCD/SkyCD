@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using SharpCompress.Compressors.ZStandard;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Zstd.Import;
+using SkyCD.Plugin.Zstd.Models;
+using SkyCD.Plugin.Zstd.Parsing;
 
 namespace SkyCD.Plugin.Zstd;
 

@@ -16,6 +16,7 @@ using SkyCD.Plugin.Katalog.CsvIdx;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.Katalog.CsvIdx.Models;
 
 namespace SkyCD.Plugin.Katalog.CsvIdx.Tests;
 

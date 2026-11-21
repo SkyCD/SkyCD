@@ -5,6 +5,9 @@ using System.Linq;
 using System.Threading;
 using SkyCD.Plugin.GCstar;
 using Xunit;
+using SkyCD.Plugin.GCstar.Import;
+using SkyCD.Plugin.GCstar.Models;
+using SkyCD.Plugin.GCstar.Parsing;
 
 namespace SkyCD.Plugin.GCstar.Tests;
 

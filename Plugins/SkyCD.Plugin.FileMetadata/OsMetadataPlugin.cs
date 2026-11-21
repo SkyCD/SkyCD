@@ -3,6 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.MediaMetadata;
+using SkyCD.Plugin.FileMetadata.Models;
+using SkyCD.Plugin.FileMetadata.Parsing;
+using SkyCD.Plugin.MediaMetadata.Models;
+using SkyCD.Plugin.MediaMetadata.Parsing;
 
 namespace SkyCD.Plugin.FileMetadata;
 

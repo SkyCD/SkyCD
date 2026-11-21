@@ -3,6 +3,8 @@ using System.IO;
 using System.Text.Json;
 using SkyCD.Plugin.AiDescription;
 using Xunit;
+using SkyCD.Plugin.AiDescription.Exceptions;
+using SkyCD.Plugin.AiDescription.Sources;
 
 namespace SkyCD.App.Tests;
 

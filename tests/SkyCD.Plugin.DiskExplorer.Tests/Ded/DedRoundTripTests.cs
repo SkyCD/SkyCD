@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using SkyCD.Plugin.DiskExplorer.Ded;
 using Xunit;
+using SkyCD.Plugin.DiskExplorer.Ded.Import;
+using SkyCD.Plugin.DiskExplorer.Ded.Models;
+using SkyCD.Plugin.DiskExplorer.Ded.Parsing;
 
 namespace SkyCD.Plugin.DiskExplorer.Tests.Ded;
 

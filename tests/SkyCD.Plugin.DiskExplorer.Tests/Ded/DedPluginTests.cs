@@ -7,6 +7,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.DiskExplorer.Ded;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.DiskExplorer.Ded.Models;
+using SkyCD.Plugin.DiskExplorer.Ded.Parsing;
 
 namespace SkyCD.Plugin.DiskExplorer.Tests.Ded;
 

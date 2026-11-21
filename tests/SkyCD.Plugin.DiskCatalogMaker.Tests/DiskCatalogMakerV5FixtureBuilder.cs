@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using SkyCD.Plugin.DiskCatalogMaker;
+using SkyCD.Plugin.DiskCatalogMaker.Models;
+using SkyCD.Plugin.DiskCatalogMaker.Parsing;
 
 namespace SkyCD.Plugin.DiskCatalogMaker.Tests;
 

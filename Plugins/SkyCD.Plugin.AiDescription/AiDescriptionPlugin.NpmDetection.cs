@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.AiDescription.Models;
+using SkyCD.Plugin.AiDescription.Sources;
 
 namespace SkyCD.Plugin.AiDescription;
 

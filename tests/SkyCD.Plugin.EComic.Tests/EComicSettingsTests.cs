@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using Xunit;
+using SkyCD.Plugin.EComic.Configuration;
+using SkyCD.Plugin.EComic.Models;
 
 namespace SkyCD.Plugin.EComic.Tests;
 

@@ -10,6 +10,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Iso;
 using Xunit;
+using SkyCD.Plugin.Iso.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

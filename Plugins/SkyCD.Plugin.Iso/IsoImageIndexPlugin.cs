@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Iso.Exceptions;
+using SkyCD.Plugin.Iso.Import;
+using SkyCD.Plugin.Iso.Models;
+using SkyCD.Plugin.Iso.Parsing;
 
 namespace SkyCD.Plugin.Iso;
 

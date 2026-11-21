@@ -14,6 +14,8 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
+using SkyCD.Plugin.EBook.Models;
+using SkyCD.Plugin.EBook.Parsing;
 
 namespace SkyCD.Plugin.EBook.Tests;
 

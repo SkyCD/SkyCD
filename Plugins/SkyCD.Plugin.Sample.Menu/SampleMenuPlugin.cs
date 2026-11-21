@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.Plugin.Sample.Menu.Views;
 
 namespace SkyCD.Plugin.Sample.Menu;
 

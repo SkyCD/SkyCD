@@ -15,6 +15,7 @@ using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
+using SkyCD.Plugin.Arc.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

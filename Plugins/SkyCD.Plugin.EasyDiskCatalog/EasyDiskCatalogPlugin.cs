@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.EasyDiskCatalog.Models;
+using SkyCD.Plugin.EasyDiskCatalog.Parsing;
 
 namespace SkyCD.Plugin.EasyDiskCatalog;
 

@@ -9,6 +9,7 @@ using System.Xml;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.WinCatalog.Xml;
 using Xunit;
+using SkyCD.Plugin.WinCatalog.Xml.Models;
 
 namespace SkyCD.Plugin.WinCatalog.Xml.Tests;
 

@@ -14,6 +14,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
+using SkyCD.Plugin.IWork.Models;
 
 namespace SkyCD.Plugin.IWork.Tests;
 

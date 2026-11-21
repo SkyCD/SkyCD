@@ -16,6 +16,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Sample.Configuration;
 using Xunit;
+using SkyCD.Plugin.Sample.Configuration.Configuration;
 
 namespace SkyCD.Plugin.Sample.Configuration.Tests;
 

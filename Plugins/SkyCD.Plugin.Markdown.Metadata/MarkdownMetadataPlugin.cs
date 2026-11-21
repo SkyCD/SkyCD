@@ -10,6 +10,8 @@ using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using MarkdigMarkdown = Markdig.Markdown;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Markdown.Metadata.Models;
+using SkyCD.Plugin.Markdown.Metadata.Parsing;
 
 namespace SkyCD.Plugin.Markdown.Metadata;
 

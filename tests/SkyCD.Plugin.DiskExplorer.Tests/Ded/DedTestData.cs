@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using SkyCD.Plugin.DiskExplorer.Ded;
+using SkyCD.Plugin.DiskExplorer.Ded.Export;
+using SkyCD.Plugin.DiskExplorer.Ded.Models;
+using SkyCD.Plugin.DiskExplorer.Ded.Parsing;
 
 namespace SkyCD.Plugin.DiskExplorer.Tests.Ded;
 

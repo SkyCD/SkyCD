@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Csv;
 using SkyCD.Plugin.WinCatalog.Csv;
 using Xunit;
+using SkyCD.Plugin.Csv.Parsing;
+using SkyCD.Plugin.WinCatalog.Csv.Import;
+using SkyCD.Plugin.WinCatalog.Csv.Models;
 
 namespace SkyCD.Plugin.WinCatalog.Csv.Tests;
 

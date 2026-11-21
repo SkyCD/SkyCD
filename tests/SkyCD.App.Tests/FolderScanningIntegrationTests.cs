@@ -19,6 +19,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.AiDescription;
 using Xunit;
+using SkyCD.Plugin.AiDescription.Exceptions;
+using SkyCD.Plugin.AiDescription.Models;
 
 namespace SkyCD.App.Tests;
 

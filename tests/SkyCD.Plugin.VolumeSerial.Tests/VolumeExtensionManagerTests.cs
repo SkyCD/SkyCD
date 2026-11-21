@@ -5,6 +5,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.Volume;
 using Xunit;
+using SkyCD.Plugin.VolumeSerial.Models;
 
 namespace SkyCD.Plugin.VolumeSerial.Tests;
 

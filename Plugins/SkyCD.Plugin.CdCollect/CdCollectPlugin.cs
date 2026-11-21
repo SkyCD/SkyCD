@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.CdCollect.Export;
+using SkyCD.Plugin.CdCollect.Parsing;
 
 namespace SkyCD.Plugin.CdCollect;
 

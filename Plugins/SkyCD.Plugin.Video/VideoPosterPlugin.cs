@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Video.Models;
+using SkyCD.Plugin.Video.Parsing;
 
 namespace SkyCD.Plugin.Video;
 

@@ -9,6 +9,8 @@ using SharpCompress.Readers;
 using SharpCompress.Readers.Arj;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Arj.Import;
+using SkyCD.Plugin.Arj.Models;
 
 namespace SkyCD.Plugin.Arj;
 

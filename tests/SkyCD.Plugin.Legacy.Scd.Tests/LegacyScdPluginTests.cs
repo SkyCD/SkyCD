@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Scd;
 using Xunit;
+using SkyCD.Plugin.Legacy.Scd.Models;
 
 namespace SkyCD.LegacyFormats.Tests;
 

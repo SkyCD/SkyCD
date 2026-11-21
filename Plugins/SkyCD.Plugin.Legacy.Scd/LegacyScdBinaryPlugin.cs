@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Legacy.Scd.Export;
+using SkyCD.Plugin.Legacy.Scd.Models;
 
 namespace SkyCD.Plugin.Legacy.Scd;
 

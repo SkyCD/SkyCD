@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Audio.Exceptions;
 using Xunit;
+using SkyCD.Plugin.Audio.Models;
 
 namespace SkyCD.Plugin.Audio.Tests;
 

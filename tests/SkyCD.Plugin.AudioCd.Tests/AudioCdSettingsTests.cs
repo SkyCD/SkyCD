@@ -2,6 +2,8 @@ using System.Linq;
 using SkyCD.Plugin.AudioCd;
 using SkyCD.Plugin.AudioCd.Sources;
 using Xunit;
+using SkyCD.Plugin.AudioCd.Configuration;
+using SkyCD.Plugin.AudioCd.Models;
 
 namespace SkyCD.Plugin.AudioCd.Tests;
 

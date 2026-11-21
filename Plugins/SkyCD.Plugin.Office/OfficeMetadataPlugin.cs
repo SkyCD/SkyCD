@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Office.Exceptions;
+using SkyCD.Plugin.Office.Models;
+using SkyCD.Plugin.Office.Parsing;
 
 namespace SkyCD.Plugin.Office;
 

@@ -14,6 +14,8 @@ using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Tar.Metadata;
 using Xunit;
+using SkyCD.Plugin.Tar.Metadata.Import;
+using SkyCD.Plugin.Tar.Metadata.Models;
 
 namespace SkyCD.Plugin.Tar.Metadata.Tests;
 

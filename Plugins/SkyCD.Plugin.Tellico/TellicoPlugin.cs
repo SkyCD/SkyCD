@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.Tellico.Import;
+using SkyCD.Plugin.Tellico.Parsing;
 
 namespace SkyCD.Plugin.Tellico;
 

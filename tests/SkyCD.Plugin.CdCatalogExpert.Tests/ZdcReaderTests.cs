@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.CdCatalogExpert;
 using Xunit;
+using SkyCD.Plugin.CdCatalogExpert.Models;
+using SkyCD.Plugin.CdCatalogExpert.Parsing;
 
 namespace SkyCD.Plugin.CdCatalogExpert.Tests;
 

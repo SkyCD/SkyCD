@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SkyCD.Plugin.AudioCd;
 using Xunit;
+using SkyCD.Plugin.AudioCd.Parsing;
 
 namespace SkyCD.Plugin.AudioCd.Tests;
 

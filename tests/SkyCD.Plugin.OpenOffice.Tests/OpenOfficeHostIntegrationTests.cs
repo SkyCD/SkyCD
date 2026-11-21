@@ -11,6 +11,7 @@ using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
 using Xunit;
+using SkyCD.Plugin.OpenOffice.Models;
 
 namespace SkyCD.Plugin.OpenOffice.Tests;
 

@@ -8,6 +8,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.Plugin.Qcow2.Models;
 
 namespace SkyCD.Plugin.Qcow2.Tests;
 

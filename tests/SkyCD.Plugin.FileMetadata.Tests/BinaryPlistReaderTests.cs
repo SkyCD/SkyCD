@@ -1,4 +1,5 @@
 using Xunit;
+using SkyCD.Plugin.FileMetadata.Parsing;
 
 namespace SkyCD.Plugin.FileMetadata.Tests;
 

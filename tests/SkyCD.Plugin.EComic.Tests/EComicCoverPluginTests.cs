@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
 using Xunit;
+using SkyCD.Plugin.EComic.Export;
+using SkyCD.Plugin.EComic.Models;
 
 namespace SkyCD.Plugin.EComic.Tests;
 

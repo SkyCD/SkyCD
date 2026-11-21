@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
+using SkyCD.Plugin.FileMetadata.Models;
+using SkyCD.Plugin.FileMetadata.Parsing;
 
 namespace SkyCD.Plugin.FileMetadata.Tests;
 

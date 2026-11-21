@@ -1,5 +1,7 @@
 using Xunit;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.AiProvider.Configuration;
+using SkyCD.Plugin.AiProvider.Exceptions;
 
 namespace SkyCD.Plugin.AiProvider.Tests;
 

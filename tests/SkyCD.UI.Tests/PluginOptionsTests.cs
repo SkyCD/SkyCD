@@ -25,6 +25,12 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Sample.Configuration;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.AudioCd.Configuration;
+using SkyCD.Plugin.AudioCd.Models;
+using SkyCD.Plugin.EBook.Configuration;
+using SkyCD.Plugin.EComic.Configuration;
+using SkyCD.Plugin.Fonts.Configuration;
+using SkyCD.Plugin.Sample.Configuration.Configuration;
 
 namespace SkyCD.UI.Tests;
 

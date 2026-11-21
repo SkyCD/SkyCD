@@ -8,6 +8,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.WinCatalog.Csv;
 using SkyCD.Plugin.WinCatalog.Csv.Exceptions;
 using Xunit;
+using SkyCD.Plugin.WinCatalog.Csv.Models;
 
 namespace SkyCD.Plugin.WinCatalog.Csv.Tests;
 

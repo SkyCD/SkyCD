@@ -3,6 +3,9 @@ using System.IO;
 using SkyCD.Plugin.DiskExplorer.Ded;
 using SkyCD.Plugin.DiskExplorer.Ded.Exceptions;
 using Xunit;
+using SkyCD.Plugin.DiskExplorer.Ded.Export;
+using SkyCD.Plugin.DiskExplorer.Ded.Models;
+using SkyCD.Plugin.DiskExplorer.Ded.Parsing;
 
 namespace SkyCD.Plugin.DiskExplorer.Tests.Ded;
 

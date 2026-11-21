@@ -10,6 +10,7 @@ using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.WhereIsIt;
 using Xunit;
+using SkyCD.Plugin.WhereIsIt.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 

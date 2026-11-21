@@ -3,6 +3,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Rtf.Export;
+using SkyCD.Plugin.Rtf.Models;
+using SkyCD.Plugin.Rtf.Parsing;
 
 namespace SkyCD.Plugin.Rtf;
 

@@ -15,6 +15,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.Ownership;
 using SkyCD.Plugin.Abstractions.OAuth;
 using SkyCD.Plugin.Accounts.JetBrains;
 using Xunit;
+using SkyCD.Plugin.Accounts.JetBrains.Models;
+using SkyCD.Plugin.Accounts.JetBrains.Parsing;
 
 namespace SkyCD.Plugin.Accounts.Tests;
 

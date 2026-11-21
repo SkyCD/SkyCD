@@ -15,6 +15,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
+using SkyCD.Plugin.Audio.Models;
 
 namespace SkyCD.Plugin.Audio.Tests;
 

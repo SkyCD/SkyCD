@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.AbeMeda.Native.Models;
 
 namespace SkyCD.Plugin.AbeMeda.Native.Tests;
 

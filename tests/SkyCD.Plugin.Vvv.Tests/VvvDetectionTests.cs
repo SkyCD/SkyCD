@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using Xunit;
+using SkyCD.Plugin.Vvv.Models;
 
 namespace SkyCD.Plugin.Vvv.Tests;
 

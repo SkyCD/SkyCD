@@ -8,6 +8,9 @@ using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.Plugin.Bzip2.Import;
+using SkyCD.Plugin.Bzip2.Models;
+using SkyCD.Plugin.Bzip2.Parsing;
 
 namespace SkyCD.Plugin.Bzip2;
 

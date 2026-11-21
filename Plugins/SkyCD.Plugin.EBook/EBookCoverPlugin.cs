@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.EBook.Exceptions;
+using SkyCD.Plugin.EBook.Export;
+using SkyCD.Plugin.EBook.Models;
+using SkyCD.Plugin.EBook.Parsing;
 
 namespace SkyCD.Plugin.EBook;
 

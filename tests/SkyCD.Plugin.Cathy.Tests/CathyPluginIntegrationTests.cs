@@ -15,6 +15,7 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.Plugin.Cathy.Models;
 
 namespace SkyCD.Plugin.Cathy.Tests;
 

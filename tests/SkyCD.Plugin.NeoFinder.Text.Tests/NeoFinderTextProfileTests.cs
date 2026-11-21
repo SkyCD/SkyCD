@@ -1,4 +1,5 @@
 using Xunit;
+using SkyCD.Plugin.NeoFinder.Text.Models;
 
 namespace SkyCD.Plugin.NeoFinder.Text.Tests;
 
