@@ -6,9 +6,16 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 /// <summary>Neutral classification of a catalog entry, mapped from the host document type.</summary>
 public enum CatalogEntryKind
 {
+    /// <summary>A directory entry.</summary>
     Folder,
+
+    /// <summary>A file entry.</summary>
     File,
+
+    /// <summary>A storage volume entry.</summary>
     Volume,
+
+    /// <summary>An entry that does not fit the other kinds.</summary>
     Other
 }
 
@@ -29,8 +36,13 @@ public sealed record CatalogEntry(
 /// <summary>Kind of catalog transition reported to a lifecycle-aware capability.</summary>
 public enum CatalogLifecycle
 {
+    /// <summary>A catalog was opened and is now the active one.</summary>
     Opened,
+
+    /// <summary>The active catalog was closed and no catalog remains open.</summary>
     Closed,
+
+    /// <summary>The active catalog's contents or identity changed.</summary>
     Changed
 }
 

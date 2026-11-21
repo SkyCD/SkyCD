@@ -18,6 +18,10 @@ public sealed record ImportOutcome(IReadOnlyList<string> Warnings, int AffectedE
 /// </summary>
 public interface ICatalogImportPluginCapability : IPluginCapability
 {
+    /// <summary>Converts freshly imported entries into the plugin's own storage and reports any warnings.</summary>
+    /// <param name="entries">The entries written by the import.</param>
+    /// <param name="cancellationToken">Cancels the pass; the host still isolates and bounds each plugin.</param>
+    /// <returns>The import outcome, or null when the plugin had nothing to do.</returns>
     Task<ImportOutcome?> OnEntriesImportedAsync(
         IReadOnlyList<CatalogEntry> entries,
         CancellationToken cancellationToken = default);

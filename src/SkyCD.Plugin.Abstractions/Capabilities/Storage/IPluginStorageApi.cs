@@ -15,14 +15,23 @@ public sealed record PluginDocumentRecord(string Id, IReadOnlyDictionary<string,
 /// </summary>
 public interface IPluginCollection
 {
+    /// <summary>Gets the collection name as seen by the owning plugin (without host namespacing).</summary>
     string Name { get; }
 
+    /// <summary>Gets one record by id, or null when no record with that id exists.</summary>
+    /// <param name="id">The document id.</param>
     PluginDocumentRecord? Get(string id);
 
+    /// <summary>Gets every record in the collection.</summary>
     IReadOnlyList<PluginDocumentRecord> GetAll();
 
+    /// <summary>Creates or replaces the record with the given id from its field map.</summary>
+    /// <param name="id">The document id.</param>
+    /// <param name="fields">The field values to persist.</param>
     void Upsert(string id, IReadOnlyDictionary<string, object?> fields);
 
+    /// <summary>Deletes the record with the given id when it exists.</summary>
+    /// <param name="id">The document id.</param>
     void Delete(string id);
 }
 
