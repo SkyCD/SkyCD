@@ -9,14 +9,20 @@ using DryIoc;
 using SkyCD.App.Views;
 using SkyCD.App.Marketplace;
 using SkyCD.App.Mcp;
+using SkyCD.App.PluginHost;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.Abstractions;
+using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.Plugin.Abstractions.Capabilities.Storage;
+using SkyCD.Plugin.Abstractions.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
+using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Indexing;
@@ -111,6 +117,38 @@ public partial class App : Avalonia.Application
         }
 
         ServiceProvider.ReregisterPluginsService();
+        InitializePluginConsumers(pluginManager);
+    }
+
+    // Hands each plugin capability the host-owned APIs before its services are used. Failures are isolated per
+    // capability so one bad plugin cannot stop the others from receiving their APIs.
+    private void InitializePluginConsumers(PluginManager pluginManager)
+    {
+        var catalogApi = appServiceProvider!.Resolve<CatalogApiAdapter>();
+        var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
+        var dialogApi = new AvaloniaHostDialogApi(() =>
+            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
+
+        foreach (var plugin in pluginManager.Plugins)
+        {
+            foreach (var consumer in plugin.Capabilities.OfType<ICatalogApiConsumer>())
+            {
+                try { consumer.InitializeCatalogApi(catalogApi); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<IPluginStorageConsumer>())
+            {
+                try { consumer.InitializeStorage(storageFactory.ForPlugin(plugin.Id)); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<IHostDialogConsumer>())
+            {
+                try { consumer.InitializeDialogApi(dialogApi); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
+            }
+        }
     }
 
     private static void InitializeDefaultStatuses(RepositoryManager repositoryManager)
@@ -142,6 +180,9 @@ public partial class App : Avalonia.Application
             registrator.Register<McpServerHost>(Reuse.Singleton);
             registrator.Register<PluginTranslationRegistry>(Reuse.Singleton);
             registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
+            registrator.Register<OpenCatalogState>(Reuse.Singleton);
+            registrator.Register<CatalogApiAdapter>(Reuse.Singleton);
+            registrator.Register<PluginStorageApiFactory>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });

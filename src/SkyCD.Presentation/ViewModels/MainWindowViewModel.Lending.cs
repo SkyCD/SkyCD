@@ -65,6 +65,7 @@ public partial class MainWindowViewModel
 
     partial void OnCurrentCatalogPathChanged(string? value)
     {
+        openCatalogState?.Path = value;
         if (loanService is not null)
         {
             loanService.CatalogPath = value ?? string.Empty;
