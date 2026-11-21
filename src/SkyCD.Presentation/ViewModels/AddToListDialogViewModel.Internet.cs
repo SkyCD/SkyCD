@@ -41,7 +41,10 @@ public partial class AddToListDialogViewModel
         ? InternetCredentials.TlsMode == RemoteTlsMode.Implicit ? 990 : 21
         : InternetProviders.Get(InternetProtocol).DefaultPort;
 
-    public RemoteScanOptions CreateInternetScanOptions(string? targetParentId, ScanTraversalOptions? traversal = null) =>
+    public RemoteScanOptions CreateInternetScanOptions(
+        string? targetParentId,
+        ScanTraversalOptions? traversal = null,
+        bool includeExtendedInfo = false) =>
         new(InternetCredentials.EffectiveAddress,
             InternetCredentials.UseAnonymous ? null : InternetCredentials.Username,
             InternetCredentials.IsCredentialEntryEnabled && InternetCredentials.IsPasswordAuthentication
@@ -50,7 +53,7 @@ public partial class AddToListDialogViewModel
             InternetCredentials.UseAnonymous,
             string.IsNullOrWhiteSpace(MediaName) ? null : MediaName,
             targetParentId,
-            IncludeExtendedInfo,
+            includeExtendedInfo,
             traversal: traversal,
             authMethod: InternetCredentials.AuthMethod,
             keyFilePath: InternetCredentials.IsKeyAuthentication ? InternetCredentials.KeyFilePath : null,

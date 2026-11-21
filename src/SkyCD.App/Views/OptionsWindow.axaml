@@ -645,6 +645,8 @@
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipOnlineOnlyCloudFiles}}"
                                       IsChecked="{Binding SkipOnlineOnlyCloudFiles}"
                                       IsVisible="{Binding IsOnlineOnlyCloudFilesOptionVisible}" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
+                                      IsChecked="{Binding IncludeExtendedInfo}" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ShowScanErrorsAfterScan}}"
                                       IsChecked="{Binding ShowScanErrorsAfterScan}" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SaveScanErrorsToComments}}"

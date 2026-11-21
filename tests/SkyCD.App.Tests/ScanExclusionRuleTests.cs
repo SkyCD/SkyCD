@@ -415,8 +415,8 @@ public sealed class ScanExclusionRuleTests : IDisposable
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true, false, true,
-            false, false, false));
+        vm.SetScanOptions(new ScanSettingsSnapshot(true, "SkipHiddenAndSystem", false, false, true, true, true, false,
+            true, false, false, false));
         vm.SetScanExclusionRules(
         [
             new ScanExclusionRuleDocument { Pattern = "*.tmp", EntryType = "File", IsInclude = false },
@@ -430,6 +430,7 @@ public sealed class ScanExclusionRuleTests : IDisposable
         Assert.False(scanOptions.SkipWellKnownSystemFolders);
         Assert.True(scanOptions.SkipEmptyFolders);
         Assert.True(scanOptions.SkipOnlineOnlyCloudFiles);
+        Assert.True(scanOptions.IncludeExtendedInfo);
         Assert.False(scanOptions.ShowScanErrorsAfterScan);
         Assert.True(scanOptions.SaveScanErrorsToComments);
 

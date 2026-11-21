@@ -98,7 +98,6 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         using var addDialog = new AddToListDialogViewModel(initialSourceMode: AddToListSourceMode.Internet)
         {
             MediaName = "Remote Archive",
-            IncludeExtendedInfo = true,
         };
         Assert.Null(addDialog.FillInternetFromUrl(address));
         Assert.Equal(UrlPassword, addDialog.InternetCredentials.Password);
@@ -107,7 +106,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         Assert.True(addDialog.CheckInternetConnectionCommand.CanExecute(null));
         await addDialog.CheckInternetConnectionCommand.ExecuteAsync(null);
         Assert.Equal(LocalizationService.Current.Get(UiKeys.InternetCheckSucceeded), addDialog.InternetCheckStatus);
-        var options = addDialog.CreateInternetScanOptions("library");
+        var options = addDialog.CreateInternetScanOptions("library", includeExtendedInfo: true);
         Assert.DoesNotContain(UrlPassword, options.Address, StringComparison.Ordinal);
         Assert.DoesNotContain(Password, options.Address, StringComparison.Ordinal);
         var scanned = new RemoteCatalogScanner().Scan(options, progress);
