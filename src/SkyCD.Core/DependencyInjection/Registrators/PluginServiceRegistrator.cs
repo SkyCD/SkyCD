@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using SkyCD.Core.Plugins.Installation;
 using SkyCD.Core.Versioning;
 using SkyCD.Plugin.Runtime.Installation;
+using SkyCD.Plugin.Runtime.Marketplace.Models;
+using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
@@ -76,6 +78,10 @@ public sealed class PluginServiceRegistrator
             Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.RegisterDelegate<IPluginInstallStateSource>(
             resolver => (IPluginInstallStateSource)resolver.Resolve<IPluginPackageInstaller>(),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        registrator.RegisterDelegate<PluginCatalog>(static resolver => new PluginCatalog(
+                new PluginCatalogOptions { HostVersion = resolver.Resolve<HostVersionProvider>().Current }),
             Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);

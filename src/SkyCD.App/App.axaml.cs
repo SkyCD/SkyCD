@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using DryIoc;
 using SkyCD.App.Views;
+using SkyCD.App.Marketplace;
 using SkyCD.App.Mcp;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
@@ -140,6 +141,7 @@ public partial class App : Avalonia.Application
             registrator.Register<IMediaDriveProvider, SystemMediaDriveProvider>(Reuse.Singleton);
             registrator.Register<McpServerHost>(Reuse.Singleton);
             registrator.Register<PluginTranslationRegistry>(Reuse.Singleton);
+            registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });

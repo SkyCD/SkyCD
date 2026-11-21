@@ -253,4 +253,27 @@ public static class TextKeys
     public const string Scan = "core.text.Scan";
     public const string AllRulesNeedPattern = "core.text.AllRulesNeedPattern";
     public const string AllMimeTypesNeedValue = "core.text.AllMimeTypesNeedValue";
+    public const string PluginUnknownPublisher = "core.text.PluginUnknownPublisher";
+    public const string PluginNoRelease = "core.text.PluginNoRelease";
+    public const string PluginInstallAction = "core.text.PluginInstallAction";
+    public const string PluginUpdateAction = "core.text.PluginUpdateAction";
+    public const string PluginRetryAction = "core.text.PluginRetryAction";
+    public const string PluginInstalledAction = "core.text.PluginInstalledAction";
+    public const string PluginDownloading = "core.text.PluginDownloading";
+    public const string PluginRestartRequired = "core.text.PluginRestartRequired";
+    public const string PluginIncompatible = "core.text.PluginIncompatible";
+    public const string PluginUnavailable = "core.text.PluginUnavailable";
+    public const string PluginNotInstalled = "core.text.PluginNotInstalled";
+    public const string PluginStagedMessage = "core.text.PluginStagedMessage";
+    public const string PluginStillInstalled = "core.text.PluginStillInstalled";
+    public const string PluginInstallFailed = "core.text.PluginInstallFailed";
+    public const string PluginInstallFailedDetail = "core.text.PluginInstallFailedDetail";
+    public const string PluginInstallConfirmation = "core.text.PluginInstallConfirmation";
+    public const string PluginSource = "core.text.PluginSource";
+    public const string PluginVersionSummary = "core.text.PluginVersionSummary";
+    public const string PluginRunsCodeNotice = "core.text.PluginRunsCodeNotice";
+    public const string PluginCatalogOffline = "core.text.PluginCatalogOffline";
+    public const string PluginCatalogFailure = "core.text.PluginCatalogFailure";
+    public const string PluginCatalogPartialFailure = "core.text.PluginCatalogPartialFailure";
+    public const string PluginCatalogEmpty = "core.text.PluginCatalogEmpty";
 }

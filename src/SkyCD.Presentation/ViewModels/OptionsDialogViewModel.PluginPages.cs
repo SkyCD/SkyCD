@@ -112,5 +112,6 @@ public partial class OptionsDialogViewModel
         foreach (var plugin in Plugins) plugin.PropertyChanged -= OnPluginEnabledChanged;
         foreach (var page in pluginPages.Values) page.Dispose();
         pluginPages.Clear();
+        DisposeMarketplace();
     }
 }

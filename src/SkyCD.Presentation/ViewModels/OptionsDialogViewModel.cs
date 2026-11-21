@@ -195,7 +195,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     private int SelectedBuiltInIndex => CurrentCategory.BuiltInIndex;
     public string CurrentCategoryName => CurrentCategory.Title;
     public OptionsPluginPage? SelectedPluginPage => CurrentCategory.PluginPage;
-    public bool ShowPluginSettingsSection => SelectedPluginPage is not null && IsCurrentCategoryVisibleInSearch;
+    public bool ShowPluginSettingsSection =>
+        SelectedPluginPage is not null && IsCurrentCategoryVisibleInSearch && !IsMarketplaceBrowseSelected;
 
     public bool IsCurrentCategoryVisibleInSearch =>
         string.IsNullOrWhiteSpace(SettingsSearchText) || FilteredSettingCategories.Any(category => category.Id == CurrentCategory.Id);
@@ -666,6 +667,12 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));
+        OnPropertyChanged(nameof(ShowPluginViewSwitcher));
+        OnPropertyChanged(nameof(ShowInstalledPluginPathSection));
+        OnPropertyChanged(nameof(ShowInstalledPluginListSection));
+        OnPropertyChanged(nameof(ShowInstalledPluginInfoSection));
+        OnPropertyChanged(nameof(ShowMarketplaceSection));
+        OnPropertyChanged(nameof(ShowMarketplaceEmptyState));
         OnPropertyChanged(nameof(ShowLanguageSection));
         OnPropertyChanged(nameof(HasVisibleCategoryContent));
         OnPropertyChanged(nameof(ShowAcpSection));
