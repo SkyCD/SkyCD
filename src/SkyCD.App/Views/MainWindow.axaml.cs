@@ -845,10 +845,13 @@ public partial class MainWindow : Window
             var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
                 ? null
                 : vm.SelectedTreeNode?.Key ?? "library";
-            var scanOptions = dialogVm.CreateInternetScanOptions(targetParentId, BuildScanTraversalOptions());
+            var scanErrorOptions = LoadAppOptions();
+            var scanOptions = dialogVm.CreateInternetScanOptions(
+                targetParentId,
+                BuildScanTraversalOptions(),
+                includeExtendedInfo: scanErrorOptions.IncludeExtendedInfo);
             dialogVm.ClearInternetSecrets();
 
-            var scanErrorOptions = LoadAppOptions();
             var scanner = new RemoteCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
@@ -951,13 +954,14 @@ public partial class MainWindow : Window
 
             var selectedDrivePath = dialogVm.SelectedDrive?.RootDirectory ?? dialogVm.SelectedDrive?.Name ?? string.Empty;
 
+            var scanErrorOptions = LoadAppOptions();
             var scanOptions = new MediaScanOptions(
                 DrivePathOrName: selectedDrivePath,
                 MediaName: string.IsNullOrWhiteSpace(dialogVm.MediaName) ? dialogVm.SelectedDrive?.DisplayName : dialogVm.MediaName,
                 TargetParentId: targetParentId,
                 RootType: rootType,
                 IncludeMediaInfo: dialogVm.IncludeMediaInfo,
-                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                IncludeExtendedInfo: scanErrorOptions.IncludeExtendedInfo,
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
                 IncludeFiles: dialogVm.IncludeFiles,
                 Traversal: BuildScanTraversalOptions(),
@@ -965,7 +969,6 @@ public partial class MainWindow : Window
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
                 volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
-            var scanErrorOptions = LoadAppOptions();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
@@ -1048,6 +1051,7 @@ public partial class MainWindow : Window
                 ? CatalogDocumentType.Media
                 : CatalogDocumentType.Folder;
 
+            var scanErrorOptions = LoadAppOptions();
             var scanOptions = new FolderScanOptions(
                 FolderPath: dialogVm.SourceValue,
                 MediaName: string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
@@ -1055,11 +1059,10 @@ public partial class MainWindow : Window
                 RootType: rootType,
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
                 IncludeFiles: dialogVm.IncludeFiles,
-                IncludeExtendedInfo: dialogVm.IncludeExtendedInfo,
+                IncludeExtendedInfo: scanErrorOptions.IncludeExtendedInfo,
                 Traversal: BuildScanTraversalOptions());
 
             var scanner = new FolderCatalogScanner();
-            var scanErrorOptions = LoadAppOptions();
             var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
             var progressDialog = new AddingProgressWindow
             {
@@ -1653,6 +1656,7 @@ public partial class MainWindow : Window
             options.SkipWellKnownSystemFolders,
             options.SkipEmptyFolders,
             options.SkipOnlineOnlyCloudFiles,
+            options.IncludeExtendedInfo,
             options.ShowScanErrorsAfterScan,
             options.SaveScanErrorsToComments,
             options.EjectMediaAfterScan,
@@ -1670,6 +1674,7 @@ public partial class MainWindow : Window
         options.SkipWellKnownSystemFolders = scanSettings.SkipWellKnownSystemFolders;
         options.SkipEmptyFolders = scanSettings.SkipEmptyFolders;
         options.SkipOnlineOnlyCloudFiles = scanSettings.SkipOnlineOnlyCloudFiles;
+        options.IncludeExtendedInfo = scanSettings.IncludeExtendedInfo;
         options.ShowScanErrorsAfterScan = scanSettings.ShowScanErrorsAfterScan;
         options.SaveScanErrorsToComments = scanSettings.SaveScanErrorsToComments;
         options.EjectMediaAfterScan = scanSettings.EjectMediaAfterScan;

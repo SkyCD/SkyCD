@@ -52,6 +52,9 @@ public sealed class AppOptionsDocument
 
     public bool SkipOnlineOnlyCloudFiles { get; set; } = false;
 
+    /// <summary>Read file and folder metadata such as size and dates while scanning, instead of names only.</summary>
+    public bool IncludeExtendedInfo { get; set; } = false;
+
     /// <summary>Show the collected scan errors and warnings once a scan finishes.</summary>
     public bool ShowScanErrorsAfterScan { get; set; } = true;
 

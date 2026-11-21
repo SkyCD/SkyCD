@@ -192,6 +192,23 @@ public sealed class AiScanExclusionTests : IDisposable
     }
 
     [Fact]
+    public void AppOptionsDocument_PersistsIncludeExtendedInfoAcrossRepositoryInstances()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+
+        var options = optionsRepository.GetOrCreateAppOptions();
+        Assert.False(options.IncludeExtendedInfo);
+        options.IncludeExtendedInfo = true;
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var restored = optionsRepository.GetOrCreateAppOptions();
+        Assert.True(restored.IncludeExtendedInfo);
+    }
+
+    [Fact]
     public void OptionsDialogViewModel_AiScanSettingsRoundTrip()
     {
         var vm = new OptionsDialogViewModel(["English"]);

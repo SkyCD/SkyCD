@@ -488,13 +488,23 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void InternetSource_PassesIncludeExtendedInfoToRemoteScanOptions()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet);
+        vm.InternetHost = "example.com";
+        vm.InternetPath = "share";
+
+        Assert.False(vm.CreateInternetScanOptions("target-id").IncludeExtendedInfo);
+        Assert.True(vm.CreateInternetScanOptions("target-id", includeExtendedInfo: true).IncludeExtendedInfo);
+    }
+
+    [Fact]
     public void TitleOnlySource_RequiresOnlyAMediaName()
     {
         var provider = new FakeDriveProvider([]);
         var vm = new AddToListDialogViewModel(provider, AddToListSourceMode.TitleOnly);
 
         Assert.True(vm.IsSourceTitleOnly);
-        Assert.False(vm.IsScanOptionsEnabled);
         Assert.False(vm.CanConfirm);
         Assert.Equal("A media name is required.", vm.ValidationMessage);
 

@@ -90,8 +90,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public bool IsSourceTitleOnly => SourceMode == AddToListSourceMode.TitleOnly;
 
-    public bool IsScanOptionsEnabled => SourceMode != AddToListSourceMode.TitleOnly;
-
     public bool CanUseMedia => AvailableDrives.Count > 0;
 
     /// <summary>The location picker applies to media roots created from a drive or a title-only entry.</summary>
@@ -110,8 +108,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool includeSubfolders = true;
 
     [ObservableProperty] private bool includeFiles = true;
-
-    [ObservableProperty] private bool includeExtendedInfo;
 
     [ObservableProperty] private string mediaName = string.Empty;
 
@@ -291,7 +287,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsSourceFolder));
         OnPropertyChanged(nameof(IsSourceInternet));
         OnPropertyChanged(nameof(IsSourceTitleOnly));
-        OnPropertyChanged(nameof(IsScanOptionsEnabled));
         OnPropertyChanged(nameof(IsLocationPickerVisible));
     }
 
