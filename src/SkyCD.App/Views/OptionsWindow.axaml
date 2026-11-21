@@ -829,8 +829,94 @@
                                 </ComboBox>
                             </Grid>
 
-                            <Border IsVisible="{Binding ShowAiProviderSection}"
-                                    BorderBrush="#2E2E2E"
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiScanSettings}}" FontWeight="SemiBold" />
+                                <Grid ColumnDefinitions="180,120,*" ColumnSpacing="10">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MaxAiScanFileSize}}"
+                                               VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding AiScanMaxFileSizeMegabytes, UpdateSourceTrigger=PropertyChanged}" />
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Height="1"
+                                    HorizontalAlignment="Stretch"
+                                    Margin="0,2"
+                                    Background="#2E2E2E" />
+
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiMimeExclusions}}" FontWeight="SemiBold" />
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            Spacing="8">
+                                    <Button Content="↺"
+                                            FontSize="16"
+                                            Width="34"
+                                            Height="28"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.ResetMimeTypesTooltip}}"
+                                            Command="{Binding ResetAiScanExclusionsCommand}" />
+                                    <Button Content="+"
+                                            FontSize="16"
+                                            Width="34"
+                                            Height="28"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddMimeType}}"
+                                            Command="{Binding AddAiScanExclusionCommand}" />
+                                    <Button Content="-"
+                                            FontSize="16"
+                                            Width="34"
+                                            Height="28"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMimeType}}"
+                                            Command="{Binding RemoveAiScanExclusionCommand}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Border BorderBrush="#2E2E2E"
+                                    BorderThickness="1"
+                                    Height="150">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MimeType}}" FontWeight="SemiBold" />
+                                    </Border>
+                                    <ListBox Grid.Row="1"
+                                             ItemsSource="{Binding AiScanExclusions}"
+                                             SelectedItem="{Binding SelectedAiScanExclusion}"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:AiScanExclusionItemViewModel">
+                                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
+                                                    <TextBox Text="{Binding MimeType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+
+                            <Border IsVisible="{Binding ShowAiDescriptionAlert}"
+                                    Background="#7F1D1D"
+                                    BorderBrush="#DC2626"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,4">
+                                <TextBlock Text="{Binding AiDescriptionAlertMessage}"
+                                           Foreground="#FEE2E2"
+                                           TextWrapping="Wrap" />
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <ScrollViewer Grid.Row="2"
+                                  IsVisible="{Binding ShowAiProviderSection}"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}" FontSize="15" />
+                                <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <Border BorderBrush="#2E2E2E"
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     Padding="10">
@@ -928,82 +1014,6 @@
                                                    TextWrapping="Wrap" />
                                     </Border>
                                 </StackPanel>
-                            </Border>
-
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiScanSettings}}" FontWeight="SemiBold" />
-                                <Grid ColumnDefinitions="180,120,*" ColumnSpacing="10">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MaxAiScanFileSize}}"
-                                               VerticalAlignment="Center" />
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding AiScanMaxFileSizeMegabytes, UpdateSourceTrigger=PropertyChanged}" />
-                                </Grid>
-                            </StackPanel>
-
-                            <Border Height="1"
-                                    HorizontalAlignment="Stretch"
-                                    Margin="0,2"
-                                    Background="#2E2E2E" />
-
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiMimeExclusions}}" FontWeight="SemiBold" />
-                                <StackPanel Grid.Column="1"
-                                            Orientation="Horizontal"
-                                            HorizontalAlignment="Right"
-                                            Spacing="8">
-                                    <Button Content="↺"
-                                            FontSize="16"
-                                            Width="34"
-                                            Height="28"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.ResetMimeTypesTooltip}}"
-                                            Command="{Binding ResetAiScanExclusionsCommand}" />
-                                    <Button Content="+"
-                                            FontSize="16"
-                                            Width="34"
-                                            Height="28"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddMimeType}}"
-                                            Command="{Binding AddAiScanExclusionCommand}" />
-                                    <Button Content="-"
-                                            FontSize="16"
-                                            Width="34"
-                                            Height="28"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMimeType}}"
-                                            Command="{Binding RemoveAiScanExclusionCommand}" />
-                                </StackPanel>
-                            </Grid>
-
-                            <Border BorderBrush="#2E2E2E"
-                                    BorderThickness="1"
-                                    Height="150">
-                                <Grid RowDefinitions="Auto,*">
-                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MimeType}}" FontWeight="SemiBold" />
-                                    </Border>
-                                    <ListBox Grid.Row="1"
-                                             ItemsSource="{Binding AiScanExclusions}"
-                                             SelectedItem="{Binding SelectedAiScanExclusion}"
-                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:AiScanExclusionItemViewModel">
-                                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                                    <TextBox Text="{Binding MimeType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </Grid>
-                            </Border>
-
-                            <Border IsVisible="{Binding ShowAiDescriptionAlert}"
-                                    Background="#7F1D1D"
-                                    BorderBrush="#DC2626"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    Padding="8,4">
-                                <TextBlock Text="{Binding AiDescriptionAlertMessage}"
-                                           Foreground="#FEE2E2"
-                                           TextWrapping="Wrap" />
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
