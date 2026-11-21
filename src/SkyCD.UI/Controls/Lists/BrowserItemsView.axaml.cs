@@ -93,6 +93,12 @@ public partial class BrowserItemsView : UserControl
     public new event EventHandler<TappedEventArgs>? DoubleTapped;
     public new event EventHandler<ContextRequestedEventArgs>? ContextRequested;
 
+    /// <summary>Raised when a details header is dragged onto a new position.</summary>
+    public event EventHandler<DetailsColumnReorderedEventArgs>? DetailsColumnReordered;
+
+    /// <summary>Raised when a details header splitter drag finishes with a new width.</summary>
+    public event EventHandler<DetailsColumnResizedEventArgs>? DetailsColumnResized;
+
     public BrowserItemsView()
     {
         AvaloniaXamlLoader.Load(this);
@@ -671,6 +677,10 @@ public partial class BrowserItemsView : UserControl
             grid.ContextMenu = HeaderContextMenu;
         }
 
+        var headerCells = new List<Grid>(detailsColumns.Count);
+        var pointerDrag = new DetailsHeaderPointerDrag();
+        var headerCursor = new Cursor(StandardCursorType.SizeAll);
+
         for (var i = 0; i < detailsColumns.Count; i++)
         {
             var column = detailsColumns[i];
@@ -684,7 +694,8 @@ public partial class BrowserItemsView : UserControl
             {
                 BorderThickness = new Thickness(0, 0, 1, 1),
                 Padding = new Thickness(6, 3),
-                MinHeight = 24
+                MinHeight = 24,
+                Cursor = column.IsRequired ? null : headerCursor
             };
             cellBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
             cellBorder.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
@@ -713,12 +724,14 @@ public partial class BrowserItemsView : UserControl
             var isDragging = false;
             var dragStartX = 0.0;
             var startWidth = 0.0;
+            var widthChanged = false;
 
             splitter.PointerPressed += (s, e) =>
             {
                 if (e.GetCurrentPoint(splitter).Properties.IsLeftButtonPressed)
                 {
                     isDragging = true;
+                    widthChanged = false;
                     dragStartX = e.GetPosition(grid).X;
                     startWidth = targetColumn.Width.GridUnitType == GridUnitType.Pixel
                         ? targetColumn.Width.Value
@@ -735,6 +748,12 @@ public partial class BrowserItemsView : UserControl
                     var currentX = e.GetPosition(grid).X;
                     var delta = currentX - dragStartX;
                     var newWidth = Math.Max(targetColumn.MinWidth, startWidth + delta);
+                    if (Math.Abs(newWidth - targetColumn.Width.Value) > 0.5 ||
+                        targetColumn.Width.GridUnitType != GridUnitType.Pixel)
+                    {
+                        widthChanged = true;
+                    }
+
                     targetColumn.Width = new GridLength(newWidth, GridUnitType.Pixel);
                     e.Handled = true;
                 }
@@ -746,19 +765,104 @@ public partial class BrowserItemsView : UserControl
                 {
                     isDragging = false;
                     e.Pointer.Capture(null);
+                    RaiseDetailsColumnResized(targetColumn, widthChanged);
+                    widthChanged = false;
                     e.Handled = true;
                 }
             };
 
             splitter.PointerCaptureLost += (_, _) =>
             {
-                isDragging = false;
+                if (isDragging)
+                {
+                    isDragging = false;
+                    RaiseDetailsColumnResized(targetColumn, widthChanged);
+                    widthChanged = false;
+                }
             };
 
             cellGrid.Children.Add(splitter);
+
+            if (!column.IsRequired)
+            {
+                var columnIndex = i;
+                cellGrid.PointerPressed += (_, e) =>
+                {
+                    var point = e.GetCurrentPoint(cellGrid);
+                    if (!point.Properties.IsLeftButtonPressed)
+                    {
+                        return;
+                    }
+
+                    pointerDrag.Begin(e.Pointer, point.Position.X, columnIndex, targetColumn.Id);
+                    e.Pointer.Capture(grid);
+                    e.Handled = true;
+                };
+            }
+
             Grid.SetColumn(cellGrid, i);
             grid.Children.Add(cellGrid);
+            headerCells.Add(cellGrid);
         }
+
+        var leadingRequiredCount = 0;
+        while (leadingRequiredCount < detailsColumns.Count && detailsColumns[leadingRequiredCount].IsRequired)
+        {
+            leadingRequiredCount++;
+        }
+
+        grid.PointerMoved += (_, e) =>
+        {
+            if (!pointerDrag.IsActive || pointerDrag.Pointer != e.Pointer)
+            {
+                return;
+            }
+
+            if (!pointerDrag.IsDragging &&
+                Math.Abs(e.GetPosition(grid).X - pointerDrag.StartX) > DetailsHeaderDragThreshold)
+            {
+                pointerDrag.IsDragging = true;
+                grid.Cursor = headerCursor;
+            }
+
+            e.Handled = pointerDrag.IsDragging;
+        };
+
+        grid.PointerReleased += (_, e) =>
+        {
+            if (!pointerDrag.IsActive || pointerDrag.Pointer != e.Pointer)
+            {
+                return;
+            }
+
+            grid.ClearValue(CursorProperty);
+
+            var wasDragging = pointerDrag.IsDragging;
+            var sourceIndex = pointerDrag.SourceVisibleIndex;
+            var columnId = pointerDrag.ColumnId;
+            pointerDrag.End();
+            e.Pointer.Capture(null);
+
+            if (wasDragging)
+            {
+                var targetIndex = GetDetailsHeaderDropIndex(
+                    headerCells.Select(static cell => cell.Bounds.Right).ToList(),
+                    e.GetPosition(grid).X,
+                    leadingRequiredCount);
+                if (targetIndex != sourceIndex)
+                {
+                    DetailsColumnReordered?.Invoke(this, new DetailsColumnReorderedEventArgs(columnId, targetIndex));
+                }
+
+                e.Handled = true;
+            }
+        };
+
+        grid.PointerCaptureLost += (_, _) =>
+        {
+            grid.ClearValue(CursorProperty);
+            pointerDrag.End();
+        };
 
         if (detailsColumns.Count > 0)
         {
@@ -936,6 +1040,83 @@ public partial class BrowserItemsView : UserControl
 
     private const string ItemStatusIconGlyphPropertyKey = "StatusIconGlyph";
     private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
+
+    /// <summary>Horizontal travel, in pixels, before a header press turns into a reorder drag.</summary>
+    private const double DetailsHeaderDragThreshold = 4;
+
+    private void RaiseDetailsColumnResized(BrowserDetailsColumn column, bool widthChanged)
+    {
+        if (!widthChanged || string.IsNullOrEmpty(column.Id))
+        {
+            return;
+        }
+
+        var width = column.Width.GridUnitType == GridUnitType.Pixel ? column.Width.Value : 0;
+        if (width <= 0)
+        {
+            return;
+        }
+
+        DetailsColumnResized?.Invoke(this, new DetailsColumnResizedEventArgs(column.Id, width));
+    }
+
+    /// <summary>
+    /// Resolves the drop position for a dragged header: the index of the header cell under
+    /// <paramref name="pointerX"/>, clamped to the first movable slot (the leading required column
+    /// stays pinned) and to the last column.
+    /// </summary>
+    private static int GetDetailsHeaderDropIndex(
+        IReadOnlyList<double> cellRightEdges,
+        double pointerX,
+        int firstMovableIndex)
+    {
+        if (cellRightEdges.Count == 0)
+        {
+            return 0;
+        }
+
+        var index = 0;
+        while (index < cellRightEdges.Count - 1 && pointerX >= cellRightEdges[index])
+        {
+            index++;
+        }
+
+        return Math.Clamp(index, Math.Min(firstMovableIndex, cellRightEdges.Count - 1), cellRightEdges.Count - 1);
+    }
+
+    private sealed class DetailsHeaderPointerDrag
+    {
+        public bool IsActive { get; private set; }
+
+        public bool IsDragging { get; set; }
+
+        public IPointer? Pointer { get; private set; }
+
+        public double StartX { get; private set; }
+
+        public int SourceVisibleIndex { get; private set; }
+
+        public string ColumnId { get; private set; } = string.Empty;
+
+        public void Begin(IPointer pointer, double startX, int sourceVisibleIndex, string columnId)
+        {
+            IsActive = true;
+            IsDragging = false;
+            Pointer = pointer;
+            StartX = startX;
+            SourceVisibleIndex = sourceVisibleIndex;
+            ColumnId = columnId;
+        }
+
+        public void End()
+        {
+            IsActive = false;
+            IsDragging = false;
+            Pointer = null;
+            SourceVisibleIndex = -1;
+            ColumnId = string.Empty;
+        }
+    }
 
     private static ColumnDefinitions BuildDetailsColumnDefinitions(
         IReadOnlyList<BrowserDetailsColumn> detailsColumns,

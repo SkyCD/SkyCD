@@ -2525,15 +2525,77 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshDetailsHeaderMenuItems();
     }
 
+    /// <summary>
+    /// Moves a visible column to a new position in the visible order. Returns <c>true</c> when the
+    /// order actually changed, in which case <see cref="DetailsColumnsChanged"/> is raised so the host
+    /// can persist the layout.
+    /// </summary>
+    public bool MoveDetailsColumn(string columnId, int targetVisibleIndex)
+    {
+        var updated = DetailsColumnsCatalog.MoveVisibleColumn(detailsColumnSettings, columnId, targetVisibleIndex);
+        if (!SettingsDiffer(detailsColumnSettings, updated))
+        {
+            return false;
+        }
+
+        detailsColumnSettings = updated;
+        OnPropertyChanged(nameof(BrowserDetailsColumns));
+        RefreshDetailsHeaderMenuItems();
+        DetailsColumnsChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    /// Stores a dragged column width. Returns <c>true</c> when the width actually changed, in which
+    /// case <see cref="DetailsColumnsChanged"/> is raised so the host can persist the layout.
+    /// </summary>
+    public bool ResizeDetailsColumn(string columnId, double width)
+    {
+        var updated = DetailsColumnsCatalog.SetColumnWidth(detailsColumnSettings, columnId, width);
+        if (!SettingsDiffer(detailsColumnSettings, updated))
+        {
+            return false;
+        }
+
+        detailsColumnSettings = updated;
+        OnPropertyChanged(nameof(BrowserDetailsColumns));
+        RefreshDetailsHeaderMenuItems();
+        DetailsColumnsChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
     public IReadOnlyList<DetailsColumnSettingDocument> GetDetailsColumnSettings()
     {
         return detailsColumnSettings
             .Select(static setting => new DetailsColumnSettingDocument
             {
                 Id = setting.Id,
-                IsVisible = setting.IsVisible
+                IsVisible = setting.IsVisible,
+                Width = setting.Width
             })
             .ToArray();
+    }
+
+    private static bool SettingsDiffer(
+        IReadOnlyList<DetailsColumnSettingDocument> current,
+        IReadOnlyList<DetailsColumnSettingDocument> updated)
+    {
+        if (current.Count != updated.Count)
+        {
+            return true;
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            if (!string.Equals(current[i].Id, updated[i].Id, StringComparison.OrdinalIgnoreCase) ||
+                current[i].IsVisible != updated[i].IsVisible ||
+                current[i].Width != updated[i].Width)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     [RelayCommand]

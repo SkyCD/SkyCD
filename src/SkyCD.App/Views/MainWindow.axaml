@@ -212,6 +212,8 @@
                                          ListContextMenu="{DynamicResource BrowserContextMenu}"
                                          HeaderContextMenu="{DynamicResource DetailsHeaderContextMenu}"
                                          DoubleTapped="OnBrowserListDoubleTapped"
+                                         DetailsColumnReordered="OnDetailsColumnReordered"
+                                         DetailsColumnResized="OnDetailsColumnResized"
                                          GotFocus="OnBrowserGotFocus"
                                          PointerPressed="OnBrowserPointerPressed">
                     </cl:BrowserItemsView>

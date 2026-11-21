@@ -18,6 +18,10 @@ public static class DetailsColumnsCatalog
     public const string LentToId = "lentTo";
     public const string LocationId = "location";
 
+    public const double MinSavedColumnWidth = 30;
+
+    public const double MaxSavedColumnWidth = 4000;
+
     public static IReadOnlyList<DetailsColumnDefinition> All { get; } =
     [
         new()
@@ -106,7 +110,8 @@ public static class DetailsColumnsCatalog
             normalized.Add(new DetailsColumnSettingDocument
             {
                 Id = definition.Id,
-                IsVisible = definition.IsRequired || setting.IsVisible
+                IsVisible = definition.IsRequired || setting.IsVisible,
+                Width = ToSavedWidth(setting.Width)
             });
         }
 
@@ -142,10 +147,101 @@ public static class DetailsColumnsCatalog
             var definition = Find(setting.Id);
             if (definition is not null)
             {
-                columns.Add(definition.CreateColumn());
+                columns.Add(definition.CreateColumn(setting.Width));
             }
         }
 
         return columns;
+    }
+
+    /// <summary>
+    /// Moves a visible, non-required column to <paramref name="targetVisibleIndex"/> inside the visible
+    /// order. Hidden columns keep their slots in the saved configuration (and their saved widths), and
+    /// leading required columns (Name) always stay first.
+    /// </summary>
+    public static List<DetailsColumnSettingDocument> MoveVisibleColumn(
+        IEnumerable<DetailsColumnSettingDocument>? settings,
+        string columnId,
+        int targetVisibleIndex)
+    {
+        var normalized = Normalize(settings);
+        var definition = Find(columnId);
+        if (definition is null || definition.IsRequired)
+        {
+            return normalized;
+        }
+
+        var visibleSlots = normalized
+            .Select((setting, index) => (setting, index))
+            .Where(static pair => pair.setting.IsVisible)
+            .ToList();
+        var sourceVisibleIndex = visibleSlots.FindIndex(pair =>
+            string.Equals(pair.setting.Id, definition.Id, StringComparison.OrdinalIgnoreCase));
+        if (sourceVisibleIndex < 0)
+        {
+            return normalized;
+        }
+
+        var leadingRequiredCount = CountLeadingRequired(visibleSlots.Select(static pair => pair.setting).ToList());
+        var clampedTarget = Math.Clamp(targetVisibleIndex, leadingRequiredCount, visibleSlots.Count - 1);
+        if (clampedTarget == sourceVisibleIndex)
+        {
+            return normalized;
+        }
+
+        var visibleSettings = visibleSlots.Select(static pair => pair.setting).ToList();
+        var moved = visibleSettings[sourceVisibleIndex];
+        visibleSettings.RemoveAt(sourceVisibleIndex);
+        visibleSettings.Insert(clampedTarget, moved);
+
+        for (var i = 0; i < visibleSlots.Count; i++)
+        {
+            normalized[visibleSlots[i].index] = visibleSettings[i];
+        }
+
+        return normalized;
+    }
+
+    /// <summary>
+    /// Stores a user-chosen pixel width for the column, clamped to a sane range. The normalized list is
+    /// returned unchanged when the id is unknown.
+    /// </summary>
+    public static List<DetailsColumnSettingDocument> SetColumnWidth(
+        IEnumerable<DetailsColumnSettingDocument>? settings,
+        string columnId,
+        double width)
+    {
+        var normalized = Normalize(settings);
+        var definition = Find(columnId);
+        if (definition is null || double.IsNaN(width))
+        {
+            return normalized;
+        }
+
+        var setting = normalized.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, definition.Id, StringComparison.OrdinalIgnoreCase));
+        if (setting is null)
+        {
+            return normalized;
+        }
+
+        setting.Width = Math.Clamp(width, MinSavedColumnWidth, MaxSavedColumnWidth);
+        return normalized;
+    }
+
+    private static double? ToSavedWidth(double? width)
+    {
+        return width is > 0 && double.IsFinite(width.Value) ? width : null;
+    }
+
+    private static int CountLeadingRequired(IReadOnlyList<DetailsColumnSettingDocument> visibleSettings)
+    {
+        var count = 0;
+        while (count < visibleSettings.Count && Find(visibleSettings[count].Id)?.IsRequired == true)
+        {
+            count++;
+        }
+
+        return count;
     }
 }

@@ -25,12 +25,18 @@ public sealed class DetailsColumnDefinition
 
     public string Header => LocalizationService.Current.Get(HeaderKey);
 
-    public BrowserDetailsColumn CreateColumn() => new()
+    /// <summary>
+    /// Creates a renderable column. A saved <paramref name="width"/> greater than zero overrides the
+    /// catalog default width.
+    /// </summary>
+    public BrowserDetailsColumn CreateColumn(double? width = null) => new()
     {
+        Id = Id,
         Header = Header,
         ValuePath = ValuePath,
-        Width = Width,
+        Width = width is > 0 ? new GridLength(width.Value, GridUnitType.Pixel) : Width,
         HeaderAlignment = HeaderAlignment,
-        ValueAlignment = ValueAlignment
+        ValueAlignment = ValueAlignment,
+        IsRequired = IsRequired
     };
 }

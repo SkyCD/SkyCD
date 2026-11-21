@@ -9,6 +9,9 @@ public sealed class BrowserDetailsColumn : AvaloniaObject
     public static readonly StyledProperty<GridLength> WidthProperty =
         AvaloniaProperty.Register<BrowserDetailsColumn, GridLength>(nameof(Width), new GridLength(1, GridUnitType.Star));
 
+    /// <summary>Stable catalog identifier used when reordering or resizing the column.</summary>
+    public string Id { get; init; } = string.Empty;
+
     public required string Header { get; init; }
 
     public required string ValuePath { get; init; }
@@ -24,4 +27,7 @@ public sealed class BrowserDetailsColumn : AvaloniaObject
     public HorizontalAlignment ValueAlignment { get; init; } = HorizontalAlignment.Left;
 
     public double MinWidth { get; init; } = 30;
+
+    /// <summary>Required columns stay visible and cannot be dragged to a different position.</summary>
+    public bool IsRequired { get; init; }
 }
