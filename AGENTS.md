@@ -26,11 +26,22 @@
 - `src/SkyCD.Plugin.Runtime`: plugin discovery/loading and compatibility checks.
 - `src/SkyCD.Plugin.Host`: host-side plugin routing/execution services.
 - `Plugins/`: functional plugin implementations discovered from assembly metadata and capabilities.
-- `Plugins/samples/`: legacy-format plugins and sample menu/modal plugins.
+- `Plugins/Shared/`: source linked into multiple plugin projects instead of a standalone assembly.
+- `Plugins/SkyCD.Plugin.Sample.*`: sample configuration, menu and modal plugins.
 - `tests/`: xUnit test projects organized per module (`SkyCD.App.Tests`, `SkyCD.Infrastructure.Tests`, etc.).
 - `tools/`: CI/publishing scripts and migration CLI.
 - `docs/`: architecture, migration, plugin SDK, legal/license, and implementation guides.
 - `legacy/`: archived VB.NET WinForms code; reference-only for migration context.
+
+## Plugin Project Layout
+Every project under `Plugins/`, `Plugins/Shared` and `Plugins/SkyCD.Plugin.Sample.*` follows a
+role-based layout; full rules and examples are in
+[docs/plugins/plugin-project-layout.md](docs/plugins/plugin-project-layout.md).
+- Root files are capability entry types and `AssemblyInfo.cs` only.
+- Role folders: `Configuration/`, `Models/`, `Parsing/`, `Import/`, `Export/`, `Sources/`, `Views/`,
+  `Exceptions/`; the namespace matches the path as `SkyCD.Plugin.<Name>.<Folder>`.
+- Create a folder only when it holds a type; no empty scaffolding or `Misc/` buckets.
+- Format-specific parents are nested folders with their own namespace and the same layout inside.
 
 ## Build, Test, and PR Validation
 - Restore: `dotnet restore SkyCD.slnx`

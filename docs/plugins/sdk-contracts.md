@@ -1,5 +1,7 @@
 # Plugin SDK Contracts (vNext)
 
+Project structure and role folders are described in [plugin-project-layout.md](plugin-project-layout.md).
+
 ## Base Lifecycle
 - `IPlugin`
   - `Descriptor` metadata (`Id`, `Version`, `MinHostVersion`)
