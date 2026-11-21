@@ -616,7 +616,7 @@
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowScanSection}"
-                          RowDefinitions="Auto,Auto,Auto,*,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
                           RowSpacing="8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanExclusions}}" FontSize="15" />
@@ -666,7 +666,13 @@
                                       IsChecked="{Binding PlaySoundAfterScan}" />
                         </StackPanel>
 
-                        <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Border Grid.Row="2"
+                                Height="1"
+                                Margin="0,4"
+                                Background="#2E2E2E"
+                                HorizontalAlignment="Stretch" />
+
+                        <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="10">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ExclusionRules}}" FontWeight="SemiBold" />
                             <StackPanel Grid.Column="1"
                                         Orientation="Horizontal"
@@ -695,7 +701,7 @@
 
                         <Border BorderBrush="#2E2E2E"
                                 BorderThickness="1"
-                                Grid.Row="3">
+                                Grid.Row="4">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                     <Grid ColumnDefinitions="2*,160,120" ColumnSpacing="10">
@@ -734,7 +740,7 @@
                         </Border>
 
                         <Border IsVisible="{Binding ShowScanAlert}"
-                                Grid.Row="4"
+                                Grid.Row="5"
                                 Background="#7F1D1D"
                                 BorderBrush="#DC2626"
                                 BorderThickness="1"
