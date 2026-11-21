@@ -23,14 +23,30 @@
     </Window.Resources>
 
     <Window.Styles>
-        <Style Selector="TextBox.property-value">
+        <!--
+            The value editor is part of the grid: it keeps the row's own background so the selection stays
+            visible, and shows only an outer focus ring so it never draws a second box inside the cell.
+        -->
+        <Style Selector="TextBox.property-value-editor">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="2" />
+            <!-- Cancel the cell padding so the text sits exactly where the row shows it; the ring covers the cell. -->
+            <Setter Property="Padding" Value="7,1" />
+            <Setter Property="Margin" Value="-8,-4" />
             <Setter Property="MinHeight" Value="0" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
         </Style>
-        <Style Selector="TextBox.property-value:focus">
-            <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+        <Style Selector="TextBox.property-value-editor /template/ TextPresenter">
+            <!-- The cell already wraps its text; keep the editor at the cell width so neither overflows. -->
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBox.property-value-editor:pointerover /template/ TextBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="TextBox.property-value-editor:focus /template/ TextBox">
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
@@ -130,9 +146,11 @@
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" IsVisible="{Binding HasCustomProperties}">
-                <cp:PropertiesList Margin="8,8,8,10"
+                <cp:PropertiesList x:Name="CustomPropertiesList"
+                                   Margin="8,8,8,10"
                                    Rows="{Binding CustomProperties}"
                                    RowIsTabStop="False"
+                                   EditValueInPlace="True"
                                    PropertyHeader="{i18n:Translate {x:Static i18n:UiKeys.Property}}"
                                    ValueHeader="{i18n:Translate {x:Static i18n:UiKeys.Value}}">
                     <!-- Tab navigation cannot reach unrealized rows. -->
@@ -148,10 +166,19 @@
                     </cp:PropertiesList.PropertyCellTemplate>
                     <cp:PropertiesList.ValueCellTemplate>
                         <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
-                            <TextBox Classes="property-value"
-                                     Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     TextWrapping="Wrap"
-                                     AutomationProperties.Name="{Binding Name}" />
+                            <!-- The value text stays in the row; the editor only covers it while editing. -->
+                            <Panel>
+                                <TextBlock Text="{Binding DefaultValue}"
+                                           IsVisible="{Binding !IsEditing}"
+                                           TextWrapping="Wrap"
+                                           AutomationProperties.Name="{Binding Name}" />
+                                <TextBox Classes="property-value-editor"
+                                         IsVisible="{Binding IsEditing}"
+                                         Text="{Binding EditValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap"
+                                         AutomationProperties.Name="{Binding Name}"
+                                         KeyDown="OnCustomPropertyValueKeyDown" />
+                            </Panel>
                         </DataTemplate>
                     </cp:PropertiesList.ValueCellTemplate>
                 </cp:PropertiesList>

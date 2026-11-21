@@ -68,7 +68,11 @@ public class PropertiesWindowLayoutTests
         Assert.Contains("IsVisible=\"{Binding HasCustomProperties}\"", window, StringComparison.Ordinal);
         Assert.Contains("<cp:PropertiesList.PropertyCellTemplate>", window, StringComparison.Ordinal);
         Assert.Contains("<cp:PropertiesList.ValueCellTemplate>", window, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", window, StringComparison.Ordinal);
+        Assert.Contains("EditValueInPlace=\"True\"", window, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding DefaultValue}\"", window, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding IsEditing}\"", window, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding EditValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", window, StringComparison.Ordinal);
+        Assert.Contains("Classes=\"value-cell\"", table, StringComparison.Ordinal);
         Assert.Contains("PropertyHeader=\"{i18n:Translate {x:Static i18n:UiKeys.Property}}\"", window, StringComparison.Ordinal);
         Assert.Contains("ValueHeader=\"{i18n:Translate {x:Static i18n:UiKeys.Value}}\"", window, StringComparison.Ordinal);
         Assert.Contains("ContentTemplate=\"{Binding PropertyCellTemplate, ElementName=Root}\"", table, StringComparison.Ordinal);
