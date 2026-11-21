@@ -120,18 +120,6 @@ public class ToolbarCustomizationTests
     }
 
     [Fact]
-    public void Customization_ConfirmMarksDialogAccepted()
-    {
-        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
-        var dialog = new ToolbarCustomizationViewModel(vm.ToolbarCommands(), ToolbarLayout.CreateDefault());
-        Assert.False(dialog.DialogAccepted);
-
-        dialog.ConfirmCommand.Execute(null);
-
-        Assert.True(dialog.DialogAccepted);
-    }
-
-    [Fact]
     public void MainWindowViewModel_LoadToolbarLayoutNormalizesAndNotifies()
     {
         using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
@@ -175,16 +163,87 @@ public class ToolbarCustomizationTests
     }
 
     [Fact]
-    public void CustomizeToolbarCommand_RaisesDialogRequest()
+    public void CustomizeToolbarCommand_OpensOptionsOnToolbarCategory()
     {
         using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
-        ToolbarCustomizeRequestedEventArgs? request = null;
-        vm.CustomizeToolbarRequested += (_, args) => request = args;
+        OptionsDialogRequestedEventArgs? request = null;
+        vm.OptionsRequested += (_, args) => request = args;
 
         vm.CustomizeToolbarCommand.Execute(null);
 
         Assert.NotNull(request);
-        Assert.Equal(ToolbarLayout.CreateDefault().Count, request.Dialog.SelectedItems.Count);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.Toolbar), request.PreselectSettingCategory);
+    }
+
+    [Fact]
+    public void OptionsDialog_ShowsToolbarCategoryAndPage()
+    {
+        var options = new OptionsDialogViewModel(["English"]);
+        var toolbarCategory = LocalizationService.Current.Get(UiKeys.Toolbar);
+
+        Assert.Contains(options.SettingCategories, category => category.Title == toolbarCategory);
+        Assert.False(options.ShowToolbarSection);
+
+        options.SelectedSettingCategory = options.SettingCategories.Single(
+            category => category.Title == toolbarCategory);
+
+        Assert.True(options.IsToolbarCategorySelected);
+        Assert.True(options.ShowToolbarSection);
+        Assert.True(options.HasVisibleCategoryContent);
+    }
+
+    [Fact]
+    public void OptionsDialog_SearchFindsToolbarCategory()
+    {
+        var options = new OptionsDialogViewModel(["English"]);
+        var toolbarCategory = LocalizationService.Current.Get(UiKeys.Toolbar);
+
+        options.SettingsSearchText = "toolbar";
+
+        Assert.Contains(options.FilteredSettingCategories, category => category.Title == toolbarCategory);
+        Assert.Equal(toolbarCategory, options.SelectedSettingCategory?.Title);
+        Assert.True(options.ShowToolbarSection);
+
+        options.SettingsSearchText = "customize";
+
+        Assert.Contains(options.FilteredSettingCategories, category => category.Title == toolbarCategory);
+    }
+
+    [Fact]
+    public void OptionsSave_AppliesEditedToolbarLayout()
+    {
+        using var main = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        var options = new OptionsDialogViewModel(["English"]);
+        options.SetToolbarCustomization(main.ToolbarCommands(), main.ToolbarEntries);
+        options.ToolbarLayoutApplied += (_, args) => main.ApplyToolbarLayout(args.Layout);
+        var toolbar = Assert.IsType<ToolbarCustomizationViewModel>(options.Toolbar);
+
+        toolbar.SelectedCommand = toolbar.AvailableCommands.Single(
+            choice => choice.Descriptor.Id == ToolbarCommandIds.Refresh);
+        toolbar.AddCommand.Execute(null);
+
+        options.ConfirmCommand.Execute(null);
+
+        Assert.True(options.DialogAccepted);
+        Assert.Contains(main.ToolbarEntries, entry => entry.CommandId == ToolbarCommandIds.Refresh);
+    }
+
+    [Fact]
+    public void OptionsCancel_LeavesToolbarLayoutUnchanged()
+    {
+        using var main = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        var original = main.ToolbarEntries.Select(entry => entry.CommandId).ToArray();
+        var options = new OptionsDialogViewModel(["English"]);
+        options.SetToolbarCustomization(main.ToolbarCommands(), main.ToolbarEntries);
+        options.ToolbarLayoutApplied += (_, args) => main.ApplyToolbarLayout(args.Layout);
+        var toolbar = Assert.IsType<ToolbarCustomizationViewModel>(options.Toolbar);
+
+        toolbar.SelectedCommand = toolbar.AvailableCommands.Single(
+            choice => choice.Descriptor.Id == ToolbarCommandIds.Refresh);
+        toolbar.AddCommand.Execute(null);
+
+        Assert.False(options.DialogAccepted);
+        Assert.Equal(original, main.ToolbarEntries.Select(entry => entry.CommandId).ToArray());
     }
 
     [Fact]

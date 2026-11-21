@@ -159,33 +159,34 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    private static readonly string[] BuiltInCategoryIds =
-        ["plugins", "language", "mcp", "statuses", "custom-properties", "acp", "scan", "details-columns", "ai-description"];
-
     public IReadOnlyList<OptionsSettingCategory> SettingCategories
     {
         get
         {
-            string[] titles =
+            List<OptionsSettingCategory> categories =
             [
-                LocalizationService.Current.Get(TextKeys.Plugins),
-                LocalizationService.Current.Get(TextKeys.Language),
-                LocalizationService.Current.Get(TextKeys.MCP),
-                LocalizationService.Current.Get(TextKeys.Statuses),
-                LocalizationService.Current.Get(UiKeys.CustomProperties),
-                LocalizationService.Current.Get(UiKeys.AcpAgents),
-                LocalizationService.Current.Get(TextKeys.Scan),
-                LocalizationService.Current.Get(UiKeys.DetailsColumns),
-                LocalizationService.Current.Get(UiKeys.AiDescription)
+                new("plugins", LocalizationService.Current.Get(TextKeys.Plugins), 0),
+                new("language", LocalizationService.Current.Get(TextKeys.Language), 1),
+                new("mcp", LocalizationService.Current.Get(TextKeys.MCP), 2),
+                new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
+                new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4),
+                new("acp", LocalizationService.Current.Get(UiKeys.AcpAgents), 5),
+                new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
+                new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7),
+                new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex)
             ];
-            return titles.Take(IsAiDescriptionAvailable ? 9 : 8)
-                .Select((title, index) => new OptionsSettingCategory(BuiltInCategoryIds[index], title, index))
-                .Concat(pluginPages.Values
-                    .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
-                    .OrderBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
-                    .ThenBy(page => page.Id, StringComparer.OrdinalIgnoreCase)
-                    .Select(page => new OptionsSettingCategory(page.Id, page.Registration.Descriptor.Title, PluginPage: page)))
-                .ToArray();
+            if (IsAiDescriptionAvailable)
+            {
+                categories.Add(new("ai-description", LocalizationService.Current.Get(UiKeys.AiDescription), AiDescriptionCategoryIndex));
+                categories.Add(new("ai-provider", LocalizationService.Current.Get(UiKeys.AiProviderCategory), AiProviderCategoryIndex));
+            }
+
+            categories.AddRange(pluginPages.Values
+                .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(page => page.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(page => new OptionsSettingCategory(page.Id, page.Registration.Descriptor.Title, PluginPage: page)));
+            return categories;
         }
     }
 
@@ -246,7 +247,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowDetailsColumnsSection || ShowAiDescriptionSection || ShowPluginSettingsSection;
+        ShowDetailsColumnsSection || ShowToolbarSection || ShowAiDescriptionSection || ShowAiProviderSection ||
+        ShowPluginSettingsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -353,6 +355,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         if (!TrySaveAiProviderSettings()) return;
         if (!TrySaveAcpSettings()) return;
         if (!SavePluginSettings(pluginSettings)) return;
+        if (GetToolbarLayout() is { } toolbarLayout)
+        {
+            ToolbarLayoutApplied?.Invoke(this, new ToolbarLayoutAppliedEventArgs { Layout = toolbarLayout });
+        }
+
         DialogAccepted = true;
     }
 
@@ -558,6 +565,21 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         return terms.Any(term => term.Contains(SettingsSearchText, StringComparison.OrdinalIgnoreCase));
     }
 
+    private bool MatchesCategorySearch(OptionsSettingCategory category)
+    {
+        if (MatchesSearch(category.Title))
+        {
+            return true;
+        }
+
+        return category.Id == ToolbarCategoryId &&
+               MatchesSearch(
+                   LocalizationService.Current.Get(UiKeys.CustomizeToolbar),
+                   LocalizationService.Current.Get(UiKeys.CustomizeToolbarHint),
+                   LocalizationService.Current.Get(UiKeys.ToolbarCommands),
+                   LocalizationService.Current.Get(UiKeys.ToolbarButtons));
+    }
+
     partial void OnSelectedSettingCategoryChanged(OptionsSettingCategory? value)
     {
         if (isRefreshingLocalization || value is null) return;
@@ -610,7 +632,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         try
         {
             FilteredSettingCategories.Clear();
-            foreach (var category in SettingCategories.Where(category => MatchesSearch(category.Title)))
+            foreach (var category in SettingCategories.Where(MatchesCategorySearch))
                 FilteredSettingCategories.Add(category);
         }
         finally { isRefreshingLocalization = false; }
@@ -635,6 +657,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
+        OnPropertyChanged(nameof(IsToolbarCategorySelected));
+        OnPropertyChanged(nameof(ShowToolbarSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));
@@ -645,6 +669,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowScanSection));
         OnPropertyChanged(nameof(IsAiDescriptionCategorySelected));
         OnPropertyChanged(nameof(ShowAiDescriptionSection));
+        OnPropertyChanged(nameof(IsAiProviderCategorySelected));
         OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }

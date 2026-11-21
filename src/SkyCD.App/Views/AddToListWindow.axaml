@@ -87,6 +87,9 @@
             <Setter Property="BorderBrush" Value="#7A7A7A" />
             <Setter Property="Background" Value="#207A7A7A" />
         </Style>
+        <Style Selector="Button.source:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
         <Style Selector="TextBox.source-field, ComboBox.source-field, Button.source-field">
             <Setter Property="Height" Value="26" />
         </Style>
@@ -102,6 +105,7 @@
             <StackPanel>
                 <Button Classes="source"
                         Classes.selected="{Binding IsSourceMedia}"
+                        IsEnabled="{Binding CanUseMedia}"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Media">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
@@ -295,14 +299,6 @@
                                          IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
                                          Command="{Binding SelectTargetCommand}"
                                          CommandParameter="SelectedFolder" />
-                        </StackPanel>
-                    </TabItem>
-                    <TabItem Theme="{StaticResource AddToListTabItemTheme}"
-                             Header="{i18n:Translate {x:Static i18n:UiKeys.Misc}}">
-                        <StackPanel Margin="10" Spacing="6">
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
-                                      IsChecked="{Binding IncludeExtendedInfo}"
-                                      IsEnabled="{Binding IsScanOptionsEnabled}" />
                         </StackPanel>
                     </TabItem>
                 </TabControl>

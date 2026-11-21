@@ -47,7 +47,8 @@ public class AddToListDialogViewModelTests
     [Fact]
     public void MediaSource_RequiresMediaName()
     {
-        var vm = new AddToListDialogViewModel
+        var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([drive]))
         {
             SourceMode = AddToListSourceMode.Media,
             MediaName = ""
@@ -55,6 +56,82 @@ public class AddToListDialogViewModelTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal("Media name is required for media source.", vm.ValidationMessage);
+    }
+
+    [Fact]
+    public void NoDrives_OnOpen_FallsBackToFolder()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]));
+
+        Assert.False(vm.CanUseMedia);
+        Assert.Empty(vm.AvailableDrives);
+        Assert.True(vm.IsSourceFolder);
+        Assert.False(vm.IsSourceMedia);
+        Assert.Equal(AddToListSourceMode.Folder, vm.SourceMode);
+    }
+
+    [Fact]
+    public void NoDrives_SelectSourceMedia_IsIgnored()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]));
+
+        vm.SelectSourceCommand.Execute("Media");
+
+        Assert.False(vm.IsSourceMedia);
+        Assert.True(vm.IsSourceFolder);
+    }
+
+    [Fact]
+    public void RemovingLastDrive_WhileMediaSelected_SwitchesToFolder()
+    {
+        var driveD = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        var provider = new DynamicDriveProvider([driveD]);
+        using var vm = new AddToListDialogViewModel(provider);
+        Assert.True(vm.IsSourceMedia);
+
+        var mediaAvailabilityChanges = 0;
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AddToListDialogViewModel.CanUseMedia))
+            {
+                mediaAvailabilityChanges++;
+            }
+        };
+
+        provider.SetDrives([]);
+
+        Assert.False(vm.CanUseMedia);
+        Assert.False(vm.IsSourceMedia);
+        Assert.True(vm.IsSourceFolder);
+        Assert.Equal(1, mediaAvailabilityChanges);
+    }
+
+    [Fact]
+    public void ConnectingDrive_ReenablesMedia_AndKeepsCurrentSource()
+    {
+        var driveD = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        var provider = new DynamicDriveProvider([]);
+        using var vm = new AddToListDialogViewModel(provider);
+        Assert.False(vm.CanUseMedia);
+        Assert.True(vm.IsSourceFolder);
+
+        var mediaAvailabilityChanges = 0;
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AddToListDialogViewModel.CanUseMedia))
+            {
+                mediaAvailabilityChanges++;
+            }
+        };
+
+        provider.SetDrives([driveD]);
+
+        Assert.True(vm.CanUseMedia);
+        Assert.True(vm.IsSourceFolder);
+        Assert.Equal(1, mediaAvailabilityChanges);
+
+        vm.SelectSourceCommand.Execute("Media");
+        Assert.True(vm.IsSourceMedia);
     }
 
     [Fact]
@@ -411,13 +488,23 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void InternetSource_PassesIncludeExtendedInfoToRemoteScanOptions()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet);
+        vm.InternetHost = "example.com";
+        vm.InternetPath = "share";
+
+        Assert.False(vm.CreateInternetScanOptions("target-id").IncludeExtendedInfo);
+        Assert.True(vm.CreateInternetScanOptions("target-id", includeExtendedInfo: true).IncludeExtendedInfo);
+    }
+
+    [Fact]
     public void TitleOnlySource_RequiresOnlyAMediaName()
     {
         var provider = new FakeDriveProvider([]);
         var vm = new AddToListDialogViewModel(provider, AddToListSourceMode.TitleOnly);
 
         Assert.True(vm.IsSourceTitleOnly);
-        Assert.False(vm.IsScanOptionsEnabled);
         Assert.False(vm.CanConfirm);
         Assert.Equal("A media name is required.", vm.ValidationMessage);
 

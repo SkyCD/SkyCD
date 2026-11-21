@@ -37,7 +37,7 @@ configuration adapter. Previously released binaries/branches are not modified by
 | Immediate persistence after modal OK | Host batch persistence on Options Save, disposal on Cancel/close |
 
 The four production configuration plugins and `Plugins/SkyCD.Plugin.Sample.Configuration` demonstrate
-the new contract. See [SDK contracts](sdk-contracts.md#embedded-options-configuration-v3-migration-828) for
+the new contract. See [SDK contracts](sdk-contracts.md#embedded-options-configuration-sdk-20-migration-828) for
 threading, draft ownership, cancellation and headless use. Other capability signatures are unchanged.
 
 ## Capability Evolution

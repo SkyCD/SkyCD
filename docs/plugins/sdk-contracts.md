@@ -48,10 +48,10 @@
   - Enumerating actions does not execute them; the host explicitly invokes a selected handler.
   - These contracts do not add a store UI, credential storage, or an execution scheduler.
 
-## Embedded Options configuration (v3 migration, #828)
+## Embedded Options configuration (SDK 2.0 migration, #828)
 
 `IPluginConfigurationCapability.CreatePageAsync(request, cancellationToken)` replaces the former
-modal `ConfigureAsync` contract. Recompile configuration plugins against this v3 SDK; remove their
+modal `ConfigureAsync` contract. Recompile configuration plugins against SDK 2.0; remove their
 configuration Windows and the descriptor's Width/Height arguments. Other capabilities are unchanged.
 
 - `PluginConfigurationDescriptor(ConfigurationId, Title)` identifies one page per plugin. Keep the ID
@@ -63,13 +63,16 @@ configuration Windows and the descriptor's Width/Height arguments. Other capabil
   searching, or disabling/re-enabling the plugin within the same dialog.
 - The page's `AcceptAsync` callback validates and returns a snapshot in `PluginConfigurationResult`.
   It may run repeatedly after a failed Save. It must not save, change consumers, or perform external side
-  effects. A failure stays inline on that page and prevents Options from closing.
+  effects. A validation failure stays inline on that page and prevents Options from closing.
+- A draft that cannot be created or embedded is reported inline on its page but contributes no settings,
+  so it does not block saving built-in or other plugin settings. Its category remains available for review.
 - The host validates all visited, enabled pages before committing through `PluginConfigurationStore`,
   then applies settings to `IPluginSettingsConsumer` instances. Unvisited or disabled pages are not saved.
   Cancel/close disposes drafts without accepting them; supply a disposal callback for owned resources.
 - Creation and acceptance must honor cancellation and return promptly. Asynchronous timeouts appear inline;
   the host disposes late-created pages. Synchronous UI callbacks must not block: in-process plugins cannot
-  be forcibly terminated. Timed-out pages require reopening Options before another attempt.
+  be forcibly terminated. A failed or timed-out load is retried when the page is selected again, without
+  retrying on a timer.
 - CLI/headless hosts use `PluginConfigurationStore.GetSettings` / `SaveSettings` without creating a page.
   They may also create/accept a page without accessing `Content` to normalize a settings dictionary.
   `PluginConfigurationManager.SaveSettings` additionally refreshes currently loaded consumers.

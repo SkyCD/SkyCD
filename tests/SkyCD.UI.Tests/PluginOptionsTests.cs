@@ -72,7 +72,8 @@ public sealed class PluginOptionsTests : IDisposable
         var category = TestCategory(vm);
         Assert.Equal("Plugins", category.Title);
         Assert.Equal(2, vm.SettingCategories.Count(c => c.Title == "Plugins"));
-        Assert.All(vm.SettingCategories.Take(8), c => Assert.Null(c.PluginPage));
+        Assert.All(vm.SettingCategories.Take(9), c => Assert.Null(c.PluginPage));
+        Assert.Equal("toolbar", vm.SettingCategories[8].Id);
         vm.SelectedSettingCategory = category;
         Assert.False(vm.ShowPluginListSection);
         Assert.True(vm.ShowPluginSettingsSection);
@@ -94,6 +95,27 @@ public sealed class PluginOptionsTests : IDisposable
         Assert.Empty(vm.FilteredSettingCategories);
         Assert.True(vm.ShowNoSearchResults);
         Assert.False(vm.ShowPluginSettingsSection);
+    }
+
+    [AvaloniaFact]
+    public void BuiltInIndexes_KeepToolbarAndAiBeforePluginCategories()
+    {
+        using var vm = CreateViewModel();
+        var withoutAi = vm.SettingCategories.ToList();
+        Assert.All(withoutAi.Take(9), category => Assert.Equal(withoutAi.IndexOf(category), category.BuiltInIndex));
+        Assert.Equal("toolbar", withoutAi[8].Id);
+        Assert.All(withoutAi.Skip(9), category => Assert.Equal(-1, category.BuiltInIndex));
+
+        vm.SetAiDescriptionAvailable(true);
+        var categories = vm.SettingCategories.ToList();
+        Assert.Equal((8, "toolbar"), (categories[8].BuiltInIndex, categories[8].Id));
+        Assert.Equal((9, "ai-description"), (categories[9].BuiltInIndex, categories[9].Id));
+        Assert.Equal((10, "ai-provider"), (categories[10].BuiltInIndex, categories[10].Id));
+        Assert.All(categories.Skip(11), category =>
+        {
+            Assert.Equal(-1, category.BuiltInIndex);
+            Assert.NotNull(category.PluginPage);
+        });
     }
 
     [AvaloniaFact]

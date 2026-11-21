@@ -77,7 +77,8 @@ public partial class OptionsWindow : Window
         {
             await LoadAcpAgentsIfVisibleAsync();
         }
-        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAiDescriptionSection))
+        else if (e.PropertyName is nameof(OptionsDialogViewModel.ShowAiDescriptionSection)
+                 or nameof(OptionsDialogViewModel.ShowAiProviderSection))
         {
             LoadAiProviderSettingsIfVisible();
         }
@@ -86,6 +87,14 @@ public partial class OptionsWindow : Window
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
     {
         Close(false);
+    }
+
+    private void OnToolbarCommandDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel { Toolbar: { AddCommand: var add } } && add.CanExecute(null))
+        {
+            add.Execute(null);
+        }
     }
 
     private async void OnBrowseAcpAgentClicked(object? sender, RoutedEventArgs e)
@@ -124,7 +133,7 @@ public partial class OptionsWindow : Window
 
     private void LoadAiProviderSettingsIfVisible()
     {
-        if (!hasOpened || startedAiProviderLoad || DataContext is not OptionsDialogViewModel { ShowAiDescriptionSection: true } vm)
+        if (!hasOpened || startedAiProviderLoad || DataContext is not OptionsDialogViewModel { IsAiDescriptionAvailable: true } vm)
         {
             return;
         }

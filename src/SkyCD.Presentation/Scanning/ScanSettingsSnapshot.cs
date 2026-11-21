@@ -10,6 +10,7 @@ public sealed record ScanSettingsSnapshot(
     bool SkipWellKnownSystemFolders,
     bool SkipEmptyFolders,
     bool SkipOnlineOnlyCloudFiles,
+    bool IncludeExtendedInfo,
     bool ShowScanErrorsAfterScan,
     bool SaveScanErrorsToComments,
     bool EjectMediaAfterScan,

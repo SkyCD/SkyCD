@@ -20,8 +20,6 @@ public partial class MainWindowViewModel
     /// <summary>Raised when the user confirmed a new layout; the view persists it.</summary>
     public event EventHandler? ToolbarLayoutChanged;
 
-    public event EventHandler<ToolbarCustomizeRequestedEventArgs>? CustomizeToolbarRequested;
-
     /// <summary>Restores the saved layout without persisting it back, used when a window takes over the view model.</summary>
     public void LoadToolbarLayout(IEnumerable<ToolbarItemDocument>? layout)
     {
@@ -38,11 +36,11 @@ public partial class MainWindowViewModel
         ToolbarLayoutChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Opens Options on the Toolbar category instead of a standalone dialog.</summary>
     [RelayCommand]
     private void CustomizeToolbar()
     {
-        var dialog = new ToolbarCustomizationViewModel(ToolbarCommands(), toolbarEntries);
-        CustomizeToolbarRequested?.Invoke(this, new ToolbarCustomizeRequestedEventArgs { Dialog = dialog });
+        ShowOptions(LocalizationService.Current.Get(UiKeys.Toolbar));
     }
 
     /// <summary>

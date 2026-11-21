@@ -32,6 +32,8 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private bool skipOnlineOnlyCloudFiles;
 
+    [ObservableProperty] private bool includeExtendedInfo;
+
     [ObservableProperty] private bool showScanErrorsAfterScan = true;
 
     [ObservableProperty] private bool saveScanErrorsToComments;
@@ -124,6 +126,7 @@ public partial class OptionsDialogViewModel
         SkipWellKnownSystemFolders = settings.SkipWellKnownSystemFolders;
         SkipEmptyFolders = settings.SkipEmptyFolders;
         SkipOnlineOnlyCloudFiles = settings.SkipOnlineOnlyCloudFiles;
+        IncludeExtendedInfo = settings.IncludeExtendedInfo;
         ShowScanErrorsAfterScan = settings.ShowScanErrorsAfterScan;
         SaveScanErrorsToComments = settings.SaveScanErrorsToComments;
         EjectMediaAfterScan = settings.EjectMediaAfterScan;
@@ -141,6 +144,7 @@ public partial class OptionsDialogViewModel
             SkipWellKnownSystemFolders,
             SkipEmptyFolders,
             SkipOnlineOnlyCloudFiles,
+            IncludeExtendedInfo,
             ShowScanErrorsAfterScan,
             SaveScanErrorsToComments,
             EjectMediaAfterScan,

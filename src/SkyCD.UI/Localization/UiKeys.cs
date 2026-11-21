@@ -108,6 +108,7 @@ public static class UiKeys
     public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
     public const string AiImplementation = "core.ui.AiImplementation";
     public const string AiProvider = "core.ui.AiProvider";
+    public const string AiProviderCategory = "core.ui.AiProviderCategory";
     public const string AiProviderSettings = "core.ui.AiProviderSettings";
     public const string AiProviderAddress = "core.ui.AiProviderAddress";
     public const string AiProviderEndpoint = "core.ui.AiProviderEndpoint";
@@ -395,6 +396,7 @@ public static class UiKeys
     public const string RequiredColumn = "core.ui.RequiredColumn";
     public const string MoveUp = "core.ui.MoveUp";
     public const string MoveDown = "core.ui.MoveDown";
+    public const string Toolbar = "core.ui.Toolbar";
     public const string CustomizeToolbar = "core.ui.CustomizeToolbar";
     public const string CustomizeToolbarHint = "core.ui.CustomizeToolbarHint";
     public const string ToolbarCommands = "core.ui.ToolbarCommands";

@@ -134,6 +134,7 @@ public sealed class ScanCompletionSettingsTests
             SkipWellKnownSystemFolders: true,
             SkipEmptyFolders: false,
             SkipOnlineOnlyCloudFiles: false,
+            IncludeExtendedInfo: false,
             ShowScanErrorsAfterScan: true,
             SaveScanErrorsToComments: false,
             EjectMediaAfterScan: true,
@@ -145,6 +146,34 @@ public sealed class ScanCompletionSettingsTests
         Assert.True(scanOptions.EjectMediaAfterScan);
         Assert.False(scanOptions.ActivateMainWindowAfterScan);
         Assert.True(scanOptions.PlaySoundAfterScan);
+    }
+
+    [Fact]
+    public void OptionsDialogViewModel_IncludeExtendedInfoRoundTrip()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        Assert.False(vm.GetScanOptions().IncludeExtendedInfo);
+
+        vm.SetScanOptions(new ScanSettingsSnapshot(
+            SkipSymbolicLinks: false,
+            HiddenSystemFilePolicy: "Include",
+            SkipRecycleBins: true,
+            SkipWellKnownSystemFolders: true,
+            SkipEmptyFolders: false,
+            SkipOnlineOnlyCloudFiles: false,
+            IncludeExtendedInfo: true,
+            ShowScanErrorsAfterScan: true,
+            SaveScanErrorsToComments: false,
+            EjectMediaAfterScan: false,
+            ActivateMainWindowAfterScan: false,
+            PlaySoundAfterScan: false));
+
+        Assert.True(vm.IncludeExtendedInfo);
+        Assert.True(vm.GetScanOptions().IncludeExtendedInfo);
+
+        vm.IncludeExtendedInfo = false;
+
+        Assert.False(vm.GetScanOptions().IncludeExtendedInfo);
     }
 
     [Fact]

@@ -192,12 +192,30 @@ public sealed class AiScanExclusionTests : IDisposable
     }
 
     [Fact]
+    public void AppOptionsDocument_PersistsIncludeExtendedInfoAcrossRepositoryInstances()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+
+        var options = optionsRepository.GetOrCreateAppOptions();
+        Assert.False(options.IncludeExtendedInfo);
+        options.IncludeExtendedInfo = true;
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var restored = optionsRepository.GetOrCreateAppOptions();
+        Assert.True(restored.IncludeExtendedInfo);
+    }
+
+    [Fact]
     public void OptionsDialogViewModel_AiScanSettingsRoundTrip()
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
         vm.SetAiDescriptionAvailable(true);
         Assert.Contains(vm.SettingCategories, category => category.Title == "AI description");
+        Assert.Contains(vm.SettingCategories, category => category.Title == "AI provider");
 
         vm.AiScanMaxFileSizeMegabytes = 2048;
         vm.SetAiScanExclusions(
@@ -214,6 +232,7 @@ public sealed class AiScanExclusionTests : IDisposable
 
         vm.SetAiDescriptionAvailable(false);
         Assert.DoesNotContain(vm.SettingCategories, category => category.Title == "AI description");
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Title == "AI provider");
     }
 
     [Fact]
