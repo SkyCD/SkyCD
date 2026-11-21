@@ -101,8 +101,8 @@ public class AiProviderSettingsViewModelTests
         vm.SetAiDescriptionAvailable(false);
 
         Assert.DoesNotContain("AI provider", vm.SettingCategories);
-        Assert.Equal(7, vm.SelectedTabIndex);
-        Assert.True(vm.IsDetailsColumnsCategorySelected);
+        Assert.Equal(8, vm.SelectedTabIndex);
+        Assert.True(vm.IsToolbarCategorySelected);
         Assert.False(vm.ShowAiProviderSection);
     }
 

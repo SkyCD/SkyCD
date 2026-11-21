@@ -9,9 +9,8 @@ using SkyCD.Documents;
 namespace SkyCD.Presentation.ViewModels;
 
 /// <summary>
-/// Toolbar customization dialog. Edits a working copy of the layout so closing without confirmation
-/// changes nothing; the view hands the edited layout to <see cref="MainWindowViewModel.ApplyToolbarLayout"/>
-/// on confirm.
+/// Edits a working copy of the toolbar layout for the Options window; the page is only handed to
+/// <see cref="MainWindowViewModel.ApplyToolbarLayout"/> when Save accepts it.
 /// </summary>
 public sealed partial class ToolbarCustomizationViewModel : ObservableObject
 {
@@ -41,12 +40,6 @@ public sealed partial class ToolbarCustomizationViewModel : ObservableObject
     [ObservableProperty] private ToolbarCommandChoiceViewModel? selectedCommand;
 
     [ObservableProperty] private ToolbarEntryViewModel? selectedItem;
-
-    [ObservableProperty] private bool dialogAccepted;
-
-    /// <summary>Closes the dialog with the edited layout as the result.</summary>
-    [RelayCommand]
-    private void Confirm() => DialogAccepted = true;
 
     public IReadOnlyList<ToolbarItemDocument> GetLayout() => SelectedItems.Select(entry => entry.ToDocument()).ToArray();
 

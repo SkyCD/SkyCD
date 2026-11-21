@@ -12,7 +12,7 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class OptionsDialogViewModel
 {
     /// <summary>Index of the AI description category; it is appended after the always-present categories.</summary>
-    private const int AiDescriptionCategoryIndex = 8;
+    private const int AiDescriptionCategoryIndex = 9;
 
     public ObservableCollection<AiScanExclusionItemViewModel> AiScanExclusions { get; } = [];
 

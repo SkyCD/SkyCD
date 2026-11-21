@@ -159,7 +159,6 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested -= OnFocusTreeRequested;
             subscribedViewModel.RenameRequested -= OnRenameRequested;
             subscribedViewModel.DetailsColumnsChanged -= OnDetailsColumnsChanged;
-            subscribedViewModel.CustomizeToolbarRequested -= OnCustomizeToolbarRequested;
             subscribedViewModel.ToolbarItemsChanged -= OnToolbarItemsChanged;
             subscribedViewModel.ToolbarLayoutChanged -= OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -190,7 +189,6 @@ public partial class MainWindow : Window
             subscribedViewModel.FocusTreeRequested += OnFocusTreeRequested;
             subscribedViewModel.RenameRequested += OnRenameRequested;
             subscribedViewModel.DetailsColumnsChanged += OnDetailsColumnsChanged;
-            subscribedViewModel.CustomizeToolbarRequested += OnCustomizeToolbarRequested;
             subscribedViewModel.ToolbarItemsChanged += OnToolbarItemsChanged;
             subscribedViewModel.ToolbarLayoutChanged += OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -237,15 +235,6 @@ public partial class MainWindow : Window
         var options = LoadAppOptions();
         options.Toolbar = viewModel.ToolbarEntries.ToList();
         SaveAppOptions(options);
-    }
-
-    private async void OnCustomizeToolbarRequested(object? sender, ToolbarCustomizeRequestedEventArgs e)
-    {
-        var dialog = new ToolbarCustomizationWindow { DataContext = e.Dialog };
-        if (await dialog.ShowDialog<bool>(this) && DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.ApplyToolbarLayout(e.Dialog.GetLayout());
-        }
     }
 
     private void RebuildToolbar(MainWindowViewModel viewModel)
@@ -1384,6 +1373,10 @@ public partial class MainWindow : Window
             options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
+        if (DataContext is MainWindowViewModel toolbarViewModel)
+        {
+            e.Dialog.SetToolbarCustomization(toolbarViewModel.ToolbarCommands(), toolbarViewModel.ToolbarEntries);
+        }
         e.Dialog.SelectedTabIndex = Math.Max(0, options.OptionsTabIndex);
         if (!string.IsNullOrWhiteSpace(e.PreselectSettingCategory))
         {
@@ -1396,6 +1389,7 @@ public partial class MainWindow : Window
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested += OnResetAiScanExclusionsRequested;
+        e.Dialog.ToolbarLayoutApplied += OnOptionsToolbarLayoutApplied;
         RefreshPlugins(e.Dialog);
 
         var dialog = new OptionsWindow
@@ -1431,6 +1425,11 @@ public partial class MainWindow : Window
             options.AiScanMaxFileSizeBytes = e.Dialog.AiScanMaxFileSizeMegabytes * 1024L * 1024L;
             options.AiDescriptionImplementation = e.Dialog.SelectedAiDescriptionImplementation?.Id
                                                   ?? options.AiDescriptionImplementation;
+            if (e.Dialog.GetToolbarLayout() is { } toolbarLayout)
+            {
+                options.Toolbar = toolbarLayout.ToList();
+            }
+
             SaveScanOptionsFromDialog(e.Dialog, options);
             SaveAppOptions(options);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
@@ -1457,8 +1456,17 @@ public partial class MainWindow : Window
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested -= OnResetAiScanExclusionsRequested;
+        e.Dialog.ToolbarLayoutApplied -= OnOptionsToolbarLayoutApplied;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
+    }
+
+    private void OnOptionsToolbarLayoutApplied(object? sender, ToolbarLayoutAppliedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.ApplyToolbarLayout(e.Layout);
+        }
     }
 
     private async void OnAboutRequested(object? sender, EventArgs e)

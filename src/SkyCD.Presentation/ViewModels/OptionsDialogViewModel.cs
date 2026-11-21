@@ -170,7 +170,8 @@ public partial class OptionsDialogViewModel : ObservableObject
                 LocalizationService.Current.Get(UiKeys.CustomProperties),
                 LocalizationService.Current.Get(UiKeys.AcpAgents),
                 LocalizationService.Current.Get(TextKeys.Scan),
-                LocalizationService.Current.Get(UiKeys.DetailsColumns)
+                LocalizationService.Current.Get(UiKeys.DetailsColumns),
+                LocalizationService.Current.Get(UiKeys.Toolbar)
             ];
             if (IsAiDescriptionAvailable)
             {
@@ -238,7 +239,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowDetailsColumnsSection || ShowAiDescriptionSection || ShowAiProviderSection;
+        ShowDetailsColumnsSection || ShowToolbarSection || ShowAiDescriptionSection || ShowAiProviderSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -359,6 +360,11 @@ public partial class OptionsDialogViewModel : ObservableObject
         AiDescriptionAlertMessage = string.Empty;
         if (!TrySaveAiProviderSettings()) return;
         if (!TrySaveAcpSettings()) return;
+        if (GetToolbarLayout() is { } toolbarLayout)
+        {
+            ToolbarLayoutApplied?.Invoke(this, new ToolbarLayoutAppliedEventArgs { Layout = toolbarLayout });
+        }
+
         DialogAccepted = true;
     }
 
@@ -565,6 +571,21 @@ public partial class OptionsDialogViewModel : ObservableObject
         return terms.Any(term => term.Contains(SettingsSearchText, StringComparison.OrdinalIgnoreCase));
     }
 
+    private bool MatchesCategorySearch(string category)
+    {
+        if (MatchesSearch(category))
+        {
+            return true;
+        }
+
+        return string.Equals(category, ToolbarCategoryName, StringComparison.OrdinalIgnoreCase) &&
+               MatchesSearch(
+                   LocalizationService.Current.Get(UiKeys.CustomizeToolbar),
+                   LocalizationService.Current.Get(UiKeys.CustomizeToolbarHint),
+                   LocalizationService.Current.Get(UiKeys.ToolbarCommands),
+                   LocalizationService.Current.Get(UiKeys.ToolbarButtons));
+    }
+
     partial void OnSelectedSettingCategoryChanged(string? value)
     {
         if (isRefreshingLocalization || string.IsNullOrWhiteSpace(value))
@@ -634,7 +655,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     private void RefreshFilteredCategories()
     {
         FilteredSettingCategories.Clear();
-        foreach (var category in SettingCategories.Where(category => MatchesSearch(category)))
+        foreach (var category in SettingCategories.Where(MatchesCategorySearch))
         {
             FilteredSettingCategories.Add(category);
         }
@@ -667,6 +688,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
+        OnPropertyChanged(nameof(IsToolbarCategorySelected));
+        OnPropertyChanged(nameof(ShowToolbarSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
         OnPropertyChanged(nameof(ShowPluginActionsSection));
         OnPropertyChanged(nameof(ShowPluginInfoSection));

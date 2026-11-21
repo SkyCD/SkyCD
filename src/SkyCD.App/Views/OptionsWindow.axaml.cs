@@ -82,6 +82,14 @@ public partial class OptionsWindow : Window
         Close(false);
     }
 
+    private void OnToolbarCommandDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel { Toolbar: { AddCommand: var add } } && add.CanExecute(null))
+        {
+            add.Execute(null);
+        }
+    }
+
     private async void OnBrowseAcpAgentClicked(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not OptionsDialogViewModel { CanChooseAcpAgent: true } vm ||
