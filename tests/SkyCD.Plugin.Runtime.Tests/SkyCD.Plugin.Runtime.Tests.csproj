@@ -29,4 +29,22 @@
             <_Parameter1>3.0.0</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
+    <ItemGroup>
+        <!-- Slice plugin assemblies packaged by staged-install fixtures and copied next to the tests. -->
+        <Compile Remove="Slice/**/*.cs"/>
+        <None Include="Slice/**/*.cs"/>
+        <ProjectReference Include="Slice/SkyCD.Plugin.SlipSlice.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Slice/Foreign/SkyCD.Plugin.ForeignSlice.csproj" ReferenceOutputAssembly="false"/>
+        <!-- The standalone slices share metadata-derived identity with the self-discovered test assembly. -->
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)Slice/bin/$(Configuration)/net10.0/SkyCD.Plugin.SlipSlice.dll"
+              Link="Slice.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="$(MSBuildThisFileDirectory)Slice/Foreign/bin/$(Configuration)/net10.0/SkyCD.Plugin.ForeignSlice.dll"
+              Link="ForeignSlice.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>
