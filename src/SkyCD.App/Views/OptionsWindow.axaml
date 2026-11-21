@@ -920,6 +920,11 @@
                                 </Grid>
                             </StackPanel>
 
+                            <Border Height="1"
+                                    HorizontalAlignment="Stretch"
+                                    Margin="0,2"
+                                    Background="#2E2E2E" />
+
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiMimeExclusions}}" FontWeight="SemiBold" />
                                 <StackPanel Grid.Column="1"
