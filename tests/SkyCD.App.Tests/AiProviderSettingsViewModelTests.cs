@@ -66,22 +66,58 @@ public class AiProviderSettingsViewModelTests
     }
 
     [Fact]
-    public void SelectingProviderImplementation_RevealsProviderSettings()
+    public void AiProviderCategory_ShowsProviderSettingsIndependentlyOfDescriptionPage()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.LoadAiProviderSettings(new FakeCapability());
+        vm.SetAiDescriptionAvailable(true);
+        vm.SetAiDescriptionImplementations(
+            [new("acp", "ACP"), new("provider", "AI provider")], "acp");
+
+        var categories = vm.SettingCategories.ToList();
+        var descriptionIndex = categories.IndexOf("AI description");
+        var providerIndex = categories.IndexOf("AI provider");
+        Assert.Equal(descriptionIndex + 1, providerIndex);
+
+        vm.SelectedTabIndex = descriptionIndex;
+        Assert.True(vm.ShowAiDescriptionSection);
+        Assert.False(vm.ShowAiProviderSection);
+
+        vm.SelectedTabIndex = providerIndex;
+        Assert.True(vm.IsAiProviderCategorySelected);
+        Assert.True(vm.ShowAiProviderSection);
+        Assert.False(vm.ShowAiDescriptionSection);
+    }
+
+    [Fact]
+    public void AiProviderCategory_IsHiddenAndSelectionFallsBackWhenDescriptionUnavailable()
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.LoadAiProviderSettings(new FakeCapability());
         vm.SetAiDescriptionAvailable(true);
         vm.SelectedTabIndex = vm.SettingCategories.Count - 1;
-        vm.SetAiDescriptionImplementations(
-            [new("acp", "ACP"), new("provider", "AI provider")], "acp");
+        Assert.True(vm.IsAiProviderCategorySelected);
 
-        Assert.False(vm.IsAiProviderImplementationSelected);
+        vm.SetAiDescriptionAvailable(false);
+
+        Assert.DoesNotContain("AI provider", vm.SettingCategories);
+        Assert.Equal(7, vm.SelectedTabIndex);
+        Assert.True(vm.IsDetailsColumnsCategorySelected);
         Assert.False(vm.ShowAiProviderSection);
+    }
 
-        vm.SelectedAiDescriptionImplementation = vm.AiDescriptionImplementations.Single(i => i.Id == "provider");
+    [Fact]
+    public void SearchingProvider_SelectsAiProviderCategory()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.LoadAiProviderSettings(new FakeCapability());
+        vm.SetAiDescriptionAvailable(true);
 
-        Assert.True(vm.IsAiProviderImplementationSelected);
-        Assert.True(vm.ShowAiDescriptionImplementationSection);
+        vm.SettingsSearchText = "provider";
+
+        Assert.Equal(["AI provider"], vm.FilteredSettingCategories);
+        Assert.Equal("AI provider", vm.SelectedSettingCategory);
+        Assert.True(vm.IsAiProviderCategorySelected);
         Assert.True(vm.ShowAiProviderSection);
     }
 

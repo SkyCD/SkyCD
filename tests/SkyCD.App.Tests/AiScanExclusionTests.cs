@@ -198,6 +198,7 @@ public sealed class AiScanExclusionTests : IDisposable
 
         vm.SetAiDescriptionAvailable(true);
         Assert.Contains(vm.SettingCategories, category => category == "AI description");
+        Assert.Contains(vm.SettingCategories, category => category == "AI provider");
 
         vm.AiScanMaxFileSizeMegabytes = 2048;
         vm.SetAiScanExclusions(
@@ -214,6 +215,7 @@ public sealed class AiScanExclusionTests : IDisposable
 
         vm.SetAiDescriptionAvailable(false);
         Assert.DoesNotContain(vm.SettingCategories, category => category == "AI description");
+        Assert.DoesNotContain(vm.SettingCategories, category => category == "AI provider");
     }
 
     [Fact]

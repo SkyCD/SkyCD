@@ -175,6 +175,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             if (IsAiDescriptionAvailable)
             {
                 categories.Add(LocalizationService.Current.Get(UiKeys.AiDescription));
+                categories.Add(LocalizationService.Current.Get(UiKeys.AiProviderCategory));
             }
 
             return categories;
@@ -237,7 +238,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowDetailsColumnsSection || ShowAiDescriptionSection;
+        ShowDetailsColumnsSection || ShowAiDescriptionSection || ShowAiProviderSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -676,6 +677,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowScanSection));
         OnPropertyChanged(nameof(IsAiDescriptionCategorySelected));
         OnPropertyChanged(nameof(ShowAiDescriptionSection));
+        OnPropertyChanged(nameof(IsAiProviderCategorySelected));
         OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }

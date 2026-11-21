@@ -75,7 +75,7 @@ public sealed class FileFormatCompatibilityTests
             Assert.True(leaf.Size > 0);
         }
         if (format is "skycd-zip" or "skycd-tar" or "skycd-7z" or "skycd-iso" or "skycd-qcow2" or "skycd-dmg"
-            or "skycd-daa" or "skycd-arj" or "skycd-vhd" or "skycd-vdi" or "skycd-lha" or "skycd-zoo" 
+            or "skycd-daa" or "skycd-arj" or "skycd-vhd" or "skycd-vdi" or "skycd-lha" or "skycd-zoo"
             or "skycd-arc" or "skycd-cab" or "skycd-rar" or "skycd-ace")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);

@@ -87,6 +87,9 @@
             <Setter Property="BorderBrush" Value="#7A7A7A" />
             <Setter Property="Background" Value="#207A7A7A" />
         </Style>
+        <Style Selector="Button.source:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
         <Style Selector="TextBox.source-field, ComboBox.source-field, Button.source-field">
             <Setter Property="Height" Value="26" />
         </Style>
@@ -102,6 +105,7 @@
             <StackPanel>
                 <Button Classes="source"
                         Classes.selected="{Binding IsSourceMedia}"
+                        IsEnabled="{Binding CanUseMedia}"
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Media">
                     <StackPanel Spacing="3" HorizontalAlignment="Center">
