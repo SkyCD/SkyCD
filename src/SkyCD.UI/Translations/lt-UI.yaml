@@ -235,6 +235,7 @@ ui.ResetMimeTypesConfirmation: "Atkurti numatytuosius MIME tipus, neįtraukiamus
 ui.NewMimeType: "Naujas MIME tipas"
 ui.AiImplementation: "Įgyvendinimas"
 ui.AiProvider: "Tiekėjas"
+ui.AiProviderCategory: "AI tiekėjas"
 ui.AiProviderSettings: "AI tiekėjo nustatymai"
 ui.AiProviderAddress: "Adresas"
 ui.AiProviderEndpoint: "Prieigos taškas"

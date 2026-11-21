@@ -70,7 +70,8 @@ public partial class OptionsWindow : Window
         {
             await LoadAcpAgentsIfVisibleAsync();
         }
-        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAiDescriptionSection))
+        else if (e.PropertyName is nameof(OptionsDialogViewModel.ShowAiDescriptionSection)
+                 or nameof(OptionsDialogViewModel.ShowAiProviderSection))
         {
             LoadAiProviderSettingsIfVisible();
         }
@@ -118,7 +119,7 @@ public partial class OptionsWindow : Window
 
     private void LoadAiProviderSettingsIfVisible()
     {
-        if (!hasOpened || startedAiProviderLoad || DataContext is not OptionsDialogViewModel { ShowAiDescriptionSection: true } vm)
+        if (!hasOpened || startedAiProviderLoad || DataContext is not OptionsDialogViewModel { IsAiDescriptionAvailable: true } vm)
         {
             return;
         }

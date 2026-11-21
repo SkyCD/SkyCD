@@ -71,6 +71,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
     private bool isSessionStateLoaded;
+    private bool isWindowPlacementDeferred;
     private Task? catalogLoadTask;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private readonly Dictionary<string, IImage> toolbarIcons = new(StringComparer.Ordinal);
@@ -99,6 +100,7 @@ public partial class MainWindow : Window
             new DesktopMainWindowLocator(),
             ServiceProvider.Resolve<ILogger<ScanCompletionService>>());
         InitializeComponent();
+        ApplyWindowBounds(LoadAppOptions());
         AttachPaneFocusHandlers();
         AddHandler(InputElement.KeyDownEvent, OnMainWindowKeyDown, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
         QuickFindResultList.AddHandler(InputElement.KeyDownEvent, OnQuickFindResultKeyDown, RoutingStrategies.Tunnel);
@@ -741,7 +743,12 @@ public partial class MainWindow : Window
         }
 
         var options = LoadAppOptions();
-        ApplyWindowBounds(options);
+        if (isWindowPlacementDeferred)
+        {
+            // Screen geometry was not queryable before the first show; apply the placement now.
+            ApplyWindowBounds(options);
+        }
+
         vm.ApplySessionState(
             options.Browser.ViewMode,
             options.Browser.SortMode,
@@ -1687,70 +1694,38 @@ public partial class MainWindow : Window
 
     private void ApplyWindowBounds(AppOptionsDocument options)
     {
-        if (options.Window.Width is > 0)
+        var layout = MainWindowBoundsResolver.Resolve(options.Window, GetScreenWorkingAreas());
+
+        Width = layout.Width;
+        Height = layout.Height;
+
+        if (layout.Position is { } position)
         {
-            Width = options.Window.Width.Value;
+            Position = position;
         }
 
-        if (options.Window.Height is > 0)
+        if (layout.TreePaneWidth is { } treePaneWidth)
         {
-            Height = options.Window.Height.Value;
+            TreePaneColumn.Width = new GridLength(treePaneWidth, GridUnitType.Pixel);
         }
 
-        if (options.Window.Left.HasValue && options.Window.Top.HasValue)
-        {
-            Position = ClampPositionToVisibleBounds(
-                new PixelPoint(options.Window.Left.Value, options.Window.Top.Value),
-                Width,
-                Height);
-        }
-
-        if (options.Window.TreePaneWidth is > 0)
-        {
-            TreePaneColumn.Width = new GridLength(options.Window.TreePaneWidth.Value, GridUnitType.Pixel);
-        }
-
-        // Restore window state
-        WindowState = options.Window.State;
+        WindowState = layout.State;
+        isWindowPlacementDeferred = layout.Position is null;
     }
 
-    private PixelPoint ClampPositionToVisibleBounds(PixelPoint requestedPosition, double requestedWidth,
-        double requestedHeight)
+    private IReadOnlyList<ScreenWorkingArea> GetScreenWorkingAreas()
     {
-        var windowWidth = Math.Max(1, (int)Math.Round(requestedWidth));
-        var windowHeight = Math.Max(1, (int)Math.Round(requestedHeight));
-
-        foreach (var screen in Screens.All)
+        try
         {
-            if (Intersects(requestedPosition, windowWidth, windowHeight, screen.WorkingArea))
-            {
-                return ClampToScreen(requestedPosition, windowWidth, windowHeight, screen.WorkingArea);
-            }
+            return Screens.All
+                .Select(static screen => new ScreenWorkingArea(screen.WorkingArea, screen.Scaling, screen.IsPrimary))
+                .ToArray();
         }
-
-        var fallbackScreen = Screens.Primary?.WorkingArea ?? Screens.All.First().WorkingArea;
-        return ClampToScreen(requestedPosition, windowWidth, windowHeight, fallbackScreen);
-    }
-
-    private static bool Intersects(PixelPoint position, int width, int height, PixelRect bounds)
-    {
-        var right = position.X + width;
-        var bottom = position.Y + height;
-
-        return position.X < bounds.Right &&
-               right > bounds.X &&
-               position.Y < bounds.Bottom &&
-               bottom > bounds.Y;
-    }
-
-    private static PixelPoint ClampToScreen(PixelPoint position, int width, int height, PixelRect bounds)
-    {
-        var maxX = Math.Max(bounds.X, bounds.Right - width);
-        var maxY = Math.Max(bounds.Y, bounds.Bottom - height);
-
-        var clampedX = Math.Clamp(position.X, bounds.X, maxX);
-        var clampedY = Math.Clamp(position.Y, bounds.Y, maxY);
-        return new PixelPoint(clampedX, clampedY);
+        catch (InvalidOperationException)
+        {
+            // Screens may not be queryable on some backends until the window is shown.
+            return [];
+        }
     }
 
     private static BrowserViewMode ParseBrowserViewMode(string? value)
