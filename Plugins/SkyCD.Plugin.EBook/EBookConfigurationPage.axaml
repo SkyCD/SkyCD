@@ -1,11 +1,7 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="SkyCD.Plugin.EBook.EBookConfigurationWindow"
-        Width="460"
-        Height="430"
-        CanResize="False"
-        WindowStartupLocation="CenterOwner">
-    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8">
+        x:Class="SkyCD.Plugin.EBook.EBookConfigurationPage">
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
         <CheckBox x:Name="CollectionEnabledCheckBox"
                   Content="Collect e-book metadata while indexing" />
         <TextBlock Grid.Row="1" Text="Use in place of the file name" FontWeight="SemiBold" />
@@ -27,15 +23,5 @@
                    Text="Supported extensions (semicolon separated)"
                    FontWeight="SemiBold" />
         <TextBox Grid.Row="8" x:Name="ExtensionsTextBox" />
-        <StackPanel Grid.Row="9" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
-            <Button Content="_OK"
-                    MinWidth="75"
-                    IsDefault="True"
-                    Click="OnOkClicked" />
-            <Button Content="_Cancel"
-                    MinWidth="75"
-                    IsCancel="True"
-                    Click="OnCancelClicked" />
-        </StackPanel>
     </Grid>
-</Window>
+</UserControl>

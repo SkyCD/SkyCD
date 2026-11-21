@@ -28,6 +28,8 @@ public sealed class AppOptionsDocument
 
     public int OptionsTabIndex { get; set; }
 
+    public string? OptionsCategoryId { get; set; }
+
     public int AppStartCount { get; set; }
 
     public string LastOpenedCatalogPath { get; set; } = string.Empty;

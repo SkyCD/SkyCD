@@ -57,7 +57,7 @@ public partial class OptionsDialogViewModel
 
     public bool IsOnlineOnlyCloudFilesOptionVisible => OperatingSystem.IsWindows();
 
-    public bool IsScanCategorySelected => SelectedTabIndex == 6;
+    public bool IsScanCategorySelected => SelectedBuiltInIndex == 6;
 
     public bool ShowScanSection => IsScanCategorySelected && IsCurrentCategoryVisibleInSearch;
 

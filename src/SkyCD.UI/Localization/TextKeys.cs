@@ -111,6 +111,10 @@ public static class TextKeys
     public const string PluginConfigurationNotSupported = "core.text.PluginConfigurationNotSupported";
     public const string PluginConfigurationTimedOut = "core.text.PluginConfigurationTimedOut";
     public const string PluginConfigurationFailed = "core.text.PluginConfigurationFailed";
+    public const string PluginConfigurationPageUnavailable = "core.text.PluginConfigurationPageUnavailable";
+    public const string PluginConfigurationPageNotEmbeddable = "core.text.PluginConfigurationPageNotEmbeddable";
+    public const string PluginConfigurationRejected = "core.text.PluginConfigurationRejected";
+    public const string PluginConfigurationSaveFailed = "core.text.PluginConfigurationSaveFailed";
     public const string AllStatusItemsMustHaveAnIconSelected = "core.text.AllStatusItemsMustHaveAnIconSelected";
     public const string LoadedPluginS = "core.text.LoadedPluginS";
     public const string PreparingDatabaseForModifications = "core.text.PreparingDatabaseForModifications";

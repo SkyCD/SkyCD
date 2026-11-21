@@ -23,7 +23,15 @@ public sealed class DetailsColumnDefinition
 
     public bool IsVisibleByDefault { get; init; } = true;
 
+    /// <summary>
+    /// Raw localized header including access-key markers; keep it for menu surfaces only.
+    /// </summary>
     public string Header => LocalizationService.Current.Get(HeaderKey);
+
+    /// <summary>
+    /// Header without access-key markers for plain-text surfaces such as column headers.
+    /// </summary>
+    public string DisplayHeader => MnemonicText.Strip(Header);
 
     /// <summary>
     /// Creates a renderable column. A saved <paramref name="width"/> greater than zero overrides the
@@ -32,7 +40,7 @@ public sealed class DetailsColumnDefinition
     public BrowserDetailsColumn CreateColumn(double? width = null) => new()
     {
         Id = Id,
-        Header = Header,
+        Header = DisplayHeader,
         ValuePath = ValuePath,
         Width = width is > 0 ? new GridLength(width.Value, GridUnitType.Pixel) : Width,
         HeaderAlignment = HeaderAlignment,

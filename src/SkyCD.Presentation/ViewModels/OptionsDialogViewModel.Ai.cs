@@ -12,7 +12,7 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class OptionsDialogViewModel
 {
     /// <summary>Index of the AI description category; it is appended after the always-present categories.</summary>
-    private const int AiDescriptionCategoryIndex = 9;
+    private const int AiDescriptionCategoryIndex = 10;
 
     public ObservableCollection<AiScanExclusionItemViewModel> AiScanExclusions { get; } = [];
 
@@ -26,7 +26,7 @@ public partial class OptionsDialogViewModel
 
     public bool ShowAiDescriptionAlert => !string.IsNullOrWhiteSpace(AiDescriptionAlertMessage);
 
-    public bool IsAiDescriptionCategorySelected => SelectedTabIndex == AiDescriptionCategoryIndex;
+    public bool IsAiDescriptionCategorySelected => SelectedBuiltInIndex == AiDescriptionCategoryIndex;
 
     public bool ShowAiDescriptionSection =>
         IsAiDescriptionAvailable &&
@@ -43,13 +43,15 @@ public partial class OptionsDialogViewModel
             return;
         }
 
+        var aiWasSelected = SelectedBuiltInIndex >= AiDescriptionCategoryIndex;
         IsAiDescriptionAvailable = available;
-        if (!available && SelectedTabIndex >= AiDescriptionCategoryIndex)
+        if (!available && aiWasSelected)
         {
-            SelectedTabIndex = AiDescriptionCategoryIndex - 1;
+            RefreshCategoriesPreservingSelection(ToolbarCategoryId);
+            return;
         }
 
-        RefreshFilteredCategories();
+        RefreshCategoriesPreservingSelection(SelectedSettingCategory?.Id);
         NotifySettingsVisibilityChanged();
     }
 

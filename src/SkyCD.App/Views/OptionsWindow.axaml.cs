@@ -40,7 +40,10 @@ public partial class OptionsWindow : Window
         {
             acpLifetime.Cancel();
             if (DataContext is OptionsDialogViewModel vm)
+            {
                 vm.PropertyChanged -= OnViewModelPropertyChanged;
+                vm.Dispose();
+            }
         };
     }
 
@@ -65,6 +68,10 @@ public partial class OptionsWindow : Window
             vm.DialogAccepted)
         {
             Close(true);
+        }
+        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowPluginSettingsSection))
+        {
+            await LoadPluginPageIfVisibleAsync();
         }
         else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAcpSection))
         {
@@ -109,6 +116,13 @@ public partial class OptionsWindow : Window
         hasOpened = true;
         LoadAiProviderSettingsIfVisible();
         await LoadAcpAgentsIfVisibleAsync();
+        await LoadPluginPageIfVisibleAsync();
+    }
+
+    private async Task LoadPluginPageIfVisibleAsync()
+    {
+        if (hasOpened && DataContext is OptionsDialogViewModel { ShowPluginSettingsSection: true, SelectedPluginPage: { } page })
+            await page.LoadAsync();
     }
 
     private void OnLoadAiProviderSettings(object? sender, EventArgs e)

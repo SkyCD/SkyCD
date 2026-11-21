@@ -214,8 +214,8 @@ public sealed class AiScanExclusionTests : IDisposable
         var vm = new OptionsDialogViewModel(["English"]);
 
         vm.SetAiDescriptionAvailable(true);
-        Assert.Contains(vm.SettingCategories, category => category == "AI description");
-        Assert.Contains(vm.SettingCategories, category => category == "AI provider");
+        Assert.Contains(vm.SettingCategories, category => category.Title == "AI description");
+        Assert.Contains(vm.SettingCategories, category => category.Title == "AI provider");
 
         vm.AiScanMaxFileSizeMegabytes = 2048;
         vm.SetAiScanExclusions(
@@ -231,8 +231,8 @@ public sealed class AiScanExclusionTests : IDisposable
         Assert.Contains(exclusions, entry => entry.MimeType == "video/mp4");
 
         vm.SetAiDescriptionAvailable(false);
-        Assert.DoesNotContain(vm.SettingCategories, category => category == "AI description");
-        Assert.DoesNotContain(vm.SettingCategories, category => category == "AI provider");
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Title == "AI description");
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Title == "AI provider");
     }
 
     [Fact]

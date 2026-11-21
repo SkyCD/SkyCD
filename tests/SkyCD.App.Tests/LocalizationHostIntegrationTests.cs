@@ -32,7 +32,6 @@ public sealed class LocalizationHostIntegrationTests
     [Theory]
     [InlineData("Veiksmai")]
     [InlineData("Atnaujinti")]
-    [InlineData("Konfigūruoti")]
     public void SettingsSearch_FindsPluginActionsUsingTranslatedLabels(string search)
     {
         var service = LocalizationService.Current;

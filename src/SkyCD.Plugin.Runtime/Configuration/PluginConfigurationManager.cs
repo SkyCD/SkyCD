@@ -9,131 +9,140 @@ using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.Configuration;
 
-/// <summary>
-/// Routes configuration requests to the plugin that contributes a configuration surface
-/// and persists the settings accepted by the user.
-/// </summary>
+/// <summary>Creates isolated Options drafts and persists settings only when the host accepts them.</summary>
 public sealed class PluginConfigurationManager(PluginManager pluginManager, PluginConfigurationStore store)
 {
-    /// <summary>
-    /// Gets the plugins that currently expose a configuration surface.
-    /// </summary>
-    public IReadOnlyList<PluginConfigurationRegistration> GetRegistrations()
+    /// <summary>Lists enabled configuration plugins, or all available plugins for pending Options toggles.</summary>
+    public IReadOnlyList<PluginConfigurationRegistration> GetRegistrations(bool includeDisabled = false)
     {
-        return pluginManager.Plugins
-            .Select(static plugin => (
-                Plugin: plugin,
-                Capability: plugin.Capabilities.OfType<IPluginConfigurationCapability>().FirstOrDefault()))
-            .Where(static entry => entry.Capability is not null)
-            .Select(static entry => new PluginConfigurationRegistration(
-                entry.Plugin.Id,
-                entry.Plugin.Name,
-                entry.Capability!.Configuration))
-            .OrderBy(static registration => registration.PluginName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var enabledIds = pluginManager.GetPluginDescriptors().Where(p => p.IsEnabled)
+            .Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return pluginManager.AvailablePlugins
+            .Where(p => includeDisabled || enabledIds.Contains(p.Id))
+            .Select(p => (Plugin: p, Capability: p.Capabilities.OfType<IPluginConfigurationCapability>().FirstOrDefault()))
+            .Where(p => p.Capability is not null)
+            .Select(p => new PluginConfigurationRegistration(p.Plugin.Id, p.Plugin.Name, p.Capability!.Configuration))
+            .OrderBy(p => p.PluginName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.PluginId, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    /// <summary>
-    /// Gets whether the given plugin exposes a configuration surface.
-    /// </summary>
-    public bool SupportsConfiguration(string? pluginId)
-    {
-        return ResolveCapability(pluginId) is not null;
-    }
-
-    /// <summary>
-    /// Opens the configuration surface of the given plugin and persists the accepted settings.
-    /// Canceled flows never change the persisted settings.
-    /// </summary>
-    public async Task<PluginConfigurationOutcome> ConfigureAsync(
-        string pluginId,
-        TimeSpan timeout,
+    /// <summary>Loads stored settings into a new draft without creating UI or persisting anything.</summary>
+    public Task<PluginConfigurationOutcome> CreatePageAsync(string pluginId, TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
         var capability = ResolveCapability(pluginId);
         if (capability is null)
-        {
-            return new PluginConfigurationOutcome
+            return Task.FromResult(new PluginConfigurationOutcome
             {
                 Status = PluginConfigurationStatus.NotSupported,
                 Error = $"Plugin '{pluginId}' does not provide a configuration surface."
-            };
-        }
+            });
 
-        var request = new PluginConfigurationRequest
+        return RunAsync(pluginId, capability.GetType(), async token =>
         {
-            ConfigurationId = capability.Configuration.ConfigurationId,
-            CurrentSettings = store.GetSettings(pluginId)
-        };
+            var task = capability.CreatePageAsync(new PluginConfigurationRequest
+            {
+                ConfigurationId = capability.Configuration.ConfigurationId,
+                CurrentSettings = store.GetSettings(pluginId)
+            }, token);
+            try
+            {
+                var page = await task.WaitAsync(token);
+                return new PluginConfigurationOutcome { Status = PluginConfigurationStatus.Succeeded, Page = page };
+            }
+            catch (OperationCanceledException)
+            {
+                // An uncooperative asynchronous plugin can finish after the host timeout/close.
+                _ = DisposeAbandonedPageAsync(task);
+                throw;
+            }
+        }, timeout, cancellationToken);
+    }
 
+    /// <summary>Validates and snapshots a draft. Does not persist or apply values.</summary>
+    public Task<PluginConfigurationOutcome> AcceptPageAsync(string pluginId, PluginConfigurationPage page,
+        TimeSpan timeout, CancellationToken cancellationToken = default) =>
+        RunAsync(pluginId, ResolveCapability(pluginId)?.GetType() ?? page.GetType(), async token =>
+        {
+            var result = await page.AcceptAsync(token).WaitAsync(token);
+            return new PluginConfigurationOutcome
+            {
+                Status = !result.Success ? PluginConfigurationStatus.Failed : result.Canceled
+                    ? PluginConfigurationStatus.Canceled : PluginConfigurationStatus.Succeeded,
+                Settings = new Dictionary<string, string?>(result.Settings, StringComparer.OrdinalIgnoreCase),
+                Error = result.Success ? null : result.Error ?? "The plugin configuration failed."
+            };
+        }, timeout, cancellationToken);
+
+    /// <summary>
+    /// Persists an already validated batch. Headless hosts can also use the store directly.
+    /// Consumer failures are reported independently: persisted values remain authoritative.
+    /// </summary>
+    public void SaveSettings(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string?>> settings)
+    {
+        store.SaveBatch(settings);
+
+        foreach (var plugin in pluginManager.AvailablePlugins)
+        {
+            if (!settings.TryGetValue(plugin.Id, out var values)) continue;
+            foreach (var consumer in plugin.Capabilities.OfType<IPluginSettingsConsumer>())
+            {
+                try { consumer.ApplySettings(values); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "configure", exception); }
+            }
+        }
+    }
+
+    /// <summary>Refreshes newly discovered enabled consumers after the host rebuilds runtime registrations.</summary>
+    public void RefreshConsumers()
+    {
+        foreach (var plugin in pluginManager.Plugins)
+        {
+            var values = store.GetSettings(plugin.Id);
+            foreach (var consumer in plugin.Capabilities.OfType<IPluginSettingsConsumer>())
+            {
+                try { consumer.ApplySettings(values); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "configure", exception); }
+            }
+        }
+    }
+
+    private static async Task<PluginConfigurationOutcome> RunAsync(string pluginId, Type type,
+        Func<CancellationToken, Task<PluginConfigurationOutcome>> operation, TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-        PluginConfigurationResult result;
-        try
-        {
-            result = await capability.ConfigureAsync(request, linkedCts.Token);
-        }
+        try { return await operation(linkedCts.Token); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (OperationCanceledException exception) when (timeoutCts.IsCancellationRequested)
         {
-            PluginFailure.Publish(capability.GetType(), "configure", exception);
+            PluginFailure.Publish(type, "configure", exception);
             return new PluginConfigurationOutcome
             {
                 Status = PluginConfigurationStatus.TimedOut,
                 Error = $"Configuration of plugin '{pluginId}' timed out."
             };
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
         catch (Exception exception)
         {
-            PluginFailure.Publish(capability.GetType(), "configure", exception);
+            PluginFailure.Publish(type, "configure", exception);
             return new PluginConfigurationOutcome
             {
                 Status = PluginConfigurationStatus.Failed,
                 Error = "The plugin configuration failed."
             };
         }
-
-        if (!result.Success)
-        {
-            return new PluginConfigurationOutcome
-            {
-                Status = PluginConfigurationStatus.Failed,
-                Error = result.Error ?? "The plugin configuration failed."
-            };
-        }
-
-        if (result.Canceled)
-        {
-            return new PluginConfigurationOutcome
-            {
-                Status = PluginConfigurationStatus.Canceled,
-                Settings = store.GetSettings(pluginId)
-            };
-        }
-
-        store.SaveSettings(pluginId, result.Settings);
-
-        return new PluginConfigurationOutcome
-        {
-            Status = PluginConfigurationStatus.Succeeded,
-            Settings = result.Settings
-        };
     }
 
-    private IPluginConfigurationCapability? ResolveCapability(string? pluginId)
+    private static async Task DisposeAbandonedPageAsync(Task<PluginConfigurationPage> task)
     {
-        if (string.IsNullOrWhiteSpace(pluginId))
-        {
-            return null;
-        }
-
-        return pluginManager.Plugins
-            .Where(plugin => plugin.Id.Equals(pluginId, StringComparison.OrdinalIgnoreCase))
-            .SelectMany(static plugin => plugin.Capabilities.OfType<IPluginConfigurationCapability>())
-            .FirstOrDefault();
+        try { (await task).Dispose(); }
+        catch (Exception exception) { PluginFailure.Publish(typeof(PluginConfigurationPage), "configure", exception); }
     }
+
+    private IPluginConfigurationCapability? ResolveCapability(string? pluginId) => pluginManager.AvailablePlugins
+        .Where(p => p.Id.Equals(pluginId, StringComparison.OrdinalIgnoreCase))
+        .SelectMany(p => p.Capabilities.OfType<IPluginConfigurationCapability>()).FirstOrDefault();
 }

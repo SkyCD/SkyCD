@@ -53,7 +53,7 @@ public partial class OptionsDialogViewModel
 
     public bool ShowAiDescriptionImplementationSection => AiDescriptionImplementations.Count > 1;
 
-    public bool IsAiProviderCategorySelected => SelectedTabIndex == AiProviderCategoryIndex;
+    public bool IsAiProviderCategorySelected => SelectedBuiltInIndex == AiProviderCategoryIndex;
 
     public bool ShowAiProviderSection =>
         IsAiDescriptionAvailable &&
@@ -318,7 +318,8 @@ public partial class OptionsDialogViewModel
         }
         catch (Exception exception) when (IsAiProviderFailure(exception))
         {
-            SelectedTabIndex = AiProviderCategoryIndex;
+            SelectedSettingCategory = SettingCategories.FirstOrDefault(category =>
+                category.BuiltInIndex == AiProviderCategoryIndex);
             AiProviderAlertMessage = LocalizationService.Current.Format(UiKeys.AiProviderSaveError,
                 exception.Message);
             return false;

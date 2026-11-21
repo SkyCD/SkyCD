@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Globalization;
 using SkyCD.Plugin.Abstractions.Localization;
 using System.Linq;
@@ -13,9 +14,10 @@ using SkyCD.Documents.Enum;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class OptionsDialogViewModel : ObservableObject
+public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 {
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, bool> pendingPluginStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILocalizationService? localizationService;
     private readonly CultureInfo? originalLanguage;
     private bool isRefreshingLocalization;
@@ -69,14 +71,14 @@ public partial class OptionsDialogViewModel : ObservableObject
         SetDetailsColumns(settings: null);
         RefreshScanLocalization();
         RefreshFilteredCategories();
-        selectedSettingCategory = CurrentCategoryName;
+        selectedSettingCategory = CurrentCategory;
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public ObservableCollection<CustomPropertyItemViewModel> CustomProperties { get; } = [];
     [ObservableProperty] private CustomPropertyItemViewModel? selectedCustomProperty;
     [ObservableProperty] private string customPropertyAlertMessage = string.Empty;
-    public bool ShowCustomPropertiesSection => SelectedTabIndex == 4 && IsCurrentCategoryVisibleInSearch;
+    public bool ShowCustomPropertiesSection => SelectedBuiltInIndex == 4 && IsCurrentCategoryVisibleInSearch;
 
     public void SetCustomProperties(IEnumerable<CustomPropertyDocument>? properties)
     {
@@ -118,7 +120,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public ObservableCollection<LanguageItem> Languages { get; } = [];
 
-    public ObservableCollection<string> FilteredSettingCategories { get; } = [];
+    public ObservableCollection<OptionsSettingCategory> FilteredSettingCategories { get; } = [];
     public ObservableCollection<StatusVariantItemViewModel> StatusVariants { get; } = [];
 
     [ObservableProperty] private string pluginPath = string.Empty;
@@ -137,7 +139,7 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     [ObservableProperty] private string settingsSearchText = string.Empty;
 
-    [ObservableProperty] private string? selectedSettingCategory;
+    [ObservableProperty] private OptionsSettingCategory? selectedSettingCategory;
 
     [ObservableProperty] private int mcpPort = 8765;
 
@@ -157,42 +159,50 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowMcpAlert => !string.IsNullOrWhiteSpace(McpAlertMessage);
 
-    public IReadOnlyList<string> SettingCategories
+    public IReadOnlyList<OptionsSettingCategory> SettingCategories
     {
         get
         {
-            List<string> categories =
+            List<OptionsSettingCategory> categories =
             [
-                LocalizationService.Current.Get(TextKeys.Plugins),
-                LocalizationService.Current.Get(TextKeys.Language),
-                LocalizationService.Current.Get(TextKeys.MCP),
-                LocalizationService.Current.Get(TextKeys.Statuses),
-                LocalizationService.Current.Get(UiKeys.CustomProperties),
-                LocalizationService.Current.Get(UiKeys.AcpAgents),
-                LocalizationService.Current.Get(TextKeys.Scan),
-                LocalizationService.Current.Get(UiKeys.DetailsColumns),
-                LocalizationService.Current.Get(UiKeys.Toolbar)
+                new("plugins", LocalizationService.Current.Get(TextKeys.Plugins), 0),
+                new("language", LocalizationService.Current.Get(TextKeys.Language), 1),
+                new("mcp", LocalizationService.Current.Get(TextKeys.MCP), 2),
+                new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
+                new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4),
+                new("acp", LocalizationService.Current.Get(UiKeys.AcpAgents), 5),
+                new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
+                new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7),
+                new("locations", LocalizationService.Current.Get(UiKeys.Locations), 8),
+                new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex)
             ];
             if (IsAiDescriptionAvailable)
             {
-                categories.Add(LocalizationService.Current.Get(UiKeys.AiDescription));
-                categories.Add(LocalizationService.Current.Get(UiKeys.AiProviderCategory));
+                categories.Add(new("ai-description", LocalizationService.Current.Get(UiKeys.AiDescription), AiDescriptionCategoryIndex));
+                categories.Add(new("ai-provider", LocalizationService.Current.Get(UiKeys.AiProviderCategory), AiProviderCategoryIndex));
             }
 
+            categories.AddRange(pluginPages.Values
+                .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(page => page.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(page => new OptionsSettingCategory(page.Id, page.Registration.Descriptor.Title, PluginPage: page)));
             return categories;
         }
     }
 
-    public string CurrentCategoryName =>
-        SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
+    private OptionsSettingCategory CurrentCategory => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
+    private int SelectedBuiltInIndex => CurrentCategory.BuiltInIndex;
+    public string CurrentCategoryName => CurrentCategory.Title;
+    public OptionsPluginPage? SelectedPluginPage => CurrentCategory.PluginPage;
+    public bool ShowPluginSettingsSection => SelectedPluginPage is not null && IsCurrentCategoryVisibleInSearch;
 
     public bool IsCurrentCategoryVisibleInSearch =>
-        string.IsNullOrWhiteSpace(SettingsSearchText) ||
-        FilteredSettingCategories.Contains(CurrentCategoryName);
+        string.IsNullOrWhiteSpace(SettingsSearchText) || FilteredSettingCategories.Any(category => category.Id == CurrentCategory.Id);
 
-    public bool IsPluginsCategorySelected => SelectedTabIndex == 0;
+    public bool IsPluginsCategorySelected => SelectedBuiltInIndex == 0;
 
-    public bool IsLanguageCategorySelected => SelectedTabIndex == 1;
+    public bool IsLanguageCategorySelected => SelectedBuiltInIndex == 1;
 
     public bool ShowProjectSettingsSection =>
         IsPluginsCategorySelected &&
@@ -207,10 +217,9 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     public bool ShowPluginActionsSection =>
         IsPluginsCategorySelected &&
-        MatchesSearch("actions", "refresh", "configure", "plugin actions",
+        MatchesSearch("actions", "refresh", "plugin actions",
             LocalizationService.Current.Get(UiKeys.Actions),
-            LocalizationService.Current.Get(UiKeys.Refresh),
-            LocalizationService.Current.Get(UiKeys.Configure));
+            LocalizationService.Current.Get(UiKeys.Refresh));
 
     public bool ShowPluginInfoSection =>
         IsPluginsCategorySelected &&
@@ -220,8 +229,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         IsLanguageCategorySelected &&
         IsCurrentCategoryVisibleInSearch;
 
-    public bool IsMcpCategorySelected => SelectedTabIndex == 2;
-    public bool IsStatusesCategorySelected => SelectedTabIndex == 3;
+    public bool IsMcpCategorySelected => SelectedBuiltInIndex == 2;
+    public bool IsStatusesCategorySelected => SelectedBuiltInIndex == 3;
 
     public bool ShowMcpSection =>
         IsMcpCategorySelected &&
@@ -239,7 +248,9 @@ public partial class OptionsDialogViewModel : ObservableObject
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowDetailsColumnsSection || ShowToolbarSection || ShowAiDescriptionSection || ShowAiProviderSection;
+        ShowDetailsColumnsSection || ShowLocationsSection || ShowToolbarSection ||
+        ShowAiDescriptionSection || ShowAiProviderSection ||
+        ShowPluginSettingsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -248,8 +259,6 @@ public partial class OptionsDialogViewModel : ObservableObject
     public event EventHandler? BrowsePluginPathRequested;
 
     public event EventHandler? RefreshPluginsRequested;
-
-    public event EventHandler<ConfigurePluginRequestedEventArgs>? ConfigurePluginRequested;
 
     public event EventHandler? ResetStatusVariantsRequested;
 
@@ -297,21 +306,6 @@ public partial class OptionsDialogViewModel : ObservableObject
         ResetStatusVariantsRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    [RelayCommand(CanExecute = nameof(CanConfigure))]
-    private void ConfigurePlugin()
-    {
-        if (SelectedPlugin is null)
-        {
-            return;
-        }
-
-        ConfigurePluginRequested?.Invoke(this, new ConfigurePluginRequestedEventArgs
-        {
-            PluginId = SelectedPlugin.Id,
-            PluginName = SelectedPlugin.Name
-        });
-    }
-
     [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginAuthorUrl))]
     private void OpenSelectedPluginAuthorUrl()
     {
@@ -328,7 +322,7 @@ public partial class OptionsDialogViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Confirm()
+    private async Task ConfirmAsync()
     {
         if (CustomProperties.Any(property => string.IsNullOrWhiteSpace(property.Name)) ||
             CustomProperties.Select(property => property.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != CustomProperties.Count)
@@ -358,19 +352,17 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         AiDescriptionAlertMessage = string.Empty;
+        var pluginSettings = await PreparePluginSettingsAsync();
+        if (pluginSettings is null || disposed) return;
         if (!TrySaveAiProviderSettings()) return;
         if (!TrySaveAcpSettings()) return;
+        if (!SavePluginSettings(pluginSettings)) return;
         if (GetToolbarLayout() is { } toolbarLayout)
         {
             ToolbarLayoutApplied?.Invoke(this, new ToolbarLayoutAppliedEventArgs { Layout = toolbarLayout });
         }
 
         DialogAccepted = true;
-    }
-
-    private bool CanConfigure()
-    {
-        return SelectedPlugin is not null && SelectedPlugin.SupportsConfiguration;
     }
 
     private bool CanOpenSelectedPluginAuthorUrl()
@@ -382,21 +374,27 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         pluginSelectionBeforeFilter = null;
         var snapshot = plugins.ToArray();
+        foreach (var plugin in Plugins) plugin.PropertyChanged -= OnPluginEnabledChanged;
         Plugins.Clear();
         foreach (var plugin in snapshot)
         {
-            if (disabledPluginIds.Contains(plugin.Id))
+            if (pendingPluginStates.TryGetValue(plugin.Id, out var enabled))
+            {
+                plugin.IsEnabled = enabled;
+            }
+            else if (disabledPluginIds.Contains(plugin.Id))
             {
                 plugin.IsEnabled = false;
             }
 
             Plugins.Add(plugin);
+            plugin.PropertyChanged += OnPluginEnabledChanged;
         }
 
+        RefreshCategoriesPreservingSelection();
         RefreshFilteredPlugins();
         InfoMessage = LocalizationService.Current.Format(TextKeys.LoadedPluginS, Plugins.Count);
         OnPropertyChanged(nameof(SelectedPluginDescription));
-        ConfigurePluginCommand.NotifyCanExecuteChanged();
     }
 
     public string SelectedPluginDescription =>
@@ -407,15 +405,12 @@ public partial class OptionsDialogViewModel : ObservableObject
     public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
     {
         disabledPluginIds.Clear();
-        if (pluginIds is null)
-        {
-            return;
-        }
-
-        foreach (var pluginId in pluginIds.Where(static id => !string.IsNullOrWhiteSpace(id)))
+        pendingPluginStates.Clear();
+        foreach (var pluginId in (pluginIds ?? []).Where(static id => !string.IsNullOrWhiteSpace(id)))
         {
             disabledPluginIds.Add(pluginId);
         }
+        foreach (var plugin in Plugins) plugin.IsEnabled = !disabledPluginIds.Contains(plugin.Id);
     }
 
     public void CapturePluginStates()
@@ -426,6 +421,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         }
 
         disabledPluginIds.Clear();
+        pendingPluginStates.Clear();
+        foreach (var plugin in Plugins) pendingPluginStates[plugin.Id] = plugin.IsEnabled;
         foreach (var plugin in Plugins.Where(static plugin => !plugin.IsEnabled))
         {
             disabledPluginIds.Add(plugin.Id);
@@ -467,7 +464,6 @@ public partial class OptionsDialogViewModel : ObservableObject
     {
         pluginSelectionIsAuto = isAutoSelectingPlugin;
         OnPropertyChanged(nameof(SelectedPluginDescription));
-        ConfigurePluginCommand.NotifyCanExecuteChanged();
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
     }
 
@@ -490,7 +486,7 @@ public partial class OptionsDialogViewModel : ObservableObject
             return;
         }
 
-        SelectedSettingCategory = CurrentCategoryName;
+        SelectedSettingCategory = CurrentCategory;
         NotifySettingsVisibilityChanged();
     }
 
@@ -571,14 +567,14 @@ public partial class OptionsDialogViewModel : ObservableObject
         return terms.Any(term => term.Contains(SettingsSearchText, StringComparison.OrdinalIgnoreCase));
     }
 
-    private bool MatchesCategorySearch(string category)
+    private bool MatchesCategorySearch(OptionsSettingCategory category)
     {
-        if (MatchesSearch(category))
+        if (MatchesSearch(category.Title))
         {
             return true;
         }
 
-        return string.Equals(category, ToolbarCategoryName, StringComparison.OrdinalIgnoreCase) &&
+        return category.Id == ToolbarCategoryId &&
                MatchesSearch(
                    LocalizationService.Current.Get(UiKeys.CustomizeToolbar),
                    LocalizationService.Current.Get(UiKeys.CustomizeToolbarHint),
@@ -586,24 +582,12 @@ public partial class OptionsDialogViewModel : ObservableObject
                    LocalizationService.Current.Get(UiKeys.ToolbarButtons));
     }
 
-    partial void OnSelectedSettingCategoryChanged(string? value)
+    partial void OnSelectedSettingCategoryChanged(OptionsSettingCategory? value)
     {
-        if (isRefreshingLocalization || string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        var index = SettingCategories
-            .Select((category, index) => new { category, index })
-            .FirstOrDefault(item => string.Equals(item.category, value, StringComparison.OrdinalIgnoreCase))
-            ?.index;
-
-        if (index is null || index == SelectedTabIndex)
-        {
-            return;
-        }
-
-        SelectedTabIndex = index.Value;
+        if (isRefreshingLocalization || value is null) return;
+        var index = SettingCategories.ToList().FindIndex(category => category.Id == value.Id);
+        if (index >= 0) SelectedTabIndex = index;
+        NotifySettingsVisibilityChanged();
     }
 
     private void RefreshLocalization()
@@ -612,16 +596,7 @@ public partial class OptionsDialogViewModel : ObservableObject
         McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
         RefreshScanLocalization();
         RefreshDetailsColumnsLocalization();
-        isRefreshingLocalization = true;
-        try
-        {
-            RefreshFilteredCategories();
-            SelectedSettingCategory = FilteredSettingCategories.Contains(CurrentCategoryName) ? CurrentCategoryName : null;
-        }
-        finally
-        {
-            isRefreshingLocalization = false;
-        }
+        RefreshCategoriesPreservingSelection();
         NotifySettingsVisibilityChanged();
     }
 
@@ -654,27 +629,23 @@ public partial class OptionsDialogViewModel : ObservableObject
 
     private void RefreshFilteredCategories()
     {
-        FilteredSettingCategories.Clear();
-        foreach (var category in SettingCategories.Where(MatchesCategorySearch))
+        var id = SelectedSettingCategory?.Id ?? CurrentCategory.Id;
+        isRefreshingLocalization = true;
+        try
         {
-            FilteredSettingCategories.Add(category);
+            FilteredSettingCategories.Clear();
+            foreach (var category in SettingCategories.Where(MatchesCategorySearch))
+                FilteredSettingCategories.Add(category);
         }
-
-        if (FilteredSettingCategories.Count == 0)
-        {
-            SelectedSettingCategory = null;
-            return;
-        }
-
-        if (SelectedSettingCategory is null ||
-            !FilteredSettingCategories.Contains(SelectedSettingCategory))
-        {
-            SelectedSettingCategory = FilteredSettingCategories[0];
-        }
+        finally { isRefreshingLocalization = false; }
+        SelectedSettingCategory = FilteredSettingCategories.FirstOrDefault(category => category.Id == id)
+                                  ?? FilteredSettingCategories.FirstOrDefault();
     }
 
     private void NotifySettingsVisibilityChanged()
     {
+        OnPropertyChanged(nameof(SelectedPluginPage));
+        OnPropertyChanged(nameof(ShowPluginSettingsSection));
         OnPropertyChanged(nameof(CurrentCategoryName));
         OnPropertyChanged(nameof(IsCurrentCategoryVisibleInSearch));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
@@ -688,6 +659,8 @@ public partial class OptionsDialogViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
+        OnPropertyChanged(nameof(IsLocationsCategorySelected));
+        OnPropertyChanged(nameof(ShowLocationsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));
         OnPropertyChanged(nameof(ShowToolbarSection));
         OnPropertyChanged(nameof(ShowPluginListSection));

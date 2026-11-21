@@ -1,11 +1,7 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="SkyCD.Plugin.AudioCd.AudioCdConfigurationWindow"
-        Width="520"
-        Height="470"
-        CanResize="False"
-        WindowStartupLocation="CenterOwner">
-    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8">
+        x:Class="SkyCD.Plugin.AudioCd.AudioCdConfigurationPage">
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
         <TextBlock Text="Online sources" FontWeight="SemiBold" />
         <StackPanel Grid.Row="1" Spacing="4">
             <CheckBox x:Name="MusicBrainzCheckBox" Content="MusicBrainz" />
@@ -44,9 +40,5 @@
                    Opacity="0.75"
                    Text="MusicBrainz allows one request per second; GnuDb is a free community database. Missing artwork and unmatched discs are skipped." />
 
-        <StackPanel Grid.Row="9" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
-            <Button Content="_OK" MinWidth="75" IsDefault="True" Click="OnOkClicked" />
-            <Button Content="_Cancel" MinWidth="75" IsCancel="True" Click="OnCancelClicked" />
-        </StackPanel>
     </Grid>
-</Window>
+</UserControl>

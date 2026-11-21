@@ -28,6 +28,9 @@ public sealed class PluginManager(
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => plugins;
 
+    /// <summary>Compatible discovered plugins, including disabled plugins for Options drafts.</summary>
+    public IReadOnlyCollection<DiscoveredPlugin> AvailablePlugins => availablePlugins;
+
     public event EventHandler? PluginsChanged;
 
     /// <summary>Returns compatible discovered plugins, including disabled plugins, with the requested capability.</summary>

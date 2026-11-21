@@ -15,7 +15,7 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private DetailsColumnOptionItemViewModel? selectedDetailsColumn;
 
-    public bool IsDetailsColumnsCategorySelected => SelectedTabIndex == DetailsColumnsCategoryIndex;
+    public bool IsDetailsColumnsCategorySelected => SelectedBuiltInIndex == DetailsColumnsCategoryIndex;
 
     public bool ShowDetailsColumnsSection =>
         IsDetailsColumnsCategorySelected &&
@@ -35,7 +35,7 @@ public partial class OptionsDialogViewModel
             DetailsColumns.Add(new DetailsColumnOptionItemViewModel
             {
                 Id = definition.Id,
-                Header = definition.Header,
+                Header = definition.DisplayHeader,
                 IsVisible = setting.IsVisible,
                 IsRequired = definition.IsRequired,
                 Width = setting.Width
@@ -116,7 +116,7 @@ public partial class OptionsDialogViewModel
     {
         foreach (var item in DetailsColumns)
         {
-            item.RefreshLocalization(DetailsColumnsCatalog.Find(item.Id)?.Header ?? item.Header);
+            item.RefreshLocalization(DetailsColumnsCatalog.Find(item.Id)?.DisplayHeader ?? item.Header);
         }
     }
 }

@@ -5,7 +5,7 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 /// <summary>
 /// Capability that runs from host-persisted settings rather than only when its configuration surface is
 /// opened. The host applies the values saved for the plugin before invoking the capability, so an option
-/// changed in Options → Plugins → Configure affects later extraction without a restart.
+/// changed in an Options plugin page affects later extraction without a restart.
 /// </summary>
 /// <remarks>
 /// The dictionary contains string values keyed exactly as they were persisted by
