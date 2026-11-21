@@ -88,7 +88,7 @@ public class DetailsColumnsTests
         [
             LocalizationService.Current.Get(UiKeys.Location),
             LocalizationService.Current.Get(TextKeys.Name2),
-            LocalizationService.Current.Get(TextKeys.Type2),
+            MnemonicText.Strip(LocalizationService.Current.Get(TextKeys.Type2)),
             LocalizationService.Current.Get(TextKeys.Size),
             LocalizationService.Current.Get(UiKeys.LentTo)
         ], headers);
@@ -183,5 +183,81 @@ public class DetailsColumnsTests
         Assert.Equal(LocalizationService.Current.Get(UiKeys.Locations), dialog.CurrentCategoryName);
         Assert.True(categories.IndexOf(LocalizationService.Current.Get(UiKeys.Locations)) >
                     categories.IndexOf(LocalizationService.Current.Get(UiKeys.DetailsColumns)));
+    }
+
+    [Theory]
+    [InlineData(DetailsColumnsCatalog.TypeId, TextKeys.Type2)]
+    [InlineData(DetailsColumnsCatalog.StatusId, TextKeys.Status)]
+    public void ColumnDefinition_BrowseHeaderDropsMnemonicMarkerButKeepsRawHeader(string id, string headerKey)
+    {
+        var definition = DetailsColumnsCatalog.Find(id);
+        Assert.NotNull(definition);
+
+        var localized = LocalizationService.Current.Get(headerKey);
+
+        Assert.Equal(localized, definition!.Header);
+        Assert.StartsWith("_", definition.Header);
+        Assert.Equal(localized.TrimStart('_'), definition.CreateColumn().Header);
+        Assert.DoesNotContain("_", definition.CreateColumn().Header);
+        Assert.DoesNotContain("&", definition.CreateColumn().Header);
+    }
+
+    [Theory]
+    [InlineData(DetailsColumnsCatalog.TypeId, TextKeys.Type2)]
+    [InlineData(DetailsColumnsCatalog.StatusId, TextKeys.Status)]
+    public void OptionsDialog_DetailsColumnHeadersHaveNoMnemonicMarkers(string id, string headerKey)
+    {
+        var dialog = new OptionsDialogViewModel(["English"]);
+
+        var item = dialog.DetailsColumns.Single(column => column.Id == id);
+
+        Assert.DoesNotContain("_", item.Header);
+        Assert.DoesNotContain("&", item.Header);
+        Assert.Equal(
+            LocalizationService.Current.Get(headerKey).TrimStart('_'),
+            item.Header);
+    }
+
+    [Fact]
+    public void OptionsDialog_DetailsColumnHeadersHaveNoMnemonicMarkersForEveryColumn()
+    {
+        var dialog = new OptionsDialogViewModel(["English"]);
+
+        Assert.All(dialog.DetailsColumns, item =>
+        {
+            Assert.DoesNotContain("_", item.Header);
+            Assert.DoesNotContain("&", item.Header);
+        });
+    }
+
+    [Fact]
+    public void SetDetailsColumns_StripsMnemonicMarkers()
+    {
+        var dialog = new OptionsDialogViewModel(["English"]);
+
+        dialog.SetDetailsColumns(
+        [
+            new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.StatusId, IsVisible = true },
+            new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.TypeId, IsVisible = true }
+        ]);
+
+        Assert.All(dialog.DetailsColumns, item => Assert.DoesNotContain("_", item.Header));
+        Assert.Equal(
+            LocalizationService.Current.Get(TextKeys.Status).TrimStart('_'),
+            dialog.DetailsColumns.Single(item => item.Id == DetailsColumnsCatalog.StatusId).Header);
+        Assert.Equal(
+            LocalizationService.Current.Get(TextKeys.Type2).TrimStart('_'),
+            dialog.DetailsColumns.Single(item => item.Id == DetailsColumnsCatalog.TypeId).Header);
+    }
+
+    [Fact]
+    public void DetailsHeaderMenu_KeepsRawHeaderWithMnemonicMarker()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+
+        var typeItem = vm.DetailsHeaderMenuItems.Single(item => item.Key == "details_column_" + DetailsColumnsCatalog.TypeId);
+
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.Type2), typeItem.Header);
+        Assert.StartsWith("_", typeItem.Header);
     }
 }
