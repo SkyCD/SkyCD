@@ -23,11 +23,19 @@ public sealed class DetailsColumnDefinition
 
     public bool IsVisibleByDefault { get; init; } = true;
 
+    /// <summary>
+    /// Raw localized header including access-key markers; keep it for menu surfaces only.
+    /// </summary>
     public string Header => LocalizationService.Current.Get(HeaderKey);
+
+    /// <summary>
+    /// Header without access-key markers for plain-text surfaces such as column headers.
+    /// </summary>
+    public string DisplayHeader => MnemonicText.Strip(Header);
 
     public BrowserDetailsColumn CreateColumn() => new()
     {
-        Header = Header,
+        Header = DisplayHeader,
         ValuePath = ValuePath,
         Width = Width,
         HeaderAlignment = HeaderAlignment,

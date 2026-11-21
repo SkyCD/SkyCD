@@ -35,7 +35,7 @@ public partial class OptionsDialogViewModel
             DetailsColumns.Add(new DetailsColumnOptionItemViewModel
             {
                 Id = definition.Id,
-                Header = definition.Header,
+                Header = definition.DisplayHeader,
                 IsVisible = setting.IsVisible,
                 IsRequired = definition.IsRequired
             });
@@ -114,7 +114,7 @@ public partial class OptionsDialogViewModel
     {
         foreach (var item in DetailsColumns)
         {
-            item.RefreshLocalization(DetailsColumnsCatalog.Find(item.Id)?.Header ?? item.Header);
+            item.RefreshLocalization(DetailsColumnsCatalog.Find(item.Id)?.DisplayHeader ?? item.Header);
         }
     }
 }
