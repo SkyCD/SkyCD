@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SkyCD.Documents;
 
-namespace SkyCD.Presentation.Lending;
+namespace SkyCD.Plugin.Feature.Loans;
 
 public sealed class ImportedLoanMapper(CatalogLoanService service)
 {

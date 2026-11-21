@@ -4,10 +4,9 @@ using System.Linq;
 using Couchbase.Lite;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
-using SkyCD.Presentation.Lending;
+using SkyCD.Plugin.Feature.Loans;
 using SkyCD.Presentation.Search;
 using SkyCD.Presentation.Staging;
-using SkyCD.Presentation.ViewModels;
 using Xunit;
 
 namespace SkyCD.App.Tests;

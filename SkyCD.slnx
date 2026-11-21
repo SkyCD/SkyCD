@@ -34,6 +34,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Hash/SkyCD.Plugin.Hash.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.VolumeSerial/SkyCD.Plugin.VolumeSerial.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vmdk/SkyCD.Plugin.Vmdk.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Feature.Loans/SkyCD.Plugin.Feature.Loans.csproj"/>
     </Folder>
     <Folder Name="/Plugins/samples/">
         <Project Path="Plugins/SkyCD.Plugin.Csv/SkyCD.Plugin.Csv.csproj"/>

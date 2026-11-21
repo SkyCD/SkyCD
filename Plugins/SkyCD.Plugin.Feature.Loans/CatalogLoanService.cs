@@ -6,7 +6,7 @@ using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 
-namespace SkyCD.Presentation.Lending;
+namespace SkyCD.Plugin.Feature.Loans;
 
 public sealed class CatalogLoanService(
     CatalogDocumentRepository catalog,

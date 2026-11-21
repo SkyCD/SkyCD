@@ -1,6 +1,5 @@
 using System.Linq;
-using SkyCD.Documents;
-using SkyCD.Presentation.Lending;
+using SkyCD.Plugin.Feature.Loans;
 using Xunit;
 
 namespace SkyCD.App.Tests;

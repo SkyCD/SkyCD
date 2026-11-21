@@ -4,11 +4,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using SkyCD.Documents;
-using SkyCD.Presentation.Lending;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.Presentation.ViewModels;
+namespace SkyCD.Plugin.Feature.Loans;
 
 /// <summary>
 /// Contact manager dialog: keeps the contact list, the editable contact

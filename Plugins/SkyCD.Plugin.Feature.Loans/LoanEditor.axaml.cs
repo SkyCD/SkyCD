@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace SkyCD.App.Views;
+namespace SkyCD.Plugin.Feature.Loans;
 
 public partial class LoanEditor : UserControl
 {

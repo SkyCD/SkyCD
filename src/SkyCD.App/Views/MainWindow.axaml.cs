@@ -43,7 +43,7 @@ using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Operations;
-using SkyCD.Presentation.Lending;
+using SkyCD.Plugin.Feature.Loans;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;

@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace SkyCD.App.Views;
+namespace SkyCD.Plugin.Feature.Loans;
 
 public partial class LoansWindow : Window
 {

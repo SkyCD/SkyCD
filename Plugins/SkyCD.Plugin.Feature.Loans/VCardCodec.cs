@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using SkyCD.Documents;
 
-namespace SkyCD.Presentation.Lending;
+namespace SkyCD.Plugin.Feature.Loans;
 
 /// <summary>
 /// Reads and writes the subset of vCard 2.1/3.0 used by contact exchange.

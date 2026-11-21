@@ -4,10 +4,9 @@ using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.App.Views;
+namespace SkyCD.Plugin.Feature.Loans;
 
 public partial class ContactsWindow : Window
 {

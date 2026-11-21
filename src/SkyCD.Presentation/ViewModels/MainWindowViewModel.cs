@@ -36,7 +36,7 @@ using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
-using SkyCD.Presentation.Lending;
+using SkyCD.Plugin.Feature.Loans;
 using SkyCD.Presentation.Locations;
 using SkyCD.Presentation.Collections;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;

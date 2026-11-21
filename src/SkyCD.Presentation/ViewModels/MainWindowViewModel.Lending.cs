@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
-using SkyCD.Presentation.Lending;
+using SkyCD.Plugin.Feature.Loans;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;

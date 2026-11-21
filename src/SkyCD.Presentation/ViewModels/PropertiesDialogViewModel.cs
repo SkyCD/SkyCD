@@ -10,6 +10,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Formatting;
+using SkyCD.Plugin.Feature.Loans;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Localization;
 

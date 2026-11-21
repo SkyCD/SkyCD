@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Presentation.ViewModels;
+namespace SkyCD.Plugin.Feature.Loans;
 
 public sealed class LoanDialogRequestedEventArgs(LoanDialogViewModel dialog) : EventArgs
 {

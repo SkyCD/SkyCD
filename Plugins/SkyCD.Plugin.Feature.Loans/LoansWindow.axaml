@@ -1,8 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
-        xmlns:views="clr-namespace:SkyCD.App.Views"
-        x:Class="SkyCD.App.Views.LoansWindow"
+        xmlns:local="clr-namespace:SkyCD.Plugin.Feature.Loans"
+        x:Class="SkyCD.Plugin.Feature.Loans.LoansWindow"
         Width="411" Height="460"
         CanResize="False" CanMinimize="False" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
@@ -11,6 +11,6 @@
     <DockPanel>
         <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="8"
                 Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" IsCancel="True" Click="CloseClicked" />
-        <views:LoanEditor />
+        <local:LoanEditor />
     </DockPanel>
 </Window>

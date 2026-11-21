@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
-             xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
-             x:Class="SkyCD.App.Views.LoanEditor"
+             xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Loans"
+             x:Class="SkyCD.Plugin.Feature.Loans.LoanEditor"
              x:DataType="vm:LoanDialogViewModel">
     <ScrollViewer>
         <StackPanel Margin="8" Spacing="5">
