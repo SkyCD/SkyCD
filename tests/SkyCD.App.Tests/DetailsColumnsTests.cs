@@ -161,11 +161,30 @@ public class DetailsColumnsTests
     public void OptionsDialog_DetailsColumnsCategoryShowsSection()
     {
         var dialog = new OptionsDialogViewModel(["English"]);
+        var categories = dialog.SettingCategories.ToList();
 
-        dialog.SelectedTabIndex = 7;
+        dialog.SelectedTabIndex = categories.FindIndex(
+            category => category.Title == LocalizationService.Current.Get(UiKeys.DetailsColumns));
 
         Assert.True(dialog.IsDetailsColumnsCategorySelected);
         Assert.True(dialog.ShowDetailsColumnsSection);
         Assert.Equal(LocalizationService.Current.Get(UiKeys.DetailsColumns), dialog.CurrentCategoryName);
+    }
+
+    [Fact]
+    public void OptionsDialog_LocationsCategoryShowsSection()
+    {
+        var dialog = new OptionsDialogViewModel(["English"]);
+        var categories = dialog.SettingCategories.ToList();
+
+        var locationsIndex = categories.FindIndex(
+            category => category.Title == LocalizationService.Current.Get(UiKeys.Locations));
+        dialog.SelectedTabIndex = locationsIndex;
+
+        Assert.True(dialog.IsLocationsCategorySelected);
+        Assert.True(dialog.ShowLocationsSection);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.Locations), dialog.CurrentCategoryName);
+        Assert.True(locationsIndex > categories.FindIndex(
+            category => category.Title == LocalizationService.Current.Get(UiKeys.DetailsColumns)));
     }
 }

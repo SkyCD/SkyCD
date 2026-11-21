@@ -72,7 +72,7 @@ public partial class MainWindowViewModel
     }
 
     /// <summary>
-    /// Builds the Locations context submenu: the manager dialog entry, an all-locations filter reset,
+    /// Builds the Locations context submenu: the manager entry, an all-locations filter reset,
     /// and one filter entry per location with its effective usage count.
     /// </summary>
     private MainMenuItemViewModel BuildLocationsMenu()
@@ -110,6 +110,125 @@ public partial class MainWindowViewModel
         RefreshTreeNodes(SelectedTreeNode?.Key);
         RefreshBrowserItemsForSelection();
         RefreshLocationMenuItems();
+    }
+
+    /// <summary>
+    /// Returns the stored locations with their effective usage counts, as the Options dialog needs them
+    /// when it opens its Locations category.
+    /// </summary>
+    public IReadOnlyList<LocationSnapshot> GetLocationSnapshots()
+    {
+        if (locationService is null)
+        {
+            return [];
+        }
+
+        return locationService.GetLocations()
+            .Select(location => new LocationSnapshot(location.Id, location.Name, locationService.CountUsages(location.Id)))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Applies the location edits staged in the Options dialog, in the order the user made them. Each
+    /// definition change joins the undo history exactly as a direct edit would, and the visible location
+    /// names, tree, browser and location menus are refreshed once at the end. An empty change set changes
+    /// nothing, so cancelling the dialog can never touch stored locations or catalog assignments.
+    /// </summary>
+    public void ApplyLocationChanges(LocationChangeSet? changes)
+    {
+        if (changes is null || changes.IsEmpty ||
+            locationService is null || locationRepository is null || catalogRepository is null)
+        {
+            return;
+        }
+
+        foreach (var change in changes.Changes)
+        {
+            ApplyLocationChange(change);
+        }
+
+        IsDirtyDocument = true;
+        UpdateUndoRedoState();
+        RefreshLocations();
+    }
+
+    private void ApplyLocationChange(LocationChange change)
+    {
+        var service = locationService!;
+        try
+        {
+            switch (change)
+            {
+                case LocationChange.Create create:
+                    var created = service.CreateLocation(create.Name);
+                    undoManager?.RecordLocationCreated(locationRepository!, catalogRepository!, created.Id, created.Name);
+                    break;
+
+                case LocationChange.Rename rename:
+                    service.RenameLocation(rename.LocationId, rename.NewName);
+                    undoManager?.RecordLocationRenamed(locationRepository!, rename.LocationId, rename.OldName, rename.NewName);
+                    break;
+
+                case LocationChange.Merge merge:
+                    ApplyLocationMerge(service, merge);
+                    break;
+
+                case LocationChange.Delete delete:
+                    var affected = CollectLocationAffected(service, delete.LocationId);
+                    service.DeleteLocation(delete.LocationId);
+                    undoManager?.RecordLocationDeleted(
+                        catalogRepository!, locationRepository!, delete.LocationId, delete.Name, affected);
+                    break;
+            }
+        }
+        catch (LocationNotFoundException exception)
+        {
+            // A staged edit whose location disappeared meanwhile; the stored state already matches the intent.
+            StatusText = exception.Message;
+        }
+        catch (LocationDuplicateNameException exception)
+        {
+            StatusText = exception.Message;
+        }
+    }
+
+    private void ApplyLocationMerge(CatalogLocationService service, LocationChange.Merge merge)
+    {
+        var source = service.GetLocations()
+            .FirstOrDefault(location => string.Equals(location.Id, merge.SourceId, StringComparison.Ordinal));
+        var targetId = merge.TargetId;
+        var targetExists = service.GetLocations()
+            .Any(location => string.Equals(location.Id, targetId, StringComparison.Ordinal));
+        if (source is null || !targetExists)
+        {
+            return;
+        }
+
+        var affected = CollectLocationAffected(service, merge.SourceId);
+        service.MergeLocations(merge.SourceId, targetId);
+        undoManager?.RecordLocationsMerged(
+            catalogRepository!, locationRepository!, merge.SourceId, merge.SourceName, targetId, affected);
+    }
+
+    /// <summary>
+    /// Snapshots the own assignment of every entry directly carrying the location, so undo can restore
+    /// exactly the stored state the operation rewrote. Inheriting descendants need no snapshot: they
+    /// follow their ancestors again once the assignment is restored.
+    /// </summary>
+    private static Dictionary<string, string?> CollectLocationAffected(
+        CatalogLocationService service, string locationId)
+    {
+        var affected = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var entry in service.GetEntriesWithLocation(locationId))
+        {
+            var own = service.GetEntryOwnLocationId(entry.Id);
+            if (string.Equals(own, locationId, StringComparison.Ordinal))
+            {
+                affected[entry.Id] = own;
+            }
+        }
+
+        return affected;
     }
 
     private void RefreshLocationMenuItems()

@@ -173,6 +173,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 new("acp", LocalizationService.Current.Get(UiKeys.AcpAgents), 5),
                 new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7),
+                new("locations", LocalizationService.Current.Get(UiKeys.Locations), 8),
                 new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex)
             ];
             if (IsAiDescriptionAvailable)
@@ -247,7 +248,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowDetailsColumnsSection || ShowToolbarSection || ShowAiDescriptionSection || ShowAiProviderSection ||
+        ShowDetailsColumnsSection || ShowLocationsSection || ShowToolbarSection ||
+        ShowAiDescriptionSection || ShowAiProviderSection ||
         ShowPluginSettingsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
@@ -657,6 +659,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
+        OnPropertyChanged(nameof(IsLocationsCategorySelected));
+        OnPropertyChanged(nameof(ShowLocationsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));
         OnPropertyChanged(nameof(ShowToolbarSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
