@@ -150,6 +150,7 @@
         <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj"/>
         <Project Path="tests/SkyCD.Logging.Tests/SkyCD.Logging.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Csv.Tests/SkyCD.Plugin.Csv.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.PlainText.Tests/SkyCD.Plugin.PlainText.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Html.Tests/SkyCD.Plugin.Html.Tests.csproj"/>
