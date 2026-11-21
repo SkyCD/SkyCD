@@ -978,47 +978,54 @@
                             </DockPanel>
                         </Grid>
                     </Grid>
-                    <ScrollViewer Grid.Row="2"
-                                  IsVisible="{Binding ShowAiDescriptionSection}"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="10">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" FontSize="15" />
-                                <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
-                            </Grid>
-
-                            <Grid ColumnDefinitions="180,*"
-                                  ColumnSpacing="10"
-                                  IsVisible="{Binding ShowAiDescriptionImplementationSection}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiImplementation}}"
-                                           VerticalAlignment="Center" />
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding AiDescriptionImplementations}"
-                                          SelectedItem="{Binding SelectedAiDescriptionImplementation}">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate x:DataType="hostmedia:AiDescriptionImplementationChoice">
-                                            <TextBlock Text="{Binding Name}" />
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </Grid>
-
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiScanSettings}}" FontWeight="SemiBold" />
-                                <Grid ColumnDefinitions="180,120,*" ColumnSpacing="10">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MaxAiScanFileSize}}"
-                                               VerticalAlignment="Center" />
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding AiScanMaxFileSizeMegabytes, UpdateSourceTrigger=PropertyChanged}" />
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowAiDescriptionSection}"
+                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowSpacing="8">
+                        <ScrollViewer x:Name="AiDescriptionSettingsScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" FontSize="15" />
+                                    <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                                 </Grid>
+
+                                <Grid ColumnDefinitions="180,*"
+                                      ColumnSpacing="10"
+                                      IsVisible="{Binding ShowAiDescriptionImplementationSection}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiImplementation}}"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding AiDescriptionImplementations}"
+                                              SelectedItem="{Binding SelectedAiDescriptionImplementation}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="hostmedia:AiDescriptionImplementationChoice">
+                                                <TextBlock Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiScanSettings}}" FontWeight="SemiBold" />
+                                    <Grid ColumnDefinitions="180,120,*" ColumnSpacing="10">
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MaxAiScanFileSize}}"
+                                                   VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding AiScanMaxFileSizeMegabytes, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                </StackPanel>
                             </StackPanel>
+                        </ScrollViewer>
 
-                            <Border Height="1"
-                                    HorizontalAlignment="Stretch"
-                                    Margin="0,2"
-                                    Background="#2E2E2E" />
+                        <Border Grid.Row="1"
+                                Height="1"
+                                HorizontalAlignment="Stretch"
+                                Margin="0,2"
+                                Background="#2E2E2E" />
 
+                        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiMimeExclusions}}" FontWeight="SemiBold" />
                                 <StackPanel Grid.Column="1"
@@ -1046,14 +1053,16 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Border BorderBrush="#2E2E2E"
-                                    BorderThickness="1"
-                                    Height="150">
+                            <Border x:Name="AiScanExclusionsListBorder"
+                                    Grid.Row="1"
+                                    BorderBrush="#2E2E2E"
+                                    BorderThickness="1">
                                 <Grid RowDefinitions="Auto,*">
                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MimeType}}" FontWeight="SemiBold" />
                                     </Border>
-                                    <ListBox Grid.Row="1"
+                                    <ListBox x:Name="AiScanExclusionsList"
+                                             Grid.Row="1"
                                              ItemsSource="{Binding AiScanExclusions}"
                                              SelectedItem="{Binding SelectedAiScanExclusion}"
                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -1068,19 +1077,20 @@
                                     </ListBox>
                                 </Grid>
                             </Border>
+                        </Grid>
 
-                            <Border IsVisible="{Binding ShowAiDescriptionAlert}"
-                                    Background="#7F1D1D"
-                                    BorderBrush="#DC2626"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    Padding="8,4">
-                                <TextBlock Text="{Binding AiDescriptionAlertMessage}"
-                                           Foreground="#FEE2E2"
-                                           TextWrapping="Wrap" />
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
+                        <Border Grid.Row="3"
+                                IsVisible="{Binding ShowAiDescriptionAlert}"
+                                Background="#7F1D1D"
+                                BorderBrush="#DC2626"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4">
+                            <TextBlock Text="{Binding AiDescriptionAlertMessage}"
+                                       Foreground="#FEE2E2"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </Grid>
                     <ScrollViewer Grid.Row="2"
                                   IsVisible="{Binding ShowAiProviderSection}"
                                   VerticalScrollBarVisibility="Auto"
