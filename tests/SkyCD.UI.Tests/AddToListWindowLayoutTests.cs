@@ -19,8 +19,9 @@ using Xunit;
 namespace SkyCD.UI.Tests;
 
 /// <summary>
-/// Issue #823: the Add To List dialog keeps one fixed size while the source type is switched.
-/// The source content flexes; the tab strip, OK/Cancel row, and validation row stay anchored.
+/// Issues #823 and #826: the Add To List dialog keeps one fixed size while the source type is
+/// switched. The source content flexes; the tab strip, OK/Cancel row, and validation row stay
+/// anchored, and the bordered source column stretches to the bottom of the content area.
 /// </summary>
 public sealed class AddToListWindowLayoutTests
 {
@@ -150,6 +151,120 @@ public sealed class AddToListWindowLayoutTests
             Assert.Equal(tabBounds.Bottom - 2, cancelBounds.Bottom, 1);
             Assert.Equal(tabBounds.Bottom, messageBounds.Top, 1);
         }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("en")]
+    [InlineData("lt")]
+    public void SourcePanel_StretchesFromContentTopToContentBottom(string cultureName)
+    {
+        var previousCulture = LocalizationService.Current.CurrentCulture;
+        try
+        {
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo(cultureName));
+            using var fixture = ShowWindow(AddToListSourceMode.Media);
+            var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
+            var tabStrip = fixture.Root.GetVisualDescendants().OfType<TabControl>().Single();
+
+            var panelBounds = BoundsRelativeTo(panel, fixture.Root);
+            var tabBounds = BoundsRelativeTo(tabStrip, fixture.Root);
+
+            Assert.Equal(0, panelBounds.Top, 1);
+            Assert.Equal(tabBounds.Bottom, panelBounds.Bottom, 1);
+            Assert.True(panelBounds.Height > 4 * 68,
+                $"{cultureName}: source panel height {panelBounds.Height} does not extend past its buttons.");
+        }
+        finally
+        {
+            LocalizationService.Current.SetCulture(previousCulture);
+        }
+    }
+
+    [AvaloniaFact]
+    public void SourceButtons_KeepNaturalSizeAtTopOfStretchedPanel()
+    {
+        using var fixture = ShowWindow(AddToListSourceMode.Media);
+        var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
+        var panelBounds = BoundsRelativeTo(panel, fixture.Root);
+        var buttons = fixture.Root.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Classes.Contains("source"))
+            .ToList();
+
+        Assert.Equal(4, buttons.Count);
+        var previousBottom = panelBounds.Top;
+        foreach (var button in buttons)
+        {
+            var buttonBounds = BoundsRelativeTo(button, fixture.Root);
+            Assert.Equal(68, buttonBounds.Height, 1);
+            Assert.Equal(panelBounds.Left + 3, buttonBounds.Left, 1);
+            Assert.Equal(panelBounds.Right - 3, buttonBounds.Right, 1);
+            Assert.True(buttonBounds.Top >= previousBottom - 0.5,
+                "source buttons must stay stacked top to bottom.");
+            previousBottom = buttonBounds.Bottom;
+        }
+
+        // The extra height is absorbed by the panel background below the buttons.
+        Assert.True(panelBounds.Bottom - previousBottom >= 50,
+            $"only {panelBounds.Bottom - previousBottom} px of background left below the source buttons.");
+    }
+
+    [AvaloniaFact]
+    public void SwitchingSources_KeepsSourcePanelStretchedToTheBottom()
+    {
+        using var fixture = ShowWindow(AddToListSourceMode.Media);
+        var viewModel = fixture.ViewModel;
+        // Keep every source valid so the validation row cannot change the content height.
+        viewModel.MediaName = "Music";
+        viewModel.SourceValue = @"C:\Music";
+        viewModel.InternetHost = "example.com";
+        viewModel.InternetPath = "/";
+        viewModel.InternetCredentials.UseAnonymous = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Null(viewModel.ValidationMessage);
+
+        var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
+        var tabStrip = fixture.Root.GetVisualDescendants().OfType<TabControl>().Single();
+        var initialBounds = BoundsRelativeTo(panel, fixture.Root);
+
+        foreach (var mode in SourceModes)
+        {
+            viewModel.SelectSourceCommand.Execute(mode.ToString());
+            Dispatcher.UIThread.RunJobs();
+
+            var panelBounds = BoundsRelativeTo(panel, fixture.Root);
+            var tabBounds = BoundsRelativeTo(tabStrip, fixture.Root);
+
+            Assert.True(Math.Abs(initialBounds.Top - panelBounds.Top) <= 1,
+                $"{mode}: panel top moved from {initialBounds.Top} to {panelBounds.Top}.");
+            Assert.True(Math.Abs(initialBounds.Height - panelBounds.Height) <= 1,
+                $"{mode}: panel height changed from {initialBounds.Height} to {panelBounds.Height}.");
+            Assert.True(Math.Abs(tabBounds.Bottom - panelBounds.Bottom) <= 1,
+                $"{mode}: panel bottom {panelBounds.Bottom} does not match the tab strip bottom {tabBounds.Bottom}.");
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(AddToListSourceMode.Media)]
+    [InlineData(AddToListSourceMode.Folder)]
+    [InlineData(AddToListSourceMode.Internet)]
+    [InlineData(AddToListSourceMode.TitleOnly)]
+    public void ValidationRow_SpansBothColumnsBelowTheStretchedPanel(AddToListSourceMode mode)
+    {
+        using var fixture = ShowWindow(mode);
+        var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
+        var sourceHost = fixture.Root.GetVisualDescendants().OfType<Grid>().Single(grid => grid.MinHeight == 84);
+        var message = fixture.Root.GetVisualDescendants().OfType<TextBlock>().Single(text => text.MinHeight == 14);
+
+        var panelBounds = BoundsRelativeTo(panel, fixture.Root);
+        var sourceBounds = BoundsRelativeTo(sourceHost, fixture.Root);
+        var messageBounds = BoundsRelativeTo(message, fixture.Root);
+
+        Assert.Equal(0, messageBounds.Left, 1);
+        Assert.Equal(fixture.Root.Bounds.Width, messageBounds.Right, 1);
+        Assert.Equal(panelBounds.Bottom, messageBounds.Top, 1);
+        Assert.True(messageBounds.Top >= sourceBounds.Bottom,
+            "the validation row must stay below the right-hand source content.");
+        Assert.Equal(fixture.Root.Bounds.Height, messageBounds.Bottom, 1);
     }
 
     [AvaloniaTheory]

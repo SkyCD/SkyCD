@@ -96,13 +96,16 @@
     </Window.Styles>
 
     <Grid Margin="8"
+          RowDefinitions="*,Auto"
           ColumnDefinitions="89,*"
           ColumnSpacing="8">
-        <Border BorderBrush="#B0B0B0"
+        <Border x:Name="SourcePanel"
+                Grid.Row="0"
+                Grid.Column="0"
+                BorderBrush="#B0B0B0"
                 BorderThickness="1"
-                Padding="2"
-                VerticalAlignment="Top">
-            <StackPanel>
+                Padding="2">
+            <StackPanel VerticalAlignment="Top">
                 <Button Classes="source"
                         Classes.selected="{Binding IsSourceMedia}"
                         IsEnabled="{Binding CanUseMedia}"
@@ -155,7 +158,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto">
+        <Grid Grid.Row="0" Grid.Column="1" RowDefinitions="Auto,*,Auto">
             <Grid RowDefinitions="Auto,6,Auto">
                 <StackPanel Spacing="3">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
@@ -321,12 +324,13 @@
                             Click="OnCancelClicked" />
                 </StackPanel>
             </Grid>
-
-            <TextBlock Grid.Row="3"
-                       MinHeight="14"
-                       Foreground="#B00000"
-                       Text="{Binding ValidationMessage}"
-                       TextWrapping="Wrap" />
         </Grid>
+
+        <TextBlock Grid.Row="1"
+                   Grid.ColumnSpan="2"
+                   MinHeight="14"
+                   Foreground="#B00000"
+                   Text="{Binding ValidationMessage}"
+                   TextWrapping="Wrap" />
     </Grid>
 </Window>
