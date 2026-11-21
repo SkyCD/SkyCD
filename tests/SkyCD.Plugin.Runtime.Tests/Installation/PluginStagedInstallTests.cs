@@ -162,10 +162,8 @@ public sealed class PluginStagedInstallTests : IDisposable
         feed.AddPackage(PackageId, "2.0.0", Package(PluginId, "2.0.0"));
         Assert.True((await installer.StageInstallAsync(Request("2.0.0"))).IsSuccess);
 
-        // Lock the active entry assembly: replacement must not proceed and the old version must stay active.
-        var activeAssembly = Path.Combine(installedFolder(installer), ContentFolder, "Slice.dll");
-        Assert.True(File.Exists(activeAssembly));
-        using (new FileStream(activeAssembly, FileMode.Open, FileAccess.Read, FileShare.None))
+        // Make the active folder unmovable: replacement must not proceed and the old version must stay active.
+        using (BlockActiveFolderMove(installer))
         {
             var applied = Assert.Single(await CreateInstaller(feed).ApplyPendingAsync());
 
@@ -190,12 +188,8 @@ public sealed class PluginStagedInstallTests : IDisposable
         feed.AddPackage(PackageId, "2.0.0", Package(PluginId, "2.0.0"));
         Assert.True((await installer.StageInstallAsync(Request("2.0.0"))).IsSuccess);
 
-        // Lock a file in the staged content: the backup move succeeds but the replacement cannot be placed.
-        var pending = ReadPending(installer);
-        var stagedDependency = Path.Combine(pending.StagedPath!, "prepared", ContentFolder,
-            "SkyCD.Plugin.SlipSlice.Private.dll");
-        Assert.True(File.Exists(stagedDependency));
-        using (new FileStream(stagedDependency, FileMode.Open, FileAccess.Read, FileShare.None))
+        // Make the staged content unmovable: the backup move succeeds but the replacement cannot be placed.
+        using (BlockStagedContentMove(installer))
         {
             var applied = Assert.Single(await CreateInstaller(feed).ApplyPendingAsync());
 
@@ -209,7 +203,7 @@ public sealed class PluginStagedInstallTests : IDisposable
         Assert.Equal(PluginInstallOperationStatus.RolledBack, installer.GetInstallState(PluginId).Status);
         Assert.Empty(BackupDirectories(installer));
 
-        // The locked staging copy could not be removed during the failed activation; the next startup cleans it.
+        // The staging copy could not be removed during the failed activation; the next startup cleans it.
         Assert.True(await installer.ApplyPendingAsync() is not null);
         Assert.Empty(OperationStagingDirectories(installer));
     }
@@ -686,6 +680,58 @@ public sealed class PluginStagedInstallTests : IDisposable
         JsonSerializer.Deserialize<PluginInstallOperation>(
             File.ReadAllText(installer.Layout.ResolvePendingPath(PluginId)),
             new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+    // Windows refuses to rename a folder holding an open FileShare.None handle; Unix ignores share modes,
+    // so the containing directory is denied writes instead. Both failures surface as an I/O error.
+    private static IDisposable BlockActiveFolderMove(PluginInstallService installer)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return DenyDirectoryWrites(installer.Layout.PluginRoot);
+        }
+
+        var activeAssembly = Path.Combine(installedFolder(installer), ContentFolder, "Slice.dll");
+        Assert.True(File.Exists(activeAssembly));
+        return new FileStream(activeAssembly, FileMode.Open, FileAccess.Read, FileShare.None);
+    }
+
+    private static IDisposable BlockStagedContentMove(PluginInstallService installer)
+    {
+        var pending = ReadPending(installer);
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.True(Directory.Exists(Path.Combine(pending.StagedPath!, "prepared")));
+            return DenyDirectoryWrites(pending.StagedPath!);
+        }
+
+        var stagedDependency = Path.Combine(pending.StagedPath!, "prepared", ContentFolder,
+            "SkyCD.Plugin.SlipSlice.Private.dll");
+        Assert.True(File.Exists(stagedDependency));
+        return new FileStream(stagedDependency, FileMode.Open, FileAccess.Read, FileShare.None);
+    }
+
+    private static IDisposable DenyDirectoryWrites(string directory)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException("Unix permissions are the non-Windows failure injection.");
+        }
+
+        var original = File.GetUnixFileMode(directory);
+        File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        return new RestoreDirectoryMode(directory, original);
+    }
+
+    private sealed class RestoreDirectoryMode(string directory, UnixFileMode mode) : IDisposable
+    {
+        public void Dispose()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(directory, mode);
+            }
+        }
+    }
 
     private static string InstalledMarker(PluginInstallService installer) =>
         File.ReadAllText(Path.Combine(installedFolder(installer), ContentFolder, "package-version.txt"));
