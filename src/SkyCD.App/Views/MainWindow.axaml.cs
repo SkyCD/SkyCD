@@ -24,6 +24,7 @@ using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
+using SkyCD.App.Marketplace;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
@@ -1388,6 +1389,7 @@ public partial class MainWindow : Window
         {
             e.Dialog.SetLocations(locationsViewModel.GetLocationSnapshots());
         }
+        e.Dialog.SetPluginMarketplace(ServiceProvider.Resolve<PluginMarketplaceService>());
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;

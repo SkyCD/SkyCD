@@ -7,12 +7,15 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using DryIoc;
 using SkyCD.App.Views;
+using SkyCD.App.Marketplace;
 using SkyCD.App.Mcp;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Core.DependencyInjection;
+using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
@@ -96,6 +99,12 @@ public partial class App : Avalonia.Application
         pluginManager.PluginsChanged += (_, _) => translations.Refresh(pluginManager.Plugins);
         var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
 
+        // Staged catalog installs and updates become visible to assembly discovery only here, before the scan.
+        PluginServiceRegistrator.ApplyPendingOperationsBeforeDiscoveryAsync(
+                ServiceProvider.Resolve<IPluginPackageInstaller>())
+            .GetAwaiter()
+            .GetResult();
+
         if (!string.IsNullOrWhiteSpace(pluginPath) && Directory.Exists(pluginPath))
         {
             pluginManager.Discover(pluginPath, hostVersionProvider.Current);
@@ -132,6 +141,7 @@ public partial class App : Avalonia.Application
             registrator.Register<IMediaDriveProvider, SystemMediaDriveProvider>(Reuse.Singleton);
             registrator.Register<McpServerHost>(Reuse.Singleton);
             registrator.Register<PluginTranslationRegistry>(Reuse.Singleton);
+            registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });

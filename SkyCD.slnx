@@ -226,6 +226,10 @@
         <Project Path="tests/SkyCD.Plugin.MyCatalogue.Tests/SkyCD.Plugin.MyCatalogue.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskBase.Tests/SkyCD.Plugin.DiskBase.Tests.csproj"/>
     </Folder>
+    <Folder Name="/tests/slices/">
+        <Project Path="tests/SkyCD.Plugin.Runtime.Tests/Slice/SkyCD.Plugin.SlipSlice.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Runtime.Tests/Slice/Foreign/SkyCD.Plugin.ForeignSlice.csproj"/>
+    </Folder>
     <Folder Name="/tools/">
         <Project Path="tools/SkyCD.TestLogger/SkyCD.TestLogger.csproj"/>
     </Folder>

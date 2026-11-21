@@ -1,7 +1,16 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using DryIoc;
+using Microsoft.Extensions.Logging;
+using SkyCD.Core.Plugins.Installation;
+using SkyCD.Core.Versioning;
+using SkyCD.Plugin.Runtime.Installation;
+using SkyCD.Plugin.Runtime.Marketplace.Models;
+using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
@@ -27,6 +36,20 @@ namespace SkyCD.Core.DependencyInjection.Registrators;
 
 public sealed class PluginServiceRegistrator
 {
+    /// <summary>Overrides local application data for the catalog plugin root, staging area and receipts.</summary>
+    public const string PluginStateDirectoryEnvironmentVariable = "SKYCD_PLUGIN_STATE_DIRECTORY";
+
+    /// <summary>
+    /// Applies every pending catalog plugin operation. Hosts call it once per process, before the first
+    /// <c>PluginManager.Discover</c>, so a staged install or update becomes visible to assembly discovery.
+    /// </summary>
+    public static async Task<IReadOnlyList<PluginInstallResult>> ApplyPendingOperationsBeforeDiscoveryAsync(
+        IPluginPackageInstaller installer, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(installer);
+        return await installer.ApplyPendingAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public void RegisterServices(IRegistrator registrator)
     {
         registrator.Register<AssembliesListFactory>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
@@ -44,7 +67,45 @@ public sealed class PluginServiceRegistrator
         }, Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<PluginConfigurationStore>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
         registrator.Register<PluginConfigurationManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        // Catalog plugin installs stage outside the discovery root and activate on the next startup, before
+        // PluginManager.Discover enumerates the plugin root.
+        registrator.RegisterDelegate<IPluginPackageInstaller>(static resolver =>
+            new PluginInstallService(
+                CreatePluginInstallLayout(resolver.Resolve<HostVersionProvider>()),
+                resolver.Resolve<HostVersionProvider>().Current,
+                resolver.Resolve<ILogger<PluginInstallService>>()),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterDelegate<IPluginInstallStateSource>(
+            resolver => (IPluginInstallStateSource)resolver.Resolve<IPluginPackageInstaller>(),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
+        registrator.RegisterDelegate<PluginCatalog>(static resolver => new PluginCatalog(
+                new PluginCatalogOptions { HostVersion = resolver.Resolve<HostVersionProvider>().Current }),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    }
+
+    /// <summary>
+    /// Catalog plugin root and hidden staging root defaults. Staging lives in the local application data state
+    /// folder and never below the plugin root, so assembly discovery cannot see downloaded packages.
+    /// </summary>
+    public static PluginInstallLayout CreatePluginInstallLayout(HostVersionProvider? hostVersionProvider = null)
+    {
+        var stateRoot = Environment.GetEnvironmentVariable(PluginStateDirectoryEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(stateRoot))
+        {
+            stateRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SkyCD",
+                "plugin-state");
+        }
+
+        var hostVersion = hostVersionProvider?.Current.ToString() ?? "0.0.0";
+        return new PluginInstallLayout(
+            Path.Combine(stateRoot, "plugins"),
+            Path.Combine(stateRoot, "staging", hostVersion));
     }
 
     public static void RegisterServices(IRegistrator registrator, IReadOnlyList<DiscoveredPlugin> plugins, OAuthService oauthService,
