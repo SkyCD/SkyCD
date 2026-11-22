@@ -85,8 +85,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void ToggleBackgroundMediaSync() => IsBackgroundMediaSyncEnabled = !IsBackgroundMediaSyncEnabled;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
-    private Database? temporaryCatalogDatabase;
     private bool previewArtifactReclaimPending;
+
     private readonly CatalogDocumentRepository? catalogRepository;
     private OpenCatalogState? openCatalogState;
     private CatalogFeatureExtensionManager? catalogFeatures;
@@ -798,34 +798,49 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             mediaCacheStore.Dispose();
         }
 
-        if (temporaryCatalogDatabase is { } database)
-        {
-            using (database) database.Delete();
-        }
-
         GC.SuppressFinalize(this);
     }
 
-    public static MainWindowViewModel CreateNewCatalog()
+    /// <summary>
+    /// Starts an empty catalog on the application's working database. A new catalog provisions no database of
+    /// its own: the working database is already open, and its content is replaced the same way opening a catalog
+    /// replaces it, so File -> New does not depend on creating a new database file.
+    /// </summary>
+    public static MainWindowViewModel CreateNewCatalog(RepositoryManager repositoryManager)
     {
-        var database = new Database($"skycd-new-catalog-{Guid.NewGuid():N}",
-            new DatabaseConfiguration { Directory = Path.GetTempPath() });
-        try
+        ArgumentNullException.ThrowIfNull(repositoryManager);
+        if (repositoryManager.For<CatalogDocument>() is not CatalogDocumentRepository repository)
         {
-            var collection = database.GetDefaultCollection();
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            return new MainWindowViewModel(repository, new PropertyValueLocalizer(), CreateEmptyMenuExtensionManager(),
-                shouldSeedDefaultCatalog: false, new CatalogUndoManager(repository))
+            throw new InvalidOperationException("Catalog repository must be CatalogDocumentRepository.");
+        }
+
+        ClearCatalogDocuments(repository);
+        var catalog = new MainWindowViewModel(repository, new PropertyValueLocalizer(),
+            CreateEmptyMenuExtensionManager(), shouldSeedDefaultCatalog: false, new CatalogUndoManager(repository));
+        catalog.CompleteNewCatalog();
+        return catalog;
+    }
+
+    private static void ClearCatalogDocuments(CatalogDocumentRepository repository)
+    {
+        var entries = repository.GetAll();
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        var collection = repository.Collection;
+        collection.Database.InBatch(() =>
+        {
+            foreach (var entry in entries)
             {
-                temporaryCatalogDatabase = database
-            };
-        }
-        catch
-        {
-            using (database) database.Delete();
-            throw;
-        }
+                using var document = collection.GetDocument(entry.Id);
+                if (document is not null)
+                {
+                    collection.Delete(document);
+                }
+            }
+        });
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(

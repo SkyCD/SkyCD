@@ -1180,16 +1180,32 @@ public partial class MainWindow : Window
             }
         }
 
-        var newCatalog = MainWindowViewModel.CreateNewCatalog();
-        newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-        newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-            ServiceProvider.Resolve<VolumeExtensionManager>(),
-            ServiceProvider.Resolve<IndexWorkItemSequence>(),
-            ServiceProvider.Resolve<IAudioCdMetadataProvider>());
-        newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
-        newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
-        newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
-        newCatalog.CompleteNewCatalog();
+        // The new catalog runs on the shared working database, so the previous catalog's background sync must
+        // stop before that database is cleared and handed to the new view model.
+        var resumeBackgroundSync = vm.IsBackgroundMediaSyncEnabled;
+        vm.IsBackgroundMediaSyncEnabled = false;
+        MainWindowViewModel? newCatalog = null;
+        try
+        {
+            newCatalog = MainWindowViewModel.CreateNewCatalog(repositoryManager);
+            newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
+                ServiceProvider.Resolve<VolumeExtensionManager>(),
+                ServiceProvider.Resolve<IndexWorkItemSequence>(),
+                ServiceProvider.Resolve<IAudioCdMetadataProvider>());
+            newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+            newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
+            newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
+        }
+        catch (Exception ex)
+        {
+            newCatalog?.Dispose();
+            vm.IsBackgroundMediaSyncEnabled = resumeBackgroundSync;
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToCreateNewCatalog,
+                ex.GetBaseException().Message);
+            return;
+        }
+
         DataContext = newCatalog;
     }
 

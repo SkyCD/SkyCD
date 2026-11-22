@@ -4,6 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.Couchbase;
+using SkyCD.Documents;
+using SkyCD.Documents.Enum;
+using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Legacy.Scd;
 using SkyCD.Plugin.Json;
@@ -70,7 +74,7 @@ public sealed class CatalogLoadServiceTests
     }
 
     [Fact]
-    public async Task NewCatalog_UsesAnEmptyWorkingCopy_AndSavesOnlyNewEntries()
+    public async Task NewCatalog_ClearsTheWorkingCopy_AndSavesOnlyNewEntries()
     {
         var originalPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "text-sample.scd");
         var originalBytes = await File.ReadAllBytesAsync(originalPath);
@@ -78,48 +82,100 @@ public sealed class CatalogLoadServiceTests
         var loader = new CatalogLoadService(formats);
         var original = await loader.LoadAsync(originalPath,
             (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
-        CatalogImportTests.Persist(original, vm =>
-        {
-            Assert.NotEmpty(vm.TreeNodes);
-            Assert.NotEmpty(vm.BrowserItems);
-        });
 
-        using var newCatalog = MainWindowViewModel.CreateNewCatalog();
-        newCatalog.CompleteNewCatalog();
-        newCatalog.RefreshLocalization();
-        Assert.Empty(newCatalog.TreeNodes);
-        Assert.Empty(newCatalog.BrowserItems);
-        Assert.Empty(newCatalog.GetAllCatalogEntries());
-        Assert.Null(newCatalog.SelectedTreeNode);
-        Assert.Null(newCatalog.SelectedBrowserItem);
-        Assert.Null(newCatalog.CurrentCatalogPath);
-        Assert.False(newCatalog.IsDirtyDocument);
-
-        var newPath = Path.Combine(Path.GetTempPath(), $"skycd-new-catalog-{Guid.NewGuid():N}.json");
+        var databaseDirectory = Path.Combine(Path.GetTempPath(), $"skycd-new-catalog-{Guid.NewGuid():N}");
+        var databaseManager = new DatabaseManager();
+        global::Couchbase.Lite.Database? database = null;
         try
         {
-            var added = newCatalog.AddTitleOnlyMedia("New disk", parentId: null);
-            await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries());
-            newCatalog.CompleteSaveCatalog(newPath);
-            var saved = await loader.LoadAsync(newPath, (payload, _) => CatalogImportTests.Extract(payload!),
-                new RecordingProgress());
-            Assert.Equal(added.Id, Assert.Single(saved).Id);
+            database = databaseManager.Connect("default", databaseDirectory);
+            var repositories = new RepositoryManager(databaseManager);
+            var repository = Assert.IsType<CatalogDocumentRepository>(repositories.For<CatalogDocument>());
+            foreach (var entry in original)
+            {
+                repository.Save(entry.Id, entry);
+            }
+
+            using var newCatalog = MainWindowViewModel.CreateNewCatalog(repositories);
+
+            Assert.Empty(repository.GetAll());
+            Assert.Empty(newCatalog.TreeNodes);
+            Assert.Empty(newCatalog.BrowserItems);
+            Assert.Empty(newCatalog.GetAllCatalogEntries());
+            Assert.Null(newCatalog.SelectedTreeNode);
+            Assert.Null(newCatalog.SelectedBrowserItem);
+            Assert.Null(newCatalog.CurrentCatalogPath);
             Assert.False(newCatalog.IsDirtyDocument);
+
+            var newPath = Path.Combine(Path.GetTempPath(), $"skycd-new-catalog-{Guid.NewGuid():N}.json");
+            try
+            {
+                var added = newCatalog.AddTitleOnlyMedia("New disk", parentId: null);
+                await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries());
+                newCatalog.CompleteSaveCatalog(newPath);
+                var saved = await loader.LoadAsync(newPath, (payload, _) => CatalogImportTests.Extract(payload!),
+                    new RecordingProgress());
+                Assert.Equal(added.Id, Assert.Single(saved).Id);
+                Assert.False(newCatalog.IsDirtyDocument);
+            }
+            finally
+            {
+                File.Delete(newPath);
+            }
+
+            var reopened = await loader.LoadAsync(originalPath,
+                (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
+            Assert.Equal(original.Select(entry => entry.Id), reopened.Select(entry => entry.Id));
+            Assert.Equal(originalBytes, await File.ReadAllBytesAsync(originalPath));
         }
         finally
         {
-            File.Delete(newPath);
+            database?.Dispose();
+            databaseManager.Dispose();
+            if (Directory.Exists(databaseDirectory)) Directory.Delete(databaseDirectory, recursive: true);
         }
+    }
 
-        var reopened = await loader.LoadAsync(originalPath,
-            (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
-        CatalogImportTests.Persist(reopened, vm =>
+    [Fact]
+    public void CreateNewCatalog_ClearsCatalogDocumentsOnTheSharedWorkingDatabase()
+    {
+        var databaseDirectory = Path.Combine(Path.GetTempPath(), $"skycd-working-database-{Guid.NewGuid():N}");
+        var databaseManager = new DatabaseManager();
+        global::Couchbase.Lite.Database? database = null;
+        try
         {
-            Assert.NotEmpty(vm.TreeNodes);
-            Assert.NotEmpty(vm.BrowserItems);
-        });
-        Assert.Equal(original.Select(entry => entry.Id), reopened.Select(entry => entry.Id));
-        Assert.Equal(originalBytes, await File.ReadAllBytesAsync(originalPath));
+            database = databaseManager.Connect("default", databaseDirectory);
+            var repositories = new RepositoryManager(databaseManager);
+            var repository = Assert.IsType<CatalogDocumentRepository>(repositories.For<CatalogDocument>());
+            repository.Save("root", new CatalogDocument
+            {
+                Id = "root",
+                Name = "Root",
+                Type = CatalogDocumentType.Folder
+            });
+            repository.Save("child", new CatalogDocument
+            {
+                Id = "child",
+                ParentId = "root",
+                Name = "File",
+                Type = CatalogDocumentType.File
+            });
+
+            using (var catalog = MainWindowViewModel.CreateNewCatalog(repositories))
+            {
+                Assert.Empty(repository.GetAll());
+                Assert.Empty(catalog.GetAllCatalogEntries());
+            }
+
+            Assert.Same(database, repository.Collection.Database);
+            Assert.Empty(repository.GetAll());
+        }
+        finally
+        {
+            database?.Dispose();
+            databaseManager.Dispose();
+            if (Directory.Exists(databaseDirectory)) Directory.Delete(databaseDirectory, recursive: true);
+        }
     }
 
     [Fact]
