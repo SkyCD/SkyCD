@@ -144,9 +144,9 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.FileFormat.Xml.XmlCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Yaml.YamlCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Toml.TomlCatalogPlugin(),
-        new SkyCD.Plugin.FileFormat.M3u.M3uCatalogPlugin(),
-        new SkyCD.Plugin.FileFormat.Pls.PlsCatalogPlugin(),
-        new SkyCD.Plugin.FileFormat.Xspf.XspfCatalogPlugin(),
+        new SkyCD.Plugin.FileFormat.Playlist.M3u.M3uCatalogPlugin(),
+        new SkyCD.Plugin.FileFormat.Playlist.Pls.PlsCatalogPlugin(),
+        new SkyCD.Plugin.FileFormat.Playlist.Xspf.XspfCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Tar.TarArchiveIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.FileFormat.Markdown.MarkdownCatalogExportPlugin()

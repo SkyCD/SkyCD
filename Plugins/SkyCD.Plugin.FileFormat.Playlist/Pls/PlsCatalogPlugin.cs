@@ -7,8 +7,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.FileFormat.Playlist.Export;
+using SkyCD.Plugin.FileFormat.Playlist.Pls.Models;
 
-namespace SkyCD.Plugin.FileFormat.Pls;
+namespace SkyCD.Plugin.FileFormat.Playlist.Pls;
 
 public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
 {
@@ -93,7 +95,7 @@ public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
         try
         {
             var entries = ResolveEntries(request.Payload);
-            await using var writer = new StreamWriter(request.Target, new UTF8Encoding(false), leaveOpen: true);
+            await using var writer = PlaylistTextWriter.Create(request.Target);
             await writer.WriteLineAsync("[playlist]");
 
             var index = 1;
@@ -158,7 +160,3 @@ public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
         throw new InvalidOperationException("PLS payload must be a PLS playlist document.");
     }
 }
-
-public sealed record PlsPlaylistDocument(IReadOnlyList<PlsPlaylistEntry> Entries);
-
-public sealed record PlsPlaylistEntry(string Path, string? Title, long SizeBytes);

@@ -6,8 +6,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.FileFormat.Playlist.Export;
+using SkyCD.Plugin.FileFormat.Playlist.M3u.Models;
 
-namespace SkyCD.Plugin.FileFormat.M3u;
+namespace SkyCD.Plugin.FileFormat.Playlist.M3u;
 
 public sealed class M3uCatalogPlugin : IFileFormatPluginCapability
 {
@@ -78,7 +80,7 @@ public sealed class M3uCatalogPlugin : IFileFormatPluginCapability
         try
         {
             var entries = ResolveEntries(request.Payload);
-            await using var writer = new StreamWriter(request.Target, new UTF8Encoding(false), leaveOpen: true);
+            await using var writer = PlaylistTextWriter.Create(request.Target);
             await writer.WriteLineAsync("#EXTM3U");
             await writer.WriteLineAsync();
 
@@ -149,7 +151,3 @@ public sealed class M3uCatalogPlugin : IFileFormatPluginCapability
         throw new InvalidOperationException("M3U payload must be an M3U playlist document.");
     }
 }
-
-public sealed record M3uPlaylistDocument(IReadOnlyList<M3uPlaylistEntry> Entries);
-
-public sealed record M3uPlaylistEntry(string Path, string? Title, int? DurationSeconds);
