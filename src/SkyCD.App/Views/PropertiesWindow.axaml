@@ -55,7 +55,7 @@
         <TabControl x:Name="Tabs" Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
                 <Grid Margin="10,8,10,10" RowDefinitions="Auto,*">
-                    <Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,8">
                         <Border Grid.RowSpan="2"
                                 Width="{Binding #NameFields.Bounds.Height}"
                                 Height="{Binding #NameFields.Bounds.Height}"
@@ -77,17 +77,23 @@
                             <TextBox Text="{Binding Name}" />
                         </StackPanel>
 
-                        <TextBlock Grid.Row="2"
-                                   Grid.ColumnSpan="3"
-                                   Margin="0,10,0,4"
-                                   Text="{i18n:Translate {x:Static i18n:UiKeys.RatingName}}" />
-                        <rating:StarRatingControl Grid.Row="3"
-                                                  Grid.ColumnSpan="3"
-                                                  Classes="star-rating"
-                                                  StarSize="18"
-                                                  RatingName="{i18n:Translate {x:Static i18n:UiKeys.RatingName}}"
-                                                  Value="{Binding Rating, Mode=TwoWay}"
-                                                  ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RatingKeyboardHint}}" />
+                        <Grid x:Name="RatingRow"
+                              Grid.Row="2"
+                              Grid.Column="2"
+                              ColumnDefinitions="Auto,*"
+                              Margin="0,10,0,0">
+                            <TextBlock x:Name="RatingLabel"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.RatingName}}"
+                                       VerticalAlignment="Center" />
+                            <rating:StarRatingControl Grid.Column="1"
+                                                      Classes="star-rating"
+                                                      StarSize="18"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"
+                                                      RatingName="{i18n:Translate {x:Static i18n:UiKeys.RatingName}}"
+                                                      Value="{Binding Rating, Mode=TwoWay}"
+                                                      ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RatingKeyboardHint}}" />
+                        </Grid>
                     </Grid>
 
                     <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto">
