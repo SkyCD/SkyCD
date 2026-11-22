@@ -6,7 +6,7 @@ using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.AbeMeda.Native.Models;
 
-namespace SkyCD.Plugin.FileFormat.AbeMeda.Native.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed record SyntheticEntry(
     ulong Ordinal,

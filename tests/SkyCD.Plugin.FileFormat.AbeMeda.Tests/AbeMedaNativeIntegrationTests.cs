@@ -10,11 +10,12 @@ using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Plugin.FileFormat.AbeMeda.Native;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
-namespace SkyCD.Plugin.FileFormat.AbeMeda.Native.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed class AbeMedaNativeIntegrationTests
 {

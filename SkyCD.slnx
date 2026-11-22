@@ -8,7 +8,6 @@
         <Project Path="Plugins/SkyCD.Plugin.Feature.Loans/SkyCD.Plugin.Feature.Loans.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.MotionDetector/SkyCD.Plugin.Feature.MotionDetector.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.WebBrowser/SkyCD.Plugin.Feature.WebBrowser.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.AbeMeda.Native/SkyCD.Plugin.FileFormat.AbeMeda.Native.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.AbeMeda/SkyCD.Plugin.FileFormat.AbeMeda.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Access/SkyCD.Plugin.FileFormat.Access.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Adc/SkyCD.Plugin.FileFormat.Adc.csproj"/>
@@ -127,7 +126,6 @@
         <Project Path="tests/SkyCD.Plugin.Feature.Loans.Tests/SkyCD.Plugin.Feature.Loans.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.MotionDetector.Tests/SkyCD.Plugin.Feature.MotionDetector.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.WebBrowser.Tests/SkyCD.Plugin.Feature.WebBrowser.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.AbeMeda.Native.Tests/SkyCD.Plugin.FileFormat.AbeMeda.Native.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Adc.Tests/SkyCD.Plugin.FileFormat.Adc.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Basenji.Vdb.Tests/SkyCD.Plugin.FileFormat.Basenji.Vdb.Tests.csproj"/>
