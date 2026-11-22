@@ -169,6 +169,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AudioCdMetadataService? audioCdMetadataService;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
+    private readonly object viewRefreshLock = new();
 
     public void RefreshMediaServices(MediaExtensionManager updatedManager,
         IVolumeMetadataProvider? volumeMetadataProvider = null, IndexWorkItemSequence? indexWorkItems = null,
@@ -2572,6 +2573,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshTreeNodes(string? preferredSelectedKey = null)
     {
+        lock (viewRefreshLock)
+        {
+            RefreshTreeNodesCore(preferredSelectedKey);
+        }
+    }
+
+    private void RefreshTreeNodesCore(string? preferredSelectedKey)
+    {
         var targetKey = preferredSelectedKey ?? SelectedTreeNode?.Key;
         var expandedKeys = FlattenNodes(TreeNodes)
             .Where(static node => node.IsExpanded)
@@ -3341,6 +3350,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshBrowserItemsForSelection()
     {
+        lock (viewRefreshLock)
+        {
+            RefreshBrowserItemsForSelectionCore();
+        }
+    }
+
+    private void RefreshBrowserItemsForSelectionCore()
+    {
         var previouslySelectedName = SelectedBrowserItem?.Name;
         var nodeKey = SelectedTreeNode?.Key ?? "library";
         var baseItems = GetBrowserItems(nodeKey);
@@ -3618,42 +3635,45 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedBrowserItemsChanged(System.Collections.IList value)
     {
-        var first = value.Count > 0 ? value[0] as CatalogDocument : null;
-
-        if (value.Count > 0)
+        lock (viewRefreshLock)
         {
-            if (!ReferenceEquals(selectedBrowserItem, first))
+            var first = value.Count > 0 ? value[0] as CatalogDocument : null;
+
+            if (value.Count > 0)
             {
-                selectedBrowserItem = first;
+                if (!ReferenceEquals(selectedBrowserItem, first))
+                {
+                    selectedBrowserItem = first;
+                    OnPropertyChanged(nameof(SelectedBrowserItem));
+                }
+            }
+            else if (selectedBrowserItem is not null)
+            {
+                selectedBrowserItem = null;
                 OnPropertyChanged(nameof(SelectedBrowserItem));
             }
-        }
-        else if (selectedBrowserItem is not null)
-        {
-            selectedBrowserItem = null;
-            OnPropertyChanged(nameof(SelectedBrowserItem));
-        }
 
-        UpdatePreviewFor(first);
+            UpdatePreviewFor(first);
 
-        OnPropertyChanged(nameof(IsDeleteEnabled));
-        OnPropertyChanged(nameof(IsPropertiesEnabled));
-        OnPropertyChanged(nameof(IsCopyEnabled));
-        OnPropertyChanged(nameof(IsCutEnabled));
-        DeleteItemCommand.NotifyCanExecuteChanged();
-        OpenPropertiesCommand.NotifyCanExecuteChanged();
-        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
-        CopyCommand.NotifyCanExecuteChanged();
-        CutCommand.NotifyCanExecuteChanged();
-        ExpandSelectionCommand.NotifyCanExecuteChanged();
-        CollapseSelectionCommand.NotifyCanExecuteChanged();
-        RefreshTopMenuState();
-        ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
-        ToggleTagForEntriesCommand.NotifyCanExecuteChanged();
-        RefreshTagsMenuItems();
-        RefreshCollectionsMenuItems();
-        RefreshFeatureContextMenus();
-        ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(IsDeleteEnabled));
+            OnPropertyChanged(nameof(IsPropertiesEnabled));
+            OnPropertyChanged(nameof(IsCopyEnabled));
+            OnPropertyChanged(nameof(IsCutEnabled));
+            DeleteItemCommand.NotifyCanExecuteChanged();
+            OpenPropertiesCommand.NotifyCanExecuteChanged();
+            GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
+            CopyCommand.NotifyCanExecuteChanged();
+            CutCommand.NotifyCanExecuteChanged();
+            ExpandSelectionCommand.NotifyCanExecuteChanged();
+            CollapseSelectionCommand.NotifyCanExecuteChanged();
+            RefreshTopMenuState();
+            ApplyBrowserItemStatusCommand.NotifyCanExecuteChanged();
+            ToggleTagForEntriesCommand.NotifyCanExecuteChanged();
+            RefreshTagsMenuItems();
+            RefreshCollectionsMenuItems();
+            RefreshFeatureContextMenus();
+            ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
+        }
     }
 
     /// <summary>
@@ -4021,9 +4041,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshTopMenuState()
     {
-        ApplyMenuState(topMenuItems);
-        ApplyMenuState(browserContextMenuItems);
-        ApplyMenuState(treeContextMenuItems);
+        lock (viewRefreshLock)
+        {
+            ApplyMenuState(topMenuItems);
+            ApplyMenuState(browserContextMenuItems);
+            ApplyMenuState(treeContextMenuItems);
+        }
     }
 
     private void ApplyMenuState(IEnumerable<MainMenuItemViewModel> menuItems)
@@ -4244,10 +4267,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshFeatureContextMenus()
     {
-        ReplaceMenuItems(browserContextMenuItems, BuildBrowserContextMenuItems());
-        ReplaceMenuItems(treeContextMenuItems, BuildTreeContextMenuItems());
-        OnPropertyChanged(nameof(BrowserContextMenuItems));
-        OnPropertyChanged(nameof(TreeContextMenuItems));
+        lock (viewRefreshLock)
+        {
+            ReplaceMenuItems(browserContextMenuItems, BuildBrowserContextMenuItems());
+            ReplaceMenuItems(treeContextMenuItems, BuildTreeContextMenuItems());
+            OnPropertyChanged(nameof(BrowserContextMenuItems));
+            OnPropertyChanged(nameof(TreeContextMenuItems));
+        }
     }
 
     private IReadOnlyList<MainMenuItemViewModel> BuildFeatureMenuGroups()
