@@ -17,7 +17,8 @@ public sealed class McpServerHostTests
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var port = GetFreeTcpPort();
 
-        host.Configure(enabled: true, port);
+        host.UpdateConfiguration(enabled: true, port);
+        await host.ApplyConfigurationAsync();
         var baseUrl = host.BaseUrl;
         Assert.True(host.IsRunning);
         Assert.Equal($"http://127.0.0.1:{port}/mcp", baseUrl);
@@ -38,7 +39,8 @@ public sealed class McpServerHostTests
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var port = GetFreeTcpPort();
 
-        host.Configure(enabled: true, port);
+        host.UpdateConfiguration(enabled: true, port);
+        await host.ApplyConfigurationAsync();
         var baseUrl = host.BaseUrl;
         Assert.NotNull(baseUrl);
 
@@ -53,7 +55,8 @@ public sealed class McpServerHostTests
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var port = GetFreeTcpPort();
 
-        host.Configure(enabled: true, port);
+        host.UpdateConfiguration(enabled: true, port);
+        await host.ApplyConfigurationAsync();
         var baseUrl = host.BaseUrl;
         Assert.NotNull(baseUrl);
 
@@ -72,12 +75,14 @@ public sealed class McpServerHostTests
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var (firstPort, secondPort) = GetTwoFreeTcpPorts();
 
-        host.Configure(enabled: true, firstPort);
+        host.UpdateConfiguration(enabled: true, firstPort);
+        await host.ApplyConfigurationAsync();
         var firstUrl = host.BaseUrl;
         Assert.Equal($"http://127.0.0.1:{firstPort}/mcp", firstUrl);
         await RetryGetStringAsync(client, $"{firstUrl}/tools");
 
-        host.Configure(enabled: true, secondPort);
+        host.UpdateConfiguration(enabled: true, secondPort);
+        await host.ApplyConfigurationAsync();
         var secondUrl = host.BaseUrl;
         Assert.Equal($"http://127.0.0.1:{secondPort}/mcp", secondUrl);
         await RetryGetStringAsync(client, $"{secondUrl}/tools");
@@ -92,12 +97,14 @@ public sealed class McpServerHostTests
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var port = GetFreeTcpPort();
 
-        host.Configure(enabled: true, port);
+        host.UpdateConfiguration(enabled: true, port);
+        await host.ApplyConfigurationAsync();
         var url = host.BaseUrl;
         Assert.True(host.IsRunning);
         Assert.NotNull(url);
 
-        host.Configure(enabled: false, port);
+        host.UpdateConfiguration(enabled: false, port);
+        await host.ApplyConfigurationAsync();
 
         Assert.False(host.IsRunning);
         Assert.Null(host.BaseUrl);

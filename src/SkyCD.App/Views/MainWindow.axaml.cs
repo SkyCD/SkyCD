@@ -788,6 +788,11 @@ public partial class MainWindow : Window
             }
         }
 
+        if (Application.Current is App app)
+        {
+            await app.BackgroundServicesStarted;
+        }
+
         RefreshMcpStatusIndicator();
 
         isSessionStateLoaded = true;
@@ -1460,7 +1465,10 @@ public partial class MainWindow : Window
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
-            (Application.Current as App)?.ApplyMcpSettings();
+            if (Application.Current is App app)
+            {
+                await app.ApplyMcpSettingsAsync();
+            }
             RefreshMcpStatusIndicator();
             if (DataContext is MainWindowViewModel vm)
             {
