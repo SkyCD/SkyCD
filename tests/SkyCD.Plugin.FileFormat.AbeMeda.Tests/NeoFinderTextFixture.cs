@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 /// <summary>
 /// Generates synthetic NeoFinder-style text exports at runtime.

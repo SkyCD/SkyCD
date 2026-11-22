@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
 /// <summary>
 /// Summary details for a NeoFinder text export import execution.

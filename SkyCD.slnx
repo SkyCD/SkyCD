@@ -33,7 +33,6 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.M3u/SkyCD.Plugin.FileFormat.M3u.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Markdown/SkyCD.Plugin.FileFormat.Markdown.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.MyCatalogue/SkyCD.Plugin.FileFormat.MyCatalogue.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.NeoFinder.Text/SkyCD.Plugin.FileFormat.NeoFinder.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.PlainText/SkyCD.Plugin.FileFormat.PlainText.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Pls/SkyCD.Plugin.FileFormat.Pls.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.SmartCDCatalogPro/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.csproj"/>
@@ -148,7 +147,6 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.M3u.Tests/SkyCD.Plugin.FileFormat.M3u.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Markdown.Tests/SkyCD.Plugin.FileFormat.Markdown.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.MyCatalogue.Tests/SkyCD.Plugin.FileFormat.MyCatalogue.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests/SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.PlainText.Tests/SkyCD.Plugin.FileFormat.PlainText.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Pls.Tests/SkyCD.Plugin.FileFormat.Pls.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests.csproj"/>

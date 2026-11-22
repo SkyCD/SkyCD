@@ -2,10 +2,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Import;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Import;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed class NeoFinderTextReaderTests
 {

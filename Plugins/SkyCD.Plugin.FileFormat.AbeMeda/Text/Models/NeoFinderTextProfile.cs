@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
 /// <summary>
 /// Header alias map for NeoFinder configurable text exports.

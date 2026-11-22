@@ -59,5 +59,6 @@ cancellation.
 
 ## Docs
 
-- `docs/plugins/neofinder-text.md` — recommended export configuration,
-  supported versions/encodings, column mapping, bounds, known loss.
+- `docs/plugins/abemeda.md` — recommended export configuration,
+  supported versions/encodings, column mapping, bounds, known loss (the page was later
+  consolidated into the abeMeda/NeoFinder plugin documentation in #878).

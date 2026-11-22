@@ -1,8 +1,9 @@
 using System.IO;
 using System.Threading.Tasks;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text;
 using Xunit;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed class NeoFinderTextDetectionTests
 {

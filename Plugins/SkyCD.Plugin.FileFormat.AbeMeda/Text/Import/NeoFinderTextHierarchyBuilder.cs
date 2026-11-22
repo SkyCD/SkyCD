@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Exceptions;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Exceptions;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Import;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text.Import;
 
 /// <summary>
 /// Reconstructs hierarchical catalog entries and metadata from NeoFinder text export rows.

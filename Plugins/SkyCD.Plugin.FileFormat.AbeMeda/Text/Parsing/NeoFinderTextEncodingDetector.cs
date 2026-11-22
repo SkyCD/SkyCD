@@ -1,8 +1,8 @@
 using System;
 using System.Text;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Parsing;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text.Parsing;
 
 /// <summary>
 /// Resolves the character encoding profile of a NeoFinder text export.

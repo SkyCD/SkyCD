@@ -1,7 +1,7 @@
 using Xunit;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed class NeoFinderTextProfileTests
 {

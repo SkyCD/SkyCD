@@ -1,27 +1,31 @@
 # abeMeda/NeoFinder import
 
-The `SkyCD.Plugin.FileFormat.AbeMeda` plugin imports abeMeda/NeoFinder data through two read-only
+The `SkyCD.Plugin.FileFormat.AbeMeda` plugin imports abeMeda/NeoFinder data through three read-only
 file-format capabilities that share one enable toggle in **Options → Plugins**:
 
 | Format id | Extensions | Source |
 | --- | --- | --- |
 | `abemeda-xml` | `.xml` | XML catalog/list/find-result exports |
 | `abemeda-native` | `.cdw`, `.abeMeda7`, `.neofinder7` | Native abeMeda/NeoFinder/CDFinder catalog container |
+| `neofinder-text` | `.txt`, `.tsv` | NeoFinder configurable **Text with Tab** exports |
 
-Both formats come from the same vendor product family, so they ship as one assembly. SkyCD opens
+All formats come from the same vendor product family, so they ship as one assembly. SkyCD opens
 the right capability through **File → Open** or `skycd open <path>`; `.xml` is disambiguated by
-content inspection, and native catalogs are claimed only when the binary signature and header
-sentinel match. Export back to abeMeda/NeoFinder is not supported. Discovery uses assembly metadata
-and the capability types; no `plugin.json` is involved.
+content inspection, native catalogs are claimed only when the binary signature and header
+sentinel match, and the shared `.txt`/`.tsv` extensions are claimed only when the header row maps
+to a NeoFinder export layout. Export back to abeMeda/NeoFinder is not supported. Discovery uses
+assembly metadata and the capability types; no `plugin.json` is involved.
 
 ## Plugin identity and packaging
 
-The plugin id is `SkyCD.Plugin.AbeMeda`; the former native id `SkyCD.Plugin.AbeMeda.Native` is
-retired. Existing `PluginDocument` rows for the retired id are kept but marked unavailable on the
-next discovery pass, and the merged plugin is discovered with its own persisted enabled state
-unchanged. The merged project was formerly two assemblies (`SkyCD.Plugin.FileFormat.AbeMeda` and
-`SkyCD.Plugin.FileFormat.AbeMeda.Native`); only the `.Native` assembly disappeared, and the native
-reader moved to the `Native/` folder of the surviving project.
+The plugin id is `SkyCD.Plugin.AbeMeda`. The former native id `SkyCD.Plugin.AbeMeda.Native` and
+text id `SkyCD.Plugin.NeoFinder.Text` are retired. Existing `PluginDocument` rows for both retired
+ids are kept but marked unavailable on the next discovery pass; their persisted enabled state is
+not transferred, and the merged plugin is discovered with its own persisted enabled state
+unchanged. The merged project was formerly three assemblies (`SkyCD.Plugin.FileFormat.AbeMeda`,
+`SkyCD.Plugin.FileFormat.AbeMeda.Native` and `SkyCD.Plugin.FileFormat.NeoFinder.Text`); only the
+`.AbeMeda` assembly survived, and the native and text readers moved to the `Native/` and `Text/`
+folders of the surviving project.
 
 ## XML exports (`abemeda-xml`)
 
@@ -200,9 +204,76 @@ match, and the extended generation additionally requires verified fixtures.
 
 These remain blocked on genuine, redistributable fixtures with provenance.
 
+## NeoFinder text exports (`neofinder-text`)
+
+### Export configuration
+
+The importer reads NeoFinder configurable text exports without requiring macOS or NeoFinder at
+import time. Point it at a **Text with Tab** export with headers included.
+
+In NeoFinder, select one or more catalogs in the Library and use File → Export:
+
+1. Format: **Text with Tab**.
+2. Check **include the names of the column headers**.
+3. Levels: **All** (top levels only cannot reproduce the full hierarchy).
+4. Under Include Fields keep **Name** (always included) plus at least one of
+   **Where**, **Volume** or **Catalog** so SkyCD can rebuild the hierarchy.
+   Also include Kind, Size, dates and Comments for full metadata.
+
+In SkyCD, open the resulting `.txt` or `.tsv` file with **File → Open**. Because those extensions
+are shared with other text formats, recognition is content-aware: the export is decoded with the
+same encoding profile the import uses, and it is claimed only when the header row maps to a
+NeoFinder layout. SkyCD generic CSV and WinCatalog CSV headers are rejected, so the capability
+does not steal other delimited formats.
+
+### Column mapping
+
+Columns are matched by header against a built-in alias table (English export headers plus
+best-effort localized variants); columns may be reordered and unknown columns are listed in
+`UnsupportedFields` without failing the import. Two different headers mapping to the same field, a
+missing Name column, or a headerless file is rejected as ambiguous with an actionable message —
+enable headers and check the Include Fields selection instead of guessing.
+
+Supported metadata: kind, size, volume, catalog, created/modified dates, comments and label.
+`DateCreated`/`DateModified` are normalized to `yyyy-MM-dd HH:mm:ss` across the exporter's
+locale-dependent date formats; unparseable dates are preserved verbatim.
+
+### Paths, volumes and partial reports
+
+POSIX (`/`) and classic Mac OS (`:`) separators are recognised, names are Unicode-normalized, and
+a leading volume/catalog segment names the media root instead of a subfolder. Exports listing
+several catalogs are grouped under one media root per volume/catalog. Rows without any path,
+volume or catalog entry are imported flat under a generic media root with a warning.
+
+Missing intermediate folders derived from paths mark the report partial, as do skipped malformed
+rows; both are itemized in the import summary next to counts and unsupported fields. Sizes accept
+byte counts and unit suffixes (including European comma decimals); folders and the em-dash
+placeholder count as zero.
+
+### Encoding profiles
+
+Recognition and import use the same strict decoding policy:
+
+1. A BOM selects UTF-8 or UTF-16 LE/BE. Malformed data under that declared encoding is rejected.
+2. Without a BOM, an alternating NUL pattern in the leading ASCII header identifies UTF-16 LE/BE.
+3. Otherwise valid UTF-8 takes precedence.
+4. If UTF-8 is invalid, Windows-1252 is accepted when none of its undefined bytes occur.
+5. Anything else is rejected. No lossy replacement-character decoding is used.
+
+`DetectedEncoding`, `DetectedDelimiter` and `DetectedColumns` are recorded in the import summary.
+The parser never touches the filesystem: thumbnail references or external paths in the export are
+treated as plain text.
+
+### What is not imported
+
+Indented Text exports (human-readable tree dumps without columns) and the XML export are not
+imported through this capability; use `abemeda-xml` for XML. Embedded file contents, icons and
+thumbnails are not imported. The format is read-only. Native NeoFinder catalogs are imported through
+`abemeda-native`.
+
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests` covers both capabilities in one project.
+`tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests` covers all three capabilities in one project.
 
 XML exports: a nested two-volume synthetic export (hierarchy, Unicode, missing attributes,
 duplicates, metadata variants, unknown names, thumbnails), a flat path-based export,
@@ -216,3 +287,12 @@ non-text handlers, out-of-file ranges and blob values, unsupported versions and 
 constants, truncated headers, bad signatures, extended-generation gating, cancellation,
 progress reporting, read-only writes, and persistence/reopen through
 `MainWindow.ExtractCatalogEntries` plus Couchbase Lite.
+
+NeoFinder text exports: synthetic **Text with Tab** exports generated at runtime (no vendor bytes
+are committed or redistributed) covering localized headers, comma/semicolon delimiters, POSIX and
+classic Mac paths, multiple catalogs, duplicate names, Unicode, malformed and empty rows, and
+strict encoding detection. Detection tests confirm `.txt`/`.tsv` content resolution, rejection of
+SkyCD generic CSV and WinCatalog CSV headers, and position preservation. The suite also covers
+read-only writes, cancellation, size/date normalization, and persistence/reopen through
+Couchbase Lite. The merged-plugin tests assert one plugin id, one entry and all three formats
+(`abemeda-native`, `abemeda-xml`, `neofinder-text`) from one assembly.
