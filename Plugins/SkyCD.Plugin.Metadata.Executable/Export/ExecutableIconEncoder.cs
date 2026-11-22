@@ -1,8 +1,7 @@
 using System;
-using System.IO;
+using SkiaSharp;
 using SkyCD.Plugin.Metadata.Executable.Exceptions;
 using SkyCD.Plugin.Metadata.Executable.Models;
-using SkyCD.Plugin.Metadata.Executable.Parsing;
 
 namespace SkyCD.Plugin.Metadata.Executable.Export;
 
@@ -38,7 +37,7 @@ internal static class ExecutableIconEncoder
         }
 
         var flattened = Flatten(image, size);
-        var png = PngDecoder.Encode(size, size, flattened.Rgba);
+        var png = EncodePng(flattened);
         if (png.Length > maximumBytes)
         {
             throw new ExecutableIconException(
@@ -122,4 +121,32 @@ internal static class ExecutableIconEncoder
 
     private static byte Unpremultiply(double premultipliedSum, double alphaSum) =>
         alphaSum <= 0 ? (byte)0 : (byte)Math.Clamp(Math.Round(premultipliedSum / alphaSum), 0, 255);
+
+    /// <summary>Encodes the straight RGBA raster as an 8-bit PNG; Skia stores it straight, as PNG requires.</summary>
+    private static byte[] EncodePng(ExecutableIconImage image)
+    {
+        var info = new SKImageInfo(image.Width, image.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(info);
+        var target = bitmap.GetPixelSpan();
+        for (var row = 0; row < image.Height; row++)
+        {
+            var source = image.Rgba.AsSpan(row * image.Width * 4, image.Width * 4);
+            var destination = target.Slice(row * bitmap.RowBytes, image.Width * 4);
+            for (var column = 0; column < source.Length; column += 4)
+            {
+                var alpha = source[column + 3];
+                destination[column] = Premultiply(source[column], alpha);
+                destination[column + 1] = Premultiply(source[column + 1], alpha);
+                destination[column + 2] = Premultiply(source[column + 2], alpha);
+                destination[column + 3] = alpha;
+            }
+        }
+
+        using var imageHandle = SKImage.FromBitmap(bitmap);
+        using var encoded = imageHandle.Encode(SKEncodedImageFormat.Png, 100)
+                            ?? throw new ExecutableIconException("the encoded icon PNG is not available");
+        return encoded.ToArray();
+    }
+
+    private static byte Premultiply(byte value, byte alpha) => (byte)(((value * alpha) + 127) / 255);
 }
