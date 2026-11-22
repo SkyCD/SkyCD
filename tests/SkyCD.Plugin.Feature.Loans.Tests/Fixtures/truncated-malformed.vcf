@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Doe;Jane;;;
+FN:Jane Doe
+EMAIL:jane@example.com
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Truncated Person
+NOTE:this card never ends
+this line is not a vCard property
+BEGIN:VCARD
+FN:Recovered Person
+TEL:+1 555 0111
+END:VCARD

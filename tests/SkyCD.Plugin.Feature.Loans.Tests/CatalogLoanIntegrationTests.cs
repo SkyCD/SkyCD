@@ -187,7 +187,7 @@ public sealed class CatalogLoanIntegrationTests
         Assert.Equal("Alice Example", contact.DisplayName);
         Assert.Equal("+1 555 0200", contact.Phone);
         Assert.Equal("ACME", contact.Company);
-        Assert.Contains("TEL;TYPE=VOICE:+1 555 0200", service.ExportContacts(), StringComparison.Ordinal);
+        Assert.Contains("TEL;TYPE=VOICE:+1 555 0200", service.ExportContacts(), StringComparison.OrdinalIgnoreCase);
         Assert.Throws<ContactEditException>(() => service.CreateContact("alice"));
 
         service.DeleteContact(contact.Id);

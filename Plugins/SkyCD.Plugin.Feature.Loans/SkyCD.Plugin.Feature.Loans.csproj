@@ -20,6 +20,7 @@
         <PackageReference Include="Avalonia.Desktop" Version="12.1.6"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
         <PackageReference Include="Couchbase.Lite" Version="4.1.3"/>
+        <PackageReference Include="vCardLib.dll" Version="6.3.2"/>
     </ItemGroup>
     <ItemGroup>
         <!-- Shared application icon so the dialog windows resolve /Assets/skycd.ico in this assembly. -->

@@ -3,110 +3,347 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SkyCD.Plugin.Feature.Loans.Models;
+using vCardLib.Deserialization;
+using vCardLib.Enums;
+using vCardLib.Models;
+using vCardLib.Serialization;
 
 namespace SkyCD.Plugin.Feature.Loans.Parsing;
 
 /// <summary>
-/// Reads and writes the subset of vCard 2.1/3.0 used by contact exchange.
-/// Supports line folding, escaped separators, structured names/addresses, and
-/// quoted-printable values.
+/// Maps vCard contact exchange onto <see cref="BorrowerDocument"/> using vCardLib,
+/// normalizing the legacy 2.1 quirks the library does not tolerate: missing
+/// VERSION, grouped properties, unterminated cards and quoted-printable values.
 /// </summary>
 public static class VCardCodec
 {
     public static IReadOnlyList<BorrowerDocument> Parse(string text)
     {
         var contacts = new List<BorrowerDocument>();
-        BorrowerDocument? current = null;
-        foreach (var line in Unfold(text))
+        foreach (var card in SplitCards(Unfold(text)))
         {
-            if (line.Equals("BEGIN:VCARD", StringComparison.OrdinalIgnoreCase))
+            foreach (var parsed in ParseCard(card))
             {
-                current = new BorrowerDocument { Id = Guid.NewGuid().ToString("N") };
-                continue;
-            }
-
-            if (line.Equals("END:VCARD", StringComparison.OrdinalIgnoreCase))
-            {
-                if (current is not null)
+                var contact = Map(parsed);
+                Normalize(contact);
+                if (contact.Name.Length > 0)
                 {
-                    Normalize(current);
-                    if (current.Name.Length > 0)
-                    {
-                        contacts.Add(current);
-                    }
+                    contacts.Add(contact);
                 }
-
-                current = null;
-                continue;
-            }
-
-            if (current is not null && TrySplit(line, out var name, out var parameters, out var value))
-            {
-                Apply(current, name, parameters, value);
             }
         }
 
         return contacts;
     }
 
-    public static string Write(IEnumerable<BorrowerDocument> contacts)
+    public static string Write(IEnumerable<BorrowerDocument> contacts) =>
+        vCardSerializer.Serialize(contacts.Select(ToCard).ToArray(), vCardVersion.v3);
+
+    private static IEnumerable<string> SplitCards(IEnumerable<string> lines)
     {
-        var builder = new StringBuilder();
-        foreach (var contact in contacts)
+        List<string>? current = null;
+        foreach (var line in lines)
         {
-            AppendLine(builder, "BEGIN:VCARD");
-            AppendLine(builder, "VERSION:3.0");
-            AppendProperty(builder, "FN", FirstNonEmpty(contact.DisplayName, contact.Name));
-            AppendStructured(builder, "N", Pad([contact.Name], 5));
-            if (!string.IsNullOrWhiteSpace(contact.Phone))
+            if (line.Equals("BEGIN:VCARD", StringComparison.OrdinalIgnoreCase))
             {
-                AppendProperty(builder, "TEL;TYPE=VOICE", contact.Phone);
+                current = ["BEGIN:VCARD"];
+                continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(contact.Fax))
+            if (line.Equals("END:VCARD", StringComparison.OrdinalIgnoreCase))
             {
-                AppendProperty(builder, "TEL;TYPE=FAX", contact.Fax);
+                if (current is null)
+                {
+                    continue;
+                }
+
+                current.Add("END:VCARD");
+                yield return BuildCard(current);
+                current = null;
+                continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(contact.Email))
+            if (current is not null && TryNormalizeProperty(line, out var property))
             {
-                AppendProperty(builder, "EMAIL", contact.Email);
+                current.Add(property);
+            }
+        }
+    }
+
+    private static string BuildCard(IReadOnlyList<string> lines)
+    {
+        // vCardLib resolves fields with StartsWith, so an N line must precede
+        // NOTE or NICKNAME and a missing N must be supplied explicitly.
+        var version = lines.FirstOrDefault(line => IsProperty(line, "VERSION")) ?? "VERSION:3.0";
+        var name = lines.FirstOrDefault(line => IsProperty(line, "N")) ?? "N:;;;;";
+
+        var builder = new StringBuilder();
+        builder.Append("BEGIN:VCARD\r\n");
+        builder.Append(version).Append("\r\n");
+        builder.Append(name).Append("\r\n");
+        foreach (var line in lines)
+        {
+            if (IsProperty(line, "BEGIN") || IsProperty(line, "END") ||
+                IsProperty(line, "VERSION") || IsProperty(line, "N"))
+            {
+                continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(contact.WebPage))
-            {
-                AppendProperty(builder, "URL", contact.WebPage);
-            }
-
-            if (!string.IsNullOrWhiteSpace(contact.Messenger))
-            {
-                AppendProperty(builder, "IMPP", contact.Messenger);
-            }
-
-            if (!string.IsNullOrWhiteSpace(contact.Address))
-            {
-                AppendStructured(builder, "ADR", Pad(["", "", contact.Address], 7));
-            }
-
-            if (!string.IsNullOrWhiteSpace(contact.Company))
-            {
-                AppendStructured(builder, "ORG", [contact.Company]);
-            }
-
-            if (!string.IsNullOrWhiteSpace(contact.Position))
-            {
-                AppendProperty(builder, "TITLE", contact.Position);
-            }
-
-            if (!string.IsNullOrWhiteSpace(contact.Comments))
-            {
-                AppendProperty(builder, "NOTE", contact.Comments);
-            }
-
-            AppendLine(builder, "END:VCARD");
+            builder.Append(line).Append("\r\n");
         }
 
+        builder.Append("END:VCARD\r\n");
         return builder.ToString();
+    }
+
+    private static bool IsProperty(string line, string name)
+    {
+        var colon = line.IndexOf(':');
+        if (colon <= 0)
+        {
+            return false;
+        }
+
+        var head = line[..colon];
+        var parameterSeparator = head.IndexOf(';');
+        var propertyName = parameterSeparator >= 0 ? head[..parameterSeparator] : head;
+        return propertyName.Equals(name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryNormalizeProperty(string line, out string normalized)
+    {
+        normalized = line;
+        var colon = line.IndexOf(':');
+        if (colon <= 0)
+        {
+            return false;
+        }
+
+        var head = line[..colon];
+        var value = line[(colon + 1)..];
+        var groupSeparator = head.LastIndexOf('.');
+        if (groupSeparator >= 0)
+        {
+            head = head[(groupSeparator + 1)..];
+        }
+
+        var name = head;
+        var parameters = string.Empty;
+        var parameterSeparator = head.IndexOf(';');
+        if (parameterSeparator >= 0)
+        {
+            name = head[..parameterSeparator];
+            parameters = head[(parameterSeparator + 1)..];
+        }
+
+        if (name.Length == 0)
+        {
+            return false;
+        }
+
+        if (IsQuotedPrintable(parameters))
+        {
+            value = EscapeNewlines(DecodeQuotedPrintable(parameters, value));
+            parameters = RemoveParameters(parameters, "ENCODING", "CHARSET");
+        }
+
+        normalized = parameters.Length == 0
+            ? name + ":" + value
+            : name + ";" + parameters + ":" + value;
+        return true;
+    }
+
+    private static string RemoveParameters(string parameters, params string[] names) =>
+        string.Join(
+            ";",
+            parameters
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(parameter => !names.Any(name => parameter.StartsWith(name, StringComparison.OrdinalIgnoreCase))));
+
+    private static string EscapeNewlines(string value) =>
+        value.Replace("\r\n", "\\n").Replace("\n", "\\n").Replace("\r", "\\n");
+
+    private static IReadOnlyList<vCard> ParseCard(string text)
+    {
+        try
+        {
+            return vCardDeserializer.FromContent(text).ToList();
+        }
+        catch (Exception)
+        {
+            // vCardLib rejects cards the legacy importer must skip instead of failing the file.
+            return [];
+        }
+    }
+
+    private static BorrowerDocument Map(vCard card)
+    {
+        var contact = new BorrowerDocument
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Name = FormatName(card.Name),
+            DisplayName = Clean(card.FormattedName),
+            Comments = Clean(card.Note),
+            WebPage = Clean(card.Url?.Value),
+            Position = Clean(card.Title),
+            Company = FormatOrganization(card.Organization)
+        };
+
+        foreach (var phone in card.PhoneNumbers)
+        {
+            var number = Clean(phone.Number);
+            if (number.Length == 0)
+            {
+                continue;
+            }
+
+            if (phone.Type.HasFlag(TelephoneNumberType.Fax))
+            {
+                contact.Fax = AppendText(contact.Fax, number);
+            }
+            else
+            {
+                contact.Phone = AppendText(contact.Phone, number);
+            }
+        }
+
+        foreach (var email in card.EmailAddresses)
+        {
+            contact.Email = AppendText(contact.Email, Clean(email.Value));
+        }
+
+        foreach (var address in card.Addresses)
+        {
+            contact.Address = AppendText(contact.Address, FormatAddress(address));
+        }
+
+        foreach (var field in card.CustomFields)
+        {
+            var key = field.Key.Split(';', ':')[0].Trim();
+            if (!IsMessengerKey(key))
+            {
+                continue;
+            }
+
+            var raw = field.Key + ":" + field.Value;
+            var separator = raw.IndexOf(':');
+            if (separator >= 0 && separator < raw.Length - 1)
+            {
+                contact.Messenger = AppendText(contact.Messenger, Clean(raw[(separator + 1)..]));
+            }
+        }
+
+        return contact;
+    }
+
+    private static vCard ToCard(BorrowerDocument contact)
+    {
+        var card = new vCard(vCardVersion.v3)
+        {
+            FormattedName = NullIfEmpty(FirstNonEmpty(contact.DisplayName, contact.Name)),
+            Name = new Name(contact.Name, null, null, null, null),
+            Note = NullIfEmpty(contact.Comments),
+            Title = NullIfEmpty(contact.Position),
+            Url = string.IsNullOrWhiteSpace(contact.WebPage) ? null : new Url(contact.WebPage),
+            Organization = string.IsNullOrWhiteSpace(contact.Company)
+                ? null
+                : new Organization(contact.Company, null, null)
+        };
+
+        if (!string.IsNullOrWhiteSpace(contact.Phone))
+        {
+            card.PhoneNumbers.Add(new TelephoneNumber(contact.Phone, TelephoneNumberType.Voice));
+        }
+
+        if (!string.IsNullOrWhiteSpace(contact.Fax))
+        {
+            card.PhoneNumbers.Add(new TelephoneNumber(contact.Fax, TelephoneNumberType.Fax));
+        }
+
+        if (!string.IsNullOrWhiteSpace(contact.Email))
+        {
+            card.EmailAddresses.Add(new EmailAddress(contact.Email));
+        }
+
+        if (!string.IsNullOrWhiteSpace(contact.Address))
+        {
+            card.Addresses.Add(new Address(string.Empty, string.Empty, contact.Address, string.Empty, string.Empty, string.Empty, string.Empty));
+        }
+
+        if (!string.IsNullOrWhiteSpace(contact.Messenger))
+        {
+            card.CustomFields.Add(new KeyValuePair<string, string>("IMPP", contact.Messenger));
+        }
+
+        return card;
+    }
+
+    private static string FormatName(Name? name)
+    {
+        if (name is not { } value)
+        {
+            return string.Empty;
+        }
+
+        return Join([value.HonorificPrefix, value.GivenName, value.FamilyName, value.HonorificSuffix], " ");
+    }
+
+    private static string FormatAddress(Address address) =>
+        Join(
+            [
+                address.PostOfficeBox,
+                address.ApartmentOrSuiteNumber,
+                address.StreetAddress,
+                address.CityOrLocality,
+                address.StateOrProvinceOrRegion,
+                address.PostalOrZipCode,
+                address.Country
+            ],
+            ", ");
+
+    private static string FormatOrganization(Organization? organization)
+    {
+        if (organization is not { } value)
+        {
+            return string.Empty;
+        }
+
+        return Join([value.Name, value.PrimaryUnit, value.SecondaryUnit], ", ");
+    }
+
+    private static string Join(IEnumerable<string?> parts, string separator) =>
+        string.Join(
+            separator,
+            parts.Select(part => part?.Trim() ?? string.Empty).Where(part => part.Length > 0));
+
+    private static bool IsMessengerKey(string key) =>
+        key.Equals("IMPP", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals("X-MESSENGER", StringComparison.OrdinalIgnoreCase) ||
+        key.Equals("X-SKYPE", StringComparison.OrdinalIgnoreCase);
+
+    private static void Normalize(BorrowerDocument contact)
+    {
+        contact.Name = contact.Name.Trim();
+        contact.DisplayName = contact.DisplayName.Trim();
+        contact.Comments = contact.Comments.Trim();
+        contact.Phone = contact.Phone.Trim();
+        contact.Fax = contact.Fax.Trim();
+        contact.Email = contact.Email.Trim();
+        contact.WebPage = contact.WebPage.Trim();
+        contact.Messenger = contact.Messenger.Trim();
+        contact.Address = contact.Address.Trim();
+        contact.Company = contact.Company.Trim();
+        contact.Position = contact.Position.Trim();
+
+        if (contact.Name.Length == 0)
+        {
+            contact.Name = contact.DisplayName;
+        }
+
+        if (contact.DisplayName.Length == 0)
+        {
+            contact.DisplayName = contact.Name;
+        }
     }
 
     private static IEnumerable<string> Unfold(string text)
@@ -136,203 +373,6 @@ public static class VCardCodec
         }
 
         return lines;
-    }
-
-    private static bool TrySplit(string line, out string name, out string parameters, out string value)
-    {
-        name = string.Empty;
-        parameters = string.Empty;
-        value = string.Empty;
-        var colon = line.IndexOf(':');
-        if (colon <= 0)
-        {
-            return false;
-        }
-
-        var head = line[..colon];
-        value = line[(colon + 1)..];
-        var groupSeparator = head.LastIndexOf('.');
-        if (groupSeparator >= 0)
-        {
-            head = head[(groupSeparator + 1)..];
-        }
-
-        var parameterSeparator = head.IndexOf(';');
-        if (parameterSeparator < 0)
-        {
-            name = head;
-        }
-        else
-        {
-            name = head[..parameterSeparator];
-            parameters = head[(parameterSeparator + 1)..];
-        }
-
-        return name.Length > 0;
-    }
-
-    private static void Apply(BorrowerDocument contact, string name, string parameters, string value)
-    {
-        switch (name.ToUpperInvariant())
-        {
-            case "FN":
-                contact.DisplayName = Decode(parameters, value);
-                break;
-            case "N":
-                var formatted = FormatName(SplitEscaped(value, ';'));
-                if (formatted.Length > 0 && contact.Name.Length == 0)
-                {
-                    contact.Name = formatted;
-                }
-
-                break;
-            case "NOTE":
-                contact.Comments = AppendText(contact.Comments, Decode(parameters, value));
-                break;
-            case "TEL":
-                if (parameters.Contains("FAX", StringComparison.OrdinalIgnoreCase))
-                {
-                    contact.Fax = AppendText(contact.Fax, Decode(parameters, value));
-                }
-                else
-                {
-                    contact.Phone = AppendText(contact.Phone, Decode(parameters, value));
-                }
-
-                break;
-            case "EMAIL":
-                contact.Email = AppendText(contact.Email, Decode(parameters, value));
-                break;
-            case "URL":
-                contact.WebPage = AppendText(contact.WebPage, Decode(parameters, value));
-                break;
-            case "IMPP":
-            case "X-MESSENGER":
-            case "X-SKYPE":
-                contact.Messenger = AppendText(contact.Messenger, Decode(parameters, value));
-                break;
-            case "ADR":
-                contact.Address = AppendText(contact.Address, FormatAddress(SplitEscaped(value, ';')));
-                break;
-            case "ORG":
-                contact.Company = AppendText(contact.Company, FormatOrganization(SplitEscaped(value, ';')));
-                break;
-            case "TITLE":
-                contact.Position = AppendText(contact.Position, Decode(parameters, value));
-                break;
-        }
-    }
-
-    private static void Normalize(BorrowerDocument contact)
-    {
-        contact.Name = contact.Name.Trim();
-        contact.DisplayName = contact.DisplayName.Trim();
-        contact.Comments = contact.Comments.Trim();
-        contact.Phone = contact.Phone.Trim();
-        contact.Fax = contact.Fax.Trim();
-        contact.Email = contact.Email.Trim();
-        contact.WebPage = contact.WebPage.Trim();
-        contact.Messenger = contact.Messenger.Trim();
-        contact.Address = contact.Address.Trim();
-        contact.Company = contact.Company.Trim();
-        contact.Position = contact.Position.Trim();
-
-        if (contact.Name.Length == 0)
-        {
-            contact.Name = contact.DisplayName;
-        }
-
-        if (contact.DisplayName.Length == 0)
-        {
-            contact.DisplayName = contact.Name;
-        }
-    }
-
-    private static string FormatName(IReadOnlyList<string> components)
-    {
-        var family = Component(components, 0);
-        var given = Component(components, 1);
-        var prefix = Component(components, 3);
-        var suffix = Component(components, 4);
-        return string.Join(" ", new[] { prefix, given, family, suffix }.Where(part => part.Length > 0));
-    }
-
-    private static string FormatAddress(IReadOnlyList<string> components)
-    {
-        var parts = Enumerable.Range(0, 7).Select(index => Component(components, index));
-        return string.Join(", ", parts.Where(part => part.Length > 0));
-    }
-
-    private static string FormatOrganization(IReadOnlyList<string> components)
-    {
-        var parts = components.Select(part => Unescape(part).Trim());
-        return string.Join(", ", parts.Where(part => part.Length > 0));
-    }
-
-    private static string Component(IReadOnlyList<string> components, int index) =>
-        index < components.Count ? Unescape(components[index]).Trim() : string.Empty;
-
-    private static string[] SplitEscaped(string value, char separator)
-    {
-        var parts = new List<string>();
-        var builder = new StringBuilder();
-        for (var i = 0; i < value.Length; i++)
-        {
-            var character = value[i];
-            if (character == '\\' && i + 1 < value.Length)
-            {
-                builder.Append(character).Append(value[++i]);
-                continue;
-            }
-
-            if (character == separator)
-            {
-                parts.Add(builder.ToString());
-                builder.Clear();
-                continue;
-            }
-
-            builder.Append(character);
-        }
-
-        parts.Add(builder.ToString());
-        return [.. parts];
-    }
-
-    private static string Unescape(string value)
-    {
-        var builder = new StringBuilder(value.Length);
-        for (var i = 0; i < value.Length; i++)
-        {
-            if (value[i] != '\\' || i + 1 >= value.Length)
-            {
-                builder.Append(value[i]);
-                continue;
-            }
-
-            var next = value[++i];
-            builder.Append(next switch
-            {
-                'n' or 'N' => '\n',
-                _ => next
-            });
-        }
-
-        return builder.ToString();
-    }
-
-    private static string Escape(string value) => value
-        .Replace("\\", "\\\\")
-        .Replace(";", "\\;")
-        .Replace(",", "\\,")
-        .Replace("\r\n", "\\n")
-        .Replace("\n", "\\n")
-        .Replace("\r", "\\n");
-
-    private static string Decode(string parameters, string value)
-    {
-        var decoded = IsQuotedPrintable(parameters) ? DecodeQuotedPrintable(parameters, value) : value;
-        return Unescape(decoded).Trim();
     }
 
     private static bool IsQuotedPrintable(string parameters) =>
@@ -379,43 +419,14 @@ public static class VCardCodec
         return existing.Length == 0 ? value : existing + ", " + value;
     }
 
+    private static string Clean(string? value) =>
+        string.IsNullOrEmpty(value)
+            ? string.Empty
+            : value.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
+
     private static string FirstNonEmpty(string first, string second) =>
         !string.IsNullOrWhiteSpace(first) ? first : second;
 
-    private static string[] Pad(string[] components, int count)
-    {
-        if (components.Length >= count)
-        {
-            return components;
-        }
-
-        var padded = new string[count];
-        Array.Copy(components, padded, components.Length);
-        for (var i = components.Length; i < count; i++)
-        {
-            padded[i] = string.Empty;
-        }
-
-        return padded;
-    }
-
-    private static void AppendStructured(StringBuilder builder, string property, IReadOnlyList<string> components) =>
-        Fold(builder, property + ":" + string.Join(";", components.Select(Escape)));
-
-    private static void AppendProperty(StringBuilder builder, string property, string value) =>
-        Fold(builder, property + ":" + Escape(value));
-
-    private static void AppendLine(StringBuilder builder, string line) => builder.Append(line).Append("\r\n");
-
-    private static void Fold(StringBuilder builder, string line)
-    {
-        const int limit = 75;
-        while (line.Length > limit)
-        {
-            builder.Append(line, 0, limit).Append("\r\n ");
-            line = line[limit..];
-        }
-
-        AppendLine(builder, line);
-    }
+    private static string? NullIfEmpty(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 }
