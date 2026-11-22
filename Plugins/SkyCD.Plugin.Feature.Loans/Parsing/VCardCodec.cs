@@ -179,7 +179,7 @@ public static class VCardCodec
                 contact.DisplayName = Decode(parameters, value);
                 break;
             case "N":
-                var formatted = FormatName(SplitEscaped(value, ';'));
+                var formatted = FormatName(SplitEscaped(DecodeRaw(parameters, value), ';'));
                 if (formatted.Length > 0 && contact.Name.Length == 0)
                 {
                     contact.Name = formatted;
@@ -212,10 +212,10 @@ public static class VCardCodec
                 contact.Messenger = AppendText(contact.Messenger, Decode(parameters, value));
                 break;
             case "ADR":
-                contact.Address = AppendText(contact.Address, FormatAddress(SplitEscaped(value, ';')));
+                contact.Address = AppendText(contact.Address, FormatAddress(SplitEscaped(DecodeRaw(parameters, value), ';')));
                 break;
             case "ORG":
-                contact.Company = AppendText(contact.Company, FormatOrganization(SplitEscaped(value, ';')));
+                contact.Company = AppendText(contact.Company, FormatOrganization(SplitEscaped(DecodeRaw(parameters, value), ';')));
                 break;
             case "TITLE":
                 contact.Position = AppendText(contact.Position, Decode(parameters, value));
@@ -334,6 +334,9 @@ public static class VCardCodec
         var decoded = IsQuotedPrintable(parameters) ? DecodeQuotedPrintable(parameters, value) : value;
         return Unescape(decoded).Trim();
     }
+
+    private static string DecodeRaw(string parameters, string value) =>
+        IsQuotedPrintable(parameters) ? DecodeQuotedPrintable(parameters, value) : value;
 
     private static bool IsQuotedPrintable(string parameters) =>
         parameters.Contains("QUOTED-PRINTABLE", StringComparison.OrdinalIgnoreCase);
