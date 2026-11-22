@@ -2,11 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.MediaMetadata;
+using SkyCD.Plugin.MediaMetadata.Models;
 using SkyCD.Plugin.Metadata.Image.Models;
 using SkyCD.Plugin.Metadata.Image.Parsing;
-using SkyCD.Plugin.MediaMetadata.Models;
-using SkyCD.Plugin.MediaMetadata.Parsing;
 
 namespace SkyCD.Plugin.Metadata.Image;
 
@@ -35,19 +33,12 @@ public sealed class ContainerTagsPlugin : IMediaMetadataCapability
             .ConfigureAwait(false);
         progress?.Report(new MediaProgress(0.6));
 
-        MetadataScan scan;
-        try
-        {
-            scan = ContainerTagsReader.Scan(data);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            // A damaged container must never fail the item; the catalog keeps the file without tags.
-            scan = new MetadataScan();
-        }
+        // A damaged container must never fail the item; the reader yields an empty scan instead, and the
+        // catalog keeps the file without tags.
+        var embedded = EmbeddedMetadataReader.Read(data);
 
         progress?.Report(new MediaProgress(1));
         return new MediaExtractionResult(
-            MetadataValues.Build(scan, ImageSchema.Tags, ImageSchema.Comment, ImageSchema.Rating));
+            MetadataValues.Build(embedded.Tags, ImageSchema.Tags, ImageSchema.Comment, ImageSchema.Rating));
     }
 }

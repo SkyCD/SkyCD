@@ -1,11 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Xml;
-using System.Xml.Linq;
+using XmpCore;
 
 namespace SkyCD.Plugin.MediaMetadata.Parsing;
 
@@ -20,31 +16,17 @@ internal sealed record XmpMetadata(
 
 /// <summary>
 /// Reads the properties that file managers agree on: <c>dc:subject</c>, <c>dc:description</c>,
-/// <c>xmp:Rating</c> and their Microsoft/IPTC counterparts. The XML parser is configured without DTD
-/// processing or an external resolver, and the packet was already bounded by the caller, so a hostile file
-/// can waste at most one bounded parse.
+/// <c>xmp:Rating</c> and their Microsoft/IPTC counterparts. Parsing is delegated to XmpCore, the XMP
+/// toolkit MetadataExtractor already uses, so hostile packets never reach a hand-written XML reader.
 /// </summary>
 internal static class XmpMetadataReader
 {
-    private static readonly XNamespace Rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-    private static readonly XNamespace Xml = XNamespace.Xml;
-    private static readonly XNamespace Dc = "http://purl.org/dc/elements/1.1/";
-    private static readonly XNamespace Xmp = "http://ns.adobe.com/xap/1.0/";
-    private static readonly XNamespace Exif = "http://ns.adobe.com/exif/1.0/";
-    private static readonly XNamespace Pdf = "http://ns.adobe.com/pdf/1.3/";
-    private static readonly XNamespace MicrosoftPhoto = "http://ns.microsoft.com/photo/1.0/";
-
-    private static readonly XmlReaderSettings ReaderSettings = new()
-    {
-        DtdProcessing = DtdProcessing.Prohibit,
-        XmlResolver = null,
-        IgnoreComments = true,
-        IgnoreProcessingInstructions = true,
-        IgnoreWhitespace = false
-    };
-
-    private static readonly UTF8Encoding LenientUtf8 = new(encoderShouldEmitUTF8Identifier: false,
-        throwOnInvalidBytes: false);
+    private const string DcNamespace = "http://purl.org/dc/elements/1.1/";
+    private const string XmpNamespace = "http://ns.adobe.com/xap/1.0/";
+    private const string ExifNamespace = "http://ns.adobe.com/exif/1.0/";
+    private const string PdfNamespace = "http://ns.adobe.com/pdf/1.3/";
+    private const string MicrosoftPhotoNamespace = "http://ns.microsoft.com/photo/1.0/";
+    private const string DefaultLanguage = "x-default";
 
     /// <summary>Parses one located packet; a malformed packet yields no metadata rather than an exception.</summary>
     public static bool TryRead(ReadOnlySpan<byte> packet, out XmpMetadata metadata)
@@ -55,124 +37,115 @@ internal static class XmpMetadataReader
             return false;
         }
 
-        XDocument document;
+        IXmpMeta parsed;
         try
         {
-            var text = LenientUtf8.GetString(packet);
-            using var stringReader = new StringReader(text);
-            using var xmlReader = XmlReader.Create(stringReader, ReaderSettings);
-            document = XDocument.Load(xmlReader);
+            parsed = XmpMetaFactory.ParseFromBuffer(packet.ToArray());
         }
-        catch (Exception exception) when (exception is XmlException or ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (exception is XmpException or ArgumentException)
         {
             return false;
         }
 
-        var keywords = new List<string>();
-        foreach (var property in Find(document, Dc, "subject"))
-        {
-            keywords.AddRange(ReadList(property));
-        }
-
-        foreach (var property in Find(document, Pdf, "Keywords"))
-        {
-            keywords.AddRange(SplitDelimited(property.Value));
-        }
-
-        var comment = Find(document, Dc, "description")
-            .Select(ReadLocalized)
-            .FirstOrDefault(value => value.Length > 0);
-        if (string.IsNullOrEmpty(comment))
-        {
-            comment = Find(document, Exif, "UserComment")
-                .Select(property => MetadataText.Clean(property.Value))
-                .FirstOrDefault(value => value.Length > 0);
-        }
-
-        metadata = new XmpMetadata(keywords, comment, ReadRating(document));
-        return true;
+        return TryRead(parsed, out metadata);
     }
 
-    private static IEnumerable<XElement> Find(XContainer document, XNamespace ns, string localName) =>
-        document.Descendants().Where(element => element.Name == ns + localName);
-
-    private static IReadOnlyList<string> ReadList(XElement property)
+    /// <summary>Reads the portable properties from a packet the container reader already parsed.</summary>
+    public static bool TryRead(IXmpMeta? meta, out XmpMetadata metadata)
     {
-        var values = property.Descendants(Rdf + "li")
-            .Select(item => MetadataText.Clean(item.Value))
-            .Where(value => value.Length > 0)
-            .ToList();
-        if (values.Count > 0)
+        metadata = XmpMetadata.Empty;
+        if (meta is null)
         {
-            return values;
+            return false;
         }
 
-        if (property.Attribute(Rdf + "resource") is not null ||
-            string.Equals((string?)property.Attribute(Rdf + "parseType"), "Resource", StringComparison.Ordinal))
+        try
         {
-            return values;
+            metadata = new XmpMetadata(ReadKeywords(meta), ReadComment(meta), ReadRating(meta));
+            return true;
+        }
+        catch (XmpException)
+        {
+            return false;
+        }
+    }
+
+    private static IReadOnlyList<string> ReadKeywords(IXmpMeta meta)
+    {
+        var keywords = new List<string>();
+        var count = meta.CountArrayItems(DcNamespace, "subject");
+        for (var index = 1; index <= count; index++)
+        {
+            AddKeyword(keywords, meta.GetArrayItem(DcNamespace, "subject", index)?.Value);
         }
 
-        var direct = MetadataText.Clean(property.Value);
-        if (direct.Length > 0)
+        foreach (var keyword in SplitDelimited(ReadValue(meta, PdfNamespace, "Keywords")))
         {
-            values.Add(direct);
+            AddKeyword(keywords, keyword);
         }
 
-        return values;
+        return keywords;
+    }
+
+    private static void AddKeyword(List<string> keywords, string? value)
+    {
+        var normalized = MetadataText.Clean(value);
+        if (normalized.Length > 0)
+        {
+            keywords.Add(normalized);
+        }
     }
 
     /// <summary>Alt text prefers the <c>x-default</c> language, matching how tools present captions.</summary>
-    private static string ReadLocalized(XElement property)
+    private static string? ReadComment(IXmpMeta meta)
     {
-        var items = property.Descendants(Rdf + "li").ToList();
-        if (items.Count == 0)
+        var localized = MetadataText.Clean(
+            meta.GetLocalizedText(DcNamespace, "description", null, DefaultLanguage)?.Value);
+        if (localized.Length > 0)
         {
-            return MetadataText.Clean(property.Value);
+            return localized;
         }
 
-        var preferred = items.FirstOrDefault(item =>
-                             string.Equals((string?)item.Attribute(Xml + "lang"), "x-default",
-                                 StringComparison.OrdinalIgnoreCase))
-                         ?? items[0];
-        return MetadataText.Clean(preferred.Value);
+        var userComment = MetadataText.Clean(ReadValue(meta, ExifNamespace, "UserComment"));
+        return userComment.Length > 0 ? userComment : null;
     }
 
     private static IReadOnlyList<string> SplitDelimited(string? value) =>
         string.IsNullOrWhiteSpace(value)
             ? []
-            : value.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(MetadataText.Clean)
-                .Where(text => text.Length > 0)
-                .ToArray();
+            : value.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>
     /// <c>xmp:Rating</c> uses a 0–5 star scale. The Microsoft namespace persists 0–99 (or -1 for rejected),
     /// which <see cref="MetadataScan.NormalizeRating"/> converts to stars.
     /// </summary>
-    private static int? ReadRating(XContainer document)
+    private static int? ReadRating(IXmpMeta meta)
     {
-        var standard = FirstInteger(Find(document, Xmp, "Rating"));
+        var standard = ParseInteger(ReadValue(meta, XmpNamespace, "Rating"));
         if (standard is >= 0)
         {
             return standard;
         }
 
-        var microsoft = FirstInteger(Find(document, MicrosoftPhoto, "Rating"));
+        var microsoft = ParseInteger(ReadValue(meta, MicrosoftPhotoNamespace, "Rating"));
         return microsoft is >= 0 ? microsoft : null;
     }
 
-    private static int? FirstInteger(IEnumerable<XElement> properties)
-    {
-        foreach (var property in properties)
-        {
-            if (int.TryParse(MetadataText.Clean(property.Value), NumberStyles.Integer,
-                    CultureInfo.InvariantCulture, out var value))
-            {
-                return value;
-            }
-        }
+    private static int? ParseInteger(string? value) =>
+        int.TryParse(MetadataText.Clean(value), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
 
-        return null;
+    /// <summary>A missing property or an unrecognized namespace yields no value instead of failing the read.</summary>
+    private static string? ReadValue(IXmpMeta meta, string schemaNamespace, string propertyName)
+    {
+        try
+        {
+            return meta.GetProperty(schemaNamespace, propertyName)?.Value;
+        }
+        catch (XmpException)
+        {
+            return null;
+        }
     }
 }

@@ -4,7 +4,8 @@
   "allowedLicenseIds": ["CC-BY-4.0"],
   "licenseIdsByUrl": {
     "https://creativecommons.org/licenses/by/4.0/": "CC-BY-4.0",
-    "https://creativecommons.org/licenses/by/4.0/legalcode": "CC-BY-4.0"
+    "https://creativecommons.org/licenses/by/4.0/legalcode": "CC-BY-4.0",
+    "https://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html": "BSD-3-Clause"
   },
   "blockedLicenseIds": [
     "AGPL-1.0",
