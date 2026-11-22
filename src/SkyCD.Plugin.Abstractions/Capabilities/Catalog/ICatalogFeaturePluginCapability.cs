@@ -7,8 +7,8 @@ namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 
 /// <summary>
 /// Domain-neutral surface through which a catalog feature plugin decorates entries and contributes details
-/// columns, advanced-search fields and per-entry commands. Implementations must stay feature-agnostic: the
-/// host treats every contribution generically and names no specific feature.
+/// columns, advanced-search fields, per-entry commands and per-entry Properties tabs. Implementations must
+/// stay feature-agnostic: the host treats every contribution generically and names no specific feature.
 /// </summary>
 public interface ICatalogFeaturePluginCapability : IPluginCapability
 {
@@ -29,4 +29,20 @@ public interface ICatalogFeaturePluginCapability : IPluginCapability
 
     /// <summary>Runs one contributed entry command and returns whether the host should refresh its projection.</summary>
     Task<bool> ExecuteEntryCommandAsync(string commandId, CatalogEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Raised when the plugin wants the host to open the entry's Properties dialog on one of its tabs.
+    /// The host stays feature-agnostic; implementations without tabs never raise it.
+    /// </summary>
+    event EventHandler<EntryDetailsTabRequestEventArgs>? DetailsTabRequested
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>
+    /// Gets the optional tabs this plugin embeds in the host's Properties dialog for the given entry.
+    /// Return an empty list when the entry cannot host the plugin's surface.
+    /// </summary>
+    IReadOnlyList<EntryDetailsTabContribution> GetEntryDetailsTabs(CatalogEntry entry) => [];
 }

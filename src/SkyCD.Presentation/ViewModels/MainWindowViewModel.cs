@@ -399,10 +399,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (catalogFeatures is not null)
         {
             catalogFeatures.DataChanged -= OnCatalogFeatureDataChanged;
+            catalogFeatures.DetailsTabRequested -= OnCatalogFeatureDetailsTabRequested;
         }
 
         catalogFeatures = manager;
         manager.DataChanged += OnCatalogFeatureDataChanged;
+        manager.DetailsTabRequested += OnCatalogFeatureDetailsTabRequested;
         DetailsColumnsCatalog.SetContributedColumns(manager.GetDetailsColumns().Select(contribution =>
             new DetailsColumnDefinition
             {
@@ -455,6 +457,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
+    }
+
+    private void OnCatalogFeatureDetailsTabRequested(object? sender, EntryDetailsTabRequestEventArgs e)
+    {
+        // Entry and menu commands run synchronously on the UI thread, so the dialog can open directly.
+        if (isDisposed)
+        {
+            return;
+        }
+
+        ShowProperties(e.TabKey);
     }
 
     private IReadOnlyList<CatalogDocument> ApplyCatalogDecorations(IReadOnlyList<CatalogDocument> entries)
@@ -1358,9 +1371,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(IsPropertiesEnabled))]
-    private void OpenProperties()
+    private void OpenProperties() => ShowProperties(null);
+
+    private void ShowProperties(string? initialDetailsTabKey)
     {
-        if (!TryBuildPropertiesDialog(out var dialog))
+        if (!IsPropertiesEnabled)
+        {
+            return;
+        }
+
+        if (!TryBuildPropertiesDialog(out var dialog, initialDetailsTabKey))
         {
             StatusText = LocalizationService.Current.Get(TextKeys.UnknownSelectedObject);
             return;
@@ -3209,7 +3229,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return false;
     }
 
-    private bool TryBuildPropertiesDialog([NotNullWhen(true)] out PropertiesDialogViewModel? dialog)
+    private bool TryBuildPropertiesDialog(
+        [NotNullWhen(true)] out PropertiesDialogViewModel? dialog,
+        string? initialDetailsTabKey = null)
     {
         if (ActivePane == ActivePane.Tree && SelectedTreeNode is not null)
         {
@@ -3223,6 +3245,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 comments,
                 GetBrowserItemInfoProperties(SelectedTreeNode.Key),
                 propertyValueLocalizer);
+            AttachDetailsTabs(dialog, initialDetailsTabKey);
             return true;
         }
 
@@ -3251,6 +3274,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 dialog.InitializeAiDescription(aiDescriptionService, SelectedBrowserItem.Id);
             }
 
+            AttachDetailsTabs(dialog, initialDetailsTabKey);
             return true;
         }
 
@@ -3266,11 +3290,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 comments,
                 GetBrowserItemInfoProperties(SelectedTreeNode.Key),
                 propertyValueLocalizer);
+            AttachDetailsTabs(dialog, initialDetailsTabKey);
             return true;
         }
 
         dialog = null;
         return false;
+    }
+
+    /// <summary>
+    /// Attaches the tabs contributed by enabled feature plugins for the selected entry and records which
+    /// tab the dialog should select. Non-entry selections get no plugin tabs.
+    /// </summary>
+    private void AttachDetailsTabs(PropertiesDialogViewModel dialog, string? initialDetailsTabKey)
+    {
+        dialog.InitialDetailsTabKey = initialDetailsTabKey;
+        if (catalogFeatures is null || GetSelectedCatalogEntry() is not { } entry)
+        {
+            return;
+        }
+
+        dialog.InitializeDetailsTabs(catalogFeatures.GetEntryDetailsTabs(entry));
     }
 
     private string GetObjectComments(string objectKey, string documentId)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
+using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -452,6 +453,67 @@ public class PropertiesDialogViewModelTests
         vm.CustomProperties[0].DefaultValue = "edited";
         Assert.Equal("edited", vm.GetProperties()["Created"]);
         Assert.Equal(timestamp, source["Created"]);
+    }
+
+    [Fact]
+    public void InitializeDetailsTabs_AddsContributionsAndDisposesThemWithTheDialog()
+    {
+        var disposed = false;
+        var contribution = new EntryDetailsTabContribution(
+            "demo.details",
+            "Demo",
+            0,
+            () => new EntryDetailsTab(() => "content", () => disposed = true));
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new PropertiesCollection());
+
+        vm.InitializeDetailsTabs([contribution]);
+
+        var tab = Assert.Single(vm.DetailsTabs);
+        Assert.Equal("demo.details", tab.Key);
+        Assert.Equal("Demo", tab.Title);
+        Assert.Equal("content", tab.Content);
+        Assert.True(vm.HasDetailsTabs);
+
+        vm.Dispose();
+
+        Assert.True(disposed);
+        Assert.Empty(vm.DetailsTabs);
+        Assert.False(vm.HasDetailsTabs);
+    }
+
+    [Fact]
+    public void InitializeDetailsTabs_IsolatesFailingContribution()
+    {
+        var healthy = new EntryDetailsTabContribution(
+            "demo.details",
+            "Demo",
+            0,
+            () => new EntryDetailsTab(() => "content"));
+        var failing = new EntryDetailsTabContribution(
+            "demo.broken",
+            "Broken",
+            1,
+            () => throw new InvalidOperationException("boom"));
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new PropertiesCollection());
+
+        vm.InitializeDetailsTabs([failing, healthy]);
+
+        Assert.Equal("demo.details", Assert.Single(vm.DetailsTabs).Key);
+    }
+
+    [Fact]
+    public void InitializeDetailsTabs_ReplacesPreviousTabs()
+    {
+        var first = new EntryDetailsTabContribution("demo.first", "First", 0,
+            () => new EntryDetailsTab(() => "first"));
+        var second = new EntryDetailsTabContribution("demo.second", "Second", 0,
+            () => new EntryDetailsTab(() => "second"));
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", "comments", new PropertiesCollection());
+
+        vm.InitializeDetailsTabs([first]);
+        vm.InitializeDetailsTabs([second]);
+
+        Assert.Equal("demo.second", Assert.Single(vm.DetailsTabs).Key);
     }
 
     private static PropertiesDialogViewModel CreateWithCulture(object value, CultureInfo culture, string key = "Value")
