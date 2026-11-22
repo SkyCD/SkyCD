@@ -95,16 +95,57 @@ public class CatalogFeatureExtensionManagerTests
         Assert.False(await manager.ExecuteEntryCommandAsync("x", Entry()));
     }
 
+    [Fact]
+    public void GetEntryDetailsTabs_DeduplicatesByKeyAndOrders()
+    {
+        var a = new FakeFeatureCapability(tabs:
+        [
+            Tab("b", 2),
+            Tab("a", 1)
+        ]);
+        var b = new FakeFeatureCapability(tabs:
+        [
+            Tab("a", 5),
+            Tab("c", 0)
+        ]);
+
+        var manager = new CatalogFeatureExtensionManager([a, b]);
+        var tabs = manager.GetEntryDetailsTabs(Entry());
+
+        Assert.Equal(new[] { "c", "a", "b" }, tabs.Select(static tab => tab.Key).ToArray());
+    }
+
+    [Fact]
+    public void DetailsTabRequested_ForwardsFromCapability()
+    {
+        var capability = new FakeFeatureCapability();
+        var manager = new CatalogFeatureExtensionManager([capability]);
+        EntryDetailsTabRequestEventArgs? request = null;
+        manager.DetailsTabRequested += (_, args) => request = args;
+
+        capability.RaiseDetailsTabRequested(new EntryDetailsTabRequestEventArgs("1", "tab"));
+
+        Assert.NotNull(request);
+        Assert.Equal("1", request.EntryId);
+        Assert.Equal("tab", request.TabKey);
+    }
+
+    private static EntryDetailsTabContribution Tab(string key, int order) =>
+        new(key, key.ToUpperInvariant(), order, () => new EntryDetailsTab(() => new object()));
+
     private sealed class FakeFeatureCapability(
         IReadOnlyList<EntryDecoration>? decorations = null,
         IReadOnlyList<DetailsColumnContribution>? columns = null,
         IReadOnlyList<AdvancedSearchFieldContribution>? searchFields = null,
         IReadOnlyList<EntryCommandContribution>? commands = null,
+        IReadOnlyList<EntryDetailsTabContribution>? tabs = null,
         bool columnsError = false,
         bool commandError = false,
         bool commandResult = false) : ICatalogFeaturePluginCapability
     {
         public event EventHandler? DataChanged;
+
+        public event EventHandler<EntryDetailsTabRequestEventArgs>? DetailsTabRequested;
 
         public IReadOnlyList<EntryDecoration> GetEntryDecorations(IReadOnlyList<CatalogEntry> entries) =>
             decorations ?? [];
@@ -123,6 +164,8 @@ public class CatalogFeatureExtensionManagerTests
 
         public IReadOnlyList<EntryCommandContribution> GetEntryCommands() => commands ?? [];
 
+        public IReadOnlyList<EntryDetailsTabContribution> GetEntryDetailsTabs(CatalogEntry entry) => tabs ?? [];
+
         public Task<bool> ExecuteEntryCommandAsync(
             string commandId, CatalogEntry entry, CancellationToken cancellationToken = default)
         {
@@ -135,5 +178,8 @@ public class CatalogFeatureExtensionManagerTests
         }
 
         public void RaiseDataChanged() => DataChanged?.Invoke(this, EventArgs.Empty);
+
+        public void RaiseDetailsTabRequested(EntryDetailsTabRequestEventArgs args) =>
+            DetailsTabRequested?.Invoke(this, args);
     }
 }

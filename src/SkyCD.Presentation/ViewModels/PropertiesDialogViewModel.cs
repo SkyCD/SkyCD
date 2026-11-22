@@ -10,12 +10,14 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Formatting;
+using SkyCD.Plugin.Abstractions;
+using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class PropertiesDialogViewModel : ObservableObject
+public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 {
     private const string DescriptionPropertyKey = "Description";
 
@@ -73,6 +75,51 @@ public partial class PropertiesDialogViewModel : ObservableObject
 
     /// <summary>Unified description surface; absent only when the entry has no description to show.</summary>
     [ObservableProperty] private DescriptionViewModel? description;
+
+    /// <summary>Tabs contributed by enabled feature plugins; empty when no plugin offers a surface.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<PropertiesDetailsTabViewModel> DetailsTabs { get; } = [];
+    public bool HasDetailsTabs => DetailsTabs.Count > 0;
+
+    /// <summary>Key of the contributed tab the dialog should select on open, when one was requested.</summary>
+    public string? InitialDetailsTabKey { get; set; }
+
+    /// <summary>
+    /// Attaches the tabs contributed by enabled plugins for the selected entry, replacing any previously
+    /// attached tabs. A failing contribution is isolated so the rest of the dialog still opens.
+    /// </summary>
+    public void InitializeDetailsTabs(IEnumerable<EntryDetailsTabContribution>? contributions)
+    {
+        DisposeDetailsTabs();
+        foreach (var contribution in contributions ?? [])
+        {
+            try
+            {
+                DetailsTabs.Add(new PropertiesDetailsTabViewModel(
+                    contribution.Key,
+                    contribution.Title,
+                    contribution.CreateTab()));
+            }
+            catch (Exception exception)
+            {
+                PluginFailure.Publish(typeof(EntryDetailsTabContribution), "catalog", exception);
+            }
+        }
+
+        OnPropertyChanged(nameof(HasDetailsTabs));
+    }
+
+    /// <summary>Releases the plugin-owned tab content.</summary>
+    public void Dispose() => DisposeDetailsTabs();
+
+    private void DisposeDetailsTabs()
+    {
+        foreach (var tab in DetailsTabs)
+        {
+            tab.Dispose();
+        }
+
+        DetailsTabs.Clear();
+    }
 
     public bool HasDescriptionSection => Description is not null;
 

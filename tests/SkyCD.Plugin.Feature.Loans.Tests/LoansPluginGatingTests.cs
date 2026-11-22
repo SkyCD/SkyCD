@@ -77,6 +77,7 @@ public sealed class LoansPluginGatingTests
             Assert.Empty(features.GetDetailsColumns());
             Assert.Empty(features.GetAdvancedSearchFields());
             Assert.Empty(features.GetEntryCommands());
+            Assert.Empty(features.GetEntryDetailsTabs(Entry));
             Assert.False(await features.ExecuteEntryCommandAsync("skycd.loans.lend", Entry));
 
             Assert.Equal("Alice", repository.Get("book")!.Properties["Borrower"]);
@@ -117,6 +118,10 @@ public sealed class LoansPluginGatingTests
         Assert.Equal("Alice", column.SelectValue(Entry));
         Assert.Equal(3, features.GetEntryCommands().Count);
 
+        var loansTab = Assert.Single(features.GetEntryDetailsTabs(Entry));
+        Assert.Equal("skycd.loans.details", loansTab.Key);
+        Assert.EndsWith("Loans", loansTab.Title, StringComparison.Ordinal);
+
         var searchFields = features.GetAdvancedSearchFields();
         Assert.Equal(3, searchFields.Count);
         var activeField = Assert.Single(searchFields, field => field.Key == "skycd.loans.active");
@@ -133,12 +138,21 @@ public sealed class LoansPluginGatingTests
         Assert.Single(restored.GetDecorations([Entry]));
         Assert.Single(restored.GetDetailsColumns());
 
-        Assert.True(await features.ExecuteEntryCommandAsync("skycd.loans.return", Entry));
-        Assert.Empty(features.GetDecorations([Entry]));
-        Assert.Null(column.SelectValue(Entry));
+        EntryDetailsTabRequestEventArgs? tabRequest = null;
+        features.DetailsTabRequested += (_, args) => tabRequest = args;
+
+        Assert.False(await features.ExecuteEntryCommandAsync("skycd.loans.return", Entry));
+        Assert.NotNull(tabRequest);
+        Assert.Equal("book", tabRequest.EntryId);
+        Assert.Equal("skycd.loans.details", tabRequest.TabKey);
 
         var service = CatalogLoanService.Open(repository);
         service.CatalogPath = provider.CatalogPath!;
+        var active = Assert.Single(service.GetHistory("book"));
+        service.Return("book", active.Id, DateOnly.FromDateTime(DateTime.Today));
+        Assert.Empty(features.GetDecorations([Entry]));
+        Assert.Null(column.SelectValue(Entry));
+
         var history = Assert.Single(service.GetHistory("book"));
         Assert.False(history.IsActive);
     }

@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -15,12 +17,14 @@ namespace SkyCD.App.Views;
 
 public partial class PropertiesWindow : Window
 {
+    private readonly List<TabItem> detailsTabItems = [];
     private PropertiesDialogViewModel? subscribedViewModel;
 
     public PropertiesWindow()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        Closed += OnClosed;
         CustomPropertiesList.ValueCellEditRequested += OnCustomPropertyEditRequested;
         CustomPropertiesList.RowSelectionChanged += OnCustomPropertyRowSelectionChanged;
     }
@@ -46,6 +50,51 @@ public partial class PropertiesWindow : Window
         subscribedViewModel = vm;
         vm.PropertyChanged += OnViewModelPropertyChanged;
         vm.CopyTextRequested += OnCopyTextRequested;
+        SyncDetailsTabs(vm);
+    }
+
+    private void OnClosed(object? sender, EventArgs e) => (DataContext as IDisposable)?.Dispose();
+
+    /// <summary>
+    /// Appends the plugin-contributed tabs after the built-in ones and selects the tab a plugin command
+    /// asked for. Tab content stays plugin-owned and is disposed with the dialog.
+    /// </summary>
+    private void SyncDetailsTabs(PropertiesDialogViewModel vm)
+    {
+        foreach (var item in detailsTabItems)
+        {
+            Tabs.Items.Remove(item);
+        }
+
+        detailsTabItems.Clear();
+        foreach (var tab in vm.DetailsTabs)
+        {
+            var content = new ContentControl();
+            content.Bind(ContentControl.ContentProperty, new Binding(nameof(PropertiesDetailsTabViewModel.Content))
+            {
+                Source = tab
+            });
+            var item = new TabItem { Header = tab.Title, Content = content };
+            Tabs.Items.Add(item);
+            detailsTabItems.Add(item);
+        }
+
+        if (vm.InitialDetailsTabKey is not { Length: > 0 } key)
+        {
+            return;
+        }
+
+        var index = 0;
+        while (index < vm.DetailsTabs.Count &&
+               !string.Equals(vm.DetailsTabs[index].Key, key, StringComparison.Ordinal))
+        {
+            index++;
+        }
+
+        if (index < detailsTabItems.Count)
+        {
+            Tabs.SelectedItem = detailsTabItems[index];
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
