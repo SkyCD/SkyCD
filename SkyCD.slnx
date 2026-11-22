@@ -29,9 +29,7 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Json/SkyCD.Plugin.FileFormat.Json.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.CsvIdx/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.Sqlite/SkyCD.Plugin.FileFormat.Katalog.Sqlite.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Legacy.Ascd/SkyCD.Plugin.FileFormat.Legacy.Ascd.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Legacy.Cscd/SkyCD.Plugin.FileFormat.Legacy.Cscd.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Legacy.Scd/SkyCD.Plugin.FileFormat.Legacy.Scd.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.FileFormat.LegacySkyCD/SkyCD.Plugin.FileFormat.LegacySkyCD.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Librer/SkyCD.Plugin.FileFormat.Librer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.M3u/SkyCD.Plugin.FileFormat.M3u.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Markdown/SkyCD.Plugin.FileFormat.Markdown.csproj"/>
@@ -147,9 +145,7 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.Json.Tests/SkyCD.Plugin.FileFormat.Json.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Legacy.Ascd.Tests/SkyCD.Plugin.FileFormat.Legacy.Ascd.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Legacy.Cscd.Tests/SkyCD.Plugin.FileFormat.Legacy.Cscd.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Legacy.Scd.Tests/SkyCD.Plugin.FileFormat.Legacy.Scd.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.FileFormat.LegacySkyCD.Tests/SkyCD.Plugin.FileFormat.LegacySkyCD.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Librer.Tests/SkyCD.Plugin.FileFormat.Librer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.M3u.Tests/SkyCD.Plugin.FileFormat.M3u.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Markdown.Tests/SkyCD.Plugin.FileFormat.Markdown.Tests.csproj"/>

@@ -16,8 +16,7 @@
     <ItemGroup>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Legacy.Cscd\SkyCD.Plugin.FileFormat.Legacy.Cscd.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Legacy.Ascd\SkyCD.Plugin.FileFormat.Legacy.Ascd.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.LegacySkyCD\SkyCD.Plugin.FileFormat.LegacySkyCD.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Access\SkyCD.Plugin.FileFormat.Access.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Ai.Description\SkyCD.Plugin.Ai.Description.csproj" />
@@ -32,7 +31,6 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Tar\SkyCD.Plugin.FileFormat.Tar.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Html\SkyCD.Plugin.FileFormat.Html.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Markdown\SkyCD.Plugin.FileFormat.Markdown.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Legacy.Scd\SkyCD.Plugin.FileFormat.Legacy.Scd.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.WinCatalog\SkyCD.Plugin.FileFormat.WinCatalog.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Katalog.CsvIdx\SkyCD.Plugin.FileFormat.Katalog.CsvIdx.csproj" />
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj" />
@@ -42,6 +40,6 @@
         <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="FormatFixtures\ftpz.ascd" CopyToOutputDirectory="PreserveNewest" />
         <None Include="..\..\legacy\SkyCD\Samples\My Documents.ascd" Link="FormatFixtures\my-documents.ascd" CopyToOutputDirectory="PreserveNewest" />
         <None Include="..\SkyCD.Plugin.*.Tests\Fixtures\**\*" Link="FormatFixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-        <None Include="..\SkyCD.Plugin.FileFormat.Legacy.Scd.Tests\Fixtures\Scd\*-sample.scd" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\SkyCD.Plugin.FileFormat.LegacySkyCD.Tests\Fixtures\Scd\*-sample.scd" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
