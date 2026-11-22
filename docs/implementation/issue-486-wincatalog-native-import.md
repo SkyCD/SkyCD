@@ -37,7 +37,7 @@ resolved from assembly metadata; no `plugin.json`).
 ## Legacy profiles
 `.wcat`/`.wca`/`.wcl` are recognized by extension only to produce the
 conversion diagnostic (convert to `.w3cat` in WinCatalog or export CSV/XML).
-No direct parsing is claimed; see `docs/plugins/wincatalog-native.md`.
+No direct parsing is claimed; see `docs/plugins/wincatalog.md`.
 
 ## Integration
 - Registered in `SkyCD.slnx` (plugin + tests).
@@ -57,5 +57,5 @@ rejection, cancellation).
   persist/reopen, duplicate-name parent separation, tree verification.
 
 ## Docs
-- `docs/plugins/wincatalog-native.md` — user import instructions, supported
+- `docs/plugins/wincatalog.md` — user import instructions, supported
   versions, bounds, known loss.

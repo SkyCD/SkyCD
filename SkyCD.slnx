@@ -43,9 +43,7 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Toml/SkyCD.Plugin.FileFormat.Toml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Vvv/SkyCD.Plugin.FileFormat.Vvv.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.WhereIsIt/SkyCD.Plugin.FileFormat.WhereIsIt.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.WinCatalog.Csv/SkyCD.Plugin.FileFormat.WinCatalog.Csv.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.WinCatalog.Native/SkyCD.Plugin.FileFormat.WinCatalog.Native.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.WinCatalog.Xml/SkyCD.Plugin.FileFormat.WinCatalog.Xml.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.FileFormat.WinCatalog/SkyCD.Plugin.FileFormat.WinCatalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Xml/SkyCD.Plugin.FileFormat.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.XmlExport/SkyCD.Plugin.FileFormat.XmlExport.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Xspf/SkyCD.Plugin.FileFormat.Xspf.csproj"/>
@@ -161,9 +159,7 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.Toml.Tests/SkyCD.Plugin.FileFormat.Toml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Vvv.Tests/SkyCD.Plugin.FileFormat.Vvv.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.WhereIsIt.Tests/SkyCD.Plugin.FileFormat.WhereIsIt.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.WinCatalog.Csv.Tests/SkyCD.Plugin.FileFormat.WinCatalog.Csv.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.WinCatalog.Native.Tests/SkyCD.Plugin.FileFormat.WinCatalog.Native.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.WinCatalog.Xml.Tests/SkyCD.Plugin.FileFormat.WinCatalog.Xml.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Xml.Tests/SkyCD.Plugin.FileFormat.Xml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.XmlExport.Tests/SkyCD.Plugin.FileFormat.XmlExport.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Xspf.Tests/SkyCD.Plugin.FileFormat.Xspf.Tests.csproj"/>
