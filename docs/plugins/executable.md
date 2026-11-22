@@ -145,9 +145,21 @@ budget exhaustion and cancellation still propagate, so a cancelled scan stops in
 | SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
 
 SkiaSharp is a policy-allowed MIT dependency already used by the Image, EBook and AudioCD plugins, so no license
-whitelist entry or policy change is needed. The PE reader, the resource directory walk, the version-information
-parser, the bitmap icon decoder and the box filter remain in this assembly; nothing is extracted to disk and no
-Windows-only API is used.
+whitelist entry or policy change is needed.
+
+The PE/COFF header and section-table facts are read with
+`System.Reflection.PortableExecutable.PEHeaders`, which ships in-box with .NET 10 (`Microsoft.NETCore.App`, MIT)
+and therefore adds no package, SBOM component or policy entry. This replaced the hand-written optional-header
+parser; the layout comes from the BCL reader, including the standard section-table fields
+(`PointerToRawData` at offset 20). The Win32 resource directory walk, the `VS_VERSION_INFO` parser, the bitmap
+icon decoder and the box filter remain in this assembly because the BCL exposes no Win32 resource reader.
+
+PeNet 6.1.2 (Apache-2.0, published 2026-05, `System.Security.Cryptography.Pkcs` 10.0.7 dependency) was evaluated
+and not adopted: it parses a complete in-memory buffer or a synchronously read stream, so reading through the
+host's bounded asynchronous `IMediaSource` would need a blocking adapter and either a whole-file buffer or a
+second resource-directory walk beside the icon pipeline. Its licence metadata is Apache-2.0 rather than the MIT
+assumed by the issue; both are compatible with BSD-2-Clause under the OSADL matrix, so licence compliance was not
+the deciding factor and no policy change is needed. Nothing is extracted to disk and no Windows-only API is used.
 
 ## Tests
 
@@ -157,6 +169,9 @@ fixture is checked in. The tests cover:
 
 - The descriptor: extensions, MIME types, schema ids and `IndexTimePreview`.
 - Header facts for PE32+, PE32, x86, a .NET image and a bare `mz-16` image.
+- Header failure modes that must not escape the plugin contract: a truncated PE header or section table, an
+  unsupported optional-header magic, zero sections, zero or overflowing data-directory counts, and a DOS image
+  whose stub does not reach a PE signature.
 - Version strings, the two length styles, and text truncation.
 - Icon selection (largest image wins, damaged group falls back to the next group), DIB and PNG icons, alpha and
   AND-mask transparency, and the square bounded output.
