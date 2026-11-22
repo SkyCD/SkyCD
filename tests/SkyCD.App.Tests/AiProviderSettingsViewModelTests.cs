@@ -75,8 +75,8 @@ public class AiProviderSettingsViewModelTests
             [new("acp", "ACP"), new("provider", "AI provider")], "acp");
 
         var categories = vm.SettingCategories.ToList();
-        var descriptionIndex = categories.FindIndex(category => category.Title == "AI description");
-        var providerIndex = categories.FindIndex(category => category.Title == "AI provider");
+        var descriptionIndex = categories.FindIndex(category => category.Title == "Description");
+        var providerIndex = categories.FindIndex(category => category.Title == "Provider");
         Assert.Equal(descriptionIndex + 1, providerIndex);
 
         vm.SelectedTabIndex = descriptionIndex;
@@ -100,7 +100,7 @@ public class AiProviderSettingsViewModelTests
 
         vm.SetAiDescriptionAvailable(false);
 
-        Assert.DoesNotContain(vm.SettingCategories, category => category.Title == "AI provider");
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Id == "ai-provider");
         Assert.Equal(9, vm.SelectedTabIndex);
         Assert.True(vm.IsToolbarCategorySelected);
         Assert.False(vm.ShowAiProviderSection);
@@ -115,10 +115,76 @@ public class AiProviderSettingsViewModelTests
 
         vm.SettingsSearchText = "provider";
 
-        Assert.Equal(["AI provider"], vm.FilteredSettingCategories.Select(category => category.Title));
-        Assert.Equal("AI provider", vm.SelectedSettingCategory?.Title);
+        Assert.Equal(["Provider"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal("Provider", vm.SelectedSettingCategory?.Title);
         Assert.True(vm.IsAiProviderCategorySelected);
         Assert.True(vm.ShowAiProviderSection);
+    }
+
+    [Fact]
+    public void AiCategories_RenderUnderSingleGroupHeaderWithShortLabels()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetAiDescriptionAvailable(true);
+
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Equal("AI", header.Title);
+        var headerIndex = vm.SidebarEntries.IndexOf(header);
+        var children = vm.SidebarEntries.Skip(headerIndex + 1)
+            .TakeWhile(entry => !entry.IsGroupHeader)
+            .ToList();
+        Assert.Equal(["Description", "Provider"], children.Select(child => child.Title));
+        Assert.Equal(["ai-description", "ai-provider"], children.Select(child => child.Category?.Id));
+        Assert.All(children, child => Assert.Equal(1, child.Depth));
+    }
+
+    [Fact]
+    public void SelectingAiGroupHeader_SelectsDescriptionAndShowsFullPath()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetAiDescriptionAvailable(true);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+
+        vm.SelectedSidebarEntry = header;
+
+        Assert.Equal("ai-description", vm.SelectedSettingCategory?.Id);
+        Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
+        Assert.Equal("AI  >  Description", vm.CurrentCategoryPath);
+        Assert.True(vm.ShowAiDescriptionSection);
+    }
+
+    [Fact]
+    public void Search_FiltersAiChildrenAndHidesGroup()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetAiDescriptionAvailable(true);
+
+        vm.SettingsSearchText = "provider";
+
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Equal("AI", header.Title);
+        var child = Assert.Single(vm.SidebarEntries, entry => !entry.IsGroupHeader);
+        Assert.Equal("Provider", child.Title);
+        Assert.Equal("ai-provider", child.Category?.Id);
+
+        vm.SettingsSearchText = "AI";
+
+        Assert.DoesNotContain(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.DoesNotContain(vm.FilteredSettingCategories, category => category.Id.StartsWith("ai-", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void UnavailableAi_RemovesGroupAndKeepsToolbarFallback()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetAiDescriptionAvailable(true);
+        vm.SelectedSidebarEntry = vm.SidebarEntries.Single(entry => entry.Category?.Id == "ai-provider");
+
+        vm.SetAiDescriptionAvailable(false);
+
+        Assert.DoesNotContain(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Id.StartsWith("ai-", StringComparison.Ordinal));
+        Assert.Equal("toolbar", vm.SelectedSettingCategory?.Id);
     }
 
     private sealed class FakeCapability : IAiProviderSettingsCapability

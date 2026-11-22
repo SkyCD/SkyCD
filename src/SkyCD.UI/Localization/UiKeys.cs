@@ -106,6 +106,7 @@ public static class UiKeys
     public const string AcpInstallErrorTitle = "core.ui.AcpInstallErrorTitle";
     public const string NoMatchingAcpAgents = "core.ui.NoMatchingAcpAgents";
     public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
+    public const string AiGroup = "core.ui.AiGroup";
     public const string AiImplementation = "core.ui.AiImplementation";
     public const string AiProvider = "core.ui.AiProvider";
     public const string AiProviderCategory = "core.ui.AiProviderCategory";
@@ -293,6 +294,7 @@ public static class UiKeys
     public const string UpdateSearch = "core.ui.UpdateSearch";
     public const string RefreshResults = "core.ui.RefreshResults";
     public const string AiDescription = "core.ui.AiDescription";
+    public const string AiDescriptionShort = "core.ui.AiDescriptionShort";
     public const string Generate = "core.ui.Generate";
     public const string Regenerate = "core.ui.Regenerate";
     public const string Clear = "core.ui.Clear";
