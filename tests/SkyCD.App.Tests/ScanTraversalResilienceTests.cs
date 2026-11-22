@@ -229,6 +229,7 @@ public sealed class ScanTraversalResilienceTests
                 FolderPath: root,
                 Traversal: new ScanTraversalOptions
                 {
+                    ConcurrencyMode = ScanConcurrencyMode.Manual,
                     MaxConcurrency = 4,
                     MaxRetries = 0,
                     RetryDelay = TimeSpan.Zero

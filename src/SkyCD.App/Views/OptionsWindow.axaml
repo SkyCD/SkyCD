@@ -836,6 +836,71 @@
                                       IsVisible="{Binding IsOnlineOnlyCloudFilesOptionVisible}" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
                                       IsChecked="{Binding IncludeExtendedInfo}" />
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHeader}}"
+                                       Margin="0,8,0,0"
+                                       FontWeight="SemiBold" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyMode}}"
+                                           VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="220"
+                                          HorizontalAlignment="Left"
+                                          ItemsSource="{Binding ScanConcurrencyModeOptions}"
+                                          SelectedIndex="{Binding SelectedScanConcurrencyModeIndex}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                  IsVisible="{Binding IsManualScanConcurrency}">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyManualWorkers}}"
+                                           VerticalAlignment="Center" />
+                                <NumericUpDown Grid.Column="1"
+                                               Width="140"
+                                               HorizontalAlignment="Left"
+                                               Minimum="1"
+                                               Maximum="32"
+                                               Increment="1"
+                                               FormatString="0"
+                                               Value="{Binding ScanConcurrencyManualWorkers}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyCpuShare}}"
+                                           VerticalAlignment="Center" />
+                                <NumericUpDown Grid.Column="1"
+                                               Width="140"
+                                               HorizontalAlignment="Left"
+                                               Minimum="1"
+                                               Maximum="100"
+                                               Increment="5"
+                                               FormatString="0"
+                                               Value="{Binding ScanConcurrencyCpuSharePercent}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadShrink}}"
+                                           VerticalAlignment="Center" />
+                                <NumericUpDown Grid.Column="1"
+                                               Width="140"
+                                               HorizontalAlignment="Left"
+                                               Minimum="1"
+                                               Maximum="99"
+                                               Increment="5"
+                                               FormatString="0"
+                                               Value="{Binding ScanConcurrencyLoadShrinkPercent}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadSuspend}}"
+                                           VerticalAlignment="Center" />
+                                <NumericUpDown Grid.Column="1"
+                                               Width="140"
+                                               HorizontalAlignment="Left"
+                                               Minimum="2"
+                                               Maximum="100"
+                                               Increment="5"
+                                               FormatString="0"
+                                               Value="{Binding ScanConcurrencyLoadSuspendPercent}" />
+                            </Grid>
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHint}}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.75" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ShowScanErrorsAfterScan}}"
                                       IsChecked="{Binding ShowScanErrorsAfterScan}" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SaveScanErrorsToComments}}"
