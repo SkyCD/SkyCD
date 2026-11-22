@@ -168,6 +168,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AudioCdMetadataService? audioCdMetadataService;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
+    private readonly ICpuLoadSampler cpuLoadSampler = new SystemCpuLoadSampler();
     private readonly object viewRefreshLock = new();
 
     public void RefreshMediaServices(MediaExtensionManager updatedManager,
@@ -1695,7 +1696,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public async Task AddImportedDocumentsAsync(
         IReadOnlyList<CatalogDocument> documents,
         CancellationToken cancellationToken = default,
-        IOperationProgress? progress = null)
+        IOperationProgress? progress = null,
+        ScanTraversalOptions? traversal = null)
     {
         ArgumentNullException.ThrowIfNull(documents);
         cancellationToken.ThrowIfCancellationRequested();
@@ -1708,7 +1710,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             PublishImportedDocuments(documents, cancellationToken);
             return true;
-        }, progress, cancellationToken, describeNewFiles: true);
+        }, progress, cancellationToken, describeNewFiles: true, traversal: traversal);
         RefreshPreview();
     }
 
@@ -1749,7 +1751,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         CancellationToken cancellationToken,
         string? sessionId = null,
         Func<bool>? canPublish = null,
-        bool describeNewFiles = false)
+        bool describeNewFiles = false,
+        ScanTraversalOptions? traversal = null)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, metadataLifetime.Token);
         var token = linked.Token;
@@ -1765,7 +1768,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 var prepared = catalogRepository is null ? documents : new CatalogEntryMerger().Merge(documents, existing);
                 var preparedIds = prepared.Select(entry => entry.Id).ToHashSet(StringComparer.Ordinal);
                 var catalog = existing.Where(entry => !preparedIds.Contains(entry.Id)).Concat(prepared).ToArray();
-                var batchId = await StageMetadataAsync(prepared, catalog, progress, token, sessionId);
+                var batchId = await StageMetadataAsync(prepared, catalog, progress, token, sessionId, traversal);
                 try
                 {
                     token.ThrowIfCancellationRequested();
@@ -1880,7 +1883,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IReadOnlyList<CatalogDocument> catalog,
         IOperationProgress? progress,
         CancellationToken cancellationToken,
-        string? sessionId)
+        string? sessionId,
+        ScanTraversalOptions? traversal)
     {
         var service = mediaMetadataService is { CanCollect: true } ? mediaMetadataService : null;
         var audioCdService = audioCdMetadataService is { CanCollect: true } ? audioCdMetadataService : null;
@@ -1927,32 +1931,64 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 }
             }
 
-            for (var index = 0; index < files.Count; index++)
+            async Task CollectFileAsync(CatalogDocument file, int index, CancellationToken token)
             {
-                await Task.Yield();
-                cancellationToken.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
                 progress?.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
                     stagePercentage: index * 100d / files.Count, stageCurrent: index, stageTotal: files.Count);
-                progress?.ReportItem(files[index].Name);
+                progress?.ReportItem(file.Name);
                 try
                 {
-                    var currentIndex = index;
                     var itemProgress = progress is null ? null : new Progress<MediaProgress>(value =>
                         progress.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
-                            stagePercentage: (currentIndex + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Count,
-                            stageCurrent: currentIndex, stageTotal: files.Count));
-                    var outcome = await service!.CollectAsync(files[index], catalog, itemProgress, cancellationToken,
-                        batchId);
+                            stagePercentage: (index + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Count,
+                            stageCurrent: index, stageTotal: files.Count));
+                    var outcome = await service!.CollectAsync(file, catalog, itemProgress, token, batchId);
                     if (outcome.SkipReason == MediaMetadataSkipReason.Failed)
                     {
-                        progress?.ReportWarning(outcome.FailureReason ?? outcome.SkipReason.ToString(), itemPath: files[index].Name);
+                        progress?.ReportWarning(outcome.FailureReason ?? outcome.SkipReason.ToString(), itemPath: file.Name);
                     }
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    progress?.ReportWarning(exception.Message, itemPath: files[index].Name);
+                    progress?.ReportWarning(exception.Message, itemPath: file.Name);
                 }
             }
+
+            var metadataWorkers = traversal is null
+                ? 1
+                : ScanConcurrencyResolver.ResolveMetadataWorkers(
+                    traversal, Environment.ProcessorCount, cpuLoadSampler.Sample());
+
+            if (metadataWorkers <= 1 || files.Count <= 1)
+            {
+                for (var index = 0; index < files.Count; index++)
+                {
+                    await Task.Yield();
+                    await CollectFileAsync(files[index], index, cancellationToken);
+                }
+            }
+            else
+            {
+                var completedCount = 0;
+                await Parallel.ForEachAsync(
+                    files,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = metadataWorkers,
+                        CancellationToken = cancellationToken
+                    },
+                    async (file, token) =>
+                    {
+                        var index = Interlocked.Increment(ref completedCount) - 1;
+                        await CollectFileAsync(file, index, token).ConfigureAwait(false);
+                    });
+            }
+
             return batchId;
         }
         catch
@@ -3271,7 +3307,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             if (aiDescriptionService is not null)
             {
-                dialog.InitializeAiDescription(aiDescriptionService, SelectedBrowserItem.Id);
+                dialog.InitializeDescription(aiDescriptionService, SelectedBrowserItem.Id);
             }
 
             AttachDetailsTabs(dialog, initialDetailsTabKey);

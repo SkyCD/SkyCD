@@ -2,11 +2,10 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using SkiaSharp;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Metadata.Executable.Parsing;
 
 namespace SkyCD.Plugin.Metadata.Executable.Tests;
 
@@ -16,7 +15,8 @@ namespace SkyCD.Plugin.Metadata.Executable.Tests;
 /// </summary>
 /// <remarks>
 /// Layout produced by <see cref="Build"/>: DOS stub of <see cref="DosStubSize"/> bytes, the PE header, one
-/// section table entry, then a single <c>.rsrc</c> section whose virtual address equals its file offset.
+/// section table entry, then a single <c>.rsrc</c> section directly after the headers, whose data entries are
+/// section-relative RVAs.
 /// The resource section starts with a packed three-level tree — type, name, language — where every directory
 /// entry carries its offset in the high bit of its target, and data entries point at the resource payloads
 /// that follow the tree.
@@ -72,6 +72,32 @@ internal static class ExecutableFixtures
     /// <summary>An executable whose single icon group references the given images.</summary>
     public static byte[] WithIcons(params IconEntry[] entries) =>
         BuildGroups(Group(1, entries));
+
+    /// <summary>Rewrites the optional-header magic of a PE32+ fixture to the given unsupported value.</summary>
+    public static byte[] WithOptionalHeaderMagic(byte[] image, ushort magic) =>
+        Patched(image, DosStubSize + 24, magic);
+
+    /// <summary>Rewrites the COFF section count without moving the bytes that follow the header.</summary>
+    public static byte[] WithSectionCount(byte[] image, ushort sectionCount) =>
+        Patched(image, DosStubSize + 6, sectionCount);
+
+    /// <summary>Rewrites the data-directory count of a PE32+ fixture's optional header.</summary>
+    public static byte[] WithDataDirectoryCount(byte[] image, uint count) =>
+        Patched(image, DosStubSize + 24 + 0x6C, count);
+
+    private static byte[] Patched(byte[] image, int offset, ushort value)
+    {
+        var copy = (byte[])image.Clone();
+        BinaryPrimitives.WriteUInt16LittleEndian(copy.AsSpan(offset), value);
+        return copy;
+    }
+
+    private static byte[] Patched(byte[] image, int offset, uint value)
+    {
+        var copy = (byte[])image.Clone();
+        BinaryPrimitives.WriteUInt32LittleEndian(copy.AsSpan(offset), value);
+        return copy;
+    }
 
     /// <summary>
     /// An executable with the given resources and arbitrarily named icon groups. A group is paired with the
@@ -260,14 +286,15 @@ internal static class ExecutableFixtures
             BinaryPrimitives.WriteUInt32LittleEndian(span[(directories + (14 * 8) + 4)..], 0x48);
         }
 
-        // One section: virtual address equals its file offset so data entries can use section-relative RVA math.
+        // One section, laid out as the PE format specifies: virtual size, virtual address, raw size and raw
+        // pointer. Resource data entries stay section-relative because their RVA is SectionRva plus an offset.
         var sectionTable = optional + optionalSize;
         ".rsrc\0\0\0"u8.CopyTo(span[sectionTable..]);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 8)..], (uint)rawSection);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 8)..], (uint)resourceSection.Length);
         BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 12)..], SectionRva);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 16)..], (uint)resourceSection.Length);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 20)..], (uint)rawSection);
-        BinaryPrimitives.WriteInt32LittleEndian(span[(sectionTable + 36)..], headerSize);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 16)..], (uint)rawSection);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 20)..], (uint)headerSize);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 36)..], 0x4000_0040);
 
         resourceSection.CopyTo(span[headerSize..]);
         return image;
@@ -351,7 +378,7 @@ internal static class ExecutableFixtures
         return data;
     }
 
-    /// <summary>An icon image stored as a PNG, reusing the plugin's own encoder so no fixture binary is needed.</summary>
+    /// <summary>An icon image stored as a PNG, encoded with SkiaSharp so no fixture binary is needed.</summary>
     public static byte[] PngImage(int width, int height, uint rgba, int borderWidth = 0)
     {
         var pixels = new byte[width * height * 4];
@@ -369,7 +396,61 @@ internal static class ExecutableFixtures
             }
         }
 
-        return PngDecoder.Encode(width, height, pixels);
+        return EncodePng(width, height, pixels);
+    }
+
+    /// <summary>
+    /// A structurally valid PNG whose header declares <paramref name="width"/> by <paramref name="height"/>
+    /// pixels but whose image data stays tiny, so the decoder's header bound is exercised without a real bomb.
+    /// </summary>
+    public static byte[] PngWithDeclaredSize(int width, int height)
+    {
+        var png = PngImage(2, 2, 0x0000FFFF);
+
+        // Signature (8), chunk length (4), "IHDR" (4), then width and height; the header CRC covers type+data.
+        BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(16), width);
+        BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(20), height);
+        BinaryPrimitives.WriteUInt32BigEndian(png.AsSpan(29), Crc32(png.AsSpan(12, 17)));
+        return png;
+    }
+
+    private static byte[] EncodePng(int width, int height, byte[] rgba)
+    {
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(info);
+        var target = bitmap.GetPixelSpan();
+        for (var row = 0; row < height; row++)
+        {
+            var source = rgba.AsSpan(row * width * 4, width * 4);
+            var destination = target.Slice(row * bitmap.RowBytes, width * 4);
+            for (var column = 0; column < source.Length; column += 4)
+            {
+                var alpha = source[column + 3];
+                destination[column] = (byte)(((source[column] * alpha) + 127) / 255);
+                destination[column + 1] = (byte)(((source[column + 1] * alpha) + 127) / 255);
+                destination[column + 2] = (byte)(((source[column + 2] * alpha) + 127) / 255);
+                destination[column + 3] = alpha;
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+
+    private static uint Crc32(ReadOnlySpan<byte> data)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in data)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) != 0 ? 0xEDB88320u ^ (crc >> 1) : crc >> 1;
+            }
+        }
+
+        return ~crc;
     }
 
     /// <summary>A <c>VS_VERSION_INFO</c> resource with a fixed block and one string table.</summary>

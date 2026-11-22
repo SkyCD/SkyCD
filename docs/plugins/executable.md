@@ -75,13 +75,14 @@ The preview follows the icon format's own path:
    depth. A group whose declared payloads are all damaged is skipped and the next group is tried.
 2. Resource ids in the group are one-based indexes into the `RT_ICON` list, which is how Windows stores them.
 3. An `RT_ICON` payload is either a `BITMAPINFOHEADER` bitmap (palette for 1/2/4/8 bpp, 16/24/32 bpp direct, XOR
-   rows bottom-up, then a 1-bit AND mask) or, since Windows Vista, a bare PNG. Both are accepted.
+   rows bottom-up, then a 1-bit AND mask) or, since Windows Vista, a bare PNG decoded with SkiaSharp. Both are
+   accepted.
 4. 32-bit images carry their own alpha; the AND mask is still applied where it marks transparency, so the rounded
    corners of older icons survive.
 5. The image is drawn onto a transparent square. An icon that fits keeps its own pixels and is centred, so a
    16×16 icon is never blurred into a 128×128 smear; a larger one is box-filtered down with its longer edge fitted
    to the square, averaging in premultiplied alpha so transparent margins never darken the edge.
-6. The result is encoded as an 8-bit RGBA PNG (`image/png`).
+6. The result is encoded as an 8-bit RGBA PNG (`image/png`) with SkiaSharp.
 
 The stored PNG is therefore always square and exactly `IconSize` pixels on a side (128 by default, clamped to
 16–128).
@@ -117,7 +118,6 @@ does not decode pixels.
 
 Rejected instead of approximated, because a wrong icon is worse than a type fallback:
 
-- Interlaced (Adam7) PNG icons, PNG bit depths other than 8, and unknown critical PNG chunks.
 - Icon bitmaps whose header is neither a `BITMAPCOREHEADER` nor a supported `BITMAPINFOHEADER` size.
 - Icon bitmaps above 256 × 256 pixels.
 - Named resources and named languages: the plugin selects the neutral language first, then the lowest numeric
@@ -137,9 +137,29 @@ budget exhaustion and cancellation still propagate, so a cancelled scan stops in
 
 ## Dependencies and licensing
 
-No package dependency. The PE reader, the resource directory walk, the version-information parser, the icon
-decoder, the box filter, the PNG decoder/encoder and the zlib/deflate inflater are implemented in this assembly,
-so there is nothing to add to `docs/legal/dependency-license-policy.json` and no Windows-only API is used.
+`dotnet list Plugins/SkyCD.Plugin.Metadata.Executable/SkyCD.Plugin.Metadata.Executable.csproj package`:
+
+| Package | Version | License | Use |
+|---|---|---|---|
+| SkiaSharp | 3.119.4 | MIT | Decode embedded PNG icons and encode the bounded preview |
+| SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
+
+SkiaSharp is a policy-allowed MIT dependency already used by the Image, EBook and AudioCD plugins, so no license
+whitelist entry or policy change is needed.
+
+The PE/COFF header and section-table facts are read with
+`System.Reflection.PortableExecutable.PEHeaders`, which ships in-box with .NET 10 (`Microsoft.NETCore.App`, MIT)
+and therefore adds no package, SBOM component or policy entry. This replaced the hand-written optional-header
+parser; the layout comes from the BCL reader, including the standard section-table fields
+(`PointerToRawData` at offset 20). The Win32 resource directory walk, the `VS_VERSION_INFO` parser, the bitmap
+icon decoder and the box filter remain in this assembly because the BCL exposes no Win32 resource reader.
+
+PeNet 6.1.2 (Apache-2.0, published 2026-05, `System.Security.Cryptography.Pkcs` 10.0.7 dependency) was evaluated
+and not adopted: it parses a complete in-memory buffer or a synchronously read stream, so reading through the
+host's bounded asynchronous `IMediaSource` would need a blocking adapter and either a whole-file buffer or a
+second resource-directory walk beside the icon pipeline. Its licence metadata is Apache-2.0 rather than the MIT
+assumed by the issue; both are compatible with BSD-2-Clause under the OSADL matrix, so licence compliance was not
+the deciding factor and no policy change is needed. Nothing is extracted to disk and no Windows-only API is used.
 
 ## Tests
 
@@ -149,9 +169,14 @@ fixture is checked in. The tests cover:
 
 - The descriptor: extensions, MIME types, schema ids and `IndexTimePreview`.
 - Header facts for PE32+, PE32, x86, a .NET image and a bare `mz-16` image.
+- Header failure modes that must not escape the plugin contract: a truncated PE header or section table, an
+  unsupported optional-header magic, zero sections, zero or overflowing data-directory counts, and a DOS image
+  whose stub does not reach a PE signature.
 - Version strings, the two length styles, and text truncation.
 - Icon selection (largest image wins, damaged group falls back to the next group), DIB and PNG icons, alpha and
   AND-mask transparency, and the square bounded output.
 - Every "no icon" case: plain text, `MZ`-only, no resources, truncated image, group without icons, empty payload,
   damaged PNG, garbage bitmap, oversized source, oversized PNG and clamp of the configured edge.
+- A structurally valid PNG whose header declares 4096 × 4096 pixels is refused by the header bound before any
+  raster is allocated (decompression-bomb protection).
 - Option validation and the `MaxIconSourceBytes` ≤ `MaxSourceBytes` rule.

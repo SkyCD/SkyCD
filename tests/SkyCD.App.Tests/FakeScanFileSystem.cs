@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.App.Tests;
@@ -10,6 +11,9 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
 {
     private readonly Dictionary<string, Node> nodes;
     private readonly StringComparer comparer;
+    private readonly object gate = new();
+    private int enumerateFilesCallCount;
+    private int enumerateDirectoriesCallCount;
 
     public FakeScanFileSystem(StringComparer? comparer = null)
     {
@@ -17,9 +21,9 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
         nodes = new Dictionary<string, Node>(this.comparer);
     }
 
-    public int EnumerateFilesCallCount { get; private set; }
+    public int EnumerateFilesCallCount => Volatile.Read(ref enumerateFilesCallCount);
 
-    public int EnumerateDirectoriesCallCount { get; private set; }
+    public int EnumerateDirectoriesCallCount => Volatile.Read(ref enumerateDirectoriesCallCount);
 
     public void AddDirectory(
         string path,
@@ -27,28 +31,31 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
         bool isLink = false,
         string? visitedIdentity = null)
     {
-        var normalized = Normalize(path);
-        var existingChildren = nodes.TryGetValue(normalized, out var existing)
-            ? existing.Children
-            : new List<string>();
+        lock (gate)
+        {
+            var normalized = Normalize(path);
+            var existingChildren = nodes.TryGetValue(normalized, out var existing)
+                ? existing.Children
+                : new List<string>();
 
-        nodes[normalized] = new Node(
-            Entry: new ScanFileSystemEntry(
-                FullPath: normalized,
-                Name: GetEntryName(normalized),
-                IsDirectory: true,
-                Length: 0,
-                Attributes: attributes | FileAttributes.Directory | (isLink ? FileAttributes.ReparsePoint : 0),
-                CreationTime: DateTime.UtcNow,
-                LastAccessTime: DateTime.UtcNow,
-                LastWriteTime: DateTime.UtcNow,
-                IsLinkOrReparsePoint: isLink,
-                VisitedIdentity: visitedIdentity ?? normalized),
-            Children: existingChildren,
-            EnumerateExceptionFactory: null,
-            FailTimesRemaining: 0);
+            nodes[normalized] = new Node(
+                Entry: new ScanFileSystemEntry(
+                    FullPath: normalized,
+                    Name: GetEntryName(normalized),
+                    IsDirectory: true,
+                    Length: 0,
+                    Attributes: attributes | FileAttributes.Directory | (isLink ? FileAttributes.ReparsePoint : 0),
+                    CreationTime: DateTime.UtcNow,
+                    LastAccessTime: DateTime.UtcNow,
+                    LastWriteTime: DateTime.UtcNow,
+                    IsLinkOrReparsePoint: isLink,
+                    VisitedIdentity: visitedIdentity ?? normalized),
+                Children: existingChildren,
+                EnumerateExceptionFactory: null,
+                FailTimesRemaining: 0);
 
-        AttachToParent(normalized);
+            AttachToParent(normalized);
+        }
     }
 
     public void AddFile(
@@ -57,78 +64,96 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
         FileAttributes attributes = FileAttributes.Normal,
         bool isLink = false)
     {
-        var normalized = Normalize(path);
-        EnsureDirectory(GetParentPath(normalized) ?? normalized);
+        lock (gate)
+        {
+            var normalized = Normalize(path);
+            EnsureDirectory(GetParentPath(normalized) ?? normalized);
 
-        var entry = new ScanFileSystemEntry(
-            FullPath: normalized,
-            Name: GetEntryName(normalized),
-            IsDirectory: false,
-            Length: length,
-            Attributes: attributes | (isLink ? FileAttributes.ReparsePoint : 0),
-            CreationTime: DateTime.UtcNow,
-            LastAccessTime: DateTime.UtcNow,
-            LastWriteTime: DateTime.UtcNow,
-            IsLinkOrReparsePoint: isLink,
-            VisitedIdentity: normalized);
+            var entry = new ScanFileSystemEntry(
+                FullPath: normalized,
+                Name: GetEntryName(normalized),
+                IsDirectory: false,
+                Length: length,
+                Attributes: attributes | (isLink ? FileAttributes.ReparsePoint : 0),
+                CreationTime: DateTime.UtcNow,
+                LastAccessTime: DateTime.UtcNow,
+                LastWriteTime: DateTime.UtcNow,
+                IsLinkOrReparsePoint: isLink,
+                VisitedIdentity: normalized);
 
-        nodes[normalized] = new Node(entry, Children: [], EnumerateExceptionFactory: null, FailTimesRemaining: 0);
-        AttachToParent(normalized);
+            nodes[normalized] = new Node(entry, Children: [], EnumerateExceptionFactory: null, FailTimesRemaining: 0);
+            AttachToParent(normalized);
+        }
     }
 
     public void LinkDirectory(string linkPath, string targetPath)
     {
-        var normalizedLink = Normalize(linkPath);
-        var normalizedTarget = Normalize(targetPath);
-        EnsureDirectory(normalizedTarget);
+        lock (gate)
+        {
+            var normalizedLink = Normalize(linkPath);
+            var normalizedTarget = Normalize(targetPath);
+            EnsureDirectory(normalizedTarget);
 
-        nodes[normalizedLink] = new Node(
-            Entry: new ScanFileSystemEntry(
-                FullPath: normalizedLink,
-                Name: GetEntryName(normalizedLink),
-                IsDirectory: true,
-                Length: 0,
-                Attributes: FileAttributes.Directory | FileAttributes.ReparsePoint,
-                CreationTime: DateTime.UtcNow,
-                LastAccessTime: DateTime.UtcNow,
-                LastWriteTime: DateTime.UtcNow,
-                IsLinkOrReparsePoint: true,
-                VisitedIdentity: normalizedTarget),
-            Children: nodes[normalizedTarget].Children.ToList(),
-            EnumerateExceptionFactory: null,
-            FailTimesRemaining: 0);
+            nodes[normalizedLink] = new Node(
+                Entry: new ScanFileSystemEntry(
+                    FullPath: normalizedLink,
+                    Name: GetEntryName(normalizedLink),
+                    IsDirectory: true,
+                    Length: 0,
+                    Attributes: FileAttributes.Directory | FileAttributes.ReparsePoint,
+                    CreationTime: DateTime.UtcNow,
+                    LastAccessTime: DateTime.UtcNow,
+                    LastWriteTime: DateTime.UtcNow,
+                    IsLinkOrReparsePoint: true,
+                    VisitedIdentity: normalizedTarget),
+                Children: nodes[normalizedTarget].Children.ToList(),
+                EnumerateExceptionFactory: null,
+                FailTimesRemaining: 0);
 
-        AttachToParent(normalizedLink);
+            AttachToParent(normalizedLink);
+        }
     }
 
     public void SetEnumerateFailure(string path, Func<Exception> exceptionFactory, int failTimes)
     {
-        var normalized = Normalize(path);
-        EnsureDirectory(normalized);
-        var existing = nodes[normalized];
-        nodes[normalized] = existing with
+        lock (gate)
         {
-            EnumerateExceptionFactory = exceptionFactory,
-            FailTimesRemaining = failTimes
-        };
+            var normalized = Normalize(path);
+            EnsureDirectory(normalized);
+            var existing = nodes[normalized];
+            nodes[normalized] = existing with
+            {
+                EnumerateExceptionFactory = exceptionFactory,
+                FailTimesRemaining = failTimes
+            };
+        }
     }
 
-    public bool DirectoryExists(string path) => nodes.TryGetValue(Normalize(path), out var node) && node.Entry.IsDirectory;
+    public bool DirectoryExists(string path)
+    {
+        lock (gate)
+        {
+            return nodes.TryGetValue(Normalize(path), out var node) && node.Entry.IsDirectory;
+        }
+    }
 
     public ScanFileSystemEntry GetDirectoryEntry(string path)
     {
-        var normalized = Normalize(path);
-        if (!nodes.TryGetValue(normalized, out var node) || !node.Entry.IsDirectory)
+        lock (gate)
         {
-            throw new DirectoryNotFoundException(normalized);
-        }
+            var normalized = Normalize(path);
+            if (!nodes.TryGetValue(normalized, out var node) || !node.Entry.IsDirectory)
+            {
+                throw new DirectoryNotFoundException(normalized);
+            }
 
-        return node.Entry;
+            return node.Entry;
+        }
     }
 
     public IEnumerable<ScanFileSystemEntry> EnumerateFiles(string path)
     {
-        EnumerateFilesCallCount++;
+        Interlocked.Increment(ref enumerateFilesCallCount);
         foreach (var child in EnumerateChildren(path, directories: false))
         {
             yield return child;
@@ -137,7 +162,7 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
 
     public IEnumerable<ScanFileSystemEntry> EnumerateDirectories(string path)
     {
-        EnumerateDirectoriesCallCount++;
+        Interlocked.Increment(ref enumerateDirectoriesCallCount);
         foreach (var child in EnumerateChildren(path, directories: true))
         {
             yield return child;
@@ -146,29 +171,42 @@ internal sealed class FakeScanFileSystem : IScanFileSystem
 
     private IEnumerable<ScanFileSystemEntry> EnumerateChildren(string path, bool directories)
     {
-        var normalized = Normalize(path);
-        if (!nodes.TryGetValue(normalized, out var node) || !node.Entry.IsDirectory)
+        List<ScanFileSystemEntry> entries = [];
+        Exception? pendingFailure = null;
+        lock (gate)
         {
-            throw new DirectoryNotFoundException(normalized);
-        }
-
-        if (node.FailTimesRemaining > 0 && node.EnumerateExceptionFactory is not null)
-        {
-            nodes[normalized] = node with { FailTimesRemaining = node.FailTimesRemaining - 1 };
-            throw node.EnumerateExceptionFactory();
-        }
-
-        foreach (var childPath in node.Children)
-        {
-            if (!nodes.TryGetValue(childPath, out var child))
+            var normalized = Normalize(path);
+            if (!nodes.TryGetValue(normalized, out var node) || !node.Entry.IsDirectory)
             {
-                continue;
+                throw new DirectoryNotFoundException(normalized);
             }
 
-            if (child.Entry.IsDirectory == directories)
+            if (node.FailTimesRemaining > 0 && node.EnumerateExceptionFactory is not null)
             {
-                yield return child.Entry;
+                nodes[normalized] = node with { FailTimesRemaining = node.FailTimesRemaining - 1 };
+                pendingFailure = node.EnumerateExceptionFactory();
             }
+            else
+            {
+                foreach (var childPath in node.Children)
+                {
+                    if (nodes.TryGetValue(childPath, out var child) &&
+                        child.Entry.IsDirectory == directories)
+                    {
+                        entries.Add(child.Entry);
+                    }
+                }
+            }
+        }
+
+        if (pendingFailure is not null)
+        {
+            throw pendingFailure;
+        }
+
+        foreach (var entry in entries)
+        {
+            yield return entry;
         }
     }
 

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using Xunit;
+using SkyCD.Plugin.Metadata.Executable.Exceptions;
 using SkyCD.Plugin.Metadata.Executable.Models;
 using SkyCD.Plugin.Metadata.Executable.Parsing;
 
@@ -36,10 +37,10 @@ public sealed class ExecutableIconPluginTests
         var artifact = Assert.Single(await Generate(image));
 
         Assert.Equal("image/png", artifact.ContentType);
-        var png = PngDecoder.Decode(artifact.Data.Span, 1024 * 1024);
+        var png = Decode(artifact);
         Assert.Equal(ExecutablePluginOptions.MaxIconSize, png.Width);
         Assert.Equal(ExecutablePluginOptions.MaxIconSize, png.Height);
-        var centre = png.PixelAt(png.Width / 2, png.Height / 2);
+        var centre = PixelAt(png, png.Width / 2, png.Height / 2);
         Assert.True((centre >> 16 & 0xFF) > 0xE0, "the 256px image must be decoded, not skipped by the pixel bound");
         Assert.Equal(255u, centre & 0xFF);
     }
@@ -50,10 +51,10 @@ public sealed class ExecutableIconPluginTests
         var image = ExecutableFixtures.WithIcons(
             ExecutableFixtures.IconEntry.Dib(16, 16, ExecutableFixtures.Pixel32Dib(16, 16, 0x123456, 4)));
 
-        var png = PngDecoder.Decode(Assert.Single(await Generate(image)).Data.Span, 1024 * 1024);
+        var png = Decode(Assert.Single(await Generate(image)));
 
-        Assert.Equal(255u, png.PixelAt(png.Width / 2, png.Height / 2) & 0xFF);
-        Assert.Equal(0u, png.PixelAt(0, 0) & 0xFF);
+        Assert.Equal(255u, PixelAt(png, png.Width / 2, png.Height / 2) & 0xFF);
+        Assert.Equal(0u, PixelAt(png, 0, 0) & 0xFF);
     }
 
     [Fact]
@@ -66,8 +67,8 @@ public sealed class ExecutableIconPluginTests
             ExecutableFixtures.IconEntry.Dib(64, 64, large));
 
         var artifact = Assert.Single(await Generate(image));
-        var png = PngDecoder.Decode(artifact.Data.Span, 1024 * 1024);
-        var centre = png.PixelAt(64, 64);
+        var png = Decode(artifact);
+        var centre = PixelAt(png, 64, 64);
 
         Assert.True((centre >> 16 & 0xFF) > (centre >> 24 & 0xFF), "the green 64px image must win over red");
     }
@@ -79,8 +80,8 @@ public sealed class ExecutableIconPluginTests
             ExecutableFixtures.IconEntry.Png(32, 32, ExecutableFixtures.PngImage(32, 32, 0x0000FFFF)));
 
         var artifact = Assert.Single(await Generate(image));
-        var png = PngDecoder.Decode(artifact.Data.Span, 1024 * 1024);
-        var centre = png.PixelAt(64, 64);
+        var png = Decode(artifact);
+        var centre = PixelAt(png, 64, 64);
 
         Assert.True((centre & 0xFF) != 0, "the icon must keep its alpha");
         Assert.True((centre >> 8 & 0xFF) > 0xE0, "the blue channel of the source must survive");
@@ -163,6 +164,25 @@ public sealed class ExecutableIconPluginTests
     }
 
     [Fact]
+    public async Task GeneratePreview_RejectsPngWhoseHeaderExceedsThePixelBound()
+    {
+        var image = ExecutableFixtures.WithIcons(
+            ExecutableFixtures.IconEntry.Png(256, 256, ExecutableFixtures.PngWithDeclaredSize(4096, 4096)));
+
+        Assert.Empty(await Generate(image));
+    }
+
+    [Fact]
+    public void Decode_RejectsPngWhoseHeaderExceedsThePixelBound()
+    {
+        var exception = Assert.Throws<ExecutableIconException>(() =>
+            ExecutableIconDecoder.Decode(ExecutableFixtures.PngWithDeclaredSize(4096, 4096),
+                ExecutablePluginOptions.MaximumIconPixels));
+
+        Assert.Contains("pixel count", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task GeneratePreview_ClampsTheRenderedEdgeToTheSupportedRange()
     {
         Assert.Equal(16, new ExecutablePluginOptions(iconSize: 4).IconSize);
@@ -175,7 +195,7 @@ public sealed class ExecutableIconPluginTests
         var result = await plugin.GeneratePreviewAsync(new MediaItem(".exe", null, image.Length),
             new ByteArrayMediaSource(image), progress: null, CancellationToken.None);
 
-        var png = PngDecoder.Decode(Assert.Single(result.Artifacts).Data.Span, 1024 * 1024);
+        var png = Decode(Assert.Single(result.Artifacts));
         Assert.Equal(32, png.Width);
         Assert.Equal(32, png.Height);
     }
@@ -209,6 +229,16 @@ public sealed class ExecutableIconPluginTests
             progress: null,
             CancellationToken.None);
         return result.Artifacts;
+    }
+
+    private static ExecutableIconImage Decode(MediaPreviewArtifact artifact) =>
+        ExecutableIconDecoder.Decode(artifact.Data.Span, 1024 * 1024);
+
+    private static uint PixelAt(ExecutableIconImage image, int x, int y)
+    {
+        var offset = ((y * image.Width) + x) * 4;
+        return ((uint)image.Rgba[offset] << 24) | ((uint)image.Rgba[offset + 1] << 16) |
+               ((uint)image.Rgba[offset + 2] << 8) | image.Rgba[offset + 3];
     }
 
     private static byte[] MzOnly()

@@ -866,9 +866,10 @@ public partial class MainWindow : Window
                 ? null
                 : vm.SelectedTreeNode?.Key ?? "library";
             var scanErrorOptions = LoadAppOptions();
+            var scanTraversal = BuildScanTraversalOptions(ScanSourceProfile.Network);
             var scanOptions = dialogVm.CreateInternetScanOptions(
                 targetParentId,
-                BuildScanTraversalOptions(),
+                scanTraversal,
                 includeExtendedInfo: scanErrorOptions.IncludeExtendedInfo);
             dialogVm.ClearInternetSecrets();
 
@@ -907,7 +908,8 @@ public partial class MainWindow : Window
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 90);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
+                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm,
+                    scanTraversal);
                 progressVm.CanCancel = false;
 
                 if (scanErrorOptions.SaveScanErrorsToComments)
@@ -980,6 +982,7 @@ public partial class MainWindow : Window
             var selectedDrivePath = dialogVm.SelectedDrive?.RootDirectory ?? dialogVm.SelectedDrive?.Name ?? string.Empty;
 
             var scanErrorOptions = LoadAppOptions();
+            var scanTraversal = BuildScanTraversalOptions(ScanSourceClassifier.FromDrive(dialogVm.SelectedDrive));
             var scanOptions = new MediaScanOptions(
                 DrivePathOrName: selectedDrivePath,
                 MediaName: string.IsNullOrWhiteSpace(dialogVm.MediaName) ? dialogVm.SelectedDrive?.DisplayName : dialogVm.MediaName,
@@ -989,7 +992,7 @@ public partial class MainWindow : Window
                 IncludeExtendedInfo: scanErrorOptions.IncludeExtendedInfo,
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
                 IncludeFiles: dialogVm.IncludeFiles,
-                Traversal: BuildScanTraversalOptions(),
+                Traversal: scanTraversal,
                 LocationId: dialogVm.SelectedLocationId);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
@@ -1028,7 +1031,8 @@ public partial class MainWindow : Window
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
+                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm,
+                    scanTraversal);
                 progressVm.CanCancel = false;
 
                 if (scanErrorOptions.SaveScanErrorsToComments)
@@ -1082,6 +1086,7 @@ public partial class MainWindow : Window
                 : CatalogDocumentType.Folder;
 
             var scanErrorOptions = LoadAppOptions();
+            var scanTraversal = BuildScanTraversalOptions(ScanSourceClassifier.FromPath(dialogVm.SourceValue));
             var scanOptions = new FolderScanOptions(
                 FolderPath: dialogVm.SourceValue,
                 MediaName: string.IsNullOrWhiteSpace(dialogVm.MediaName) ? null : dialogVm.MediaName,
@@ -1090,7 +1095,7 @@ public partial class MainWindow : Window
                 IncludeSubfolders: dialogVm.IncludeSubfolders,
                 IncludeFiles: dialogVm.IncludeFiles,
                 IncludeExtendedInfo: scanErrorOptions.IncludeExtendedInfo,
-                Traversal: BuildScanTraversalOptions());
+                Traversal: scanTraversal);
 
             var scanner = new FolderCatalogScanner();
             var progressVm = new AddingProgressDialogViewModel
@@ -1127,7 +1132,8 @@ public partial class MainWindow : Window
                 progressVm.ReportStage("Importing documents...", stagePercentage: null, overallPercentage: 80);
                 progressVm.ReportInfo($"Importing {scannedDocuments.Count} catalog documents into library.");
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
-                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm);
+                await vm.AddImportedDocumentsAsync(scannedDocuments, progressVm.CancellationToken, progressVm,
+                    scanTraversal);
                 progressVm.CanCancel = false;
 
                 if (scanErrorOptions.SaveScanErrorsToComments)
@@ -1726,11 +1732,12 @@ public partial class MainWindow : Window
         return appOptionsRepository.GetOrCreateAppOptions();
     }
 
-    private ScanTraversalOptions BuildScanTraversalOptions()
+    private ScanTraversalOptions BuildScanTraversalOptions(ScanSourceProfile? sourceProfile = null)
     {
         return ScanSettingsApplicator.BuildTraversalOptions(
             LoadAppOptions(),
-            scanExclusionRuleRepository.GetOrdered());
+            scanExclusionRuleRepository.GetOrdered(),
+            sourceProfile);
     }
 
     private void SaveAppOptions(AppOptionsDocument options)
@@ -1752,7 +1759,12 @@ public partial class MainWindow : Window
             options.SaveScanErrorsToComments,
             options.EjectMediaAfterScan,
             options.ActivateMainWindowAfterScan,
-            options.PlaySoundAfterScan));
+            options.PlaySoundAfterScan,
+            options.ScanConcurrencyMode,
+            options.ScanConcurrencyManualWorkers,
+            options.ScanConcurrencyCpuSharePercent,
+            options.ScanConcurrencyLoadShrinkPercent,
+            options.ScanConcurrencyLoadSuspendPercent));
         dialog.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
     }
 
@@ -1771,6 +1783,11 @@ public partial class MainWindow : Window
         options.EjectMediaAfterScan = scanSettings.EjectMediaAfterScan;
         options.ActivateMainWindowAfterScan = scanSettings.ActivateMainWindowAfterScan;
         options.PlaySoundAfterScan = scanSettings.PlaySoundAfterScan;
+        options.ScanConcurrencyMode = scanSettings.ScanConcurrencyMode;
+        options.ScanConcurrencyManualWorkers = scanSettings.ScanConcurrencyManualWorkers;
+        options.ScanConcurrencyCpuSharePercent = scanSettings.ScanConcurrencyCpuSharePercent;
+        options.ScanConcurrencyLoadShrinkPercent = scanSettings.ScanConcurrencyLoadShrinkPercent;
+        options.ScanConcurrencyLoadSuspendPercent = scanSettings.ScanConcurrencyLoadSuspendPercent;
     }
 
     /// <summary>

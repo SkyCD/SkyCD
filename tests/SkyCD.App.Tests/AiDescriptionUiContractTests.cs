@@ -20,18 +20,20 @@ namespace SkyCD.App.Tests;
 public sealed class AiDescriptionUiContractTests
 {
     [Fact]
-    public void PropertiesWindow_ExposesDescriptionActionsSeparateFromComments()
+    public void PropertiesWindow_ShowsUnifiedDescriptionWithSourceAndActions()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
 
-        Assert.Contains("Text=\"{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("IsVisible=\"{Binding HasAiDescription}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AiDescription.GenerateCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AiDescription.CopyCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AiDescription.AdoptCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding AiDescription.ClearCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding AiDescription.StateText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{i18n:Translate {x:Static i18n:UiKeys.Description}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding HasDescriptionSection}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding Description.SourceText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding Description.StateText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding Description.GenerateCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding Description.CopyCommand}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding Description.ClearCommand}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("RtfText=\"{Binding Comments, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Description.AdoptCommand", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AiDescription}}", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("RtfText=\"{Binding DescriptionText", xaml, StringComparison.Ordinal);
     }
 
@@ -140,7 +142,8 @@ public sealed class AiDescriptionUiContractTests
 
             foreach (var key in new[]
                      {
-                         "ui.AiDescription:", "ui.Generate:", "ui.Regenerate:", "ui.AdoptAsComment:",
+                         "ui.AiDescription:", "ui.Description:", "ui.DescriptionEmpty:",
+                         "ui.DescriptionCatalogSource:", "ui.Generate:", "ui.Regenerate:",
                          "ui.AiDescriptionStale:", "ui.DestinationUnknown:"
                      })
             {
@@ -157,28 +160,50 @@ public sealed class AiDescriptionUiContractTests
             }
 
             Assert.DoesNotContain("text.GenerateAiDescriptions:", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("text.AiDescriptionAdoptConfirmation:", text, StringComparison.Ordinal);
 
             Assert.Contains("metadata.AiDescription:", metadata, StringComparison.Ordinal);
         }
     }
 
     [Fact]
-    public void PropertiesDialog_AdoptsIntoTheCommentEditorOnly()
+    public void PropertiesDialog_ShowsUnifiedDescriptionAndCopiesWithoutTouchingComments()
     {
         using var stack = new DescriptionStack();
         var service = stack.Service("entry", "Generated text");
         var dialog = new PropertiesDialogViewModel(
             "item", "entry", string.Empty, "Existing comment", new PropertiesCollection());
-        dialog.InitializeAiDescription(service, "entry");
+        dialog.InitializeDescription(service, "entry");
+        string? copied = null;
+        dialog.CopyTextRequested += text => copied = text;
 
-        Assert.NotNull(dialog.AiDescription);
-        Assert.True(dialog.HasAiDescription);
-        dialog.AiDescription!.AdoptCommand.Execute(null);
+        Assert.True(dialog.HasDescriptionSection);
+        Assert.NotNull(dialog.Description);
+        Assert.Equal("Generated text", dialog.Description!.DescriptionText);
         Assert.Equal("Existing comment", dialog.Comments);
-        dialog.AiDescription.AdoptCommand.Execute(null);
-        Assert.Equal("Generated text", dialog.Comments);
-        Assert.Equal("Generated text", service.Read("entry").Text);
+
+        dialog.Description.CopyCommand.Execute(null);
+
+        Assert.Equal("Generated text", copied);
+        Assert.Equal("Existing comment", dialog.Comments);
         Assert.Equal("Existing comment", stack.Catalog.Get("entry")!.Properties["Comment"]);
+    }
+
+    [Fact]
+    public void PropertiesDialog_ImportedDescriptionWinsAndIsHiddenFromThePropertyList()
+    {
+        using var stack = new DescriptionStack();
+        var dialog = new PropertiesDialogViewModel(
+            "item", "entry", string.Empty, "Existing comment",
+            new PropertiesCollection { ["Description"] = "Imported description", ["Size"] = 10 });
+
+        Assert.True(dialog.HasDescriptionSection);
+        Assert.NotNull(dialog.Description);
+        Assert.Equal("Imported description", dialog.Description!.DescriptionText);
+        Assert.False(dialog.Description.IsAiSourced);
+        Assert.False(dialog.Description.HasActions);
+        Assert.True(dialog.InfoProperties.ContainsKey("Size"));
+        Assert.False(dialog.InfoProperties.ContainsKey("Description"));
     }
 
     private sealed class DescriptionStack : IDisposable

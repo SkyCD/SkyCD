@@ -101,6 +101,73 @@ public sealed class ExecutableMetadataPluginTests
     }
 
     [Fact]
+    public async Task Extract_TruncatedSectionTable_ProducesNoValuesRatherThanFailing()
+    {
+        // The header declares one 40-byte section entry, so cutting the last byte makes the table unreadable.
+        var image = ExecutableFixtures.Build();
+        var values = await Extract(image[..^1], ".exe");
+
+        Assert.Empty(values.Values);
+    }
+
+    [Fact]
+    public async Task Extract_UnsupportedOptionalHeaderMagic_ProducesNoValues()
+    {
+        var image = ExecutableFixtures.WithOptionalHeaderMagic(ExecutableFixtures.Build(), 0x1234);
+        var values = await Extract(image, ".exe");
+
+        Assert.Empty(values.Values);
+    }
+
+    [Fact]
+    public async Task Extract_ImageWithoutSections_ProducesNoValues()
+    {
+        var values = await Extract(ExecutableFixtures.WithSectionCount(ExecutableFixtures.Build(), 0), ".exe");
+
+        Assert.Empty(values.Values);
+    }
+
+    [Fact]
+    public async Task Extract_ImageWithoutDataDirectories_KeepsOnlyTheHeaderFacts()
+    {
+        var image = ExecutableFixtures.WithDataDirectoryCount(
+            ExecutableFixtures.WithVersion("1.2.3.4", "SkyCD Sample", "SkyCD"), 0);
+        var values = await Extract(image, ".exe");
+
+        Assert.Equal("pe", Text(values, ExecutableSchema.Container));
+        Assert.Equal("x64", Text(values, ExecutableSchema.Architecture));
+        Assert.Equal("PE32+", Text(values, ExecutableSchema.PeFormat));
+        Assert.DoesNotContain(values.Values, value => value.Key == ExecutableSchema.FileVersion);
+        Assert.DoesNotContain(values.Values, value => value.Key == ExecutableSchema.IconImageCount);
+    }
+
+    [Fact]
+    public async Task Extract_DataDirectoryCountBeyondTheHeader_KeepsTheHeaderAndResourceFacts()
+    {
+        // The optional header still carries the 16 standard directory entries; an inflated count must not throw
+        // or hide the facts that follow.
+        var image = ExecutableFixtures.WithDataDirectoryCount(
+            ExecutableFixtures.WithVersion("1.2.3.4", "SkyCD Sample", "SkyCD"), uint.MaxValue);
+        var values = await Extract(image, ".exe");
+
+        Assert.Equal("pe", Text(values, ExecutableSchema.Container));
+        Assert.Equal("1.2.3.4", Text(values, ExecutableSchema.FileVersion));
+        Assert.Equal(1, Integer(values, ExecutableSchema.IconImageCount));
+    }
+
+    [Fact]
+    public async Task Extract_DosImageWithoutPeSignature_ProducesNoValues()
+    {
+        var image = new byte[128];
+        "MZ"u8.CopyTo(image);
+        image[0x3C] = 0x50;
+
+        var values = await Extract(image, ".exe");
+
+        Assert.Empty(values.Values);
+    }
+
+    [Fact]
     public async Task Extract_ImageWithoutResources_HasHeaderFactsAndNoIconFacts()
     {
         var values = await Extract(ExecutableFixtures.Build(), ".exe");

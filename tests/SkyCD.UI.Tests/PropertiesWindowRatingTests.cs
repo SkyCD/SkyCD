@@ -1,5 +1,7 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -223,6 +225,134 @@ public class PropertiesWindowRatingTests
         {
             window.Close();
         }
+    }
+
+    [AvaloniaFact]
+    public void HeaderGrid_PlacesEveryChildInsideADeclaredRow()
+    {
+        var (window, _, _) = ShowProperties(new PropertiesCollection());
+        try
+        {
+            var header = HeaderGrid(window);
+            Assert.True(header.RowDefinitions.Count >= 3, "the header must declare a row for the rating line.");
+            foreach (var child in header.Children)
+            {
+                var row = Grid.GetRow(child);
+                var span = Math.Max(1, Grid.GetRowSpan(child));
+                Assert.InRange(row, 0, header.RowDefinitions.Count - 1);
+                Assert.True(row + span <= header.RowDefinitions.Count,
+                    $"{child.GetType().Name} spans rows {row}..{row + span - 1}, outside the {header.RowDefinitions.Count} declared rows.");
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void RatingRow_ShowsLabelLeftAndStarsRightAlignedBelowTheNameField()
+    {
+        var (window, _, stars) = ShowProperties(new PropertiesCollection { [StarRating.PropertyKey] = "3" });
+        try
+        {
+            var content = (Control)window.Content!;
+            var header = HeaderGrid(window);
+            var icon = header.Children.OfType<Border>().Single();
+            var nameFields = window.FindControl<StackPanel>("NameFields")!;
+            var ratingRow = window.FindControl<Grid>("RatingRow")!;
+            var ratingLabel = window.FindControl<TextBlock>("RatingLabel")!;
+            var commentsLabel = window.GetVisualDescendants().OfType<TextBlock>()
+                .Single(text => text.Text == LocalizationService.Current.Get(UiKeys.CommentsLabel));
+
+            // Label and stars are siblings in one row: label in the first column, stars fill the rest.
+            Assert.Same(ratingRow, ratingLabel.GetVisualParent());
+            Assert.Same(ratingRow, stars.GetVisualParent());
+            Assert.Equal(Grid.GetRow(ratingLabel), Grid.GetRow(stars));
+            Assert.True(Grid.GetColumn(ratingLabel) < Grid.GetColumn(stars));
+
+            var iconBounds = BoundsRelativeTo(icon, content);
+            var nameBounds = BoundsRelativeTo(nameFields, content);
+            var rowBounds = BoundsRelativeTo(ratingRow, content);
+            var labelBounds = BoundsRelativeTo(ratingLabel, content);
+            var starsBounds = BoundsRelativeTo(stars, content);
+            var commentsBounds = BoundsRelativeTo(commentsLabel, content);
+
+            // The rating line is its own row below the icon and name field, above the comments.
+            Assert.True(rowBounds.Top >= iconBounds.Bottom,
+                $"the rating row ({rowBounds.Top}) overlaps the icon ({iconBounds.Bottom}).");
+            Assert.True(rowBounds.Top >= nameBounds.Bottom,
+                $"the rating row ({rowBounds.Top}) overlaps the name field ({nameBounds.Bottom}).");
+            Assert.True(rowBounds.Bottom <= commentsBounds.Top + 1,
+                $"the rating row ({rowBounds.Bottom}) overlaps the comments ({commentsBounds.Top}).");
+
+            // Label left, stars right-aligned at the end of the field area, both inside the window.
+            Assert.Equal(rowBounds.Left, labelBounds.Left, 1);
+            Assert.True(starsBounds.Left >= labelBounds.Right,
+                $"the stars ({starsBounds.Left}) are not to the right of the label ({labelBounds.Right}).");
+            Assert.Equal(rowBounds.Right, starsBounds.Right, 1);
+            Assert.True(starsBounds.Right <= content.Bounds.Width + 1,
+                $"the stars ({starsBounds.Right}) are clipped by the window width ({content.Bounds.Width}).");
+
+            // One visual line: label and stars share the same vertical center.
+            Assert.Equal(CenterY(labelBounds), CenterY(starsBounds), 1);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("en")]
+    [InlineData("lt")]
+    public void RatingRow_FitsTheFixedWindowInEveryLocale(string cultureName)
+    {
+        var previousCulture = LocalizationService.Current.CurrentCulture;
+        try
+        {
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo(cultureName));
+            var (window, _, stars) = ShowProperties(new PropertiesCollection());
+            try
+            {
+                var content = (Control)window.Content!;
+                var ratingRow = window.FindControl<Grid>("RatingRow")!;
+                var ratingLabel = window.FindControl<TextBlock>("RatingLabel")!;
+
+                var rowBounds = BoundsRelativeTo(ratingRow, content);
+                var labelBounds = BoundsRelativeTo(ratingLabel, content);
+                var starsBounds = BoundsRelativeTo(stars, content);
+
+                Assert.Equal(cultureName, LocalizationService.Current.CurrentCulture.Name);
+                Assert.True(labelBounds.Width > 0 && starsBounds.Width > 0,
+                    $"{cultureName}: the rating line collapsed.");
+                Assert.True(labelBounds.Right <= starsBounds.Left + 1,
+                    $"{cultureName}: the label overlaps the stars.");
+                Assert.True(starsBounds.Right <= content.Bounds.Width + 1,
+                    $"{cultureName}: the stars ({starsBounds.Right}) are clipped by the window width ({content.Bounds.Width}).");
+                Assert.True(rowBounds.Bottom <= content.Bounds.Height + 1,
+                    $"{cultureName}: the rating row ({rowBounds.Bottom}) is clipped by the window height ({content.Bounds.Height}).");
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+        finally
+        {
+            LocalizationService.Current.SetCulture(previousCulture);
+        }
+    }
+
+    private static Grid HeaderGrid(PropertiesWindow window) =>
+        (Grid)window.FindControl<StackPanel>("NameFields")!.GetVisualParent()!;
+
+    private static double CenterY(Rect bounds) => bounds.Top + (bounds.Height / 2);
+
+    private static Rect BoundsRelativeTo(Visual visual, Visual ancestor)
+    {
+        var origin = visual.TranslatePoint(default, ancestor)!.Value;
+        return new Rect(origin, visual.Bounds.Size);
     }
 
     private static (PropertiesWindow Window, PropertiesDialogViewModel ViewModel, StarRatingControl Stars) ShowProperties(

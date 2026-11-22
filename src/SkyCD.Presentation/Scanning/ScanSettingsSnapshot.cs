@@ -15,4 +15,9 @@ public sealed record ScanSettingsSnapshot(
     bool SaveScanErrorsToComments,
     bool EjectMediaAfterScan,
     bool ActivateMainWindowAfterScan,
-    bool PlaySoundAfterScan);
+    bool PlaySoundAfterScan,
+    string ScanConcurrencyMode = "Automatic",
+    int ScanConcurrencyManualWorkers = 2,
+    int ScanConcurrencyCpuSharePercent = 80,
+    int ScanConcurrencyLoadShrinkPercent = 70,
+    int ScanConcurrencyLoadSuspendPercent = 85);

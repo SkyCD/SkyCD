@@ -57,6 +57,24 @@ public sealed class AppOptionsDocument
     /// <summary>Read file and folder metadata such as size and dates while scanning, instead of names only.</summary>
     public bool IncludeExtendedInfo { get; set; } = false;
 
+    /// <summary>
+    /// How scan worker counts are chosen: <c>Automatic</c> (source and system load aware) or
+    /// <c>Manual</c> (explicit count).
+    /// </summary>
+    public string ScanConcurrencyMode { get; set; } = "Automatic";
+
+    /// <summary>Worker count used when <see cref="ScanConcurrencyMode"/> is <c>Manual</c>.</summary>
+    public int ScanConcurrencyManualWorkers { get; set; } = 2;
+
+    /// <summary>Maximum share of logical processors automatic scanning may use on an idle machine.</summary>
+    public int ScanConcurrencyCpuSharePercent { get; set; } = 80;
+
+    /// <summary>System-wide CPU usage at which automatic scanning starts shrinking the pool.</summary>
+    public int ScanConcurrencyLoadShrinkPercent { get; set; } = 70;
+
+    /// <summary>System-wide CPU usage at which automatic scanning drops to one worker.</summary>
+    public int ScanConcurrencyLoadSuspendPercent { get; set; } = 85;
+
     /// <summary>Show the collected scan errors and warnings once a scan finishes.</summary>
     public bool ShowScanErrorsAfterScan { get; set; } = true;
 

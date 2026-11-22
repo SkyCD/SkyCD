@@ -11,7 +11,8 @@ public static class ScanSettingsApplicator
 {
     public static ScanTraversalOptions BuildTraversalOptions(
         AppOptionsDocument options,
-        IReadOnlyList<ScanExclusionRuleDocument>? rules = null)
+        IReadOnlyList<ScanExclusionRuleDocument>? rules = null,
+        ScanSourceProfile? sourceProfile = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -42,9 +43,23 @@ public static class ScanSettingsApplicator
             SkipRecycleBins = options.SkipRecycleBins,
             SkipWellKnownSystemFolders = options.SkipWellKnownSystemFolders,
             SkipEmptyFolders = options.SkipEmptyFolders,
-            SkipOnlineOnlyCloudFiles = options.SkipOnlineOnlyCloudFiles
+            SkipOnlineOnlyCloudFiles = options.SkipOnlineOnlyCloudFiles,
+            ConcurrencyMode = ParseConcurrencyMode(options.ScanConcurrencyMode),
+            MaxConcurrency = Math.Clamp(options.ScanConcurrencyManualWorkers, 1, ScanTraversalOptions.AbsoluteMaxConcurrency),
+            CpuSharePercent = options.ScanConcurrencyCpuSharePercent,
+            LoadShrinkThresholdPercent = options.ScanConcurrencyLoadShrinkPercent,
+            LoadSuspendThresholdPercent = options.ScanConcurrencyLoadSuspendPercent,
+            SourceProfile = sourceProfile ?? ScanSourceProfile.Unknown
         };
     }
+
+    public static ScanConcurrencyMode ParseConcurrencyMode(string? value) =>
+        string.Equals(value, "Manual", StringComparison.OrdinalIgnoreCase)
+            ? ScanConcurrencyMode.Manual
+            : ScanConcurrencyMode.Automatic;
+
+    public static string ToConcurrencyModeString(ScanConcurrencyMode mode) =>
+        mode == ScanConcurrencyMode.Manual ? "Manual" : "Automatic";
 
     public static ScanEntryType ParseEntryType(string? value) => value switch
     {

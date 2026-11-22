@@ -126,7 +126,8 @@ public sealed class BackgroundMediaSyncService : IDisposable
                         var traversal = (traversalFactory?.Invoke() ?? ScanTraversalOptions.Default) with
                         {
                             OperationTimeout = TimeSpan.FromMinutes(2),
-                            LinkFollowPolicy = LinkFollowPolicy.NeverFollowLinks
+                            LinkFollowPolicy = LinkFollowPolicy.NeverFollowLinks,
+                            SourceProfile = ScanSourceClassifier.FromDrive(drive)
                         };
                         var scanned = scan(new MediaScanOptions(path, root.Name, root.ParentId, root.Type,
                             Traversal: traversal), cancellationToken);

@@ -244,7 +244,6 @@ public static class TextKeys
     public const string AiDescriptionProvenance = "core.text.AiDescriptionProvenance";
     public const string AiDescriptionFailedState = "core.text.AiDescriptionFailedState";
     public const string AiDescriptionGenerateFailed = "core.text.AiDescriptionGenerateFailed";
-    public const string AiDescriptionAdoptConfirmation = "core.text.AiDescriptionAdoptConfirmation";
     public const string AiDescriptionBatchItemCount = "core.text.AiDescriptionBatchItemCount";
     public const string AiDescriptionBatchProgress = "core.text.AiDescriptionBatchProgress";
     public const string AiDescriptionBatchSummary = "core.text.AiDescriptionBatchSummary";

@@ -248,43 +248,68 @@ public sealed class AiDescriptionTests : IDisposable
         Assert.Equal("Earlier accepted", service.Read("entry").Text);
         Assert.Equal("User comment", stack.Catalog.Get("entry")!.Properties["Comment"]);
 
-        string? adopted = null;
-        var viewModel = new AiDescriptionViewModel(service, "entry", () => "User comment", text => adopted = text);
+        var viewModel = new DescriptionViewModel(catalogDescription: null, service: service, entryId: "entry");
         await viewModel.GenerateCommand.ExecuteAsync(null);
         Assert.True(viewModel.HasError);
         Assert.Contains("agent crashed", viewModel.ErrorText, StringComparison.Ordinal);
         Assert.Equal("Earlier accepted", viewModel.DescriptionText);
-        Assert.Null(adopted);
+        Assert.Equal("User comment", stack.Catalog.Get("entry")!.Properties["Comment"]);
     }
 
     [Fact]
-    public void AdoptingDescription_RequiresConfirmationAndNeverChangesStoredText()
+    public async Task CatalogDescription_WinsOverStoredAiText_AndIsNotRegenerated()
+    {
+        using var stack = new Stack();
+        using var store = new CouchbaseMediaCacheStore(stack.Catalog.Collection.Database);
+        var entry = Entry("entry", comment: "Existing comment");
+        entry.Properties["Description"] = "Imported description";
+        stack.Catalog.Save("entry", entry);
+        SaveDescription(stack, store, "entry", "Generated text");
+        var capability = new FakeCapability((_, _) =>
+            Task.FromException<GeneratedDescription>(new InvalidOperationException("generation must not run")));
+        var service = new AiDescriptionService(stack.Catalog, store, capability);
+
+        var viewModel = new DescriptionViewModel("Imported description", service, "entry");
+
+        Assert.True(viewModel.HasDescription);
+        Assert.False(viewModel.IsAiSourced);
+        Assert.Equal("Imported description", viewModel.DescriptionText);
+        Assert.False(viewModel.CanGenerate);
+        Assert.False(viewModel.CanClear);
+
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, capability.Calls);
+        Assert.Equal("Imported description", stack.Catalog.Get("entry")!.Properties["Description"]);
+        Assert.Equal("Generated text", service.Read("entry").Text);
+        Assert.Equal("Existing comment", stack.Catalog.Get("entry")!.Properties["Comment"]);
+    }
+
+    [Fact]
+    public void AiDescription_FillsEmptyDescription_AndCopyOrClearLeaveCommentsAlone()
     {
         using var stack = new Stack();
         using var store = new CouchbaseMediaCacheStore(stack.Catalog.Collection.Database);
         stack.Catalog.Save("entry", Entry("entry", comment: "Existing comment"));
         SaveDescription(stack, store, "entry", "Generated text");
         var service = new AiDescriptionService(stack.Catalog, store);
-        var comment = "Existing comment";
-        var viewModel = new AiDescriptionViewModel(
-            service, "entry", () => comment, text => comment = text);
 
-        viewModel.AdoptCommand.Execute(null);
-        Assert.True(viewModel.IsAdoptionPending);
-        Assert.Equal("Existing comment", comment);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.AdoptionHint));
+        var viewModel = new DescriptionViewModel(catalogDescription: null, service: service, entryId: "entry");
+        string? copied = null;
+        viewModel.CopyRequested += text => copied = text;
 
-        viewModel.AdoptCommand.Execute(null);
-        Assert.False(viewModel.IsAdoptionPending);
-        Assert.Equal("Generated text", comment);
-        Assert.Equal("Generated text", service.Read("entry").Text);
+        Assert.True(viewModel.IsAiSourced);
+        Assert.Equal("Generated text", viewModel.DescriptionText);
+        Assert.Contains("fake-agent", viewModel.SourceText, StringComparison.Ordinal);
+
+        viewModel.CopyCommand.Execute(null);
+        Assert.Equal("Generated text", copied);
         Assert.Equal("Existing comment", stack.Catalog.Get("entry")!.Properties["Comment"]);
 
-        var adopted = string.Empty;
-        var emptyCommentViewModel = new AiDescriptionViewModel(service, "entry", () => string.Empty, text => adopted = text);
-        emptyCommentViewModel.AdoptCommand.Execute(null);
-        Assert.Equal("Generated text", adopted);
-        Assert.False(emptyCommentViewModel.IsAdoptionPending);
+        viewModel.ClearCommand.Execute(null);
+        Assert.False(viewModel.HasDescription);
+        Assert.Null(service.Read("entry").Text);
+        Assert.Equal("Existing comment", stack.Catalog.Get("entry")!.Properties["Comment"]);
     }
 
     [Fact]
