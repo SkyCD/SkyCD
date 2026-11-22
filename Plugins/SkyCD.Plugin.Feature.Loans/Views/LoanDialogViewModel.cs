@@ -4,9 +4,11 @@ using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Plugin.Feature.Loans.Exceptions;
+using SkyCD.Plugin.Feature.Loans.Models;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.Plugin.Feature.Loans;
+namespace SkyCD.Plugin.Feature.Loans.Views;
 
 public sealed partial class LoanDialogViewModel : ObservableObject
 {
@@ -79,7 +81,7 @@ public sealed partial class LoanDialogViewModel : ObservableObject
         }
         catch (LoanEditException)
         {
-            Error = LocalizationService.Current.Get(UiKeys.LoanInvalidEdit);
+            Error = LocalizationService.Current.Get(LoansKeys.LoanInvalidEdit);
         }
     }
 
@@ -100,15 +102,15 @@ public sealed partial class LoanDialogViewModel : ObservableObject
     {
         var localization = LocalizationService.Current;
         var detail = loan.IsActive
-            ? localization.Get(loan.IsOverdue(DateOnly.FromDateTime(DateTime.Today)) ? UiKeys.OverdueLoans : UiKeys.ActiveLoans)
-            : localization.Format(UiKeys.LoanReturnedOn, loan.ReturnDate!);
+            ? localization.Get(loan.IsOverdue(DateOnly.FromDateTime(DateTime.Today)) ? LoansKeys.OverdueLoans : LoansKeys.ActiveLoans)
+            : localization.Format(LoansKeys.LoanReturnedOn, loan.ReturnDate!);
 
         return string.Join(Environment.NewLine, new[]
         {
             borrower,
             detail,
-            loan.LoanDate is { } loanDate ? localization.Format(UiKeys.LoanDateValue, loanDate) : null,
-            loan.DueDate is { } dueDate ? localization.Format(UiKeys.LoanDueValue, dueDate) : null,
+            loan.LoanDate is { } loanDate ? localization.Format(LoansKeys.LoanDateValue, loanDate) : null,
+            loan.DueDate is { } dueDate ? localization.Format(LoansKeys.LoanDueValue, dueDate) : null,
             loan.Note
         }.Where(line => !string.IsNullOrWhiteSpace(line)));
     }

@@ -6,7 +6,6 @@
         xmlns:rt="clr-namespace:SkyCD.UI.Controls.RichText;assembly=SkyCD.UI"
         xmlns:rating="clr-namespace:SkyCD.UI.Controls.Rating;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
-        xmlns:loans="clr-namespace:SkyCD.Plugin.Feature.Loans;assembly=SkyCD.Plugin.Feature.Loans"
         x:Class="SkyCD.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesDialogViewModel"
         Width="411"
@@ -182,9 +181,6 @@
                         </DataTemplate>
                     </cp:PropertiesList.ValueCellTemplate>
                 </cp:PropertiesList>
-            </TabItem>
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Loans}}" IsVisible="{Binding HasLendingTab}">
-                <loans:LoanEditor DataContext="{Binding Lending}" />
             </TabItem>
         </TabControl>
 

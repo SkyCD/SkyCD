@@ -200,6 +200,7 @@ text.AdvancedFindDuplicateUniques: Unique files
 text.AdvancedFindAlgorithmSha256: SHA-256
 text.AdvancedFindAlgorithmCrc32: CRC32
 text.AdvancedFilterKeyRequired: "A key is required for custom property and metadata filters."
+text.AdvancedFilterPluginField: "Plugin field"
 text.AdvancedFilterValueRequired: "A comparison value is required for this operator."
 text.AdvancedFilterOneOfRequired: "OneOf requires at least one semicolon-separated value."
 

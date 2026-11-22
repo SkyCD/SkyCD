@@ -1,8 +1,9 @@
 using System.Linq;
-using SkyCD.Plugin.Feature.Loans;
+using SkyCD.Plugin.Feature.Loans.Models;
+using SkyCD.Plugin.Feature.Loans.Parsing;
 using Xunit;
 
-namespace SkyCD.App.Tests;
+namespace SkyCD.Plugin.Feature.Loans.Tests;
 
 public sealed class ContactVCardTests
 {

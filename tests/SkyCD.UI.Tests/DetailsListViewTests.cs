@@ -330,7 +330,6 @@ public class DetailsListViewTests
             new() { Id = DetailsColumnsCatalog.SizeId, IsVisible = true, Width = 175 },
             new() { Id = DetailsColumnsCatalog.TypeId, IsVisible = false },
             new() { Id = DetailsColumnsCatalog.StatusId, IsVisible = false },
-            new() { Id = DetailsColumnsCatalog.LentToId, IsVisible = true },
             new() { Id = DetailsColumnsCatalog.LocationId, IsVisible = true }
         };
 
@@ -340,7 +339,6 @@ public class DetailsListViewTests
         [
             DetailsColumnsCatalog.NameId,
             DetailsColumnsCatalog.SizeId,
-            DetailsColumnsCatalog.LentToId,
             DetailsColumnsCatalog.LocationId
         ], columns.Select(column => column.Id));
         Assert.True(columns[0].IsRequired);
@@ -403,7 +401,7 @@ public class DetailsListViewTests
         var (window, view, headerGrid) = ShowDetailsColumns(
             CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
             CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
-            CreateCatalogColumn(DetailsColumnsCatalog.LentToId, required: false, width: 100),
+            CreateCatalogColumn(DetailsColumnsCatalog.TypeId, required: false, width: 100),
             CreateCatalogColumn(DetailsColumnsCatalog.LocationId, required: false, width: 140));
 
         try
@@ -430,30 +428,30 @@ public class DetailsListViewTests
 
             // A plain click on a reorderable header is not a reorder.
             reordered.Clear();
-            var lentCell = Assert.IsType<Grid>(headerGrid.Children[2]);
-            var lentPoint = lentCell.TranslatePoint(new Point(30, 10), window);
-            Assert.NotNull(lentPoint);
-            window.MouseDown(lentPoint!.Value, MouseButton.Left);
-            window.MouseUp(lentPoint.Value, MouseButton.Left);
+            var typeCell = Assert.IsType<Grid>(headerGrid.Children[2]);
+            var typePoint = typeCell.TranslatePoint(new Point(30, 10), window);
+            Assert.NotNull(typePoint);
+            window.MouseDown(typePoint!.Value, MouseButton.Left);
+            window.MouseUp(typePoint.Value, MouseButton.Left);
             Assert.Empty(reordered);
 
             // Dropping inside the dragged header itself is not a reorder.
-            window.MouseDown(lentPoint.Value, MouseButton.Left);
-            window.MouseMove(lentPoint.Value + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
-            window.MouseMove(lentPoint.Value + new Vector(3, 0), RawInputModifiers.LeftMouseButton);
-            window.MouseUp(lentPoint.Value + new Vector(3, 0), MouseButton.Left);
+            window.MouseDown(typePoint.Value, MouseButton.Left);
+            window.MouseMove(typePoint.Value + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(typePoint.Value + new Vector(3, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseUp(typePoint.Value + new Vector(3, 0), MouseButton.Left);
             Assert.Empty(reordered);
 
             // Dropping before the leading required column clamps to the first movable slot.
             var namePoint = headerGrid.TranslatePoint(new Point(10, 10), window);
             Assert.NotNull(namePoint);
-            window.MouseDown(lentPoint.Value, MouseButton.Left);
-            window.MouseMove(lentPoint.Value + new Vector(-20, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseDown(typePoint.Value, MouseButton.Left);
+            window.MouseMove(typePoint.Value + new Vector(-20, 0), RawInputModifiers.LeftMouseButton);
             window.MouseMove(namePoint!.Value, RawInputModifiers.LeftMouseButton);
             window.MouseUp(namePoint.Value, MouseButton.Left);
 
             move = Assert.Single(reordered);
-            Assert.Equal(DetailsColumnsCatalog.LentToId, move.ColumnId);
+            Assert.Equal(DetailsColumnsCatalog.TypeId, move.ColumnId);
             Assert.Equal(1, move.TargetIndex);
 
             // The required Name header is not draggable.

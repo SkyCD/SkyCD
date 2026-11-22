@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -15,6 +16,12 @@ public sealed class BrowserDetailsColumn : AvaloniaObject
     public required string Header { get; init; }
 
     public required string ValuePath { get; init; }
+
+    /// <summary>
+    /// Optional per-item value projection. When set, the row renders the returned text instead of binding
+    /// <see cref="ValuePath"/>, so contributed columns can compute values without changing the document model.
+    /// </summary>
+    public Func<object?, string?>? ValueSelector { get; init; }
 
     public GridLength Width
     {

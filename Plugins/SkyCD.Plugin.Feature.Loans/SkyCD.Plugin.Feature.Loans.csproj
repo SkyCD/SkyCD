@@ -13,6 +13,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.1.6"/>
@@ -28,6 +29,6 @@
         <!-- The first-party host consumes the service and view models directly (coupling choice for issue #857). -->
         <InternalsVisibleTo Include="SkyCD.Presentation"/>
         <InternalsVisibleTo Include="SkyCD.App"/>
-        <InternalsVisibleTo Include="SkyCD.App.Tests"/>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Feature.Loans.Tests"/>
     </ItemGroup>
 </Project>

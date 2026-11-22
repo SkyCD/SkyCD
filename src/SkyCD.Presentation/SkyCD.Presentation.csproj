@@ -8,7 +8,6 @@
         <ProjectReference Include="..\SkyCD.UI\SkyCD.UI.csproj" />
         <ProjectReference Include="..\SkyCD.Core\SkyCD.Core.csproj" />
         <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Loans\SkyCD.Plugin.Feature.Loans.csproj" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

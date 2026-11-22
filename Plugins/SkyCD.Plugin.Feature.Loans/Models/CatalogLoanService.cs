@@ -5,8 +5,11 @@ using System.Linq;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Feature.Loans.Exceptions;
+using SkyCD.Plugin.Feature.Loans.Import;
+using SkyCD.Plugin.Feature.Loans.Parsing;
 
-namespace SkyCD.Plugin.Feature.Loans;
+namespace SkyCD.Plugin.Feature.Loans.Models;
 
 public sealed class CatalogLoanService(
     CatalogDocumentRepository catalog,

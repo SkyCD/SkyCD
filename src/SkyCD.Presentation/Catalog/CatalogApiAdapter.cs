@@ -46,7 +46,8 @@ public sealed class CatalogApiAdapter(OpenCatalogState state) : ICatalogApi
         return Task.FromResult<CatalogEntry?>(Project(document, byId));
     }
 
-    private static CatalogEntry Project(CatalogDocument document, IReadOnlyDictionary<string, CatalogDocument> byId) =>
+    /// <summary>Projects a stored document into the domain-neutral plugin read model.</summary>
+    public static CatalogEntry Project(CatalogDocument document, IReadOnlyDictionary<string, CatalogDocument> byId) =>
         new(
             document.Id,
             document.Name,

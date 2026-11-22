@@ -4,9 +4,12 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Plugin.Feature.Loans.Exceptions;
+using SkyCD.Plugin.Feature.Loans.Models;
+using SkyCD.Plugin.Feature.Loans.Parsing;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.Plugin.Feature.Loans;
+namespace SkyCD.Plugin.Feature.Loans.Views;
 
 /// <summary>
 /// Contact manager dialog: keeps the contact list, the editable contact
@@ -53,7 +56,7 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
         Error = string.Empty;
         try
         {
-            var baseName = LocalizationService.Current.Get(UiKeys.NewContact);
+            var baseName = LocalizationService.Current.Get(LoansKeys.NewContact);
             var existing = service.GetContacts().Select(contact => contact.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var name = baseName;
@@ -64,12 +67,12 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
 
             var contact = service.CreateContact(name);
             Reload(contact.Id);
-            StatusText = LocalizationService.Current.Get(UiKeys.ContactSaved);
+            StatusText = LocalizationService.Current.Get(LoansKeys.ContactSaved);
             onChanged?.Invoke();
         }
         catch (ContactEditException)
         {
-            Error = LocalizationService.Current.Get(UiKeys.ContactNameDuplicate);
+            Error = LocalizationService.Current.Get(LoansKeys.ContactNameDuplicate);
         }
     }
 
@@ -86,14 +89,14 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
         var name = ContactName.Trim();
         if (name.Length == 0)
         {
-            Error = localization.Get(UiKeys.ContactNameRequired);
+            Error = localization.Get(LoansKeys.ContactNameRequired);
             return;
         }
 
         if (service.GetContacts().Any(contact => contact.Id != selected.Id &&
             string.Equals(contact.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            Error = localization.Get(UiKeys.ContactNameDuplicate);
+            Error = localization.Get(LoansKeys.ContactNameDuplicate);
             return;
         }
 
@@ -113,12 +116,12 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
             contact.Position = ContactPosition;
             service.SaveContact(contact);
             Reload(contact.Id);
-            StatusText = localization.Get(UiKeys.ContactSaved);
+            StatusText = localization.Get(LoansKeys.ContactSaved);
             onChanged?.Invoke();
         }
         catch (ContactEditException)
         {
-            Error = localization.Get(UiKeys.ContactNameDuplicate);
+            Error = localization.Get(LoansKeys.ContactNameDuplicate);
         }
     }
 
@@ -138,12 +141,12 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
             service.DeleteContact(selected.Id);
             Reload();
             SelectedContact = Contacts.Count == 0 ? null : Contacts[Math.Min(index, Contacts.Count - 1)];
-            StatusText = localization.Get(UiKeys.ContactDeleted);
+            StatusText = localization.Get(LoansKeys.ContactDeleted);
             onChanged?.Invoke();
         }
         catch (ContactEditException)
         {
-            Error = localization.Get(UiKeys.ContactInUse);
+            Error = localization.Get(LoansKeys.ContactInUse);
         }
     }
 
@@ -156,18 +159,18 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
             var parsed = VCardCodec.Parse(text);
             if (parsed.Count == 0)
             {
-                StatusText = localization.Get(UiKeys.ContactsImportEmpty);
+                StatusText = localization.Get(LoansKeys.ContactsImportEmpty);
                 return;
             }
 
             var result = service.ImportContacts(parsed);
             Reload(SelectedContact?.Id);
-            StatusText = localization.Format(UiKeys.ContactsImported, result.Added, result.Updated);
+            StatusText = localization.Format(LoansKeys.ContactsImported, result.Added, result.Updated);
             onChanged?.Invoke();
         }
         catch (Exception exception)
         {
-            Error = localization.Format(UiKeys.ContactsImportFailed, exception.Message);
+            Error = localization.Format(LoansKeys.ContactsImportFailed, exception.Message);
         }
     }
 
@@ -178,12 +181,12 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
         try
         {
             var text = service.ExportContacts();
-            StatusText = localization.Format(UiKeys.ContactsExported, service.GetContacts().Count);
+            StatusText = localization.Format(LoansKeys.ContactsExported, service.GetContacts().Count);
             return text;
         }
         catch (Exception exception)
         {
-            Error = localization.Format(UiKeys.ContactsExportFailed, exception.Message);
+            Error = localization.Format(LoansKeys.ContactsExportFailed, exception.Message);
             return string.Empty;
         }
     }
@@ -245,17 +248,17 @@ public sealed partial class ContactsDialogViewModel : ObservableObject
             var parts = new List<string> { service.GetEntryName(loan.EntryId) };
             if (loan.LoanDate is { } loanDate)
             {
-                parts.Add(LocalizationService.Current.Format(UiKeys.LoanDateValue, loanDate));
+                parts.Add(LocalizationService.Current.Format(LoansKeys.LoanDateValue, loanDate));
             }
 
             if (loan.DueDate is { } dueDate)
             {
-                parts.Add(LocalizationService.Current.Format(UiKeys.LoanDueValue, dueDate));
+                parts.Add(LocalizationService.Current.Format(LoansKeys.LoanDueValue, dueDate));
             }
 
             if (loan.IsOverdue(today))
             {
-                parts.Add(LocalizationService.Current.Get(UiKeys.OverdueLoans));
+                parts.Add(LocalizationService.Current.Get(LoansKeys.OverdueLoans));
             }
 
             LentItems.Add(new ContactLentItem(loan.EntryId, string.Join(" — ", parts)));

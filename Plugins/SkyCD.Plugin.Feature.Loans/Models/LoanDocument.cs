@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using SkyCD.Couchbase.Attributes;
 
-namespace SkyCD.Plugin.Feature.Loans;
+namespace SkyCD.Plugin.Feature.Loans.Models;
 
 [CouchbaseDocument("loans", repositoryType: typeof(LoanDocumentRepository))]
 public sealed class LoanDocument

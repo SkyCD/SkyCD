@@ -10,7 +10,7 @@ namespace SkyCD.App.Tests;
 public class DetailsColumnsTests
 {
     [Fact]
-    public void Defaults_ShowNameSizeLentToAndLocation()
+    public void Defaults_ShowNameSizeAndLocation()
     {
         using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
 
@@ -20,7 +20,6 @@ public class DetailsColumnsTests
         [
             LocalizationService.Current.Get(TextKeys.Name2),
             LocalizationService.Current.Get(TextKeys.Size),
-            LocalizationService.Current.Get(UiKeys.LentTo),
             LocalizationService.Current.Get(UiKeys.Location)
         ], headers);
     }
@@ -77,8 +76,7 @@ public class DetailsColumnsTests
             DetailsColumnsCatalog.NameId,
             DetailsColumnsCatalog.TypeId,
             DetailsColumnsCatalog.SizeId,
-            DetailsColumnsCatalog.StatusId,
-            DetailsColumnsCatalog.LentToId
+            DetailsColumnsCatalog.StatusId
         ], stored.Select(setting => setting.Id));
         Assert.True(stored.Single(setting => setting.Id == DetailsColumnsCatalog.NameId).IsVisible);
         Assert.DoesNotContain(stored, setting => setting.Id == "unknown-column");
@@ -89,8 +87,7 @@ public class DetailsColumnsTests
             LocalizationService.Current.Get(UiKeys.Location),
             LocalizationService.Current.Get(TextKeys.Name2),
             MnemonicText.Strip(LocalizationService.Current.Get(TextKeys.Type2)),
-            LocalizationService.Current.Get(TextKeys.Size),
-            LocalizationService.Current.Get(UiKeys.LentTo)
+            LocalizationService.Current.Get(TextKeys.Size)
         ], headers);
     }
 
@@ -148,13 +145,13 @@ public class DetailsColumnsTests
         Assert.True(dialog.MoveDetailsColumnUpCommand.CanExecute(null));
         dialog.MoveDetailsColumnUpCommand.Execute(null);
 
-        Assert.Equal(DetailsColumnsCatalog.LocationId, dialog.DetailsColumns[4].Id);
-        Assert.Equal(DetailsColumnsCatalog.LentToId, dialog.DetailsColumns[5].Id);
+        Assert.Equal(DetailsColumnsCatalog.LocationId, dialog.DetailsColumns[3].Id);
+        Assert.Equal(DetailsColumnsCatalog.StatusId, dialog.DetailsColumns[4].Id);
 
         var settings = dialog.GetDetailsColumns();
         Assert.False(settings.Single(setting => setting.Id == DetailsColumnsCatalog.SizeId).IsVisible);
         Assert.True(settings.Single(setting => setting.Id == DetailsColumnsCatalog.NameId).IsVisible);
-        Assert.Equal(DetailsColumnsCatalog.LocationId, settings[4].Id);
+        Assert.Equal(DetailsColumnsCatalog.StatusId, settings[4].Id);
     }
 
     [Fact]
@@ -181,7 +178,6 @@ public class DetailsColumnsTests
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.SizeId, IsVisible = true },
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.TypeId, IsVisible = false, Width = 175 },
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.StatusId, IsVisible = false },
-            new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.LentToId, IsVisible = true },
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.LocationId, IsVisible = true }
         ]);
         var raised = 0;
@@ -195,8 +191,7 @@ public class DetailsColumnsTests
         [
             DetailsColumnsCatalog.NameId,
             DetailsColumnsCatalog.LocationId,
-            DetailsColumnsCatalog.SizeId,
-            DetailsColumnsCatalog.LentToId
+            DetailsColumnsCatalog.SizeId
         ], vm.BrowserDetailsColumns.Select(column => column.Id));
         Assert.Equal(LocalizationService.Current.Get(TextKeys.Name2), vm.BrowserDetailsColumns[0].Header);
 
@@ -207,8 +202,7 @@ public class DetailsColumnsTests
             DetailsColumnsCatalog.LocationId,
             DetailsColumnsCatalog.TypeId,
             DetailsColumnsCatalog.StatusId,
-            DetailsColumnsCatalog.SizeId,
-            DetailsColumnsCatalog.LentToId
+            DetailsColumnsCatalog.SizeId
         ], stored.Select(setting => setting.Id));
         Assert.False(stored.Single(setting => setting.Id == DetailsColumnsCatalog.TypeId).IsVisible);
         Assert.Equal(175, stored.Single(setting => setting.Id == DetailsColumnsCatalog.TypeId).Width);
@@ -305,7 +299,7 @@ public class DetailsColumnsTests
         Assert.Equal(222, normalized.Single(setting => setting.Id == DetailsColumnsCatalog.SizeId).Width);
         Assert.Null(normalized.Single(setting => setting.Id == DetailsColumnsCatalog.TypeId).Width);
         Assert.Null(normalized.Single(setting => setting.Id == DetailsColumnsCatalog.StatusId).Width);
-        Assert.Null(normalized.Single(setting => setting.Id == DetailsColumnsCatalog.LentToId).Width);
+        Assert.Null(normalized.Single(setting => setting.Id == DetailsColumnsCatalog.LocationId).Width);
     }
 
     [Fact]
@@ -318,7 +312,6 @@ public class DetailsColumnsTests
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.SizeId, IsVisible = false, Width = 130 },
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.TypeId, IsVisible = true },
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.StatusId, IsVisible = false },
-            new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.LentToId, IsVisible = true, Width = 200 },
             new DetailsColumnSettingDocument { Id = DetailsColumnsCatalog.LocationId, IsVisible = true }
         ]);
 
@@ -330,13 +323,11 @@ public class DetailsColumnsTests
             DetailsColumnsCatalog.SizeId,
             DetailsColumnsCatalog.TypeId,
             DetailsColumnsCatalog.StatusId,
-            DetailsColumnsCatalog.LentToId,
             DetailsColumnsCatalog.LocationId
         ], settings.Select(setting => setting.Id));
         Assert.Equal(640, settings.Single(setting => setting.Id == DetailsColumnsCatalog.NameId).Width);
         Assert.Equal(130, settings.Single(setting => setting.Id == DetailsColumnsCatalog.SizeId).Width);
         Assert.Null(settings.Single(setting => setting.Id == DetailsColumnsCatalog.TypeId).Width);
-        Assert.Equal(200, settings.Single(setting => setting.Id == DetailsColumnsCatalog.LentToId).Width);
         Assert.False(settings.Single(setting => setting.Id == DetailsColumnsCatalog.SizeId).IsVisible);
     }
 

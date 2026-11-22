@@ -1,28 +1,29 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
-        xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Loans"
-        x:Class="SkyCD.Plugin.Feature.Loans.ContactsWindow"
+        xmlns:loans="clr-namespace:SkyCD.Plugin.Feature.Loans.Models"
+        xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Loans.Views"
+        x:Class="SkyCD.Plugin.Feature.Loans.Views.ContactsWindow"
         x:DataType="vm:ContactsDialogViewModel"
         Width="640" Height="520"
         CanMinimize="False" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
-        Title="{i18n:Translate {x:Static i18n:UiKeys.Contacts}}">
+        Title="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}">
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
             <TextBlock Text="{Binding StatusText}" Foreground="Gray" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Error}" Foreground="Firebrick" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
-                <Button Content="{i18n:Translate {x:Static i18n:UiKeys.NewContact}}"
+                <Button Content="{i18n:Translate {x:Static loans:LoansKeys.NewContact}}"
                         Command="{Binding AddContactCommand}" />
-                <Button Grid.Column="1" Content="{i18n:Translate {x:Static i18n:UiKeys.DeleteContact}}"
+                <Button Grid.Column="1" Content="{i18n:Translate {x:Static loans:LoansKeys.DeleteContact}}"
                         Command="{Binding DeleteContactCommand}" />
-                <Button Grid.Column="2" Content="{i18n:Translate {x:Static i18n:UiKeys.SaveContact}}"
+                <Button Grid.Column="2" Content="{i18n:Translate {x:Static loans:LoansKeys.SaveContact}}"
                         Command="{Binding SaveContactCommand}" />
-                <Button Grid.Column="4" Content="{i18n:Translate {x:Static i18n:UiKeys.ImportContacts}}"
+                <Button Grid.Column="4" Content="{i18n:Translate {x:Static loans:LoansKeys.ImportContacts}}"
                         Click="ImportClicked" />
-                <Button Grid.Column="5" Content="{i18n:Translate {x:Static i18n:UiKeys.ExportContacts}}"
+                <Button Grid.Column="5" Content="{i18n:Translate {x:Static loans:LoansKeys.ExportContacts}}"
                         Click="ExportClicked" />
                 <Button Grid.Column="6" Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}"
                         IsCancel="True" Click="CloseClicked" />
@@ -31,14 +32,14 @@
 
         <Grid ColumnDefinitions="200,10,*">
             <DockPanel Grid.Column="0">
-                <TextBlock DockPanel.Dock="Top" Text="{i18n:Translate {x:Static i18n:UiKeys.Contacts}}"
+                <TextBlock DockPanel.Dock="Top" Text="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}"
                            FontWeight="Bold" Margin="0,0,0,4" />
                 <ListBox x:Name="PART_ContactList"
                          ItemsSource="{Binding Contacts}"
                          SelectedItem="{Binding SelectedContact, Mode=TwoWay}"
-                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Contacts}}">
+                         AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}">
                     <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ContactListItem">
+                        <DataTemplate x:DataType="loans:ContactListItem">
                             <StackPanel Spacing="1">
                                 <TextBlock Text="{Binding Name}" />
                                 <TextBlock Text="{Binding DisplayLabel}" FontSize="11" Foreground="Gray" />
@@ -49,7 +50,7 @@
             </DockPanel>
 
             <TabControl Grid.Column="2">
-                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ContactDetails}}">
+                <TabItem Header="{i18n:Translate {x:Static loans:LoansKeys.ContactDetails}}">
                     <ScrollViewer Margin="8">
                         <StackPanel Spacing="6">
                             <StackPanel Spacing="2">
@@ -57,43 +58,43 @@
                                 <TextBox Text="{Binding ContactName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactDisplayName}}" />
+                                <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactDisplayName}}" />
                                 <TextBox Text="{Binding ContactDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <Grid ColumnDefinitions="*,8,*">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactPhone}}" />
+                                    <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactPhone}}" />
                                     <TextBox Text="{Binding ContactPhone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="2">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactFax}}" />
+                                    <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactFax}}" />
                                     <TextBox Text="{Binding ContactFax, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Grid>
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactEmail}}" />
+                                <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactEmail}}" />
                                 <TextBox Text="{Binding ContactEmail, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactWebPage}}" />
+                                <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactWebPage}}" />
                                 <TextBox Text="{Binding ContactWebPage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactMessenger}}" />
+                                <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactMessenger}}" />
                                 <TextBox Text="{Binding ContactMessenger, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <StackPanel Spacing="2">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactAddress}}" />
+                                <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactAddress}}" />
                                 <TextBox Text="{Binding ContactAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          AcceptsReturn="True" TextWrapping="Wrap" Height="54" />
                             </StackPanel>
                             <Grid ColumnDefinitions="*,8,*">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactCompany}}" />
+                                    <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactCompany}}" />
                                     <TextBox Text="{Binding ContactCompany, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="2">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ContactPosition}}" />
+                                    <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactPosition}}" />
                                     <TextBox Text="{Binding ContactPosition, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Grid>
@@ -105,17 +106,17 @@
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ContactLentItems}}">
+                <TabItem Header="{i18n:Translate {x:Static loans:LoansKeys.ContactLentItems}}">
                     <Grid Margin="8" RowDefinitions="Auto,*">
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NoLentItems}}"
+                        <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.NoLentItems}}"
                                    TextWrapping="Wrap"
                                    IsVisible="{Binding !HasLentItems}" />
                         <ListBox Grid.Row="1" Margin="0,6,0,0"
                                  ItemsSource="{Binding LentItems}"
                                  IsVisible="{Binding HasLentItems}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.ContactLentItems}}">
+                                 AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.ContactLentItems}}">
                             <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ContactLentItem">
+                                <DataTemplate x:DataType="loans:ContactLentItem">
                                     <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

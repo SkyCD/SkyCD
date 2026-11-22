@@ -4,13 +4,14 @@ using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using SkyCD.Plugin.Feature.Loans.Models;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.Plugin.Feature.Loans;
+namespace SkyCD.Plugin.Feature.Loans.Views;
 
 public partial class ContactsWindow : Window
 {
-    private static FilePickerFileType VCardFileType => new(LocalizationService.Current.Get(UiKeys.VCardFiles))
+    private static FilePickerFileType VCardFileType => new(LocalizationService.Current.Get(LoansKeys.VCardFiles))
     {
         Patterns = ["*.vcf", "*.vcard"],
         MimeTypes = ["text/vcard", "text/x-vcard"]
@@ -29,7 +30,7 @@ public partial class ContactsWindow : Window
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = LocalizationService.Current.Get(UiKeys.ImportContacts),
+            Title = LocalizationService.Current.Get(LoansKeys.ImportContacts),
             AllowMultiple = true,
             FileTypeFilter = [VCardFileType]
         });
@@ -50,7 +51,7 @@ public partial class ContactsWindow : Window
         }
         catch (Exception exception)
         {
-            viewModel.Error = LocalizationService.Current.Format(UiKeys.ContactsImportFailed, exception.Message);
+            viewModel.Error = LocalizationService.Current.Format(LoansKeys.ContactsImportFailed, exception.Message);
             return;
         }
 
@@ -66,7 +67,7 @@ public partial class ContactsWindow : Window
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = LocalizationService.Current.Get(UiKeys.ExportContacts),
+            Title = LocalizationService.Current.Get(LoansKeys.ExportContacts),
             SuggestedFileName = "contacts.vcf",
             DefaultExtension = "vcf",
             FileTypeChoices = [VCardFileType]
@@ -90,7 +91,7 @@ public partial class ContactsWindow : Window
         }
         catch (Exception exception)
         {
-            viewModel.Error = LocalizationService.Current.Format(UiKeys.ContactsExportFailed, exception.Message);
+            viewModel.Error = LocalizationService.Current.Format(LoansKeys.ContactsExportFailed, exception.Message);
         }
     }
 }

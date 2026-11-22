@@ -1,32 +1,40 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Couchbase.Lite;
 using SkyCD.Documents;
+using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Feature.Loans;
-using SkyCD.Presentation.Search;
+using SkyCD.Plugin.Feature.Loans.Exceptions;
+using SkyCD.Plugin.Feature.Loans.Import;
+using SkyCD.Plugin.Feature.Loans.Models;
+using SkyCD.Plugin.Feature.Loans.Parsing;
+using SkyCD.Plugin.Feature.Loans.Views;
 using SkyCD.Presentation.Staging;
 using Xunit;
 
-namespace SkyCD.App.Tests;
+namespace SkyCD.Plugin.Feature.Loans.Tests;
 
 public sealed class CatalogLoanIntegrationTests
 {
     [Fact]
     public void SourceFixturesPreserveDatePrecisionHistoryAndProvenanceAcrossReopen()
     {
-        using var payload = System.Text.Json.JsonDocument.Parse("""
-            {"nodes":[
-              {"nodeId":"gcstar","name":"The Matrix","kind":"media","properties":{
-                "Borrower":"Alice","LendDate":"2024-03-01",
-                "Borrowings":"Alice | 2024-03-01 |  | Bob | 2023-01-05 | 2023-01-20 |"}},
-              {"nodeId":"tellico","name":"Tellico item","kind":"entry","properties":{
-                "Borrower":"Alice","LoanDate":"2024-01-05","DueDate":"2024-02-05","LoanUid":"u1"}},
-              {"nodeId":"unmapped","name":"Undated item","kind":"entry","properties":{"DueDate":"invalid","LoanUid":"orphan"}}
-            ]}
-            """);
-        var entries = CatalogImportTests.Extract(payload.RootElement);
+        var entries = new[]
+        {
+            Document("gcstar", "The Matrix",
+                ("Borrower", "Alice"),
+                ("LendDate", "2024-03-01"),
+                ("Borrowings", "Alice | 2024-03-01 |  | Bob | 2023-01-05 | 2023-01-20 |")),
+            Document("tellico", "Tellico item",
+                ("Borrower", "Alice"),
+                ("LoanDate", "2024-01-05"),
+                ("DueDate", "2024-02-05"),
+                ("LoanUid", "u1")),
+            Document("unmapped", "Undated item",
+                ("DueDate", "invalid"),
+                ("LoanUid", "orphan"))
+        };
         using var directory = new TemporaryDirectory();
         using (var database = OpenDatabase(directory.Path))
         {
@@ -100,23 +108,6 @@ public sealed class CatalogLoanIntegrationTests
         Assert.Equal("Box included", history.Note);
         Assert.False(history.IsOverdue(new DateOnly(2024, 4, 2)));
         Assert.Equal(100, catalog.Get(merged.Id)!.Size);
-
-        merged.SetLendingState(active[merged.Id]);
-        var index = new CatalogSearchIndex();
-        index.Rebuild([merged, new CatalogDocument { Id = "other", Name = "Other disk" }]);
-        foreach (var predicate in new[]
-        {
-            new AdvancedCatalogPredicate { Field = AdvancedCatalogField.ActiveLoan, Operator = AdvancedCatalogOperator.IsPresent },
-            new AdvancedCatalogPredicate { Field = AdvancedCatalogField.OverdueLoan, Operator = AdvancedCatalogOperator.IsPresent },
-            new AdvancedCatalogPredicate { Field = AdvancedCatalogField.Borrower, Operator = AdvancedCatalogOperator.Equals, Value = "Alex" }
-        })
-        {
-            var results = AdvancedCatalogSearchService.Search(index, new AdvancedCatalogQuery
-            {
-                Root = new CatalogQueryGroup { Predicates = [predicate] }
-            });
-            Assert.Equal(merged.Id, Assert.Single(results).Document.Id);
-        }
     }
 
     [Fact]
@@ -201,6 +192,17 @@ public sealed class CatalogLoanIntegrationTests
 
         service.DeleteContact(contact.Id);
         Assert.Empty(service.GetContacts());
+    }
+
+    private static CatalogDocument Document(string id, string name, params (string Key, string Value)[] properties)
+    {
+        var collection = new PropertiesCollection();
+        foreach (var (key, value) in properties)
+        {
+            collection[key] = value;
+        }
+
+        return new CatalogDocument { Id = id, Name = name, Properties = collection };
     }
 
     private static Database OpenDatabase(string directory) =>

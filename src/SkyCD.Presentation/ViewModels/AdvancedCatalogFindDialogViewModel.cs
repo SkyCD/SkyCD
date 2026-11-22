@@ -39,7 +39,8 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     IReadOnlyList<string>? statusValues = null,
     VirtualCollectionService? savedSearchService = null,
     Action? onSavedSearchChanged = null,
-    string? selectedSubtreeId = null)
+    string? selectedSubtreeId = null,
+    IReadOnlyList<ContributedSearchFieldDefinition>? contributedFields = null)
     : ObservableObject, IDisposable
 {
     public const int PageSize = 100;
@@ -47,6 +48,7 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     private readonly IReadOnlyList<CatalogDocument> documents = documents ?? [];
     private readonly Action<CatalogFindResult>? navigate = navigate;
     private readonly AdvancedCatalogSearchService.MetadataLookup? metadataLookup = metadataLookup;
+    private readonly IReadOnlyList<ContributedSearchFieldDefinition> contributedFields = contributedFields ?? [];
 
     private CancellationTokenSource? searchCancellation;
     private int searchGeneration;
@@ -102,15 +104,18 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             Filters.Clear();
             foreach (var predicate in query.Root.Predicates)
             {
-                Filters.Add(new AdvancedCatalogFilterRowViewModel
-                {
-                    SelectedField = predicate.Field,
-                    SelectedOperator = predicate.Operator,
-                    Key = predicate.Key ?? string.Empty,
-                    ValueText = predicate.Operator == AdvancedCatalogOperator.OneOf
-                        ? string.Join(';', predicate.Values ?? [])
-                        : Convert.ToString(predicate.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
-                });
+                var row = CreateFilterRow();
+                row.SelectedContributedField = predicate.Field == AdvancedCatalogField.Contributed
+                    ? contributedFields.FirstOrDefault(field =>
+                        string.Equals(field.Key, predicate.Key, StringComparison.OrdinalIgnoreCase))
+                    : null;
+                row.SelectedField = predicate.Field;
+                row.SelectedOperator = predicate.Operator;
+                row.Key = predicate.Key ?? string.Empty;
+                row.ValueText = predicate.Operator == AdvancedCatalogOperator.OneOf
+                    ? string.Join(';', predicate.Values ?? [])
+                    : Convert.ToString(predicate.Value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+                Filters.Add(row);
             }
 
             ScopeRootId = query.Scope.RootId ?? initialSubtreeId;
@@ -297,7 +302,8 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             {
                 var index = new CatalogSearchIndex();
                 index.Rebuild(snapshot);
-                var page = AdvancedCatalogSearchService.Search(index, query, lookup, cancellationToken, out var total);
+                var page = AdvancedCatalogSearchService.Search(
+                    index, query, lookup, cancellationToken, out var total, contributedFields);
                 return (page, total);
             }, cancellationToken);
 
@@ -341,7 +347,10 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     }
 
     [RelayCommand]
-    private void AddFilter() => Filters.Add(new AdvancedCatalogFilterRowViewModel());
+    private void AddFilter() => Filters.Add(CreateFilterRow());
+
+    private AdvancedCatalogFilterRowViewModel CreateFilterRow() =>
+        new() { ContributedFields = contributedFields };
 
     [RelayCommand]
     private void RemoveFilter(AdvancedCatalogFilterRowViewModel? row)
@@ -366,7 +375,7 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
         SearchSubtree = false;
         IncludeDescendants = true;
         Filters.Clear();
-        Filters.Add(new AdvancedCatalogFilterRowViewModel());
+        Filters.Add(CreateFilterRow());
         SelectedCombination = CatalogQueryCombination.All;
         SelectedScopeType = null;
         SelectedDuplicateFilter = DuplicateFilterMode.None;

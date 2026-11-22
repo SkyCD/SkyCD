@@ -25,6 +25,7 @@ using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
@@ -73,6 +74,7 @@ public partial class App : Avalonia.Application
                     ServiceProvider.Resolve<IndexWorkItemSequence>(),
                     ServiceProvider.Resolve<IAudioCdMetadataProvider>());
                 mainWindowViewModel.RefreshDescriptionServices(descriptionManager);
+                mainWindowViewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
@@ -122,10 +124,12 @@ public partial class App : Avalonia.Application
     }
 
     // Hands each plugin capability the host-owned APIs before its services are used. Failures are isolated per
-    // capability so one bad plugin cannot stop the others from receiving their APIs.
-    private void InitializePluginConsumers(PluginManager pluginManager)
+    // capability so one bad plugin cannot stop the others from receiving their APIs. Re-discovery creates new
+    // capability instances, so hosts must call this again after every plugin runtime sync.
+    internal void InitializePluginConsumers(PluginManager pluginManager)
     {
         var catalogApi = appServiceProvider!.Resolve<CatalogApiAdapter>();
+        var catalogProvider = (ICatalogRepositoryProvider)appServiceProvider.Resolve<OpenCatalogState>();
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
@@ -135,6 +139,12 @@ public partial class App : Avalonia.Application
             foreach (var consumer in plugin.Capabilities.OfType<ICatalogApiConsumer>())
             {
                 try { consumer.InitializeCatalogApi(catalogApi); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<ICatalogRepositoryConsumer>())
+            {
+                try { consumer.InitializeCatalogRepository(catalogProvider); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
             }
 

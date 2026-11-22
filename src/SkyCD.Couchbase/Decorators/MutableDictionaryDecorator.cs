@@ -23,7 +23,8 @@ internal sealed class MutableDictionaryDecorator(IMutableDictionary dictionary) 
         var properties = source.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
         foreach (var property in properties)
         {
-            if (!property.CanRead || property.GetIndexParameters().Length > 0)
+            if (!property.CanRead || property.GetIndexParameters().Length > 0 ||
+                property.IsDefined(typeof(Attributes.CouchbaseTransientAttribute), inherit: false))
             {
                 continue;
             }

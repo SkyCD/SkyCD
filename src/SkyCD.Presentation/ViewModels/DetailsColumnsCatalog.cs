@@ -15,14 +15,13 @@ public static class DetailsColumnsCatalog
     public const string SizeId = "size";
     public const string TypeId = "type";
     public const string StatusId = "status";
-    public const string LentToId = "lentTo";
     public const string LocationId = "location";
 
     public const double MinSavedColumnWidth = 30;
 
     public const double MaxSavedColumnWidth = 4000;
 
-    public static IReadOnlyList<DetailsColumnDefinition> All { get; } =
+    private static readonly DetailsColumnDefinition[] CoreColumns =
     [
         new()
         {
@@ -59,19 +58,27 @@ public static class DetailsColumnsCatalog
         },
         new()
         {
-            Id = LentToId,
-            HeaderKey = UiKeys.LentTo,
-            ValuePath = nameof(CatalogDocument.LentTo),
-            Width = new GridLength(140, GridUnitType.Pixel)
-        },
-        new()
-        {
             Id = LocationId,
             HeaderKey = UiKeys.Location,
             ValuePath = nameof(CatalogDocument.Location),
             Width = new GridLength(140, GridUnitType.Pixel)
         }
     ];
+
+    private static DetailsColumnDefinition[] contributedColumns = [];
+
+    /// <summary>
+    /// Every supported column: the built-in catalog followed by columns contributed by enabled feature
+    /// plugins. Contributed columns take part in saved visibility, width and ordering like built-in ones.
+    /// </summary>
+    public static IReadOnlyList<DetailsColumnDefinition> All =>
+        contributedColumns.Length == 0 ? CoreColumns : [.. CoreColumns, .. contributedColumns];
+
+    /// <summary>Installs the columns contributed by enabled plugins; an empty list removes them.</summary>
+    public static void SetContributedColumns(IEnumerable<DetailsColumnDefinition>? columns)
+    {
+        contributedColumns = columns?.ToArray() ?? [];
+    }
 
     public static DetailsColumnDefinition? Find(string? id)
     {

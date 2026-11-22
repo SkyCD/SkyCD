@@ -32,7 +32,6 @@ public static class ToolbarCommandIds
     public const string Options = "options";
     public const string Tags = "tags";
     public const string Collections = "collections";
-    public const string Contacts = "contacts";
     public const string Locations = "locations";
     public const string AiDescriptions = "ai-descriptions";
 
@@ -61,7 +60,6 @@ public static class ToolbarCommandIds
         Options,
         Tags,
         Collections,
-        Contacts,
         Locations,
         AiDescriptions
     ];

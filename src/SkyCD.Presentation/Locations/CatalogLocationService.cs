@@ -220,8 +220,8 @@ public sealed class CatalogLocationService(
     }
 
     /// <summary>
-    /// Projects the resolved location name onto every entry, mirroring the lending projection. Entries
-    /// with no effective location keep an empty <see cref="CatalogDocument.Location"/>.
+    /// Projects the resolved location name onto every entry. Entries with no effective location keep an
+    /// empty <see cref="CatalogDocument.Location"/>.
     /// </summary>
     public IReadOnlyList<CatalogDocument> ProjectLocations(IReadOnlyList<CatalogDocument> entries)
     {

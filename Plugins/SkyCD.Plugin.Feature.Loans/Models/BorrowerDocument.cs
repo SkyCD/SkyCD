@@ -1,6 +1,6 @@
 using SkyCD.Couchbase.Attributes;
 
-namespace SkyCD.Plugin.Feature.Loans;
+namespace SkyCD.Plugin.Feature.Loans.Models;
 
 [CouchbaseDocument("borrowers", repositoryType: typeof(BorrowerDocumentRepository))]
 public sealed class BorrowerDocument

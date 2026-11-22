@@ -32,6 +32,8 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
@@ -43,7 +45,7 @@ using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Operations;
-using SkyCD.Plugin.Feature.Loans;
+using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
@@ -65,6 +67,7 @@ public partial class MainWindow : Window
     private readonly AiScanExclusionDocumentRepository aiScanExclusionRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
+    private readonly OpenCatalogState openCatalogState;
     private readonly IMediaDriveProvider mediaDriveProvider;
     private readonly SystemMediaEjector mediaEjector = new();
     private readonly ScanCompletionService scanCompletionService;
@@ -84,10 +87,12 @@ public partial class MainWindow : Window
         PluginManager pluginManager,
         FileFormatManager fileFormatManager,
         PluginMarketplaceService pluginMarketplaceService,
+        OpenCatalogState openCatalogState,
         IMediaDriveProvider? mediaDriveProvider = null)
     {
         this.repositoryManager = repositoryManager;
         this.pluginMarketplaceService = pluginMarketplaceService;
+        this.openCatalogState = openCatalogState;
         this.mediaDriveProvider = mediaDriveProvider ?? new SystemMediaDriveProvider();
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
@@ -154,8 +159,6 @@ public partial class MainWindow : Window
             subscribedViewModel.AiDescriptionBatchRequested -= OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
-            subscribedViewModel.LoansRequested -= OnLoansRequested;
-            subscribedViewModel.ContactsRequested -= OnContactsRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
             subscribedViewModel.ExitRequested -= OnExitRequested;
             subscribedViewModel.FocusBrowserRequested -= OnFocusBrowserRequested;
@@ -183,8 +186,6 @@ public partial class MainWindow : Window
             subscribedViewModel.AiDescriptionBatchRequested += OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
-            subscribedViewModel.LoansRequested += OnLoansRequested;
-            subscribedViewModel.ContactsRequested += OnContactsRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
             subscribedViewModel.ExitRequested += OnExitRequested;
             subscribedViewModel.FocusBrowserRequested += OnFocusBrowserRequested;
@@ -1341,18 +1342,6 @@ public partial class MainWindow : Window
         e.Complete(accepted == true, e.Dialog.Comments);
     }
 
-    private async void OnLoansRequested(object? sender, LoanDialogRequestedEventArgs e)
-    {
-        var dialog = new LoansWindow { DataContext = e.Dialog };
-        await dialog.ShowDialog(this);
-    }
-
-    private async void OnContactsRequested(object? sender, ContactsDialogRequestedEventArgs e)
-    {
-        var dialog = new ContactsWindow { DataContext = e.Dialog };
-        await dialog.ShowDialog(this);
-    }
-
     private async void OnTagsRequested(object? sender, TagsDialogRequestedEventArgs e)
     {
         var dialog = new TagsWindow
@@ -1602,23 +1591,40 @@ public partial class MainWindow : Window
         vm.BeginCatalogLoad();
         var progress = new Progress<int>(vm.ReportCatalogLoadProgress);
         MainWindowViewModel? reloadedViewModel = null;
-        IReadOnlyList<string> loanWarnings = [];
+        IReadOnlyList<string> importWarnings = [];
+        // Import hooks reach plugin storage through the open-catalog state, so the repository and path must
+        // be visible before the load callback runs. Update them on the UI thread to keep plugin event
+        // handlers, which refresh decorations, off the worker thread.
+        var previousCatalogPath = openCatalogState.Path;
+        openCatalogState.Path = localPath;
+        openCatalogState.Attach(catalogRepository);
+        var loaded = false;
         try
         {
             reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
             {
                 var entries = ExtractCatalogEntries(payload);
-                var lending = CatalogLoanService.Open(catalogRepository);
-                lending.CatalogPath = localPath;
                 catalogRepository.Collection.Database.InBatch(() =>
                 {
                     ReplaceCatalogContent(entries, importProgress);
-                    loanWarnings = new ImportedLoanMapper(lending).Import(entries);
                 });
+
+                // The plugin sees the entries after they are written, so its own storage and warnings stay
+                // a plugin concern; the host only folds the warnings into the status line.
+                var byId = entries
+                    .GroupBy(static entry => entry.Id, StringComparer.Ordinal)
+                    .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+                var imported = entries.Select(entry => CatalogApiAdapter.Project(entry, byId)).ToArray();
+                importWarnings = ServiceProvider.Resolve<CatalogImportExtensionManager>()
+                    .RunAsync(imported, TimeSpan.FromSeconds(30))
+                    .GetAwaiter()
+                    .GetResult()
+                    .Warnings;
                 importProgress.Report(90);
                 return new MainWindowViewModel(repositoryManager);
             }, progress);
             reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            reloadedViewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
             reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                 ServiceProvider.Resolve<VolumeExtensionManager>(),
                 ServiceProvider.Resolve<IndexWorkItemSequence>(),
@@ -1630,15 +1636,22 @@ public partial class MainWindow : Window
             options.LastOpenedCatalogPath = localPath;
             SaveAppOptions(options);
             reloadedViewModel.CompleteOpenCatalog();
-            if (loanWarnings.Count > 0)
+            if (importWarnings.Count > 0)
             {
-                reloadedViewModel.StatusText = LocalizationService.Current.Format(UiKeys.LoanImportWarnings, string.Join("; ", loanWarnings));
+                reloadedViewModel.StatusText = LocalizationService.Current.Format(UiKeys.PluginImportWarnings, string.Join("; ", importWarnings));
             }
+            reloadedViewModel.AttachOpenCatalogState(openCatalogState);
             DataContext = reloadedViewModel;
             reloadedViewModel = null; // Ownership passes to the window.
+            loaded = true;
         }
         finally
         {
+            if (!loaded)
+            {
+                openCatalogState.Path = previousCatalogPath;
+            }
+
             reloadedViewModel?.Dispose();
             vm.EndCatalogLoad();
         }
@@ -1900,6 +1913,9 @@ public partial class MainWindow : Window
         pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
 
         ServiceProvider.ReregisterPluginsService();
+        // Re-discovery builds fresh capability instances; without re-injection they would resolve from the
+        // new container without the host APIs (catalog repository, dialogs, storage) they depend on.
+        (Application.Current as App)?.InitializePluginConsumers(pluginManager);
         ServiceProvider.Resolve<PluginConfigurationManager>().RefreshConsumers();
         fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
         var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
@@ -1908,6 +1924,7 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            viewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
             viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                 ServiceProvider.Resolve<VolumeExtensionManager>(),
                 ServiceProvider.Resolve<IndexWorkItemSequence>(),

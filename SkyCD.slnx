@@ -227,6 +227,7 @@
         <Project Path="tests/SkyCD.Plugin.SmartCdCatalogPro.Tests/SkyCD.Plugin.SmartCdCatalogPro.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.MyCatalogue.Tests/SkyCD.Plugin.MyCatalogue.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskBase.Tests/SkyCD.Plugin.DiskBase.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Feature.Loans.Tests/SkyCD.Plugin.Feature.Loans.Tests.csproj"/>
     </Folder>
     <Folder Name="/tests/slices/">
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/Slice/SkyCD.Plugin.SlipSlice.csproj"/>

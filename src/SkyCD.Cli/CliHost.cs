@@ -105,16 +105,23 @@ public sealed class CliHost(
         FileFormatManager fileFormatManager;
         lock (PluginRuntimeLock)
         {
-            // Staged catalog installs and updates become visible to assembly discovery only here, before the scan.
-            PluginServiceRegistrator.ApplyPendingOperationsBeforeDiscoveryAsync(
-                    ServiceProvider.Resolve<IPluginPackageInstaller>())
-                .GetAwaiter()
-                .GetResult();
             var pluginManager = ServiceProvider.Resolve<PluginManager>();
-            var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
-            pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
+            // An embedding host (the desktop app's in-process MCP bridge) already registered plugin services;
+            // swapping the container here would leave the host's plugin instances and contribution managers
+            // stale, so the CLI reuses the registered state instead.
+            if (!ServiceProvider.ArePluginsRegistered)
+            {
+                // Staged catalog installs and updates become visible to assembly discovery only here, before the scan.
+                PluginServiceRegistrator.ApplyPendingOperationsBeforeDiscoveryAsync(
+                        ServiceProvider.Resolve<IPluginPackageInstaller>())
+                    .GetAwaiter()
+                    .GetResult();
+                var hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
+                pluginManager.Discover(pluginPath ?? string.Empty, hostVersionProvider.Current);
+                ServiceProvider.ReregisterPluginsService();
+            }
+
             discoveredPlugins = pluginManager.Plugins.ToArray();
-            ServiceProvider.ReregisterPluginsService();
             fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
         }
         using var registry = new CliContributionRegistry();

@@ -17,6 +17,7 @@ public static class ServiceProvider
 {
     private static readonly IContainer MainContainer;
     private static IContainer _pluginServiceProvider;
+    private static bool pluginsRegistered;
 
     static ServiceProvider()
     {
@@ -30,10 +31,17 @@ public static class ServiceProvider
         _pluginServiceProvider = CreatePluginsChildContainer();
     }
 
+    /// <summary>
+    /// True once a host registered discovered plugins with their capability services. In-process helpers such
+    /// as the CLI bridge must reuse that registration instead of swapping the container below the host.
+    /// </summary>
+    public static bool ArePluginsRegistered => pluginsRegistered;
+
     public static void ReregisterPluginsService()
     {
         var oldPluginServiceProvider = _pluginServiceProvider;
         _pluginServiceProvider = CreatePluginsChildContainer();
+        pluginsRegistered = true;
         oldPluginServiceProvider.Dispose();
     }
 

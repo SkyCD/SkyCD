@@ -174,6 +174,7 @@ public static class TextKeys
     public const string AdvancedFilterKeyRequired = "core.text.AdvancedFilterKeyRequired";
     public const string AdvancedFilterValueRequired = "core.text.AdvancedFilterValueRequired";
     public const string AdvancedFilterOneOfRequired = "core.text.AdvancedFilterOneOfRequired";
+    public const string AdvancedFilterPluginField = "core.text.AdvancedFilterPluginField";
     public const string AdvancedFindDuplicateFilter = "core.text.AdvancedFindDuplicateFilter";
     public const string AdvancedFindHashAlgorithm = "core.text.AdvancedFindHashAlgorithm";
     public const string AdvancedFindDuplicateNone = "core.text.AdvancedFindDuplicateNone";

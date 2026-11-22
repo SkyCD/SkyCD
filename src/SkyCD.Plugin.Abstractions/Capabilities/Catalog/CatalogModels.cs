@@ -68,13 +68,15 @@ public sealed record DetailsColumnContribution(
     Func<CatalogEntry, string?> SelectValue);
 
 /// <summary>
-/// An advanced-search field contributed by a plugin. <see cref="Matches"/> decides whether an entry
-/// satisfies this field's active filter; the host exposes the field to the filter UI keyed by <see cref="Key"/>.
+/// An advanced-search field contributed by a plugin. Presence-only fields (no <see cref="SelectValue"/>)
+/// are evaluated through <see cref="Matches"/>; fields with a selector expose that entry text so the host
+/// can apply the ordinary text operators to it. The host exposes the field to the filter UI keyed by <see cref="Key"/>.
 /// </summary>
 public sealed record AdvancedSearchFieldContribution(
     string Key,
     string Title,
-    Func<CatalogEntry, bool> Matches);
+    Func<CatalogEntry, bool> Matches,
+    Func<CatalogEntry, string?>? SelectValue = null);
 
 /// <summary>A per-entry command a plugin contributes to the browser/tree context menu for a single entry.</summary>
 public sealed record EntryCommandContribution(string CommandId, string Title, int Order);

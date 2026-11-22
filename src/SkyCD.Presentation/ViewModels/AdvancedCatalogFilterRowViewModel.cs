@@ -14,8 +14,27 @@ namespace SkyCD.Presentation.ViewModels;
 /// </summary>
 public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
 {
-    public IReadOnlyList<AdvancedCatalogField> Fields { get; } =
-        Enum.GetValues<AdvancedCatalogField>();
+    private static readonly AdvancedCatalogField[] AllFields = Enum.GetValues<AdvancedCatalogField>();
+
+    private IReadOnlyList<ContributedSearchFieldDefinition> contributedFields = [];
+
+    public IReadOnlyList<ContributedSearchFieldDefinition> ContributedFields
+    {
+        get => contributedFields;
+        set
+        {
+            contributedFields = value ?? [];
+            OnPropertyChanged(nameof(ContributedFields));
+            OnPropertyChanged(nameof(Fields));
+            if (SelectedField == AdvancedCatalogField.Contributed && SelectedContributedField is null)
+            {
+                SelectedContributedField = contributedFields.FirstOrDefault();
+            }
+        }
+    }
+
+    public IReadOnlyList<AdvancedCatalogField> Fields => [.. AllFields.Where(candidate =>
+        candidate != AdvancedCatalogField.Contributed || contributedFields.Count > 0)];
 
     private static readonly AdvancedCatalogOperator[] AllOperators = Enum.GetValues<AdvancedCatalogOperator>();
     private static readonly AdvancedCatalogOperator[] PresenceOperators =
@@ -31,10 +50,12 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
         {
             var compatible = SelectedField switch
             {
-                AdvancedCatalogField.ActiveLoan or AdvancedCatalogField.OverdueLoan => PresenceOperators,
+                AdvancedCatalogField.Contributed => SelectedContributedField?.SelectValue is null
+                    ? PresenceOperators
+                    : TextOperators,
                 AdvancedCatalogField.Name or AdvancedCatalogField.FullPath or AdvancedCatalogField.Extension
                     or AdvancedCatalogField.DocumentType or AdvancedCatalogField.Status
-                    or AdvancedCatalogField.Borrower or AdvancedCatalogField.Location => TextOperators,
+                    or AdvancedCatalogField.Location => TextOperators,
                 _ => AllOperators
             };
 
@@ -50,6 +71,9 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
     private AdvancedCatalogOperator selectedOperator = AdvancedCatalogOperator.Contains;
 
     [ObservableProperty]
+    private ContributedSearchFieldDefinition? selectedContributedField;
+
+    [ObservableProperty]
     private string key = string.Empty;
 
     [ObservableProperty]
@@ -57,18 +81,25 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
 
     public bool IsKeyed => SelectedField is AdvancedCatalogField.CustomProperty or AdvancedCatalogField.Metadata;
 
+    public bool IsContributed => SelectedField == AdvancedCatalogField.Contributed;
+
     public bool IsValueRequired => SelectedOperator is not
         AdvancedCatalogOperator.IsMissing and not AdvancedCatalogOperator.IsPresent;
 
     partial void OnSelectedFieldChanged(AdvancedCatalogField value)
     {
         OnPropertyChanged(nameof(IsKeyed));
+        OnPropertyChanged(nameof(IsContributed));
         OnPropertyChanged(nameof(Operators));
-        if (value is AdvancedCatalogField.ActiveLoan or AdvancedCatalogField.OverdueLoan)
+        if (value is AdvancedCatalogField.Contributed)
         {
-            SelectedOperator = AdvancedCatalogOperator.IsPresent;
+            SelectedContributedField ??= contributedFields.FirstOrDefault();
+            if (SelectedOperator is not (AdvancedCatalogOperator.IsMissing or AdvancedCatalogOperator.IsPresent))
+            {
+                SelectedOperator = AdvancedCatalogOperator.IsPresent;
+            }
         }
-        else if (value is AdvancedCatalogField.Borrower or AdvancedCatalogField.Location)
+        else if (value is AdvancedCatalogField.Location)
         {
             SelectedOperator = AdvancedCatalogOperator.Contains;
         }
@@ -91,6 +122,23 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
         OnPropertyChanged(nameof(Operators));
     }
 
+    partial void OnSelectedContributedFieldChanged(ContributedSearchFieldDefinition? value)
+    {
+        Key = value?.Key ?? string.Empty;
+        OnPropertyChanged(nameof(Operators));
+        if (value?.SelectValue is null)
+        {
+            if (SelectedOperator is not (AdvancedCatalogOperator.IsMissing or AdvancedCatalogOperator.IsPresent))
+            {
+                SelectedOperator = AdvancedCatalogOperator.IsPresent;
+            }
+        }
+        else if (SelectedOperator is AdvancedCatalogOperator.IsMissing or AdvancedCatalogOperator.IsPresent)
+        {
+            SelectedOperator = AdvancedCatalogOperator.Contains;
+        }
+    }
+
     /// <summary>
     /// Builds the typed predicate, or returns false with a human-readable reason
     /// when the row is incomplete. <c>OneOf</c> splits <see cref="ValueText"/> on
@@ -101,6 +149,12 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
         predicate = null;
         error = null;
         var key = Key?.Trim() ?? string.Empty;
+        if (IsContributed && SelectedContributedField is not { Key.Length: > 0 })
+        {
+            error = LocalizationService.Current.Get(TextKeys.AdvancedFilterKeyRequired);
+            return false;
+        }
+
         if (IsKeyed && string.IsNullOrWhiteSpace(key))
         {
             error = LocalizationService.Current.Get(TextKeys.AdvancedFilterKeyRequired);
@@ -131,7 +185,7 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
             {
                 Field = SelectedField,
                 Operator = SelectedOperator,
-                Key = IsKeyed ? key : null,
+                Key = IsKeyed || IsContributed ? key : null,
                 Values = values
             };
             return true;
@@ -141,7 +195,7 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
         {
             Field = SelectedField,
             Operator = SelectedOperator,
-            Key = IsKeyed ? key : null,
+            Key = IsKeyed || IsContributed ? key : null,
             Value = IsValueRequired ? value : null
         };
         return true;
