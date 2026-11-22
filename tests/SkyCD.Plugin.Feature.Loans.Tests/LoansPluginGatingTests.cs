@@ -31,6 +31,24 @@ public sealed class LoansPluginGatingTests
         });
 
     [Fact]
+    public async Task AuxiliaryData_ReportsImportedLoansAndBorrowers()
+    {
+        using var directory = new TemporaryDirectory();
+        using var database = OpenDatabase(directory.Path);
+        var repository = OpenCatalog(database);
+        repository.Save("book", new CatalogDocument { Id = "book", Name = "Book" });
+        var plugin = new LoansPlugin();
+        plugin.InitializeCatalogRepository(new TestProvider(repository));
+
+        await plugin.OnEntriesImportedAsync([Entry]);
+
+        var data = plugin.GetAuxiliaryData();
+        Assert.Contains(data, group => group.Category == "loans" && group.AffectedCount == 1 &&
+            group.Sample == "Alice");
+        Assert.Contains(data, group => group.Category == "borrowers" && group.AffectedCount == 1);
+    }
+
+    [Fact]
     public async Task DisabledPluginLeavesImportedPropertiesPlainAndContributesNoSurfaces()
     {
         using var directory = new TemporaryDirectory();

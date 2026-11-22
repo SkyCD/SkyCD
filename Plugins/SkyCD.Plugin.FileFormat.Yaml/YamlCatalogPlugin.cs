@@ -12,7 +12,7 @@ using SkyCD.Plugin.FileFormat.Yaml.Models;
 
 namespace SkyCD.Plugin.FileFormat.Yaml;
 
-public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
+public sealed class YamlCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
@@ -28,6 +28,13 @@ public sealed class YamlCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/yaml", "text/yaml"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)

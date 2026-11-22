@@ -12,7 +12,7 @@ namespace SkyCD.Plugin.FileFormat.CDCollect;
 /// <summary>
 /// File format capability plugin for importing and exporting CDcollect SQLite database catalogs (*.db, *.cdcollect).
 /// </summary>
-public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
+public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability, IDataLossAwareFileFormatCapability
 {
     private static readonly byte[] SqliteHeader = "SQLite format 3\0"u8.ToArray();
 
@@ -24,6 +24,14 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
             MimeTypes: ["application/x-sqlite3", "application/vnd.sqlite3", "application/x-cdcollect"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size |
+            FileFormatEntryFieldSupport.Properties));
 
     /// <summary>
     /// Inspects the stream content to verify if it represents a CDcollect SQLite database.

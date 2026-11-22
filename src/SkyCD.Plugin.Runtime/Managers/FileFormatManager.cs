@@ -216,6 +216,42 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return byExtension is null ? throw new UnsupportedFileFormatException(path) : byExtension.FormatId;
     }
 
+    /// <summary>
+    /// Assesses the catalog data a write would drop. Formats without loss awareness are treated as
+    /// representable for entry data, but catalog-scope items are always reported because they are
+    /// outside plugin knowledge.
+    /// </summary>
+    public IReadOnlyList<FileFormatDataLossItem> AssessDataLoss(
+        string formatId,
+        string? fileName,
+        IReadOnlyList<FileFormatDataLossEntry> entries,
+        IReadOnlyList<FileFormatDataLossItem> catalogScopeItems)
+    {
+        var formatHandler = ResolveHandler(formatId, fileName);
+        if (formatHandler is not IDataLossAwareFileFormatCapability aware)
+        {
+            return catalogScopeItems;
+        }
+
+        try
+        {
+            var assessment = aware.AssessDataLoss(new FileFormatDataLossRequest(
+                formatId,
+                fileName,
+                entries,
+                catalogScopeItems,
+                System.Globalization.CultureInfo.CurrentUICulture.Name));
+            return aware.PreservesCatalogScope
+                ? assessment.Items
+                : [.. assessment.Items, .. catalogScopeItems];
+        }
+        catch (Exception exception)
+        {
+            PluginFailure.Publish(formatHandler.GetType(), "assess", exception);
+            return catalogScopeItems;
+        }
+    }
+
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -247,7 +283,8 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
 
     /// <summary>Writes beside the destination and replaces it only after successful serialization.</summary>
     public async Task<FileFormatWriteResult> WriteFileAsync(string formatId, string path, object payload,
-        IProgress<int>? progress = null, CancellationToken cancellationToken = default)
+        IProgress<int>? progress = null, CancellationToken cancellationToken = default,
+        IReadOnlyList<FileFormatDataLossItem>? catalogScopeItems = null)
     {
         var destination = Path.GetFullPath(path);
         var directory = Path.GetDirectoryName(destination)!;
@@ -264,7 +301,8 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
                     FileName = Path.GetFileName(destination),
                     Target = stream,
                     Payload = payload,
-                    Progress = progress
+                    Progress = progress,
+                    CatalogScopeItems = catalogScopeItems ?? []
                 }, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
             }

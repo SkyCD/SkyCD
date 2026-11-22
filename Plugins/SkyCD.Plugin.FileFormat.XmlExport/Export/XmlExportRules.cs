@@ -29,7 +29,7 @@ internal static class XmlExportRules
 
     private static readonly HashSet<string> StructuralListKeys = new(StringComparer.OrdinalIgnoreCase)
     {
-        "nodeid", "parentid", "kind"
+        "id", "nodeid", "parentid", "kind"
     };
 
     internal static string? GetValue(Dictionary<string, object?> row, string key)

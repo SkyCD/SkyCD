@@ -13,7 +13,7 @@ namespace SkyCD.Plugin.FileFormat.DiskExplorer.Html;
 /// (read and write). Detection requires report-shaped markup so unrelated HTML
 /// files sharing the .htm/.html extension are never claimed.
 /// </summary>
-public sealed class DiskExplorerHtmlPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
+public sealed class DiskExplorerHtmlPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -23,6 +23,13 @@ public sealed class DiskExplorerHtmlPlugin : IFileFormatPluginCapability, IConte
             MimeTypes: ["text/html"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.ParentId | FileFormatEntryFieldSupport.Kind |
+            FileFormatEntryFieldSupport.Size | FileFormatEntryFieldSupport.Properties));
 
     /// <summary>
     /// Inspects the stream content to verify it is a Disk Explorer HTML report.

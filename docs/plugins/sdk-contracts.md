@@ -83,6 +83,36 @@ See `Plugins/SkyCD.Plugin.Sample.Config/SampleConfigurationPlugin.cs` and
 `SampleConfigurationPage.axaml` for the editor, lazy control and acceptance callbacks. The four production
 examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
 
+## Catalog data-loss preflight (SDK 3.0)
+
+Before writing a catalog, the host asks the routed writer what the target format cannot represent and
+shows a confirmation dialog when anything would be lost. Declining never creates, truncates or replaces
+the file.
+
+- `IDataLossAwareFileFormatCapability` (optional, extends `IFileFormatPluginCapability`)
+  - `PreservesCatalogScope` declares whether the format stores catalog-scope data (virtual collections,
+    custom statuses, loans, borrowers, scan and AI exclusions). When `false`, the host appends its
+    catalog-scope loss items to the plugin's list.
+  - `AssessDataLoss(FileFormatDataLossRequest)` must be pure: no file access, no side effects. It receives
+    the same entry snapshot and catalog-scope items that the following write receives.
+- Plugins without the interface are treated as lossless for entry data; any catalog-scope data present is
+  still reported as lost.
+- `FileFormatDataLossRequest` carries `FormatId`, `FileName`, `Entries` (`FileFormatDataLossEntry`),
+  `CatalogScopeItems` and `CultureName`. Return `FileFormatDataLossAssessment.Lossless` when nothing is
+  lost. Each `FileFormatDataLossItem` has `Category`, `Name`, `AffectedCount` and an optional `Sample`.
+- Use `FileFormatDataLossAssessmentBuilder.AssessEntries(request, represented)` with a
+  `FileFormatEntryFieldSupport` combination (`Id`, `ParentId`, `Kind`, `Size`, `Status`, `Properties`) to
+  report only fields that are actually present and actually dropped.
+- Categories come from `FileFormatDataLossCategories` (`entries`, `collections`, `statuses`, `loans`,
+  `borrowers`, `scanExclusions`, `aiScanExclusions`). Entry item names come from
+  `FileFormatDataLossFields`; custom property losses use one item per key named `property:<key>`.
+- Feature plugins can contribute catalog-scope groups by implementing
+  `ICatalogAuxiliaryDataProvider.GetAuxiliaryData()` and returning `CatalogAuxiliaryDataGroup` values.
+- The host dialog localizes categories and fields, groups items with counts and examples, and defaults to
+  "No, Do Not Save" (Esc closes without writing).
+- `FileFormatWriteRequest.CatalogScopeItems` carries the same scope snapshot to writers. Formats that
+  preserve scope (currently the native JSON catalog) serialize it; see [json-catalog.md](json-catalog.md).
+
 ## Runtime Discovery
 - Runtime scans assemblies for concrete capability classes with public parameterless constructors.
 - Identity and version constraints come from assembly metadata; no manifest is required.

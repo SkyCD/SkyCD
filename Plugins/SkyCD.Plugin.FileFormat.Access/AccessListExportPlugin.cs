@@ -14,12 +14,18 @@ using FileDataType = UCanAccess.File.DataType;
 
 namespace SkyCD.Plugin.FileFormat.Access;
 
-public sealed class AccessListExportPlugin : IFileFormatPluginCapability
+public sealed class AccessListExportPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const int MaxTextCharacters = 255;
 
     public FileFormatDescriptor SupportedFormat => new("skycd-access-list", "Access list export (*.mdb)",
         [".mdb"], ["application/x-msaccess"], CanRead: false, CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatReadResult { Success = false, Error = "Access list export is write-only." });

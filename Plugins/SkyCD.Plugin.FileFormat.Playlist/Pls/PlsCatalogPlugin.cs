@@ -12,7 +12,7 @@ using SkyCD.Plugin.FileFormat.Playlist.Pls.Models;
 
 namespace SkyCD.Plugin.FileFormat.Playlist.Pls;
 
-public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
+public sealed class PlsCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -22,6 +22,11 @@ public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["audio/x-scpls", "audio/scpls"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request, FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
@@ -157,6 +162,61 @@ public sealed class PlsCatalogPlugin : IFileFormatPluginCapability
             return document.Entries;
         }
 
-        throw new InvalidOperationException("PLS payload must be a PLS playlist document.");
+        if (payload is IEnumerable<Dictionary<string, object?>> rows)
+        {
+            var entries = new List<PlsPlaylistEntry>();
+            foreach (var row in rows)
+            {
+                var name = Read(row, "name");
+                var path = Read(row, "path");
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    path = name;
+                }
+
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    continue;
+                }
+
+                entries.Add(new PlsPlaylistEntry(path, string.IsNullOrWhiteSpace(name) ? null : name, ReadSize(row)));
+            }
+
+            return entries;
+        }
+
+        throw new InvalidOperationException("PLS payload must be a PLS playlist document or catalog rows.");
+    }
+
+    private static long ReadSize(Dictionary<string, object?> row)
+    {
+        foreach (var key in new[] { "size", "sizeBytes" })
+        {
+            var text = Read(row, key);
+            if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return 0L;
+    }
+
+    private static string Read(Dictionary<string, object?> row, string key)
+    {
+        if (row.TryGetValue(key, out var value))
+        {
+            return value?.ToString() ?? string.Empty;
+        }
+
+        foreach (var (candidate, candidateValue) in row)
+        {
+            if (candidate.Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidateValue?.ToString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -10,7 +11,7 @@ using SkyCD.Plugin.FileFormat.LegacySkyCD.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.LegacySkyCD;
 
-public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
+public sealed class LegacyCscdPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -20,6 +21,12 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/vnd.skycd.cscd"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
@@ -63,7 +70,8 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.Payload is not LegacyCscdCatalog catalog)
+        var catalog = ResolveCatalog(request.Payload);
+        if (catalog is null)
         {
             return new FileFormatWriteResult { Success = false, Error = "Payload must be LegacyCscdCatalog." };
         }
@@ -88,5 +96,31 @@ public sealed class LegacyCscdPlugin : IFileFormatPluginCapability
         {
             return new FileFormatWriteResult { Success = false, Error = exception.Message };
         }
+    }
+
+    private static LegacyCscdCatalog? ResolveCatalog(object? payload)
+    {
+        if (payload is LegacyCscdCatalog typed)
+        {
+            return typed;
+        }
+
+        if (payload is not IEnumerable<Dictionary<string, object?>> rows)
+        {
+            return null;
+        }
+
+        var catalog = new LegacyCscdCatalog();
+        foreach (var entry in LegacyRowPaths.Build(rows))
+        {
+            catalog.Entries.Add(new LegacyCscdEntry
+            {
+                Path = entry.Path,
+                SizeBytes = entry.SizeBytes,
+                IsDirectory = entry.IsDirectory
+            });
+        }
+
+        return catalog;
     }
 }

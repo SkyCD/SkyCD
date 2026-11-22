@@ -11,7 +11,7 @@ using Tomlyn.Model;
 
 namespace SkyCD.Plugin.FileFormat.Toml;
 
-public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
+public sealed class TomlCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
     private const string HierarchyStrategy = "adjacency-list";
@@ -24,6 +24,13 @@ public sealed class TomlCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/toml"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)

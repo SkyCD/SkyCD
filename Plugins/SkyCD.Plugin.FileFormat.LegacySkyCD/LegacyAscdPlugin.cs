@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -7,12 +8,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Models;
 
 namespace SkyCD.Plugin.FileFormat.LegacySkyCD;
 
-public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
+public sealed class LegacyAscdPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const string FormatHeaderPrefix = "# format: skycd-nf";
     private static readonly StringComparer KeyComparer = StringComparer.OrdinalIgnoreCase;
@@ -25,6 +27,14 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/vnd.skycd.ascd"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size |
+            FileFormatEntryFieldSupport.Properties));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
@@ -429,10 +439,42 @@ public sealed class LegacyAscdPlugin : IFileFormatPluginCapability
             Name = GetString(row, "name"),
             ParentId = GetString(row, "parentId", defaultValue: "-1"),
             Type = GetString(row, "legacyType", defaultValue: DenormalizeLegacyType(normalizedType)),
-            PropertiesXml = GetString(row, "properties", defaultValue: GetString(row, "propertiesXml")),
+            PropertiesXml = SerializeProperties(row),
             SizeBytes = GetLong(row, "size", "sizeBytes"),
             ApplicationId = GetString(row, "applicationId", defaultValue: Guid.Empty.ToString())
         };
+    }
+
+    private static string SerializeProperties(Dictionary<string, object?> row)
+    {
+        if (!row.TryGetValue("properties", out var raw) || raw is null)
+        {
+            return GetString(row, "propertiesXml");
+        }
+
+        switch (raw)
+        {
+            case string text:
+                return text;
+            case JsonElement { ValueKind: JsonValueKind.Object } element:
+                return SerializeProperties(element.EnumerateObject()
+                    .ToDictionary(property => property.Name, property => (object?)property.Value.ToString(), KeyComparer));
+            case IDictionary dictionary:
+                var root = new XElement("properties");
+                foreach (DictionaryEntry entry in dictionary)
+                {
+                    if (entry.Key is not null && entry.Value is not null)
+                    {
+                        root.Add(new XElement("property",
+                            new XAttribute("name", entry.Key.ToString() ?? string.Empty),
+                            new XAttribute("value", entry.Value.ToString() ?? string.Empty)));
+                    }
+                }
+
+                return root.ToString(SaveOptions.DisableFormatting);
+        }
+
+        return GetString(row, "propertiesXml");
     }
 
     private static LegacyAscdEntry FromJsonDocument(JsonElement element)

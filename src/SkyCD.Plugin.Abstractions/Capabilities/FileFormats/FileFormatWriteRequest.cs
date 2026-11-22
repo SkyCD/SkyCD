@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
@@ -32,4 +33,10 @@ public sealed class FileFormatWriteRequest
     /// Gets optional progress reporter (0-100).
     /// </summary>
     public IProgress<int>? Progress { get; init; }
+
+    /// <summary>
+    /// Gets catalog-wide data outside the entry payload. Formats that preserve catalog scope
+    /// serialize these items alongside the payload.
+    /// </summary>
+    public IReadOnlyList<FileFormatDataLossItem> CatalogScopeItems { get; init; } = [];
 }

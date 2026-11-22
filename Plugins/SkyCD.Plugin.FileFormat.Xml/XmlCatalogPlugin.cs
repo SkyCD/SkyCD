@@ -10,7 +10,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.FileFormat.Xml;
 
-public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
+public sealed class XmlCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const string NamespaceUri = "urn:skycd:catalog";
     private const string SchemaVersion = "1.0";
@@ -23,6 +23,13 @@ public sealed class XmlCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/xml", "text/xml"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)

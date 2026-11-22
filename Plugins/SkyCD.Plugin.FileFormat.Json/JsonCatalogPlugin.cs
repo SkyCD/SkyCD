@@ -9,7 +9,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.FileFormat.Json;
 
-public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
+public sealed class JsonCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const string SchemaVersion = "skycd.catalog.v1";
 
@@ -21,6 +21,11 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/json"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => true;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request, FileFormatEntryFieldSupport.All));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
@@ -87,6 +92,10 @@ public sealed class JsonCatalogPlugin : IFileFormatPluginCapability
                 ["schemaVersion"] = SchemaVersion,
                 ["payload"] = request.Payload
             };
+            if (request.CatalogScopeItems.Count > 0)
+            {
+                envelope["catalogScope"] = request.CatalogScopeItems;
+            }
 
             await JsonSerializer.SerializeAsync(
                 request.Target,

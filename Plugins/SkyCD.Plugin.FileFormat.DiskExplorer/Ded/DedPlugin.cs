@@ -20,7 +20,7 @@ namespace SkyCD.Plugin.FileFormat.DiskExplorer.Ded;
 /// writes emit a deterministic DEDB v0x102 container; unknown records, flags,
 /// extensions, and payloads are preserved.
 /// </summary>
-public sealed class DedPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
+public sealed class DedPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -30,6 +30,13 @@ public sealed class DedPlugin : IFileFormatPluginCapability, IContentAwareFileFo
             MimeTypes: ["application/x-diskexplorer-database"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.ParentId | FileFormatEntryFieldSupport.Kind |
+            FileFormatEntryFieldSupport.Size | FileFormatEntryFieldSupport.Properties));
 
     /// <summary>
     /// Claims a stream only when the file name carries the <c>.ded</c>
