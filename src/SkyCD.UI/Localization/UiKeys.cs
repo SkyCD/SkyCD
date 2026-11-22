@@ -293,12 +293,13 @@ public static class UiKeys
     public const string UpdateSearch = "core.ui.UpdateSearch";
     public const string RefreshResults = "core.ui.RefreshResults";
     public const string AiDescription = "core.ui.AiDescription";
+    public const string Description = "core.ui.Description";
+    public const string DescriptionEmpty = "core.ui.DescriptionEmpty";
+    public const string DescriptionCatalogSource = "core.ui.DescriptionCatalogSource";
     public const string Generate = "core.ui.Generate";
     public const string Regenerate = "core.ui.Regenerate";
     public const string Clear = "core.ui.Clear";
     public const string CopyDescription = "core.ui.CopyDescription";
-    public const string AdoptAsComment = "core.ui.AdoptAsComment";
-    public const string AiDescriptionEmpty = "core.ui.AiDescriptionEmpty";
     public const string AiDescriptionCurrent = "core.ui.AiDescriptionCurrent";
     public const string AiDescriptionStale = "core.ui.AiDescriptionStale";
     public const string AiDescriptionUnavailable = "core.ui.AiDescriptionUnavailable";

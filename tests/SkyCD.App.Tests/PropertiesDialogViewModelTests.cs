@@ -62,6 +62,8 @@ public class PropertiesDialogViewModelTests
     [InlineData("rEaLdIrEcToRyNaMe")]
     [InlineData("Comment")]
     [InlineData("cOmMeNt")]
+    [InlineData("Description")]
+    [InlineData("dEsCrIpTiOn")]
     public void Constructor_HidesGeneralTabPropertiesWithoutChangingStoredValues(string key)
     {
         var source = new PropertiesCollection { [key] = "original" };
@@ -71,6 +73,33 @@ public class PropertiesDialogViewModelTests
         Assert.False(vm.HasInfoTab);
         Assert.Equal("original", vm.GetProperties()[key]);
         Assert.Equal("original", source[key]);
+    }
+
+    [Fact]
+    public void Constructor_ExposesCatalogDescriptionAsUnifiedValueWithoutDuplicatingIt()
+    {
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+            new PropertiesCollection { ["Description"] = "Imported description", ["Size"] = 1 });
+
+        Assert.True(vm.HasDescriptionSection);
+        Assert.NotNull(vm.Description);
+        Assert.Equal("Imported description", vm.Description!.DescriptionText);
+        Assert.False(vm.Description.IsAiSourced);
+        Assert.False(vm.Description.HasActions);
+        Assert.Equal("Imported description", vm.GetProperties()["Description"]);
+        Assert.False(vm.InfoProperties.ContainsKey("Description"));
+        Assert.True(vm.InfoProperties.ContainsKey("Size"));
+    }
+
+    [Fact]
+    public void Constructor_IgnoresBlankCatalogDescription()
+    {
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+            new PropertiesCollection { ["Description"] = "  " });
+
+        Assert.False(vm.HasDescriptionSection);
+        Assert.Null(vm.Description);
+        Assert.False(vm.InfoProperties.ContainsKey("Description"));
     }
 
     [Fact]
