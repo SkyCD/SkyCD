@@ -1,6 +1,6 @@
 using System;
 using System.Buffers.Binary;
-using System.IO;
+using SkiaSharp;
 using SkyCD.Plugin.Metadata.Executable.Exceptions;
 using SkyCD.Plugin.Metadata.Executable.Models;
 
@@ -11,25 +11,26 @@ namespace SkyCD.Plugin.Metadata.Executable.Parsing;
 /// </summary>
 /// <remarks>
 /// An icon resource is either a full bitmap (BITMAPINFOHEADER plus palette, XOR pixels and a 1-bit AND mask)
-/// or, since Windows Vista, a bare PNG file. In a bitmap, an image that declares at least 32 bits per pixel
-/// carries its own alpha channel; otherwise transparency comes from the AND mask, which is still applied to a
-/// 32-bit image so the rounded corners of older icons survive.
+/// or, since Windows Vista, a bare PNG file decoded through SkiaSharp. In a bitmap, an image that declares at
+/// least 32 bits per pixel carries its own alpha channel; otherwise transparency comes from the AND mask, which
+/// is still applied to a 32-bit image so the rounded corners of older icons survive.
 /// </remarks>
 internal static class ExecutableIconDecoder
 {
+    private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
     /// <summary>
     /// Decodes the resource at its own pixel size. Fitting it to the preview edge is the encoder's job; an
-    /// image above <paramref name="maximumPixels"/> raises <see cref="ExecutableIconException"/> before its
-    /// raster is allocated.
+    /// image above <paramref name="maximumPixels"/> raises <see cref="ExecutableIconException"/> after its
+    /// header is read but before any raster is allocated.
     /// </summary>
     public static ExecutableIconImage Decode(ReadOnlySpan<byte> data, int maximumPixels)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumPixels);
 
-        if (PngDecoder.HasSignature(data))
+        if (HasPngSignature(data))
         {
-            var png = PngDecoder.Decode(data, maximumPixels);
-            return new ExecutableIconImage(png.Width, png.Height, png.Rgba);
+            return DecodePng(data, maximumPixels);
         }
 
         return DecodeBitmap(data, maximumPixels);
@@ -38,7 +39,7 @@ internal static class ExecutableIconDecoder
     /// <summary>Reads the pixel dimensions an icon bitmap declares, or null when it is not a readable bitmap.</summary>
     public static (int Width, int Height, int BitCount)? ReadBitmapHeader(ReadOnlySpan<byte> data)
     {
-        if (data.Length < 16 || PngDecoder.HasSignature(data))
+        if (data.Length < 16 || HasPngSignature(data))
         {
             return null;
         }
@@ -190,6 +191,80 @@ internal static class ExecutableIconDecoder
 
         return new ExecutableIconImage(width, height, rgba);
     }
+
+    private static bool HasPngSignature(ReadOnlySpan<byte> data) =>
+        data.Length >= 8 && data[..8].SequenceEqual(PngSignature);
+
+    /// <summary>
+    /// Decodes a bare PNG icon. The pixel bound is checked against the header dimensions, so a decompression
+    /// bomb that merely declares a huge image is refused before any raster exists.
+    /// </summary>
+    private static ExecutableIconImage DecodePng(ReadOnlySpan<byte> data, int maximumPixels)
+    {
+        using var buffer = SKData.CreateCopy(data.ToArray());
+        using var codec = SKCodec.Create(buffer) ??
+                          throw new ExecutableIconException("the icon PNG could not be recognized");
+
+        var info = codec.Info;
+        if (info.Width <= 0 || info.Height <= 0)
+        {
+            throw new ExecutableIconException("the icon PNG declares empty dimensions");
+        }
+
+        if ((long)info.Width * info.Height > maximumPixels)
+        {
+            throw new ExecutableIconException("the icon PNG exceeds the allowed pixel count");
+        }
+
+        var decodeInfo = new SKImageInfo(info.Width, info.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(decodeInfo);
+        if (codec.GetPixels(decodeInfo, bitmap.GetPixels()) != SKCodecResult.Success)
+        {
+            throw new ExecutableIconException("the icon PNG pixels could not be decoded");
+        }
+
+        return new ExecutableIconImage(info.Width, info.Height, ToStraightRgba(bitmap));
+    }
+
+    /// <summary>
+    /// Converts Skia's premultiplied rows into the straight RGBA the icon pipeline and PNG encoding use.
+    /// Opaque and fully transparent pixels are copied unchanged, so fully opaque icons round-trip exactly.
+    /// </summary>
+    private static byte[] ToStraightRgba(SKBitmap bitmap)
+    {
+        var width = bitmap.Width;
+        var height = bitmap.Height;
+        var rgba = new byte[width * height * 4];
+        var pixels = bitmap.GetPixelSpan();
+        for (var row = 0; row < height; row++)
+        {
+            var source = pixels.Slice(row * bitmap.RowBytes, width * 4);
+            var target = rgba.AsSpan(row * width * 4, width * 4);
+            for (var column = 0; column < width * 4; column += 4)
+            {
+                var alpha = source[column + 3];
+                if (alpha is 0 or 255)
+                {
+                    target[column] = alpha == 0 ? (byte)0 : source[column];
+                    target[column + 1] = alpha == 0 ? (byte)0 : source[column + 1];
+                    target[column + 2] = alpha == 0 ? (byte)0 : source[column + 2];
+                }
+                else
+                {
+                    target[column] = Unpremultiply(source[column], alpha);
+                    target[column + 1] = Unpremultiply(source[column + 1], alpha);
+                    target[column + 2] = Unpremultiply(source[column + 2], alpha);
+                }
+
+                target[column + 3] = alpha;
+            }
+        }
+
+        return rgba;
+    }
+
+    private static byte Unpremultiply(byte value, byte alpha) =>
+        (byte)Math.Min(255, ((value * 255) + (alpha / 2)) / alpha);
 
     /// <summary>
     /// Returns the offset of the bitmap header: zero, or the four-byte value at zero when it points at a

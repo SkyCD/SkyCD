@@ -2,6 +2,13 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: decoding embedded PNG icons and encoding the bounded preview. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
@@ -9,7 +16,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Executable File Facts and Icons</AssemblyTitle>
-        <Description>Reads PE version information and technical facts from executable files, and extracts the program's own icon as a bounded, index-time PNG preview so the catalog can show it offline. No package dependency and no Windows-only API is used.</Description>
+        <Description>Reads PE version information and technical facts from executable files, and extracts the program's own icon as a bounded, index-time PNG preview so the catalog can show it offline. PNG icons are decoded with SkiaSharp; no Windows-only API is used.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

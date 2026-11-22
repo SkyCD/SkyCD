@@ -2,11 +2,10 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using SkiaSharp;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Metadata.Executable.Parsing;
 
 namespace SkyCD.Plugin.Metadata.Executable.Tests;
 
@@ -351,7 +350,7 @@ internal static class ExecutableFixtures
         return data;
     }
 
-    /// <summary>An icon image stored as a PNG, reusing the plugin's own encoder so no fixture binary is needed.</summary>
+    /// <summary>An icon image stored as a PNG, encoded with SkiaSharp so no fixture binary is needed.</summary>
     public static byte[] PngImage(int width, int height, uint rgba, int borderWidth = 0)
     {
         var pixels = new byte[width * height * 4];
@@ -369,7 +368,61 @@ internal static class ExecutableFixtures
             }
         }
 
-        return PngDecoder.Encode(width, height, pixels);
+        return EncodePng(width, height, pixels);
+    }
+
+    /// <summary>
+    /// A structurally valid PNG whose header declares <paramref name="width"/> by <paramref name="height"/>
+    /// pixels but whose image data stays tiny, so the decoder's header bound is exercised without a real bomb.
+    /// </summary>
+    public static byte[] PngWithDeclaredSize(int width, int height)
+    {
+        var png = PngImage(2, 2, 0x0000FFFF);
+
+        // Signature (8), chunk length (4), "IHDR" (4), then width and height; the header CRC covers type+data.
+        BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(16), width);
+        BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(20), height);
+        BinaryPrimitives.WriteUInt32BigEndian(png.AsSpan(29), Crc32(png.AsSpan(12, 17)));
+        return png;
+    }
+
+    private static byte[] EncodePng(int width, int height, byte[] rgba)
+    {
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(info);
+        var target = bitmap.GetPixelSpan();
+        for (var row = 0; row < height; row++)
+        {
+            var source = rgba.AsSpan(row * width * 4, width * 4);
+            var destination = target.Slice(row * bitmap.RowBytes, width * 4);
+            for (var column = 0; column < source.Length; column += 4)
+            {
+                var alpha = source[column + 3];
+                destination[column] = (byte)(((source[column] * alpha) + 127) / 255);
+                destination[column + 1] = (byte)(((source[column + 1] * alpha) + 127) / 255);
+                destination[column + 2] = (byte)(((source[column + 2] * alpha) + 127) / 255);
+                destination[column + 3] = alpha;
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+
+    private static uint Crc32(ReadOnlySpan<byte> data)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in data)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) != 0 ? 0xEDB88320u ^ (crc >> 1) : crc >> 1;
+            }
+        }
+
+        return ~crc;
     }
 
     /// <summary>A <c>VS_VERSION_INFO</c> resource with a fixed block and one string table.</summary>
