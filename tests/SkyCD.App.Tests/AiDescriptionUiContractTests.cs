@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using DryIoc;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
@@ -15,7 +16,7 @@ using Xunit;
 
 namespace SkyCD.App.Tests;
 
-/// <summary>Issue #462: the Properties surface and batch dialog expose the documented actions.</summary>
+/// <summary>Issue #462: the Properties surface exposes the documented actions.</summary>
 public sealed class AiDescriptionUiContractTests
 {
     [Fact]
@@ -35,33 +36,39 @@ public sealed class AiDescriptionUiContractTests
     }
 
     [Fact]
-    public void BatchWindow_OffersExplicitStartCancelAndPerItemResults()
-    {
-        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "AiDescriptionBatchWindow.axaml");
-
-        Assert.Contains("Command=\"{Binding StartCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding CancelCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("IsChecked=\"{Binding RegenerateExisting, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("<ProgressBar", xaml, StringComparison.Ordinal);
-        Assert.Contains("ItemsSource=\"{Binding Results}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Binding ProviderText", xaml, StringComparison.Ordinal);
-        Assert.Contains("Binding ContextText", xaml, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ToolsMenu_OffersDescriptionBatch_AndStaysDisabledWithoutAProvider()
+    public void ToolsMenu_OmitsManualDescriptionBatch()
     {
         var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
         try
         {
-            var item = Assert.Single(vm.ToolsMenuItems, menu => menu.Key == "ai_description_batch");
-            Assert.Equal("Generate AI descriptions...", item.Header);
-            Assert.False(vm.GenerateAiDescriptionsCommand.CanExecute(null));
+            Assert.DoesNotContain(vm.ToolsMenuItems, menu => menu.Key == "ai_description_batch");
+            Assert.DoesNotContain(vm.ToolsMenuItems, menu => menu.Header == "Generate AI descriptions...");
         }
         finally
         {
             vm.Dispose();
         }
+    }
+
+    [Fact]
+    public void Toolbar_OmitsManualDescriptionBatch_AndDropsItFromSavedLayouts()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+
+        Assert.DoesNotContain("ai-descriptions", ToolbarCommandIds.All);
+        Assert.DoesNotContain(vm.ToolbarCommands(), command => command.Id == "ai-descriptions");
+
+        var saved = new[]
+        {
+            ToolbarItemDocument.Command(ToolbarCommandIds.Refresh),
+            ToolbarItemDocument.Command("ai-descriptions"),
+            ToolbarItemDocument.Command(ToolbarCommandIds.Find)
+        };
+        vm.LoadToolbarLayout(saved);
+
+        Assert.Equal(
+            new[] { ToolbarCommandIds.Refresh, ToolbarCommandIds.Find },
+            vm.ToolbarEntries.Select(entry => entry.CommandId));
     }
 
     [Fact]
@@ -142,12 +149,14 @@ public sealed class AiDescriptionUiContractTests
 
             foreach (var key in new[]
                      {
-                         "text.GenerateAiDescriptions:", "text.AiDescriptionProvider:",
+                         "text.AiDescriptionProvider:",
                          "text.AiDescriptionProvenance:", "text.AiDescriptionBatchSummary:"
                      })
             {
                 Assert.Contains(key, text, StringComparison.Ordinal);
             }
+
+            Assert.DoesNotContain("text.GenerateAiDescriptions:", text, StringComparison.Ordinal);
 
             Assert.Contains("metadata.AiDescription:", metadata, StringComparison.Ordinal);
         }

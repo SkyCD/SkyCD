@@ -364,23 +364,18 @@ public sealed class AiDescriptionTests : IDisposable
             return FakeCapability.Describe("generated for " + context.EntryId);
         });
         var service = new AiDescriptionService(stack.Catalog, store, capability);
-        var viewModel = new AiDescriptionBatchDialogViewModel(service, new[] { "a", "b", "c", "d" }
-            .Select(stack.Catalog.Get)
-            .Where(entry => entry is not null)
-            .Select(entry => entry!)
-            .ToArray());
+        using var cancellation = new CancellationTokenSource();
 
-        var run = viewModel.StartCommand.ExecuteAsync(null);
+        var run = service.GenerateBatchAsync(["a", "b", "c", "d"], regenerate: false, progress: null,
+            cancellation.Token);
         await Task.Delay(60);
-        viewModel.CancelCommand.Execute(null);
-        await run;
+        cancellation.Cancel();
+        var result = await run;
 
-        Assert.False(viewModel.IsRunning);
-        Assert.Contains(viewModel.Results, item => item.Outcome == AiDescriptionBatchItemOutcome.Cancelled);
-        Assert.DoesNotContain(viewModel.Results, item => item.Outcome == AiDescriptionBatchItemOutcome.Failed);
+        Assert.Contains(result.Items, item => item.Outcome == AiDescriptionBatchItemOutcome.Cancelled);
+        Assert.DoesNotContain(result.Items, item => item.Outcome == AiDescriptionBatchItemOutcome.Failed);
         Assert.Equal("Earlier accepted", service.Read("a").Text);
         Assert.Equal("User comment", stack.Catalog.Get("a")!.Properties["Comment"]);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.SummaryText));
     }
 
     private static void InterlockedMax(ref int target, int value)

@@ -201,8 +201,6 @@ text.LocationFilterMatchCount: "{0} įrašų vietoje {1}."
 text.LocationFilterApplied: "Rodomi įrašai vietoje {0}."
 text.LocationFilterCleared: "Rodomos visos vietos."
 
-text.GenerateAiDescriptions: "Generuoti AI aprašymus..."
-text.AiDescriptionUnavailableStatus: "AI aprašymo papildinys nepasiekiamas."
 text.AiDescriptionBatchNoTargets: "Pasirinkite bent vieną katalogo failą aprašymams generuoti."
 text.AiDescriptionProvider: "Teikėjas: {0} {1}; apdorojimo vieta: {2}. Vieta nurodyta konfigūracijoje ir nėra patvirtinta privatumo ar sąnaudų garantija."
 text.AiDescriptionDisabled: "AI aprašymų generavimas išjungtas: {0}"

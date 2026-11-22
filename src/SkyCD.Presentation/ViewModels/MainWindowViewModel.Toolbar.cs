@@ -77,8 +77,7 @@ public partial class MainWindowViewModel
             Descriptor(ToolbarCommandIds.Options, tools, UiKeys.Options, OpenOptionsCommand),
             Descriptor(ToolbarCommandIds.Tags, tools, UiKeys.ManageTags, OpenTagsDialogCommand),
             Descriptor(ToolbarCommandIds.Collections, tools, UiKeys.ManageCollections, OpenCollectionsDialogCommand),
-            Descriptor(ToolbarCommandIds.Locations, tools, UiKeys.ManageLocations, OpenLocationsDialogCommand),
-            Descriptor(ToolbarCommandIds.AiDescriptions, tools, TextKeys.GenerateAiDescriptions, GenerateAiDescriptionsCommand)
+            Descriptor(ToolbarCommandIds.Locations, tools, UiKeys.ManageLocations, OpenLocationsDialogCommand)
         ];
     }
 
