@@ -166,6 +166,12 @@ introduces no new dependency tree for the policy gate. Every package and its tra
 to MIT or another license allowed by `docs/legal/dependency-license-policy.json`; no blocked, unknown or
 whitelist-dependent license is involved.
 
+`VersOne.Epub` (3.3.6, Unlicense, OSADL-compatible with BSD-2-Clause) was evaluated as a replacement for the
+custom EPUB reader in #914 and rejected: it cannot fall back to a packaged `.opf` without `container.xml`,
+resolves entries case-sensitively, decompresses package parts without a bound, exposes no encryption/DRM state
+and reads NCX, navigation and SMIL parts the plugin does not need. The evidence is in the
+[VersOne.Epub assessment](../implementation/issue-914-versone-epub-assessment.md).
+
 ## Limitations
 
 - **Metadata sources are the book's own documents.** EPUB relies on the package document, Mobipocket on the
