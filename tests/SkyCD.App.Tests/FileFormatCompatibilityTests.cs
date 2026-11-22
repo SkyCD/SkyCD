@@ -134,9 +134,9 @@ public sealed class FileFormatCompatibilityTests
 
     private static IFileFormatPluginCapability[] CreateProviders() =>
     [
-        new SkyCD.Plugin.FileFormat.Legacy.Scd.LegacyScdPlugin(),
-        new SkyCD.Plugin.FileFormat.Legacy.Cscd.LegacyCscdPlugin(),
-        new SkyCD.Plugin.FileFormat.Legacy.Ascd.LegacyAscdPlugin(),
+        new SkyCD.Plugin.FileFormat.LegacySkyCD.LegacyScdPlugin(),
+        new SkyCD.Plugin.FileFormat.LegacySkyCD.LegacyCscdPlugin(),
+        new SkyCD.Plugin.FileFormat.LegacySkyCD.LegacyAscdPlugin(),
         new SkyCD.Plugin.FileFormat.Json.JsonCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Csv.CsvCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.WinCatalog.Csv.WinCatalogCsvPlugin(),

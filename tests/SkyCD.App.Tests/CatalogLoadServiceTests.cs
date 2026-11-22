@@ -9,7 +9,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.FileFormat.Legacy.Scd;
+using SkyCD.Plugin.FileFormat.LegacySkyCD;
 using SkyCD.Plugin.FileFormat.Json;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
