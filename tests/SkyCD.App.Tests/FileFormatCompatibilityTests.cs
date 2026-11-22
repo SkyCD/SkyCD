@@ -29,13 +29,6 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-tar", "sample.tar", "catalog.tar")]
     [InlineData("skycd-tar", "sample.tar.gz", "catalog.TAR.GZ")]
     [InlineData("skycd-tar", "sample.tar.gz", "catalog.tgz")]
-    [InlineData("skycd-iso", "catalog-sample.iso", "catalog.iso")]
-    [InlineData("skycd-nrg", "catalog-sample.nrg", "catalog.nrg")]
-    [InlineData("skycd-qcow2", "catalog-sample.qcow2", "catalog.qcow2")]
-    [InlineData("skycd-dmg", "catalog-sample.dmg", "catalog.dmg")]
-    [InlineData("skycd-daa", "catalog-sample.daa", "catalog.daa")]
-    [InlineData("skycd-vhd", "catalog-sample.vhd", "catalog.vhd")]
-    [InlineData("skycd-vdi", "catalog.vdi", "catalog.vdi")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
         var manager = new FileFormatManager(CreateProviders());
@@ -56,8 +49,7 @@ public sealed class FileFormatCompatibilityTests
             Assert.NotNull(leaf.ParentId);
             Assert.True(leaf.Size > 0);
         }
-        if (format is "skycd-tar" or "skycd-iso" or "skycd-qcow2" or "skycd-dmg"
-            or "skycd-daa" or "skycd-vhd" or "skycd-vdi")
+        if (format is "skycd-tar")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
@@ -72,66 +64,6 @@ public sealed class FileFormatCompatibilityTests
         Assert.Equal(entries.Select(entry => entry.Name), roundTrip.Select(entry => entry.Name));
         Assert.Equal(entries.Select(entry => entry.Type), roundTrip.Select(entry => entry.Type));
         Assert.Equal(entries.Select(entry => entry.Size), roundTrip.Select(entry => entry.Size));
-    }
-
-    [Fact]
-    public async Task MdfImage_ResolvesCompanionImageAndImportsCatalog()
-    {
-        var manager = new FileFormatManager(CreateProviders());
-        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.mds");
-        Assert.True(File.Exists(path));
-        Assert.True(File.Exists(Path.ChangeExtension(path, ".mdf")));
-        Assert.Equal("skycd-mdf", manager.ResolveFormatId(null, path, forWrite: false));
-
-        var service = new CatalogLoadService(manager);
-        await service.LoadAsync(path, (payload, _) =>
-        {
-            var entries = CatalogImportTests.Extract(payload!);
-            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
-            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
-            CatalogImportTests.Persist(entries);
-            return entries.Count;
-        }, new Progress<int>());
-    }
-
-    [Fact]
-    public async Task CloneCdImage_ResolvesCompanionImageAndImportsCatalog()
-    {
-        var manager = new FileFormatManager(CreateProviders());
-        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.ccd");
-        Assert.True(File.Exists(path));
-        Assert.True(File.Exists(Path.ChangeExtension(path, ".img")));
-        Assert.Equal("skycd-ccd", manager.ResolveFormatId(null, path, forWrite: false));
-
-        var service = new CatalogLoadService(manager);
-        await service.LoadAsync(path, (payload, _) =>
-        {
-            var entries = CatalogImportTests.Extract(payload!);
-            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
-            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
-            CatalogImportTests.Persist(entries);
-            return entries.Count;
-        }, new Progress<int>());
-    }
-
-    [Fact]
-    public async Task BinCueImage_ResolvesCompanionImageAndImportsCatalog()
-    {
-        var manager = new FileFormatManager(CreateProviders());
-        var path = Path.Combine(AppContext.BaseDirectory, "FormatFixtures", "catalog-sample.cue");
-        Assert.True(File.Exists(path));
-        Assert.True(File.Exists(Path.ChangeExtension(path, ".bin")));
-        Assert.Equal("skycd-bincue", manager.ResolveFormatId(null, path, forWrite: false));
-
-        var service = new CatalogLoadService(manager);
-        await service.LoadAsync(path, (payload, _) =>
-        {
-            var entries = CatalogImportTests.Extract(payload!);
-            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
-            Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
-            CatalogImportTests.Persist(entries);
-            return entries.Count;
-        }, new Progress<int>());
     }
 
     [Theory]
@@ -216,16 +148,6 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.FileFormat.Pls.PlsCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Xspf.XspfCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Tar.TarArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Iso.IsoImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Nrg.NrgImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Qcow2.Qcow2ImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Dmg.DmgImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Daa.DaaImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Mdf.MdfImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Ccd.CcdImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.BinCue.BinCueImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Vhd.VhdImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Vdi.VdiImageIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.FileFormat.Markdown.MarkdownCatalogExportPlugin()
     ];

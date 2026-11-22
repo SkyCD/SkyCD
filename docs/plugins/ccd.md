@@ -1,18 +1,17 @@
 # CloneCD (CCD / IMG / SUB) disk image indexing plugin
 
-Implements #726 on the file-format and indexing capability contracts.
+Implements #726 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.Ccd/` → plugin id `skycd.ccd`.
-Tests: `tests/SkyCD.Plugin.FileFormat.Ccd.Tests/`.
-Format: `skycd-ccd`, extension `.ccd`, MIME type `application/x-clonecd`, read-only.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Ccd/` → plugin id `skycd.ccd`.
+Tests: `tests/SkyCD.Plugin.Metadata.Ccd.Tests/`.
+Entry point: the `.ccd` descriptor; the plugin claims `.ccd` files and resolves the IMG companion.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `CcdImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `CcdImageIndexPlugin : IIndexWorkItemProvider` |
 
 A CloneCD image is a set of companion files that share a base name:
@@ -23,7 +22,7 @@ A CloneCD image is a set of companion files that share a base name:
 | `name.img` | Raw track data; every track is stored back to back. |
 | `name.sub` | Optional subchannel data. It is not needed to read the filesystem and is never opened. |
 
-The descriptor is indexed as the image. The IMG file is not claimed as a format on its own, because a
+The descriptor is indexed as the image. The IMG file is not claimed on its own, because a
 bare `.img` commonly holds a floppy or hard-disk image that does not follow the CCD layout.
 
 ## Reading the image
@@ -74,7 +73,7 @@ dependency.
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.Ccd.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
+`tests/SkyCD.Plugin.Metadata.Ccd.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
 and 2352-byte sectors, then exercises:
 
 - Every supported track mode, data tracks after an audio track, and `ImageFile` overrides.
@@ -83,5 +82,4 @@ and 2352-byte sectors, then exercises:
 - One-file-at-a-time extraction, temporary-file cleanup, entry limits, total budget, and cancellation.
 - Host indexing through `IndexWorkItemSequence` with a metadata provider.
 
-`Fixtures/Ccd/catalog-sample.ccd` and `catalog-sample.img` also feed the shared
-`FileFormatCompatibilityTests`.
+`Fixtures/Ccd/catalog-sample.ccd` and `catalog-sample.img` remain as a sample set for manual checks.

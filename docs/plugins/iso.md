@@ -1,15 +1,14 @@
 # ISO 9660 / UDF Disk Image Index Plugin
 
 ## Overview
-The `skycd-iso` plugin indexes optical disc images (`*.iso`) as read-only
-catalogs. During scanning it enumerates the image's filesystem and contributes
-its folders and files to the catalog hierarchy. When metadata-collecting plugins
-are enabled it also exposes each stored file to them, one file at a time. It
-never writes or modifies the image.
+The `skycd-iso` plugin is a metadata provider for optical disc images
+(`*.iso`). During scanning it enumerates the image's filesystem and contributes
+one work item per contained file, so metadata-collecting plugins can read them
+one file at a time. It never writes or modifies the image.
 
 The plugin is discovered through assembly metadata and capability types
-(`IFileFormatPluginCapability` and `IIndexWorkItemProvider`); no `plugin.json`
-descriptor is used. A single plugin instance provides both capabilities.
+(`IIndexWorkItemProvider`); no `plugin.json`
+descriptor is used. A single plugin instance provides the capability.
 
 ## Supported Images
 - **Filesystems**: ISO 9660 with Joliet extensions, and UDF (read through
@@ -50,8 +49,7 @@ never fully extracted.
   fails the read with `ISO_DAMAGED`.
 - Cancellation is honored during listing, buffering, extraction and stream
   copies; temporary files are cleaned up on every failure path.
-- Reads are read-only; attempts to use the format for saving are blocked by the
-  host because `CanWrite` is `false`.
+- The plugin registers no save format; the image is only ever read.
 
 ## Dependencies and Licensing
 The plugin uses `DiscUtils.Iso9660` `0.16.13` (MIT), already used by

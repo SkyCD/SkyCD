@@ -1,19 +1,17 @@
 # BIN / CUE disk image indexing plugin
 
-Implements #723 on the file-format and indexing capability contracts.
+Implements #723 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.BinCue/` → plugin id `skycd.bincue`.
-Tests: `tests/SkyCD.Plugin.FileFormat.BinCue.Tests/`.
-Format: `skycd-bincue`, extension `.cue`, MIME types `application/x-cue` and `application/x-bincue`,
-read-only.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.BinCue/` → plugin id `skycd.bincue`.
+Tests: `tests/SkyCD.Plugin.Metadata.BinCue.Tests/`.
+Entry point: the `.cue` sheet; the plugin claims `.cue` files and resolves the BIN companion.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `BinCueImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `BinCueImageIndexPlugin : IIndexWorkItemProvider` |
 
 A BIN/CUE image is a pair of companion files that share a base name:
@@ -23,7 +21,7 @@ A BIN/CUE image is a pair of companion files that share a base name:
 | `name.cue` | Small text sheet that declares the FILE, its tracks, and their start times. This is the entry point the plugin claims. |
 | `name.bin` | Raw track data; tracks are stored back to back at fixed sector sizes. |
 
-The sheet is indexed as the image. A bare `.bin` is not claimed as a format on its own, because a bare
+The sheet is indexed as the image. A bare `.bin` is not claimed on its own, because a bare
 `.bin` is also used for firmware and disk images that do not follow the CUE layout.
 
 ## Reading the image
@@ -77,7 +75,7 @@ dependency.
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.BinCue.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048,
+`tests/SkyCD.Plugin.Metadata.BinCue.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048,
 2336, and 2352-byte sectors, then exercises:
 
 - Every supported track mode, data tracks after an audio track, and multi-track boundaries.
@@ -88,5 +86,4 @@ dependency.
 - One-file-at-a-time extraction, temporary-file cleanup, entry limits, total budget, and cancellation.
 - Host indexing through `IndexWorkItemSequence` with a metadata provider.
 
-`Fixtures/BinCue/catalog-sample.cue` and `catalog-sample.bin` also feed the shared
-`FileFormatCompatibilityTests`.
+`Fixtures/BinCue/catalog-sample.cue` and `catalog-sample.bin` remain as a sample set for manual checks.

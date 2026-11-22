@@ -1,13 +1,13 @@
 # DAA Disk Image Index Plugin
 
 ## Overview
-The `skycd-daa` plugin indexes PowerISO Direct Access Archive images (`*.daa`)
-as read-only catalogs. During scanning it enumerates the ISO 9660 filesystem
-stored inside the archive and contributes its folders and files to the catalog
-hierarchy. It never writes or modifies the image.
+The `skycd-daa` plugin is a metadata provider for PowerISO Direct Access
+Archive images (`*.daa`). During scanning it enumerates the ISO 9660 filesystem
+stored inside the archive and contributes one work item per contained file. It
+never writes or modifies the image.
 
 The plugin is discovered through assembly metadata and capability types
-(`IFileFormatPluginCapability` and `IIndexWorkItemProvider`); no `plugin.json`
+(`IIndexWorkItemProvider`); no `plugin.json`
 descriptor is used.
 
 ## Supported Images
@@ -40,8 +40,7 @@ whole image.
   data raises a damaged-image error.
 - Non-seekable inputs are buffered to a per-read temporary directory that is
   deleted when the read finishes, including on failure or cancellation.
-- Reads are read-only; attempts to use the format for saving are blocked by the
-  host because `CanWrite` is `false`.
+- The plugin registers no save format; the image is only ever read.
 
 ## Dependencies and Licensing
 The plugin adds no new NuGet dependency for DAA decoding: the container is

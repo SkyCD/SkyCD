@@ -1,20 +1,19 @@
 # DMG disk image indexing plugin
 
-Implements #722 on the file-format and indexing capability contracts.
+Implements #722 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.Dmg/` → plugin id `skycd.dmg`.
-Tests: `tests/SkyCD.Plugin.FileFormat.Dmg.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Dmg/` → plugin id `skycd.dmg`.
+Tests: `tests/SkyCD.Plugin.Metadata.Dmg.Tests/`.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `DmgImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `DmgImageIndexPlugin : IIndexWorkItemProvider` |
 
-The plugin claims extension `.dmg` with MIME type `application/x-apple-diskimage`.
+The plugin claims extension `.dmg`.
 
 ## Reading the image
 
@@ -48,8 +47,7 @@ These are rejected with a clear message rather than misread:
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.Dmg.Tests/` builds UDIF images in memory around a FAT volume that DiscUtils
+`tests/SkyCD.Plugin.Metadata.Dmg.Tests/` builds UDIF images in memory around a FAT volume that DiscUtils
 creates, including raw, zlib-compressed, and zero-block data forks, then exercises catalog listing,
 one-file-at-a-time extraction, cleanup, limits, cancellation, and the damaged, encrypted, and
-segmented rejection paths. `Fixtures/catalog-sample.dmg` also feeds the shared
-`FileFormatCompatibilityTests`.
+segmented rejection paths. `Fixtures/catalog-sample.dmg` remains as a sample set for manual checks.
