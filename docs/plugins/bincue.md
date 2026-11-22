@@ -2,8 +2,8 @@
 
 Implements #723 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.BinCue/` → plugin id `skycd.bincue`.
-Tests: `tests/SkyCD.Plugin.BinCue.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.BinCue/` → plugin id `skycd.bincue`.
+Tests: `tests/SkyCD.Plugin.FileFormat.BinCue.Tests/`.
 Format: `skycd-bincue`, extension `.cue`, MIME types `application/x-cue` and `application/x-bincue`,
 read-only.
 
@@ -77,7 +77,7 @@ dependency.
 
 ## Tests
 
-`tests/SkyCD.Plugin.BinCue.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048,
+`tests/SkyCD.Plugin.FileFormat.BinCue.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048,
 2336, and 2352-byte sectors, then exercises:
 
 - Every supported track mode, data tracks after an audio track, and multi-track boundaries.

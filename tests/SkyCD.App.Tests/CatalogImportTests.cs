@@ -11,14 +11,14 @@ using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Legacy.Scd;
+using SkyCD.Plugin.FileFormat.Legacy.Scd;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using Xunit;
-using SkyCD.Plugin.Legacy.Scd.Models;
+using SkyCD.Plugin.FileFormat.Legacy.Scd.Models;
 
 namespace SkyCD.App.Tests;
 

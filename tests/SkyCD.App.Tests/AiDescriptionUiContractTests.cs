@@ -67,7 +67,7 @@ public sealed class AiDescriptionUiContractTests
     [Fact]
     public void AiDescriptionPlugin_NoLongerContributesToolsMenuItems()
     {
-        var plugin = ReadRepoFile("Plugins", "SkyCD.Plugin.AiDescription", "AiDescriptionPlugin.cs");
+        var plugin = ReadRepoFile("Plugins", "SkyCD.Plugin.Ai.Description", "AiDescriptionPlugin.cs");
 
         Assert.DoesNotContain("Generate AI description for selected file", plugin, StringComparison.Ordinal);
         Assert.DoesNotContain("AI description configuration", plugin, StringComparison.Ordinal);

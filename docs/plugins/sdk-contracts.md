@@ -79,7 +79,7 @@ configuration Windows and the descriptor's Width/Height arguments. Other capabil
   They may also create/accept a page without accessing `Content` to normalize a settings dictionary.
   `PluginConfigurationManager.SaveSettings` additionally refreshes currently loaded consumers.
 
-See `Plugins/SkyCD.Plugin.Sample.Configuration/SampleConfigurationPlugin.cs` and
+See `Plugins/SkyCD.Plugin.Sample.Config/SampleConfigurationPlugin.cs` and
 `SampleConfigurationPage.axaml` for the editor, lazy control and acceptance callbacks. The four production
 examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
 
@@ -103,6 +103,6 @@ examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capabi
 - Host executes CLI plugin handlers with timeout and exception isolation, including deterministic command collision checks.
 
 ## Sample Plugin
-- `Plugins/SkyCD.Plugin.Json` compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
+- `Plugins/SkyCD.Plugin.FileFormat.Json` compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
 - `Plugins/SkyCD.Plugin.Sample.Modal` demonstrates modal registration and typed request/response payload contracts (`IModalPluginCapability`).
-- `Plugins/SkyCD.Plugin.Sample.Configuration` demonstrates embedded Options drafts (see above).
+- `Plugins/SkyCD.Plugin.Sample.Config` demonstrates embedded Options drafts (see above).

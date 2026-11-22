@@ -1,6 +1,6 @@
 # Disk Explorer Professional delimited-text profile (`disk-explorer-delimited`)
 
-Read/write capability in `SkyCD.Plugin.DiskExplorer`, sub-profile next to the
+Read/write capability in `SkyCD.Plugin.FileFormat.DiskExplorer`, sub-profile next to the
 XML (`disk-explorer-xml-report`) and HTML (`disk-explorer-html-report`)
 profiles. Discovery uses assembly metadata and capability types; no
 `plugin.json`. It covers the Disk Explorer Professional "Special Export"

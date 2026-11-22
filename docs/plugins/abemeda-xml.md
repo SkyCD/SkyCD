@@ -1,6 +1,6 @@
 # abeMeda XML export import plugin (`abemeda-xml`)
 
-Read-only capability in `SkyCD.Plugin.AbeMeda` that imports abeMeda/NeoFinder-family
+Read-only capability in `SkyCD.Plugin.FileFormat.AbeMeda` that imports abeMeda/NeoFinder-family
 XML catalog exports. Discovery uses assembly metadata and the capability type; no
 `plugin.json` is involved.
 
@@ -45,7 +45,7 @@ the import mode (Nested/Flat), skipped rows with reasons, and unsupported fields
 
 ## Tests
 
-`tests/SkyCD.Plugin.AbeMeda.Tests` covers a nested two-volume synthetic export
+`tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests` covers a nested two-volume synthetic export
 (hierarchy, Unicode, missing attributes, duplicates, metadata variants, unknown
 names, thumbnails), a flat path-based export, recognizer true/false cases with
 position preservation, malformed/empty/wrong-root diagnostics, cancellation, and

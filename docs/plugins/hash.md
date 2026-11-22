@@ -3,8 +3,8 @@
 Implements #446 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`) and the
 durable cache from #436.
 
-Assembly: `Plugins/SkyCD.Plugin.Hash/` → plugin id `SkyCD.Plugin.Hash`.
-Tests: `tests/SkyCD.Plugin.Hash.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Hash/` → plugin id `SkyCD.Plugin.Metadata.Hash`.
+Tests: `tests/SkyCD.Plugin.Metadata.Hash.Tests/`.
 
 ## What it provides
 

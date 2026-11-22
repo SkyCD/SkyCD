@@ -2,8 +2,8 @@
 
 Implements #718 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.Vhd/` → plugin id `skycd.vhd`.
-Tests: `tests/SkyCD.Plugin.Vhd.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.Vhd/` → plugin id `skycd.vhd`.
+Tests: `tests/SkyCD.Plugin.FileFormat.Vhd.Tests/`.
 
 ## What it provides
 
@@ -49,7 +49,7 @@ image directory are rejected with a clear message rather than misread. The plugi
 
 ## Tests
 
-`tests/SkyCD.Plugin.Vhd.Tests/` builds dynamic VHD and VHDX images in memory around a FAT volume that
+`tests/SkyCD.Plugin.FileFormat.Vhd.Tests/` builds dynamic VHD and VHDX images in memory around a FAT volume that
 DiscUtils creates, then exercises catalog listing, one-file-at-a-time extraction, cleanup, limits,
 cancellation, stream-based opening, VHD differencing parent resolution, and the damaged, missing
 parent, parent-outside-directory, and non-image rejection paths. `Fixtures/catalog-sample.vhd` also

@@ -212,10 +212,10 @@ UpgradeLog*.htm
 *.mdf
 *.ldf
 
-# Alcohol 120% MDF disk images (skycd-mdf plugin sources and fixtures are not databases)
-!Plugins/SkyCD.Plugin.Mdf/
-!tests/SkyCD.Plugin.Mdf.Tests/Fixtures/Mdf/
-!tests/SkyCD.Plugin.Mdf.Tests/Fixtures/Mdf/*.mdf
+# Alcohol 120% MDF disk images (MDF plugin sources and fixtures are not databases)
+!Plugins/SkyCD.Plugin.FileFormat.Mdf/
+!tests/SkyCD.Plugin.FileFormat.Mdf.Tests/Fixtures/Mdf/
+!tests/SkyCD.Plugin.FileFormat.Mdf.Tests/Fixtures/Mdf/*.mdf
 
 # Business Intelligence projects
 *.rdl.data
@@ -257,6 +257,8 @@ paket-files/
 *.sln.iml
 *.pdb
 *.exe
+# The motion capture bundle ships motion.exe with the plugin (see docs/plugins/motion-detector.md).
+!Plugins/SkyCD.Plugin.Feature.MotionDetector/motion/motion.exe
 *.Cache
 SkyCD/obj/Debug/SkyCD.vbproj.GenerateResource.Cache
 

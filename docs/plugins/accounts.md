@@ -1,6 +1,6 @@
 # Ownership and account CLI commands
 
-The `SkyCD.Plugin.Accounts` plugin exposes ownership and account features through
+The `SkyCD.Plugin.Accounts.Core` plugin exposes ownership and account features through
 the existing SkyCD CLI. Commands are plugin-defined (`ICliPluginCapability`) and
 discovered like any other plugin capability; no changes to the host command tree
 were needed. Global `--json` output is honoured through the `ISupportsJsonOutput`
@@ -9,9 +9,9 @@ of human-readable text.
 
 ## Account provider plugins
 
-`SkyCD.Plugin.Accounts` supplies the shared CLI and store. Providers are separate
-assemblies, such as `SkyCD.Plugin.Accounts.JetBrains` and
-`SkyCD.Plugin.Accounts.Microsoft365`. Install the shared plugin and the desired
+`SkyCD.Plugin.Accounts.Core` supplies the shared CLI and store. Providers are separate
+assemblies, such as `SkyCD.Plugin.Accounts.Core.JetBrains` and
+`SkyCD.Plugin.Accounts.Core.Microsoft365`. Install the shared plugin and the desired
 provider assemblies in the configured plugin directory. Disabled or unavailable
 plugins do not participate in sync.
 
@@ -93,7 +93,7 @@ stored — only product, seat, date and note metadata.
 
 ## JetBrains connector
 
-`SkyCD.Plugin.Accounts.JetBrains` additionally implements `IOAuthClient`,
+`SkyCD.Plugin.Accounts.Core.JetBrains` additionally implements `IOAuthClient`,
 `IAccountConnector`, `IOwnershipProvider` and `IActionProvider`, so a single
 discovered capability provides the JetBrains-specific connection, ownership and
 launch behavior. OAuth tokens stay in the host's encrypted OAuth store; the
@@ -123,7 +123,7 @@ Endpoints are public-native-client defaults and can be overridden with
 
 ## Microsoft 365 connector
 
-`SkyCD.Plugin.Accounts.Microsoft365` implements the same `IOAuthClient`,
+`SkyCD.Plugin.Accounts.Core.Microsoft365` implements the same `IOAuthClient`,
 `IAccountConnector`, `IOwnershipProvider` and `IActionProvider` capabilities. It
 signs in through the Microsoft identity platform, reads company subscriptions
 from Microsoft Graph, and detects classic Office applications installed through

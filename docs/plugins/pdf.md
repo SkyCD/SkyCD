@@ -2,8 +2,8 @@
 
 Implements #441 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Pdf/` → plugin id `SkyCD.Plugin.Pdf`.
-Tests: `tests/SkyCD.Plugin.Pdf.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Pdf/` → plugin id `SkyCD.Plugin.Metadata.Pdf`.
+Tests: `tests/SkyCD.Plugin.Metadata.Pdf.Tests/`.
 
 This plugin is deliberately independent of image and video extraction: it claims only `.pdf` /
 `application/pdf`, so a PDF is never also routed through the image plugin's reader.
@@ -132,7 +132,7 @@ rejected; `Ghostscript` bindings were rejected as AGPL.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Pdf.Tests/` builds **structurally valid PDF documents in memory** — real object table,
+`tests/SkyCD.Plugin.Metadata.Pdf.Tests/` builds **structurally valid PDF documents in memory** — real object table,
 cross-reference table with correct byte offsets, and trailer — so the suite commits no binary blobs and every
 expected value is known to the test asserting it. Fixtures cover single and multi-page documents, a full
 information dictionary with timezone-bearing dates, a textless document, a long single-page text layer, an

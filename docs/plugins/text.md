@@ -2,8 +2,8 @@
 
 Implements #442 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Text/` → plugin id `SkyCD.Plugin.Text`.
-Tests: `tests/SkyCD.Plugin.Text.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Text/` → plugin id `SkyCD.Plugin.Metadata.Text`.
+Tests: `tests/SkyCD.Plugin.Metadata.Text.Tests/`.
 
 ## What it provides
 
@@ -141,7 +141,7 @@ there is no transitive dependency whose license the policy gate has to judge.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Text.Tests/` builds every fixture in memory, so the suite commits no binary blobs.
+`tests/SkyCD.Plugin.Metadata.Text.Tests/` builds every fixture in memory, so the suite commits no binary blobs.
 Coverage includes BOM and no-BOM detection for UTF-8, UTF-16 LE/BE and the ISO-8859-1 fallback; a UTF-16
 source not being mistaken for binary despite its NUL bytes; a scan window cut inside a multi-byte character
 still decoding as UTF-8 with no replacement characters; line-ending classification including mixed and none;

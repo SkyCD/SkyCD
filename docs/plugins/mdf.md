@@ -2,8 +2,8 @@
 
 Implements #724 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.Mdf/` → plugin id `skycd.mdf`.
-Tests: `tests/SkyCD.Plugin.Mdf.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.Mdf/` → plugin id `skycd.mdf`.
+Tests: `tests/SkyCD.Plugin.FileFormat.Mdf.Tests/`.
 Format: `skycd-mdf`, extension `.mds`, MIME type `application/x-alcohol-mds`, read-only.
 
 ## What it provides
@@ -70,7 +70,7 @@ dependency.
 
 ## Tests
 
-`tests/SkyCD.Plugin.Mdf.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
+`tests/SkyCD.Plugin.FileFormat.Mdf.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
 and 2352-byte sectors, then exercises:
 
 - Every supported sector layout, images opened from the MDF file, and MDF files without a descriptor.

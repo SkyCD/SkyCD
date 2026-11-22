@@ -2,8 +2,8 @@
 
 Implements #728 on the media capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Xmp/` → plugin id `SkyCD.Plugin.Xmp`.
-Tests: `tests/SkyCD.Plugin.Xmp.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Xmp/` → plugin id `SkyCD.Plugin.Metadata.Xmp`.
+Tests: `tests/SkyCD.Plugin.Metadata.Xmp.Tests/`.
 
 ## What it provides
 
@@ -15,7 +15,7 @@ One capability, discovered from assembly metadata without `plugin.json`:
 
 The plugin claims the extension `.xmp` and the MIME type `application/rdf+xml`. XMP embedded inside a
 JPEG, PNG, WebP, TIFF or RAW container is read by the plugin that claims that container
-(`SkyCD.Plugin.Image`), so every carrier is claimed exactly once. A sidecar is the only source claimed
+(`SkyCD.Plugin.Metadata.Image`), so every carrier is claimed exactly once. A sidecar is the only source claimed
 here.
 
 ## Fields
@@ -74,11 +74,11 @@ was rejected: its NuGet license is declared as a URL rather than an SPDX express
 dependency-license policy gate reports as unknown and fails. The parsing is shared source from
 `Plugins/Shared/MediaMetadata/` (`XmpPacketLocator`, `XmpMetadataReader`, `XmpPacketReader`,
 `MetadataScan`, `MetadataText`, `MetadataValues`, `SourcePrefix`), compiled into this assembly and into
-`SkyCD.Plugin.Image`, which needs the same code for embedded packets.
+`SkyCD.Plugin.Metadata.Image`, which needs the same code for embedded packets.
 
 ## Tests
 
-`tests/SkyCD.Plugin.Xmp.Tests/` builds sidecars in memory. Coverage includes keywords, description and
+`tests/SkyCD.Plugin.Metadata.Xmp.Tests/` builds sidecars in memory. Coverage includes keywords, description and
 rating; a rejected rating; `pdf:Keywords` splitting; Microsoft ratings converted to stars; malformed,
 truncated and non-XMP payloads returning no values without failing; an empty source; a packet beyond the
 1 MiB prefix ignored; cancellation; progress completion; the descriptor claiming only `.xmp` and

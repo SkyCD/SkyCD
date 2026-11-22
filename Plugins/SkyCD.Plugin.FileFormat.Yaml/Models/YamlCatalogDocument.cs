@@ -1,0 +1,9 @@
+using System.Collections.Generic;
+
+namespace SkyCD.Plugin.FileFormat.Yaml.Models;
+
+internal sealed class YamlCatalogDocument
+{
+    public string? SchemaVersion { get; set; }
+    public List<Dictionary<string, string?>>? Payload { get; set; }
+}

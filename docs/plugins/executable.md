@@ -2,8 +2,8 @@
 
 Implements #733 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Executable/` → plugin id `SkyCD.Plugin.Executable`.
-Tests: `tests/SkyCD.Plugin.Executable.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Executable/` → plugin id `SkyCD.Plugin.Metadata.Executable`.
+Tests: `tests/SkyCD.Plugin.Metadata.Executable.Tests/`.
 
 This plugin claims Windows executables and reads two things from them: the version information Windows shows in
 a file's properties, and the program's own icon, which it stores as a PNG during indexing so the catalog can show
@@ -143,7 +143,7 @@ so there is nothing to add to `docs/legal/dependency-license-policy.json` and no
 
 ## Tests
 
-`tests/SkyCD.Plugin.Executable.Tests/` builds synthetic PE images in memory — DOS stub, PE header, one `.rsrc`
+`tests/SkyCD.Plugin.Metadata.Executable.Tests/` builds synthetic PE images in memory — DOS stub, PE header, one `.rsrc`
 section with a packed three-level resource tree, a `VS_VERSION_INFO` block and icon bitmaps or PNGs — so no binary
 fixture is checked in. The tests cover:
 

@@ -1,0 +1,17 @@
+using System.Collections.Generic;
+
+namespace SkyCD.Plugin.FileFormat.WinCatalog.Csv.Models;
+
+/// <summary>
+/// Summary details for a WinCatalog CSV import execution.
+/// </summary>
+public sealed record WinCatalogCsvImportSummary(
+    int TotalRecordsRead,
+    int ImportedRecordsCount,
+    int SkippedRecordsCount,
+    bool IsPartialReport,
+    IReadOnlyList<string> SkippedReasons,
+    IReadOnlyList<string> UnsupportedFields,
+    char DetectedDelimiter,
+    IReadOnlyList<string> DetectedColumns,
+    string DetectedEncoding);

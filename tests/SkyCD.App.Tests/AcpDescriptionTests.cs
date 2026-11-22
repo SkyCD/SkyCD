@@ -10,11 +10,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.AiDescription;
+using SkyCD.Plugin.Ai.Description;
 using Xunit;
-using SkyCD.Plugin.AiDescription.Exceptions;
-using SkyCD.Plugin.AiDescription.Models;
-using SkyCD.Plugin.AiDescription.Sources;
+using SkyCD.Plugin.Ai.Description.Exceptions;
+using SkyCD.Plugin.Ai.Description.Models;
+using SkyCD.Plugin.Ai.Description.Sources;
 
 namespace SkyCD.App.Tests;
 

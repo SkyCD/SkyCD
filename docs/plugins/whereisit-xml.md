@@ -1,6 +1,6 @@
 # Where Is It? XML report import plugin (`whereisit-xml-report`)
 
-Read-only capability in `SkyCD.Plugin.WhereIsIt` that imports Where Is It?
+Read-only capability in `SkyCD.Plugin.FileFormat.WhereIsIt` that imports Where Is It?
 "List of all cataloged files and folders on selected disks" XML exports.
 The mapping follows the Librer reference implementation
 (`info/wii_import.md`, `src/core.py`), including its tolerant behaviors:
@@ -64,7 +64,7 @@ numbers, unknown item kinds and disk-level reports fail with typed diagnostics.
 
 ## Tests
 
-`tests/SkyCD.Plugin.WhereIsIt.Tests` covers a complete two-disk fixture
+`tests/SkyCD.Plugin.FileFormat.WhereIsIt.Tests` covers a complete two-disk fixture
 (hierarchy, counts, sizes, timestamps, metadata, duplicates in distinct paths,
 demo and unknown-type skips, unknown-field retention), missing fields, bad
 values, disk-kind/empty/malformed/wrong-root failures, recognition (including

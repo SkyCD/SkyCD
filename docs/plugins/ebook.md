@@ -3,8 +3,8 @@
 Implements #730 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`) and #438
 (`docs/plugins/image.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.EBook/` → plugin id `SkyCD.Plugin.EBook`.
-Tests: `tests/SkyCD.Plugin.EBook.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.EBook/` → plugin id `SkyCD.Plugin.Metadata.EBook`.
+Tests: `tests/SkyCD.Plugin.Metadata.EBook.Tests/`.
 
 ## What it provides
 
@@ -161,7 +161,7 @@ entity or reach the network.
 
 ZIP reading uses `System.IO.Compression` from the framework and the ZIP, Palm database, Mobipocket and
 FictionBook parsing is plugin code, so no archive or e-book package was added. SkiaSharp and Avalonia are
-already used by the repository (`SkyCD.Plugin.Image` and the plugin configuration samples), so the plugin
+already used by the repository (`SkyCD.Plugin.Metadata.Image` and the plugin configuration samples), so the plugin
 introduces no new dependency tree for the policy gate. Every package and its transitive dependencies resolve
 to MIT or another license allowed by `docs/legal/dependency-license-policy.json`; no blocked, unknown or
 whitelist-dependent license is involved.
@@ -188,7 +188,7 @@ whitelist-dependent license is involved.
 
 ## Testing
 
-`tests/SkyCD.Plugin.EBook.Tests/` builds every fixture in memory — ZIP packages with EPUB 2 and EPUB 3
+`tests/SkyCD.Plugin.Metadata.EBook.Tests/` builds every fixture in memory — ZIP packages with EPUB 2 and EPUB 3
 package documents, Palm databases with MOBI headers and EXTH records, and FictionBook XML with base64
 binaries — so the suite commits no binary blobs and every expected value is known to the test that asserts
 it. Covers are encoded by SkiaSharp at fixture build time. Coverage includes:

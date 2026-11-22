@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- BSD-2-Clause: parses CommonMark/GFM structure for headings, links, code and plain text. -->
+        <PackageReference Include="Markdig" Version="1.6.0"/>
+        <!-- MIT: reads the YAML front matter block that Markdown documents commonly use. -->
+        <PackageReference Include="YamlDotNet" Version="18.1.0"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Markdown Document Metadata</AssemblyTitle>
+        <Description>Reads YAML front matter and the document structure of Markdown files, and publishes a bounded plain-text excerpt. The source is never modified and external references are never followed.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.Markdown.Tests"/>
+    </ItemGroup>
+</Project>

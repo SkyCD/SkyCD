@@ -2,8 +2,8 @@
 
 Implements #440 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Video/` → plugin id `SkyCD.Plugin.Video`.
-Tests: `tests/SkyCD.Plugin.Video.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Video/` → plugin id `SkyCD.Plugin.Metadata.Video`.
+Tests: `tests/SkyCD.Plugin.Metadata.Video.Tests/`.
 
 ## What it provides
 
@@ -128,7 +128,7 @@ configuration — exactly the assumption the issue warns against.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Video.Tests/` builds container-accurate fixtures in memory — a full MP4 atom tree with a
+`tests/SkyCD.Plugin.Metadata.Video.Tests/` builds container-accurate fixtures in memory — a full MP4 atom tree with a
 real transformation matrix and a trailing-`moov` variant, Matroska with EBML variable-width ids and sizes
 including an unknown-size Segment, WebM, and a RIFF/AVI with `hdrl`, `strl`, `strh` and `strf` chunks — so
 the suite commits no binary blobs and every expected value is known to the test asserting it.

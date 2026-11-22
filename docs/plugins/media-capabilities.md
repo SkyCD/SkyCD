@@ -65,7 +65,7 @@ addition under `docs/plugins/sdk-versioning-policy.md`; existing capabilities ar
 
 ## AbiWord document metadata
 
-`SkyCD.Plugin.AbiWord` implements `IMediaMetadataCapability` and is discovered from assembly
+`SkyCD.Plugin.Metadata.AbiWord` implements `IMediaMetadataCapability` and is discovered from assembly
 metadata, without `plugin.json`. Enable it through the normal plugin pipeline. During indexing,
 its results use the existing media scheduler/cache and remain available offline with the item.
 It does not provide thumbnails, render documents, extract body text, or require AbiWord installed.
@@ -124,7 +124,7 @@ not encryption, and does not prevent metadata reading.
 
 The implementation uses .NET 10 `System.Xml.XmlReader` and `System.IO.Compression.GZipStream`
 (MIT-licensed .NET runtime), plus the existing plugin abstraction project. `dotnet list
-Plugins/SkyCD.Plugin.AbiWord/SkyCD.Plugin.AbiWord.csproj package --include-transitive` reports
+Plugins/SkyCD.Plugin.Metadata.AbiWord/SkyCD.Plugin.Metadata.AbiWord.csproj package --include-transitive` reports
 no NuGet dependencies. No additional direct/transitive licenses, whitelist entries or policy
 changes are needed; the blocked-license, unknown-license and explicit-whitelist rules in
 `docs/legal/dependency-license-policy.json` remain unchanged.
@@ -153,7 +153,7 @@ References: [AbiWord formats](https://github.com/AbiWord/abiword/blob/6940426ea7
 
 ## Apple iWork document metadata and thumbnail
 
-`SkyCD.Plugin.IWork` implements `IMediaMetadataCapability` and `IMediaPreviewCapability` and is
+`SkyCD.Plugin.Metadata.IWork` implements `IMediaMetadataCapability` and `IMediaPreviewCapability` and is
 discovered from assembly metadata, without `plugin.json`. Enable it through the normal plugin
 pipeline. During indexing, its results use the existing media scheduler/cache and remain available
 offline with the item. It does not render pages, decode document content into text, or require
@@ -229,7 +229,7 @@ maintenance) for the component archive: it identifies the application from the I
 build history, projects Keynote slides and recognizes and validates embedded preview images. Its
 only dependency is `OfficeIMO.Core` 3.6.2 (also MIT, no further dependencies). Both pass the CI
 license gate: a CycloneDX SBOM generated for
-`Plugins/SkyCD.Plugin.IWork/SkyCD.Plugin.IWork.csproj` and checked with
+`Plugins/SkyCD.Plugin.Metadata.IWork/SkyCD.Plugin.Metadata.IWork.csproj` and checked with
 `tools/scripts/ci/check-license-compliance.ps1` against
 `docs/legal/dependency-license-policy.json` reports full compliance, and the blocked-license,
 unknown-license and explicit-whitelist rules are unchanged.

@@ -1,6 +1,6 @@
 # Catalog list CSV export (`skycd-csv-list`)
 
-Export-only capability in `SkyCD.Plugin.Csv` that writes the current catalog list or
+Export-only capability in `SkyCD.Plugin.FileFormat.Csv` that writes the current catalog list or
 result set as delimiter-separated text. It never reads: `CanHandleContent` is not
 implemented and `ReadAsync` reports write-only. Routing uses the explicit format id
 `skycd-csv-list` (for example `convert --format skycd-csv-list`); the `.csv` extension
@@ -51,7 +51,7 @@ message instead of writing a partial file.
 
 ## Tests
 
-`tests/SkyCD.Plugin.Csv.Tests/CsvListExportTests.cs` covers registration as
+`tests/SkyCD.Plugin.FileFormat.Csv.Tests/CsvListExportTests.cs` covers registration as
 export-only, defaults (header, BOM, invariant sizes, ISO timestamps), column
 selection and order, quoting, formula neutralization and raw mode, null/empty
 distinction, all encodings, delimiters, >4 GiB sizes, Unicode and multiline fields,

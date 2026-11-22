@@ -2,8 +2,8 @@
 
 Implements #736 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Office/` → plugin id `SkyCD.Plugin.Office`.
-Tests: `tests/SkyCD.Plugin.Office.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Office/` → plugin id `SkyCD.Plugin.Metadata.Office`.
+Tests: `tests/SkyCD.Plugin.Metadata.Office.Tests/`.
 
 The plugin claims the Word, Excel and PowerPoint filename extensions and MIME types, so an Office document
 is never routed through another metadata reader. It follows the PDF and Works plugins' conventions: a
@@ -155,7 +155,7 @@ No policy file change is made.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Office.Tests/` builds **structurally valid OOXML packages and OLE2 compound documents in
+`tests/SkyCD.Plugin.Metadata.Office.Tests/` builds **structurally valid OOXML packages and OLE2 compound documents in
 memory**, so the suite commits no binary blobs and every expected value is known to the test asserting it.
 Fixtures cover Word, Excel (including the binary workbook part) and PowerPoint packages, complete and partial
 core and application parts, case-varied part names, nested vector fields, DTD-bearing parts, encrypted

@@ -1,10 +1,10 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using SkyCD.Plugin.AiDescription;
+using SkyCD.Plugin.Ai.Description;
 using Xunit;
-using SkyCD.Plugin.AiDescription.Exceptions;
-using SkyCD.Plugin.AiDescription.Sources;
+using SkyCD.Plugin.Ai.Description.Exceptions;
+using SkyCD.Plugin.Ai.Description.Sources;
 
 namespace SkyCD.App.Tests;
 

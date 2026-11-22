@@ -8,13 +8,13 @@ using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Access;
+using SkyCD.Plugin.FileFormat.Access;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using UCanAccess.File;
 using Xunit;
-using SkyCD.Plugin.Access.Models;
+using SkyCD.Plugin.FileFormat.Access.Models;
 
 namespace SkyCD.App.Tests;
 

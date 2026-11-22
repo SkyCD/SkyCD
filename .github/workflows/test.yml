@@ -25,6 +25,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Check assembly naming
+        shell: pwsh
+        run: ./tools/scripts/ci/check-naming.ps1
+
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:

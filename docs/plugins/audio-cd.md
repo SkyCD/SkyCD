@@ -2,8 +2,8 @@
 
 Implements #732 on the volume-level media contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.AudioCd/` → plugin id `SkyCD.Plugin.AudioCd`.
-Tests: `tests/SkyCD.Plugin.AudioCd.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.AudioCD/` → plugin id `SkyCD.Plugin.Metadata.AudioCD`.
+Tests: `tests/SkyCD.Plugin.Metadata.AudioCD.Tests/`.
 
 An audio CD has no filesystem to read tags from, so identification and enrichment exist only at the volume
 level. The plugin contributes one `IAudioCdMetadataCapability` (disc and track records plus cover art) and one
@@ -147,7 +147,7 @@ already manages, and published atomically with the file records:
 
 ## Dependencies
 
-`dotnet list Plugins/SkyCD.Plugin.AudioCd/SkyCD.Plugin.AudioCd.csproj package --include-transitive`:
+`dotnet list Plugins/SkyCD.Plugin.Metadata.AudioCD/SkyCD.Plugin.Metadata.AudioCD.csproj package --include-transitive`:
 
 | Package | Version | License | Use |
 |---|---|---|---|
@@ -155,7 +155,7 @@ already manages, and published atomically with the file records:
 | SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
 | Avalonia, Avalonia.Desktop | 12.1.6 | MIT | Embedded settings page, same pattern as Sample.Configuration |
 
-All three families are already policy-allowed and already used by the repo (`SkyCD.Plugin.Image` uses
+All three families are already policy-allowed and already used by the repo (`SkyCD.Plugin.Metadata.Image` uses
 SkiaSharp; every UI plugin uses Avalonia), so no policy whitelist entry or change is needed. Network and JSON
 use the MIT .NET runtime (`HttpClient`, `System.Text.Json`); no HTTP or JSON package is added.
 
@@ -168,7 +168,7 @@ Alternatives considered:
 
 ## Testing
 
-`tests/SkyCD.Plugin.AudioCd.Tests/` uses no network and no binary blobs:
+`tests/SkyCD.Plugin.Metadata.AudioCD.Tests/` uses no network and no binary blobs:
 
 - disc-id vectors (published MusicBrainz example, hand-computed CDDB id) and invalid-TOC rejection;
 - settings defaults, clamping, round-trip and editor normalisation;

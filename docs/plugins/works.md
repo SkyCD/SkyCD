@@ -2,8 +2,8 @@
 
 Implements #740 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Works/` → plugin id `SkyCD.Plugin.Works`.
-Tests: `tests/SkyCD.Plugin.Works.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Works/` → plugin id `SkyCD.Plugin.Metadata.Works`.
+Tests: `tests/SkyCD.Plugin.Metadata.Works.Tests/`.
 
 The plugin claims only `.wps` and `application/vnd.ms-works`, so a Works word processor document is never
 routed through another metadata reader. It follows the PDF plugin's conventions: a versioned schema, a bounded
@@ -138,7 +138,7 @@ No policy file change is made. The format facts are cross-checked against libwps
 
 ## Testing
 
-`tests/SkyCD.Plugin.Works.Tests/` builds **structurally valid Works documents, property sets and compound files
+`tests/SkyCD.Plugin.Metadata.Works.Tests/` builds **structurally valid Works documents, property sets and compound files
 in memory**, so the suite commits no binary blobs and every expected value is known to the test asserting it.
 Fixtures cover flat Works 2 and Works 3 headers, `MN0` Works 3 and 4 documents, `CONTENTS` Works 2000 and 7/8
 documents, a stream larger than the mini-stream cutoff so both compound storage paths run, complete and partial

@@ -2,8 +2,8 @@
 
 Implements #438 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Image/` → plugin id `SkyCD.Plugin.Image`.
-Tests: `tests/SkyCD.Plugin.Image.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Image/` → plugin id `SkyCD.Plugin.Metadata.Image`.
+Tests: `tests/SkyCD.Plugin.Metadata.Image.Tests/`.
 
 ## What it provides
 
@@ -47,7 +47,7 @@ Version 2 added `Tags`, `Comment` and `Rating`. `Tags` carries the `Tags` role, 
 the keywords as catalog tags through the existing media-cache effects. There is no hierarchical
 expansion: `lr:hierarchicalSubject` is not read, so `Places|Beach|Sunset` stays one keyword. Bare XMP
 sidecars are claimed by a separate plugin (`docs/plugins/xmp.md`), and OS-assigned properties by
-`SkyCD.Plugin.FileMetadata` (`docs/plugins/file-metadata.md`); each carrier is claimed once.
+`SkyCD.Plugin.Metadata.FileMetadata` (`docs/plugins/file-metadata.md`); each carrier is claimed once.
 
 Provenance is not a field: it is the record identity the host stores (plugin id, plugin version, capability
 type, schema id, schema version), per `docs/architecture/media-cache-lifecycle.md`. A capture date is never
@@ -173,7 +173,7 @@ allow-list.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Image.Tests/` builds every fixture in memory with SkiaSharp or from hand-assembled
+`tests/SkyCD.Plugin.Metadata.Image.Tests/` builds every fixture in memory with SkiaSharp or from hand-assembled
 container bytes, so the suite carries no binary blobs and each fixture's properties are known to the test
 that asserts on them. Coverage includes a rotated JPEG with injected EXIF (orientation 2/3/6/8) checked at
 pixel level, a transparent PNG, an animated GIF with a hand-written LZW stream, corrupt and truncated input,

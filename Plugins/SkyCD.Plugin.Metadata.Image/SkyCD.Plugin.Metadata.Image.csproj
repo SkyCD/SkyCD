@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the XMP sidecar plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
+        <Compile Include="..\Shared\MediaMetadata\**\*.cs" Link="Shared\MediaMetadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: decoding, orientation-aware scaling and thumbnail encoding. -->
+        <!-- No general metadata library is referenced: the obvious candidate drags in an XMP toolkit whose -->
+        <!-- NuGet license the policy gate reports as unknown, so the few EXIF tags needed here are read -->
+        <!-- directly. See docs/plugins/image.md. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Image Preview and Metadata</AssemblyTitle>
+        <Description>Extracts dimensions, format, orientation, capture date, embedded tags, comment and rating from JPEG, PNG and WebP sources, and renders bounded orientation-corrected thumbnails.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.Image.Tests"/>
+    </ItemGroup>
+</Project>

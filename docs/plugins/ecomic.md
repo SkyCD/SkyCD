@@ -3,8 +3,8 @@
 Implements #729 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`) and #438
 (`docs/plugins/image.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.EComic/` → plugin id `SkyCD.Plugin.EComic`.
-Tests: `tests/SkyCD.Plugin.EComic.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.EComic/` → plugin id `SkyCD.Plugin.Metadata.EComic`.
+Tests: `tests/SkyCD.Plugin.Metadata.EComic.Tests/`.
 
 ## What it provides
 
@@ -122,7 +122,7 @@ numbers degrade to `null`.
 | `SkiaSharp.NativeAssets.Win32` / `.Linux` / `.macOS` | 3.119.4 | MIT | Platform natives |
 | `Avalonia` / `Avalonia.Desktop` | 12.1.6 | MIT | Configuration surface only |
 
-All four are already used by the repository (`SkyCD.Plugin.SevenZip`, `SkyCD.Plugin.Image` and the plugin
+All four are already used by the repository (`SkyCD.Plugin.FileFormat.SevenZip`, `SkyCD.Plugin.Metadata.Image` and the plugin
 configuration samples), so the plugin introduces no new dependency tree for the policy gate. Every package and
 its transitive dependencies resolve to MIT or another license allowed by
 `docs/legal/dependency-license-policy.json`; no blocked, unknown or whitelist-dependent license is involved.
@@ -134,7 +134,7 @@ considered for them.
 - **Container support comes from SharpCompress.** ZIP (`.cbz`) is fully exercised by tests; RAR (`.cbr`) and
   7z (`.cb7`) go through the same reader but the suite builds no such fixtures, because SharpCompress cannot
   write either format and committing binary archives is not an option. Those paths are covered by the
-  constructor's signature detection and by `SkyCD.Plugin.SevenZip`'s existing use of the same package.
+  constructor's signature detection and by `SkyCD.Plugin.FileFormat.SevenZip`'s existing use of the same package.
 - **ComicInfo is the only metadata source.** Archives without `ComicInfo.xml` report only `Container`; there
   is no filename-based guessing of series, number or volume.
 - **The cover is the first page in natural name order**, not a user selection and not a ComicInfo-declared
@@ -150,7 +150,7 @@ considered for them.
 
 ## Testing
 
-`tests/SkyCD.Plugin.EComic.Tests/` builds archives and pages in memory — a real zip with ComicInfo and JPEG
+`tests/SkyCD.Plugin.Metadata.EComic.Tests/` builds archives and pages in memory — a real zip with ComicInfo and JPEG
 pages encoded by SkiaSharp — so the suite commits no binary blobs and every expected value is known to the
 test that asserts it. Coverage includes:
 

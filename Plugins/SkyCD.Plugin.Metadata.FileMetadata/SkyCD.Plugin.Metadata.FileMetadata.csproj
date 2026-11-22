@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Only the core scan model is shared; container parsers live with the plugins that claim them. -->
+        <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Models\MetadataValues.cs" Link="Shared\MediaMetadata\MetadataValues.cs"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>File Metadata</AssemblyTitle>
+        <Description>Reads the tags, comment and rating a user or a colleague assigned through Windows file properties, Linux extended attributes or macOS Finder properties, so the catalog keeps the metadata that is not stored in the file bytes.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.FileMetadata.Tests"/>
+    </ItemGroup>
+</Project>

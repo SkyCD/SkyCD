@@ -1,12 +1,12 @@
 # GitHub Actions Quality Gates (v3)
 
 This document describes the default CI checks for pull requests and pushes.
-Default CI validates only the v3 solution path (`SkyCD.V3.slnx`) and does not build legacy solutions.
+Default CI validates only the v3 solution path (`SkyCD.slnx`) and does not build legacy solutions.
 
 ## Workflows
 - `v3-ci`:
 - `style` job runs `dotnet format --verify-no-changes`.
-- `build-test` job restores/builds/tests `SkyCD.V3.slnx` on `ubuntu-latest`, `windows-latest`, and `macos-latest`.
+- `build-test` job restores/builds/tests `SkyCD.slnx` on `ubuntu-latest`, `windows-latest`, and `macos-latest`.
 - `license-compliance` job generates CycloneDX SBOM and validates dependency policy.
 - `dependabot-automerge`:
 - Dependabot-only metadata, approval, and auto-merge workflow.

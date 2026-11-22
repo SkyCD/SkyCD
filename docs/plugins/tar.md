@@ -4,13 +4,13 @@ TAR support is implemented by **two separate plugins** with distinct responsibil
 
 | Project | Plugin id | Capability | Role |
 |---|---|---|---|
-| `Plugins/SkyCD.Plugin.Tar/` | `SkyCD.Plugin.Tar` | `IFileFormatPluginCapability` | Opens `.tar`, `.tar.gz` and `.tgz` as a read-only catalog/filesystem view |
-| `Plugins/SkyCD.Plugin.Tar.Metadata/` | `skycd.tar-metadata` | `IIndexWorkItemProvider` | Contributes archive entries as index work items so metadata plugins can inspect them |
+| `Plugins/SkyCD.Plugin.FileFormat.Tar/` | `SkyCD.Plugin.FileFormat.Tar` | `IFileFormatPluginCapability` | Opens `.tar`, `.tar.gz` and `.tgz` as a read-only catalog/filesystem view |
+| `Plugins/SkyCD.Plugin.Metadata.Tar/` | `skycd.tar-metadata` | `IIndexWorkItemProvider` | Contributes archive entries as index work items so metadata plugins can inspect them |
 
 Both are discovered through assembly metadata and implemented capability types only; no
 `plugin.json` descriptor is used.
 
-Tests: `tests/SkyCD.Plugin.Tar.Tests/` (format) and `tests/SkyCD.Plugin.Tar.Metadata.Tests/` (work items).
+Tests: `tests/SkyCD.Plugin.FileFormat.Tar.Tests/` (format) and `tests/SkyCD.Plugin.Metadata.Tar.Tests/` (work items).
 
 ## Format plugin (`skycd-tar`)
 

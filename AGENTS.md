@@ -43,6 +43,20 @@ role-based layout; full rules and examples are in
 - Create a folder only when it holds a type; no empty scaffolding or `Misc/` buckets.
 - Format-specific parents are nested folders with their own namespace and the same layout inside.
 
+## Plugin Assembly Naming
+Every first-party plugin project and its output assembly follow
+`SkyCD.Plugin.<Kind>.<Subject>[.<Variant>]`; full rules and the kind list are in
+[docs/plugins/assembly-naming.md](docs/plugins/assembly-naming.md).
+- `<Kind>` is one of `FileFormat`, `Metadata`, `Preview`, `Config`, `Feature`, `Accounts`, `Ai`,
+  `Volume` or `Sample`. `<Subject>` names the format, product, brand or feature the plugin adds.
+- Name a plugin by the data or feature it produces, never by the capability interface it implements.
+  `Menu`, `Modal` and `Cli` are host surfaces, not kinds, and must not name a production plugin.
+- Multi-capability plugins use the primary-purpose precedence
+  `FileFormat` > `Metadata` > `Preview` > `Config` > `Feature`.
+- `Directory.Build.props` pins `AssemblyName` to `$(MSBuildProjectName)`; run
+  `tools/scripts/ci/check-naming.ps1` to verify folder, project and assembly names.
+- Keep existing `PluginId` values stable when renaming; id state is persisted.
+
 ## Build, Test, and PR Validation
 - Restore: `dotnet restore SkyCD.slnx`
 - Build (required before PR): `dotnet build SkyCD.slnx --configuration Release --no-restore`

@@ -2,8 +2,8 @@
 
 Implements #735 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Rtf/` → plugin id `SkyCD.Plugin.Rtf`.
-Tests: `tests/SkyCD.Plugin.Rtf.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Rtf/` → plugin id `SkyCD.Plugin.Metadata.Rtf`.
+Tests: `tests/SkyCD.Plugin.Metadata.Rtf.Tests/`.
 
 This plugin claims only `.rtf` / `application/rtf` / `text/rtf`, so a document is never also routed
 through the plain-text reader.
@@ -126,7 +126,7 @@ image and PDF plugins.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Rtf.Tests/` builds **structurally valid RTF documents in memory**, so the suite commits
+`tests/SkyCD.Plugin.Metadata.Rtf.Tests/` builds **structurally valid RTF documents in memory**, so the suite commits
 no binary blobs. Fixtures cover a full information group with statistics and timestamps, an information
 group with escaped and typographic text, a protected document, a document with no information group, a
 textless document, a long single paragraph, a truncated document and non-RTF bytes.

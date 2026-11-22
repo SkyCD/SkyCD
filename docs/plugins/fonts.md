@@ -3,8 +3,8 @@
 Implements #731 on the capability contracts from `docs/plugins/media-capabilities.md` and #438
 (`docs/plugins/image.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Fonts/` → plugin id `SkyCD.Plugin.Fonts`.
-Tests: `tests/SkyCD.Plugin.Fonts.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Fonts/` → plugin id `SkyCD.Plugin.Metadata.Fonts`.
+Tests: `tests/SkyCD.Plugin.Metadata.Fonts.Tests/`.
 
 ## What it provides
 
@@ -110,7 +110,7 @@ option makes earlier cached results stale and a rescan re-extracts with the new 
 | `SkiaSharp` 3.119.4 + native assets | MIT | Renders the preview with the font's own glyphs | Allowed |
 | `Avalonia` 12.1.6 + `Avalonia.Desktop` | MIT | Configuration surface only | Allowed |
 
-`SkiaSharp` is already a direct dependency of `SkyCD.Plugin.Image`, `SkyCD.Plugin.Rtf`, `SkyCD.Plugin.Pdf`
-and `SkyCD.Plugin.EComic`, and Avalonia is the application UI framework. No new transitive dependency is
+`SkiaSharp` is already a direct dependency of `SkyCD.Plugin.Metadata.Image`, `SkyCD.Plugin.Metadata.Rtf`, `SkyCD.Plugin.Metadata.Pdf`
+and `SkyCD.Plugin.Metadata.EComic`, and Avalonia is the application UI framework. No new transitive dependency is
 introduced, and every package complies with `docs/legal/dependency-license-policy.json` (MIT is on the
 allow list; no blocked or unknown licenses).

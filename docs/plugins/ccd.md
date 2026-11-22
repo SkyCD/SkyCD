@@ -2,8 +2,8 @@
 
 Implements #726 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.Ccd/` → plugin id `skycd.ccd`.
-Tests: `tests/SkyCD.Plugin.Ccd.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.Ccd/` → plugin id `skycd.ccd`.
+Tests: `tests/SkyCD.Plugin.FileFormat.Ccd.Tests/`.
 Format: `skycd-ccd`, extension `.ccd`, MIME type `application/x-clonecd`, read-only.
 
 ## What it provides
@@ -74,7 +74,7 @@ dependency.
 
 ## Tests
 
-`tests/SkyCD.Plugin.Ccd.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
+`tests/SkyCD.Plugin.FileFormat.Ccd.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
 and 2352-byte sectors, then exercises:
 
 - Every supported track mode, data tracks after an audio track, and `ImageFile` overrides.
