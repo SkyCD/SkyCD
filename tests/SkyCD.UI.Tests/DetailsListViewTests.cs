@@ -467,6 +467,114 @@ public class DetailsListViewTests
         }
     }
 
+    [AvaloniaFact]
+    public void HeaderDrag_ShowsDropMarkerAndGhost_AndClearsOnRelease()
+    {
+        var (window, view, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
+            CreateCatalogColumn(DetailsColumnsCatalog.TypeId, required: false, width: 100),
+            CreateCatalogColumn(DetailsColumnsCatalog.LocationId, required: false, width: 140));
+
+        try
+        {
+            var marker = FindHeaderVisual(headerGrid, "DetailsHeaderDropMarker");
+            var ghost = FindHeaderVisual(headerGrid, "DetailsHeaderDragGhost");
+            var nameCell = Assert.IsType<Grid>(headerGrid.Children[0]);
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            var typeCell = Assert.IsType<Grid>(headerGrid.Children[2]);
+            var locationCell = Assert.IsType<Grid>(headerGrid.Children[3]);
+
+            Assert.False(marker.IsVisible);
+            Assert.False(ghost.IsVisible);
+
+            // A plain click and travel inside the 4 px threshold show no drag visuals.
+            var start = sizeCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            window.MouseDown(start, MouseButton.Left);
+            window.MouseMove(start + new Vector(2, 0), RawInputModifiers.LeftMouseButton);
+            Assert.False(marker.IsVisible);
+            Assert.False(ghost.IsVisible);
+            window.MouseUp(start + new Vector(2, 0), MouseButton.Left);
+            Assert.False(marker.IsVisible);
+            Assert.False(ghost.IsVisible);
+
+            // Once past the threshold, the marker sits at the drop cell's leading edge.
+            var reordered = new List<DetailsColumnReorderedEventArgs>();
+            view.DetailsColumnReordered += (_, e) => reordered.Add(e);
+            var typePoint = typeCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            window.MouseDown(start, MouseButton.Left);
+            window.MouseMove(typePoint, RawInputModifiers.LeftMouseButton);
+
+            Assert.True(marker.IsVisible);
+            Assert.True(ghost.IsVisible);
+            Assert.Equal(DetailsColumnsCatalog.SizeId, Assert.IsType<TextBlock>(ghost.Child).Text);
+            Assert.Equal(typeCell.Bounds.Left, Canvas.GetLeft(marker), 3);
+
+            // Dragging over the leading required column clamps to the first movable slot.
+            var namePoint = nameCell.TranslatePoint(new Point(10, 10), window)!.Value;
+            window.MouseMove(namePoint, RawInputModifiers.LeftMouseButton);
+            Assert.True(marker.IsVisible);
+            Assert.Equal(sizeCell.Bounds.Left, Canvas.GetLeft(marker), 3);
+
+            // The marker tracks the pointer to the far column.
+            var locationPoint = locationCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            window.MouseMove(locationPoint, RawInputModifiers.LeftMouseButton);
+            Assert.Equal(locationCell.Bounds.Left, Canvas.GetLeft(marker), 3);
+
+            window.MouseUp(locationPoint, MouseButton.Left);
+            Assert.False(marker.IsVisible);
+            Assert.False(ghost.IsVisible);
+
+            var move = Assert.Single(reordered);
+            Assert.Equal(DetailsColumnsCatalog.SizeId, move.ColumnId);
+            Assert.Equal(3, move.TargetIndex);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void HeaderDrag_CaptureLost_ClearsDragVisuals()
+    {
+        var (window, _, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
+            CreateCatalogColumn(DetailsColumnsCatalog.TypeId, required: false, width: 100));
+
+        try
+        {
+            var marker = FindHeaderVisual(headerGrid, "DetailsHeaderDropMarker");
+            var ghost = FindHeaderVisual(headerGrid, "DetailsHeaderDragGhost");
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            var typeCell = Assert.IsType<Grid>(headerGrid.Children[2]);
+
+            var start = sizeCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            var typePoint = typeCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            window.MouseDown(start, MouseButton.Left);
+            window.MouseMove(typePoint, RawInputModifiers.LeftMouseButton);
+            Assert.True(marker.IsVisible);
+            Assert.True(ghost.IsVisible);
+
+            var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+            headerGrid.RaiseEvent(new PointerCaptureLostEventArgs(headerGrid, pointer));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.False(marker.IsVisible);
+            Assert.False(ghost.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static Border FindHeaderVisual(Grid headerGrid, string name)
+    {
+        return Assert.Single(headerGrid.GetVisualDescendants().OfType<Border>(), border => border.Name == name);
+    }
+
     private static BrowserDetailsColumn CreateCatalogColumn(string id, bool required, double width)
     {
         return new BrowserDetailsColumn

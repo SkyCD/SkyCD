@@ -9,6 +9,8 @@ assembly metadata.
 
 With the plugin enabled, choose **Use agent** for an installed agent in
 **Tools → Options → ACP agents** and save to activate it for generation.
+Description settings live in **Tools → Options → AI → Description**, and the
+provider connection settings in **AI → Provider**.
 Opening Options on its own preserves the saved generation preference.
 The **AI description configuration** command shows the advanced settings file,
 normally `%APPDATA%/SkyCD/ai-descriptions.json`.

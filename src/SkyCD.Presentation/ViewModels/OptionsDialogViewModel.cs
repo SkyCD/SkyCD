@@ -183,8 +183,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
             ];
             if (IsAiDescriptionAvailable)
             {
-                categories.Add(new("ai-description", LocalizationService.Current.Get(UiKeys.AiDescription), AiDescriptionCategoryIndex));
-                categories.Add(new("ai-provider", LocalizationService.Current.Get(UiKeys.AiProviderCategory), AiProviderCategoryIndex));
+                var aiGroup = LocalizationService.Current.Get(UiKeys.AiGroup);
+                categories.Add(new("ai-description", LocalizationService.Current.Get(UiKeys.AiDescriptionShort),
+                    AiDescriptionCategoryIndex, Group: aiGroup));
+                categories.Add(new("ai-provider", LocalizationService.Current.Get(UiKeys.AiProvider),
+                    AiProviderCategoryIndex, Group: aiGroup));
             }
 
             categories.AddRange(pluginPages.Values

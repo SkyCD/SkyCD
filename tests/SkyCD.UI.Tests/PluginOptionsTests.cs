@@ -232,6 +232,43 @@ public sealed class PluginOptionsTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void AiGroup_KeyboardNavigation_MovesBetweenChildren()
+    {
+        using var vm = CreateViewModel();
+        vm.SetAiDescriptionAvailable(true);
+        var description = vm.SidebarEntries.Single(entry => entry.Category?.Id == "ai-description");
+        var provider = vm.SidebarEntries.Single(entry => entry.Category?.Id == "ai-provider");
+        var descriptionIndex = vm.SidebarEntries.IndexOf(description);
+        var header = vm.SidebarEntries[descriptionIndex - 1];
+        Assert.True(header.IsGroupHeader);
+        Assert.Equal("AI", header.Title);
+        Assert.Equal(descriptionIndex + 1, vm.SidebarEntries.IndexOf(provider));
+
+        var window = new OptionsWindow { DataContext = vm };
+        window.Show();
+        try
+        {
+            var list = window.FindControl<ListBox>("SettingsCategoriesList")!;
+            list.ScrollIntoView(descriptionIndex);
+            Dispatcher.UIThread.RunJobs();
+            list.SelectedIndex = descriptionIndex;
+            Dispatcher.UIThread.RunJobs();
+            var container = Assert.IsType<ListBoxItem>(list.ContainerFromIndex(descriptionIndex));
+            container.Focus();
+
+            window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("ai-provider", vm.SelectedSettingCategory?.Id);
+            Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
+
+            window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("ai-description", vm.SelectedSettingCategory?.Id);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void DisablingOnlySearchResult_FallsBackToVisibleBuiltInCategory()
     {
         OptionsTestCapability.Title = "Unique configuration";
