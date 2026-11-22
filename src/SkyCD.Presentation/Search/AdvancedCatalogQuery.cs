@@ -110,11 +110,25 @@ public enum AdvancedCatalogField
     Status,
     CustomProperty,
     Metadata,
-    ActiveLoan,
-    Borrower,
-    OverdueLoan,
-    Location
+    Location,
+
+    /// <summary>
+    /// A field contributed at runtime by a catalog feature plugin. The predicate's
+    /// <see cref="AdvancedCatalogPredicate.Key"/> identifies the contribution.
+    /// </summary>
+    Contributed
 }
+
+/// <summary>
+/// A runtime-contributed search field. Presence-only fields supply no value selector and are
+/// evaluated through <see cref="Matches"/>; fields with a selector expose their stored text
+/// once per entry so text operators apply to it. Titles and keys come from the contributing plugin.
+/// </summary>
+public sealed record ContributedSearchFieldDefinition(
+    string Key,
+    string Title,
+    Func<SkyCD.Documents.CatalogDocument, bool> Matches,
+    Func<SkyCD.Documents.CatalogDocument, string?>? SelectValue = null);
 
 public enum AdvancedCatalogOperator
 {
@@ -153,7 +167,8 @@ public sealed record AdvancedCatalogPredicate
 
     public void Validate()
     {
-        var needsKey = Field is AdvancedCatalogField.CustomProperty or AdvancedCatalogField.Metadata;
+        var needsKey = Field is AdvancedCatalogField.CustomProperty or AdvancedCatalogField.Metadata
+            or AdvancedCatalogField.Contributed;
         if (needsKey && string.IsNullOrWhiteSpace(Key))
         {
             throw new Exceptions.AdvancedCatalogQueryException(

@@ -34,6 +34,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Hash/SkyCD.Plugin.Hash.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.VolumeSerial/SkyCD.Plugin.VolumeSerial.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Vmdk/SkyCD.Plugin.Vmdk.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Feature.Loans/SkyCD.Plugin.Feature.Loans.csproj"/>
     </Folder>
     <Folder Name="/Plugins/samples/">
         <Project Path="Plugins/SkyCD.Plugin.Csv/SkyCD.Plugin.Csv.csproj"/>
@@ -226,6 +227,7 @@
         <Project Path="tests/SkyCD.Plugin.SmartCdCatalogPro.Tests/SkyCD.Plugin.SmartCdCatalogPro.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.MyCatalogue.Tests/SkyCD.Plugin.MyCatalogue.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.DiskBase.Tests/SkyCD.Plugin.DiskBase.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Feature.Loans.Tests/SkyCD.Plugin.Feature.Loans.Tests.csproj"/>
     </Folder>
     <Folder Name="/tests/slices/">
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/Slice/SkyCD.Plugin.SlipSlice.csproj"/>

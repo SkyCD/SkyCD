@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:search="clr-namespace:SkyCD.Presentation.Search;assembly=SkyCD.Presentation"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         x:Class="SkyCD.App.Views.AdvancedCatalogFindWindow"
         x:DataType="vm:AdvancedCatalogFindDialogViewModel"
@@ -104,10 +105,21 @@
                                   ItemsSource="{Binding Operators}"
                                   SelectedItem="{Binding SelectedOperator}"
                                   AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterOperator}}" />
-                        <TextBox Grid.Column="2"
-                                 Text="{Binding Key}"
-                                 IsVisible="{Binding IsKeyed}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}" />
+                        <Grid Grid.Column="2">
+                            <TextBox Text="{Binding Key}"
+                                     IsVisible="{Binding IsKeyed}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}" />
+                            <ComboBox ItemsSource="{Binding ContributedFields}"
+                                      SelectedItem="{Binding SelectedContributedField}"
+                                      IsVisible="{Binding IsContributed}"
+                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="search:ContributedSearchFieldDefinition">
+                                        <TextBlock Text="{Binding Title}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
                         <TextBox Grid.Column="3"
                                  Text="{Binding ValueText}"
                                  IsEnabled="{Binding IsValueRequired}"

@@ -29,8 +29,8 @@ public sealed class CatalogDocument
     public PropertiesCollection Properties { get; init; } = new();
 
     /// <summary>
-    /// Returns a copy with a different name. The document is immutable, and the resolved lending and
-    /// location projections are carried over so a rename does not drop them in the same session.
+    /// Returns a copy with a different name. The document is immutable, and the resolved location and
+    /// feature decoration projections are carried over so a rename does not drop them in the same session.
     /// </summary>
     public CatalogDocument WithName(string name) => new()
     {
@@ -43,9 +43,12 @@ public sealed class CatalogDocument
         ContentsState = ContentsState,
         Status = Status,
         Properties = new PropertiesCollection(Properties),
-        lendingState = lendingState,
         locationName = locationName,
-        displayName = displayName
+        displayName = displayName,
+        badgeText = badgeText,
+        badgeIcon = badgeIcon,
+        badgeTooltip = badgeTooltip,
+        badgeAttention = badgeAttention
     };
 
     private string? displayName;
@@ -62,15 +65,38 @@ public sealed class CatalogDocument
             ? null
             : name;
 
-    private (string Borrower, bool Overdue)? lendingState;
+    private string? badgeText;
+    private string? badgeIcon;
+    private string? badgeTooltip;
+    private bool badgeAttention;
 
-    public string LentTo => lendingState?.Borrower ?? string.Empty;
+    /// <summary>
+    /// Short badge text projected from an enabled feature plugin, or null when the entry has none.
+    /// Computed at projection time and never serialized.
+    /// </summary>
+    [CouchbaseTransient]
+    public string? BadgeText => badgeText;
 
-    public bool IsLent => lendingState.HasValue;
+    /// <summary>Optional badge glyph projected from a feature plugin.</summary>
+    [CouchbaseTransient]
+    public string? BadgeIcon => badgeIcon;
 
-    public bool IsLoanOverdue => lendingState?.Overdue == true;
+    /// <summary>Optional badge tooltip projected from a feature plugin.</summary>
+    [CouchbaseTransient]
+    public string? BadgeTooltip => badgeTooltip;
 
-    public void SetLendingState((string Borrower, bool Overdue)? state) => lendingState = state;
+    /// <summary>Whether the projected badge asks for attention (for example an overdue state).</summary>
+    [CouchbaseTransient]
+    public bool BadgeAttention => badgeAttention;
+
+    /// <summary>Sets the feature-plugin decoration shown on this entry. Pass nulls to clear it.</summary>
+    public void SetDecoration(string? text, string? icon, string? tooltip, bool attention)
+    {
+        badgeText = text;
+        badgeIcon = icon;
+        badgeTooltip = tooltip;
+        badgeAttention = attention;
+    }
 
     private string? locationName;
 

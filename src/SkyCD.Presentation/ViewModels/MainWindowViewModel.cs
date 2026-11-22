@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Couchbase.Lite;
 using CommunityToolkit.Mvvm.Input;
@@ -36,7 +37,8 @@ using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
-using SkyCD.Presentation.Lending;
+using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Presentation.Locations;
 using SkyCD.Presentation.Collections;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
@@ -86,6 +88,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private Database? temporaryCatalogDatabase;
     private bool previewArtifactReclaimPending;
     private readonly CatalogDocumentRepository? catalogRepository;
+    private OpenCatalogState? openCatalogState;
+    private CatalogFeatureExtensionManager? catalogFeatures;
     private readonly CatalogUndoManager? undoManager;
     private readonly CatalogTagService? tagService;
     private readonly TagDocumentRepository? tagRepository;
@@ -125,9 +129,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     // Cached rather than computed on each get: an open ContextMenu binds ItemsSource to these, and
     // handing it a new list tears down its items mid-click. State changes go through
-    // RefreshTopMenuState, which mutates the cached items in place.
-    private IReadOnlyList<MainMenuItemViewModel> browserContextMenuItems = [];
-    private IReadOnlyList<MainMenuItemViewModel> treeContextMenuItems = [];
+    // RefreshTopMenuState, which mutates the cached items in place. The lists notify collection
+    // changes so a rebound context menu picks up contributions added or removed with a plugin.
+    private readonly ObservableCollection<MainMenuItemViewModel> browserContextMenuItems = [];
+    private readonly ObservableCollection<MainMenuItemViewModel> treeContextMenuItems = [];
     private List<DetailsColumnSettingDocument> detailsColumnSettings = DetailsColumnsCatalog.CreateDefaultSettings();
     private IReadOnlyList<MainMenuItemViewModel> detailsHeaderMenuItems = [];
     private static string DefaultStatusText => LocalizationService.Current.Get(TextKeys.Done);
@@ -284,9 +289,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void RebuildMenuItems()
     {
         topMenuItems = BuildTopMenuItems();
-        browserContextMenuItems = BuildBrowserContextMenuItems();
-        treeContextMenuItems = BuildTreeContextMenuItems();
+        ReplaceMenuItems(browserContextMenuItems, BuildBrowserContextMenuItems());
+        ReplaceMenuItems(treeContextMenuItems, BuildTreeContextMenuItems());
         RefreshDetailsHeaderMenuItems();
+    }
+
+    private static void ReplaceMenuItems(
+        ObservableCollection<MainMenuItemViewModel> target,
+        IReadOnlyList<MainMenuItemViewModel> items)
+    {
+        target.Clear();
+        foreach (var item in items)
+        {
+            target.Add(item);
+        }
     }
 
     private void RefreshDetailsHeaderMenuItems()
@@ -352,7 +368,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                                  ?? throw new InvalidOperationException(
                                      "Catalog repository must be CatalogDocumentRepository.");
         this.undoManager = undoManager;
-        loanService = this.catalogRepository.Collection is not null ? CatalogLoanService.Open(this.catalogRepository) : null;
         this.tagRepository = CreateTagDocuments(this.catalogRepository);
         this.tagService = this.tagRepository is not null
             ? new CatalogTagService(this.catalogRepository, this.tagRepository)
@@ -363,7 +378,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             : null;
         this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
         this.collectionService = this.collectionRepository is not null
-            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, entries => ProjectLocations(ProjectLending(entries)))
+            ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, entries => ProjectLocations(entries))
             : null;
         this.scanTraversalFactory = CreateScanTraversalFactory(this.catalogRepository);
         this.aiScanPolicyFactory = CreateAiScanPolicyFactory(this.catalogRepository);
@@ -406,6 +421,112 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             // Best effort cleanup of abandoned staging sessions on startup
         }
+    }
+
+    /// <summary>
+    /// Connects the host-owned open-catalog state that the plugin catalog and storage APIs project from.
+    /// </summary>
+    public void AttachOpenCatalogState(OpenCatalogState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        openCatalogState = state;
+        state.Attach(catalogRepository);
+        state.Path = CurrentCatalogPath;
+    }
+
+    /// <summary>
+    /// Connects the enabled feature plugins whose decorations, columns and commands the host renders.
+    /// </summary>
+    public void RefreshCatalogFeatureServices(CatalogFeatureExtensionManager manager)
+    {
+        ArgumentNullException.ThrowIfNull(manager);
+        if (catalogFeatures is not null)
+        {
+            catalogFeatures.DataChanged -= OnCatalogFeatureDataChanged;
+        }
+
+        catalogFeatures = manager;
+        manager.DataChanged += OnCatalogFeatureDataChanged;
+        DetailsColumnsCatalog.SetContributedColumns(manager.GetDetailsColumns().Select(contribution =>
+            new DetailsColumnDefinition
+            {
+                Id = contribution.Key,
+                HeaderKey = contribution.Title,
+                ValuePath = "Plugin:" + contribution.Key,
+                Width = new Avalonia.Controls.GridLength(140, Avalonia.Controls.GridUnitType.Pixel),
+                ValueSelector = item => item is CatalogDocument document
+                    ? contribution.SelectValue(ToCatalogEntry(document))
+                    : null
+            }));
+        OnPropertyChanged(nameof(BrowserDetailsColumns));
+        RefreshFeatureContextMenus();
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+    }
+
+    private static CatalogEntry ToCatalogEntry(CatalogDocument document) =>
+        new(
+            document.Id,
+            document.Name,
+            "/" + document.Name,
+            document.ParentId,
+            document.Type switch
+            {
+                CatalogDocumentType.Folder or CatalogDocumentType.NetworkFolder => CatalogEntryKind.Folder,
+                CatalogDocumentType.File or CatalogDocumentType.Media => CatalogEntryKind.File,
+                _ => CatalogEntryKind.Other
+            },
+            document.Size,
+            document.Properties.ToDictionary(
+                static property => property.Key,
+                static property => property.Value?.ToString() ?? string.Empty,
+                StringComparer.Ordinal));
+
+    private void OnCatalogFeatureDataChanged(object? sender, EventArgs e)
+    {
+        // Feature plugins raise this from their own threads (dialog close, import worker); the catalog
+        // collections are bound to the UI and can only be refreshed there.
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => OnCatalogFeatureDataChanged(sender, e));
+            return;
+        }
+
+        if (isDisposed)
+        {
+            return;
+        }
+
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+    }
+
+    private IReadOnlyList<CatalogDocument> ApplyCatalogDecorations(IReadOnlyList<CatalogDocument> entries)
+    {
+        foreach (var entry in entries)
+        {
+            entry.SetDecoration(null, null, null, attention: false);
+        }
+
+        if (catalogFeatures is null || entries.Count == 0)
+        {
+            return entries;
+        }
+
+        var byId = entries
+            .GroupBy(static entry => entry.Id, StringComparer.Ordinal)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+        var projected = entries.Select(entry => CatalogApiAdapter.Project(entry, byId)).ToArray();
+        foreach (var decoration in catalogFeatures.GetDecorations(projected))
+        {
+            if (byId.TryGetValue(decoration.EntryId, out var document))
+            {
+                document.SetDecoration(decoration.BadgeText, decoration.BadgeIcon, decoration.Tooltip,
+                    decoration.Attention);
+            }
+        }
+
+        return entries;
     }
 
     public MainWindowViewModel(
@@ -949,7 +1070,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public AdvancedCatalogFindDialogViewModel CreateAdvancedCatalogFindDialogViewModel()
     {
-        var entries = ProjectLocations(ProjectLending(GetAllCatalogEntries()));
+        var entries = ProjectLocations(GetAllCatalogEntries());
         var (lookup, metadataKeys) = BuildAdvancedFindMetadata();
         return new AdvancedCatalogFindDialogViewModel(
             entries,
@@ -964,8 +1085,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 IsDirtyDocument = true;
                 RefreshCollectionsMenuItems();
             },
-            SelectedTreeNode?.Key);
+            SelectedTreeNode?.Key,
+            BuildContributedSearchFields());
     }
+
+    private IReadOnlyList<ContributedSearchFieldDefinition> BuildContributedSearchFields() =>
+        catalogFeatures?.GetAdvancedSearchFields()
+            .Select(field => new ContributedSearchFieldDefinition(
+                field.Key,
+                field.Title,
+                document => field.Matches(ToCatalogEntry(document)),
+                field.SelectValue is null
+                    ? null
+                    : document => field.SelectValue(ToCatalogEntry(document))))
+            .ToArray() ?? [];
 
     private (AdvancedCatalogSearchService.MetadataLookup? Lookup, IReadOnlyList<string> Keys) BuildAdvancedFindMetadata()
     {
@@ -1219,7 +1352,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetProgress(90, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
         CompleteOperation();
 
-        loanService?.SaveUnderPath(filePath);
         CurrentCatalogPath = filePath;
         StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogTo, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
@@ -1249,7 +1381,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetProgress(95, LocalizationService.Current.Get(TextKeys.UpdatingIndexes));
         CompleteOperation();
 
-        loanService?.SaveUnderPath(filePath);
         CurrentCatalogPath = filePath;
         StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogAs, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
@@ -1264,11 +1395,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var isTreeProperties = ActivePane == ActivePane.Tree;
+        var isTreeProperties = ActivePane == ActivePane.Tree && SelectedTreeNode is not null;
         var selectedId = isTreeProperties
             ? SelectedTreeNode?.Key
             : SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key;
-        dialog.Lending = selectedId is null ? null : CreateLoanEditor(selectedId);
+
         PropertiesRequested?.Invoke(this, new PropertiesDialogRequestedEventArgs
         {
             Dialog = dialog,
@@ -3240,7 +3371,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 .ToArray();
         }
 
-        items = ProjectLocations(ProjectLending(items)).Where(MatchesLendingFilter).Where(MatchesLocationFilter).ToArray();
+        items = ProjectLocations(ApplyCatalogDecorations(items)).Where(MatchesLocationFilter).ToArray();
         ApplyPreferredNames(items);
 
         if (items.Length == 0)
@@ -3466,6 +3597,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ToggleTagForEntriesCommand.NotifyCanExecuteChanged();
         RefreshTagsMenuItems();
         RefreshCollectionsMenuItems();
+        RefreshFeatureContextMenus();
         ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
     }
 
@@ -3505,6 +3637,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ToggleTagForEntriesCommand.NotifyCanExecuteChanged();
         RefreshTagsMenuItems();
         RefreshCollectionsMenuItems();
+        RefreshFeatureContextMenus();
         ToggleCollectionForEntriesCommand.NotifyCanExecuteChanged();
     }
 
@@ -3718,8 +3851,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel
                 { Header = LocalizationService.Current.Get(UiKeys.CustomizeToolbar), Command = CustomizeToolbarCommand },
             new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(UiKeys.ManageContacts), Command = OpenContactsDialogCommand },
-            new MainMenuItemViewModel
             {
                 Header = "Automatically sync mounted media",
                 Command = ToggleBackgroundMediaSyncCommand,
@@ -3766,7 +3897,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 ActiveCatalogId = null,
                 SelectedNodeId = null,
-                Properties = null,
+                Properties = (ActivePane == ActivePane.Tree
+                        ? SelectedTreeNode?.Key
+                        : SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key) is { Length: > 0 } entryId
+                    ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["EntryId"] = entryId }
+                    : null,
                 HostApi = new ViewModelHostCommandApi(this)
             };
 
@@ -3782,6 +3917,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 StatusText = string.IsNullOrWhiteSpace(result.Error)
                     ? LocalizationService.Current.Format(TextKeys.PluginCommandFailed, commandId)
                     : LocalizationService.Current.Format(TextKeys.PluginCommandFailed2, result.Error);
+            }
+            else
+            {
+                StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
         }
         catch (Exception ex)
@@ -4021,10 +4160,112 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
-            BuildLoansMenu(),
             BuildLocationsMenu(),
+            ..BuildFeatureMenuGroups(),
+            ..BuildFeatureEntryCommandItems(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
+    }
+
+    private CatalogEntry? GetSelectedCatalogEntry()
+    {
+        var document = SelectedBrowserItem;
+        if (document is null && ActivePane == ActivePane.Tree && SelectedTreeNode?.Key is { Length: > 0 } key)
+        {
+            document = (catalogRepository is not null ? catalogRepository.GetAll() : inMemoryCatalogEntries ?? [])
+                .FirstOrDefault(entry => entry.Id == key);
+        }
+
+        return document is null ? null : ToCatalogEntry(document);
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildFeatureEntryCommandItems()
+    {
+        // A plugin that already exposes a command through its own menu group keeps it there, so the
+        // same command is not listed twice in one context menu.
+        var groupedIds = menuExtensionManager.GetMenuContributions()
+            .Select(contribution => contribution.CommandId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var commands = (catalogFeatures?.GetEntryCommands() ?? [])
+            .Where(command => !groupedIds.Contains(command.CommandId))
+            .ToArray();
+        if (commands.Length == 0 || GetSelectedCatalogEntry() is null)
+        {
+            return [];
+        }
+
+        var items = new List<MainMenuItemViewModel> { Separator() };
+        foreach (var command in commands)
+        {
+            var commandId = command.CommandId;
+            items.Add(new MainMenuItemViewModel
+            {
+                Key = commandId,
+                Header = command.Title,
+                Command = new AsyncRelayCommand(() => ExecuteFeatureEntryCommandAsync(commandId))
+            });
+        }
+
+        return items;
+    }
+
+    private async Task ExecuteFeatureEntryCommandAsync(string commandId)
+    {
+        var entry = GetSelectedCatalogEntry();
+        if (catalogFeatures is null || entry is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await catalogFeatures.ExecuteEntryCommandAsync(commandId, entry);
+        }
+        catch (Exception exception)
+        {
+            StatusText = LocalizationService.Current.Format(TextKeys.PluginCommandError, exception.Message);
+        }
+    }
+
+    private void RefreshFeatureContextMenus()
+    {
+        ReplaceMenuItems(browserContextMenuItems, BuildBrowserContextMenuItems());
+        ReplaceMenuItems(treeContextMenuItems, BuildTreeContextMenuItems());
+        OnPropertyChanged(nameof(BrowserContextMenuItems));
+        OnPropertyChanged(nameof(TreeContextMenuItems));
+    }
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildFeatureMenuGroups()
+    {
+        var groups = menuExtensionManager.GetMenuContributions()
+            .Where(contribution => !string.Equals(contribution.Location, "Tools", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(contribution => contribution.Location, StringComparer.OrdinalIgnoreCase)
+            .Where(group => !string.IsNullOrWhiteSpace(group.Key))
+            .ToArray();
+        if (groups.Length == 0)
+        {
+            return [];
+        }
+
+        var items = new List<MainMenuItemViewModel> { Separator() };
+        foreach (var group in groups)
+        {
+            items.Add(new MainMenuItemViewModel
+            {
+                Key = "feature_" + group.Key,
+                Header = group.Key,
+                Items =
+                [
+                    .. group.Select(contribution => new MainMenuItemViewModel
+                    {
+                        Header = contribution.Title,
+                        Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
+                    })
+                ]
+            });
+        }
+
+        return items;
     }
 
     private IReadOnlyList<MainMenuItemViewModel> BuildTreeContextMenuItems()
@@ -4073,8 +4314,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", InputGesture = "Ctrl+V", Command = PasteCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
-            BuildLoansMenu(),
             BuildLocationsMenu(),
+            ..BuildFeatureMenuGroups(),
+            ..BuildFeatureEntryCommandItems(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
         ];
     }
@@ -4094,12 +4336,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private IReadOnlyList<BrowserTreeNode> GetTreeNodes()
     {
-        if (catalogRepository is not null)
-        {
-            return BuildTreeNodesFromEntries(ProjectLocations(ProjectLending(catalogRepository.GetAll())));
-        }
-
-        return BuildTreeNodesFromEntries(inMemoryCatalogEntries ?? []);
+        var source = catalogRepository is not null
+            ? catalogRepository.GetAll()
+            : inMemoryCatalogEntries ?? [];
+        return BuildTreeNodesFromEntries(ProjectLocations(ApplyCatalogDecorations(source)));
     }
 
     private IReadOnlyList<CatalogDocument> GetBrowserItems(string nodeKey)
@@ -4252,7 +4492,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             children,
             isExpanded)
         {
-            LoanIndicator = entry.IsLent ? LocalizationService.Current.Get(entry.IsLoanOverdue ? UiKeys.LoanOverdueBadge : UiKeys.LoanBadge) : null,
+            DecorationIndicator = entry.BadgeText,
             LocationIndicator = entry.HasLocation ? entry.Location : null
         };
     }

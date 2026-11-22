@@ -141,7 +141,7 @@
                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Rename}}"
                                      KeyDown="OnRenameEditorKeyDown"
                                      LostFocus="OnRenameEditorLostFocus" />
-                            <TextBlock Text="{Binding LoanIndicator}" FontSize="10" Opacity="0.8" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding DecorationIndicator}" FontSize="10" Opacity="0.8" VerticalAlignment="Center" />
                             <TextBlock Text="{Binding LocationIndicator}" FontSize="10" Opacity="0.8" VerticalAlignment="Center" />
                         </StackPanel>
                     </TreeDataTemplate>

@@ -10,10 +10,8 @@ public sealed class AdvancedCatalogFieldConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
     {
-        AdvancedCatalogField.ActiveLoan => LocalizationService.Current.Get(UiKeys.ActiveLoans),
-        AdvancedCatalogField.Borrower => LocalizationService.Current.Get(UiKeys.Borrower),
-        AdvancedCatalogField.OverdueLoan => LocalizationService.Current.Get(UiKeys.OverdueLoans),
         AdvancedCatalogField.Location => LocalizationService.Current.Get(UiKeys.Location),
+        AdvancedCatalogField.Contributed => LocalizationService.Current.Get(TextKeys.AdvancedFilterPluginField),
         _ => value?.ToString()
     };
 

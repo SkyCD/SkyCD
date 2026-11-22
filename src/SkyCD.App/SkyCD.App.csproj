@@ -55,5 +55,6 @@
         <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj" />
         <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
         <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Loans\SkyCD.Plugin.Feature.Loans.csproj" />
     </ItemGroup>
 </Project>

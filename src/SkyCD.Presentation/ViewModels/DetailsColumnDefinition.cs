@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using SkyCD.UI.Controls.Lists;
@@ -12,6 +13,9 @@ public sealed class DetailsColumnDefinition
     public required string HeaderKey { get; init; }
 
     public required string ValuePath { get; init; }
+
+    /// <summary>Optional per-item value projection used by plugin-contributed columns.</summary>
+    public Func<object?, string?>? ValueSelector { get; init; }
 
     public GridLength Width { get; init; } = new(1, GridUnitType.Star);
 
@@ -42,6 +46,7 @@ public sealed class DetailsColumnDefinition
         Id = Id,
         Header = DisplayHeader,
         ValuePath = ValuePath,
+        ValueSelector = ValueSelector,
         Width = width is > 0 ? new GridLength(width.Value, GridUnitType.Pixel) : Width,
         HeaderAlignment = HeaderAlignment,
         ValueAlignment = ValueAlignment,

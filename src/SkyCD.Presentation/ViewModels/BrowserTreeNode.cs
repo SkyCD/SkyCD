@@ -27,7 +27,7 @@ public partial class BrowserTreeNode : ObservableObject
 
     public string IconGlyph { get; }
 
-    public string? LoanIndicator { get; init; }
+    public string? DecorationIndicator { get; init; }
 
     public string? LocationIndicator { get; init; }
 

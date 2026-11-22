@@ -94,14 +94,6 @@ public sealed class StatusVariantDocumentRepository : RepositoryBase<StatusVaria
             },
             new StatusVariantDocument
             {
-                Id = "status-loaned-out",
-                Name = "Loaned Out",
-                IconGlyph = "Lucide:Handshake",
-                IconColor = "#F97316",
-                ItemTypes = [CatalogDocumentType.Media, CatalogDocumentType.File]
-            },
-            new StatusVariantDocument
-            {
                 Id = "status-missing",
                 Name = "Missing",
                 IconGlyph = "Lucide:Search",

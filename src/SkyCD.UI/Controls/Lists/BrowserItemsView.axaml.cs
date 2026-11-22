@@ -936,7 +936,11 @@ public partial class BrowserItemsView : UserControl
                     Margin = new Thickness(6, 0),
                     ClipToBounds = true
                 };
-                if (column.ValuePath == "DisplayType")
+                if (column.ValueSelector is { } selector)
+                {
+                    valueCell.Text = selector(item) ?? string.Empty;
+                }
+                else if (column.ValuePath == "DisplayType")
                 {
                     valueCell.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
                 }
@@ -1021,9 +1025,9 @@ public partial class BrowserItemsView : UserControl
         badge.Bind(ToolTip.TipProperty, new Binding("Properties[StatusName]"));
         iconContainer.Children.Add(badge);
 
-        var loanBadge = new TextBlock
+        // Feature plugins supply the badge through the projected decoration slot; the control only renders it.
+        var featureBadge = new TextBlock
         {
-            Text = "↗",
             FontWeight = Avalonia.Media.FontWeight.Bold,
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
@@ -1031,9 +1035,14 @@ public partial class BrowserItemsView : UserControl
             Foreground = Brushes.Black,
             FontSize = 10
         };
-        loanBadge.Bind(IsVisibleProperty, new Binding("IsLent") { FallbackValue = false });
-        loanBadge.Bind(ToolTip.TipProperty, new Binding("LentTo"));
-        iconContainer.Children.Add(loanBadge);
+        featureBadge.Bind(IsVisibleProperty, new Binding("BadgeIcon")
+        {
+            Converter = HasNonEmptyValueConverter,
+            FallbackValue = false
+        });
+        featureBadge.Bind(TextBlock.TextProperty, new Binding("BadgeIcon"));
+        featureBadge.Bind(ToolTip.TipProperty, new Binding("BadgeTooltip"));
+        iconContainer.Children.Add(featureBadge);
 
         return iconContainer;
     }

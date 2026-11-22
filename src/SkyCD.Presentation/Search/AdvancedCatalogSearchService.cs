@@ -37,19 +37,28 @@ public static class AdvancedCatalogSearchService
         CatalogSearchIndex index,
         AdvancedCatalogQuery query,
         MetadataLookup? metadataLookup = null,
-        CancellationToken cancellationToken = default) =>
-        Search(index, query, metadataLookup, cancellationToken, out _);
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<ContributedSearchFieldDefinition>? contributedFields = null) =>
+        Search(index, query, metadataLookup, cancellationToken, out _, contributedFields);
 
     internal static IReadOnlyList<CatalogFindResult> Search(
         CatalogSearchIndex index,
         AdvancedCatalogQuery query,
         MetadataLookup? metadataLookup,
         CancellationToken cancellationToken,
-        out int totalMatches)
+        out int totalMatches,
+        IReadOnlyList<ContributedSearchFieldDefinition>? contributedFields = null)
     {
         ArgumentNullException.ThrowIfNull(index);
         ArgumentNullException.ThrowIfNull(query);
         Validate(query);
+
+        IReadOnlyDictionary<string, ContributedSearchFieldDefinition>? contributed =
+            contributedFields is { Count: > 0 }
+                ? contributedFields
+                    .GroupBy(static field => field.Key, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.OrdinalIgnoreCase)
+                : null;
 
         var candidates = index.GetScopeCandidates(query.Scope);
 
@@ -72,7 +81,7 @@ public static class AdvancedCatalogSearchService
             IReadOnlyDictionary<string, object?> metadata =
                 metadataLookup?.Invoke(document) ?? (IReadOnlyDictionary<string, object?>)document.Properties;
             var fullPath = index.GetFullPath(document.Id);
-            if (MatchesGroup(query.Root, document, fullPath, metadata, cancellationToken))
+            if (MatchesGroup(query.Root, document, fullPath, metadata, contributed, cancellationToken))
             {
                 var context = ContextFromPath(fullPath);
                 matches.Add((new CatalogFindResult(document, fullPath, context), fullPath));
@@ -170,6 +179,7 @@ public static class AdvancedCatalogSearchService
         CatalogDocument document,
         string fullPath,
         IReadOnlyDictionary<string, object?> metadata,
+        IReadOnlyDictionary<string, ContributedSearchFieldDefinition>? contributed,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -183,7 +193,7 @@ public static class AdvancedCatalogSearchService
         {
             foreach (var predicate in group.Predicates)
             {
-                if (!MatchesPredicate(predicate, document, fullPath, metadata))
+                if (!MatchesPredicate(predicate, document, fullPath, metadata, contributed))
                 {
                     return false;
                 }
@@ -191,7 +201,7 @@ public static class AdvancedCatalogSearchService
 
             foreach (var nested in group.Groups)
             {
-                if (!MatchesGroup(nested, document, fullPath, metadata, cancellationToken))
+                if (!MatchesGroup(nested, document, fullPath, metadata, contributed, cancellationToken))
                 {
                     return false;
                 }
@@ -202,7 +212,7 @@ public static class AdvancedCatalogSearchService
 
         foreach (var predicate in group.Predicates)
         {
-            if (MatchesPredicate(predicate, document, fullPath, metadata))
+            if (MatchesPredicate(predicate, document, fullPath, metadata, contributed))
             {
                 return true;
             }
@@ -210,7 +220,7 @@ public static class AdvancedCatalogSearchService
 
         foreach (var nested in group.Groups)
         {
-            if (MatchesGroup(nested, document, fullPath, metadata, cancellationToken))
+            if (MatchesGroup(nested, document, fullPath, metadata, contributed, cancellationToken))
             {
                 return true;
             }
@@ -223,7 +233,8 @@ public static class AdvancedCatalogSearchService
         AdvancedCatalogPredicate predicate,
         CatalogDocument document,
         string fullPath,
-        IReadOnlyDictionary<string, object?> metadata)
+        IReadOnlyDictionary<string, object?> metadata,
+        IReadOnlyDictionary<string, ContributedSearchFieldDefinition>? contributed)
     {
         return predicate.Field switch
         {
@@ -235,12 +246,34 @@ public static class AdvancedCatalogSearchService
             AdvancedCatalogField.Status => MatchText(StoredText(document.Status), predicate),
             AdvancedCatalogField.CustomProperty => MatchCustomProperty(document, predicate),
             AdvancedCatalogField.Metadata => MatchMetadata(metadata, predicate),
-            AdvancedCatalogField.ActiveLoan => MatchText(document.IsLent ? "true" : null, predicate),
-            AdvancedCatalogField.Borrower => MatchText(StoredText(document.LentTo), predicate),
-            AdvancedCatalogField.OverdueLoan => MatchText(document.IsLoanOverdue ? "true" : null, predicate),
             AdvancedCatalogField.Location => MatchText(StoredText(document.Location), predicate),
+            AdvancedCatalogField.Contributed => MatchContributed(document, predicate, contributed),
             _ => false
         };
+    }
+
+    private static bool MatchContributed(
+        CatalogDocument document,
+        AdvancedCatalogPredicate predicate,
+        IReadOnlyDictionary<string, ContributedSearchFieldDefinition>? contributed)
+    {
+        if (contributed is null || predicate.Key is not { Length: > 0 } key ||
+            !contributed.TryGetValue(key, out var field))
+        {
+            return predicate.Operator == AdvancedCatalogOperator.IsMissing;
+        }
+
+        if (field.SelectValue is null)
+        {
+            return predicate.Operator switch
+            {
+                AdvancedCatalogOperator.IsPresent => field.Matches(document),
+                AdvancedCatalogOperator.IsMissing => !field.Matches(document),
+                _ => false
+            };
+        }
+
+        return MatchText(StoredText(field.SelectValue(document)), predicate);
     }
 
     private static bool MatchCustomProperty(CatalogDocument document, AdvancedCatalogPredicate predicate)

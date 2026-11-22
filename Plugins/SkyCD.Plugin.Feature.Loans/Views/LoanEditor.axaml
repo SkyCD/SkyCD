@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+             xmlns:loans="clr-namespace:SkyCD.Plugin.Feature.Loans.Models"
+             xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Loans.Views"
+             x:Class="SkyCD.Plugin.Feature.Loans.Views.LoanEditor"
+             x:DataType="vm:LoanDialogViewModel">
+    <ScrollViewer>
+        <StackPanel Margin="8" Spacing="5">
+            <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.Borrower}}" />
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding Borrowers}" SelectedItem="{Binding SelectedBorrower}"
+                      AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.Borrower}}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{ReflectionBinding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="5">
+                <TextBox Text="{Binding ContactName}" PlaceholderText="{i18n:Translate {x:Static loans:LoansKeys.BorrowerName}}" />
+                <Button Grid.Column="1" Content="{i18n:Translate {x:Static loans:LoansKeys.AddBorrower}}" Command="{Binding AddBorrowerCommand}" />
+                <Button Grid.Column="2" Content="{i18n:Translate {x:Static loans:LoansKeys.RenameBorrower}}" Command="{Binding RenameBorrowerCommand}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanDateLabel}}" />
+                    <TextBox Text="{Binding LoanDate}" PlaceholderText="YYYY-MM-DD"
+                             AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanDateLabel}}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanDueLabel}}" />
+                    <TextBox Text="{Binding DueDate}" PlaceholderText="YYYY-MM-DD"
+                             AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanDueLabel}}" />
+                </StackPanel>
+            </Grid>
+            <TextBox Text="{Binding Note}" PlaceholderText="{i18n:Translate {x:Static loans:LoansKeys.LoanNote}}" />
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkLent}}" Command="{Binding MarkLentCommand}" />
+                <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkReturned}}" Command="{Binding MarkReturnedCommand}" />
+            </StackPanel>
+            <TextBlock Text="{Binding Error}" Foreground="Firebrick" TextWrapping="Wrap" />
+            <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}" />
+            <ListBox ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLoan}" MaxHeight="160"
+                     AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="loans:LoanHistoryRow">
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanChangesSave}}" TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
