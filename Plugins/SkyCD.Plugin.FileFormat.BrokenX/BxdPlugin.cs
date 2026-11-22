@@ -21,7 +21,7 @@ namespace SkyCD.Plugin.FileFormat.BrokenX;
 /// descriptors and their order) round-trip verbatim. Merge-import and selected-subtree export are
 /// exposed through <see cref="BxdMergeService"/> and <see cref="BxdSubtreeSelector"/>.
 /// </remarks>
-public sealed class BxdPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
+public sealed class BxdPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -31,6 +31,13 @@ public sealed class BxdPlugin : IFileFormatPluginCapability, IContentAwareFileFo
             MimeTypes: ["application/x-brokenx-database"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Properties));
 
     /// <summary>
     /// Claims a stream only when it starts with the exact 21-byte signature and version byte.

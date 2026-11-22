@@ -20,7 +20,7 @@ namespace SkyCD.Plugin.FileFormat.XmlExport;
 /// elements. Rows stream through an <see cref="XmlWriter"/> so large catalogs are
 /// never held as an XML document in memory.
 /// </summary>
-public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
+public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const int ProgressReportEvery = 64;
 
@@ -32,6 +32,14 @@ public sealed class XmlCatalogExportPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/xml", "text/xml"],
             CanRead: false,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size |
+            FileFormatEntryFieldSupport.Status));
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)

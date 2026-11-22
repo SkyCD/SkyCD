@@ -20,7 +20,7 @@ namespace SkyCD.Plugin.FileFormat.XmlExport;
 /// <c>Label</c> attribute whenever normalization changes it. Items stream through
 /// an <see cref="XmlWriter"/> so large result sets are never buffered as XML.
 /// </summary>
-public sealed class XmlListExportPlugin : IFileFormatPluginCapability
+public sealed class XmlListExportPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private const int ProgressReportEvery = 64;
 
@@ -32,6 +32,13 @@ public sealed class XmlListExportPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/xml", "text/xml"],
             CanRead: false,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size |
+            FileFormatEntryFieldSupport.Status));
 
     public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)

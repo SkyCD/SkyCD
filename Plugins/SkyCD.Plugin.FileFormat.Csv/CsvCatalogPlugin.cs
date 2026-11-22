@@ -11,7 +11,7 @@ using SkyCD.Plugin.FileFormat.Csv.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.Csv;
 
-public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
+public sealed class CsvCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private static readonly string[] HeaderColumns = ["NodeId", "ParentId", "Kind", "Name", "SizeBytes"];
 
@@ -23,6 +23,13 @@ public sealed class CsvCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["text/csv"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)

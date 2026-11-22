@@ -111,7 +111,8 @@ public sealed class CatalogLoadServiceTests
             try
             {
                 var added = newCatalog.AddTitleOnlyMedia("New disk", parentId: null);
-                await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries());
+                await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries(), [],
+                    _ => Task.FromResult(true));
                 newCatalog.CompleteSaveCatalog(newPath);
                 var saved = await loader.LoadAsync(newPath, (payload, _) => CatalogImportTests.Extract(payload!),
                     new RecordingProgress());

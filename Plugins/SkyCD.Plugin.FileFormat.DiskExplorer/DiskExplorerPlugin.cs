@@ -14,7 +14,7 @@ namespace SkyCD.Plugin.FileFormat.DiskExplorer;
 /// (read and write). Detection requires the exact <c>REPORT</c> root plus report
 /// shape, so unrelated XML files sharing the .xml extension are never claimed.
 /// </summary>
-public sealed class DiskExplorerPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
+public sealed class DiskExplorerPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -24,6 +24,13 @@ public sealed class DiskExplorerPlugin : IFileFormatPluginCapability, IContentAw
             MimeTypes: ["text/xml", "application/xml", "application/vnd.diskexplorer.report+xml"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.ParentId | FileFormatEntryFieldSupport.Kind |
+            FileFormatEntryFieldSupport.Size | FileFormatEntryFieldSupport.Properties));
 
     /// <summary>
     /// Inspects the stream content to verify it is a Disk Explorer XML report.

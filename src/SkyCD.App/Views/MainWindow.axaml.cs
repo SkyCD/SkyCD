@@ -65,6 +65,7 @@ public partial class MainWindow : Window
     private readonly StatusVariantDocumentRepository statusVariantRepository;
     private readonly ScanExclusionRuleDocumentRepository scanExclusionRuleRepository;
     private readonly AiScanExclusionDocumentRepository aiScanExclusionRepository;
+    private readonly VirtualCollectionDocumentRepository virtualCollectionRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
     private readonly OpenCatalogState openCatalogState;
@@ -101,6 +102,8 @@ public partial class MainWindow : Window
             (ScanExclusionRuleDocumentRepository)repositoryManager.For<ScanExclusionRuleDocument>();
         aiScanExclusionRepository =
             (AiScanExclusionDocumentRepository)repositoryManager.For<AiScanExclusionDocument>();
+        virtualCollectionRepository =
+            (VirtualCollectionDocumentRepository)repositoryManager.For<VirtualCollectionDocument>();
         this.pluginManager = pluginManager;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
         this.fileFormatManager = fileFormatManager;
@@ -1339,7 +1342,27 @@ public partial class MainWindow : Window
 
         try
         {
-            await new CatalogSaveService(fileFormatManager).SaveAsync(targetPath, vm.GetAllCatalogEntries());
+            var scopeItems = CatalogScopeDataService.Collect(
+                virtualCollectionRepository.GetOrdered(),
+                statusVariantRepository.GetOrdered(),
+                scanExclusionRuleRepository.GetOrdered(),
+                aiScanExclusionRepository.GetOrdered(),
+                pluginManager.GetCapabilities<ICatalogAuxiliaryDataProvider>());
+            var saved = await new CatalogSaveService(fileFormatManager).SaveAsync(
+                targetPath,
+                vm.GetAllCatalogEntries(),
+                scopeItems,
+                async preview =>
+                {
+                    var dialog = new SaveDataLossWindow(preview.FormatDisplayName,
+                        CatalogDataLossText.BuildLines(preview.Items));
+                    return await dialog.ShowDialog<bool>(this);
+                });
+            if (!saved)
+            {
+                return false;
+            }
+
             if (saveAs) vm.CompleteSaveCatalogAs(targetPath);
             else vm.CompleteSaveCatalog(targetPath);
             return true;

@@ -27,7 +27,7 @@ namespace SkyCD.Plugin.FileFormat.PlainText;
 /// over a bounded first pass otherwise; file targets are written to a temporary
 /// sibling and atomically replaced after success.
 /// </remarks>
-public sealed class PlainTextListExportPlugin : IFileFormatPluginCapability
+public sealed class PlainTextListExportPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     public static readonly IReadOnlyList<string> DefaultColumns =
         ["Name", "Path", "Kind", "SizeBytes", "Modified", "Description", "Disk"];
@@ -52,6 +52,12 @@ public sealed class PlainTextListExportPlugin : IFileFormatPluginCapability
             MimeTypes: ["text/plain"],
             CanRead: false,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)

@@ -11,7 +11,7 @@ using SkyCD.Plugin.FileFormat.Playlist.M3u.Models;
 
 namespace SkyCD.Plugin.FileFormat.Playlist.M3u;
 
-public sealed class M3uCatalogPlugin : IFileFormatPluginCapability
+public sealed class M3uCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -21,6 +21,11 @@ public sealed class M3uCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["audio/x-mpegurl", "application/x-mpegURL"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request, FileFormatEntryFieldSupport.None));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
@@ -148,6 +153,47 @@ public sealed class M3uCatalogPlugin : IFileFormatPluginCapability
             return document.Entries;
         }
 
-        throw new InvalidOperationException("M3U payload must be an M3U playlist document.");
+        if (payload is IEnumerable<Dictionary<string, object?>> rows)
+        {
+            var entries = new List<M3uPlaylistEntry>();
+            foreach (var row in rows)
+            {
+                var name = Read(row, "name");
+                var path = Read(row, "path");
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    path = name;
+                }
+
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    continue;
+                }
+
+                entries.Add(new M3uPlaylistEntry(path, string.IsNullOrWhiteSpace(name) ? null : name, null));
+            }
+
+            return entries;
+        }
+
+        throw new InvalidOperationException("M3U payload must be an M3U playlist document or catalog rows.");
+    }
+
+    private static string Read(Dictionary<string, object?> row, string key)
+    {
+        if (row.TryGetValue(key, out var value))
+        {
+            return value?.ToString() ?? string.Empty;
+        }
+
+        foreach (var (candidate, candidateValue) in row)
+        {
+            if (candidate.Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidateValue?.ToString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
     }
 }

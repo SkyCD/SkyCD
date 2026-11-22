@@ -25,7 +25,7 @@ namespace SkyCD.Plugin.FileFormat.CDCatalogExpert;
 /// with <see cref="ZdcEncryptionNotSupportedException"/> instead of emitting
 /// corrupt data.
 /// </remarks>
-public sealed class ZdcPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
+public sealed class ZdcPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -35,6 +35,14 @@ public sealed class ZdcPlugin : IFileFormatPluginCapability, IContentAwareFileFo
             MimeTypes: ["application/x-cdcatalogexpert-catalog"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Id | FileFormatEntryFieldSupport.ParentId |
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size |
+            FileFormatEntryFieldSupport.Properties));
 
     /// <summary>
     /// Claims a stream only when the file name carries the <c>.zdc</c>

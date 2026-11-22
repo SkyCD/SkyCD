@@ -22,7 +22,7 @@ namespace SkyCD.Plugin.FileFormat.Csv;
 /// the request explicitly opts into raw mode. Rows stream through the writer so large
 /// exports never load the full result set into memory.
 /// </summary>
-public sealed class CsvListExportPlugin : IFileFormatPluginCapability
+public sealed class CsvListExportPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     public static readonly IReadOnlyList<string> DefaultColumns =
         ["Name", "Path", "Kind", "SizeBytes", "Modified", "Description", "Disk"];
@@ -52,6 +52,12 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability
             MimeTypes: ["text/csv"],
             CanRead: false,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)

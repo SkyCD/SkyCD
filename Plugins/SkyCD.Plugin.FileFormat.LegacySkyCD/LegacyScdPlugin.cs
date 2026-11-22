@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -10,7 +11,7 @@ using SkyCD.Plugin.FileFormat.LegacySkyCD.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.LegacySkyCD;
 
-public sealed class LegacyScdPlugin : IFileFormatPluginCapability
+public sealed class LegacyScdPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     public FileFormatDescriptor SupportedFormat =>
         new(
@@ -20,6 +21,12 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/vnd.skycd.scd"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request,
+            FileFormatEntryFieldSupport.Kind | FileFormatEntryFieldSupport.Size));
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
@@ -78,7 +85,8 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.Payload is not LegacyScdCatalog catalog)
+        var catalog = ResolveCatalog(request.Payload);
+        if (catalog is null)
         {
             return new FileFormatWriteResult { Success = false, Error = "Payload must be LegacyScdCatalog." };
         }
@@ -102,5 +110,31 @@ public sealed class LegacyScdPlugin : IFileFormatPluginCapability
         {
             return new FileFormatWriteResult { Success = false, Error = exception.Message };
         }
+    }
+
+    private static LegacyScdCatalog? ResolveCatalog(object? payload)
+    {
+        if (payload is LegacyScdCatalog typed)
+        {
+            return typed;
+        }
+
+        if (payload is not IEnumerable<Dictionary<string, object?>> rows)
+        {
+            return null;
+        }
+
+        var catalog = new LegacyScdCatalog();
+        foreach (var entry in LegacyRowPaths.Build(rows))
+        {
+            catalog.Entries.Add(new LegacyScdEntry
+            {
+                Path = entry.Path,
+                SizeBytes = entry.SizeBytes,
+                IsDirectory = entry.IsDirectory
+            });
+        }
+
+        return catalog;
     }
 }

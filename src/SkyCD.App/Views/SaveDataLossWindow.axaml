@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        x:Class="SkyCD.App.Views.SaveDataLossWindow"
+        Width="480"
+        Height="380"
+        CanResize="False"
+        CanMinimize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/skycd.ico"
+        Title="{i18n:Translate {x:Static i18n:UiKeys.SaveDataLoss}}">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+        <TextBlock x:Name="IntroText"
+                   TextWrapping="Wrap" />
+
+        <Border Grid.Row="1"
+                Margin="0,12"
+                BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="8">
+            <ScrollViewer>
+                <ItemsControl x:Name="LossList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SaveDataLossSaveAnyway}}"
+                    MinWidth="110"
+                    Click="OnSaveClicked" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SaveDataLossDoNotSave}}"
+                    MinWidth="110"
+                    IsDefault="True"
+                    IsCancel="True"
+                    Click="OnDoNotSaveClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

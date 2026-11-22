@@ -12,6 +12,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Import;
 using SkyCD.Plugin.Abstractions.Capabilities.Menu;
 using SkyCD.Plugin.Abstractions.Capabilities.Ui;
@@ -30,8 +31,8 @@ namespace SkyCD.Plugin.Feature.Loans;
 /// models, views and localization live in this assembly; the host only renders the contributions.
 /// </summary>
 public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer, ICatalogFeaturePluginCapability,
-    ICatalogImportPluginCapability, ICatalogLifecyclePluginCapability, IMenuPluginCapability, IHostDialogConsumer,
-    ILocalizationPluginCapability
+    ICatalogAuxiliaryDataProvider, ICatalogImportPluginCapability, ICatalogLifecyclePluginCapability,
+    IMenuPluginCapability, IHostDialogConsumer, ILocalizationPluginCapability
 {
     private const string LendCommandId = "skycd.loans.lend";
     private const string ReturnCommandId = "skycd.loans.return";
@@ -228,7 +229,49 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     }
 
     /// <inheritdoc />
+    public IReadOnlyList<CatalogAuxiliaryDataGroup> GetAuxiliaryData()
+    {
+        if (Service() is not { } service)
+        {
+            return [];
+        }
+
+        var groups = new List<CatalogAuxiliaryDataGroup>();
+        var activeLoans = service.GetActiveLoans(DateOnly.FromDateTime(DateTime.Today));
+        if (activeLoans.Count > 0)
+        {
+            groups.Add(new CatalogAuxiliaryDataGroup(
+                FileFormatDataLossCategories.Loans,
+                "activeLoans",
+                activeLoans.Count,
+                Sample(activeLoans.Values.Select(static loan => loan.Borrower))));
+        }
+
+        var contacts = service.GetBorrowers();
+        if (contacts.Count > 0)
+        {
+            groups.Add(new CatalogAuxiliaryDataGroup(
+                FileFormatDataLossCategories.Borrowers,
+                "contacts",
+                contacts.Count,
+                Sample(contacts.Select(static contact => contact.Name))));
+        }
+
+        return groups;
+    }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, string> GetTranslations() => Translations;
+
+    private static string? Sample(IEnumerable<string> names)
+    {
+        var sample = names
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToList();
+        return sample.Count == 0 ? null : string.Join(", ", sample);
+    }
 
     private static readonly Dictionary<string, string> English = new()
     {

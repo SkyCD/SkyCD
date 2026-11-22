@@ -12,7 +12,7 @@ using SkyCD.Plugin.FileFormat.Playlist.Xspf.Models;
 
 namespace SkyCD.Plugin.FileFormat.Playlist.Xspf;
 
-public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
+public sealed class XspfCatalogPlugin : IFileFormatPluginCapability, IDataLossAwareFileFormatCapability
 {
     private static readonly XNamespace XspfNamespace = "http://xspf.org/ns/0/";
 
@@ -24,6 +24,11 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
             MimeTypes: ["application/xspf+xml"],
             CanRead: true,
             CanWrite: true);
+
+    public bool PreservesCatalogScope => false;
+
+    public FileFormatDataLossAssessment AssessDataLoss(FileFormatDataLossRequest request) =>
+        new(FileFormatDataLossAssessmentBuilder.AssessEntries(request, FileFormatEntryFieldSupport.None));
 
     public Task<FileFormatReadResult> ReadAsync(
         FileFormatReadRequest request,
@@ -154,6 +159,47 @@ public sealed class XspfCatalogPlugin : IFileFormatPluginCapability
             return document.Entries;
         }
 
-        throw new InvalidOperationException("XSPF payload must be an XSPF playlist document.");
+        if (payload is IEnumerable<Dictionary<string, object?>> rows)
+        {
+            var entries = new List<XspfPlaylistEntry>();
+            foreach (var row in rows)
+            {
+                var name = Read(row, "name");
+                var path = Read(row, "path");
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    path = name;
+                }
+
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    continue;
+                }
+
+                entries.Add(new XspfPlaylistEntry(path, string.IsNullOrWhiteSpace(name) ? null : name, null, null));
+            }
+
+            return entries;
+        }
+
+        throw new InvalidOperationException("XSPF payload must be an XSPF playlist document or catalog rows.");
+    }
+
+    private static string Read(Dictionary<string, object?> row, string key)
+    {
+        if (row.TryGetValue(key, out var value))
+        {
+            return value?.ToString() ?? string.Empty;
+        }
+
+        foreach (var (candidate, candidateValue) in row)
+        {
+            if (candidate.Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidateValue?.ToString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
     }
 }
