@@ -80,7 +80,7 @@ is `Feature.WebBrowser`.
 | --- | --- | --- |
 | `SkyCD.Plugin.Zip` | `SkyCD.Plugin.Metadata.Zip` | Archive indexer; entry listing is metadata for generated entries' subitems. |
 | `SkyCD.Plugin.Iso` | `SkyCD.Plugin.Metadata.Iso` | Disk-image metadata provider; catalog entries are contributed as work items. |
-| `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog.Xml` | File format, vendor variant. |
+| `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog` | File format, vendor subject; CSV/XML/native capabilities consolidated in one assembly. |
 | `SkyCD.Plugin.Legacy.Scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | File format, legacy generation. |
 | `SkyCD.Plugin.EBook` | `SkyCD.Plugin.Metadata.EBook` | Metadata primary; preview and config secondary. |
 | `SkyCD.Plugin.AudioCd` | `SkyCD.Plugin.Metadata.AudioCD` | Audio CD metadata primary; config secondary. |
