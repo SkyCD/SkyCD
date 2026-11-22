@@ -4,7 +4,7 @@
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: reads ComicInfo.xml and the first page from cbz/cbr/cb7 containers. SharpCompress is already
-             used by SkyCD.Plugin.Metadata.SevenZip, so the license evaluation is shared (see docs/plugins/ecomic.md). -->
+             used by SkyCD.Plugin.Metadata.Archives, so the license evaluation is shared (see docs/plugins/ecomic.md). -->
         <PackageReference Include="SharpCompress" Version="0.50.8"/>
         <!-- MIT: decodes the extracted page and encodes the bounded cover thumbnail. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
