@@ -24,6 +24,7 @@ using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
+using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.App.Marketplace;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
@@ -1179,17 +1180,34 @@ public partial class MainWindow : Window
             }
         }
 
-        var newCatalog = MainWindowViewModel.CreateNewCatalog();
-        newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
-        newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-            ServiceProvider.Resolve<VolumeExtensionManager>(),
-            ServiceProvider.Resolve<IndexWorkItemSequence>(),
-            ServiceProvider.Resolve<IAudioCdMetadataProvider>());
-        newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
-        newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
-        newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
-        newCatalog.CompleteNewCatalog();
+        MainWindowViewModel? newCatalog = null;
+        try
+        {
+            newCatalog = MainWindowViewModel.CreateNewCatalog(ResolveWorkingCopiesDirectory());
+            newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
+            newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
+                ServiceProvider.Resolve<VolumeExtensionManager>(),
+                ServiceProvider.Resolve<IndexWorkItemSequence>(),
+                ServiceProvider.Resolve<IAudioCdMetadataProvider>());
+            newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+            newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
+            newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
+            newCatalog.CompleteNewCatalog();
+        }
+        catch (Exception ex)
+        {
+            newCatalog?.Dispose();
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToCreateNewCatalog,
+                ex.GetBaseException().Message);
+            return;
+        }
+
         DataContext = newCatalog;
+    }
+
+    private static string ResolveWorkingCopiesDirectory()
+    {
+        return Path.Combine(CouchbaseServiceRegistrator.ResolveDatabaseDirectory(), "working-copies");
     }
 
     private async void OnOpenCatalogRequested(object? sender, EventArgs e)

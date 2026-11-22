@@ -6,6 +6,7 @@ public static class TextKeys
     public const string Type = "core.text.Type";
     public const string Size = "core.text.Size";
     public const string CreatedANewCatalog = "core.text.CreatedANewCatalog";
+    public const string FailedToCreateNewCatalog = "core.text.FailedToCreateNewCatalog";
     public const string LoadingCatalog = "core.text.LoadingCatalog";
     public const string ParsingCatalog = "core.text.ParsingCatalog";
     public const string UpdatingBrowser = "core.text.UpdatingBrowser";

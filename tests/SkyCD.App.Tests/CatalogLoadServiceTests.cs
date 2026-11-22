@@ -123,6 +123,26 @@ public sealed class CatalogLoadServiceTests
     }
 
     [Fact]
+    public void CreateNewCatalog_CreatesIsolatedWorkingCopyAndRemovesItOnDispose()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"skycd-working-copies-{Guid.NewGuid():N}");
+        try
+        {
+            var catalog = MainWindowViewModel.CreateNewCatalog(root);
+            var workingCopyDirectory = Assert.Single(Directory.GetDirectories(root));
+            Assert.True(Directory.Exists(Path.Combine(workingCopyDirectory, "catalog.cblite2")));
+
+            catalog.Dispose();
+
+            Assert.False(Directory.Exists(workingCopyDirectory));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task FailedLoad_PropagatesErrorAndProgressStateCanBeCleared()
     {
         var vm = MainWindowViewModel.CreateForInMemoryCatalog([]);
