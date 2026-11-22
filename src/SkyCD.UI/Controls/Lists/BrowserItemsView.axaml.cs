@@ -678,6 +678,7 @@ public partial class BrowserItemsView : UserControl
         }
 
         var headerCells = new List<Grid>(detailsColumns.Count);
+        var headerBorders = new List<Border>(detailsColumns.Count);
         var pointerDrag = new DetailsHeaderPointerDrag();
         var headerCursor = new Cursor(StandardCursorType.SizeAll);
 
@@ -794,7 +795,7 @@ public partial class BrowserItemsView : UserControl
                         return;
                     }
 
-                    pointerDrag.Begin(e.Pointer, point.Position.X, columnIndex, targetColumn.Id);
+                    pointerDrag.Begin(e.Pointer, e.GetPosition(grid).X, columnIndex, targetColumn.Id);
                     e.Pointer.Capture(grid);
                     e.Handled = true;
                 };
@@ -803,12 +804,66 @@ public partial class BrowserItemsView : UserControl
             Grid.SetColumn(cellGrid, i);
             grid.Children.Add(cellGrid);
             headerCells.Add(cellGrid);
+            headerBorders.Add(cellBorder);
         }
 
         var leadingRequiredCount = 0;
         while (leadingRequiredCount < detailsColumns.Count && detailsColumns[leadingRequiredCount].IsRequired)
         {
             leadingRequiredCount++;
+        }
+
+        var dragOverlay = new Canvas
+        {
+            IsHitTestVisible = false,
+            ZIndex = 100
+        };
+        Grid.SetColumnSpan(dragOverlay, detailsColumns.Count + 1);
+        grid.Children.Add(dragOverlay);
+
+        var dropMarker = new Border
+        {
+            Name = DetailsHeaderDropMarkerName,
+            Width = 2,
+            IsVisible = false,
+            IsHitTestVisible = false
+        };
+        dropMarker.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeAccentBrush"));
+        dragOverlay.Children.Add(dropMarker);
+
+        var ghostText = new TextBlock
+        {
+            FontWeight = FontWeight.SemiBold,
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        var dragGhost = new Border
+        {
+            Name = DetailsHeaderDragGhostName,
+            IsVisible = false,
+            IsHitTestVisible = false,
+            Opacity = 0.9,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(6, 3),
+            CornerRadius = new CornerRadius(2),
+            Child = ghostText
+        };
+        dragGhost.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
+        dragGhost.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeAccentBrush"));
+        dragOverlay.Children.Add(dragGhost);
+
+        Border? draggedBorder = null;
+
+        void ClearDragVisuals()
+        {
+            dropMarker.IsVisible = false;
+            dragGhost.IsVisible = false;
+            if (draggedBorder is not null)
+            {
+                draggedBorder.Opacity = 1;
+                draggedBorder = null;
+            }
         }
 
         grid.PointerMoved += (_, e) =>
@@ -818,11 +873,38 @@ public partial class BrowserItemsView : UserControl
                 return;
             }
 
+            var position = e.GetPosition(grid);
+
             if (!pointerDrag.IsDragging &&
-                Math.Abs(e.GetPosition(grid).X - pointerDrag.StartX) > DetailsHeaderDragThreshold)
+                Math.Abs(position.X - pointerDrag.StartX) > DetailsHeaderDragThreshold)
             {
                 pointerDrag.IsDragging = true;
                 grid.Cursor = headerCursor;
+                dropMarker.Height = Math.Max(24, grid.Bounds.Height);
+
+                var sourceIndex = pointerDrag.SourceVisibleIndex;
+                if (sourceIndex >= 0 && sourceIndex < headerBorders.Count)
+                {
+                    draggedBorder = headerBorders[sourceIndex];
+                    draggedBorder.Opacity = 0.5;
+                    ghostText.Text = detailsColumns[sourceIndex].Header;
+                    dragGhost.Width = Math.Max(24, headerCells[sourceIndex].Bounds.Width);
+                }
+            }
+
+            if (pointerDrag.IsDragging)
+            {
+                if (headerCells.Count > 0)
+                {
+                    var dropIndex = GetDetailsHeaderDropIndex(headerCells, position.X, leadingRequiredCount);
+                    Canvas.SetLeft(dropMarker, headerCells[dropIndex].Bounds.Left);
+                    Canvas.SetTop(dropMarker, 0);
+                    dropMarker.IsVisible = true;
+                }
+
+                Canvas.SetLeft(dragGhost, position.X + 12);
+                Canvas.SetTop(dragGhost, 2);
+                dragGhost.IsVisible = true;
             }
 
             e.Handled = pointerDrag.IsDragging;
@@ -836,6 +918,7 @@ public partial class BrowserItemsView : UserControl
             }
 
             grid.ClearValue(CursorProperty);
+            ClearDragVisuals();
 
             var wasDragging = pointerDrag.IsDragging;
             var sourceIndex = pointerDrag.SourceVisibleIndex;
@@ -846,7 +929,7 @@ public partial class BrowserItemsView : UserControl
             if (wasDragging)
             {
                 var targetIndex = GetDetailsHeaderDropIndex(
-                    headerCells.Select(static cell => cell.Bounds.Right).ToList(),
+                    headerCells,
                     e.GetPosition(grid).X,
                     leadingRequiredCount);
                 if (targetIndex != sourceIndex)
@@ -861,6 +944,7 @@ public partial class BrowserItemsView : UserControl
         grid.PointerCaptureLost += (_, _) =>
         {
             grid.ClearValue(CursorProperty);
+            ClearDragVisuals();
             pointerDrag.End();
         };
 
@@ -1053,6 +1137,12 @@ public partial class BrowserItemsView : UserControl
     /// <summary>Horizontal travel, in pixels, before a header press turns into a reorder drag.</summary>
     private const double DetailsHeaderDragThreshold = 4;
 
+    /// <summary>Name of the insertion marker shown while a header reorder drag is active.</summary>
+    private const string DetailsHeaderDropMarkerName = "DetailsHeaderDropMarker";
+
+    /// <summary>Name of the floating header preview shown while a header reorder drag is active.</summary>
+    private const string DetailsHeaderDragGhostName = "DetailsHeaderDragGhost";
+
     private void RaiseDetailsColumnResized(BrowserDetailsColumn column, bool widthChanged)
     {
         if (!widthChanged || string.IsNullOrEmpty(column.Id))
@@ -1075,22 +1165,22 @@ public partial class BrowserItemsView : UserControl
     /// stays pinned) and to the last column.
     /// </summary>
     private static int GetDetailsHeaderDropIndex(
-        IReadOnlyList<double> cellRightEdges,
+        IReadOnlyList<Grid> headerCells,
         double pointerX,
         int firstMovableIndex)
     {
-        if (cellRightEdges.Count == 0)
+        if (headerCells.Count == 0)
         {
             return 0;
         }
 
         var index = 0;
-        while (index < cellRightEdges.Count - 1 && pointerX >= cellRightEdges[index])
+        while (index < headerCells.Count - 1 && pointerX >= headerCells[index].Bounds.Right)
         {
             index++;
         }
 
-        return Math.Clamp(index, Math.Min(firstMovableIndex, cellRightEdges.Count - 1), cellRightEdges.Count - 1);
+        return Math.Clamp(index, Math.Min(firstMovableIndex, headerCells.Count - 1), headerCells.Count - 1);
     }
 
     private sealed class DetailsHeaderPointerDrag
