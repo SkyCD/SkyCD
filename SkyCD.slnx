@@ -26,8 +26,7 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.GCstar/SkyCD.Plugin.FileFormat.GCstar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Html/SkyCD.Plugin.FileFormat.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Json/SkyCD.Plugin.FileFormat.Json.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.CsvIdx/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.Sqlite/SkyCD.Plugin.FileFormat.Katalog.Sqlite.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog/SkyCD.Plugin.FileFormat.Katalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.LegacySkyCD/SkyCD.Plugin.FileFormat.LegacySkyCD.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Librer/SkyCD.Plugin.FileFormat.Librer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.M3u/SkyCD.Plugin.FileFormat.M3u.csproj"/>
@@ -117,8 +116,7 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.GCstar.Tests/SkyCD.Plugin.FileFormat.GCstar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Html.Tests/SkyCD.Plugin.FileFormat.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Json.Tests/SkyCD.Plugin.FileFormat.Json.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Tests/SkyCD.Plugin.FileFormat.Katalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.LegacySkyCD.Tests/SkyCD.Plugin.FileFormat.LegacySkyCD.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Librer.Tests/SkyCD.Plugin.FileFormat.Librer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.M3u.Tests/SkyCD.Plugin.FileFormat.M3u.Tests.csproj"/>

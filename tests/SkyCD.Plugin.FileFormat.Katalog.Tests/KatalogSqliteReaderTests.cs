@@ -5,13 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
+using SkyCD.Plugin.FileFormat.Katalog.Sqlite;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Exceptions;
 using Xunit;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Parsing;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests;
+namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
 public sealed class KatalogSqliteReaderTests : IDisposable
 {
@@ -20,7 +20,7 @@ public sealed class KatalogSqliteReaderTests : IDisposable
 
     public void Dispose() => fixtures.Dispose();
 
-    private async Task<KatalogCsvIdxReportDocument> ReadAsync(string path, string? sourcePath = null)
+    private async Task<KatalogReportDocument> ReadAsync(string path, string? sourcePath = null)
     {
         await using var stream = File.OpenRead(path);
         var result = await plugin.ReadAsync(new FileFormatReadRequest
@@ -31,10 +31,10 @@ public sealed class KatalogSqliteReaderTests : IDisposable
             SourcePath = sourcePath ?? path
         });
         Assert.True(result.Success, result.Error);
-        return Assert.IsType<KatalogCsvIdxReportDocument>(result.Payload);
+        return Assert.IsType<KatalogReportDocument>(result.Payload);
     }
 
-    private static Dictionary<string, object?> RowByName(KatalogCsvIdxReportDocument document, string name) =>
+    private static Dictionary<string, object?> RowByName(KatalogReportDocument document, string name) =>
         document.Rows.Single(row => string.Equals((string)row["name"]!, name, StringComparison.Ordinal));
 
     private static Dictionary<string, object?> PropertiesOf(Dictionary<string, object?> row) =>
@@ -217,7 +217,7 @@ public sealed class KatalogSqliteReaderTests : IDisposable
                 SourcePath = path
             });
             Assert.True(result.Success, result.Error);
-            var document = Assert.IsType<KatalogCsvIdxReportDocument>(result.Payload);
+            var document = Assert.IsType<KatalogReportDocument>(result.Payload);
             Assert.Equal(3, document.Summary.TotalDevices);
         }
         finally

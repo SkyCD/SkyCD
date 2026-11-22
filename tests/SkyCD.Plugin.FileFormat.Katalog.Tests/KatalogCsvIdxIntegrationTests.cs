@@ -16,11 +16,11 @@ using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests;
+namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
-public sealed class KatalogIntegrationTests
+public sealed class KatalogCsvIdxIntegrationTests
 {
     [Fact]
     public async Task ReadAsync_StandardCollection_BuildsDocumentAndSummary()
@@ -35,7 +35,7 @@ public sealed class KatalogIntegrationTests
         });
 
         Assert.True(result.Success, result.Error);
-        var reportDoc = Assert.IsType<KatalogCsvIdxReportDocument>(result.Payload);
+        var reportDoc = Assert.IsType<KatalogReportDocument>(result.Payload);
         Assert.NotNull(reportDoc.Summary);
         Assert.Equal("3.0", reportDoc.Summary.AppVersion);
         Assert.True(reportDoc.Summary.TotalCatalogs >= 2);

@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+namespace SkyCD.Plugin.FileFormat.Katalog.Models;
 
 /// <summary>
 /// A device or virtual group record parsed from device.csv.

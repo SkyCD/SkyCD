@@ -4,9 +4,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Exceptions;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Import;
+namespace SkyCD.Plugin.FileFormat.Katalog.Import;
 
 /// <summary>
 /// Reconstructs SkyCD catalog document rows from parsed Katalog data models:
@@ -14,7 +14,7 @@ namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Import;
 /// </summary>
 public static class KatalogHierarchyBuilder
 {
-    public static KatalogCsvIdxReportDocument Build(
+    public static KatalogReportDocument Build(
         string collectionRoot,
         Dictionary<string, string> parameters,
         List<KatalogDeviceRecord> devices,
@@ -229,7 +229,7 @@ public static class KatalogHierarchyBuilder
             }
         }
 
-        var summary = new KatalogCsvIdxImportSummary(
+        var summary = new KatalogImportSummary(
             AppVersion: appVersion,
             TotalDevices: devices.Count,
             TotalCatalogs: catalogs.Count,
@@ -241,7 +241,7 @@ public static class KatalogHierarchyBuilder
             Diagnostics: diagnostics,
             UnsupportedFeatures: unsupportedFeatures);
 
-        return new KatalogCsvIdxReportDocument(nodesById.Values.ToList(), summary);
+        return new KatalogReportDocument(nodesById.Values.ToList(), summary);
     }
 
     private static string EnsureFolderHierarchy(

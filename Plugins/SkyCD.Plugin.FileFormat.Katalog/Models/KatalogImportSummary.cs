@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+namespace SkyCD.Plugin.FileFormat.Katalog.Models;
 
 /// <summary>
 /// Summary report of the Katalog Memory-mode CSV/IDX collection folder import.
 /// </summary>
-public sealed record KatalogCsvIdxImportSummary(
+public sealed record KatalogImportSummary(
     string AppVersion,
     int TotalDevices,
     int TotalCatalogs,

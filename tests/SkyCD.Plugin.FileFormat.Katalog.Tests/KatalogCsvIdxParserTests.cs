@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using Xunit;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Parsing;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests;
+namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
-public sealed class KatalogParserTests
+public sealed class KatalogCsvIdxParserTests
 {
     [Fact]
     public async Task ParseParametersAsync_ReadsVersion()

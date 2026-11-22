@@ -5,7 +5,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Parsing;
 

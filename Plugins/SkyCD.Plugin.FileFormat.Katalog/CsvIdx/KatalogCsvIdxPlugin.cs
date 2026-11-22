@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Exceptions;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Import;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Import;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx;

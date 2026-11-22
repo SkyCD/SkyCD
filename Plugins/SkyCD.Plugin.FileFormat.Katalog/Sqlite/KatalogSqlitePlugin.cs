@@ -4,9 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Import;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Import;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.Sqlite;
@@ -105,7 +104,7 @@ public sealed class KatalogSqlitePlugin : IFileFormatPluginCapability, IContentA
             return new FileFormatReadResult
             {
                 Success = true,
-                Payload = new KatalogCsvIdxReportDocument(document.Rows, summary)
+                Payload = new KatalogReportDocument(document.Rows, summary)
             };
         }
         catch (OperationCanceledException)

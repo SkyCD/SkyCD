@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Parsing;
+namespace SkyCD.Plugin.FileFormat.Katalog.Parsing;
 
 /// <summary>
 /// Helper methods for unescaping Katalog text fields.

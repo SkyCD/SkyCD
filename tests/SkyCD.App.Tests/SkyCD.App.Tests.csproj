@@ -32,7 +32,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Html\SkyCD.Plugin.FileFormat.Html.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Markdown\SkyCD.Plugin.FileFormat.Markdown.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.WinCatalog\SkyCD.Plugin.FileFormat.WinCatalog.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Katalog.CsvIdx\SkyCD.Plugin.FileFormat.Katalog.CsvIdx.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Katalog\SkyCD.Plugin.FileFormat.Katalog.csproj" />
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj" />
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj" />
     </ItemGroup>
