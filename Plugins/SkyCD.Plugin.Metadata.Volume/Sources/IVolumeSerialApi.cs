@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Volume.VolumeSerial.Sources;
+namespace SkyCD.Plugin.Metadata.Volume.Sources;
 
 /// <summary>Read-only OS volume identity seam; exists so tests can fake every platform outcome.</summary>
 internal interface IVolumeSerialApi

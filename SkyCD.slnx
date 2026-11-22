@@ -95,13 +95,13 @@
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Tar/SkyCD.Plugin.Metadata.Tar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Text/SkyCD.Plugin.Metadata.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Video/SkyCD.Plugin.Metadata.Video.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Metadata.Volume/SkyCD.Plugin.Metadata.Volume.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.WordPerfect/SkyCD.Plugin.Metadata.WordPerfect.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Works/SkyCD.Plugin.Metadata.Works.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Xmp/SkyCD.Plugin.Metadata.Xmp.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Config/SkyCD.Plugin.Sample.Config.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Volume.VolumeSerial/SkyCD.Plugin.Volume.VolumeSerial.csproj"/>
     </Folder>
     <Folder Name="/src/">
         <Project Path="src/SkyCD.App/SkyCD.App.csproj"/>
@@ -216,6 +216,7 @@
         <Project Path="tests/SkyCD.Plugin.Metadata.Tar.Tests/SkyCD.Plugin.Metadata.Tar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Text.Tests/SkyCD.Plugin.Metadata.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Video.Tests/SkyCD.Plugin.Metadata.Video.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Metadata.Volume.Tests/SkyCD.Plugin.Metadata.Volume.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/SkyCD.Plugin.Metadata.WordPerfect.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Works.Tests/SkyCD.Plugin.Metadata.Works.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Xmp.Tests/SkyCD.Plugin.Metadata.Xmp.Tests.csproj"/>
@@ -223,7 +224,6 @@
         <Project Path="tests/SkyCD.Plugin.Sample.Config.Tests/SkyCD.Plugin.Sample.Config.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Menu.Tests/SkyCD.Plugin.Sample.Menu.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Modal.Tests/SkyCD.Plugin.Sample.Modal.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.Volume.VolumeSerial.Tests/SkyCD.Plugin.Volume.VolumeSerial.Tests.csproj"/>
         <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj"/>
     </Folder>
     <Folder Name="/tests/slices/">

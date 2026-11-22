@@ -19,8 +19,8 @@ Format roles — what the plugin does with files:
 
 | Kind | Meaning |
 | --- | --- |
-| `FileFormat` | Implements `IFileFormatPluginCapability`, including content-aware, folder-aware and index work-item companions that belong to the same reader. |
-| `Metadata` | Produces metadata for catalog entries: `IMediaMetadataCapability`, `ILocalMediaMetadataCapability`, `IAudioCdMetadataCapability`, and archive/container entry listings produced as index work items (`IIndexWorkItemProvider`) that become subentries of generated catalog entries. |
+| `FileFormat` | A format the user opens through File > Open or writes through File > Save As, implemented as `IFileFormatPluginCapability` (read or write support is enough), including content-aware, folder-aware and index work-item companions that belong to the same reader. |
+| `Metadata` | Data collected by inspecting files while a path is scanned: `IMediaMetadataCapability`, `ILocalMediaMetadataCapability`, `IAudioCdMetadataCapability`, and entry listings contributed through `IIndexWorkItemProvider` (archives, disk images, containers) that become subentries of generated catalog entries. |
 | `Preview` | Implements `IMediaPreviewCapability` as the assembly's own purpose. |
 | `Config` | Implements `IPluginConfigurationCapability` as the assembly's own purpose. |
 
@@ -47,9 +47,12 @@ fixed precedence so the decision is not case-by-case:
 FileFormat > Metadata > Preview > Config > Feature
 ```
 
-A feature plugin that also contributes a configuration surface stays `Feature`. An archive plugin
-that reads its format and lists its entries stays `FileFormat`; an assembly whose only job is the
-entry listing is `Metadata`.
+A feature plugin that also contributes a configuration surface stays `Feature`. Archive and
+disk-image indexers are `Metadata`: their output is the entry listing collected while scanning a
+path, not a document the user opens or saves. They are still registered as read-only `FileFormat`
+plugins today and are being corrected in #867 and #868; name them `Metadata` once those land.
+`SkyCD.Plugin.FileFormat.Tar` stays the container plugin and `SkyCD.Plugin.Metadata.Tar` stays the
+entry metadata provider.
 
 ## Casing
 
@@ -75,15 +78,15 @@ is `Feature.WebBrowser`.
 
 | Old | New | Why |
 | --- | --- | --- |
-| `SkyCD.Plugin.Zip` | `SkyCD.Plugin.FileFormat.Zip` | File format; entries listed by the same assembly. |
-| `SkyCD.Plugin.Iso` | `SkyCD.Plugin.FileFormat.Iso` | File format. |
+| `SkyCD.Plugin.Zip` | `SkyCD.Plugin.FileFormat.Zip` | Read-only archive reader; becomes `Metadata.Zip` with #867. |
+| `SkyCD.Plugin.Iso` | `SkyCD.Plugin.FileFormat.Iso` | Disk-image reader; becomes `Metadata.Iso` with #868. |
 | `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog.Xml` | File format, vendor variant. |
 | `SkyCD.Plugin.Legacy.Scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | File format, legacy generation. |
 | `SkyCD.Plugin.EBook` | `SkyCD.Plugin.Metadata.EBook` | Metadata primary; preview and config secondary. |
 | `SkyCD.Plugin.AudioCd` | `SkyCD.Plugin.Metadata.AudioCD` | Audio CD metadata primary; config secondary. |
 | `SkyCD.Plugin.Markdown.Metadata` | `SkyCD.Plugin.Metadata.Markdown` | Metadata, kind first instead of aspect suffix. |
 | `SkyCD.Plugin.Tar.Metadata` | `SkyCD.Plugin.Metadata.Tar` | Archive entry listing is metadata for generated entries' subitems. |
-| `SkyCD.Plugin.VolumeSerial` | `SkyCD.Plugin.Volume.VolumeSerial` | Volume metadata. |
+| `SkyCD.Plugin.VolumeSerial` | `SkyCD.Plugin.Metadata.Volume` | Volume metadata. |
 | `SkyCD.Plugin.MotionDetector` | `SkyCD.Plugin.Feature.MotionDetector` | Capture/import feature reached from the Tools menu. |
 | `SkyCD.Plugin.WebBrowser` | `SkyCD.Plugin.Feature.WebBrowser` | User-facing tool window. |
 | `SkyCD.Plugin.AiDescription` | `SkyCD.Plugin.Ai.Description` | Description implementation. |

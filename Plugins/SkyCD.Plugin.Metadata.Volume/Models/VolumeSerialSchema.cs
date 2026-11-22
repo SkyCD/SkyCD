@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 
-namespace SkyCD.Plugin.Volume.VolumeSerial.Models;
+namespace SkyCD.Plugin.Metadata.Volume.Models;
 
 /// <summary>
 /// Stable schema identities and field keys published by the volume serial plugin. The value is the

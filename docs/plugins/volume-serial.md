@@ -2,8 +2,8 @@
 
 Implements #642 on the volume-aware capability contracts (`src/SkyCD.Plugin.Abstractions/Capabilities/Volume/`).
 
-Assembly: `Plugins/SkyCD.Plugin.Volume.VolumeSerial/` → plugin id `SkyCD.Plugin.Volume.VolumeSerial`.
-Tests: `tests/SkyCD.Plugin.Volume.VolumeSerial.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Volume/` → plugin id `SkyCD.Plugin.VolumeSerial`.
+Tests: `tests/SkyCD.Plugin.Metadata.Volume.Tests/`.
 
 ## What it provides
 

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
-using SkyCD.Plugin.Volume.VolumeSerial.Models;
-using SkyCD.Plugin.Volume.VolumeSerial.Sources;
+using SkyCD.Plugin.Metadata.Volume.Models;
+using SkyCD.Plugin.Metadata.Volume.Sources;
 
-namespace SkyCD.Plugin.Volume.VolumeSerial;
+namespace SkyCD.Plugin.Metadata.Volume;
 
 /// <summary>
 /// Captures the filesystem volume serial of a disk while the host captures media info. Absence is

@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 
-namespace SkyCD.Plugin.Volume.VolumeSerial.Sources;
+namespace SkyCD.Plugin.Metadata.Volume.Sources;
 
 /// <summary>
 /// Filesystem volume serial via <c>GetVolumeInformationW</c>: ordinary read-only OS access that needs

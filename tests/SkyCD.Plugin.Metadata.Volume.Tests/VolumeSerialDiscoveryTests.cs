@@ -13,7 +13,7 @@ using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
 
-namespace SkyCD.Plugin.Volume.VolumeSerial.Tests;
+namespace SkyCD.Plugin.Metadata.Volume.Tests;
 
 public sealed class VolumeSerialDiscoveryTests
 {
@@ -104,7 +104,7 @@ public sealed class VolumeSerialDiscoveryTests
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Volume.VolumeSerial");
+            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Volume");
             if (Directory.Exists(candidate))
             {
                 return candidate;

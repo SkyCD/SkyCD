@@ -3,10 +3,10 @@ using System.Threading;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using Xunit;
-using SkyCD.Plugin.Volume.VolumeSerial.Models;
-using SkyCD.Plugin.Volume.VolumeSerial.Sources;
+using SkyCD.Plugin.Metadata.Volume.Models;
+using SkyCD.Plugin.Metadata.Volume.Sources;
 
-namespace SkyCD.Plugin.Volume.VolumeSerial.Tests;
+namespace SkyCD.Plugin.Metadata.Volume.Tests;
 
 public sealed class VolumeSerialPluginTests
 {

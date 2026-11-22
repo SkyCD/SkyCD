@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Volume.VolumeSerial.Sources;
+namespace SkyCD.Plugin.Metadata.Volume.Sources;
 
 /// <summary>Platform stub for systems that expose no volume serial API.</summary>
 internal sealed class UnsupportedVolumeSerialApi : IVolumeSerialApi

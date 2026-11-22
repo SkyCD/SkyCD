@@ -5,9 +5,9 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.Volume;
 using Xunit;
-using SkyCD.Plugin.Volume.VolumeSerial.Models;
+using SkyCD.Plugin.Metadata.Volume.Models;
 
-namespace SkyCD.Plugin.Volume.VolumeSerial.Tests;
+namespace SkyCD.Plugin.Metadata.Volume.Tests;
 
 /// <summary>
 /// Host-level <see cref="VolumeExtensionManager"/> behavior and schema edge cases not covered by the
