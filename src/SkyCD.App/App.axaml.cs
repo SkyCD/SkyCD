@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using DryIoc;
+using Microsoft.Extensions.Logging;
 using SkyCD.App.Views;
 using SkyCD.App.Marketplace;
 using SkyCD.App.Mcp;
@@ -13,6 +16,7 @@ using SkyCD.App.PluginHost;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
+using SkyCD.Core.BackgroundServices;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
@@ -40,6 +44,10 @@ public partial class App : Avalonia.Application
 {
     private IContainer? appServiceProvider;
     private McpServerHost? mcpServerHost;
+    private AppBackgroundServiceHost? backgroundServiceHost;
+    private IClassicDesktopStyleApplicationLifetime? desktopLifetime;
+    private Task backgroundServicesStarted = Task.CompletedTask;
+    private int shutdownDrainState;
 
     public override void Initialize()
     {
@@ -63,7 +71,8 @@ public partial class App : Avalonia.Application
                 InitializeDefaultScanExclusionRules(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultAiScanExclusions(appServiceProvider.Resolve<RepositoryManager>());
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
-                ApplyMcpSettings();
+                mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort);
+                backgroundServiceHost = appServiceProvider.Resolve<AppBackgroundServiceHost>();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
                 mainWindowViewModel.AttachOpenCatalogState(appServiceProvider.Resolve<OpenCatalogState>());
                 var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
@@ -79,12 +88,17 @@ public partial class App : Avalonia.Application
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
 
+                desktopLifetime = desktop;
+                desktop.ShutdownRequested += OnShutdownRequested;
                 desktop.Exit += (_, _) =>
                 {
+                    // Last-resort cleanup for shutdown paths that never raised ShutdownRequested.
                     mcpServerHost?.Dispose();
                     appServiceProvider.Dispose();
                 };
                 desktop.MainWindow = mainWindow;
+                backgroundServicesStarted = StartBackgroundServicesAsync(backgroundServiceHost,
+                    appServiceProvider.Resolve<ILogger<AppBackgroundServiceHost>>());
             }
             catch (Exception exception) when (DatabaseRecoveryWindow.IsDatabaseFailure(exception))
             {
@@ -96,6 +110,50 @@ public partial class App : Avalonia.Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task StartBackgroundServicesAsync(
+        AppBackgroundServiceHost host, ILogger<AppBackgroundServiceHost> logger)
+    {
+        try
+        {
+            await host.StartAsync(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to start background services.");
+        }
+    }
+
+    private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    {
+        if (Volatile.Read(ref shutdownDrainState) == 2)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (Interlocked.CompareExchange(ref shutdownDrainState, 1, 0) != 0)
+        {
+            return;
+        }
+
+        if (backgroundServiceHost is { } host)
+        {
+            try
+            {
+                await host.StopAsync(CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                // The host already logs per-service failures; never block exit on drain errors.
+                appServiceProvider?.Resolve<ILoggerFactory>().CreateLogger(typeof(App).FullName!)
+                    .LogError(exception, "Failed to drain background services.");
+            }
+        }
+
+        Volatile.Write(ref shutdownDrainState, 2);
+        desktopLifetime?.Shutdown();
     }
 
     private void InitializePlugins(RepositoryManager repositoryManager)
@@ -189,6 +247,10 @@ public partial class App : Avalonia.Application
         {
             registrator.Register<IMediaDriveProvider, SystemMediaDriveProvider>(Reuse.Singleton);
             registrator.Register<McpServerHost>(Reuse.Singleton);
+            registrator.RegisterDelegate<AppBackgroundServiceHost>(static resolver =>
+                new AppBackgroundServiceHost(
+                    [resolver.Resolve<McpServerHost>()],
+                    resolver.Resolve<ILogger<AppBackgroundServiceHost>>()), Reuse.Singleton);
             registrator.Register<PluginTranslationRegistry>(Reuse.Singleton);
             registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<OpenCatalogState>(Reuse.Singleton);
@@ -199,7 +261,12 @@ public partial class App : Avalonia.Application
         });
     }
 
-    public void ApplyMcpSettings()
+    /// <summary>
+    /// Completes when the initial background-service start pass has finished.
+    /// </summary>
+    public Task BackgroundServicesStarted => backgroundServicesStarted;
+
+    public async Task ApplyMcpSettingsAsync(CancellationToken cancellationToken = default)
     {
         if (appServiceProvider is null || mcpServerHost is null)
         {
@@ -209,7 +276,8 @@ public partial class App : Avalonia.Application
         var repositoryManager = appServiceProvider.Resolve<RepositoryManager>();
         var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         var options = appOptionsRepository.GetOrCreateAppOptions();
-        mcpServerHost.Configure(options.IsMcpServerEnabled, options.McpPort);
+        mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort);
+        await mcpServerHost.ApplyConfigurationAsync(cancellationToken);
     }
 
     public (bool IsRunning, string? BaseUrl) GetMcpStatus()
