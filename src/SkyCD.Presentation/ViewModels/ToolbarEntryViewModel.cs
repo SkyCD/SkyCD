@@ -9,7 +9,7 @@ public sealed class ToolbarEntryViewModel
     private ToolbarEntryViewModel(ToolbarCommandDescriptor? descriptor, string separatorLabel)
     {
         Descriptor = descriptor;
-        Label = descriptor?.Label ?? separatorLabel;
+        Label = descriptor is null ? separatorLabel : MnemonicText.Strip(descriptor.Label);
     }
 
     public ToolbarCommandDescriptor? Descriptor { get; }

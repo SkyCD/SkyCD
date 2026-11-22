@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
@@ -254,5 +255,80 @@ public class ToolbarCustomizationTests
         var find = vm.ToolbarCommands().Single(command => command.Id == ToolbarCommandIds.Find);
 
         Assert.Equal(LocalizationService.Current.Get(TextKeys.Find), find.Label);
+    }
+
+    [Fact]
+    public void ToolbarCommands_KeepMnemonicMarkersInDescriptorLabels()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+
+        var newCatalog = vm.ToolbarCommands().Single(command => command.Id == ToolbarCommandIds.NewCatalog);
+
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.New), newCatalog.Label);
+        Assert.Contains("_", newCatalog.Label);
+    }
+
+    [Fact]
+    public void CustomizationLists_StripMnemonicMarkersFromLabels()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        var descriptor = vm.ToolbarCommands().Single(command => command.Id == ToolbarCommandIds.NewCatalog);
+        var dialog = new ToolbarCustomizationViewModel(vm.ToolbarCommands(), ToolbarLayout.CreateDefault());
+
+        var choice = dialog.AvailableCommands.Single(item => item.Descriptor.Id == ToolbarCommandIds.NewCatalog);
+        var entry = dialog.SelectedItems.Single(item => item.CommandId == ToolbarCommandIds.NewCatalog);
+
+        Assert.Equal(MnemonicText.Strip(descriptor.Label), choice.Label);
+        Assert.Equal(MnemonicText.Strip(descriptor.Label), entry.Label);
+        Assert.DoesNotContain("_", choice.Label);
+        Assert.DoesNotContain("_", entry.Label);
+    }
+
+    [Fact]
+    public void CustomizationLists_StripBothMnemonicMarkers()
+    {
+        var dialog = new ToolbarCustomizationViewModel(
+            [CreateDescriptor("&Save _As...")],
+            [ToolbarItemDocument.Command("test-command")]);
+
+        Assert.Equal("&Save _As...", Assert.Single(dialog.AvailableCommands).Descriptor.Label);
+        Assert.Equal("Save As...", Assert.Single(dialog.AvailableCommands).Label);
+        Assert.Equal("Save As...", Assert.Single(dialog.SelectedItems).Label);
+    }
+
+    [Fact]
+    public void CustomizationLists_KeepSeparatorLabelUnchanged()
+    {
+        var dialog = new ToolbarCustomizationViewModel(
+            [CreateDescriptor("_New")],
+            [ToolbarItemDocument.Separator()]);
+
+        var separator = Assert.Single(dialog.SelectedItems);
+
+        Assert.True(separator.IsSeparator);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.Separator), separator.Label);
+    }
+
+    private static ToolbarCommandDescriptor CreateDescriptor(string label) => new()
+    {
+        Id = "test-command",
+        Category = "File",
+        Label = label,
+        Command = new TestCommand()
+    };
+
+    private sealed class TestCommand : System.Windows.Input.ICommand
+    {
+        public event EventHandler? CanExecuteChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public bool CanExecute(object? parameter) => true;
+
+        public void Execute(object? parameter)
+        {
+        }
     }
 }

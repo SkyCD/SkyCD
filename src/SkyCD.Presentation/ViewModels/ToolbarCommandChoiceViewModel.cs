@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -14,7 +15,7 @@ public sealed partial class ToolbarCommandChoiceViewModel : ObservableObject
 
     public string Category => Descriptor.Category;
 
-    public string Label => Descriptor.Label;
+    public string Label => MnemonicText.Strip(Descriptor.Label);
 
     public string? IconPath => Descriptor.IconPath;
 
