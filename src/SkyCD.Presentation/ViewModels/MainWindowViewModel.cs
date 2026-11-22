@@ -83,9 +83,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void ToggleBackgroundMediaSync() => IsBackgroundMediaSyncEnabled = !IsBackgroundMediaSyncEnabled;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
-    private Database? temporaryCatalogDatabase;
-    private string? newCatalogWorkingCopyDirectory;
     private bool previewArtifactReclaimPending;
+
     private readonly CatalogDocumentRepository? catalogRepository;
     private readonly CatalogUndoManager? undoManager;
     private readonly CatalogTagService? tagService;
@@ -678,83 +677,49 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             mediaCacheStore.Dispose();
         }
 
-        if (temporaryCatalogDatabase is { } database)
-        {
-            using (database) database.Delete();
-        }
-
-        if (newCatalogWorkingCopyDirectory is { } workingDirectory)
-        {
-            TryDeleteDirectory(workingDirectory);
-        }
-
         GC.SuppressFinalize(this);
     }
 
     /// <summary>
-    /// Opens an empty catalog backed by a scratch database. The working copy lives in its own directory under
-    /// the supplied root so that a failure to provision it is reported to the caller instead of crashing, and so
-    /// that the shared temp directory cannot make an otherwise local edit operation fail.
+    /// Starts an empty catalog on the application's working database. A new catalog provisions no database of
+    /// its own: the working database is already open, and its content is replaced the same way opening a catalog
+    /// replaces it, so File -> New does not depend on creating a new database file.
     /// </summary>
-    public static MainWindowViewModel CreateNewCatalog(string? workingCopiesDirectory = null)
+    public static MainWindowViewModel CreateNewCatalog(RepositoryManager repositoryManager)
     {
-        var root = string.IsNullOrWhiteSpace(workingCopiesDirectory)
-            ? ResolveDefaultWorkingCopiesDirectory()
-            : workingCopiesDirectory;
-        var workingCopyDirectory = Path.Combine(root, Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(workingCopyDirectory);
-
-        Database? database = null;
-        try
+        ArgumentNullException.ThrowIfNull(repositoryManager);
+        if (repositoryManager.For<CatalogDocument>() is not CatalogDocumentRepository repository)
         {
-            database = new Database("catalog", new DatabaseConfiguration { Directory = workingCopyDirectory });
-            var collection = database.GetDefaultCollection();
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            return new MainWindowViewModel(repository, new PropertyValueLocalizer(), CreateEmptyMenuExtensionManager(),
-                shouldSeedDefaultCatalog: false, new CatalogUndoManager(repository))
-            {
-                temporaryCatalogDatabase = database,
-                newCatalogWorkingCopyDirectory = workingCopyDirectory
-            };
+            throw new InvalidOperationException("Catalog repository must be CatalogDocumentRepository.");
         }
-        catch
-        {
-            if (database is not null)
-            {
-                using (database) database.Delete();
-            }
 
-            TryDeleteDirectory(workingCopyDirectory);
-            throw;
-        }
+        ClearCatalogDocuments(repository);
+        var catalog = new MainWindowViewModel(repository, new PropertyValueLocalizer(),
+            CreateEmptyMenuExtensionManager(), shouldSeedDefaultCatalog: false, new CatalogUndoManager(repository));
+        catalog.CompleteNewCatalog();
+        return catalog;
     }
 
-    private static string ResolveDefaultWorkingCopiesDirectory()
+    private static void ClearCatalogDocuments(CatalogDocumentRepository repository)
     {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return string.IsNullOrWhiteSpace(localAppData)
-            ? Path.Combine(Path.GetTempPath(), "SkyCD", "working-copies")
-            : Path.Combine(localAppData, "SkyCD", "working-copies");
-    }
+        var entries = repository.GetAll();
+        if (entries.Count == 0)
+        {
+            return;
+        }
 
-    private static void TryDeleteDirectory(string directory)
-    {
-        try
+        var collection = repository.Collection;
+        collection.Database.InBatch(() =>
         {
-            if (Directory.Exists(directory))
+            foreach (var entry in entries)
             {
-                Directory.Delete(directory, recursive: true);
+                using var document = collection.GetDocument(entry.Id);
+                if (document is not null)
+                {
+                    collection.Delete(document);
+                }
             }
-        }
-        catch (IOException)
-        {
-            // A working copy that cannot be removed (for example while a handle is still open) must not
-            // turn disposal or a failed File -> New into a second crash.
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        });
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
