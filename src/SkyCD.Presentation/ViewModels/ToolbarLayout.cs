@@ -33,7 +33,6 @@ public static class ToolbarCommandIds
     public const string Tags = "tags";
     public const string Collections = "collections";
     public const string Locations = "locations";
-    public const string AiDescriptions = "ai-descriptions";
 
     /// <summary>Every id a persisted layout may reference.</summary>
     public static IReadOnlyList<string> All { get; } =
@@ -60,8 +59,7 @@ public static class ToolbarCommandIds
         Options,
         Tags,
         Collections,
-        Locations,
-        AiDescriptions
+        Locations
     ];
 }
 

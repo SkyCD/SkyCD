@@ -156,7 +156,6 @@ public partial class MainWindow : Window
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
             subscribedViewModel.CollectionsRequested -= OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
-            subscribedViewModel.AiDescriptionBatchRequested -= OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
             subscribedViewModel.TagsRequested -= OnTagsRequested;
@@ -183,7 +182,6 @@ public partial class MainWindow : Window
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
             subscribedViewModel.CollectionsRequested += OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
-            subscribedViewModel.AiDescriptionBatchRequested += OnAiDescriptionBatchRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
             subscribedViewModel.TagsRequested += OnTagsRequested;
@@ -624,11 +622,6 @@ public partial class MainWindow : Window
     private async void OnAdvancedFindRequested(object? sender, AdvancedFindDialogRequestedEventArgs e)
     {
         await new AdvancedCatalogFindWindow { DataContext = e.Dialog }.ShowDialog<bool?>(this);
-    }
-
-    private async void OnAiDescriptionBatchRequested(object? sender, AiDescriptionBatchDialogRequestedEventArgs e)
-    {
-        await new AiDescriptionBatchWindow { DataContext = e.Dialog }.ShowDialog(this);
     }
 
     private IInputElement? GetFocusedElement()

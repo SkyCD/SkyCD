@@ -150,7 +150,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? FindCatalogRequested;
     public event EventHandler<CollectionsDialogRequestedEventArgs>? CollectionsRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
-    public event EventHandler<AiDescriptionBatchDialogRequestedEventArgs>? AiDescriptionBatchRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler? DetailsColumnsChanged;
     public event EventHandler<PropertiesDialogRequestedEventArgs>? PropertiesRequested;
@@ -208,49 +207,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    private bool CanGenerateDescriptions()
-    {
-        if (aiDescriptionService is null)
-        {
-            return false;
-        }
-
-        var policy = aiScanPolicyFactory?.Invoke() ?? AiScanPolicy.Unrestricted;
-        return GetSelectedBrowserItems().Any(entry => IsDescriptionTarget(entry, policy));
-    }
-
-    private static bool IsDescriptionTarget(CatalogDocument entry, AiScanPolicy policy) =>
-        entry.Type != CatalogDocumentType.Folder && policy.ShouldScan(entry);
-
-    /// <summary>
-    /// Opens the explicit batch dialog for the current selection. Nothing is generated until the user
-    /// starts the pass, and unchanged entries are skipped unless regeneration is requested.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(CanGenerateDescriptions))]
-    private void GenerateAiDescriptions()
-    {
-        if (aiDescriptionService is null)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionUnavailableStatus);
-            return;
-        }
-
-        var policy = aiScanPolicyFactory?.Invoke() ?? AiScanPolicy.Unrestricted;
-        var entries = GetSelectedBrowserItems().Where(entry => IsDescriptionTarget(entry, policy)).ToArray();
-        if (entries.Length == 0)
-        {
-            StatusText = LocalizationService.Current.Get(TextKeys.AiDescriptionBatchNoTargets);
-            return;
-        }
-
-        var dialog = new AiDescriptionBatchDialogViewModel(aiDescriptionService, entries, () =>
-        {
-            IsDirtyDocument = true;
-            RefreshBrowserItemsForSelection();
-        });
-        AiDescriptionBatchRequested?.Invoke(this, new AiDescriptionBatchDialogRequestedEventArgs { Dialog = dialog });
-    }
-
     public void RefreshPluginMenuServices(MenuExtensionManager updatedManager)
     {
         menuExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
@@ -275,7 +231,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RebuildDescriptionService();
         RebuildMenuItems();
         OnPropertyChanged(nameof(ToolsMenuItems));
-        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         RefreshTopMenuState();
     }
 
@@ -3544,7 +3499,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         DeleteItemCommand.NotifyCanExecuteChanged();
         RenameItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
         CollapseSelectionCommand.NotifyCanExecuteChanged();
         NavigateToFolderCommand.NotifyCanExecuteChanged();
@@ -3619,7 +3573,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
-        GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -3661,7 +3614,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(IsCutEnabled));
             DeleteItemCommand.NotifyCanExecuteChanged();
             OpenPropertiesCommand.NotifyCanExecuteChanged();
-            GenerateAiDescriptionsCommand.NotifyCanExecuteChanged();
             CopyCommand.NotifyCanExecuteChanged();
             CutCommand.NotifyCanExecuteChanged();
             ExpandSelectionCommand.NotifyCanExecuteChanged();
@@ -3891,12 +3843,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Command = ToggleBackgroundMediaSyncCommand,
                 ToggleType = MenuItemToggleType.CheckBox,
                 IsChecked = IsBackgroundMediaSyncEnabled
-            },
-            new MainMenuItemViewModel
-            {
-                Key = "ai_description_batch",
-                Header = LocalizationService.Current.Get(TextKeys.GenerateAiDescriptions),
-                Command = GenerateAiDescriptionsCommand
             }
         };
 
@@ -4066,7 +4012,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
         SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
-        SetMenuEnabled(byKey, "ai_description_batch", CanGenerateDescriptions());
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 

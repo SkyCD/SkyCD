@@ -237,8 +237,6 @@ public static class TextKeys
     public const string CollectionCleaned = "core.text.CollectionCleaned";
     public const string CollectionAddedTo = "core.text.CollectionAddedTo";
     public const string CollectionRemovedFrom = "core.text.CollectionRemovedFrom";
-    public const string GenerateAiDescriptions = "core.text.GenerateAiDescriptions";
-    public const string AiDescriptionUnavailableStatus = "core.text.AiDescriptionUnavailableStatus";
     public const string AiDescriptionBatchNoTargets = "core.text.AiDescriptionBatchNoTargets";
     public const string AiDescriptionProvider = "core.text.AiDescriptionProvider";
     public const string AiDescriptionDisabled = "core.text.AiDescriptionDisabled";
