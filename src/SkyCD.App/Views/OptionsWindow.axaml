@@ -147,11 +147,24 @@
                              Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                     <ListBox Grid.Row="1"
-                             ItemsSource="{Binding FilteredSettingCategories}"
-                             SelectedItem="{Binding SelectedSettingCategory}">
+                             x:Name="SettingsCategoriesList"
+                             ItemsSource="{Binding SidebarEntries}"
+                             SelectedItem="{Binding SelectedSidebarEntry}">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Focusable" Value="{ReflectionBinding !IsGroupHeader}" />
+                            </Style>
+                            <Style Selector="ListBoxItem TextBlock.sidebarGroup">
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="Opacity" Value="0.7" />
+                            </Style>
+                        </ListBox.Styles>
                         <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:OptionsSettingCategory">
-                                <TextBlock Text="{Binding Title}" Margin="8,5" TextWrapping="Wrap" />
+                            <DataTemplate x:DataType="vm:OptionsSidebarEntry">
+                                <TextBlock Text="{Binding Title}"
+                                           Margin="{Binding RowMargin}"
+                                           Classes.sidebarGroup="{Binding IsGroupHeader}"
+                                           TextWrapping="Wrap" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -173,7 +186,7 @@
                     <TextBlock FontSize="16" FontWeight="SemiBold">
                         <Run Text="{i18n:Translate {x:Static i18n:UiKeys.Tools}}" />
                         <Run Text="  >  " />
-                        <Run Text="{Binding CurrentCategoryName}" />
+                        <Run Text="{Binding CurrentCategoryPath}" />
                     </TextBlock>
 
                     <StackPanel Grid.Row="1"

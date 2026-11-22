@@ -6,7 +6,9 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -124,6 +126,109 @@ public sealed class PluginOptionsTests : IDisposable
             Assert.Equal(-1, category.BuiltInIndex);
             Assert.NotNull(category.PluginPage);
         });
+    }
+
+    [AvaloniaFact]
+    public void GroupedPluginPage_RendersSingleParent_AndLeavesOtherPagesTopLevel()
+    {
+        OptionsTestCapability.Group = "Metadata";
+        OptionsTestCapability.Title = "Audio CD";
+        using var vm = CreateViewModel();
+        var category = TestCategory(vm);
+        Assert.Equal("Metadata", category.Group);
+        Assert.Equal("Audio CD", category.Title);
+        Assert.Contains(vm.FilteredSettingCategories, filtered => filtered.Id == category.Id);
+
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Equal("Metadata", header.Title);
+        var headerIndex = vm.SidebarEntries.IndexOf(header);
+        var children = vm.SidebarEntries.Skip(headerIndex + 1).TakeWhile(entry => !entry.IsGroupHeader).ToList();
+        var child = Assert.Single(children);
+        Assert.Equal(category.Id, child.Category?.Id);
+        Assert.Equal(1, child.Depth);
+        Assert.Contains(vm.SidebarEntries, entry =>
+            entry.Depth == 0 && entry.Category?.PluginPage?.Registration.PluginId == "SkyCD.Plugin.Sample.Configuration");
+    }
+
+    [AvaloniaFact]
+    public void SelectingGroupHeader_SelectsFirstChild_AndHeaderShowsFullPath()
+    {
+        OptionsTestCapability.Group = "Metadata";
+        OptionsTestCapability.Title = "Audio CD";
+        using var vm = CreateViewModel();
+        var category = TestCategory(vm);
+        var header = vm.SidebarEntries.Single(entry => entry.IsGroupHeader);
+
+        vm.SelectedSidebarEntry = header;
+
+        Assert.Equal(category.Id, vm.SelectedSettingCategory?.Id);
+        Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
+        Assert.Equal("Metadata  >  Audio CD", vm.CurrentCategoryPath);
+        Assert.True(vm.ShowPluginSettingsSection);
+    }
+
+    [AvaloniaFact]
+    public void Search_FiltersGroupChildren_AndHidesEmptyGroups()
+    {
+        OptionsTestCapability.Group = "Metadata";
+        OptionsTestCapability.Title = "Audio CD";
+        using var vm = CreateViewModel();
+        var category = TestCategory(vm);
+
+        vm.SettingsSearchText = "Audio";
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Equal("Metadata", header.Title);
+        var onlyEntry = Assert.Single(vm.SidebarEntries, entry => !entry.IsGroupHeader);
+        Assert.Equal(category.Id, onlyEntry.Category?.Id);
+        Assert.Equal(category.Id, vm.SelectedSettingCategory?.Id);
+
+        vm.SettingsSearchText = "Sample Configuration";
+        Assert.DoesNotContain(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Single(vm.SidebarEntries);
+
+        vm.SettingsSearchText = "Metadata";
+        Assert.Empty(vm.SidebarEntries);
+        Assert.Null(vm.SelectedSidebarEntry);
+    }
+
+    [AvaloniaFact]
+    public void Sidebar_KeyboardNavigation_SkipsGroupHeaders()
+    {
+        OptionsTestCapability.Group = "Metadata";
+        OptionsTestCapability.Title = "Audio CD";
+        using var vm = CreateViewModel();
+        var child = vm.SidebarEntries.Single(entry =>
+            entry.Category?.PluginPage?.Registration.PluginId == TestPluginId);
+        var childIndex = vm.SidebarEntries.IndexOf(child);
+        Assert.True(childIndex >= 2);
+        Assert.True(vm.SidebarEntries[childIndex - 1].IsGroupHeader);
+        var previous = vm.SidebarEntries[childIndex - 2];
+
+        var window = new OptionsWindow { DataContext = vm };
+        window.Show();
+        try
+        {
+            var list = window.FindControl<ListBox>("SettingsCategoriesList")!;
+            list.ScrollIntoView(childIndex);
+            Dispatcher.UIThread.RunJobs();
+            var headerContainer = Assert.IsType<ListBoxItem>(list.ContainerFromIndex(childIndex - 1));
+            var childContainer = Assert.IsType<ListBoxItem>(list.ContainerFromIndex(childIndex));
+            Assert.False(headerContainer.Focusable);
+            Assert.True(childContainer.Focusable);
+
+            list.SelectedIndex = childIndex;
+            Dispatcher.UIThread.RunJobs();
+            childContainer.Focus();
+            window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
+            Assert.Equal(previous.Category?.Id, vm.SelectedSettingCategory?.Id);
+
+            window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(child.Category?.Id, vm.SelectedSettingCategory?.Id);
+        }
+        finally { window.Close(); }
     }
 
     [AvaloniaFact]
@@ -454,12 +559,14 @@ public sealed class OptionsTestCapability : IPluginConfigurationCapability, IPlu
     public static int Disposals { get; private set; }
     public static IReadOnlyDictionary<string, string?>? Applied { get; private set; }
     public static string Title { get; set; } = "Plugins";
-    public PluginConfigurationDescriptor Configuration => new("options.test", Title);
+    public static string? Group { get; set; }
+    public PluginConfigurationDescriptor Configuration => new("options.test", Title, Group);
 
     public static void Reset()
     {
         Invalid = FailCreation = DelayCreation = DelayAcceptance = ThrowOnCancellation = NonEmbeddableContent = false;
         Title = "Plugins";
+        Group = null;
         Disposals = 0;
         Applied = null;
     }

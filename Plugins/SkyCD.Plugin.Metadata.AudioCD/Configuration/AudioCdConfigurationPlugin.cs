@@ -9,7 +9,7 @@ namespace SkyCD.Plugin.Metadata.AudioCD.Configuration;
 public sealed class AudioCdConfigurationPlugin : IPluginConfigurationCapability
 {
     public PluginConfigurationDescriptor Configuration { get; } = new(
-        "skycd.audio-cd.settings", "Audio CD Metadata");
+        "skycd.audio-cd.settings", "Audio CD", "Metadata");
 
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)

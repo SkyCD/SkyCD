@@ -56,8 +56,10 @@ Project structure and role folders are described in [plugin-project-layout.md](p
 modal `ConfigureAsync` contract. Recompile configuration plugins against SDK 2.0; remove their
 configuration Windows and the descriptor's Width/Height arguments. Other capabilities are unchanged.
 
-- `PluginConfigurationDescriptor(ConfigurationId, Title)` identifies one page per plugin. Keep the ID
+- `PluginConfigurationDescriptor(ConfigurationId, Title, Group)` identifies one page per plugin. Keep the ID
   stable; the host uses plugin ID plus configuration ID, not the possibly duplicated/translated title.
+  `Group` is optional: pages sharing a group are nested under one parent in the Options sidebar, while
+  pages without a group stay top-level.
 - Return a fresh `PluginConfigurationPage` for each Options session. Its `createContent` callback must
   return an embeddable Avalonia `Control`, never a `Window`. The framework-neutral `object` boundary
   keeps Avalonia out of the abstractions/runtime assemblies. Content is created lazily on the UI thread.

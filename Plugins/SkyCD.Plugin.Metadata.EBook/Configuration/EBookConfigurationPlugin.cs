@@ -9,7 +9,7 @@ namespace SkyCD.Plugin.Metadata.EBook.Configuration;
 /// <summary>Contributes an isolated eBook Options draft. Only the host persists accepted values.</summary>
 public sealed class EBookConfigurationPlugin : IPluginConfigurationCapability
 {
-    public PluginConfigurationDescriptor Configuration { get; } = new("ebook.settings", "eBook Metadata");
+    public PluginConfigurationDescriptor Configuration { get; } = new("ebook.settings", "eBook", "Metadata");
 
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)
