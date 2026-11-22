@@ -1,10 +1,11 @@
 # ACP-generated file descriptions
 
-The separate `skycd.ai-description` plugin contributes **Tools → Generate AI
-description for selected file**. It implements an explicit generated-metadata
-capability using the existing media schema and durable cache infrastructure.
-Automatic metadata extraction never starts an AI agent. The plugin has no
-vendor API or model download, and plugin discovery uses assembly metadata.
+The separate `skycd.ai-description` plugin implements an explicit
+generated-metadata capability using the existing media schema and durable cache
+infrastructure. Generation is offered per item from the Properties dialog; there
+is no Tools-menu batch. Automatic metadata extraction never starts an AI agent.
+The plugin has no vendor API or model download, and plugin discovery uses
+assembly metadata.
 
 With the plugin enabled, choose **Use agent** for an installed agent in
 **Tools → Options → ACP agents** and save to activate it for generation.
@@ -49,12 +50,14 @@ permitted content remains, unless metadata-only inference was separately enabled
 Stale cached data is eligible only while its source fingerprint still matches.
 
 Content-based descriptions and metadata-only inference have distinct persisted
-origins. Generated descriptions are unverified AI output. They live under
-`AiDescription` and prefixed provenance fields in the media cache, separate from
-user comments, properties and tags. Records include agent/version, negotiated
-model when available, plugin/prompt version, language, source/context fingerprints,
-generation time, and configured processing destination. Existing metadata browsing
-and advanced metadata search expose these fields offline.
+origins. Generated descriptions are unverified AI output. Their text fills the
+entry's unified Description when the catalog has no imported or user
+`Description` property; provenance stays under `AiDescription` and prefixed
+fields in the media cache. Records include agent/version, negotiated model when
+available, plugin/prompt version, language, source/context fingerprints,
+generation time, and configured processing destination. Existing metadata
+browsing and advanced metadata search expose these fields offline, and cached AI
+text stays readable and searchable without a provider or plugin.
 
 Results are saved only after complete valid plain-text output and another source
 and context check. Cancellation, changes, permission/tool requests, invalid or
@@ -62,22 +65,25 @@ oversized output, crashes, authentication errors and timeouts retain earlier
 accepted descriptions. A catalog switch cancels its active plugin command.
 Clicking a plugin command while one is running cancels the active command.
 
-## Properties generation
+## Properties description
 
-The Properties dialog shows the stored description for a file in an **AI
-description** tab together with the provider, configured context sources and
-processing destination, plus provenance (agent, model, prompt version, language
-and generation time). Generation runs only from the explicit Generate or
-Regenerate button; opening Properties, reading metadata or searching never
-starts an agent. A stored description whose source or context changed is shown as
+The Properties dialog shows one **Description** value, whatever filled it. An
+imported or user-entered catalog `Description` property wins and is annotated as
+catalog metadata. When the catalog has no description, stored AI text fills the
+same field and is annotated with provenance (agent, model, prompt version,
+language, generation time and processing destination) plus its current, stale or
+failed state. A stored description whose source or context changed is shown as
 stale but remains readable, and a failed regeneration reports the error while
-keeping the earlier accepted text.
+keeping the earlier accepted text. The description is rendered once: the
+`Description` key no longer appears as a second row in the Properties list, and
+the former AI-only block and **Adopt as my comment** action are gone.
 
-**Adopt as comment** copies the generated text into the comment editor. When the
-entry already has a comment, a second confirmation is required, and the comment
-is only written through the normal dialog confirm/undo path. The stored generated
-description is never overwritten by adoption or by comment edits, so the AI and
-user-authored metadata stay distinguishable in metadata browsing and search.
+Generation runs only from the explicit Generate or Regenerate button; opening
+Properties, reading metadata or searching never starts an agent. If the entry
+already has an imported or user Description, generation is not offered, so AI
+output can never silently replace it. **Copy** copies the displayed description,
+including catalog text. **Clear** removes the stored AI text; it never edits an
+imported or user description or the entry's comments.
 
 ## ACP registry browsing
 

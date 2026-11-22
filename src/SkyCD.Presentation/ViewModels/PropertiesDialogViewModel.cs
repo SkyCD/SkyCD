@@ -19,11 +19,15 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 {
+    private const string DescriptionPropertyKey = "Description";
+
     private static readonly HashSet<string> HiddenInfoPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "Name",
         "RealDirectoryName",
         "Comment",
+        // The description is shown once as a unified value with its author annotation.
+        DescriptionPropertyKey,
         "LocationId",
         // The rating is edited with the star control at the top of the General tab.
         StarRating.PropertyKey
@@ -35,6 +39,8 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 
     private readonly PropertiesCollection sourceProperties;
     private readonly IStringLocalizer valueLocalizer;
+    private readonly string? catalogDescription;
+
     public PropertiesDialogViewModel(
         string objectKey,
         string name,
@@ -48,9 +54,16 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         IconGlyph = iconGlyph;
         this.comments = comments;
         sourceProperties = new PropertiesCollection(infoProperties.ToDictionary(item => item.Key, item => item.Value));
+        catalogDescription = ReadCatalogDescription(sourceProperties);
         valueLocalizer = localizer ?? new PropertyValueLocalizer();
         InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
         rating = ReadStoredRating();
+        if (catalogDescription is not null)
+        {
+            // Imported or user-entered descriptions render without AI actions even when no provider is available.
+            Description = new DescriptionViewModel(catalogDescription, null, objectKey);
+        }
+
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
@@ -59,6 +72,9 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 
     public System.Collections.ObjectModel.ObservableCollection<TagAssignmentViewModel> TagAssignments { get; } = [];
     public bool HasTagsTab => TagAssignments.Count > 0;
+
+    /// <summary>Unified description surface; absent only when the entry has no description to show.</summary>
+    [ObservableProperty] private DescriptionViewModel? description;
 
     /// <summary>Tabs contributed by enabled feature plugins; empty when no plugin offers a surface.</summary>
     public System.Collections.ObjectModel.ObservableCollection<PropertiesDetailsTabViewModel> DetailsTabs { get; } = [];
@@ -105,34 +121,31 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         DetailsTabs.Clear();
     }
 
-    /// <summary>Optional AI description surface; absent when no description service is available.</summary>
-    [ObservableProperty] private AiDescriptionViewModel? aiDescription;
-
-    public bool HasAiDescription => AiDescription is not null;
+    public bool HasDescriptionSection => Description is not null;
 
     /// <summary>Raised with text the view should place on the clipboard.</summary>
     public event Action<string>? CopyTextRequested;
 
-    partial void OnAiDescriptionChanged(AiDescriptionViewModel? value)
+    partial void OnDescriptionChanged(DescriptionViewModel? value)
     {
-        OnPropertyChanged(nameof(HasAiDescription));
+        OnPropertyChanged(nameof(HasDescriptionSection));
     }
 
     /// <summary>
-    /// Attaches the offline AI description field. Reading and clearing stay available without a provider;
-    /// adopting writes only the comment editor, so the user still confirms the Properties dialog.
+    /// Attaches the offline AI description actions to the unified description field. Imported or
+    /// user-entered catalog text keeps winning; AI output only fills an empty description.
     /// </summary>
-    public void InitializeAiDescription(AiDescriptionService service, string entryId)
+    public void InitializeDescription(AiDescriptionService service, string entryId)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
-        if (AiDescription is not null)
+        if (Description is not null)
         {
-            AiDescription.CopyRequested -= OnDescriptionCopyRequested;
+            Description.CopyRequested -= OnDescriptionCopyRequested;
         }
 
-        AiDescription = new AiDescriptionViewModel(service, entryId, () => Comments, text => Comments = text);
-        AiDescription.CopyRequested += OnDescriptionCopyRequested;
+        Description = new DescriptionViewModel(catalogDescription, service, entryId);
+        Description.CopyRequested += OnDescriptionCopyRequested;
     }
 
     private void OnDescriptionCopyRequested(string text) => CopyTextRequested?.Invoke(text);
@@ -237,6 +250,17 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 
     private int ReadStoredRating() =>
         sourceProperties.TryGetValue(StarRating.PropertyKey, out var stored) ? StarRating.Parse(stored) : StarRating.Unrated;
+
+    private static string? ReadCatalogDescription(PropertiesCollection properties)
+    {
+        if (!properties.TryGetValue(DescriptionPropertyKey, out var value) || value is null)
+        {
+            return null;
+        }
+
+        var text = Convert.ToString(value, CultureInfo.CurrentCulture);
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
 
     private void ApplyRating(PropertiesCollection result)
     {

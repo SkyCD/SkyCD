@@ -3271,7 +3271,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             if (aiDescriptionService is not null)
             {
-                dialog.InitializeAiDescription(aiDescriptionService, SelectedBrowserItem.Id);
+                dialog.InitializeDescription(aiDescriptionService, SelectedBrowserItem.Id);
             }
 
             AttachDetailsTabs(dialog, initialDetailsTabKey);

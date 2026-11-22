@@ -10,28 +10,27 @@ using SkyCD.UI.Localization;
 namespace SkyCD.Presentation.ViewModels;
 
 /// <summary>
-/// Offline-first AI description surface for the Properties dialog. Reading, copying and clearing never
-/// contact a provider; only the explicit Generate/Regenerate command runs inference.
+/// Unified description field for the Properties dialog. A catalog Description property (imported metadata
+/// or a user value) wins over stored AI text; without one, the cached AI description is shown with its
+/// provenance. Reading, copying and clearing never contact a provider, and only an explicit
+/// Generate/Regenerate command runs inference.
 /// </summary>
-public sealed partial class AiDescriptionViewModel : ObservableObject
+public sealed partial class DescriptionViewModel : ObservableObject
 {
-    private readonly AiDescriptionService service;
-    private readonly string entryId;
-    private readonly Func<string?> getComment;
-    private readonly Action<string> applyComment;
+    private static readonly AiDescriptionProviderInfo UnavailableProvider = new(
+        false, false, string.Empty, string.Empty, null, "unknown", null, "no AI description plugin is available");
 
-    public AiDescriptionViewModel(
-        AiDescriptionService service,
-        string entryId,
-        Func<string?> getComment,
-        Action<string> applyComment)
+    private readonly AiDescriptionService? service;
+    private readonly string entryId;
+    private readonly string? catalogDescription;
+
+    public DescriptionViewModel(string? catalogDescription, AiDescriptionService? service, string entryId)
     {
-        this.service = service ?? throw new ArgumentNullException(nameof(service));
-        this.entryId = entryId ?? throw new ArgumentNullException(nameof(entryId));
-        this.getComment = getComment ?? throw new ArgumentNullException(nameof(getComment));
-        this.applyComment = applyComment ?? throw new ArgumentNullException(nameof(applyComment));
-        Provider = service.GetProviderInfo();
-        Details = service.Read(entryId);
+        this.catalogDescription = string.IsNullOrWhiteSpace(catalogDescription) ? null : catalogDescription;
+        this.service = service;
+        this.entryId = entryId ?? string.Empty;
+        Provider = service?.GetProviderInfo() ?? UnavailableProvider;
+        Details = service is null ? AiDescriptionDetails.Unavailable(this.entryId) : service.Read(this.entryId);
         LocalizationObserver.Observe(this, static vm => vm.RefreshText());
     }
 
@@ -46,29 +45,49 @@ public sealed partial class AiDescriptionViewModel : ObservableObject
 
     [ObservableProperty] private string? errorText;
 
-    [ObservableProperty] private bool isAdoptionPending;
+    /// <summary>True when a catalog property or stored AI text supplies the description value.</summary>
+    public bool HasDescription => catalogDescription is not null || Details.HasText;
 
-    public bool HasDescription => Details.HasText;
-    public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
-    public string DescriptionText => Details.Text ?? string.Empty;
-    public bool CanGenerate => Provider.IsEnabled && !IsBusy;
-    public bool CanClear => HasDescription && !IsBusy;
-    public bool CanAdopt => HasDescription && !IsBusy;
+    /// <summary>True when the displayed value comes from AI generation rather than catalog metadata.</summary>
+    public bool IsAiSourced => catalogDescription is null && Details.HasText;
+
+    public string DescriptionText => catalogDescription ?? Details.Text ?? string.Empty;
+
+    /// <summary>True when the dialog can offer AI actions at all; reading a catalog value stays action-free.</summary>
+    public bool HasActions => service is not null;
+
+    /// <summary>
+    /// Generation is skipped for entries with an imported or user Description so explicit AI output can
+    /// never silently replace it.
+    /// </summary>
+    public bool CanGenerate => service is not null && catalogDescription is null && Provider.IsEnabled && !IsBusy;
     public bool CanCopy => HasDescription;
+    public bool CanClear => service is not null && catalogDescription is null && Details.HasText && !IsBusy;
 
-    public string GenerateButtonText => HasDescription
+    public bool CanShowGenerate => service is not null && catalogDescription is null && Provider.IsPluginAvailable;
+    public bool CanShowClear => service is not null && catalogDescription is null && Details.HasText;
+    public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
+
+    public string GenerateButtonText => Details.HasText
         ? LocalizationService.Current.Get(UiKeys.Regenerate)
         : LocalizationService.Current.Get(UiKeys.Generate);
 
-    public string StateText => Details.State switch
-    {
-        AiDescriptionState.Current => LocalizationService.Current.Get(UiKeys.AiDescriptionCurrent),
-        AiDescriptionState.Stale => LocalizationService.Current.Get(UiKeys.AiDescriptionStale),
-        AiDescriptionState.Failed => LocalizationService.Current.Format(
-            TextKeys.AiDescriptionFailedState,
-            Details.FailureReason ?? LocalizationService.Current.Get(TextKeys.Unknown)),
-        _ => LocalizationService.Current.Get(UiKeys.AiDescriptionEmpty)
-    };
+    /// <summary>Author or provenance line shown under the value.</summary>
+    public string SourceText => catalogDescription is not null
+        ? LocalizationService.Current.Get(UiKeys.DescriptionCatalogSource)
+        : Details.HasText ? ProvenanceText : string.Empty;
+
+    public string StateText => catalogDescription is not null
+        ? string.Empty
+        : Details.State switch
+        {
+            AiDescriptionState.Current => LocalizationService.Current.Get(UiKeys.AiDescriptionCurrent),
+            AiDescriptionState.Stale => LocalizationService.Current.Get(UiKeys.AiDescriptionStale),
+            AiDescriptionState.Failed => LocalizationService.Current.Format(
+                TextKeys.AiDescriptionFailedState,
+                Details.FailureReason ?? LocalizationService.Current.Get(TextKeys.Unknown)),
+            _ => LocalizationService.Current.Get(UiKeys.DescriptionEmpty)
+        };
 
     public string ProviderText => !Provider.IsPluginAvailable
         ? LocalizationService.Current.Get(UiKeys.AiDescriptionUnavailable)
@@ -97,10 +116,6 @@ public sealed partial class AiDescriptionViewModel : ObservableObject
             DestinationText(Details.ProcessingDestination))
         : string.Empty;
 
-    public string AdoptionHint => IsAdoptionPending
-        ? LocalizationService.Current.Get(TextKeys.AiDescriptionAdoptConfirmation)
-        : string.Empty;
-
     [RelayCommand]
     private async Task GenerateAsync()
     {
@@ -113,7 +128,7 @@ public sealed partial class AiDescriptionViewModel : ObservableObject
         ErrorText = null;
         try
         {
-            var outcome = await service.GenerateAsync(entryId, regenerate: HasDescription, CancellationToken.None);
+            var outcome = await service!.GenerateAsync(entryId, regenerate: Details.HasText, CancellationToken.None);
             Details = outcome.Details;
         }
         catch (Exception exception)
@@ -134,34 +149,9 @@ public sealed partial class AiDescriptionViewModel : ObservableObject
             return;
         }
 
-        service.Clear(entryId);
+        service!.Clear(entryId);
         Details = AiDescriptionDetails.Unavailable(entryId);
         ErrorText = null;
-        IsAdoptionPending = false;
-    }
-
-    /// <summary>
-    /// Copies the description into the user's comment editor. A non-empty comment is never replaced
-    /// silently: the first invocation asks for confirmation and only the second one applies the text.
-    /// The stored AI description itself is never changed by adoption.
-    /// </summary>
-    [RelayCommand]
-    private void Adopt()
-    {
-        if (!CanAdopt)
-        {
-            return;
-        }
-
-        var current = getComment();
-        if (!string.IsNullOrWhiteSpace(current) && !IsAdoptionPending)
-        {
-            IsAdoptionPending = true;
-            return;
-        }
-
-        applyComment(DescriptionText);
-        IsAdoptionPending = false;
     }
 
     [RelayCommand]
@@ -178,18 +168,18 @@ public sealed partial class AiDescriptionViewModel : ObservableObject
     /// <summary>Re-reads the stored description; used after an external generation pass.</summary>
     public void Reload()
     {
-        Provider = service.GetProviderInfo();
-        Details = service.Read(entryId);
+        Provider = service?.GetProviderInfo() ?? UnavailableProvider;
+        Details = service is null ? AiDescriptionDetails.Unavailable(entryId) : service.Read(entryId);
     }
 
     private void RefreshText()
     {
         OnPropertyChanged(nameof(GenerateButtonText));
+        OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(StateText));
         OnPropertyChanged(nameof(ProviderText));
         OnPropertyChanged(nameof(ContextText));
         OnPropertyChanged(nameof(ProvenanceText));
-        OnPropertyChanged(nameof(AdoptionHint));
     }
 
     partial void OnDetailsChanged(AiDescriptionDetails value) => NotifyDescriptionChanged();
@@ -198,19 +188,20 @@ public sealed partial class AiDescriptionViewModel : ObservableObject
 
     partial void OnIsBusyChanged(bool value) => NotifyDescriptionChanged();
 
-    partial void OnIsAdoptionPendingChanged(bool value) => OnPropertyChanged(nameof(AdoptionHint));
-
     partial void OnErrorTextChanged(string? value) => OnPropertyChanged(nameof(HasError));
 
     private void NotifyDescriptionChanged()
     {
         OnPropertyChanged(nameof(HasDescription));
+        OnPropertyChanged(nameof(IsAiSourced));
         OnPropertyChanged(nameof(DescriptionText));
         OnPropertyChanged(nameof(CanGenerate));
-        OnPropertyChanged(nameof(CanClear));
-        OnPropertyChanged(nameof(CanAdopt));
         OnPropertyChanged(nameof(CanCopy));
+        OnPropertyChanged(nameof(CanClear));
+        OnPropertyChanged(nameof(CanShowGenerate));
+        OnPropertyChanged(nameof(CanShowClear));
         OnPropertyChanged(nameof(GenerateButtonText));
+        OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(StateText));
         OnPropertyChanged(nameof(ProviderText));
         OnPropertyChanged(nameof(ContextText));
