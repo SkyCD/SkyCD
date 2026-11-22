@@ -1,0 +1,6 @@
+<Project>
+    <PropertyGroup>
+        <!-- Keep the assembly file name identical to the project name so it can never silently diverge. -->
+        <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    </PropertyGroup>
+</Project>

@@ -10,7 +10,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Json;
+using SkyCD.Plugin.FileFormat.Json;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.ViewModels;
 using Xunit;

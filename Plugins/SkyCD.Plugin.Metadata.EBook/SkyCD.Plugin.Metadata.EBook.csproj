@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: decodes the embedded cover and encodes the bounded thumbnail. SkiaSharp is already used by
+             SkyCD.Plugin.Metadata.Image, SkyCD.Plugin.Metadata.Rtf and SkyCD.Plugin.Metadata.EComic, so the license evaluation is
+             shared (see docs/plugins/ebook.md). -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+        <!-- Configuration surface only; the extraction capabilities never touch UI types. -->
+        <PackageReference Include="Avalonia" Version="12.1.6"/>
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.6"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>eBook Metadata and Covers</AssemblyTitle>
+        <Description>Reads title, author and publication metadata from epub, ibook, mobi, azw, azw3, prc and fb2 e-books, publishes author tags and preferred names, and extracts a bounded cover image during indexing.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.EBook.Tests"/>
+    </ItemGroup>
+</Project>

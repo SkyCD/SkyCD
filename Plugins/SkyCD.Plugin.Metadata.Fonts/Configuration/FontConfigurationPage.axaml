@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.Plugin.Metadata.Fonts.Configuration.FontConfigurationPage">
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+        <CheckBox x:Name="CollectionEnabledCheckBox"
+                  Content="Collect font metadata while indexing" />
+        <CheckBox Grid.Row="1"
+                  x:Name="PreviewsEnabledCheckBox"
+                  Content="Generate a preview image for each font" />
+        <TextBlock Grid.Row="2" Text="Preview text" FontWeight="SemiBold" />
+        <TextBox Grid.Row="3"
+                 x:Name="PreviewTextBox"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 MinHeight="72"
+                 MaxHeight="96" />
+        <TextBlock Grid.Row="4" Text="Preview text size (points)" FontWeight="SemiBold" />
+        <NumericUpDown Grid.Row="5"
+                       x:Name="PreviewSizeBox"
+                       Minimum="8"
+                       Maximum="200"
+                       Increment="2"
+                       FormatString="0" />
+        <TextBlock Grid.Row="6"
+                   Text="Maximum previews per folder (0 = no limit)"
+                   FontWeight="SemiBold" />
+        <NumericUpDown Grid.Row="7"
+                       x:Name="PreviewLimitBox"
+                       Minimum="0"
+                       Maximum="1000"
+                       Increment="1"
+                       FormatString="0" />
+        <TextBlock Grid.Row="8"
+                   Text="Supported extensions (semicolon separated)"
+                   FontWeight="SemiBold" />
+        <TextBox Grid.Row="9" x:Name="ExtensionsTextBox" />
+    </Grid>
+</UserControl>
