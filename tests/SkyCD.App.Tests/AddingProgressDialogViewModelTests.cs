@@ -236,4 +236,91 @@ public class AddingProgressDialogViewModelTests
 
         Assert.Empty(vm.LogEntries);
     }
+
+    [Fact]
+    public void AnalysisTime_StartsOnFirstReportAndStopsOnFinish()
+    {
+        var clock = new ManualTimeProvider();
+        var vm = new AddingProgressDialogViewModel(clock) { CanCancel = true };
+        Assert.False(vm.IsAnalysisRunning);
+        Assert.Equal("00:00:00", vm.AnalysisTimeText);
+
+        vm.ReportStage("Reading source...");
+        Assert.True(vm.IsAnalysisRunning);
+
+        clock.Advance(TimeSpan.FromSeconds(20));
+        vm.FinishCancellation();
+
+        Assert.False(vm.IsAnalysisRunning);
+        Assert.Equal("00:00:20", vm.AnalysisTimeText);
+
+        clock.Advance(TimeSpan.FromMinutes(5));
+        Assert.Equal("00:00:20", vm.AnalysisTimeText);
+    }
+
+    [Fact]
+    public void AnalysisTime_FormatsHoursMinutesAndSeconds()
+    {
+        var clock = new ManualTimeProvider();
+        var vm = new AddingProgressDialogViewModel(clock);
+
+        vm.StartAnalysis();
+        vm.StartAnalysis();
+        clock.Advance(new TimeSpan(1, 2, 3));
+        vm.StopAnalysis();
+
+        Assert.Equal("01:02:03", vm.AnalysisTimeText);
+    }
+
+    [Fact]
+    public void ReportScanStatistics_UpdatesScanBlockCounts()
+    {
+        var vm = new AddingProgressDialogViewModel();
+        var statistics = new ScanTraversalStatistics();
+        for (var i = 0; i < 3; i++)
+        {
+            statistics.IncrementDiscovered();
+        }
+
+        statistics.IncrementSkipped();
+        statistics.IncrementFailed();
+
+        vm.ReportScanStatistics(statistics);
+
+        Assert.Equal(3, vm.ScanDiscoveredCount);
+        Assert.Equal(1, vm.ScanSkippedCount);
+        Assert.Equal(1, vm.ScanFailedCount);
+    }
+
+    [Fact]
+    public void FilteringText_FallsBackFromItemToStageToOperation()
+    {
+        var vm = new AddingProgressDialogViewModel();
+        Assert.Equal(vm.OperationText, vm.FilteringText);
+
+        vm.ReportStage("Reading source folder...");
+        Assert.Equal("Reading source folder...", vm.FilteringText);
+
+        vm.ReportItem("/source/track01.flac");
+        Assert.Equal("/source/track01.flac", vm.FilteringText);
+    }
+
+    [Fact]
+    public void SourceKind_HighlightsMatchingIcon()
+    {
+        var vm = new AddingProgressDialogViewModel { SourceKind = AddingProgressSourceKind.Internet };
+
+        Assert.Equal(1, vm.InternetSourceIconOpacity);
+        Assert.Equal(0.35, vm.MediaSourceIconOpacity);
+        Assert.Equal(0.35, vm.FolderSourceIconOpacity);
+    }
+
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private DateTimeOffset now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow() => now;
+
+        public void Advance(TimeSpan delta) => now += delta;
+    }
 }

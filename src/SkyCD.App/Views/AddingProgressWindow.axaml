@@ -6,9 +6,9 @@
         x:Class="SkyCD.App.Views.AddingProgressWindow"
         x:DataType="vm:AddingProgressDialogViewModel"
         Width="520"
-        Height="360"
-        MinWidth="460"
-        MinHeight="280"
+        Height="540"
+        MinWidth="480"
+        MinHeight="460"
         CanResize="True"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
@@ -20,95 +20,173 @@
         <vm:AddingProgressDialogViewModel />
     </Design.DataContext>
 
-    <Grid Margin="12" RowDefinitions="*,Auto">
-        <TabControl SelectedIndex="{Binding SelectedTabIndex}" Margin="0">
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Progress}}">
-                <StackPanel Spacing="16" Margin="8,12,8,8">
-                    <!-- Overall Progress Section -->
-                    <StackPanel Spacing="6">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.OverallProgress}}" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="1" Text="{Binding OverallProgressText}" Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        </Grid>
-                        <TextBlock Text="{Binding OperationText}" TextWrapping="Wrap" />
-                        <ProgressBar Minimum="0"
-                                     Maximum="100"
-                                     Value="{Binding OverallProgressValue}"
-                                     IsIndeterminate="{Binding IsOverallIndeterminate}"
-                                     Height="18" />
-                    </StackPanel>
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.stat-label">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundLowBrush}" />
+        </Style>
+        <Style Selector="TextBlock.stat-value">
+            <Setter Property="FontFamily" Value="Cascadia Code,Consolas,Courier New,monospace" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+    </Window.Styles>
 
-                    <Separator Margin="0,4" />
+    <Grid Margin="10"
+          ColumnDefinitions="Auto,*"
+          ColumnSpacing="10">
+        <!-- Left icon strip: the source currently being analysed -->
+        <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Top">
+            <Image Width="20" Height="20" Stretch="Uniform"
+                   Source="/Assets/add-from-media.png"
+                   Opacity="{Binding MediaSourceIconOpacity}"
+                   ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.FromMedia}}" />
+            <Image Width="20" Height="20" Stretch="Uniform"
+                   Source="/Assets/add-from-folder.png"
+                   Opacity="{Binding FolderSourceIconOpacity}"
+                   ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.FromFolder}}" />
+            <Image Width="20" Height="20" Stretch="Uniform"
+                   Source="/Assets/add-from-internet.png"
+                   Opacity="{Binding InternetSourceIconOpacity}"
+                   ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.FromInternet}}" />
+        </StackPanel>
 
-                    <!-- Current Stage Progress Section -->
-                    <StackPanel Spacing="6">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CurrentStage}}" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="1" Text="{Binding CurrentStageProgressText}" Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        </Grid>
-                        <TextBlock Text="{Binding CurrentStageText}" TextWrapping="Wrap" />
-                        <ProgressBar Minimum="0"
-                                     Maximum="100"
-                                     Value="{Binding CurrentStageProgressValue}"
-                                     IsIndeterminate="{Binding IsStageIndeterminate}"
-                                     Height="18" />
-                        <TextBlock Text="{Binding CurrentItemText}"
-                                   TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                    </StackPanel>
-                </StackPanel>
-            </TabItem>
+        <Grid Grid.Column="1"
+              RowDefinitions="Auto,Auto,Auto,*,Auto"
+              RowSpacing="8">
+            <!-- Filtering line: what is currently being examined -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="5">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Filtering}}" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding FilteringText}"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+            </Grid>
 
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Log}}">
-                <Grid RowDefinitions="*,Auto" Margin="0,8,0,0">
-                    <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
-                            BorderThickness="1"
-                            CornerRadius="3"
-                            Background="{DynamicResource ThemeBackgroundBrush}">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding LogEntries}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="ops:OperationLogEntry">
-                                        <TextBlock Text="{Binding DisplayText}"
-                                                   FontFamily="Cascadia Code,Consolas,Courier New,monospace"
-                                                   FontSize="12"
-                                                   Margin="6,2"
-                                                   TextWrapping="NoWrap" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Border>
-                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0" ColumnSpacing="6">
-                        <TextBlock Text="{Binding SummaryText}"
-                                   VerticalAlignment="Center"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <Button Grid.Column="1"
-                                Content="{i18n:Translate {x:Static i18n:UiKeys.CopyLog}}"
-                                Click="OnCopyLogClicked"
-                                Padding="8,3"
-                                FontSize="11" />
-                        <Button Grid.Column="2"
-                                Content="{i18n:Translate {x:Static i18n:UiKeys.ClearLog}}"
-                                Command="{Binding ClearLogCommand}"
-                                Padding="8,3"
-                                FontSize="11" />
+            <!-- Grouped statistics with right-aligned values -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,12,*">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.VolumeStatistics}}" FontWeight="SemiBold" />
+                    <Border Height="1" Margin="0,0,0,2" Background="{DynamicResource ThemeBorderLowBrush}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Processed}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ProcessedCount}" />
                     </Grid>
-                </Grid>
-            </TabItem>
-        </TabControl>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Skipped}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding SkippedCount}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Failed}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding FailedCount}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Errors}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ErrorCount}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Warnings}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding WarningCount}" />
+                    </Grid>
+                </StackPanel>
 
-        <!-- Status Summary Footer -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
-            <Button Grid.Column="1" Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
-                    Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" Margin="8,8,0,0" />
-            <TextBlock Text="{Binding SummaryText}"
-                       FontSize="11"
-                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                       Margin="4,8,4,0" />
+                <StackPanel Grid.Column="2" Spacing="2">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanStatistics}}" FontWeight="SemiBold" />
+                    <Border Height="1" Margin="0,0,0,2" Background="{DynamicResource ThemeBorderLowBrush}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Discovered}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ScanDiscoveredCount}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Skipped}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ScanSkippedCount}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Failed}}" />
+                        <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ScanFailedCount}" />
+                    </Grid>
+                </StackPanel>
+            </Grid>
+
+            <!-- One progress bar, captioned by the current stage -->
+            <StackPanel Grid.Row="2" Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding StageCaptionText}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding OverallProgressText}"
+                               Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                </Grid>
+                <ProgressBar Minimum="0"
+                             Maximum="100"
+                             Value="{Binding OverallProgressValue}"
+                             IsIndeterminate="{Binding IsOverallIndeterminate}"
+                             Height="14" />
+            </StackPanel>
+
+            <!-- Always-visible error log -->
+            <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="4">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ErrorLog}}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="{i18n:Translate {x:Static i18n:UiKeys.CopyLog}}"
+                            Click="OnCopyLogClicked"
+                            Padding="8,2" />
+                    <Button Grid.Column="2"
+                            Content="{i18n:Translate {x:Static i18n:UiKeys.ClearLog}}"
+                            Command="{Binding ClearLogCommand}"
+                            Padding="8,2" />
+                </Grid>
+                <Border Grid.Row="1"
+                        MinHeight="90"
+                        BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Background="{DynamicResource ThemeBackgroundBrush}">
+                    <ScrollViewer x:Name="LogScrollViewer"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding LogEntries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="ops:OperationLogEntry">
+                                    <TextBlock Text="{Binding DisplayText}"
+                                               FontFamily="Cascadia Code,Consolas,Courier New,monospace"
+                                               FontSize="12"
+                                               Margin="6,2"
+                                               TextWrapping="NoWrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <!-- Footer: status, analysis time and Cancel -->
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PleaseWait}}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="4"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AnalysisTime}}" />
+                    <TextBlock Text="{Binding AnalysisTimeText}"
+                               FontFamily="Cascadia Code,Consolas,Courier New,monospace" />
+                </StackPanel>
+                <Button Grid.Column="2"
+                        Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                        Command="{Binding CancelCommand}"
+                        IsEnabled="{Binding CanCancel}"
+                        Width="72" />
+            </Grid>
         </Grid>
     </Grid>
 </Window>
