@@ -15,7 +15,8 @@ namespace SkyCD.Plugin.Metadata.Executable.Tests;
 /// </summary>
 /// <remarks>
 /// Layout produced by <see cref="Build"/>: DOS stub of <see cref="DosStubSize"/> bytes, the PE header, one
-/// section table entry, then a single <c>.rsrc</c> section whose virtual address equals its file offset.
+/// section table entry, then a single <c>.rsrc</c> section directly after the headers, whose data entries are
+/// section-relative RVAs.
 /// The resource section starts with a packed three-level tree — type, name, language — where every directory
 /// entry carries its offset in the high bit of its target, and data entries point at the resource payloads
 /// that follow the tree.
@@ -71,6 +72,32 @@ internal static class ExecutableFixtures
     /// <summary>An executable whose single icon group references the given images.</summary>
     public static byte[] WithIcons(params IconEntry[] entries) =>
         BuildGroups(Group(1, entries));
+
+    /// <summary>Rewrites the optional-header magic of a PE32+ fixture to the given unsupported value.</summary>
+    public static byte[] WithOptionalHeaderMagic(byte[] image, ushort magic) =>
+        Patched(image, DosStubSize + 24, magic);
+
+    /// <summary>Rewrites the COFF section count without moving the bytes that follow the header.</summary>
+    public static byte[] WithSectionCount(byte[] image, ushort sectionCount) =>
+        Patched(image, DosStubSize + 6, sectionCount);
+
+    /// <summary>Rewrites the data-directory count of a PE32+ fixture's optional header.</summary>
+    public static byte[] WithDataDirectoryCount(byte[] image, uint count) =>
+        Patched(image, DosStubSize + 24 + 0x6C, count);
+
+    private static byte[] Patched(byte[] image, int offset, ushort value)
+    {
+        var copy = (byte[])image.Clone();
+        BinaryPrimitives.WriteUInt16LittleEndian(copy.AsSpan(offset), value);
+        return copy;
+    }
+
+    private static byte[] Patched(byte[] image, int offset, uint value)
+    {
+        var copy = (byte[])image.Clone();
+        BinaryPrimitives.WriteUInt32LittleEndian(copy.AsSpan(offset), value);
+        return copy;
+    }
 
     /// <summary>
     /// An executable with the given resources and arbitrarily named icon groups. A group is paired with the
@@ -259,14 +286,15 @@ internal static class ExecutableFixtures
             BinaryPrimitives.WriteUInt32LittleEndian(span[(directories + (14 * 8) + 4)..], 0x48);
         }
 
-        // One section: virtual address equals its file offset so data entries can use section-relative RVA math.
+        // One section, laid out as the PE format specifies: virtual size, virtual address, raw size and raw
+        // pointer. Resource data entries stay section-relative because their RVA is SectionRva plus an offset.
         var sectionTable = optional + optionalSize;
         ".rsrc\0\0\0"u8.CopyTo(span[sectionTable..]);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 8)..], (uint)rawSection);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 8)..], (uint)resourceSection.Length);
         BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 12)..], SectionRva);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 16)..], (uint)resourceSection.Length);
-        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 20)..], (uint)rawSection);
-        BinaryPrimitives.WriteInt32LittleEndian(span[(sectionTable + 36)..], headerSize);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 16)..], (uint)rawSection);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 20)..], (uint)headerSize);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[(sectionTable + 36)..], 0x4000_0040);
 
         resourceSection.CopyTo(span[headerSize..]);
         return image;
