@@ -10,11 +10,11 @@ The repository still contains legacy VB.NET/WinForms sources alongside the v3 co
 - Keep legacy code in the repository for reference and rollback support.
 - Move legacy implementation under a dedicated `legacy/` tree rather than leaving it at repository root.
 - Treat `legacy/` as read-only except for archival/cleanup operations.
-- All new feature work for v3 must be implemented in projects reachable from `SkyCD.V3.slnx`.
+- All new feature work for v3 must be implemented in projects reachable from `SkyCD.slnx`.
 
 ## Contributor Guardrails
 Do:
-- Use `SkyCD.V3.slnx` as the primary solution for build/test and new development.
+- Use `SkyCD.slnx` as the primary solution for build/test and new development.
 - Implement new file-format behavior via v3 plugins and SDK abstractions.
 - Update migration docs when legacy parity behavior changes.
 

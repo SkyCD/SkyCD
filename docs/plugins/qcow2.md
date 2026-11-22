@@ -2,8 +2,8 @@
 
 Implements #721 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.Qcow2/` → plugin id `skycd.qcow2`.
-Tests: `tests/SkyCD.Plugin.Qcow2.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.Qcow2/` → plugin id `skycd.qcow2`.
+Tests: `tests/SkyCD.Plugin.FileFormat.Qcow2.Tests/`.
 
 ## What it provides
 
@@ -56,7 +56,7 @@ Unknown incompatible feature bits are also rejected, as the format requires.
 
 ## Tests
 
-`tests/SkyCD.Plugin.Qcow2.Tests/` builds images in memory (plain, deflate-compressed, and overlay
+`tests/SkyCD.Plugin.FileFormat.Qcow2.Tests/` builds images in memory (plain, deflate-compressed, and overlay
 images with a backing file) around a FAT volume that DiscUtils creates, then exercises catalog
 listing, one-file-at-a-time extraction, cleanup, limits, cancellation, and the damaged, encrypted,
 and unsupported rejection paths. `Fixtures/catalog-sample.qcow2` also feeds the shared

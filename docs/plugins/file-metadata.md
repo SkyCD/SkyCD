@@ -2,8 +2,8 @@
 
 Implements #728 on the media capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.FileMetadata/` → plugin id `SkyCD.Plugin.FileMetadata`.
-Tests: `tests/SkyCD.Plugin.FileMetadata.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.FileMetadata/` → plugin id `SkyCD.Plugin.Metadata.FileMetadata`.
+Tests: `tests/SkyCD.Plugin.Metadata.FileMetadata.Tests/`.
 
 ## What it provides
 
@@ -20,7 +20,7 @@ The plugin claims every source (`*`). These values are not in the file bytes; th
 operating system next to or inside the file, and are what a user or a colleague typed into file
 properties rather than exported by an editor. Tags, comments and ratings that tools write *into* an
 image, TIFF/RAW container or XMP sidecar are read by the plugins that claim those formats
-(`SkyCD.Plugin.Image`, `SkyCD.Plugin.Xmp`), so every carrier is claimed exactly once.
+(`SkyCD.Plugin.Metadata.Image`, `SkyCD.Plugin.Metadata.Xmp`), so every carrier is claimed exactly once.
 
 ## Fields
 
@@ -85,7 +85,7 @@ containers.
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileMetadata.Tests/` covers:
+`tests/SkyCD.Plugin.Metadata.FileMetadata.Tests/` covers:
 
 - descriptors: every source claimed, priority below the embedded readers;
 - missing paths, files without properties and unreadable stores yielding no values or a silent

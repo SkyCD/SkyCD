@@ -1,6 +1,6 @@
 # Catalog list plain-text export (`skycd-txt-list`)
 
-Export-only capability in `SkyCD.Plugin.PlainText` that writes the current catalog
+Export-only capability in `SkyCD.Plugin.FileFormat.PlainText` that writes the current catalog
 list or result set as human-readable plain text, without external software.
 
 ## Layout
@@ -48,7 +48,7 @@ through instead and the temp file is still cleaned up.
 
 ## Tests
 
-`tests/SkyCD.Plugin.PlainText.Tests/PlainTextListExportTests.cs` covers
+`tests/SkyCD.Plugin.FileFormat.PlainText.Tests/PlainTextListExportTests.cs` covers
 registration as export-only, golden layout assertions (Unicode, long/multiline
 values, empty fields, >4 GiB sizes, both layouts, all encodings, display
 cultures), exact column and result ordering, grouping, JSON payloads, header

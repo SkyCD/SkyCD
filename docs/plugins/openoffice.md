@@ -2,8 +2,8 @@
 
 Implements #734 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.OpenOffice/` → plugin id `SkyCD.Plugin.OpenOffice`.
-Tests: `tests/SkyCD.Plugin.OpenOffice.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.OpenOffice/` → plugin id `SkyCD.Plugin.Metadata.OpenOffice`.
+Tests: `tests/SkyCD.Plugin.Metadata.OpenOffice.Tests/`.
 
 This plugin is deliberately independent of the PDF, RTF and WordPerfect plugins: it claims only OpenDocument
 and legacy OpenOffice.org extensions and MIME types, so an OpenOffice package is never also routed through
@@ -142,7 +142,7 @@ reference. No third-party code is linked, bundled or copied.
 
 ## Testing
 
-`tests/SkyCD.Plugin.OpenOffice.Tests/` builds **structurally valid ZIP packages in memory**, so the suite
+`tests/SkyCD.Plugin.Metadata.OpenOffice.Tests/` builds **structurally valid ZIP packages in memory**, so the suite
 commits no binary blobs and every expected value is known to the test asserting it. Fixtures cover the
 OpenDocument 1.2 namespaces, the legacy `http://openoffice.org/2000/` namespaces, a package without metadata,
 a package without a declared MIME type, plain and encrypted manifests, truncated and malformed metadata, a

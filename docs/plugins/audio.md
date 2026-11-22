@@ -2,8 +2,8 @@
 
 Implements #439 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Audio/` → plugin id `SkyCD.Plugin.Audio`.
-Tests: `tests/SkyCD.Plugin.Audio.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Audio/` → plugin id `SkyCD.Plugin.Metadata.Audio`.
+Tests: `tests/SkyCD.Plugin.Metadata.Audio.Tests/`.
 
 ## What it provides
 
@@ -121,7 +121,7 @@ reports as unknown.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Audio.Tests/` builds container-accurate fixtures in memory — real ID3v2 frames with each
+`tests/SkyCD.Plugin.Metadata.Audio.Tests/` builds container-accurate fixtures in memory — real ID3v2 frames with each
 of the four text encodings, MPEG frame headers with and without a Xing header, FLAC metadata blocks, Ogg
 pages with correct segment tables, and a full MP4 atom tree — so the suite commits no binary blobs and every
 expected value is known to the test that asserts it. Coverage includes tag and stream extraction per format,

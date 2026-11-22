@@ -2,10 +2,10 @@
 
 Implements #738 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Markdown.Metadata/` → plugin id `SkyCD.Plugin.Markdown.Metadata`.
-Tests: `tests/SkyCD.Plugin.Markdown.Metadata.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Markdown/` → plugin id `SkyCD.Plugin.Metadata.Markdown`.
+Tests: `tests/SkyCD.Plugin.Metadata.Markdown.Tests/`.
 
-This plugin is separate from `SkyCD.Plugin.Markdown`, which writes catalog exports and is write-only for
+This plugin is separate from `SkyCD.Plugin.FileFormat.Markdown`, which writes catalog exports and is write-only for
 reading. The metadata plugin claims only `.md`, `.markdown`, `.mdown` and `.mkd`
 (`text/markdown`, `text/x-markdown`), so a Markdown file is never also routed through the plain-text reader.
 
@@ -126,7 +126,7 @@ maintained.
 
 ## Testing
 
-`tests/SkyCD.Plugin.Markdown.Metadata.Tests/` builds Markdown sources in memory. Fixtures cover a full
+`tests/SkyCD.Plugin.Metadata.Markdown.Tests/` builds Markdown sources in memory. Fixtures cover a full
 front matter block with lists and a date, a document without front matter, damaged YAML, an unterminated
 delimiter, oversized and nested front matter, structure counts, markup-to-plain-text conversion, bounded
 excerpts, textless documents, UTF-16 with a byte-order mark, invalid UTF-8, NUL bytes, oversized and

@@ -1,12 +1,13 @@
 # Plugin Project Layout
 
 Every plugin project uses the same role-based folder layout, so a file's purpose is visible from
-its path and namespace alone. The rules below are enforced by convention and review.
+its path and namespace alone. The rules below are enforced by convention and review. Project and
+assembly names follow [assembly-naming.md](assembly-naming.md).
 
 ## Layout
 
 ```
-Plugins/SkyCD.Plugin.<Name>/
+Plugins/SkyCD.Plugin.<Kind>.<Subject>/
   <Name>Plugin.cs              # capability entry points only (IPlugin metadata stays in the assembly)
   Configuration/               # configuration capability, settings editor, configuration window + code-behind
   Models/                      # documents, records, settings, schema, enums, path/limit value types
@@ -24,15 +25,15 @@ Plugins/SkyCD.Plugin.<Name>/
    types are the `IPlugin` implementation and types that directly implement a capability interface
    (for example `IAccountConnector`, `IOwnershipProvider` or `ICliPluginCapability`). `AssemblyInfo.cs`
    assembly metadata also stays in the root. Everything else goes in a role folder.
-2. Each folder declares the matching namespace: `SkyCD.Plugin.<Name>.<Folder>`. `RootNamespace`
-   stays the plugin id and is never derived from folders.
+2. Each folder declares the matching namespace: `SkyCD.Plugin.<Kind>.<Subject>.<Folder>`.
+   `RootNamespace` stays the project name and is never derived from role folders.
 3. Create a folder only when it holds at least one type. Do not add empty scaffolding or a
    single-file `Misc/` bucket.
 4. New files go in the role folder with the matching namespace. A flat root is a review finding.
 5. Format-specific parents get a nested folder with its own namespace, for example
-   `SkyCD.Plugin.DiskExplorer/Ded/` uses `SkyCD.Plugin.DiskExplorer.Ded`, not a name prefix in the
-   parent namespace. Apply this same layout inside the nested folder: capability entry types in its
-   root and role folders underneath, with the nested namespace as their base.
+   `SkyCD.Plugin.FileFormat.DiskExplorer/Ded/` uses `SkyCD.Plugin.FileFormat.DiskExplorer.Ded`, not a
+   name prefix in the parent namespace. Apply this same layout inside the nested folder: capability
+   entry types in its root and role folders underneath, with the nested namespace as their base.
 6. `Plugins/Shared` and the sample plugins follow the same layout.
 
 Multiple capability entry types may share the root, including partial-class files of the same
@@ -42,7 +43,7 @@ window, because that is the role whose contents it drives.
 ## Examples
 
 ```
-Plugins/SkyCD.Plugin.EBook/
+Plugins/SkyCD.Plugin.Metadata.EBook/
   EBookCoverPlugin.cs
   EBookMetadataPlugin.cs
   Configuration/EBookConfigurationPlugin.cs
@@ -55,7 +56,7 @@ Plugins/SkyCD.Plugin.EBook/
   Export/EBookCoverRenderer.cs
   Exceptions/...
 
-Plugins/SkyCD.Plugin.DiskExplorer/
+Plugins/SkyCD.Plugin.FileFormat.DiskExplorer/
   DiskExplorerPlugin.cs
   Ded/DedPlugin.cs                 # nested format parent: capability entry in the nested root
   Ded/Models/...

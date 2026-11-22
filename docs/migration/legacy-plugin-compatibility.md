@@ -2,9 +2,9 @@
 
 | Legacy Plugin | Legacy Extension(s) | v3 Status | Notes |
 |---|---|---|---|
-| TextFormat | `.scd` | Implemented | v3 plugin `SkyCD.Plugin.Legacy.Scd` with read/write + fixture round-trip tests (#71) |
-| CompressedTextFormat | `.cscd` | Implemented | v3 plugin `SkyCD.Plugin.Legacy.Cscd` with compressed round-trip tests (#72) |
-| SkyCDNativeFormat | `.ascd` | Implemented | v3 plugin `SkyCD.Plugin.Legacy.Ascd` with safe parser, header validation, and security tests (#73) |
+| TextFormat | `.scd` | Implemented | v3 plugin `SkyCD.Plugin.FileFormat.Legacy.Scd` with read/write + fixture round-trip tests (#71) |
+| CompressedTextFormat | `.cscd` | Implemented | v3 plugin `SkyCD.Plugin.FileFormat.Legacy.Cscd` with compressed round-trip tests (#72) |
+| SkyCDNativeFormat | `.ascd` | Implemented | v3 plugin `SkyCD.Plugin.FileFormat.Legacy.Ascd` with safe parser, header validation, and security tests (#73) |
 
 ## Binary Compatibility
 - v2 `.NET Framework` plugin binaries are **not** loaded in v3 runtime.

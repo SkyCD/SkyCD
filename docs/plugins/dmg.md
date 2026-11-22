@@ -2,8 +2,8 @@
 
 Implements #722 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.Dmg/` → plugin id `skycd.dmg`.
-Tests: `tests/SkyCD.Plugin.Dmg.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.Dmg/` → plugin id `skycd.dmg`.
+Tests: `tests/SkyCD.Plugin.FileFormat.Dmg.Tests/`.
 
 ## What it provides
 
@@ -48,7 +48,7 @@ These are rejected with a clear message rather than misread:
 
 ## Tests
 
-`tests/SkyCD.Plugin.Dmg.Tests/` builds UDIF images in memory around a FAT volume that DiscUtils
+`tests/SkyCD.Plugin.FileFormat.Dmg.Tests/` builds UDIF images in memory around a FAT volume that DiscUtils
 creates, including raw, zlib-compressed, and zero-block data forks, then exercises catalog listing,
 one-file-at-a-time extraction, cleanup, limits, cancellation, and the damaged, encrypted, and
 segmented rejection paths. `Fixtures/catalog-sample.dmg` also feeds the shared

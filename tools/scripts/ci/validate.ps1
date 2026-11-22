@@ -4,6 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-dotnet restore SkyCD.V3.slnx
-dotnet build SkyCD.V3.slnx --configuration $Configuration --no-restore
-dotnet test SkyCD.V3.slnx --configuration $Configuration --no-build
+& (Join-Path $PSScriptRoot "check-naming.ps1")
+
+dotnet restore SkyCD.slnx
+dotnet build SkyCD.slnx --configuration $Configuration --no-restore
+dotnet test SkyCD.slnx --configuration $Configuration --no-build

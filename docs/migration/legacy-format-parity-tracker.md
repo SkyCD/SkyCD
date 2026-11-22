@@ -14,9 +14,9 @@ This tracker records migration parity status for legacy file formats and related
 ## Parity Matrix
 | Extension | Plugin Package | Read | Write | Fixture Coverage | Notes |
 |---|---|---|---|---|---|
-| `.scd` | `SkyCD.Plugin.Legacy.Scd` | Text + VB6 binary | Text + VB6 binary | `gamez.scd`, owned binary/text trees, malformed binaries, independent binary decoder | Save As offers distinct text and binary choices; directories and sizes are retained |
-| `.cscd` | `SkyCD.Plugin.Legacy.Cscd` | Yes | Yes | synthetic compressed round-trip | Shares `.scd` text model with deflate wrapper |
-| `.ascd` | `SkyCD.Plugin.Legacy.Ascd` | Yes | Yes | `My Documents.ascd`, `ftpz.ascd`, round-trip | Safe parser accepts only `skycd-nf` + `INSERT INTO list` shape |
+| `.scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | Text + VB6 binary | Text + VB6 binary | `gamez.scd`, owned binary/text trees, malformed binaries, independent binary decoder | Save As offers distinct text and binary choices; directories and sizes are retained |
+| `.cscd` | `SkyCD.Plugin.FileFormat.Legacy.Cscd` | Yes | Yes | synthetic compressed round-trip | Shares `.scd` text model with deflate wrapper |
+| `.ascd` | `SkyCD.Plugin.FileFormat.Legacy.Ascd` | Yes | Yes | `My Documents.ascd`, `ftpz.ascd`, round-trip | Safe parser accepts only `skycd-nf` + `INSERT INTO list` shape |
 
 ## Host Integration Status
 - Legacy file format handling is routed through `IFileFormatPluginCapability` in plugin host.

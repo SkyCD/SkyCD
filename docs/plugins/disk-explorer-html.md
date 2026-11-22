@@ -1,6 +1,6 @@
 # Disk Explorer Professional HTML report profile (`disk-explorer-html-report`)
 
-Read/write capability in `SkyCD.Plugin.DiskExplorer` (same assembly as the XML
+Read/write capability in `SkyCD.Plugin.FileFormat.DiskExplorer` (same assembly as the XML
 profile, plus an AngleSharp parsing dependency — MIT, parse-only, no script
 execution). Discovery uses assembly metadata and the capability type; no
 `plugin.json` is involved.
@@ -72,7 +72,7 @@ partial files.
 
 ## Tests
 
-`tests/SkyCD.Plugin.DiskExplorer.Tests/DiskExplorerHtmlTests.cs` covers complete
+`tests/SkyCD.Plugin.FileFormat.DiskExplorer.Tests/DiskExplorerHtmlTests.cs` covers complete
 and legacy (Windows-1252) bundles, Unicode/entities, missing pages and assets,
 cycles, malicious inputs (no fetch, all skipped), empty/wrong documents,
 detection with position preservation, single-page partial import, exact export

@@ -1,6 +1,6 @@
 # Native abeMeda/NeoFinder catalog import (`abemeda-native`)
 
-Read-only capability in `SkyCD.Plugin.AbeMeda.Native` that recognizes the native
+Read-only capability in `SkyCD.Plugin.FileFormat.AbeMeda.Native` that recognizes the native
 abeMeda/NeoFinder/CDFinder catalog container and imports the verified container
 layer. Discovery uses assembly metadata and the capability type; no `plugin.json`
 is involved.
@@ -141,7 +141,7 @@ These remain blocked on genuine, redistributable fixtures with provenance.
 
 ## Tests
 
-`tests/SkyCD.Plugin.AbeMeda.Native.Tests` builds synthetic containers at runtime
+`tests/SkyCD.Plugin.FileFormat.AbeMeda.Native.Tests` builds synthetic containers at runtime
 from the documented offsets; no vendor bytes are committed or redistributed. The
 suite covers recognition and position preservation, classic import, empty catalogs,
 unknown header preservation, duplicate/non-increasing ordinals, non-text handlers,

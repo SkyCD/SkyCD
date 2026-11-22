@@ -16,7 +16,7 @@ Recognition and import use the same strict decoding policy:
 
 No-BOM code pages cannot be identified unambiguously. The fallback is specifically Windows-1252, not a promise to support every Windows ANSI code page. Other legacy code pages must be converted using their known source encoding. `DetectedEncoding` in the import summary records the selected profile.
 
-UTF-8 with/without BOM, UTF-16 LE/BE with/without BOM and Windows-1252 are tested. The genuine export is UTF-8 without BOM; its exporter encoding setting was not recorded. See the [fixture provenance](../../tests/SkyCD.Plugin.WinCatalog.Csv.Tests/Fixtures/WinCatalogCsv/README.md).
+UTF-8 with/without BOM, UTF-16 LE/BE with/without BOM and Windows-1252 are tested. The genuine export is UTF-8 without BOM; its exporter encoding setting was not recorded. See the [fixture provenance](../../tests/SkyCD.Plugin.FileFormat.WinCatalog.Csv.Tests/Fixtures/WinCatalogCsv/README.md).
 
 ## Columns and partial reports
 

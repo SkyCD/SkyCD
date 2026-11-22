@@ -1,6 +1,6 @@
 # Disk Explorer Professional XML report profile (`disk-explorer-xml-report`)
 
-Read/write capability in `SkyCD.Plugin.DiskExplorer`. Discovery uses assembly
+Read/write capability in `SkyCD.Plugin.FileFormat.DiskExplorer`. Discovery uses assembly
 metadata and the capability type; no `plugin.json` is involved. The profile is
 fully specified here so the plugin can be rebuilt without any external executable.
 
@@ -81,7 +81,7 @@ Progress reports per top-level item; cancellation is honored per row.
 
 ## Tests
 
-`tests/SkyCD.Plugin.DiskExplorer.Tests` covers complete/minimal/unknown-metadata
+`tests/SkyCD.Plugin.FileFormat.DiskExplorer.Tests` covers complete/minimal/unknown-metadata
 fixtures, Unicode, >4 GiB sizes, empty descriptions, DTD rejection (gate and
 parser), invalid numbers, deep nesting, empty and wrong-root reports, detection
 (including position preservation), exact round trips, escaping/CDATA splitting, and

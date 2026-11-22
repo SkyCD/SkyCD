@@ -2,8 +2,8 @@
 
 Implements #737 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.WordPerfect/` → plugin id `SkyCD.Plugin.WordPerfect`.
-Tests: `tests/SkyCD.Plugin.WordPerfect.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.WordPerfect/` → plugin id `SkyCD.Plugin.Metadata.WordPerfect`.
+Tests: `tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/`.
 
 This plugin is deliberately independent of the PDF and text plugins: it claims only `.wpd` / `.wpt` and
 `application/vnd.wordperfect`, so a WordPerfect document is never also routed through another metadata reader.
@@ -143,7 +143,7 @@ cross-checked against libwpd's reference parser and against real sample document
 
 ## Testing
 
-`tests/SkyCD.Plugin.WordPerfect.Tests/` builds **structurally valid WordPerfect documents and compound files
+`tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/` builds **structurally valid WordPerfect documents and compound files
 in memory**, so the suite commits no binary blobs and every expected value is known to the test asserting it.
 Fixtures cover flat 6.0 and 6.1+ documents, a header-only document, an unsupported WP5 document, every summary
 tag, valid and invalid dates, charset 0 and charset 1 text, folded whitespace, first-group-wins, zero-length

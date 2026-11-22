@@ -1,6 +1,6 @@
 # XML catalog and list export (`skycd-xml-catalog`, `skycd-xml-list`)
 
-Export-only capabilities in `SkyCD.Plugin.XmlExport` that write the current
+Export-only capabilities in `SkyCD.Plugin.FileFormat.XmlExport` that write the current
 catalog selection or result set as UTF-8 XML 1.0. They never read:
 `ReadAsync` reports write-only. Routing uses the explicit format ids
 (for example `convert --format skycd-xml-catalog`); the `.xml` extension is
@@ -99,7 +99,7 @@ propagates instead of becoming a failure result).
 
 ## Tests
 
-`tests/SkyCD.Plugin.XmlExport.Tests/XmlExportTests.cs` covers registration as
+`tests/SkyCD.Plugin.FileFormat.XmlExport.Tests/XmlExportTests.cs` covers registration as
 export-only, both golden files above, XSD validation of both profiles,
 ordering (child-before-parent, orphans as roots), empty outputs, Unicode and
 escaping, metadata-rich rows, sizes beyond 4 GiB, unknown kinds and columns,

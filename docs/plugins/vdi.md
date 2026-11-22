@@ -2,8 +2,8 @@
 
 Implements #720 on the file-format and indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.Vdi/` → plugin id `skycd.vdi`.
-Tests: `tests/SkyCD.Plugin.Vdi.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.FileFormat.Vdi/` → plugin id `skycd.vdi`.
+Tests: `tests/SkyCD.Plugin.FileFormat.Vdi.Tests/`.
 
 ## What it provides
 
@@ -52,7 +52,7 @@ rejected or skipped with a clear result rather than guessed. The plugin never sh
 
 ## Tests
 
-`tests/SkyCD.Plugin.Vdi.Tests/` builds small fixed and dynamic VDI images in memory around a FAT volume,
+`tests/SkyCD.Plugin.FileFormat.Vdi.Tests/` builds small fixed and dynamic VDI images in memory around a FAT volume,
 then exercises catalog listing, one-file-at-a-time extraction, cleanup, limits, cancellation,
 stream-based opening, and the damaged, missing parent, unsupported version and sector size, and
 non-image rejection paths. `Fixtures/Vdi/catalog.vdi` also feeds the shared
