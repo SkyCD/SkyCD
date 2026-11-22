@@ -5,9 +5,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Exceptions;
-using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+using SkyCD.Plugin.FileFormat.Katalog.Models;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Models;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.Sqlite.Parsing;

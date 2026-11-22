@@ -27,8 +27,7 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.GCstar/SkyCD.Plugin.FileFormat.GCstar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Html/SkyCD.Plugin.FileFormat.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Json/SkyCD.Plugin.FileFormat.Json.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.CsvIdx/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.Sqlite/SkyCD.Plugin.FileFormat.Katalog.Sqlite.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog/SkyCD.Plugin.FileFormat.Katalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Legacy.Ascd/SkyCD.Plugin.FileFormat.Legacy.Ascd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Legacy.Cscd/SkyCD.Plugin.FileFormat.Legacy.Cscd.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Legacy.Scd/SkyCD.Plugin.FileFormat.Legacy.Scd.csproj"/>
@@ -145,8 +144,7 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.GCstar.Tests/SkyCD.Plugin.FileFormat.GCstar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Html.Tests/SkyCD.Plugin.FileFormat.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Json.Tests/SkyCD.Plugin.FileFormat.Json.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests/SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Tests/SkyCD.Plugin.FileFormat.Katalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Legacy.Ascd.Tests/SkyCD.Plugin.FileFormat.Legacy.Ascd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Legacy.Cscd.Tests/SkyCD.Plugin.FileFormat.Legacy.Cscd.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Legacy.Scd.Tests/SkyCD.Plugin.FileFormat.Legacy.Scd.Tests.csproj"/>

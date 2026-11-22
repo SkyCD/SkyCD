@@ -3,9 +3,10 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.FileFormat.Katalog.Sqlite;
 using Xunit;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests;
+namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
 public sealed class KatalogSqliteDetectionTests : IDisposable
 {

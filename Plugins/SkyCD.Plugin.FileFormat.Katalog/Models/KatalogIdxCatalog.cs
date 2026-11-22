@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+namespace SkyCD.Plugin.FileFormat.Katalog.Models;
 
 /// <summary>
 /// Parsed header and file entries from a Katalog .idx catalog file.

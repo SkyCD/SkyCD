@@ -1,10 +1,11 @@
 using System;
 using System.IO;
+using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
 using Xunit;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Tests;
+namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
-public sealed class KatalogDetectionTests
+public sealed class KatalogCsvIdxDetectionTests
 {
     private readonly KatalogCsvIdxPlugin plugin = new();
 

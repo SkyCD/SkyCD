@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Data.Sqlite;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests;
+namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
 /// <summary>
 /// Builds synthetic Katalog File-mode SQLite databases. The schema mirrors the

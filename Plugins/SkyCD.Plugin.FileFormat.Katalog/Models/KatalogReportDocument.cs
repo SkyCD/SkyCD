@@ -1,19 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Models;
+namespace SkyCD.Plugin.FileFormat.Katalog.Models;
 
 /// <summary>
 /// Structured document representing a Katalog collection import, implementing
 /// IReadOnlyList&lt;Dictionary&lt;string, object?&gt;&gt; for compatibility with SkyCD catalog import pipeline.
 /// </summary>
-public sealed class KatalogCsvIdxReportDocument : IReadOnlyList<Dictionary<string, object?>>
+public sealed class KatalogReportDocument : IReadOnlyList<Dictionary<string, object?>>
 {
     private readonly IReadOnlyList<Dictionary<string, object?>> rows;
 
-    public KatalogCsvIdxReportDocument(
+    public KatalogReportDocument(
         IReadOnlyList<Dictionary<string, object?>> rows,
-        KatalogCsvIdxImportSummary summary)
+        KatalogImportSummary summary)
     {
         this.rows = rows;
         Summary = summary;
@@ -22,7 +22,7 @@ public sealed class KatalogCsvIdxReportDocument : IReadOnlyList<Dictionary<strin
     /// <summary>
     /// Gets the import execution summary.
     /// </summary>
-    public KatalogCsvIdxImportSummary Summary { get; }
+    public KatalogImportSummary Summary { get; }
 
     /// <summary>
     /// Gets the reconstructed node dictionaries.
