@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Enumeration;
+using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Documents;
@@ -13,13 +16,23 @@ using SkyCD.Presentation.Operations;
 namespace SkyCD.Presentation.Scanning;
 
 /// <summary>
-/// Shared resilient directory traversal for folder and media catalog scans.
+/// Shared resilient directory traversal for folder and media catalog scans. Subdirectories are
+/// processed through a bounded producer/consumer queue so large trees parallelize across the whole
+/// scan instead of only the file loop of one directory.
 /// </summary>
 internal sealed class FileSystemCatalogTraverser
 {
     private readonly ScanOperationContext context;
     private readonly HashSet<string> visitedIdentities;
-    private readonly object documentsGate = new();
+    private readonly object visitedGate = new();
+    private readonly DocumentStore store = new();
+
+    private BlockingCollection<DirectoryWorkItem>? queue;
+    private ScanConcurrencySession? session;
+    private DirectoryWorkItem? rootWorkItem;
+    private bool includeFolders;
+    private bool includeFiles;
+    private bool includeExtendedInfo;
 
     public FileSystemCatalogTraverser(ScanOperationContext context)
     {
@@ -47,60 +60,277 @@ internal sealed class FileSystemCatalogTraverser
             fatalOnExhaustion: true,
             () => context.FileSystem.GetDirectoryEntry(rootPath));
 
-        if (!visitedIdentities.Add(rootEntry.VisitedIdentity))
+        if (!TryAddVisited(rootEntry.VisitedIdentity))
         {
             // Should not happen for a fresh traverser, but keep cycle-safe.
             ReportSkip(rootPath, "Root path already visited (cycle).", "resolve-root");
             return (0, 0, new PropertiesCollection());
         }
 
-        return TraverseDirectory(
-            rootEntry,
-            currentDocId,
-            includeFolders,
-            includeFiles,
-            includeExtendedInfo,
-            documents,
-            isRoot: true);
+        this.includeFolders = includeFolders;
+        this.includeFiles = includeFiles;
+        this.includeExtendedInfo = includeExtendedInfo;
+
+        var plan = ScanConcurrencyResolver.ResolvePlan(context.Traversal, Environment.ProcessorCount);
+        using var concurrency = new ScanConcurrencySession(plan, context);
+        session = concurrency;
+        queue = new BlockingCollection<DirectoryWorkItem>();
+        rootWorkItem = new DirectoryWorkItem(rootEntry, currentDocId, isRoot: true, parent: null);
+        var workers = StartWorkers(plan.CeilingWorkers);
+
+        try
+        {
+            queue.Add(rootWorkItem);
+            WaitForRoot();
+            foreach (var document in store.OrderedDocuments())
+            {
+                documents.Add(document);
+            }
+
+            return (rootWorkItem.TotalSize, rootWorkItem.DirectChildrenCount, rootWorkItem.Properties);
+        }
+        finally
+        {
+            queue.CompleteAdding();
+            StopWorkers(workers);
+            queue.Dispose();
+            queue = null;
+            session = null;
+        }
     }
 
-    private (long TotalSize, int DirectChildrenCount, PropertiesCollection Properties) TraverseDirectory(
-        ScanFileSystemEntry directory,
-        string currentDocId,
-        bool includeFolders,
-        bool includeFiles,
-        bool includeExtendedInfo,
-        List<CatalogDocument> documents,
-        bool isRoot)
+    private void WaitForRoot()
     {
-        context.ThrowIfCancellationRequested();
+        try
+        {
+            rootWorkItem!.Completion.Task.Wait(context.CancellationToken);
+        }
+        catch (AggregateException exception)
+        {
+            var inner = exception.Flatten().InnerExceptions.FirstOrDefault();
+            if (inner is OperationCanceledException)
+            {
+                throw new OperationCanceledException(context.CancellationToken);
+            }
 
+            ExceptionDispatchInfo.Capture(inner ?? exception).Throw();
+        }
+    }
+
+    private Thread[] StartWorkers(int workerCount)
+    {
+        var workers = new Thread[Math.Max(1, workerCount)];
+        for (var index = 0; index < workers.Length; index++)
+        {
+            var worker = new Thread(WorkerLoop)
+            {
+                IsBackground = true,
+                Name = "SkyCD scan worker"
+            };
+            TrySetBelowNormalPriority(worker);
+            worker.Start();
+            workers[index] = worker;
+        }
+
+        return workers;
+    }
+
+    private static void TrySetBelowNormalPriority(Thread worker)
+    {
+        try
+        {
+            worker.Priority = ThreadPriority.BelowNormal;
+        }
+        catch (Exception exception) when (exception is PlatformNotSupportedException or ThreadStateException)
+        {
+            // Not every platform lets a managed thread set its priority.
+        }
+    }
+
+    private void StopWorkers(Thread[] workers)
+    {
+        foreach (var worker in workers)
+        {
+            try
+            {
+                worker.Join(TimeSpan.FromSeconds(2));
+            }
+            catch (ThreadStateException)
+            {
+                // The worker already exited.
+            }
+        }
+    }
+
+    private void WorkerLoop()
+    {
+        var concurrencyQueue = queue!;
+        var concurrencySession = session!;
+        try
+        {
+            while (!concurrencyQueue.IsCompleted)
+            {
+                context.ThrowIfCancellationRequested();
+                if (!concurrencyQueue.TryTake(out var item, 100, context.CancellationToken))
+                {
+                    continue;
+                }
+
+                context.ThrowIfCancellationRequested();
+                concurrencySession.Limiter.Acquire(context.CancellationToken);
+                try
+                {
+                    ProcessDirectory(item!, concurrencyQueue);
+                }
+                finally
+                {
+                    concurrencySession.Limiter.Release();
+                }
+            }
+        }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        {
+            FailRoot(new OperationCanceledException(context.CancellationToken));
+        }
+        catch (InvalidOperationException) when (concurrencyQueue.IsCompleted)
+        {
+            // Completed while waiting for the queue.
+        }
+        catch (Exception exception)
+        {
+            FailRoot(exception);
+        }
+    }
+
+    private void ProcessDirectory(DirectoryWorkItem item, BlockingCollection<DirectoryWorkItem> concurrencyQueue)
+    {
+        var completed = false;
+        try
+        {
+            if (includeExtendedInfo)
+            {
+                PopulateDirectoryProperties(item.Properties, item.Entry);
+            }
+
+            if (includeFiles)
+            {
+                var (fileSize, fileCount) = TraverseFiles(item);
+                item.TotalSize += fileSize;
+                item.DirectChildrenCount += fileCount;
+            }
+
+            if (includeFolders)
+            {
+                EnqueueSubdirectories(item, concurrencyQueue);
+            }
+
+            completed = true;
+        }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (!item.IsRoot && IsPerItemFailure(exception))
+        {
+            ReportFail(item.Entry.FullPath, exception.Message, "process-directory", exception);
+            completed = true;
+        }
+        finally
+        {
+            // A fatal failure must reach the root task; finalizing here would complete it successfully first.
+            if (completed)
+            {
+                lock (item.Gate)
+                {
+                    item.OwnWorkCompleted = true;
+                }
+
+                TryFinalize(item);
+            }
+        }
+    }
+
+    private (long TotalSize, int FileCount) TraverseFiles(DirectoryWorkItem item)
+    {
         long totalSize = 0;
-        long directChildrenCount = 0;
-        var dirProperties = new PropertiesCollection();
+        int fileCount = 0;
 
-        if (includeExtendedInfo)
+        var files = EnumerateEntries(
+            item.Entry.FullPath,
+            stage: "enumerate-files",
+            fatalOnExhaustion: item.IsRoot,
+            enumerate: () => context.FileSystem.EnumerateFiles(item.Entry.FullPath));
+
+        foreach (var entry in files)
         {
-            PopulateDirectoryProperties(dirProperties, directory);
+            context.ThrowIfCancellationRequested();
+
+            if (!TryAcceptEntry(entry, out var skipReason))
+            {
+                if (skipReason is not null)
+                {
+                    ReportSkip(entry.FullPath, skipReason, "process-file");
+                }
+
+                continue;
+            }
+
+            try
+            {
+                context.ThrowIfCancellationRequested();
+                var fileProperties = new PropertiesCollection
+                {
+                    ["FullName"] = entry.FullPath,
+                    ["LastWriteTime"] = entry.LastWriteTime.ToString("O")
+                };
+                if (includeExtendedInfo)
+                {
+                    PopulateFileProperties(fileProperties, entry);
+                }
+
+                var fileDoc = new CatalogDocument
+                {
+                    Id = $"file-{Guid.NewGuid():N}",
+                    Name = entry.Name,
+                    ParentId = item.DocId,
+                    Type = CatalogDocumentType.File,
+                    Size = entry.Length,
+                    ChildrenCount = 0,
+                    Properties = fileProperties
+                };
+
+                store.Add(entry.FullPath, fileDoc);
+                totalSize += entry.Length;
+                fileCount++;
+                context.Statistics.IncrementDiscovered();
+                session?.Controller.RecordCompleted();
+                context.Progress?.ReportItem(entry.FullPath);
+                context.Progress?.ReportLog(
+                    OperationLogLevel.ItemProcessed,
+                    $"Added file: {entry.Name}",
+                    itemPath: entry.FullPath,
+                    stage: "process-file");
+            }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsPerItemFailure(exception))
+            {
+                ReportFail(entry.FullPath, exception.Message, "process-file", exception);
+            }
         }
 
-        if (includeFiles)
-        {
-            var (fileSize, fileCount) = TraverseFiles(directory, currentDocId, includeExtendedInfo, documents, isRoot);
-            totalSize += fileSize;
-            directChildrenCount += fileCount;
-        }
+        return (totalSize, fileCount);
+    }
 
-        if (!includeFolders)
-        {
-            return (totalSize, (int)directChildrenCount, dirProperties);
-        }
-
+    private void EnqueueSubdirectories(DirectoryWorkItem item, BlockingCollection<DirectoryWorkItem> concurrencyQueue)
+    {
         var subdirectories = EnumerateEntries(
-            directory.FullPath,
+            item.Entry.FullPath,
             stage: "enumerate-directories",
-            fatalOnExhaustion: isRoot,
-            enumerate: () => context.FileSystem.EnumerateDirectories(directory.FullPath));
+            fatalOnExhaustion: item.IsRoot,
+            enumerate: () => context.FileSystem.EnumerateDirectories(item.Entry.FullPath));
 
         foreach (var subDir in subdirectories)
         {
@@ -134,140 +364,120 @@ internal sealed class FileSystemCatalogTraverser
                 itemPath: subDir.FullPath,
                 stage: "process-directory");
 
+            var child = new DirectoryWorkItem(
+                subDir,
+                subDirId,
+                isRoot: false,
+                parent: item);
             try
             {
-                var (subDirSize, subDirDirectChildren, subDirProperties) = TraverseDirectory(
-                    subDir,
-                    subDirId,
-                    includeFolders: true,
-                    includeFiles,
-                    includeExtendedInfo,
-                    documents,
-                    isRoot: false);
-
-                if (context.Traversal.SkipEmptyFolders && subDirDirectChildren == 0)
+                lock (item.Gate)
                 {
-                    ReportSkip(subDir.FullPath, "Empty folder excluded by policy.", "process-directory");
-                    continue;
+                    item.PendingChildren++;
                 }
 
-                var subDirDoc = new CatalogDocument
-                {
-                    Id = subDirId,
-                    Name = subDir.Name,
-                    ParentId = currentDocId,
-                    Type = CatalogDocumentType.Folder,
-                    Size = subDirSize,
-                    ChildrenCount = subDirDirectChildren,
-                    Properties = subDirProperties
-                };
-
-                lock (documentsGate)
-                {
-                    documents.Add(subDirDoc);
-                }
-
-                Interlocked.Add(ref totalSize, subDirSize);
-                Interlocked.Increment(ref directChildrenCount);
-                context.Statistics.IncrementDiscovered();
+                concurrencyQueue.Add(child, context.CancellationToken);
             }
-            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            catch
             {
+                lock (item.Gate)
+                {
+                    item.PendingChildren--;
+                }
+
                 throw;
             }
-            catch (ScanRetryExhaustedException ex)
-            {
-                ReportFail(subDir.FullPath, ex.Message, ex.Stage, ex);
-            }
-            catch (Exception ex) when (IsPerItemFailure(ex))
-            {
-                ReportFail(subDir.FullPath, ex.Message, "process-directory", ex);
-            }
         }
-
-        return (totalSize, (int)directChildrenCount, dirProperties);
     }
 
-    private (long TotalSize, int FileCount) TraverseFiles(
-        ScanFileSystemEntry directory,
-        string parentDocId,
-        bool includeExtendedInfo,
-        List<CatalogDocument> documents,
-        bool isRoot)
+    /// <summary>
+    /// Finalizes an item once all of its children finished, creating its folder document and folding
+    /// its totals into the parent. Runs without holding the item gate except for the state snapshots.
+    /// </summary>
+    private void TryFinalize(DirectoryWorkItem item)
     {
-        long totalSize = 0;
-        int fileCount = 0;
-
-        var files = EnumerateEntries(
-            directory.FullPath,
-            stage: "enumerate-files",
-            fatalOnExhaustion: isRoot,
-            enumerate: () => context.FileSystem.EnumerateFiles(directory.FullPath));
-
-        ProcessEntries(
-            files,
-            entry =>
+        lock (item.Gate)
+        {
+            if (!item.OwnWorkCompleted || item.PendingChildren > 0 || item.Finalized)
             {
-                if (!TryAcceptEntry(entry, out var skipReason))
-                {
-                    if (skipReason is not null)
-                    {
-                        ReportSkip(entry.FullPath, skipReason, "process-file");
-                    }
+                return;
+            }
 
-                    return;
-                }
+            item.Finalized = true;
+        }
 
-                try
-                {
-                    context.ThrowIfCancellationRequested();
-                    var fileProperties = new PropertiesCollection
-                    {
-                        ["FullName"] = entry.FullPath,
-                        ["LastWriteTime"] = entry.LastWriteTime.ToString("O")
-                    };
-                    if (includeExtendedInfo)
-                    {
-                        PopulateFileProperties(fileProperties, entry);
-                    }
+        var skip = !item.IsRoot && context.Traversal.SkipEmptyFolders && item.DirectChildrenCount == 0;
+        if (skip)
+        {
+            ReportSkip(item.Entry.FullPath, "Empty folder excluded by policy.", "process-directory");
+        }
+        else if (!item.IsRoot)
+        {
+            var subDirDoc = new CatalogDocument
+            {
+                Id = item.DocId,
+                Name = item.Entry.Name,
+                ParentId = item.Parent!.DocId,
+                Type = CatalogDocumentType.Folder,
+                Size = item.TotalSize,
+                ChildrenCount = item.DirectChildrenCount,
+                Properties = item.Properties
+            };
 
-                    var fileDoc = new CatalogDocument
-                    {
-                        Id = $"file-{Guid.NewGuid():N}",
-                        Name = entry.Name,
-                        ParentId = parentDocId,
-                        Type = CatalogDocumentType.File,
-                        Size = entry.Length,
-                        ChildrenCount = 0,
-                        Properties = fileProperties
-                    };
+            store.Add(item.Entry.FullPath, subDirDoc);
+            context.Statistics.IncrementDiscovered();
+            session?.Controller.RecordCompleted();
+        }
 
-                    lock (documentsGate)
-                    {
-                        documents.Add(fileDoc);
-                    }
+        var parent = item.Parent;
+        if (parent is null)
+        {
+            item.Completion.TrySetResult(true);
+            TryCompleteQueue();
+            return;
+        }
 
-                    Interlocked.Add(ref totalSize, entry.Length);
-                    Interlocked.Increment(ref fileCount);
-                    context.Statistics.IncrementDiscovered();
-                    context.Progress?.ReportItem(entry.FullPath);
-                    context.Progress?.ReportLog(
-                        OperationLogLevel.ItemProcessed,
-                        $"Added file: {entry.Name}",
-                        itemPath: entry.FullPath,
-                        stage: "process-file");
-                }
-                catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex) when (IsPerItemFailure(ex))
-                {
-                    ReportFail(entry.FullPath, ex.Message, "process-file", ex);
-                }
-            });
+        bool parentReady;
+        lock (parent.Gate)
+        {
+            if (!skip)
+            {
+                parent.TotalSize += item.TotalSize;
+                parent.DirectChildrenCount++;
+            }
 
-        return (totalSize, fileCount);
+            parent.PendingChildren--;
+            parentReady = parent.OwnWorkCompleted && parent.PendingChildren == 0;
+        }
+
+        if (parentReady)
+        {
+            TryFinalize(parent);
+        }
+    }
+
+    private void TryCompleteQueue()
+    {
+        try
+        {
+            queue?.CompleteAdding();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The scan is already tearing down.
+        }
+    }
+
+    private void FailRoot(Exception exception)
+    {
+        var root = rootWorkItem;
+        if (root is null)
+        {
+            return;
+        }
+
+        root.Completion.TrySetException(exception);
+        TryCompleteQueue();
     }
 
     private bool TryEnterDirectory(ScanFileSystemEntry subDir, out string? skipReason)
@@ -282,7 +492,7 @@ internal sealed class FileSystemCatalogTraverser
                 return false;
             }
 
-            if (!visitedIdentities.Add(subDir.VisitedIdentity))
+            if (!TryAddVisited(subDir.VisitedIdentity))
             {
                 skipReason = "Directory link cycle detected.";
                 return false;
@@ -291,7 +501,7 @@ internal sealed class FileSystemCatalogTraverser
             return true;
         }
 
-        if (!visitedIdentities.Add(subDir.VisitedIdentity))
+        if (!TryAddVisited(subDir.VisitedIdentity))
         {
             skipReason = "Directory cycle detected.";
             return false;
@@ -300,43 +510,11 @@ internal sealed class FileSystemCatalogTraverser
         return true;
     }
 
-    private void ProcessEntries(IReadOnlyList<ScanFileSystemEntry> entries, Action<ScanFileSystemEntry> process)
+    private bool TryAddVisited(string identity)
     {
-        var concurrency = context.Traversal.GetBoundedMaxConcurrency();
-        if (concurrency == 1 || entries.Count <= 1)
+        lock (visitedGate)
         {
-            foreach (var entry in entries)
-            {
-                context.ThrowIfCancellationRequested();
-                process(entry);
-            }
-
-            return;
-        }
-
-        try
-        {
-            Parallel.ForEach(
-                entries,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = concurrency,
-                    CancellationToken = context.CancellationToken
-                },
-                process);
-        }
-        catch (AggregateException ex)
-        {
-            ex.Flatten().Handle(inner =>
-            {
-                if (inner is OperationCanceledException)
-                {
-                    context.CancellationToken.ThrowIfCancellationRequested();
-                    throw inner;
-                }
-
-                return false;
-            });
+            return visitedIdentities.Add(identity);
         }
     }
 
@@ -536,6 +714,7 @@ internal sealed class FileSystemCatalogTraverser
     private void ReportFail(string itemPath, string reason, string stage, Exception? exception = null)
     {
         context.Statistics.IncrementFailed();
+        session?.Controller.RecordBackoff();
         context.Progress?.ReportFailed(itemPath, reason, stage, exception);
     }
 
@@ -569,5 +748,117 @@ internal sealed class FileSystemCatalogTraverser
         properties["FullName"] = dir.FullPath;
         properties["RealDirectoryFullName"] = dir.FullPath;
         properties["RealDirectoryName"] = dir.Name;
+    }
+
+    private sealed class DirectoryWorkItem
+    {
+        public DirectoryWorkItem(
+            ScanFileSystemEntry entry,
+            string docId,
+            bool isRoot,
+            DirectoryWorkItem? parent)
+        {
+            Entry = entry;
+            DocId = docId;
+            IsRoot = isRoot;
+            Parent = parent;
+        }
+
+        public ScanFileSystemEntry Entry { get; }
+
+        public string DocId { get; }
+
+        public bool IsRoot { get; }
+
+        public DirectoryWorkItem? Parent { get; }
+
+        public object Gate { get; } = new();
+
+        public PropertiesCollection Properties { get; } = new();
+
+        public TaskCompletionSource<bool> Completion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int PendingChildren;
+        public bool OwnWorkCompleted;
+        public bool Finalized;
+        public long TotalSize;
+        public int DirectChildrenCount;
+    }
+
+    private sealed class DocumentStore
+    {
+        private readonly object gate = new();
+        private readonly List<(string SortKey, CatalogDocument Document)> entries = [];
+
+        public void Add(string sortKey, CatalogDocument document)
+        {
+            lock (gate)
+            {
+                entries.Add((sortKey, document));
+            }
+        }
+
+        /// <summary>
+        /// Path-ordered so parallel scans emit the same sequence on every run regardless of which
+        /// directory a worker happened to pick up first.
+        /// </summary>
+        public IReadOnlyList<CatalogDocument> OrderedDocuments()
+        {
+            lock (gate)
+            {
+                return entries
+                    .OrderBy(entry => entry.SortKey, StringComparer.Ordinal)
+                    .Select(entry => entry.Document)
+                    .ToArray();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Owns the adaptive controller and the load-sampling timer for one traversal. The timer only runs
+    /// in automatic mode; manual overrides stay fixed.
+    /// </summary>
+    private sealed class ScanConcurrencySession : IDisposable
+    {
+        private readonly Timer? loadTimer;
+
+        public ScanConcurrencySession(ScanConcurrencyPlan plan, ScanOperationContext context)
+        {
+            Controller = new ScanConcurrencyController(plan, context.Traversal);
+            Limiter = new ScanConcurrencyLimiter(() => Controller.Current);
+
+            var interval = context.Traversal.LoadSampleInterval;
+            if (context.Traversal.ConcurrencyMode == ScanConcurrencyMode.Automatic &&
+                interval > TimeSpan.Zero && plan.CeilingWorkers > 1)
+            {
+                loadTimer = new Timer(
+                    _ => SampleLoad(context),
+                    state: null,
+                    dueTime: interval,
+                    period: interval);
+            }
+        }
+
+        public ScanConcurrencyController Controller { get; }
+
+        public ScanConcurrencyLimiter Limiter { get; }
+
+        private void SampleLoad(ScanOperationContext context)
+        {
+            try
+            {
+                if (Controller.SampleLoad(context.CpuLoadSampler.Sample()))
+                {
+                    Limiter.NotifyLimitChanged();
+                }
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // Load sampling must never break the scan.
+            }
+        }
+
+        public void Dispose() => loadTimer?.Dispose();
     }
 }

@@ -346,6 +346,15 @@ public static class UiKeys
     public const string SkipRecycleBins = "core.ui.SkipRecycleBins";
     public const string SkipWellKnownSystemFolders = "core.ui.SkipWellKnownSystemFolders";
     public const string SkipEmptyFolders = "core.ui.SkipEmptyFolders";
+    public const string ScanConcurrencyHeader = "core.ui.ScanConcurrencyHeader";
+    public const string ScanConcurrencyMode = "core.ui.ScanConcurrencyMode";
+    public const string ScanConcurrencyAutomatic = "core.ui.ScanConcurrencyAutomatic";
+    public const string ScanConcurrencyManual = "core.ui.ScanConcurrencyManual";
+    public const string ScanConcurrencyManualWorkers = "core.ui.ScanConcurrencyManualWorkers";
+    public const string ScanConcurrencyCpuShare = "core.ui.ScanConcurrencyCpuShare";
+    public const string ScanConcurrencyLoadShrink = "core.ui.ScanConcurrencyLoadShrink";
+    public const string ScanConcurrencyLoadSuspend = "core.ui.ScanConcurrencyLoadSuspend";
+    public const string ScanConcurrencyHint = "core.ui.ScanConcurrencyHint";
     public const string SkipOnlineOnlyCloudFiles = "core.ui.SkipOnlineOnlyCloudFiles";
     public const string ShowScanErrorsAfterScan = "core.ui.ShowScanErrorsAfterScan";
     public const string SaveScanErrorsToComments = "core.ui.SaveScanErrorsToComments";

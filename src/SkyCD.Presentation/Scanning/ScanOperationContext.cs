@@ -19,12 +19,14 @@ public sealed class ScanOperationContext : IDisposable
         ScanTraversalOptions? traversal = null,
         IOperationProgress? progress = null,
         CancellationToken cancellationToken = default,
-        IScanFileSystem? fileSystem = null)
+        IScanFileSystem? fileSystem = null,
+        ICpuLoadSampler? cpuLoadSampler = null)
     {
         Traversal = traversal ?? ScanTraversalOptions.Default;
         Progress = progress;
         Statistics = new ScanTraversalStatistics();
         FileSystem = fileSystem ?? new RealScanFileSystem();
+        CpuLoadSampler = cpuLoadSampler ?? new SystemCpuLoadSampler();
 
         if (Traversal.OperationTimeout is { } timeout && timeout > TimeSpan.Zero)
         {
@@ -46,6 +48,9 @@ public sealed class ScanOperationContext : IDisposable
     public ScanTraversalStatistics Statistics { get; }
 
     public IScanFileSystem FileSystem { get; }
+
+    /// <summary>Machine-wide CPU sampler used by the adaptive worker pool.</summary>
+    public ICpuLoadSampler CpuLoadSampler { get; }
 
     public CancellationToken CancellationToken { get; }
 

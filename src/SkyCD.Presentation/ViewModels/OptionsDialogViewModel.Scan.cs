@@ -16,6 +16,8 @@ public partial class OptionsDialogViewModel
 
     public ObservableCollection<string> HiddenSystemPolicyOptions { get; } = [];
 
+    public ObservableCollection<string> ScanConcurrencyModeOptions { get; } = [];
+
     [ObservableProperty] private ScanExclusionRuleItemViewModel? selectedScanExclusionRule;
 
     [ObservableProperty] private string scanAlertMessage = string.Empty;
@@ -44,7 +46,20 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private bool playSoundAfterScan;
 
+    [ObservableProperty] private int selectedScanConcurrencyModeIndex;
+
+    [ObservableProperty] private decimal scanConcurrencyManualWorkers = 2;
+
+    [ObservableProperty] private decimal scanConcurrencyCpuSharePercent = 80;
+
+    [ObservableProperty] private decimal scanConcurrencyLoadShrinkPercent = 70;
+
+    [ObservableProperty] private decimal scanConcurrencyLoadSuspendPercent = 85;
+
     [ObservableProperty] private bool isMediaEjectionSupported = true;
+
+    /// <summary>True when the worker count is an explicit user value instead of automatic.</summary>
+    public bool IsManualScanConcurrency => SelectedScanConcurrencyModeIndex == 1;
 
     /// <summary>Explains where media ejection applies, or why the option is unavailable on this platform.</summary>
     public string MediaEjectionSupportHint => LocalizationService.Current.Get(
@@ -132,10 +147,21 @@ public partial class OptionsDialogViewModel
         EjectMediaAfterScan = settings.EjectMediaAfterScan;
         ActivateMainWindowAfterScan = settings.ActivateMainWindowAfterScan;
         PlaySoundAfterScan = settings.PlaySoundAfterScan;
+        SelectedScanConcurrencyModeIndex =
+            ScanSettingsApplicator.ParseConcurrencyMode(settings.ScanConcurrencyMode) == ScanConcurrencyMode.Manual ? 1 : 0;
+        ScanConcurrencyManualWorkers = Math.Clamp(settings.ScanConcurrencyManualWorkers, 1, ScanTraversalOptions.AbsoluteMaxConcurrency);
+        ScanConcurrencyCpuSharePercent = Math.Clamp(settings.ScanConcurrencyCpuSharePercent, 1, 100);
+        ScanConcurrencyLoadShrinkPercent = Math.Clamp(settings.ScanConcurrencyLoadShrinkPercent, 1, 99);
+        ScanConcurrencyLoadSuspendPercent = Math.Clamp(settings.ScanConcurrencyLoadSuspendPercent, 2, 100);
     }
 
     public ScanSettingsSnapshot GetScanOptions()
     {
+        var workers = (int)Math.Round(ScanConcurrencyManualWorkers);
+        var cpuShare = (int)Math.Round(ScanConcurrencyCpuSharePercent);
+        var shrink = Math.Clamp((int)Math.Round(ScanConcurrencyLoadShrinkPercent), 1, 99);
+        var suspend = Math.Clamp((int)Math.Round(ScanConcurrencyLoadSuspendPercent), shrink + 1, 100);
+
         return new ScanSettingsSnapshot(
             SkipSymbolicLinks,
             ScanSettingsApplicator.ToHiddenSystemFilePolicyString(
@@ -149,7 +175,13 @@ public partial class OptionsDialogViewModel
             SaveScanErrorsToComments,
             EjectMediaAfterScan,
             ActivateMainWindowAfterScan,
-            PlaySoundAfterScan);
+            PlaySoundAfterScan,
+            ScanSettingsApplicator.ToConcurrencyModeString(
+                SelectedScanConcurrencyModeIndex == 1 ? ScanConcurrencyMode.Manual : ScanConcurrencyMode.Automatic),
+            Math.Clamp(workers, 1, ScanTraversalOptions.AbsoluteMaxConcurrency),
+            Math.Clamp(cpuShare, 1, 100),
+            shrink,
+            suspend);
     }
 
     partial void OnIsMediaEjectionSupportedChanged(bool value)
@@ -160,6 +192,11 @@ public partial class OptionsDialogViewModel
     partial void OnSelectedScanExclusionRuleChanged(ScanExclusionRuleItemViewModel? value)
     {
         RemoveScanExclusionRuleCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedScanConcurrencyModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsManualScanConcurrency));
     }
 
     partial void OnScanAlertMessageChanged(string value)
@@ -179,6 +216,9 @@ public partial class OptionsDialogViewModel
         HiddenSystemPolicyOptions.Add(LocalizationService.Current.Get(UiKeys.HiddenSystemPolicySkipHidden));
         HiddenSystemPolicyOptions.Add(LocalizationService.Current.Get(UiKeys.HiddenSystemPolicySkipSystem));
         HiddenSystemPolicyOptions.Add(LocalizationService.Current.Get(UiKeys.HiddenSystemPolicySkipHiddenAndSystem));
+        ScanConcurrencyModeOptions.Clear();
+        ScanConcurrencyModeOptions.Add(LocalizationService.Current.Get(UiKeys.ScanConcurrencyAutomatic));
+        ScanConcurrencyModeOptions.Add(LocalizationService.Current.Get(UiKeys.ScanConcurrencyManual));
         OnPropertyChanged(nameof(MediaEjectionSupportHint));
     }
 }
