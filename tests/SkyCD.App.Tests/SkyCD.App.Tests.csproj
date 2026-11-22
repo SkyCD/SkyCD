@@ -25,9 +25,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xml\SkyCD.Plugin.FileFormat.Xml.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Yaml\SkyCD.Plugin.FileFormat.Yaml.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Toml\SkyCD.Plugin.FileFormat.Toml.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.M3u\SkyCD.Plugin.FileFormat.M3u.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Pls\SkyCD.Plugin.FileFormat.Pls.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xspf\SkyCD.Plugin.FileFormat.Xspf.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Playlist\SkyCD.Plugin.FileFormat.Playlist.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Tar\SkyCD.Plugin.FileFormat.Tar.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Html\SkyCD.Plugin.FileFormat.Html.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Markdown\SkyCD.Plugin.FileFormat.Markdown.csproj" />

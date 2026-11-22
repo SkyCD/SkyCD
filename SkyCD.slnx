@@ -30,11 +30,10 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog.Sqlite/SkyCD.Plugin.FileFormat.Katalog.Sqlite.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.LegacySkyCD/SkyCD.Plugin.FileFormat.LegacySkyCD.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Librer/SkyCD.Plugin.FileFormat.Librer.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.M3u/SkyCD.Plugin.FileFormat.M3u.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Markdown/SkyCD.Plugin.FileFormat.Markdown.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.MyCatalogue/SkyCD.Plugin.FileFormat.MyCatalogue.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.PlainText/SkyCD.Plugin.FileFormat.PlainText.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Pls/SkyCD.Plugin.FileFormat.Pls.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Playlist/SkyCD.Plugin.FileFormat.Playlist.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.SmartCDCatalogPro/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Tar/SkyCD.Plugin.FileFormat.Tar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Tellico/SkyCD.Plugin.FileFormat.Tellico.csproj"/>
@@ -44,7 +43,6 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.WinCatalog/SkyCD.Plugin.FileFormat.WinCatalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Xml/SkyCD.Plugin.FileFormat.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.XmlExport/SkyCD.Plugin.FileFormat.XmlExport.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Xspf/SkyCD.Plugin.FileFormat.Xspf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Yaml/SkyCD.Plugin.FileFormat.Yaml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.AbiWord/SkyCD.Plugin.Metadata.AbiWord.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Archives/SkyCD.Plugin.Metadata.Archives.csproj"/>
@@ -121,11 +119,10 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests/SkyCD.Plugin.FileFormat.Katalog.Sqlite.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.LegacySkyCD.Tests/SkyCD.Plugin.FileFormat.LegacySkyCD.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Librer.Tests/SkyCD.Plugin.FileFormat.Librer.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.M3u.Tests/SkyCD.Plugin.FileFormat.M3u.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Markdown.Tests/SkyCD.Plugin.FileFormat.Markdown.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.MyCatalogue.Tests/SkyCD.Plugin.FileFormat.MyCatalogue.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.PlainText.Tests/SkyCD.Plugin.FileFormat.PlainText.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Pls.Tests/SkyCD.Plugin.FileFormat.Pls.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.FileFormat.Playlist.Tests/SkyCD.Plugin.FileFormat.Playlist.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Tar.Tests/SkyCD.Plugin.FileFormat.Tar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Tellico.Tests/SkyCD.Plugin.FileFormat.Tellico.Tests.csproj"/>
@@ -135,7 +132,6 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Xml.Tests/SkyCD.Plugin.FileFormat.Xml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.XmlExport.Tests/SkyCD.Plugin.FileFormat.XmlExport.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Xspf.Tests/SkyCD.Plugin.FileFormat.Xspf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Yaml.Tests/SkyCD.Plugin.FileFormat.Yaml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Host.Tests/SkyCD.Plugin.Host.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.AbiWord.Tests/SkyCD.Plugin.Metadata.AbiWord.Tests.csproj"/>

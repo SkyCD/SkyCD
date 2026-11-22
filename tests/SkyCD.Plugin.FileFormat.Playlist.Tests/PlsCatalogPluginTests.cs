@@ -4,34 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.FileFormat.Pls;
-using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.FileFormat.Playlist.Pls;
+using SkyCD.Plugin.FileFormat.Playlist.Pls.Models;
 using Xunit;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.FileFormat.Playlist.Tests;
 
-public class PlsCatalogPluginTests
+public sealed class PlsCatalogPluginTests
 {
-    [Fact]
-    public void GetOpenAndSaveFormats_ExposesPlsPluginMetadata()
-    {
-        var service = CreateService();
-
-        var openFormats = service.GetOpenFormats();
-        var saveFormats = service.GetSaveFormats();
-
-        Assert.Contains(openFormats, format => format.FormatId == "skycd-pls" && format.Extensions.Contains(".pls"));
-        Assert.Contains(saveFormats, format => format.FormatId == "skycd-pls" && format.Extensions.Contains(".pls"));
-    }
-
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsPlaylistEntries()
     {
-        var service = CreateService();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Pls", "catalog-playlist.pls");
 
         await using var source = File.OpenRead(fixturePath);
-        var readResult = await service.ReadAsync(new FileFormatReadRequest
+        var readResult = await new PlsCatalogPlugin().ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-pls",
             Source = source
@@ -43,7 +30,7 @@ public class PlsCatalogPluginTests
         Assert.Contains(document.Entries, entry => entry.Path == @"Music\Archive\Track A.mp3");
 
         await using var target = new MemoryStream();
-        var writeResult = await service.WriteAsync(new FileFormatWriteRequest
+        var writeResult = await new PlsCatalogPlugin().WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-pls",
             Target = target,
@@ -52,12 +39,26 @@ public class PlsCatalogPluginTests
 
         Assert.True(writeResult.Success);
         var written = Encoding.UTF8.GetString(target.ToArray());
-        Assert.Contains("[playlist]", written);
-        Assert.Contains("NumberOfEntries=3", written);
-        Assert.Contains("Version=2", written);
+        var expected = string.Join(Environment.NewLine,
+        [
+            "[playlist]",
+            @"File1=Music\Archive\Track A.mp3",
+            "Title1=Track A",
+            "Length1=12345",
+            @"File2=Music\Archive\Track B.mp3",
+            "Title2=Track B",
+            "Length2=0",
+            @"File3=Podcasts\Episode-01.mp3",
+            "Title3=Episode 01",
+            "Length3=777",
+            "NumberOfEntries=3",
+            "Version=2",
+            ""
+        ]);
+        Assert.Equal(expected, written);
 
         target.Position = 0;
-        var roundTrip = await service.ReadAsync(new FileFormatReadRequest
+        var roundTrip = await new PlsCatalogPlugin().ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-pls",
             Source = target
@@ -66,10 +67,6 @@ public class PlsCatalogPluginTests
         Assert.True(roundTrip.Success);
         var roundTripDocument = Assert.IsType<PlsPlaylistDocument>(roundTrip.Payload);
         Assert.Equal(3, roundTripDocument.Entries.Count);
-    }
-
-    private static FileFormatManager CreateService()
-    {
-        return new FileFormatManager([new PlsCatalogPlugin()]);
+        Assert.Equal(document.Entries, roundTripDocument.Entries);
     }
 }

@@ -16,9 +16,15 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xspf\SkyCD.Plugin.FileFormat.Xspf.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Playlist\SkyCD.Plugin.FileFormat.Playlist.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <None Update="Fixtures\M3u\catalog-playlist.m3u8">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Fixtures\Pls\catalog-playlist.pls">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Update="Fixtures\Xspf\catalog-playlist.xspf">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

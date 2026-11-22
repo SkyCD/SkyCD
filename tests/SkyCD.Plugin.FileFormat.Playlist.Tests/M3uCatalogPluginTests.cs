@@ -4,38 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.FileFormat.M3u;
-using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.FileFormat.Playlist.M3u;
+using SkyCD.Plugin.FileFormat.Playlist.M3u.Models;
 using Xunit;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.FileFormat.Playlist.Tests;
 
-public class M3uCatalogPluginTests
+public sealed class M3uCatalogPluginTests
 {
-    [Fact]
-    public void GetOpenAndSaveFormats_ExposesM3uPluginMetadata()
-    {
-        var service = CreateService();
-
-        var openFormats = service.GetOpenFormats();
-        var saveFormats = service.GetSaveFormats();
-
-        Assert.Contains(openFormats, format => format.FormatId == "skycd-m3u" &&
-                                               format.Extensions.Contains(".m3u") &&
-                                               format.Extensions.Contains(".m3u8"));
-        Assert.Contains(saveFormats, format => format.FormatId == "skycd-m3u" &&
-                                               format.Extensions.Contains(".m3u") &&
-                                               format.Extensions.Contains(".m3u8"));
-    }
-
     [Fact]
     public async Task ReadAndWriteAsync_RoundTripsPlaylistEntries()
     {
-        var service = CreateService();
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "M3u", "catalog-playlist.m3u8");
 
         await using var source = File.OpenRead(fixturePath);
-        var readResult = await service.ReadAsync(new FileFormatReadRequest
+        var readResult = await new M3uCatalogPlugin().ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-m3u",
             Source = source
@@ -50,7 +33,7 @@ public class M3uCatalogPluginTests
                                                    entry.DurationSeconds == -1);
 
         await using var target = new MemoryStream();
-        var writeResult = await service.WriteAsync(new FileFormatWriteRequest
+        var writeResult = await new M3uCatalogPlugin().WriteAsync(new FileFormatWriteRequest
         {
             FormatId = "skycd-m3u",
             Target = target,
@@ -59,11 +42,27 @@ public class M3uCatalogPluginTests
 
         Assert.True(writeResult.Success);
         var written = Encoding.UTF8.GetString(target.ToArray());
-        Assert.Contains("#EXTM3U", written);
-        Assert.Contains("#EXTINF:213,Daft Punk - Around the World", written);
+        var expected = string.Join(Environment.NewLine,
+        [
+            "#EXTM3U",
+            "",
+            "#EXTINF:213,Daft Punk - Around the World",
+            "music/around_the_world.mp3",
+            "",
+            "#EXTINF:187,The Prodigy - Firestarter",
+            "music/firestarter.flac",
+            "",
+            "#EXTINF:-1,Example Radio",
+            "https://radio.example.com/live.mp3",
+            "",
+            "../shared/song3.ogg",
+            "",
+            ""
+        ]);
+        Assert.Equal(expected, written);
 
         target.Position = 0;
-        var roundTrip = await service.ReadAsync(new FileFormatReadRequest
+        var roundTrip = await new M3uCatalogPlugin().ReadAsync(new FileFormatReadRequest
         {
             FormatId = "skycd-m3u",
             Source = target
@@ -72,10 +71,6 @@ public class M3uCatalogPluginTests
         Assert.True(roundTrip.Success);
         var roundTripDocument = Assert.IsType<M3uPlaylistDocument>(roundTrip.Payload);
         Assert.Equal(4, roundTripDocument.Entries.Count);
-    }
-
-    private static FileFormatManager CreateService()
-    {
-        return new FileFormatManager([new M3uCatalogPlugin()]);
+        Assert.Equal(document.Entries, roundTripDocument.Entries);
     }
 }
