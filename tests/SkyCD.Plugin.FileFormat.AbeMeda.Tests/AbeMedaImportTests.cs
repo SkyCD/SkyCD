@@ -13,7 +13,7 @@ using SkyCD.Plugin.FileFormat.AbeMeda.Import;
 using SkyCD.Plugin.FileFormat.AbeMeda.Models;
 using SkyCD.Plugin.FileFormat.AbeMeda.Parsing;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public class AbeMedaImportTests
 {

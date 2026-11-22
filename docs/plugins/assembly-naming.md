@@ -51,8 +51,8 @@ A feature plugin that also contributes a configuration surface stays `Feature`. 
 disk-image indexers are `Metadata`: their output is the entry listing collected while scanning a
 path, not a document the user opens or saves. Disk-image indexers are still registered as read-only
 `FileFormat` plugins today and are being corrected in #868; name them `Metadata` once that lands.
-`SkyCD.Plugin.FileFormat.Tar` stays the container plugin and `SkyCD.Plugin.Metadata.Tar` stays the
-entry metadata provider.
+`SkyCD.Plugin.FileFormat.Tar` stays the container plugin and `SkyCD.Plugin.Metadata.Archives` is the
+single entry metadata provider for every archive format.
 
 ## Casing
 
@@ -78,14 +78,14 @@ is `Feature.WebBrowser`.
 
 | Old | New | Why |
 | --- | --- | --- |
-| `SkyCD.Plugin.Zip` | `SkyCD.Plugin.Metadata.Zip` | Archive indexer; entry listing is metadata for generated entries' subitems. |
-| `SkyCD.Plugin.Iso` | `SkyCD.Plugin.Metadata.Iso` | Disk-image metadata provider; catalog entries are contributed as work items. |
+| `SkyCD.Plugin.Zip` | `SkyCD.Plugin.Metadata.Archives` | Archive indexer; one assembly provides entry listings for every archive format. |
+| `SkyCD.Plugin.Iso` | `SkyCD.Plugin.Metadata.DiskImages` | Disk-image metadata provider; one assembly provides entry listings for every disk-image format. |
 | `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog` | File format, vendor subject; CSV/XML/native capabilities consolidated in one assembly. |
 | `SkyCD.Plugin.Legacy.Scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | File format, legacy generation. |
 | `SkyCD.Plugin.EBook` | `SkyCD.Plugin.Metadata.EBook` | Metadata primary; preview and config secondary. |
 | `SkyCD.Plugin.AudioCd` | `SkyCD.Plugin.Metadata.AudioCD` | Audio CD metadata primary; config secondary. |
 | `SkyCD.Plugin.Markdown.Metadata` | `SkyCD.Plugin.Metadata.Markdown` | Metadata, kind first instead of aspect suffix. |
-| `SkyCD.Plugin.Tar.Metadata` | `SkyCD.Plugin.Metadata.Tar` | Archive entry listing is metadata for generated entries' subitems. |
+| `SkyCD.Plugin.Tar.Metadata` | `SkyCD.Plugin.Metadata.Archives` | Archive entry listing is metadata for generated entries' subitems. |
 | `SkyCD.Plugin.VolumeSerial` | `SkyCD.Plugin.Metadata.Volume` | Volume metadata. |
 | `SkyCD.Plugin.MotionDetector` | `SkyCD.Plugin.Feature.MotionDetector` | Capture/import feature reached from the Tools menu. |
 | `SkyCD.Plugin.WebBrowser` | `SkyCD.Plugin.Feature.WebBrowser` | User-facing tool window. |

@@ -3,7 +3,7 @@
 ## Summary
 
 Added a read-only native catalog capability in
-`Plugins/SkyCD.Plugin.AbeMeda.Native` for the documented classic container
+`Plugins/SkyCD.Plugin.FileFormat.AbeMeda/Native` for the documented classic container
 (`.cdw`) and recognition of the extended generation (`.abeMeda7`,
 `.neofinder7`). The importer validates the observed `DWDRDNBA` header, parses the
 36-byte record table, preserves unknown header fields, and publishes embedded
@@ -61,7 +61,7 @@ not been verified against genuine fixtures.
 
 ## Tests
 
-`tests/SkyCD.Plugin.AbeMeda.Native.Tests` (29 tests) uses runtime-generated
+`tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests` (native suite, 29 tests) uses runtime-generated
 synthetic containers built from the documented offsets. No vendor bytes are
 committed. Coverage includes recognition, classic import, empty catalogs, unknown
 header preservation, malformed/unsupported diagnostics, extended gating,
@@ -71,5 +71,5 @@ cancellation, progress, read-only behavior, and persistence/reopen through
 ## Validation
 
 - `dotnet build SkyCD.slnx --configuration Release`
-- `dotnet test tests/SkyCD.Plugin.AbeMeda.Native.Tests/...`
+- `dotnet test tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests/...`
 - `dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal`

@@ -12,7 +12,7 @@ namespace SkyCD.Plugin.FileFormat.Tar;
 
 /// <summary>
 /// Read-only TAR archive plugin. Lists archive entries as a catalog hierarchy. Archive entries are offered to
-/// metadata providers by the separate <c>skycd.tar-metadata</c> plugin.
+/// metadata providers by the separate <c>SkyCD.Plugin.Metadata.Archives</c> plugin.
 /// </summary>
 public sealed class TarArchiveIndexPlugin : IFileFormatPluginCapability
 {
