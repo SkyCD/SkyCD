@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
 using SkyCD.UI.Localization;
 
@@ -34,13 +33,6 @@ public partial class MainWindowViewModel
         toolbarEntries = ToolbarLayout.Normalize(layout, ToolbarCommandIds.All);
         ToolbarItemsChanged?.Invoke(this, EventArgs.Empty);
         ToolbarLayoutChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>Opens Options on the Toolbar category instead of a standalone dialog.</summary>
-    [RelayCommand]
-    private void CustomizeToolbar()
-    {
-        ShowOptions(LocalizationService.Current.Get(UiKeys.Toolbar));
     }
 
     /// <summary>

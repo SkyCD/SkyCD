@@ -164,16 +164,16 @@ public class ToolbarCustomizationTests
     }
 
     [Fact]
-    public void CustomizeToolbarCommand_OpensOptionsOnToolbarCategory()
+    public void ToolsMenu_DoesNotOfferCustomizeToolbarEntry()
     {
         using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
-        OptionsDialogRequestedEventArgs? request = null;
-        vm.OptionsRequested += (_, args) => request = args;
+        var customizeLabel = LocalizationService.Current.Get(UiKeys.CustomizeToolbar);
 
-        vm.CustomizeToolbarCommand.Execute(null);
-
-        Assert.NotNull(request);
-        Assert.Equal(LocalizationService.Current.Get(UiKeys.Toolbar), request.PreselectSettingCategory);
+        Assert.DoesNotContain(vm.ToolsMenuItems, item => item.Header == customizeLabel);
+        Assert.False(vm.ToolsMenuItems[0].Header == "-");
+        Assert.DoesNotContain(
+            Enumerable.Range(1, vm.ToolsMenuItems.Count - 1),
+            index => vm.ToolsMenuItems[index - 1].Header == "-" && vm.ToolsMenuItems[index].Header == "-");
     }
 
     [Fact]
