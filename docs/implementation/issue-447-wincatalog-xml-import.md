@@ -58,6 +58,6 @@ fields, malformed XML, DTD/entity attempt.
   persist/reopen for nested multi-media, Unicode, and flat partial reports.
 
 ## Docs
-- `docs/plugins/wincatalog-xml.md` — user export/import instructions, supported versions,
+- `docs/plugins/wincatalog.md` — user export/import instructions, supported versions,
   known loss of information.
 - `docs/migration/related-format-support-tracker.md` — added #447 entry.
