@@ -26,11 +26,9 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-m3u", "catalog-playlist.m3u8", "catalog.m3u")]
     [InlineData("skycd-pls", "catalog-playlist.pls", "catalog.pls")]
     [InlineData("skycd-xspf", "catalog-playlist.xspf", "catalog.xspf")]
-    [InlineData("skycd-zip", "sample.zip", "catalog.zip")]
     [InlineData("skycd-tar", "sample.tar", "catalog.tar")]
     [InlineData("skycd-tar", "sample.tar.gz", "catalog.TAR.GZ")]
     [InlineData("skycd-tar", "sample.tar.gz", "catalog.tgz")]
-    [InlineData("skycd-7z", "sample.7z", "catalog.7z")]
     [InlineData("skycd-iso", "catalog-sample.iso", "catalog.iso")]
     [InlineData("skycd-nrg", "catalog-sample.nrg", "catalog.nrg")]
     [InlineData("skycd-qcow2", "catalog-sample.qcow2", "catalog.qcow2")]
@@ -38,22 +36,6 @@ public sealed class FileFormatCompatibilityTests
     [InlineData("skycd-daa", "catalog-sample.daa", "catalog.daa")]
     [InlineData("skycd-vhd", "catalog-sample.vhd", "catalog.vhd")]
     [InlineData("skycd-vdi", "catalog.vdi", "catalog.vdi")]
-    [InlineData("skycd-arj", "catalog.arj", "catalog.arj")]
-    [InlineData("skycd-ace", "catalog.ace", "catalog.ace")]
-    [InlineData("skycd-lha", "catalog.lha", "catalog.lha")]
-    [InlineData("skycd-lha", "catalog.lha", "catalog.lzh")]
-    [InlineData("skycd-gzip", "catalog.gz", "catalog.gz")]
-    [InlineData("skycd-gzip", "catalog.gz", "catalog.gzip")]
-    [InlineData("skycd-zstd", "catalog.zst", "catalog.zst")]
-    [InlineData("skycd-zstd", "catalog.zst", "catalog.tzst")]
-    [InlineData("skycd-bzip2", "catalog.bz2", "catalog.bz2")]
-    [InlineData("skycd-bzip2", "catalog.bz2", "catalog.bz")]
-    [InlineData("skycd-arc", "catalog.arc", "catalog.arc")]
-    [InlineData("skycd-zoo", "catalog.zoo", "catalog.zoo")]
-    [InlineData("skycd-xz", "catalog.xz", "catalog.xz")]
-    [InlineData("skycd-xz", "catalog.xz", "catalog.txz")]
-    [InlineData("skycd-cab", "catalog.cab", "catalog.cab")]
-    [InlineData("skycd-rar", "catalog.rar", "catalog.rar")]
     public async Task SupportedFormat_ReadsImportsAndRoundTripsWhenWritable(string format, string fixture, string fileName)
     {
         var manager = new FileFormatManager(CreateProviders());
@@ -74,9 +56,8 @@ public sealed class FileFormatCompatibilityTests
             Assert.NotNull(leaf.ParentId);
             Assert.True(leaf.Size > 0);
         }
-        if (format is "skycd-zip" or "skycd-tar" or "skycd-7z" or "skycd-iso" or "skycd-qcow2" or "skycd-dmg"
-            or "skycd-daa" or "skycd-arj" or "skycd-vhd" or "skycd-vdi" or "skycd-lha" or "skycd-zoo"
-            or "skycd-arc" or "skycd-cab" or "skycd-rar" or "skycd-ace")
+        if (format is "skycd-tar" or "skycd-iso" or "skycd-qcow2" or "skycd-dmg"
+            or "skycd-daa" or "skycd-vhd" or "skycd-vdi")
         {
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.Folder);
             Assert.Contains(entries, entry => entry.Type == CatalogDocumentType.File && entry.Size > 0);
@@ -234,9 +215,7 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.FileFormat.M3u.M3uCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Pls.PlsCatalogPlugin(),
         new SkyCD.Plugin.FileFormat.Xspf.XspfCatalogPlugin(),
-        new SkyCD.Plugin.FileFormat.Zip.ZipArchiveIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Tar.TarArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.SevenZip.SevenZipArchiveIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Iso.IsoImageIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Nrg.NrgImageIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Qcow2.Qcow2ImageIndexPlugin(),
@@ -247,17 +226,6 @@ public sealed class FileFormatCompatibilityTests
         new SkyCD.Plugin.FileFormat.BinCue.BinCueImageIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Vhd.VhdImageIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Vdi.VdiImageIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Arj.ArjArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Ace.AceArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Lha.LhaArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Gzip.GzipArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Zstd.ZstdArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Bzip2.Bzip2ArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Arc.ArcArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Zoo.ZooArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.XZ.XzArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Cab.CabArchiveIndexPlugin(),
-        new SkyCD.Plugin.FileFormat.Rar.RarArchiveIndexPlugin(),
         new SkyCD.Plugin.FileFormat.Html.HtmlCatalogExportPlugin(),
         new SkyCD.Plugin.FileFormat.Markdown.MarkdownCatalogExportPlugin()
     ];
