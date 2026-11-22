@@ -102,5 +102,5 @@ public partial class MainWindowViewModel
     }
 
     private static string ToolbarCategory(string menuKey) =>
-        LocalizationService.Current.Get(menuKey).Replace("_", string.Empty).Replace("&", string.Empty);
+        MnemonicText.Strip(LocalizationService.Current.Get(menuKey));
 }
