@@ -17,6 +17,10 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 {
     private readonly CancellationTokenSource cancellationSource = new();
     private bool cancellationFinished;
+    private readonly TimeProvider timeProvider;
+    private DateTimeOffset? analysisStartedAt;
+    private DispatcherTimer? analysisTicker;
+    private TimeSpan analysisElapsed;
 
     public bool IsCancellationPending => !cancellationFinished && cancellationSource.IsCancellationRequested;
 
@@ -39,11 +43,15 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     {
         CanCancel = false;
         cancellationFinished = true;
+        StopAnalysis();
         cancellationSource.Dispose();
     }
 
     private readonly object gate = new();
     private string? currentStage;
+
+    [ObservableProperty]
+    private AddingProgressSourceKind sourceKind;
 
     [ObservableProperty]
     private string operationText = LocalizationService.Current.Get(TextKeys.PreparingDatabaseForModifications);
@@ -109,12 +117,49 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     private bool hasFailed;
 
     [ObservableProperty]
-    private string summaryText = string.Empty;
+    private long scanDiscoveredCount;
 
     [ObservableProperty]
-    private int selectedTabIndex;
+    private long scanSkippedCount;
+
+    [ObservableProperty]
+    private long scanFailedCount;
 
     public ObservableCollection<OperationLogEntry> LogEntries { get; } = new();
+
+    public string FilteringText => !string.IsNullOrEmpty(CurrentItemText)
+        ? CurrentItemText
+        : !string.IsNullOrEmpty(CurrentStageText)
+            ? CurrentStageText
+            : OperationText;
+
+    public string StageCaptionText => string.IsNullOrEmpty(CurrentStageText) ? OperationText : CurrentStageText;
+
+    public double MediaSourceIconOpacity => SourceKind == AddingProgressSourceKind.Media ? 1 : 0.35;
+
+    public double FolderSourceIconOpacity => SourceKind == AddingProgressSourceKind.Folder ? 1 : 0.35;
+
+    public double InternetSourceIconOpacity => SourceKind == AddingProgressSourceKind.Internet ? 1 : 0.35;
+
+    public bool IsAnalysisRunning => analysisStartedAt.HasValue;
+
+    public TimeSpan AnalysisElapsed
+    {
+        get => analysisElapsed;
+        private set
+        {
+            if (analysisElapsed == value)
+            {
+                return;
+            }
+
+            analysisElapsed = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(AnalysisTimeText));
+        }
+    }
+
+    public string AnalysisTimeText => FormatAnalysisTime(AnalysisElapsed);
 
     private readonly List<ScanIssue> scanIssues = new();
 
@@ -129,9 +174,108 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
         }
     }
 
-    public AddingProgressDialogViewModel()
+    public AddingProgressDialogViewModel() : this(TimeProvider.System)
     {
-        UpdateSummaryText();
+    }
+
+    public AddingProgressDialogViewModel(TimeProvider timeProvider)
+    {
+        this.timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+    }
+
+    /// <summary>Starts the analysis clock once; later calls while running are ignored.</summary>
+    public void StartAnalysis()
+    {
+        if (analysisStartedAt.HasValue)
+        {
+            return;
+        }
+
+        analysisStartedAt = timeProvider.GetUtcNow();
+        AnalysisElapsed = TimeSpan.Zero;
+        OnPropertyChanged(nameof(IsAnalysisRunning));
+        StartAnalysisTicker();
+    }
+
+    /// <summary>Stops the analysis clock and publishes the final elapsed time.</summary>
+    public void StopAnalysis()
+    {
+        if (!analysisStartedAt.HasValue)
+        {
+            return;
+        }
+
+        UpdateAnalysisElapsed();
+        analysisStartedAt = null;
+        analysisTicker?.Stop();
+        analysisTicker = null;
+        OnPropertyChanged(nameof(IsAnalysisRunning));
+    }
+
+    public void ReportScanStatistics(ScanTraversalStatistics statistics)
+    {
+        ArgumentNullException.ThrowIfNull(statistics);
+        RunOnUi(() =>
+        {
+            ScanDiscoveredCount = statistics.Discovered;
+            ScanSkippedCount = statistics.Skipped;
+            ScanFailedCount = statistics.Failed;
+        });
+    }
+
+    partial void OnCurrentItemTextChanged(string value) => OnPropertyChanged(nameof(FilteringText));
+
+    partial void OnCurrentStageTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(FilteringText));
+        OnPropertyChanged(nameof(StageCaptionText));
+    }
+
+    partial void OnOperationTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(FilteringText));
+        OnPropertyChanged(nameof(StageCaptionText));
+    }
+
+    partial void OnSourceKindChanged(AddingProgressSourceKind value)
+    {
+        OnPropertyChanged(nameof(MediaSourceIconOpacity));
+        OnPropertyChanged(nameof(FolderSourceIconOpacity));
+        OnPropertyChanged(nameof(InternetSourceIconOpacity));
+    }
+
+    private void StartAnalysisTicker()
+    {
+        if (analysisTicker is not null || Application.Current is null)
+        {
+            return;
+        }
+
+        analysisTicker = new DispatcherTimer(
+            TimeSpan.FromSeconds(1),
+            DispatcherPriority.Background,
+            (_, _) => UpdateAnalysisElapsed());
+        analysisTicker.Start();
+    }
+
+    private void UpdateAnalysisElapsed()
+    {
+        if (analysisStartedAt is not { } startedAt)
+        {
+            return;
+        }
+
+        AnalysisElapsed = timeProvider.GetUtcNow() - startedAt;
+    }
+
+    private static string FormatAnalysisTime(TimeSpan elapsed)
+    {
+        if (elapsed < TimeSpan.Zero)
+        {
+            elapsed = TimeSpan.Zero;
+        }
+
+        return $"{(int)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
     }
 
     partial void OnProgressValueChanged(int value)
@@ -180,6 +324,7 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     {
         RunOnUi(() =>
         {
+            StartAnalysis();
             OperationText = value.Status;
             ProgressValue = value.Percentage;
             CurrentStageText = value.Status;
@@ -280,6 +425,8 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     private void ApplyReport(OperationProgressReport report)
     {
+        StartAnalysis();
+
         if (!string.IsNullOrEmpty(report.OperationTitle))
         {
             OperationText = report.OperationTitle;
@@ -402,7 +549,6 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
             }
 
             LogEntries.Add(entry);
-            UpdateSummaryText();
         }
     }
 
@@ -413,11 +559,6 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
         OperationLogLevel.ItemFailed => new ScanIssue(ScanIssueSeverity.Error, entry.ItemPath, entry.Message),
         _ => null
     };
-
-    private void UpdateSummaryText()
-    {
-        SummaryText = $"Processed: {ProcessedCount} | Skipped: {SkippedCount} | Failed: {FailedCount} | Errors: {ErrorCount}";
-    }
 
     private static void RunOnUi(Action action)
     {

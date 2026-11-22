@@ -873,7 +873,11 @@ public partial class MainWindow : Window
             dialogVm.ClearInternetSecrets();
 
             var scanner = new RemoteCatalogScanner();
-            var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
+            var progressVm = new AddingProgressDialogViewModel
+            {
+                CanCancel = true,
+                SourceKind = AddingProgressSourceKind.Internet
+            };
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -886,6 +890,7 @@ public partial class MainWindow : Window
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
+                progressVm.ReportScanStatistics(scanResult.Statistics);
                 scanIssues = progressVm.GetScanIssues();
                 if (scanResult.Statistics.Failed > 0 && !scanErrorOptions.ShowScanErrorsAfterScan)
                 {
@@ -989,7 +994,11 @@ public partial class MainWindow : Window
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
                 volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
-            var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
+            var progressVm = new AddingProgressDialogViewModel
+            {
+                CanCancel = true,
+                SourceKind = AddingProgressSourceKind.Media
+            };
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -1002,6 +1011,7 @@ public partial class MainWindow : Window
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
+                progressVm.ReportScanStatistics(scanResult.Statistics);
                 scanIssues = progressVm.GetScanIssues();
                 if (scanResult.Statistics.Failed > 0 && !scanErrorOptions.ShowScanErrorsAfterScan)
                 {
@@ -1083,7 +1093,11 @@ public partial class MainWindow : Window
                 Traversal: BuildScanTraversalOptions());
 
             var scanner = new FolderCatalogScanner();
-            var progressVm = new AddingProgressDialogViewModel { CanCancel = true };
+            var progressVm = new AddingProgressDialogViewModel
+            {
+                CanCancel = true,
+                SourceKind = AddingProgressSourceKind.Folder
+            };
             var progressDialog = new AddingProgressWindow
             {
                 DataContext = progressVm
@@ -1096,6 +1110,7 @@ public partial class MainWindow : Window
             {
                 var scanResult = await Task.Run(() => scanner.ScanDetailed(scanOptions, progressVm, progressVm.CancellationToken));
                 progressVm.CancellationToken.ThrowIfCancellationRequested();
+                progressVm.ReportScanStatistics(scanResult.Statistics);
                 scanIssues = progressVm.GetScanIssues();
                 if (scanResult.Statistics.Failed > 0 && !scanErrorOptions.ShowScanErrorsAfterScan)
                 {
@@ -1528,7 +1543,16 @@ public partial class MainWindow : Window
 
     private async Task ShowAddProgressAsync(AddToListDialogViewModel addDialog)
     {
-        var progressVm = new AddingProgressDialogViewModel();
+        var progressVm = new AddingProgressDialogViewModel
+        {
+            SourceKind = addDialog.SourceMode switch
+            {
+                AddToListSourceMode.Media => AddingProgressSourceKind.Media,
+                AddToListSourceMode.Folder => AddingProgressSourceKind.Folder,
+                AddToListSourceMode.Internet => AddingProgressSourceKind.Internet,
+                _ => AddingProgressSourceKind.Generic
+            }
+        };
         var progressDialog = new AddingProgressWindow
         {
             DataContext = progressVm
