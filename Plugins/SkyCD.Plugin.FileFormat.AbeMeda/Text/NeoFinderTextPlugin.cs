@@ -6,13 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Csv;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Exceptions;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Parsing;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Import;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
-using SkyCD.Plugin.FileFormat.NeoFinder.Text.Parsing;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Import;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Parsing;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text;
 
 /// <summary>
 /// File format capability plugin for importing NeoFinder configurable text exports.

@@ -22,5 +22,5 @@ catalogs selected):
    reconstruct the hierarchy; also include Kind, Size, dates and Comments for
    full metadata.
 
-See `docs/plugins/neofinder-text.md` for supported versions, encodings and the
+See `docs/plugins/abemeda.md` for supported versions, encodings and the
 column mapping.

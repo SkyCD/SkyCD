@@ -11,10 +11,11 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Host.Menu;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed class NeoFinderTextIntegrationTests
 {

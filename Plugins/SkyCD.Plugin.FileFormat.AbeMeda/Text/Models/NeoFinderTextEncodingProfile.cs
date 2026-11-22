@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
 /// <summary>A strict decoding profile resolved for a NeoFinder text export.</summary>
 public sealed class NeoFinderTextEncodingProfile

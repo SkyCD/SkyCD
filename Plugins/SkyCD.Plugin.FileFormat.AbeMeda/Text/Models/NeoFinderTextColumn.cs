@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.FileFormat.NeoFinder.Text.Models;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
 
 /// <summary>
 /// Semantic columns of a NeoFinder text export.

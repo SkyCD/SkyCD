@@ -6,6 +6,7 @@ using System.Text;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.FileFormat.AbeMeda.Native;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text;
 using SkyCD.Plugin.FileFormat.Xml;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
@@ -19,21 +20,23 @@ public sealed class AbeMedaMergedPluginTests
 
     private static FileFormatManager CreateMergedManager()
     {
-        return new FileFormatManager([new XmlCatalogPlugin(), new AbeMedaPlugin(), new AbeMedaNativePlugin()]);
+        return new FileFormatManager(
+            [new XmlCatalogPlugin(), new AbeMedaPlugin(), new AbeMedaNativePlugin(), new NeoFinderTextPlugin()]);
     }
 
     private static string FixturePath(string name) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "AbeMeda", name);
 
     [Fact]
-    public void Assembly_PinsOnePluginIdForBothCapabilities()
+    public void Assembly_PinsOnePluginIdForAllCapabilities()
     {
         Assert.Equal("SkyCD.Plugin.AbeMeda", MergedAssembly.GetCustomAttribute<PluginIdAttribute>()?.Id);
         Assert.Same(MergedAssembly, typeof(AbeMedaNativePlugin).Assembly);
+        Assert.Same(MergedAssembly, typeof(NeoFinderTextPlugin).Assembly);
     }
 
     [Fact]
-    public void Discovery_ReturnsOnePluginCoveringBothFormats()
+    public void Discovery_ReturnsOnePluginCoveringAllFormats()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(MergedAssembly);
 
@@ -43,11 +46,11 @@ public sealed class AbeMedaMergedPluginTests
             .Select(capability => capability.SupportedFormat.FormatId)
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToList();
-        Assert.Equal(["abemeda-native", "abemeda-xml"], formatIds);
+        Assert.Equal(["abemeda-native", "abemeda-xml", "neofinder-text"], formatIds);
     }
 
     [Fact]
-    public void OpenFormats_ExposeBothCapabilitiesFromOneManager()
+    public void OpenFormats_ExposeAllCapabilitiesFromOneManager()
     {
         var formats = CreateMergedManager().GetOpenFormats();
 
@@ -58,6 +61,10 @@ public sealed class AbeMedaMergedPluginTests
             && format.Extensions.Contains(".cdw")
             && format.Extensions.Contains(".abemeda7")
             && format.Extensions.Contains(".neofinder7"));
+        Assert.Contains(formats, format =>
+            format.FormatId == "neofinder-text"
+            && format.Extensions.Contains(".txt")
+            && format.Extensions.Contains(".tsv"));
     }
 
     [Fact]
@@ -89,5 +96,15 @@ public sealed class AbeMedaMergedPluginTests
         var capability = CreateMergedManager().GetInstanceFor("demo.cdw", stream);
 
         Assert.IsType<AbeMedaNativePlugin>(capability);
+    }
+
+    [Fact]
+    public void ContentResolution_SelectsTextExportForSharedTextExtension()
+    {
+        using var stream = NeoFinderTextFixture.CreateStandardExport();
+
+        var capability = CreateMergedManager().GetInstanceFor("export.txt", stream);
+
+        Assert.IsType<NeoFinderTextPlugin>(capability);
     }
 }
