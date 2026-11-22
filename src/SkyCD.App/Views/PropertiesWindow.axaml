@@ -52,7 +52,7 @@
     </Window.Styles>
 
     <Grid RowDefinitions="*,Auto" Margin="0">
-        <TabControl Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
+        <TabControl x:Name="Tabs" Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
                 <Grid Margin="10,8,10,10" RowDefinitions="Auto,*">
                     <Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto" Margin="0,0,0,8">

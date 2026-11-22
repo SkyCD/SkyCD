@@ -38,6 +38,7 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     private const string ReturnCommandId = "skycd.loans.return";
     private const string HistoryCommandId = "skycd.loans.history";
     private const string ContactsCommandId = "skycd.loans.contacts";
+    private const string DetailsTabKey = "skycd.loans.details";
     private const string EntryIdProperty = "EntryId";
 
     private readonly Dictionary<string, (string Borrower, bool Overdue)> activeLoans = new(StringComparer.Ordinal);
@@ -48,6 +49,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 
     /// <inheritdoc />
     public event EventHandler? DataChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<EntryDetailsTabRequestEventArgs>? DetailsTabRequested;
 
     /// <inheritdoc />
     public void InitializeCatalogRepository(ICatalogRepositoryProvider catalogProvider)
@@ -135,23 +139,40 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     ];
 
     /// <inheritdoc />
-    public async Task<bool> ExecuteEntryCommandAsync(string commandId, CatalogEntry entry,
-        CancellationToken cancellationToken = default)
+    public IReadOnlyList<EntryDetailsTabContribution> GetEntryDetailsTabs(CatalogEntry entry)
     {
         if (Service() is not { } service)
         {
-            return false;
+            return [];
         }
 
-        var editor = new LoanDialogViewModel(service, entry.Id, Invalidate);
-        if (commandId == ReturnCommandId && editor.SelectedLoan is { IsActive: true })
+        return
+        [
+            new(
+                DetailsTabKey,
+                LocalizationService.Current.Get(LoansKeys.Loans),
+                10,
+                () => new EntryDetailsTab(() =>
+                {
+                    var editor = new LoanDialogViewModel(service, entry.Id, Invalidate);
+                    return new LoanEditor { DataContext = editor };
+                }))
+        ];
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ExecuteEntryCommandAsync(string commandId, CatalogEntry entry,
+        CancellationToken cancellationToken = default)
+    {
+        if (Service() is null ||
+            commandId is not (LendCommandId or ReturnCommandId or HistoryCommandId))
         {
-            editor.MarkReturnedCommand.Execute(null);
-            return editor.Error.Length == 0;
+            return Task.FromResult(false);
         }
 
-        await ShowAsync(LocalizationService.Current.Get(LoansKeys.Loans), 411, 460, editor).ConfigureAwait(false);
-        return true;
+        // The host opens the Properties dialog on the Loans tab; edits persist and refresh from there.
+        DetailsTabRequested?.Invoke(this, new EntryDetailsTabRequestEventArgs(entry.Id, DetailsTabKey));
+        return Task.FromResult(false);
     }
 
     /// <inheritdoc />
@@ -174,8 +195,7 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 
         if (commandId == ContactsCommandId)
         {
-            await ShowAsync(LocalizationService.Current.Get(LoansKeys.Contacts),
-                640, 520, new ContactsDialogViewModel(service, Invalidate)).ConfigureAwait(false);
+            await ShowContactsAsync(new ContactsDialogViewModel(service, Invalidate)).ConfigureAwait(false);
             return;
         }
 
@@ -434,19 +454,18 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
         }
     }
 
-    private async Task ShowAsync(string title, int width, int height, object viewModel)
+    private async Task ShowContactsAsync(ContactsDialogViewModel contacts)
     {
         if (dialogApi is null)
         {
             return;
         }
 
-        await dialogApi.ShowAsync(new HostWindowRequest(title, width, height, () => viewModel switch
-        {
-            LoanDialogViewModel loan => new LoanEditor { DataContext = loan },
-            ContactsDialogViewModel contacts => new ContactsWindow { DataContext = contacts },
-            _ => throw new ArgumentOutOfRangeException(nameof(viewModel))
-        })).ConfigureAwait(false);
+        await dialogApi.ShowAsync(new HostWindowRequest(
+            LocalizationService.Current.Get(LoansKeys.Contacts),
+            640,
+            520,
+            () => new ContactsWindow { DataContext = contacts })).ConfigureAwait(false);
         Invalidate();
     }
 
