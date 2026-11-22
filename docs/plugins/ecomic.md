@@ -61,7 +61,7 @@ serving old values.
 
 ## Settings
 
-Enable the plugin to show **Options → eComic Metadata**. Its embedded draft survives navigation;
+Enable the plugin to show **Options → Metadata → eComic**. Its embedded draft survives navigation;
 Options Save persists and applies it, while Cancel/close leaves stored settings unchanged.
 See [SDK configuration contracts](sdk-contracts.md#embedded-options-configuration-v3-migration-828).
 

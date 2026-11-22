@@ -7,7 +7,7 @@ Tests: `tests/SkyCD.Plugin.Metadata.AudioCD.Tests/`.
 
 An audio CD has no filesystem to read tags from, so identification and enrichment exist only at the volume
 level. The plugin contributes one `IAudioCdMetadataCapability` (disc and track records plus cover art) and one
-`IPluginConfigurationCapability` (the embedded Options → Audio CD Metadata page). Discovery uses assembly metadata
+`IPluginConfigurationCapability` (the embedded Options → Metadata → Audio CD page). Discovery uses assembly metadata
 and implemented capability types only — there is no `plugin.json`.
 
 ## Identification
@@ -104,7 +104,7 @@ published broken when decoding fails.
 
 ## Settings
 
-Enable the plugin to show its embedded **Audio CD Metadata** Options category. Navigation keeps the draft;
+Enable the plugin to show its embedded **Options → Metadata → Audio CD** page. Navigation keeps the draft;
 Options Save persists and applies it, while Cancel/close leaves stored settings unchanged.
 See [SDK configuration contracts](sdk-contracts.md#embedded-options-configuration-v3-migration-828).
 

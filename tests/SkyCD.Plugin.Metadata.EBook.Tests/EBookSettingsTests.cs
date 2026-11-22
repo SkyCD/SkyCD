@@ -164,6 +164,7 @@ public sealed class EBookSettingsTests
         var descriptor = new EBookConfigurationPlugin().Configuration;
 
         Assert.Equal("ebook.settings", descriptor.ConfigurationId);
-        Assert.Equal("eBook Metadata", descriptor.Title);
+        Assert.Equal("eBook", descriptor.Title);
+        Assert.Equal("Metadata", descriptor.Group);
     }
 }

@@ -121,6 +121,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     public ObservableCollection<LanguageItem> Languages { get; } = [];
 
     public ObservableCollection<OptionsSettingCategory> FilteredSettingCategories { get; } = [];
+    public ObservableCollection<OptionsSidebarEntry> SidebarEntries { get; } = [];
     public ObservableCollection<StatusVariantItemViewModel> StatusVariants { get; } = [];
 
     [ObservableProperty] private string pluginPath = string.Empty;
@@ -140,6 +141,10 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string settingsSearchText = string.Empty;
 
     [ObservableProperty] private OptionsSettingCategory? selectedSettingCategory;
+
+    [ObservableProperty] private OptionsSidebarEntry? selectedSidebarEntry;
+
+    private bool isSynchronizingSidebarSelection;
 
     [ObservableProperty] private int mcpPort = 8765;
 
@@ -186,14 +191,24 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(page => page.Id, StringComparer.OrdinalIgnoreCase)
-                .Select(page => new OptionsSettingCategory(page.Id, page.Registration.Descriptor.Title, PluginPage: page)));
+                .Select(page => new OptionsSettingCategory(
+                    page.Id,
+                    page.Registration.Descriptor.Title,
+                    PluginPage: page,
+                    Group: NormalizeGroup(page.Registration.Descriptor.Group))));
             return categories;
         }
     }
 
+    private static string? NormalizeGroup(string? group) =>
+        string.IsNullOrWhiteSpace(group) ? null : group.Trim();
+
     private OptionsSettingCategory CurrentCategory => SettingCategories[Math.Clamp(SelectedTabIndex, 0, SettingCategories.Count - 1)];
     private int SelectedBuiltInIndex => CurrentCategory.BuiltInIndex;
     public string CurrentCategoryName => CurrentCategory.Title;
+    public string CurrentCategoryPath => CurrentCategory.Group is { } group
+        ? $"{group}  >  {CurrentCategory.Title}"
+        : CurrentCategory.Title;
     public OptionsPluginPage? SelectedPluginPage => CurrentCategory.PluginPage;
     public bool ShowPluginSettingsSection =>
         SelectedPluginPage is not null && IsCurrentCategoryVisibleInSearch && !IsMarketplaceBrowseSelected;
@@ -588,7 +603,42 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         if (isRefreshingLocalization || value is null) return;
         var index = SettingCategories.ToList().FindIndex(category => category.Id == value.Id);
         if (index >= 0) SelectedTabIndex = index;
+        SynchronizeSidebarSelection(value);
         NotifySettingsVisibilityChanged();
+    }
+
+    partial void OnSelectedSidebarEntryChanged(OptionsSidebarEntry? value)
+    {
+        if (isSynchronizingSidebarSelection || value is null) return;
+        if (value.IsGroupHeader)
+        {
+            var firstChild = SidebarEntries
+                .SkipWhile(entry => !ReferenceEquals(entry, value))
+                .Skip(1)
+                .TakeWhile(entry => !entry.IsGroupHeader)
+                .FirstOrDefault();
+            if (firstChild?.Category is not { } child) return;
+            isSynchronizingSidebarSelection = true;
+            try { SelectedSidebarEntry = firstChild; } finally { isSynchronizingSidebarSelection = false; }
+            SelectedSettingCategory = child;
+            return;
+        }
+
+        if (value.Category is { } category)
+        {
+            SelectedSettingCategory = category;
+        }
+    }
+
+    private void SynchronizeSidebarSelection(OptionsSettingCategory? category)
+    {
+        if (isSynchronizingSidebarSelection) return;
+        var entry = category is null
+            ? null
+            : SidebarEntries.FirstOrDefault(item => item.Category is { } candidate && candidate.Id == category.Id);
+        if (ReferenceEquals(entry, SelectedSidebarEntry)) return;
+        isSynchronizingSidebarSelection = true;
+        try { SelectedSidebarEntry = entry; } finally { isSynchronizingSidebarSelection = false; }
     }
 
     private void RefreshLocalization()
@@ -641,6 +691,32 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         finally { isRefreshingLocalization = false; }
         SelectedSettingCategory = FilteredSettingCategories.FirstOrDefault(category => category.Id == id)
                                   ?? FilteredSettingCategories.FirstOrDefault();
+        RefreshSidebarEntries();
+    }
+
+    private void RefreshSidebarEntries()
+    {
+        var entries = new List<OptionsSidebarEntry>();
+        var emittedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var category in FilteredSettingCategories)
+        {
+            if (category.Group is { } group)
+            {
+                if (!emittedGroups.Add(group)) continue;
+                entries.Add(new OptionsSidebarEntry(group, null));
+                entries.AddRange(FilteredSettingCategories
+                    .Where(child => string.Equals(child.Group, group, StringComparison.OrdinalIgnoreCase))
+                    .Select(child => new OptionsSidebarEntry(child.Title, child, Depth: 1)));
+            }
+            else
+            {
+                entries.Add(new OptionsSidebarEntry(category.Title, category));
+            }
+        }
+
+        SidebarEntries.Clear();
+        foreach (var entry in entries) SidebarEntries.Add(entry);
+        SynchronizeSidebarSelection(SelectedSettingCategory);
     }
 
     private void NotifySettingsVisibilityChanged()
@@ -648,6 +724,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SelectedPluginPage));
         OnPropertyChanged(nameof(ShowPluginSettingsSection));
         OnPropertyChanged(nameof(CurrentCategoryName));
+        OnPropertyChanged(nameof(CurrentCategoryPath));
         OnPropertyChanged(nameof(IsCurrentCategoryVisibleInSearch));
         OnPropertyChanged(nameof(IsPluginsCategorySelected));
         OnPropertyChanged(nameof(IsLanguageCategorySelected));

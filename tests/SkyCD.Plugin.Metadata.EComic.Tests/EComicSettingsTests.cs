@@ -163,6 +163,7 @@ public sealed class EComicSettingsTests
         var descriptor = new EComicConfigurationPlugin().Configuration;
 
         Assert.Equal("ecomic.settings", descriptor.ConfigurationId);
-        Assert.Equal("eComic Metadata", descriptor.Title);
+        Assert.Equal("eComic", descriptor.Title);
+        Assert.Equal("Metadata", descriptor.Group);
     }
 }

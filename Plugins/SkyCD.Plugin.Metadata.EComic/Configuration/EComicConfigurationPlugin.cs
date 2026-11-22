@@ -8,7 +8,7 @@ namespace SkyCD.Plugin.Metadata.EComic.Configuration;
 /// <summary>Contributes an isolated eComic Options draft. Only the host persists accepted values.</summary>
 public sealed class EComicConfigurationPlugin : IPluginConfigurationCapability
 {
-    public PluginConfigurationDescriptor Configuration { get; } = new("ecomic.settings", "eComic Metadata");
+    public PluginConfigurationDescriptor Configuration { get; } = new("ecomic.settings", "eComic", "Metadata");
 
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)
