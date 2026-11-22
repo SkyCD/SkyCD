@@ -5,13 +5,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.FileFormat.AbeMeda.Native;
 using SkyCD.Plugin.FileFormat.AbeMeda.Native.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;
 using SkyCD.Plugin.FileFormat.AbeMeda.Native.Models;
 using SkyCD.Plugin.FileFormat.AbeMeda.Native.Parsing;
 
-namespace SkyCD.Plugin.FileFormat.AbeMeda.Native.Tests;
+namespace SkyCD.Plugin.FileFormat.AbeMeda.Tests;
 
 public sealed class AbeMedaNativeImportTests
 {
