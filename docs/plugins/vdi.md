@@ -1,21 +1,19 @@
 # VirtualBox VDI disk image indexing plugin
 
-Implements #720 on the file-format and indexing capability contracts.
+Implements #720 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.Vdi/` → plugin id `skycd.vdi`.
-Tests: `tests/SkyCD.Plugin.FileFormat.Vdi.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Vdi/` → plugin id `skycd.vdi`.
+Tests: `tests/SkyCD.Plugin.Metadata.Vdi.Tests/`.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `VdiImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `VdiImageIndexPlugin : IIndexWorkItemProvider` |
 
-The plugin claims the `.vdi` extension with MIME types `application/x-virtualbox-vdi` and
-`application/x-vdi`.
+The plugin claims the `.vdi` extension.
 
 ## Reading the image
 
@@ -52,8 +50,7 @@ rejected or skipped with a clear result rather than guessed. The plugin never sh
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.Vdi.Tests/` builds small fixed and dynamic VDI images in memory around a FAT volume,
+`tests/SkyCD.Plugin.Metadata.Vdi.Tests/` builds small fixed and dynamic VDI images in memory around a FAT volume,
 then exercises catalog listing, one-file-at-a-time extraction, cleanup, limits, cancellation,
 stream-based opening, and the damaged, missing parent, unsupported version and sector size, and
-non-image rejection paths. `Fixtures/Vdi/catalog.vdi` also feeds the shared
-`FileFormatCompatibilityTests`.
+non-image rejection paths. `Fixtures/Vdi/catalog.vdi` is also used by the work-item tests.

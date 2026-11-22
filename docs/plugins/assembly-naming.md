@@ -79,7 +79,7 @@ is `Feature.WebBrowser`.
 | Old | New | Why |
 | --- | --- | --- |
 | `SkyCD.Plugin.Zip` | `SkyCD.Plugin.FileFormat.Zip` | Read-only archive reader; becomes `Metadata.Zip` with #867. |
-| `SkyCD.Plugin.Iso` | `SkyCD.Plugin.FileFormat.Iso` | Disk-image reader; becomes `Metadata.Iso` with #868. |
+| `SkyCD.Plugin.Iso` | `SkyCD.Plugin.Metadata.Iso` | Disk-image metadata provider; catalog entries are contributed as work items. |
 | `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog.Xml` | File format, vendor variant. |
 | `SkyCD.Plugin.Legacy.Scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | File format, legacy generation. |
 | `SkyCD.Plugin.EBook` | `SkyCD.Plugin.Metadata.EBook` | Metadata primary; preview and config secondary. |

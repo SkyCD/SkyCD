@@ -1,21 +1,19 @@
 # VHD / VHDX disk image indexing plugin
 
-Implements #718 on the file-format and indexing capability contracts.
+Implements #718 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.Vhd/` → plugin id `skycd.vhd`.
-Tests: `tests/SkyCD.Plugin.FileFormat.Vhd.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Vhd/` → plugin id `skycd.vhd`.
+Tests: `tests/SkyCD.Plugin.Metadata.Vhd.Tests/`.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `VhdImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `VhdImageIndexPlugin : IIndexWorkItemProvider` |
 
-The plugin claims extensions `.vhd` and `.vhdx` with MIME types `application/x-vhd`,
-`application/x-vhdx`, and `application/x-virtualbox-vhd`.
+The plugin claims extensions `.vhd` and `.vhdx`.
 
 ## Reading the image
 
@@ -49,8 +47,7 @@ image directory are rejected with a clear message rather than misread. The plugi
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.Vhd.Tests/` builds dynamic VHD and VHDX images in memory around a FAT volume that
+`tests/SkyCD.Plugin.Metadata.Vhd.Tests/` builds dynamic VHD and VHDX images in memory around a FAT volume that
 DiscUtils creates, then exercises catalog listing, one-file-at-a-time extraction, cleanup, limits,
 cancellation, stream-based opening, VHD differencing parent resolution, and the damaged, missing
-parent, parent-outside-directory, and non-image rejection paths. `Fixtures/catalog-sample.vhd` also
-feeds the shared `FileFormatCompatibilityTests`.
+parent, parent-outside-directory, and non-image rejection paths. `Fixtures/catalog-sample.vhd` remains as a sample set for manual checks.

@@ -1,21 +1,19 @@
 # QCOW2 disk image indexing plugin
 
-Implements #721 on the file-format and indexing capability contracts.
+Implements #721 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.Qcow2/` → plugin id `skycd.qcow2`.
-Tests: `tests/SkyCD.Plugin.FileFormat.Qcow2.Tests/`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Qcow2/` → plugin id `skycd.qcow2`.
+Tests: `tests/SkyCD.Plugin.Metadata.Qcow2.Tests/`.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `Qcow2ImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `Qcow2ImageIndexPlugin : IIndexWorkItemProvider` |
 
-The plugin claims extension `.qcow2` with MIME types `application/x-qemu-disk` and
-`application/x-qcow2`.
+The plugin claims extension `.qcow2`.
 
 ## Reading the image
 
@@ -56,8 +54,7 @@ Unknown incompatible feature bits are also rejected, as the format requires.
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.Qcow2.Tests/` builds images in memory (plain, deflate-compressed, and overlay
+`tests/SkyCD.Plugin.Metadata.Qcow2.Tests/` builds images in memory (plain, deflate-compressed, and overlay
 images with a backing file) around a FAT volume that DiscUtils creates, then exercises catalog
 listing, one-file-at-a-time extraction, cleanup, limits, cancellation, and the damaged, encrypted,
-and unsupported rejection paths. `Fixtures/catalog-sample.qcow2` also feeds the shared
-`FileFormatCompatibilityTests`.
+and unsupported rejection paths. `Fixtures/catalog-sample.qcow2` remains as a sample set for manual checks.

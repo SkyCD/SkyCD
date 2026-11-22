@@ -1,18 +1,17 @@
 # Alcohol 120% (MDS / MDF) disk image indexing plugin
 
-Implements #724 on the file-format and indexing capability contracts.
+Implements #724 and #868 on the metadata indexing capability contracts.
 
-Assembly: `Plugins/SkyCD.Plugin.FileFormat.Mdf/` → plugin id `skycd.mdf`.
-Tests: `tests/SkyCD.Plugin.FileFormat.Mdf.Tests/`.
-Format: `skycd-mdf`, extension `.mds`, MIME type `application/x-alcohol-mds`, read-only.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Mdf/` → plugin id `skycd.mdf`.
+Tests: `tests/SkyCD.Plugin.Metadata.Mdf.Tests/`.
+Entry point: the `.mds` descriptor; the plugin also accepts an MDF path directly.
 
 ## What it provides
 
-One read-only capability instance, discovered through assembly metadata and implemented capability types:
+One metadata capability instance, discovered through assembly metadata and implemented capability types:
 
 | Capability | Type |
 |---|---|
-| Catalog hierarchy | `MdfImageIndexPlugin : IFileFormatPluginCapability` |
 | Index work items | `MdfImageIndexPlugin : IIndexWorkItemProvider` |
 
 An Alcohol image is a pair of companion files that share a base name:
@@ -22,7 +21,7 @@ An Alcohol image is a pair of companion files that share a base name:
 | `name.mds` | Binary descriptor with the media type, sessions, and track table. This is the entry point the plugin claims. |
 | `name.mdf` | Raw track data with 2048, 2336, or 2352-byte sectors. |
 
-The MDF file is not claimed as a format on its own, because it carries no descriptor and another
+The MDF file is not claimed on its own, because it carries no descriptor and another
 product may use the same extension. The plugin still accepts an MDF path directly, so images whose
 descriptor was lost remain browseable.
 
@@ -70,7 +69,7 @@ dependency.
 
 ## Tests
 
-`tests/SkyCD.Plugin.FileFormat.Mdf.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
+`tests/SkyCD.Plugin.Metadata.Mdf.Tests/` builds ISO 9660 images with DiscUtils and lays them out as 2048, 2336,
 and 2352-byte sectors, then exercises:
 
 - Every supported sector layout, images opened from the MDF file, and MDF files without a descriptor.
@@ -78,5 +77,4 @@ and 2352-byte sectors, then exercises:
 - One-file-at-a-time extraction, temporary-file cleanup, entry limits, total budget, and cancellation.
 - Host indexing through `IndexWorkItemSequence` with a metadata provider.
 
-`Fixtures/Mdf/catalog-sample.mds` and `catalog-sample.mdf` also feed the shared
-`FileFormatCompatibilityTests`.
+`Fixtures/Mdf/catalog-sample.mds` and `catalog-sample.mdf` remain as a sample set for manual checks.

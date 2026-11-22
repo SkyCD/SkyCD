@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
@@ -32,16 +32,6 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Zip\SkyCD.Plugin.FileFormat.Zip.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Tar\SkyCD.Plugin.FileFormat.Tar.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.SevenZip\SkyCD.Plugin.FileFormat.SevenZip.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Iso\SkyCD.Plugin.FileFormat.Iso.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Nrg\SkyCD.Plugin.FileFormat.Nrg.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Qcow2\SkyCD.Plugin.FileFormat.Qcow2.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Dmg\SkyCD.Plugin.FileFormat.Dmg.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Daa\SkyCD.Plugin.FileFormat.Daa.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Mdf\SkyCD.Plugin.FileFormat.Mdf.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Ccd\SkyCD.Plugin.FileFormat.Ccd.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.BinCue\SkyCD.Plugin.FileFormat.BinCue.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Vhd\SkyCD.Plugin.FileFormat.Vhd.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Vdi\SkyCD.Plugin.FileFormat.Vdi.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Arj\SkyCD.Plugin.FileFormat.Arj.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Ace\SkyCD.Plugin.FileFormat.Ace.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Lha\SkyCD.Plugin.FileFormat.Lha.csproj" />

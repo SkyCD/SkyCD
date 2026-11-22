@@ -213,9 +213,9 @@ UpgradeLog*.htm
 *.ldf
 
 # Alcohol 120% MDF disk images (MDF plugin sources and fixtures are not databases)
-!Plugins/SkyCD.Plugin.FileFormat.Mdf/
-!tests/SkyCD.Plugin.FileFormat.Mdf.Tests/Fixtures/Mdf/
-!tests/SkyCD.Plugin.FileFormat.Mdf.Tests/Fixtures/Mdf/*.mdf
+!Plugins/SkyCD.Plugin.Metadata.Mdf/
+!tests/SkyCD.Plugin.Metadata.Mdf.Tests/Fixtures/Mdf/
+!tests/SkyCD.Plugin.Metadata.Mdf.Tests/Fixtures/Mdf/*.mdf
 
 # Business Intelligence projects
 *.rdl.data
