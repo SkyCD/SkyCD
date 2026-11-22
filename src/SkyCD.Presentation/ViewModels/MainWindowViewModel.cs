@@ -3884,8 +3884,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel
                 { Header = LocalizationService.Current.Get(TextKeys.Options), HotKey = "Ctrl+Alt+O", InputGesture = "Ctrl+Alt+O", Command = OpenOptionsCommand },
             new MainMenuItemViewModel
-                { Header = LocalizationService.Current.Get(UiKeys.CustomizeToolbar), Command = CustomizeToolbarCommand },
-            new MainMenuItemViewModel
             {
                 Header = "Automatically sync mounted media",
                 Command = ToggleBackgroundMediaSyncCommand,
