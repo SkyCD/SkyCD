@@ -49,8 +49,8 @@ FileFormat > Metadata > Preview > Config > Feature
 
 A feature plugin that also contributes a configuration surface stays `Feature`. Archive and
 disk-image indexers are `Metadata`: their output is the entry listing collected while scanning a
-path, not a document the user opens or saves. They are still registered as read-only `FileFormat`
-plugins today and are being corrected in #867 and #868; name them `Metadata` once those land.
+path, not a document the user opens or saves. Disk-image indexers are still registered as read-only
+`FileFormat` plugins today and are being corrected in #868; name them `Metadata` once that lands.
 `SkyCD.Plugin.FileFormat.Tar` stays the container plugin and `SkyCD.Plugin.Metadata.Tar` stays the
 entry metadata provider.
 
@@ -78,7 +78,7 @@ is `Feature.WebBrowser`.
 
 | Old | New | Why |
 | --- | --- | --- |
-| `SkyCD.Plugin.Zip` | `SkyCD.Plugin.FileFormat.Zip` | Read-only archive reader; becomes `Metadata.Zip` with #867. |
+| `SkyCD.Plugin.Zip` | `SkyCD.Plugin.Metadata.Zip` | Archive indexer; entry listing is metadata for generated entries' subitems. |
 | `SkyCD.Plugin.Iso` | `SkyCD.Plugin.Metadata.Iso` | Disk-image metadata provider; catalog entries are contributed as work items. |
 | `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog.Xml` | File format, vendor variant. |
 | `SkyCD.Plugin.Legacy.Scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | File format, legacy generation. |

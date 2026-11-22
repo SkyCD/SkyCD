@@ -122,7 +122,7 @@ numbers degrade to `null`.
 | `SkiaSharp.NativeAssets.Win32` / `.Linux` / `.macOS` | 3.119.4 | MIT | Platform natives |
 | `Avalonia` / `Avalonia.Desktop` | 12.1.6 | MIT | Configuration surface only |
 
-All four are already used by the repository (`SkyCD.Plugin.FileFormat.SevenZip`, `SkyCD.Plugin.Metadata.Image` and the plugin
+All four are already used by the repository (`SkyCD.Plugin.Metadata.SevenZip`, `SkyCD.Plugin.Metadata.Image` and the plugin
 configuration samples), so the plugin introduces no new dependency tree for the policy gate. Every package and
 its transitive dependencies resolve to MIT or another license allowed by
 `docs/legal/dependency-license-policy.json`; no blocked, unknown or whitelist-dependent license is involved.
@@ -134,7 +134,7 @@ considered for them.
 - **Container support comes from SharpCompress.** ZIP (`.cbz`) is fully exercised by tests; RAR (`.cbr`) and
   7z (`.cb7`) go through the same reader but the suite builds no such fixtures, because SharpCompress cannot
   write either format and committing binary archives is not an option. Those paths are covered by the
-  constructor's signature detection and by `SkyCD.Plugin.FileFormat.SevenZip`'s existing use of the same package.
+  constructor's signature detection and by `SkyCD.Plugin.Metadata.SevenZip`'s existing use of the same package.
 - **ComicInfo is the only metadata source.** Archives without `ComicInfo.xml` report only `Container`; there
   is no filename-based guessing of series, number or volume.
 - **The cover is the first page in natural name order**, not a user selection and not a ComicInfo-declared
