@@ -4,7 +4,8 @@
   "allowedLicenseIds": ["CC-BY-4.0"],
   "licenseIdsByUrl": {
     "https://creativecommons.org/licenses/by/4.0/": "CC-BY-4.0",
-    "https://creativecommons.org/licenses/by/4.0/legalcode": "CC-BY-4.0"
+    "https://creativecommons.org/licenses/by/4.0/legalcode": "CC-BY-4.0",
+    "https://github.com/bolorundurowb/vCardLib/blob/master/LICENSE": "MIT"
   },
   "blockedLicenseIds": [
     "AGPL-1.0",
