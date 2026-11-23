@@ -1,17 +1,18 @@
-using System;
+using SharpCompress.Common;
+using SharpCompress.Readers.Rar;
+using SharpCompress.Readers;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
-using SharpCompress.Common;
-using SharpCompress.Readers;
-using SharpCompress.Readers.Rar;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Metadata.Archives.Rar.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Rar.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Rar.Import;
 
@@ -31,8 +32,7 @@ internal static class RarIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-rar-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("rar");
 
         Stream? bufferedSource = null;
         try
@@ -41,21 +41,14 @@ internal static class RarIndexWorkItems
             var archiveStream = source;
             if (!source.CanSeek)
             {
-                var bufferPath = Path.Combine(tempRoot, ".skycd-rar-source");
-                await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                                 FileShare.None, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                {
-                    await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-                }
-
-                bufferedSource = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                    CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
+                    workspace.GetPath(".skycd-rar-source"), cancellationToken).ConfigureAwait(false);
                 archiveStream = bufferedSource;
             }
 
             if (!RarArchiveSignature.Matches(archiveStream))
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
@@ -63,32 +56,32 @@ internal static class RarIndexWorkItems
                 RarVolumeCompanions.FindCompanion(request.SourcePath) is not null);
             if (!status.IsReadable)
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
-            var items = await ExtractEntriesAsync(archiveStream, tempRoot, limits, request.Progress, cancellationToken)
+            var items = await ExtractEntriesAsync(archiveStream, workspace.Root, limits, request.Progress, cancellationToken)
                 .ConfigureAwait(false);
 
             return new IndexWorkItemSet(items, () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (RarFailures.IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         finally
@@ -201,19 +194,12 @@ internal static class RarIndexWorkItems
             return (new IndexWorkItem(normalized, written, token => OpenExtractedAsync(fullPath, token),
                 TryGetModified(entry)), false);
         }
-        catch (OperationCanceledException)
-        {
-            TryDeleteFile(fullPath);
-            throw;
-        }
         catch (ArchiveEntryLimitExceededException)
         {
-            TryDeleteFile(fullPath);
             return (null, true);
         }
         catch (Exception exception) when (RarFailures.IsArchiveFailure(exception))
         {
-            TryDeleteFile(fullPath);
             return (null, true);
         }
     }
@@ -292,53 +278,6 @@ internal static class RarIndexWorkItems
         catch (Exception exception) when (RarFailures.IsArchiveFailure(exception))
         {
             return null;
-        }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
         }
     }
 

@@ -1,14 +1,15 @@
-using System;
+using SharpCompress.Compressors.BZip2;
+using SharpCompress.Compressors;
 using System.Buffers;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
-using SharpCompress.Compressors;
-using SharpCompress.Compressors.BZip2;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Bzip2.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Bzip2.Import;
 
@@ -28,8 +29,7 @@ internal static class Bzip2IndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-bzip2-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("bzip2");
 
         Stream? bufferedSource = null;
         try
@@ -38,26 +38,19 @@ internal static class Bzip2IndexWorkItems
             var archiveStream = source;
             if (!source.CanSeek)
             {
-                var bufferPath = Path.Combine(tempRoot, ".skycd-bzip2-source");
-                await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                                 FileShare.None, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                {
-                    await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-                }
-
-                bufferedSource = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                    CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
+                    workspace.GetPath(".skycd-bzip2-source"), cancellationToken).ConfigureAwait(false);
                 archiveStream = bufferedSource;
             }
 
             if (!Bzip2StreamHeader.IsValid(archiveStream))
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
             var name = ArchiveEntryName.DeriveFromFileName(request.FileName, ".tbz2", ".tbz", ".bz2", ".bz");
-            var fullPath = Path.GetFullPath(Path.Combine(tempRoot, name));
+            var fullPath = Path.GetFullPath(Path.Combine(workspace.Root, name));
 
             long written;
             try
@@ -67,8 +60,7 @@ internal static class Bzip2IndexWorkItems
             }
             catch (ArchiveEntryLimitExceededException)
             {
-                TryDeleteFile(fullPath);
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
@@ -76,23 +68,23 @@ internal static class Bzip2IndexWorkItems
             var item = new IndexWorkItem(name, written, token => OpenExtractedAsync(fullPath, token));
             return new IndexWorkItemSet([item], () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         finally
@@ -151,50 +143,4 @@ internal static class Bzip2IndexWorkItems
             or InvalidOperationException or SharpCompress.Common.SharpCompressException
             or System.Security.Cryptography.CryptographicException;
 
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 }
