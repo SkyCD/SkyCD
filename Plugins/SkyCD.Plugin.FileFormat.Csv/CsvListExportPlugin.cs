@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.ExportFormatting;
 using SkyCD.Plugin.FileFormat.Csv.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Models;
 
@@ -250,10 +250,10 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability, IDataLoss
         }
 
         var text = column.Equals("SizeBytes", StringComparison.OrdinalIgnoreCase)
-            ? FormatSize(value)
+            ? ExportValueFormatting.FormatSize(value, null)
             : column.Equals("Modified", StringComparison.OrdinalIgnoreCase)
-                ? FormatTimestamp(value)
-                : ToDisplayText(value);
+                ? ExportValueFormatting.FormatTimestamp(value, null)
+                : ExportValueFormatting.ToDisplayText(value);
         if (text is null)
         {
             return null;
@@ -288,97 +288,6 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability, IDataLoss
 
         return false;
     }
-
-    private static string? FormatSize(object? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        if (value is long integer)
-        {
-            return integer.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (value is int small)
-        {
-            return small.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (value is double number)
-        {
-            return number.ToString("R", CultureInfo.InvariantCulture);
-        }
-
-        var text = Convert.ToString(value, CultureInfo.InvariantCulture)?.Trim();
-        if (string.IsNullOrEmpty(text))
-        {
-            return null;
-        }
-
-        if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedLong))
-        {
-            return parsedLong.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedDouble))
-        {
-            return parsedDouble.ToString("R", CultureInfo.InvariantCulture);
-        }
-
-        return text;
-    }
-
-    private static string? FormatTimestamp(object? value)
-    {
-        switch (value)
-        {
-            case null:
-                return null;
-            case DateTimeOffset offset:
-                return offset.ToString("o", CultureInfo.InvariantCulture);
-            case DateTime dateTime:
-                return new DateTimeOffset(
-                    dateTime.Kind == DateTimeKind.Unspecified
-                        ? DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)
-                        : dateTime).ToString("o", CultureInfo.InvariantCulture);
-            default:
-                return FormatTimestampText(Convert.ToString(value, CultureInfo.InvariantCulture));
-        }
-    }
-
-    private static string? FormatTimestampText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return null;
-        }
-
-        var trimmed = text.Trim();
-        string[] formats =
-        [
-            "o", "yyyy-MM-ddTHH:mm:ss.FFFFFFFK", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd",
-            "yyyy/MM/dd HH:mm:ss", "yyyy/MM/dd", "MM/dd/yyyy HH:mm:ss", "MM/dd/yyyy",
-            "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy"
-        ];
-        if (DateTimeOffset.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
-        {
-            return parsed.ToString("o", CultureInfo.InvariantCulture);
-        }
-
-        return trimmed;
-    }
-
-    private static string? ToDisplayText(object? value) => value switch
-    {
-        null => null,
-        string text => text,
-        bool flag => flag ? bool.TrueString : bool.FalseString,
-        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-        _ => Convert.ToString(value, CultureInfo.InvariantCulture)
-    };
 
     private static Encoding ResolveEncoding(string name)
     {

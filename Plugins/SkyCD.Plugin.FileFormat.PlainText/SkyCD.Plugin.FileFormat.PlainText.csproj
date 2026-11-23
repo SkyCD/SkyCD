@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <!-- Shared with the CSV and XML exporters: one copy of size, timestamp and text formatting. -->
+        <Compile Include="..\Shared\ExportFormatting\ExportValueFormatting.cs" Link="Shared\ExportFormatting\ExportValueFormatting.cs" />
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <PropertyGroup>

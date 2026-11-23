@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -249,6 +250,31 @@ public class CsvListExportTests
         }));
         Assert.Contains("separator", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, badTarget.Length);
+    }
+
+    [Fact]
+    public async Task CurrentCulture_DoesNotChangeSizeOrTimestampOutput()
+    {
+        var service = CreateService();
+        var rows = new List<Dictionary<string, object?>>
+        {
+            Row("a", "D", "file", 1234567, new DateTime(2024, 1, 5, 10, 1, 0), null, "D")
+        };
+
+        var original = CultureInfo.CurrentCulture;
+        string text;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            text = await ExportToStringAsync(service,
+                new CsvListExportRequest { Rows = rows, Columns = ["SizeBytes", "Modified"] });
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+
+        Assert.Equal("1234567,2024-01-05T10:01:00.0000000+00:00", SplitLines(text.TrimStart('\uFEFF'))[1]);
     }
 
     [Fact]
