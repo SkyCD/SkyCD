@@ -1,14 +1,15 @@
-using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Formats.Tar;
-using System.IO;
 using System.IO.Compression;
-using System.Threading;
+using System.IO;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Tar.Import;
 
@@ -28,13 +29,14 @@ internal static class TarMetadataWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-tar-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("tar");
 
         try
         {
             await using var source = await request.OpenSource(cancellationToken).ConfigureAwait(false);
-            using var tarStream = PrepareStream(source, tempRoot);
+            await using var bufferedSource = await BufferSourceAsync(source, workspace.Root, cancellationToken)
+                .ConfigureAwait(false);
+            using var tarStream = PrepareStream(bufferedSource);
             var reader = new TarReader(tarStream, leaveOpen: true);
 
             var items = new List<IndexWorkItem>();
@@ -49,7 +51,7 @@ internal static class TarMetadataWorkItems
                     break;
                 }
 
-                var item = await ExtractEntryAsync(entry, tempRoot, limits, budget, cancellationToken)
+                var item = await ExtractEntryAsync(entry, workspace.Root, limits, budget, cancellationToken)
                     .ConfigureAwait(false);
                 if (item is not null)
                 {
@@ -59,23 +61,23 @@ internal static class TarMetadataWorkItems
 
             return new IndexWorkItemSet(items, () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
     }
@@ -124,31 +126,26 @@ internal static class TarMetadataWorkItems
         catch (OperationCanceledException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             throw;
         }
         catch (ArchiveEntryLimitExceededException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (NotSupportedException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (InvalidDataException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (IOException) when (!cancellationToken.IsCancellationRequested)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
     }
@@ -161,24 +158,22 @@ internal static class TarMetadataWorkItems
         return Task.FromResult(stream);
     }
 
-    private static Stream PrepareStream(Stream source, string tempRoot)
+    private static async Task<Stream> BufferSourceAsync(Stream source, string tempRoot,
+        CancellationToken cancellationToken)
     {
-        var seekable = source;
-        if (!source.CanSeek)
+        if (source.CanSeek)
         {
-            var bufferPath = Path.Combine(tempRoot, ".skycd-tar-source");
-            using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                source.CopyTo(buffer);
-            }
-
-            seekable = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return source;
         }
 
-        return IsGzip(seekable)
+        return await NonSeekableSourceBuffer.BufferAsync(source, Path.Combine(tempRoot, ".skycd-tar-source"),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static Stream PrepareStream(Stream seekable) =>
+        IsGzip(seekable)
             ? new GZipStream(seekable, CompressionMode.Decompress, leaveOpen: false)
             : seekable;
-    }
 
     private static bool IsGzip(Stream stream)
     {
@@ -224,53 +219,6 @@ internal static class TarMetadataWorkItems
     private static bool IsArchiveFailure(Exception exception) =>
         exception is InvalidDataException or IOException or NotSupportedException or ArgumentException
             or FormatException or OverflowException;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 
     private sealed class ExtractionBudget
     {

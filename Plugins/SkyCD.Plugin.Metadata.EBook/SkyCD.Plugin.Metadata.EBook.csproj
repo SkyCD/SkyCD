@@ -3,6 +3,11 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one bounded cover pipeline and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\CoverImageRenderer.cs" Link="Shared\Preview\Export\CoverImageRenderer.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- MIT: decodes the embedded cover and encodes the bounded thumbnail. SkiaSharp is already used by
              SkyCD.Plugin.Metadata.Image, SkyCD.Plugin.Metadata.Rtf and SkyCD.Plugin.Metadata.EComic, so the license evaluation is
              shared (see docs/plugins/ebook.md). -->

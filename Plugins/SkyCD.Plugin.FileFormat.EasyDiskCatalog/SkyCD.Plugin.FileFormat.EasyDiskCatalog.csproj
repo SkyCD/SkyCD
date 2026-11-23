@@ -7,6 +7,9 @@
              Referenced only by this plugin; provides cross-platform sqlite3mc native libraries. -->
         <PackageReference Include="SQLite3MC.PCLRaw.bundle" Version="2.7.1" />
     </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\Shared\Storage\TemporaryDatabase.cs" Link="Shared\Storage\TemporaryDatabase.cs" />
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>

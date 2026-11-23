@@ -7,6 +7,7 @@ using System.Threading;
 using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.FileFormat.Basenji.Vdb.Exceptions;
 using SkyCD.Plugin.FileFormat.Basenji.Vdb.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.Basenji.Vdb.Parsing;
 
@@ -30,20 +31,16 @@ public static class BasenjiVdbParser
 
         ValidateSqliteHeader(stream);
 
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"skycd-basenji-{Guid.NewGuid():N}.vdb");
+        using var database = TemporaryDatabase.CopyFrom(stream, ".vdb", cancellationToken: cancellationToken);
+
         try
         {
-            using (var fileStream = File.Create(tempFilePath))
-            {
-                stream.CopyTo(fileStream);
-            }
-
             progress?.Report(20);
             cancellationToken.ThrowIfCancellationRequested();
 
             var connectionStringBuilder = new SqliteConnectionStringBuilder
             {
-                DataSource = tempFilePath,
+                DataSource = database.Path,
                 Mode = SqliteOpenMode.ReadOnly,
                 Pooling = false
             };
@@ -88,20 +85,6 @@ public static class BasenjiVdbParser
         catch (SqliteException ex)
         {
             throw new BasenjiCorruptFileException(ex.Message);
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(tempFilePath))
-                {
-                    File.Delete(tempFilePath);
-                }
-            }
-            catch
-            {
-                // Ignore cleanup errors on temp file
-            }
         }
     }
 

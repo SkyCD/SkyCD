@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.MyCatalogue.Exceptions;
 using SkyCD.Plugin.FileFormat.MyCatalogue.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.MyCatalogue;
 
@@ -19,7 +20,7 @@ public sealed class MyCataloguePlugin : IFileFormatPluginCapability, IContentAwa
     {
         if (!stream.CanRead || !stream.CanSeek) return false;
         var position = stream.Position;
-        string? temporary = null;
+        TemporaryDatabase? temporary = null;
         try
         {
             stream.Position = 0;
@@ -30,8 +31,9 @@ public sealed class MyCataloguePlugin : IFileFormatPluginCapability, IContentAwa
             }
             else
             {
-                temporary = CopyToTemporaryAsync(stream, CancellationToken.None).GetAwaiter().GetResult();
-                MyCatalogueReader.Validate(temporary);
+                temporary = TemporaryDatabase.CopyFrom(
+                    stream, ".mdb", MaxDatabaseBytes, LimitExceeded);
+                MyCatalogueReader.Validate(temporary.Path);
             }
             return true;
         }
@@ -41,21 +43,22 @@ public sealed class MyCataloguePlugin : IFileFormatPluginCapability, IContentAwa
         }
         finally
         {
-            if (temporary is not null) DeleteTemporary(temporary);
+            temporary?.Dispose();
             stream.Position = position;
         }
     }
 
     public async Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request, CancellationToken cancellationToken = default)
     {
-        string? temporary = null;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (request.Source.CanSeek) request.Source.Position = 0;
-            temporary = await CopyToTemporaryAsync(request.Source, cancellationToken).ConfigureAwait(false);
+            using var temporary = await TemporaryDatabase.CopyFromAsync(
+                request.Source, ".mdb", MaxDatabaseBytes, LimitExceeded, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
             request.Progress?.Report(10);
-            var rows = await Task.Run(() => MyCatalogueReader.Read(temporary, request.Progress, cancellationToken),
+            var rows = await Task.Run(() => MyCatalogueReader.Read(temporary.Path, request.Progress, cancellationToken),
                 cancellationToken).ConfigureAwait(false);
             request.Progress?.Report(100);
             return new FileFormatReadResult { Success = true, Payload = rows };
@@ -73,58 +76,11 @@ public sealed class MyCataloguePlugin : IFileFormatPluginCapability, IContentAwa
                 Error = "Invalid or unsupported MyCatalogue catalog: the database could not be read."
             };
         }
-        finally
-        {
-            if (temporary is not null) DeleteTemporary(temporary);
-        }
     }
 
     public Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default) =>
         Task.FromResult(new FileFormatWriteResult { Success = false, Error = "MyCatalogue import is read-only." });
 
-    private static async Task<string> CopyToTemporaryAsync(Stream source, CancellationToken cancellationToken)
-    {
-        if (source.CanSeek && source.Length - source.Position > MaxDatabaseBytes)
-            throw new MyCatalogueImportException("the database exceeds the 2 GiB limit.");
-
-        var path = Path.Combine(Path.GetTempPath(), $"skycd-mycatalogue-{Guid.NewGuid():N}.mdb");
-        var options = new FileStreamOptions
-        {
-            Mode = FileMode.CreateNew,
-            Access = FileAccess.Write,
-            Share = FileShare.None,
-            Options = FileOptions.Asynchronous | FileOptions.SequentialScan
-        };
-        if (!OperatingSystem.IsWindows())
-            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-        var created = false;
-        try
-        {
-            await using var target = new FileStream(path, options);
-            created = true;
-            var buffer = new byte[81920];
-            long total = 0;
-            int read;
-            while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) != 0)
-            {
-                total += read;
-                if (total > MaxDatabaseBytes)
-                    throw new MyCatalogueImportException("the database exceeds the 2 GiB limit.");
-                await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-            }
-            return path;
-        }
-        catch
-        {
-            if (created) DeleteTemporary(path);
-            throw;
-        }
-    }
-
-    private static void DeleteTemporary(string path)
-    {
-        try { File.Delete(path); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
+    private static Exception LimitExceeded(long _) =>
+        new MyCatalogueImportException("the database exceeds the 2 GiB limit.");
 }
