@@ -13,6 +13,9 @@ public static class MarkdownSchema
     public const string MetadataSchemaId = "skycd.markdown.metadata";
     public const int MetadataSchemaVersion = 1;
 
+    public const string PreviewSchemaId = "skycd.markdown.preview";
+    public const int PreviewSchemaVersion = 1;
+
     public const string Container = "Container";
     public const string HasFrontMatter = "HasFrontMatter";
     public const string FrontMatterValid = "FrontMatterValid";
@@ -65,4 +68,7 @@ public static class MarkdownSchema
         new MediaMetadataField(TextExcerpt, MediaMetadataType.Text),
         new MediaMetadataField(TextExcerptTruncated, MediaMetadataType.Boolean)
     ]);
+
+    /// <summary>Preview results carry the rendered page image rather than values, so the schema is identity only.</summary>
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }

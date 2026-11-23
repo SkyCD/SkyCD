@@ -28,7 +28,7 @@ public sealed class MarkdownPluginIntegrationTests
             new MediaItem(".md", "text/markdown", source.Length),
             _ => Task.FromResult<Stream>(new MemoryStream(source)));
 
-        var metadata = Assert.Single(results);
+        var metadata = Assert.Single(results, result => result.Schema?.Id == "skycd.markdown.metadata");
         Assert.False(metadata.Failed);
         Assert.Equal("skycd.markdown.metadata", metadata.Schema!.Id);
         Assert.Equal("Integration", metadata.Metadata!.Values.Single(value => value.Key == MarkdownSchema.Title).Text);
@@ -56,7 +56,9 @@ public sealed class MarkdownPluginIntegrationTests
             new MediaItem(".md", "text/markdown", source.Length),
             _ => Task.FromResult<Stream>(new MemoryStream(source)));
 
-        var result = Assert.Single(results);
+        var result = Assert.Single(results,
+            candidate => candidate.Capability.EndsWith("MarkdownMetadataPlugin", StringComparison.Ordinal) &&
+                         candidate.Failed);
         Assert.True(result.Failed);
         Assert.Null(result.Metadata);
     }
@@ -75,14 +77,55 @@ public sealed class MarkdownPluginIntegrationTests
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsTheCapability_FromMetadataOnly()
+    public async Task Host_PublishesMetadataAndARenderedPageForADocumentWithText()
+    {
+        var source = MarkdownFixtures.WithFrontMatter(
+            "title: Rendering", "# Heading\n\nBody paragraph.\n\n## Section\n\nMore body.");
+
+        var results = await CreateManager().ProcessAsync(
+            new MediaItem(".md", "text/markdown", source.Length),
+            _ => Task.FromResult<Stream>(new MemoryStream(source)));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.False(result.Failed));
+
+        var metadata = Assert.Single(results, result => result.Schema?.Id == "skycd.markdown.metadata");
+        Assert.Equal("skycd.markdown.metadata", metadata.Schema!.Id);
+
+        var preview = Assert.Single(results, result => result.Schema?.Id == "skycd.markdown.preview");
+        var artifact = Assert.Single(preview.Preview!.Artifacts);
+        Assert.Equal("image/png", artifact.ContentType);
+        Assert.True(artifact.Data.Length > 8);
+    }
+
+    [Fact]
+    public async Task Host_TextlessDocument_HasMetadataButNoPreviewArtifacts()
+    {
+        var source = MarkdownFixtures.WithFrontMatter("title: Empty body", string.Empty);
+
+        var results = await CreateManager().ProcessAsync(
+            new MediaItem(".md", "text/markdown", source.Length),
+            _ => Task.FromResult<Stream>(new MemoryStream(source)));
+
+        var metadata = Assert.Single(results, result => result.Schema?.Id == "skycd.markdown.metadata");
+        Assert.False(metadata.Failed);
+        Assert.Equal("Empty body", metadata.Metadata!.Values.Single(value => value.Key == MarkdownSchema.Title).Text);
+
+        var preview = Assert.Single(results, result => result.Schema?.Id == "skycd.markdown.preview");
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+    }
+
+    [Fact]
+    public void AssemblyDiscovery_FindsBothCapabilities_FromMetadataOnly()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(MarkdownMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
         Assert.Equal("Markdown Document Metadata", plugin.Name);
-        var capability = Assert.Single(plugin.Capabilities);
-        Assert.IsAssignableFrom<IMediaMetadataCapability>(capability);
+        Assert.Equal(2, plugin.Capabilities.Count);
+        Assert.Single(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
+        Assert.Single(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
     }
 
     [Fact]
@@ -95,7 +138,10 @@ public sealed class MarkdownPluginIntegrationTests
     }
 
     private static MediaExtensionManager CreateManager(MediaExecutionLimits? limits = null) =>
-        new([new MediaProvider(PluginId, "1.0.0", new MarkdownMetadataPlugin())], limits);
+        new([
+            new MediaProvider(PluginId, "1.0.0", new MarkdownMetadataPlugin()),
+            new MediaProvider(PluginId, "1.0.0", new MarkdownPreviewPlugin())
+        ], limits);
 
     private static string FindPluginProjectDirectory()
     {
