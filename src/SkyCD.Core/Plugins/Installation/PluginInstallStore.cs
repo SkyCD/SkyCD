@@ -20,6 +20,8 @@ internal sealed class PluginInstallStore(PluginInstallLayout layout)
 
     private const string ReplaceFolderPrefix = ".replace-";
 
+    private const string UninstallFolderPrefix = ".uninstall-";
+
     public PluginInstallLayout Layout { get; } = layout;
 
     public string GetInstallFolder(string pluginId) => Layout.ResolveInstallFolder(pluginId);
@@ -285,6 +287,43 @@ internal sealed class PluginInstallStore(PluginInstallLayout layout)
         {
             throw new PluginInstallDestinationException(pluginId,
                 "the previous plugin version could not be restored", exception);
+        }
+    }
+
+    /// <summary>
+    /// Renames a catalog install folder to a transient sibling so a partial delete never leaves a half-removed
+    /// folder in the plugin root; the caller deletes the returned folder or moves it back.
+    /// </summary>
+    public string MoveToUninstallFolder(string pluginId, string installFolder)
+    {
+        var parent = Path.GetDirectoryName(installFolder)!;
+        var trashFolder = Path.Combine(parent, $"{UninstallFolderPrefix}{pluginId}-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.Move(installFolder, trashFolder);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new PluginInstallDestinationException(pluginId,
+                "the plugin files are in use or cannot be moved", exception);
+        }
+
+        return trashFolder;
+    }
+
+    /// <summary>Removes the side backups kept for replaced installs; used after the plugin is uninstalled.</summary>
+    public void DeleteBackups(string pluginId)
+    {
+        if (!Directory.Exists(Layout.PluginRoot))
+        {
+            return;
+        }
+
+        var prefix = $"{BackupFolderPrefix}{pluginId}-";
+        foreach (var path in Directory.EnumerateDirectories(Layout.PluginRoot, "*", SearchOption.TopDirectoryOnly)
+                     .Where(path => IsNonceFolderOf(path, prefix)))
+        {
+            TryDeleteDirectory(path);
         }
     }
 

@@ -28,7 +28,7 @@ public sealed class PluginInstallService(
     TimeProvider? timeProvider = null,
     TimeSpan? downloadTimeout = null,
     long maxPackageBytes = PluginInstallService.DefaultMaxPackageBytes)
-    : IPluginPackageInstaller, IPluginInstallStateSource
+    : IPluginPackageInstaller, IPluginInstallStateSource, IPluginPackageUninstaller
 {
     public const long DefaultMaxPackageBytes = 64L * 1024 * 1024;
 
@@ -220,6 +220,97 @@ public sealed class PluginInstallService(
             StagedPath = null,
             Error = "The staged operation was cancelled."
         }));
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The target is resolved only from <see cref="PluginInstallLayout.ResolveInstallFolder(string)"/> and every
+    /// path check runs before the first filesystem write. The folder is renamed out of discovery, deleted, and
+    /// renamed back when the delete fails, so a failed uninstall leaves the plugin listed with its files intact.
+    /// </remarks>
+    public async Task<PluginInstallResult> UninstallAsync(string pluginId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!PluginInstallLayout.IsValidPluginId(pluginId))
+        {
+            return Failure(PluginInstallFailureReason.InvalidPluginId,
+                "The plugin id is not a safe folder name.", pluginId ?? string.Empty);
+        }
+
+        using var operationGuard = await operationLock.AcquireAsync(pluginId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var installFolder = store.GetInstallFolder(pluginId);
+        if (!layout.IsDirectChildOfPluginRoot(installFolder))
+        {
+            logger.LogWarning(
+                "Refused to uninstall plugin {PluginId}: '{Folder}' is not a folder directly below the plugin root.",
+                pluginId, installFolder);
+            return Failure(PluginInstallFailureReason.UnsafeInstallPath,
+                "The plugin folder is outside the plugin root.", pluginId);
+        }
+
+        var receipt = Directory.Exists(installFolder) ? store.TryReadReceipt(installFolder) : null;
+        if (receipt is null ||
+            receipt.SchemaVersion > PluginInstallReceipt.CurrentSchemaVersion ||
+            !string.Equals(receipt.PluginId, pluginId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Failure(PluginInstallFailureReason.NotCatalogOwned,
+                "The plugin folder was not installed by the catalog or its receipt is unreadable.", pluginId);
+        }
+
+        string uninstallFolder;
+        try
+        {
+            uninstallFolder = store.MoveToUninstallFolder(pluginId, installFolder);
+        }
+        catch (PluginInstallException exception)
+        {
+            return Failure(exception.Reason, exception.Message, pluginId);
+        }
+
+        PluginInstallStore.TryDeleteDirectory(uninstallFolder);
+        if (Directory.Exists(uninstallFolder))
+        {
+            try
+            {
+                Directory.Move(uninstallFolder, installFolder);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(exception,
+                    "Uninstall of plugin {PluginId} failed and the renamed files could not be moved back to '{Folder}'.",
+                    pluginId, installFolder);
+            }
+
+            return Failure(PluginInstallFailureReason.DestinationUnavailable,
+                "The plugin files could not be deleted because they are in use or read-only.", pluginId);
+        }
+
+        TryCleanupAfterUninstall(pluginId);
+        logger.LogInformation("Uninstalled catalog plugin {PluginId} version {Version}.", pluginId, receipt.Version);
+        return PluginInstallResult.Success(PluginInstallState.NotInstalled(pluginId));
+    }
+
+    // A staged update of a plugin that no longer exists must not activate on the next start, and the hidden
+    // backup copies must not keep the "uninstalled" files on disk.
+    private void TryCleanupAfterUninstall(string pluginId)
+    {
+        try
+        {
+            if (store.TryReadPending(pluginId) is { } pending)
+            {
+                store.TryDeleteStaging(pending.StagedPath);
+            }
+
+            store.DeletePending(pluginId);
+            store.DeleteBackups(pluginId);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(exception, "Could not discard the staged operation or backups of uninstalled plugin {PluginId}.",
+                pluginId);
+        }
     }
 
     /// <inheritdoc />

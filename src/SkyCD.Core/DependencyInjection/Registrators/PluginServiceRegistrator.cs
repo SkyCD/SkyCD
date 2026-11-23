@@ -82,6 +82,9 @@ public sealed class PluginServiceRegistrator
         registrator.RegisterDelegate<IPluginInstallStateSource>(
             resolver => (IPluginInstallStateSource)resolver.Resolve<IPluginPackageInstaller>(),
             Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.RegisterDelegate<IPluginPackageUninstaller>(
+            resolver => (IPluginPackageUninstaller)resolver.Resolve<IPluginPackageInstaller>(),
+            Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.RegisterDelegate<PluginCatalog>(static resolver => new PluginCatalog(
                 new PluginCatalogOptions { HostVersion = resolver.Resolve<HostVersionProvider>().Current }),

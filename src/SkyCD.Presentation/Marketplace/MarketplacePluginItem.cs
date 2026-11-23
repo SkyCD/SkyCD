@@ -81,6 +81,12 @@ public sealed partial class MarketplacePluginItem : ObservableObject
 
     public bool IsInstalled => !string.IsNullOrEmpty(ActiveVersion);
 
+    /// <summary>True when the active files are owned by the catalog installer and may be deleted by it.</summary>
+    public bool IsCatalogOwned { get; private set; }
+
+    /// <summary>Install folder id of the catalog-owned install; <c>null</c> for manual or bundled plugins.</summary>
+    public string? InstalledPluginId { get; private set; }
+
     public bool IsPendingRestart => State == MarketplacePluginItemState.RestartRequired;
 
     public bool UpdateAvailable => IsInstalled && HasRelease && IsCompatible && CompareVersions(AvailableVersion, ActiveVersion!) > 0;
@@ -117,6 +123,12 @@ public sealed partial class MarketplacePluginItem : ObservableObject
         CanInstallOrUpdate && (!IsInstalled || UpdateAvailable);
 
     public bool ShowRetryAction => HasError && HasRelease && IsCompatible;
+
+    /// <summary>Something the primary split-button action can do: install, update or retry.</summary>
+    public bool CanRunPrimaryAction => ShowPrimaryAction || ShowRetryAction;
+
+    /// <summary>An active catalog-owned install can be removed from disk; manual installs cannot.</summary>
+    public bool CanUninstall => IsCatalogOwned && IsInstalled && !IsBusy;
 
     public string StatusLabel => State switch
     {
@@ -213,12 +225,16 @@ public sealed partial class MarketplacePluginItem : ObservableObject
             ActiveVersion = null;
             PendingVersion = null;
             pendingRestart = false;
+            InstalledPluginId = null;
+            IsCatalogOwned = false;
             return;
         }
 
         ActiveVersion = state.ActiveVersion;
         pendingRestart = state.Status == PluginInstallOperationStatus.PendingRestart;
         PendingVersion = pendingRestart ? state.PendingVersion : null;
+        IsCatalogOwned = state.Status != PluginInstallOperationStatus.NotInstalled;
+        InstalledPluginId = IsCatalogOwned ? state.PluginId : null;
         if (state.Status is PluginInstallOperationStatus.Failed or PluginInstallOperationStatus.RolledBack &&
             !string.IsNullOrWhiteSpace(state.Error))
         {
@@ -246,6 +262,10 @@ public sealed partial class MarketplacePluginItem : ObservableObject
         OnPropertyChanged(nameof(CanInstallOrUpdate));
         OnPropertyChanged(nameof(ShowPrimaryAction));
         OnPropertyChanged(nameof(ShowRetryAction));
+        OnPropertyChanged(nameof(CanRunPrimaryAction));
+        OnPropertyChanged(nameof(CanUninstall));
+        OnPropertyChanged(nameof(IsCatalogOwned));
+        OnPropertyChanged(nameof(InstalledPluginId));
         OnPropertyChanged(nameof(StatusLabel));
         OnPropertyChanged(nameof(PrimaryActionLabel));
         OnPropertyChanged(nameof(InstalledVersionLabel));

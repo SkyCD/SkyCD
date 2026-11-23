@@ -35,5 +35,14 @@ public enum PluginInstallFailureReason
     IdentityConflict,
 
     /// <summary>The plugin files are in use or the install location cannot be written.</summary>
-    DestinationUnavailable
+    DestinationUnavailable,
+
+    /// <summary>The plugin id is missing or is not a single safe folder name below the plugin root.</summary>
+    InvalidPluginId,
+
+    /// <summary>The resolved plugin folder is outside the plugin root or is the plugin root itself.</summary>
+    UnsafeInstallPath,
+
+    /// <summary>The folder was not installed by the catalog, so it is never deleted.</summary>
+    NotCatalogOwned
 }

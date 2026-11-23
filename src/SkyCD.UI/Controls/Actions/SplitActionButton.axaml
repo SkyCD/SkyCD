@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SkyCD.UI.Controls.Actions.SplitActionButton"
+             x:Name="Root">
+    <Grid ColumnDefinitions="Auto,Auto">
+        <Button x:Name="PrimaryActionButton"
+                Content="{Binding PrimaryContent, ElementName=Root}"
+                Command="{Binding PrimaryCommand, ElementName=Root}"
+                CommandParameter="{Binding PrimaryCommandParameter, ElementName=Root}"
+                IsEnabled="{Binding IsPrimaryEnabled, ElementName=Root}"
+                ToolTip.Tip="{Binding PrimaryToolTip, ElementName=Root}"
+                AutomationProperties.Name="{Binding PrimaryContent, ElementName=Root}"
+                AutomationProperties.HelpText="{Binding PrimaryToolTip, ElementName=Root}" />
+        <Button x:Name="SecondaryActionButton"
+                Grid.Column="1"
+                IsVisible="{Binding IsSecondaryVisible, ElementName=Root}"
+                IsEnabled="{Binding IsSecondaryEnabled, ElementName=Root}"
+                ToolTip.Tip="{Binding SecondaryToolTip, ElementName=Root}"
+                AutomationProperties.Name="{Binding SecondaryContent, ElementName=Root}"
+                AutomationProperties.HelpText="{Binding SecondaryToolTip, ElementName=Root}"
+                Click="OnSecondaryActionClick"
+                Padding="{DynamicResource SkyInsetXs}">
+            <TextBlock Text="▾" VerticalAlignment="Center" />
+        </Button>
+    </Grid>
+</UserControl>
