@@ -135,6 +135,13 @@ public sealed class CatalogEntryMerger
         {
             foreach (var (key, value) in existingProps)
             {
+                // SizeKnown describes the measured size, not user data: a rescan that produced a size must
+                // clear an earlier unknown marker instead of inheriting it.
+                if (string.Equals(key, CatalogDocument.SizeKnownPropertyKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 // If existing has a custom user property that scanner didn't populate, preserve it
                 if (!result.ContainsKey(key))
                 {
