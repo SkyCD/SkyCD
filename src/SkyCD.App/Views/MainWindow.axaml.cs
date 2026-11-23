@@ -168,6 +168,7 @@ public partial class MainWindow : Window
             subscribedViewModel.RenameRequested -= OnRenameRequested;
             subscribedViewModel.DetailsColumnsChanged -= OnDetailsColumnsChanged;
             subscribedViewModel.ToolbarItemsChanged -= OnToolbarItemsChanged;
+            subscribedViewModel.ToolbarStateChanged -= OnToolbarStateChanged;
             subscribedViewModel.ToolbarLayoutChanged -= OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
@@ -194,6 +195,7 @@ public partial class MainWindow : Window
             subscribedViewModel.RenameRequested += OnRenameRequested;
             subscribedViewModel.DetailsColumnsChanged += OnDetailsColumnsChanged;
             subscribedViewModel.ToolbarItemsChanged += OnToolbarItemsChanged;
+            subscribedViewModel.ToolbarStateChanged += OnToolbarStateChanged;
             subscribedViewModel.ToolbarLayoutChanged += OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
@@ -246,6 +248,22 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnToolbarStateChanged(object? sender, EventArgs e)
+    {
+        if (sender is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        foreach (var command in viewModel.ToolbarCommands())
+        {
+            if (command.IsToggle)
+            {
+                MainToolbar.SetCheckedState(command.Id, command.IsChecked);
+            }
+        }
+    }
+
     private void OnToolbarLayoutChanged(object? sender, EventArgs e)
     {
         if (sender is not MainWindowViewModel viewModel)
@@ -277,10 +295,13 @@ public partial class MainWindow : Window
 
             MainToolbar.Items.Add(new ClassicToolbarButton
             {
+                CommandId = descriptor.Id,
                 Command = descriptor.Command,
                 CommandParameter = descriptor.CommandParameter,
                 Text = descriptor.Label,
-                ImageSrc = LoadToolbarIcon(descriptor.IconPath)
+                ImageSrc = LoadToolbarIcon(descriptor.IconPath),
+                IsToggle = descriptor.IsToggle,
+                IsChecked = descriptor.IsChecked
             });
         }
     }

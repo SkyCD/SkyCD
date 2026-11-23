@@ -59,9 +59,18 @@
         <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
     </Style>
+    <!-- Checkable view commands keep the legacy sunken pressed look while they are active. -->
+    <Style Selector="ct|ClassicToolbarButton:checked">
+        <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
+    </Style>
     <Style Selector="ct|ClassicToolbarButton:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}" />
         <Setter Property="Background" Value="{DynamicResource ThemeControlLowBrush}" />
+    </Style>
+    <Style Selector="ct|ClassicToolbarButton:checked:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ThemeBorderMidBrush}" />
     </Style>
     <Style Selector="ct|ClassicToolbarButton:disabled">
         <Setter Property="Opacity" Value="0.5" />
