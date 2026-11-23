@@ -68,6 +68,7 @@ public partial class MainWindow : Window
     private readonly VirtualCollectionDocumentRepository virtualCollectionRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
+    private readonly ILogger<MainWindow> logger = ServiceProvider.Resolve<ILogger<MainWindow>>();
     private readonly OpenCatalogState openCatalogState;
     private readonly IMediaDriveProvider mediaDriveProvider;
     private readonly SystemMediaEjector mediaEjector = new();
@@ -1938,6 +1939,19 @@ public partial class MainWindow : Window
     }
 
     private void RefreshPlugins(OptionsDialogViewModel dialogVm)
+    {
+        try
+        {
+            RefreshPluginsCore(dialogVm);
+        }
+        catch (Exception exception)
+        {
+            // Reachable from async void event handlers, so an escaping plugin failure would crash the app.
+            logger.LogWarning(exception, "Refreshing the plugin list failed; the Options dialog remains usable.");
+        }
+    }
+
+    private void RefreshPluginsCore(OptionsDialogViewModel dialogVm)
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);

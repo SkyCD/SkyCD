@@ -17,11 +17,34 @@ public sealed class PluginConfigurationManager(PluginManager pluginManager, Plug
     {
         var enabledIds = pluginManager.GetPluginDescriptors().Where(p => p.IsEnabled)
             .Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return pluginManager.AvailablePlugins
-            .Where(p => includeDisabled || enabledIds.Contains(p.Id))
-            .Select(p => (Plugin: p, Capability: p.Capabilities.OfType<IPluginConfigurationCapability>().FirstOrDefault()))
-            .Where(p => p.Capability is not null)
-            .Select(p => new PluginConfigurationRegistration(p.Plugin.Id, p.Plugin.Name, p.Capability!.Configuration))
+        var registrations = new List<PluginConfigurationRegistration>();
+        foreach (var plugin in pluginManager.AvailablePlugins)
+        {
+            if (!includeDisabled && !enabledIds.Contains(plugin.Id))
+            {
+                continue;
+            }
+
+            var capability = plugin.Capabilities.OfType<IPluginConfigurationCapability>().FirstOrDefault();
+            if (capability is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                registrations.Add(new PluginConfigurationRegistration(plugin.Id, plugin.Name,
+                    capability.Configuration));
+            }
+            catch (Exception exception)
+            {
+                // A stale plugin can throw binding errors while reading its own descriptor; isolate it so
+                // the remaining plugins still register and the Options dialog stays usable.
+                PluginFailure.Publish(capability.GetType(), "configure", exception);
+            }
+        }
+
+        return registrations
             .OrderBy(p => p.PluginName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.PluginId, StringComparer.OrdinalIgnoreCase).ToArray();
     }

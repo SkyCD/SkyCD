@@ -24,7 +24,19 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
                 continue;
             }
 
-            var dllPaths = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories)
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Skipped plugin directory '{Directory}' while scanning assemblies.",
+                    directory);
+                continue;
+            }
+
+            var dllPaths = files
                 .Select(Path.GetFullPath)
                 .Where(IsCandidatePluginAssemblyPath)
                 .OrderBy(GetPriority)
