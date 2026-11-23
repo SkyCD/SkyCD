@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Exceptions;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Export;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Models;
@@ -16,7 +17,7 @@ internal static class LegacyScdBinaryReader
     // as three UInt16-length-prefixed ANSI strings (Parent, Key, Text).
     private const int RecordsOffset = 127 + 5392;
     private const int CountOffset = 127 + 128 + 128 + 8;
-    private static readonly Encoding Ansi = CodePagesEncodingProvider.Instance.GetEncoding(1252)!;
+    private static readonly Encoding Ansi = LegacyEncoding.Windows1252;
 
     public static LegacyScdCatalog Read(Stream source, CancellationToken cancellationToken)
     {

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Executable.Models;
 using SkyCD.Plugin.Metadata.Executable.Parsing;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Metadata.Executable.Tests;
@@ -149,9 +150,9 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_ResolvesAnAbsoluteIconPath()
     {
-        using var directory = new TempDirectory();
-        var icon = directory.WriteImage("icon.png", 64);
-        var launcher = directory.WriteLauncher($"Icon={icon}");
+        using var workspace = new TestWorkspace();
+        var icon = WriteImage(workspace.Root, "icon.png", 64);
+        var launcher = WriteLauncher(workspace.Root, $"Icon={icon}");
 
         var png = Decode(Assert.Single(await GenerateLauncher(launcher)));
 
@@ -161,9 +162,9 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_ResolvesASiblingIconFile()
     {
-        using var directory = new TempDirectory();
-        directory.WriteImage("myapp.png", 64);
-        var launcher = directory.WriteLauncher("Icon=myapp.png");
+        using var workspace = new TestWorkspace();
+        WriteImage(workspace.Root, "myapp.png", 64);
+        var launcher = WriteLauncher(workspace.Root, "Icon=myapp.png");
 
         Assert.Single(await GenerateLauncher(launcher));
     }
@@ -171,11 +172,11 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_ResolvesARelativeIconPath()
     {
-        using var directory = new TempDirectory();
-        var icons = Directory.CreateDirectory(Path.Combine(directory.Path, "icons"));
+        using var workspace = new TestWorkspace();
+        var icons = Directory.CreateDirectory(Path.Combine(workspace.Root, "icons"));
         File.WriteAllBytes(Path.Combine(icons.FullName, "app.png"),
             ExecutableFixtures.PngImage(64, 64, 0x00FF00FF));
-        var launcher = directory.WriteLauncher("Icon=icons/app.png");
+        var launcher = WriteLauncher(workspace.Root, "Icon=icons/app.png");
 
         Assert.Single(await GenerateLauncher(launcher));
     }
@@ -183,12 +184,12 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_ResolvesAThemeNameFromTheVolume()
     {
-        using var directory = new TempDirectory();
-        var theme = Directory.CreateDirectory(Path.Combine(directory.Path, "usr", "share", "icons", "hicolor",
+        using var workspace = new TestWorkspace();
+        var theme = Directory.CreateDirectory(Path.Combine(workspace.Root, "usr", "share", "icons", "hicolor",
             "128x128", "apps"));
         File.WriteAllBytes(Path.Combine(theme.FullName, "greenapp.png"),
             ExecutableFixtures.PngImage(128, 128, 0x00FF00FF));
-        var launcher = directory.WriteLauncher("Icon=greenapp", "apps");
+        var launcher = WriteLauncher(workspace.Root, "Icon=greenapp", "apps");
 
         Assert.Single(await GenerateLauncher(launcher));
     }
@@ -196,8 +197,8 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_UnresolvedThemeName_ProducesNoIcon()
     {
-        using var directory = new TempDirectory();
-        var launcher = directory.WriteLauncher("Icon=missingapp");
+        using var workspace = new TestWorkspace();
+        var launcher = WriteLauncher(workspace.Root, "Icon=missingapp");
 
         Assert.Empty(await GenerateLauncher(launcher));
     }
@@ -205,9 +206,9 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_IgnoresLocalizedKeysAndDesktopActions()
     {
-        using var directory = new TempDirectory();
-        directory.WriteImage("real.png", 64);
-        var launcher = directory.WriteLauncherFromLines(
+        using var workspace = new TestWorkspace();
+        WriteImage(workspace.Root, "real.png", 64);
+        var launcher = WriteLauncherFromLines(workspace.Root,
             "Icon[de]=missing.png",
             "Icon=real.png",
             "",
@@ -220,9 +221,9 @@ public sealed class PlatformIconPluginTests
     [Fact]
     public async Task Launcher_NonImageIcon_ProducesNoIcon()
     {
-        using var directory = new TempDirectory();
-        File.WriteAllText(Path.Combine(directory.Path, "fake.png"), "not an image");
-        var launcher = directory.WriteLauncher("Icon=fake.png");
+        using var workspace = new TestWorkspace();
+        File.WriteAllText(Path.Combine(workspace.Root, "fake.png"), "not an image");
+        var launcher = WriteLauncher(workspace.Root, "Icon=fake.png");
 
         Assert.Empty(await GenerateLauncher(launcher));
     }
@@ -256,47 +257,23 @@ public sealed class PlatformIconPluginTests
                ((uint)image.Rgba[offset + 2] << 8) | image.Rgba[offset + 3];
     }
 
-    private sealed class TempDirectory : IDisposable
+    private static string WriteImage(string directory, string name, int edge)
     {
-        public TempDirectory()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"skycd-icons-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
+        var path = Path.Combine(directory, name);
+        File.WriteAllBytes(path, ExecutableFixtures.PngImage(edge, edge, 0x00FF00FF));
+        return path;
+    }
 
-        public string Path { get; }
+    private static string WriteLauncherFromLines(string directory, params string[] lines) =>
+        WriteLauncher(directory, string.Join('\n', lines));
 
-        public string WriteImage(string name, int edge)
-        {
-            var path = System.IO.Path.Combine(Path, name);
-            File.WriteAllBytes(path, ExecutableFixtures.PngImage(edge, edge, 0x00FF00FF));
-            return path;
-        }
-
-        public string WriteLauncherFromLines(params string[] lines) => WriteLauncher(string.Join('\n', lines));
-
-        public string WriteLauncher(string body, string? subdirectory = null)
-        {
-            var directory = subdirectory is null ? Path : Directory.CreateDirectory(
-                System.IO.Path.Combine(Path, subdirectory)).FullName;
-            var path = System.IO.Path.Combine(directory, "app.desktop");
-            File.WriteAllText(path, $"[Desktop Entry]\nType=Application\n{body}\n");
-            return path;
-        }
-
-        public void Dispose()
-        {
-            try
-            {
-                Directory.Delete(Path, recursive: true);
-            }
-            catch (IOException)
-            {
-                // A locked temporary file only leaves the test's own folder behind.
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-        }
+    private static string WriteLauncher(string directory, string body, string? subdirectory = null)
+    {
+        var launcherDirectory = subdirectory is null
+            ? directory
+            : Directory.CreateDirectory(Path.Combine(directory, subdirectory)).FullName;
+        var path = Path.Combine(launcherDirectory, "app.desktop");
+        File.WriteAllText(path, $"[Desktop Entry]\nType=Application\n{body}\n");
+        return path;
     }
 }

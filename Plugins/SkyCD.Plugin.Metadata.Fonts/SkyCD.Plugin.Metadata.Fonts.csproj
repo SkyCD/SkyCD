@@ -3,6 +3,10 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one PNG/JPEG encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- MIT: decodes the configured preview text with the font's own glyphs and encodes a bounded PNG.
              SkiaSharp is already used by SkyCD.Plugin.Metadata.Image, SkyCD.Plugin.Metadata.Rtf and SkyCD.Plugin.Metadata.EComic. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>

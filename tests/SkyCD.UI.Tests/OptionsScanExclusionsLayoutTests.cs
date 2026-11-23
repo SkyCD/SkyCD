@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -10,6 +9,7 @@ using Avalonia.VisualTree;
 using SkyCD.App.Views;
 using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.UI.Tests;
@@ -17,35 +17,9 @@ namespace SkyCD.UI.Tests;
 /// <summary>Issue #931: scan settings scroll inside the page instead of painting over the Save/Cancel footer.</summary>
 public sealed class OptionsScanExclusionsLayoutTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-options-scan-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+    private readonly AppDataSandbox sandbox = new();
 
-    public OptionsScanExclusionsLayoutTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
-
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch
-        {
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 
     [AvaloniaFact]
     public void ScanSettings_ScrollWithinThePageAndKeepFooterAndRulesReachable()

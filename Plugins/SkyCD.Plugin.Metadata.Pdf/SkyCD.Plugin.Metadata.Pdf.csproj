@@ -3,6 +3,10 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one PNG/JPEG encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- Apache-2.0: page count, document information dictionary and bounded text extraction. -->
         <PackageReference Include="PdfPig" Version="0.1.16"/>
         <!-- MIT, over BSD-3 PDFium: renders the first page to an image for the thumbnail. -->

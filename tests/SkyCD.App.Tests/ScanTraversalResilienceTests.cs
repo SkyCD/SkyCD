@@ -5,13 +5,28 @@ using System.Threading;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
-public sealed class ScanTraversalResilienceTests
+public sealed class ScanTraversalResilienceTests : IDisposable
 {
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-scan-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
+
+    private readonly string root;
+
+    public ScanTraversalResilienceTests()
+    {
+        // The scans here run against an in-memory file system, so nothing is created here; the workspace
+        // only supplies a unique absolute base path that exists on disk (and is cleaned up on disposal).
+        root = workspace.GetPath(Path.Combine("skycd-scan", Guid.NewGuid().ToString("N")));
+    }
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
 
     [Fact]
     public void FolderScan_DetectsSymlinkCycles_AndSkipsWithoutHanging()
@@ -42,7 +57,7 @@ public sealed class ScanTraversalResilienceTests
     [Fact]
     public void FolderScan_NeverFollowLinks_DoesNotDescendIntoDirectoryLinks()
     {
-        var outside = Path.Combine(Path.GetTempPath(), $"skycd-outside-{Guid.NewGuid():N}");
+        var outside = workspace.GetPath($"skycd-outside-{Guid.NewGuid():N}");
         var fs = new FakeScanFileSystem();
         fs.AddDirectory(root);
         fs.AddDirectory(outside);

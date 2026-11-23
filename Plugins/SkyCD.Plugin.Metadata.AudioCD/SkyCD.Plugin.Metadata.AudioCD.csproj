@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the other preview plugins: one bounded cover pipeline and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\CoverImageRenderer.cs" Link="Shared\Preview\Export\CoverImageRenderer.cs"/>
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: decoding and down-scaling Cover Art Archive images to the configured disc/track cover size. -->

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using UCanAccess.File;
 
 namespace SkyCD.Plugin.FileFormat.MyCatalogue.Tests;
@@ -45,13 +44,6 @@ internal static class MyCatalogueFixture
         items.AddRow([6, 2, "root.bin", false, 0d, 0, false, 0, null!, null!]);
         if (variant == "duplicate-id")
             items.AddRow([6, 2, "duplicate", false, 0d, 0, false, 0, null!, null!]);
-    }
-
-    public static string CreateDirectory()
-    {
-        var path = Path.Combine(Path.GetTempPath(), "skycd-mycatalogue-test-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
     }
 
     private static ColumnBuilder Number(string name) => new(name, DataType.Long);

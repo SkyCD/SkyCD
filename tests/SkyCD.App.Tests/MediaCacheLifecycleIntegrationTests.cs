@@ -18,6 +18,7 @@ using SkyCD.Presentation.MediaCache.Exceptions;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -34,44 +35,11 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
 
     private static readonly byte[] PreviewBytes = [9, 8, 7, 6];
 
-    private readonly string databaseDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-mediacache-{Guid.NewGuid():N}");
+    private readonly AppDataSandbox sandbox = new();
 
-    private readonly string bundleDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-mediabundle-{Guid.NewGuid():N}");
+    private string BundleDirectory => Path.Combine(sandbox.Root, "bundle");
 
-    private readonly string? previousDatabaseDirectory =
-        Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
-
-    public MediaCacheLifecycleIntegrationTests()
-    {
-        Directory.CreateDirectory(databaseDirectory);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", databaseDirectory);
-    }
-
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        foreach (var directory in new[] { databaseDirectory, bundleDirectory })
-        {
-            try
-            {
-                if (Directory.Exists(directory))
-                {
-                    Directory.Delete(directory, recursive: true);
-                }
-            }
-            catch (IOException)
-            {
-                // Couchbase Lite can release file handles slightly after dispose on some systems.
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Blob files can stay locked briefly after the database is closed on Windows.
-            }
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 
     [Fact]
     public async Task CapturedPreviewsAndMetadata_SurviveReopen_WithoutSourceOrPlugins()
@@ -623,12 +591,12 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
             Provider("plugin.preview", "1.0.0", new FakePreviewCapability()));
         await ExtractAsync(scheduler, entry, catalog.GetAll());
 
-        var exported = await new MediaCacheBundle(store).ExportAsync(bundleDirectory);
+        var exported = await new MediaCacheBundle(store).ExportAsync(BundleDirectory);
         Assert.Equal(2, exported.RecordCount);
         Assert.Equal(1, exported.ArtifactCount);
         Assert.Equal(0, exported.SkippedArtifactCount);
-        Assert.True(File.Exists(Path.Combine(bundleDirectory, MediaCacheBundle.ManifestFileName)));
-        Assert.True(File.Exists(Path.Combine(bundleDirectory, MediaCacheBundle.ArtifactsDirectoryName, Sha256(PreviewBytes) + ".bin")));
+        Assert.True(File.Exists(Path.Combine(BundleDirectory, MediaCacheBundle.ManifestFileName)));
+        Assert.True(File.Exists(Path.Combine(BundleDirectory, MediaCacheBundle.ArtifactsDirectoryName, Sha256(PreviewBytes) + ".bin")));
 
         // Simulate a restored catalog whose artifact storage did not come along.
         var preview = store.GetRecordsForEntry(EntryId).Single(record => record.Artifacts.Count > 0);
@@ -642,7 +610,7 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
         Assert.Contains(preview.Id, integrity.MissingRecordIds);
         Assert.Equal(MediaCacheRecordState.Missing, store.GetRecord(preview.Id)!.State);
 
-        var imported = await new MediaCacheBundle(store).ImportAsync(bundleDirectory);
+        var imported = await new MediaCacheBundle(store).ImportAsync(BundleDirectory);
         Assert.Equal(1, imported.RestoredArtifactCount);
         Assert.Equal(0, imported.MissingArtifactCount);
         Assert.Equal(0, imported.IncompleteRecordCount);
@@ -663,13 +631,13 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
         var scheduler = CreateScheduler(store, Provider("plugin.preview", "1.0.0", new FakePreviewCapability()));
         await ExtractAsync(scheduler, entry, catalog.GetAll());
 
-        await new MediaCacheBundle(store).ExportAsync(bundleDirectory);
-        File.Delete(Path.Combine(bundleDirectory, MediaCacheBundle.ArtifactsDirectoryName, Sha256(PreviewBytes) + ".bin"));
+        await new MediaCacheBundle(store).ExportAsync(BundleDirectory);
+        File.Delete(Path.Combine(BundleDirectory, MediaCacheBundle.ArtifactsDirectoryName, Sha256(PreviewBytes) + ".bin"));
 
         var record = Assert.Single(store.GetRecordsForEntry(EntryId));
         store.DeleteRecord(record.Id);
 
-        var imported = await new MediaCacheBundle(store).ImportAsync(bundleDirectory);
+        var imported = await new MediaCacheBundle(store).ImportAsync(BundleDirectory);
 
         Assert.Equal(1, imported.ImportedRecordCount);
         Assert.Equal(1, imported.MissingArtifactCount);
@@ -678,7 +646,7 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
         Assert.Equal(1, store.VerifyArtifacts().MissingRecordCount);
 
         await Assert.ThrowsAsync<MediaCacheBundleManifestNotFoundException>(
-            () => new MediaCacheBundle(store).ImportAsync(Path.Combine(bundleDirectory, "missing")));
+            () => new MediaCacheBundle(store).ImportAsync(Path.Combine(BundleDirectory, "missing")));
     }
 
     [Fact]
@@ -752,7 +720,7 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
     }
 
     private Database OpenDatabase() =>
-        new("media-cache-tests", new DatabaseConfiguration { Directory = databaseDirectory });
+        new("media-cache-tests", new DatabaseConfiguration { Directory = sandbox.DatabaseDirectory });
 
     private static CatalogDocumentRepository CreateCatalogRepository(Database database)
     {

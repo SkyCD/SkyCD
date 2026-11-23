@@ -11,6 +11,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.DiskImages;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Import;
@@ -67,10 +68,10 @@ public sealed class DaaImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_MultipartVolumes_OpenContentAcrossVolumes()
     {
-        using var temp = new TempDirectory();
+        using var workspace = new TestWorkspace();
         var text = new string('x', 200_000);
         var iso = DaaTestImage.CreateIso(("ROOT/DEEP/LARGE.TXT", text));
-        var firstPath = DaaTestImage.WriteMultipart(temp.Path, "image", iso);
+        var firstPath = DaaTestImage.WriteMultipart(workspace.Root, "image", iso);
         var request = new IndexWorkItemRequest
         {
             FileName = Path.GetFileName(firstPath),
@@ -130,29 +131,6 @@ public sealed class DaaImageIndexTests
         Directory.Exists(Path.GetTempPath())
             ? Directory.GetDirectories(Path.GetTempPath(), "skycd-daa-*").ToList()
             : [];
-
-    private sealed class TempDirectory : IDisposable
-    {
-        public TempDirectory()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"skycd-daa-tests-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            try
-            {
-                Directory.Delete(Path, recursive: true);
-            }
-            catch (IOException)
-            {
-                // Best-effort cleanup.
-            }
-        }
-    }
 
     private sealed class FakeEntryReader(IReadOnlyCollection<DaaEntryInfo> entries) : IDaaEntryReader
     {

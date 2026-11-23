@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests;
@@ -9,7 +10,8 @@ public sealed class DiskCatalogMakerV5FixtureConsistencyTests
     [Fact]
     public void CommittedFixtures_MatchGenerator()
     {
-        var expectedDirectory = Path.Combine(Path.GetTempPath(), "skycd-dcm5-fixtures-" + Guid.NewGuid().ToString("N"));
+        using var workspace = new TestWorkspace();
+        var expectedDirectory = workspace.CreateDirectory("skycd-dcm5-fixtures-" + Guid.NewGuid().ToString("N"));
         try
         {
             DiskCatalogMakerV5Fixtures.WriteAll(expectedDirectory);
@@ -23,10 +25,7 @@ public sealed class DiskCatalogMakerV5FixtureConsistencyTests
         }
         finally
         {
-            if (Directory.Exists(expectedDirectory))
-            {
-                Directory.Delete(expectedDirectory, recursive: true);
-            }
+            workspace.Dispose();
         }
     }
 

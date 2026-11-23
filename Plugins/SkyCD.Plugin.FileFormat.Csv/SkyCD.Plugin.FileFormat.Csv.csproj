@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
         <!-- Shared with the plain-text and XML exporters: one copy of size, timestamp and text formatting. -->
         <Compile Include="..\Shared\ExportFormatting\ExportValueFormatting.cs" Link="Shared\ExportFormatting\ExportValueFormatting.cs" />
     </ItemGroup>

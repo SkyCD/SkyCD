@@ -9,6 +9,7 @@ using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
 
@@ -31,10 +32,9 @@ public sealed class AudioCdMetadataServiceTests
     [Fact]
     public void OpticalDriveRoot_IsFound_AndVirtualTrackFilesImplyTheRoot()
     {
-        var opticalRoot = Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-disc")) +
-                          Path.DirectorySeparatorChar;
-        var trackRoot = Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-root")) +
-                        Path.DirectorySeparatorChar;
+        using var workspace = new TestWorkspace();
+        var opticalRoot = workspace.GetPath("skycd-audio-cd-disc") + Path.DirectorySeparatorChar;
+        var trackRoot = workspace.GetPath("skycd-audio-cd-root") + Path.DirectorySeparatorChar;
         var optical = AudioCdMetadataService.FindDiscRoots(
         [
             Root("media-1", opticalRoot, "CDRom"),
@@ -137,17 +137,19 @@ public sealed class AudioCdMetadataServiceTests
             store.BeginBatch().BatchId));
     }
 
-    private static readonly string DiscRoot =
-        Path.TrimEndingDirectorySeparator(Path.Combine(Path.GetTempPath(), "skycd-audio-cd-disc")) +
-        Path.DirectorySeparatorChar;
-
-    private static IReadOnlyList<CatalogDocument> DiscDocuments() =>
-    [
-        Root("media-1", DiscRoot, "CDRom"),
-        File("file-1", "Track01.cda", Path.Combine(DiscRoot, "Track01.cda"), "media-1"),
-        File("file-2", "Track02.cda", Path.Combine(DiscRoot, "Track02.cda"), "media-1"),
-        File("file-3", "Track03.cda", Path.Combine(DiscRoot, "Track03.cda"), "media-1")
-    ];
+    private static IReadOnlyList<CatalogDocument> DiscDocuments()
+    {
+        // The disc root only has to look like an optical mount; nothing is read from disk.
+        using var workspace = new TestWorkspace();
+        var discRoot = workspace.GetPath("skycd-audio-cd-disc") + Path.DirectorySeparatorChar;
+        return
+        [
+            Root("media-1", discRoot, "CDRom"),
+            File("file-1", "Track01.cda", Path.Combine(discRoot, "Track01.cda"), "media-1"),
+            File("file-2", "Track02.cda", Path.Combine(discRoot, "Track02.cda"), "media-1"),
+            File("file-3", "Track03.cda", Path.Combine(discRoot, "Track03.cda"), "media-1")
+        ];
+    }
 
     private static CatalogDocument Root(string id, string rootDirectory, string? driveType)
     {

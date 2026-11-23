@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.ExportFormatting;
 using SkyCD.Plugin.FileFormat.PlainText.Exceptions;
 using SkyCD.Plugin.FileFormat.PlainText.Models;
@@ -551,8 +552,7 @@ public sealed class PlainTextListExportPlugin : IFileFormatPluginCapability, IDa
     {
         try
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            return Encoding.GetEncoding(codePage);
+            return LegacyEncoding.Get(codePage);
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
         {

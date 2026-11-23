@@ -1,14 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Arc.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Arc.Models;
 using SkyCD.Plugin.Metadata.Archives.Arc.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Arc.Import;
 
@@ -18,7 +19,6 @@ namespace SkyCD.Plugin.Metadata.Archives.Arc.Import;
 /// </summary>
 internal static class ArcIndexWorkItems
 {
-    private const int CopyBufferBytes = 81_920;
     private const string BufferedSourceName = ".skycd-arc-source";
 
     public static async Task<IndexWorkItemSet> CreateAsync(
@@ -29,8 +29,7 @@ internal static class ArcIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-arc-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("arc");
 
         FileStream? bufferedSource = null;
         try
@@ -39,46 +38,39 @@ internal static class ArcIndexWorkItems
             var archiveStream = source;
             if (!source.CanSeek)
             {
-                var bufferPath = Path.Combine(tempRoot, BufferedSourceName);
-                await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                                 FileShare.None, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                {
-                    await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-                }
-
-                bufferedSource = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                    CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
+                    workspace.GetPath(BufferedSourceName), cancellationToken).ConfigureAwait(false);
                 archiveStream = bufferedSource;
             }
 
             var listing = ArcLister.List(archiveStream, cancellationToken);
-            var items = await ExtractEntriesAsync(archiveStream, listing, tempRoot, limits, request.Progress,
+            var items = await ExtractEntriesAsync(archiveStream, listing, workspace.Root, limits, request.Progress,
                 cancellationToken).ConfigureAwait(false);
 
             return new IndexWorkItemSet(items, () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (ArcEntryCountExceededException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         finally
@@ -166,7 +158,7 @@ internal static class ArcIndexWorkItems
             }
 
             await using (var output = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                             CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                             NonSeekableSourceBuffer.CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
                 await ArcEntryExtractor.CopyStoredAsync(archiveStream, entry, output, limits.MaxEntryBytes,
                     cancellationToken).ConfigureAwait(false);
@@ -175,21 +167,14 @@ internal static class ArcIndexWorkItems
             return new IndexWorkItem(normalized, length, token => OpenExtractedAsync(fullPath, token),
                 entry.ModifiedUtc);
         }
-        catch (OperationCanceledException)
-        {
-            TryDeleteFile(fullPath);
-            throw;
-        }
         catch (ArchiveEntryLimitExceededException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
     }
@@ -198,60 +183,13 @@ internal static class ArcIndexWorkItems
     {
         cancellationToken.ThrowIfCancellationRequested();
         Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
-            CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            NonSeekableSourceBuffer.CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
         return Task.FromResult(stream);
     }
 
     private static bool IsArchiveFailure(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException
             or InvalidOperationException;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 
     private sealed class ExtractionBudget
     {

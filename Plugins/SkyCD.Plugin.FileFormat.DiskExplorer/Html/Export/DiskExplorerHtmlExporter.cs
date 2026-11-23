@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Html.Exceptions;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Export;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Html.Models;
@@ -616,8 +617,7 @@ public static class DiskExplorerHtmlExporter
     {
         try
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            return Encoding.GetEncoding(codePage);
+            return LegacyEncoding.Get(codePage);
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
         {

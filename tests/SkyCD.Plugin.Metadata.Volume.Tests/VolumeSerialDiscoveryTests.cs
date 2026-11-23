@@ -11,6 +11,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Metadata.Volume.Tests;
@@ -49,8 +50,8 @@ public sealed class VolumeSerialDiscoveryTests
     [Fact]
     public void FileFormatFallback_DoesNotEnableDisabledVolumePlugin()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"skycd-volume-fallback-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
+        using var workspace = new TestWorkspace();
+        var directory = workspace.CreateDirectory($"skycd-volume-fallback-{Guid.NewGuid():N}");
         var assemblyPath = typeof(VolumeSerialPlugin).Assembly.Location;
         File.Copy(assemblyPath, Path.Combine(directory, Path.GetFileName(assemblyPath)));
         using var databaseManager = new DatabaseManager();

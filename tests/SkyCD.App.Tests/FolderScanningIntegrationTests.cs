@@ -18,6 +18,7 @@ using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Ai.Description;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 using SkyCD.Plugin.Ai.Description.Models;
@@ -26,35 +27,17 @@ namespace SkyCD.App.Tests;
 
 public sealed class FolderScanningIntegrationTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-scan-cblite-{Guid.NewGuid():N}");
+    private readonly AppDataSandbox sandbox = new();
     private readonly string scanTestDirectory = Path.Combine(Path.GetTempPath(), $"skycd-scan-source-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
     public FolderScanningIntegrationTests()
     {
-        Directory.CreateDirectory(appDataRoot);
         Directory.CreateDirectory(scanTestDirectory);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
     }
 
     public void Dispose()
     {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch { }
+        sandbox.Dispose();
 
         try
         {
@@ -122,7 +105,7 @@ public sealed class FolderScanningIntegrationTests : IDisposable
         var catalog = (CatalogDocumentRepository)repositories.For<CatalogDocument>();
         foreach (var entry in catalog.CreateDefaultEntries()) catalog.Save(entry.Id, entry);
         using var viewModel = new MainWindowViewModel(repositories);
-        var config = Path.Combine(appDataRoot, "test-agent.json");
+        var config = Path.Combine(sandbox.Root, "test-agent.json");
         await File.WriteAllTextAsync(config, JsonSerializer.Serialize(new DescriptionAgentOptions
         {
             Enabled = enabled,

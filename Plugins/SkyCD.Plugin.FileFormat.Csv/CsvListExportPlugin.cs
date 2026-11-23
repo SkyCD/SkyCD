@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.ExportFormatting;
 using SkyCD.Plugin.FileFormat.Csv.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Models;
@@ -307,8 +308,7 @@ public sealed class CsvListExportPlugin : IFileFormatPluginCapability, IDataLoss
     {
         try
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            return Encoding.GetEncoding(codePage);
+            return LegacyEncoding.Get(codePage);
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
         {

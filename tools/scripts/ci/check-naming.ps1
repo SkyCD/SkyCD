@@ -34,7 +34,7 @@ $allowedKinds = @(
 )
 
 $surfaceWords = @("Menu", "Modal", "Cli")
-$testProjectAllowList = @("SkyCD.Acp.FakeAgent")
+$testProjectAllowList = @("SkyCD.Acp.FakeAgent", "SkyCD.TestSupport")
 $pluginNamePattern = "^SkyCD\.Plugin\.(?<Kind>[A-Za-z0-9]+)(?<Subject>(?:\.[A-Za-z0-9]+)+)$"
 $testFolderPattern = "^tests/[^/]+/[^/]+\.csproj$"
 

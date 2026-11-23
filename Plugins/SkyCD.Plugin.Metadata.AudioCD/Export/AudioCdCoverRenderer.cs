@@ -1,5 +1,7 @@
+using System;
 using SkiaSharp;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.AudioCD.Export;
 
@@ -29,15 +31,11 @@ public sealed class AudioCdCoverRenderer
             return null;
         }
 
-        var longest = System.Math.Max(original.Width, original.Height);
-        if (longest <= longestEdge)
+        var (width, height) = CoverImageRenderer.ScaleTo(original.Width, original.Height, longestEdge);
+        if (width == original.Width && height == original.Height)
         {
             return new MediaPreviewArtifact(contentType, data);
         }
-
-        var scale = (double)longestEdge / longest;
-        var width = System.Math.Max(1, (int)System.Math.Round(original.Width * scale));
-        var height = System.Math.Max(1, (int)System.Math.Round(original.Height * scale));
 
         using var resized = original.Resize(
             new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul),
@@ -48,7 +46,7 @@ public sealed class AudioCdCoverRenderer
         }
 
         using var image = SKImage.FromBitmap(resized);
-        using var encoded = image.Encode(SKEncodedImageFormat.Png, 90);
-        return encoded is null ? null : new MediaPreviewArtifact("image/png", encoded.ToArray());
+        var encoded = PreviewArtifactEncoder.EncodePng(image, 90);
+        return encoded is null ? null : new MediaPreviewArtifact("image/png", encoded);
     }
 }

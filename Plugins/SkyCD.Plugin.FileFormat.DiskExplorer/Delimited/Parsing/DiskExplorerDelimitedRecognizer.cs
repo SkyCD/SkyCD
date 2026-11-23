@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited.Models;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Models;
 
@@ -47,7 +48,7 @@ public static class DiskExplorerDelimitedRecognizer
             }
 
             stream.Position = position;
-            using var reader = new StreamReader(stream, CodePagesEncodingProvider.Instance.GetEncoding(1252)!, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+            using var reader = new StreamReader(stream, LegacyEncoding.Windows1252, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
 
             var lines = new List<string>();
             var chars = 0;

@@ -10,6 +10,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.DiskImages;
 using SkyCD.Plugin.Metadata.DiskImages.Models;
@@ -21,8 +22,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_ListsContainedFiles_AndOpensTheirContent()
     {
-        using var temp = new TempDirectory();
-        var path = WriteCatalog(temp.Path);
+        using var workspace = new TestWorkspace();
+        var path = WriteCatalog(workspace.Root);
         var before = TemporaryEntryFiles();
 
         await using var set = await new DiskImagesIndexPlugin().GetWorkItemsAsync(RequestFor(path));
@@ -57,8 +58,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_MissingCompanion_ReturnsEmptySet()
     {
-        using var temp = new TempDirectory();
-        var descriptorPath = Path.Combine(temp.Path, "catalog.mds");
+        using var workspace = new TestWorkspace();
+        var descriptorPath = Path.Combine(workspace.Root, "catalog.mds");
         await File.WriteAllBytesAsync(descriptorPath, MdfTestImage.BuildMds());
 
         await using var set = await new DiskImagesIndexPlugin().GetWorkItemsAsync(RequestFor(descriptorPath));
@@ -69,8 +70,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_EntryOverLimit_IsSkipped_WhileSafeEntryIsReturned()
     {
-        using var temp = new TempDirectory();
-        var path = WriteCatalog(temp.Path);
+        using var workspace = new TestWorkspace();
+        var path = WriteCatalog(workspace.Root);
         var plugin = new DiskImagesIndexPlugin(new DiskImageIndexLimits(MaxEntries: 100, MaxEntryBytes: 8));
 
         await using var set = await plugin.GetWorkItemsAsync(RequestFor(path));
@@ -82,8 +83,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_MaxEntries_LimitsContributedItems()
     {
-        using var temp = new TempDirectory();
-        var path = WriteCatalog(temp.Path);
+        using var workspace = new TestWorkspace();
+        var path = WriteCatalog(workspace.Root);
         var plugin = new DiskImagesIndexPlugin(new DiskImageIndexLimits(MaxEntries: 1));
 
         await using var set = await plugin.GetWorkItemsAsync(RequestFor(path));
@@ -94,8 +95,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_TotalBudget_BoundsMaterializedBytes()
     {
-        using var temp = new TempDirectory();
-        var path = WriteCatalog(temp.Path);
+        using var workspace = new TestWorkspace();
+        var path = WriteCatalog(workspace.Root);
         var plugin = new DiskImagesIndexPlugin(new DiskImageIndexLimits(MaxTotalBytes: 20));
 
         await using var set = await plugin.GetWorkItemsAsync(RequestFor(path));
@@ -107,8 +108,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_Cancellation_Propagates()
     {
-        using var temp = new TempDirectory();
-        var path = WriteCatalog(temp.Path);
+        using var workspace = new TestWorkspace();
+        var path = WriteCatalog(workspace.Root);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -128,8 +129,8 @@ public sealed class MdfImageIndexTests
     [Fact]
     public async Task Sequence_RunsEnabledMetadataProviders_ForContainedItems()
     {
-        using var temp = new TempDirectory();
-        var path = WriteCatalog(temp.Path);
+        using var workspace = new TestWorkspace();
+        var path = WriteCatalog(workspace.Root);
         var manager = new MediaExtensionManager([new MediaProvider("test", "1.0", new TestMetadataCapability())]);
         var sequence = new IndexWorkItemSequence(manager, [new DiskImagesIndexPlugin()]);
 
@@ -159,29 +160,6 @@ public sealed class MdfImageIndexTests
         Directory.Exists(Path.GetTempPath())
             ? Directory.GetFiles(Path.GetTempPath(), "skycd-mdf-entry-*.tmp").ToList()
             : [];
-
-    private sealed class TempDirectory : IDisposable
-    {
-        public TempDirectory()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"skycd-mdf-tests-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            try
-            {
-                Directory.Delete(Path, recursive: true);
-            }
-            catch (IOException)
-            {
-                // Best-effort cleanup.
-            }
-        }
-    }
 
     /// <summary>Lets the plugin dispose its stream while the test keeps ownership of the memory stream.</summary>
     private sealed class NonDisposingStream(Stream inner) : Stream

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 
 namespace SkyCD.Plugin.Metadata.Works.Models;
 
@@ -27,11 +28,6 @@ internal static class WorksPropertySet
     private const uint CodePagePropertyId = 1;
     private const int DefaultCodePage = 1252;
     private const int MaxProperties = 1024;
-
-    static WorksPropertySet()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
 
     public static IReadOnlyDictionary<uint, object> Parse(byte[] stream)
     {
@@ -253,16 +249,15 @@ internal static class WorksPropertySet
     {
         try
         {
-            return Encoding.GetEncoding(codePage, EncoderFallback.ReplacementFallback,
-                DecoderFallback.ReplacementFallback);
+            return LegacyEncoding.Get(codePage);
         }
         catch (ArgumentException)
         {
-            return Encoding.GetEncoding(DefaultCodePage);
+            return LegacyEncoding.Windows1252;
         }
         catch (NotSupportedException)
         {
-            return Encoding.GetEncoding(DefaultCodePage);
+            return LegacyEncoding.Windows1252;
         }
     }
 

@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.Text.Export;
 
@@ -16,9 +16,6 @@ namespace SkyCD.Plugin.Metadata.Text.Export;
 /// </remarks>
 public sealed class SkiaTextThumbnailRenderer : ITextThumbnailRenderer
 {
-    private const float PageAspect = 1.4142f;
-    private const string FontFamily = "sans-serif";
-
     public bool IsAvailable => true;
 
     public Task<byte[]?> RenderAsync(string text, int maxDimension, CancellationToken cancellationToken)
@@ -43,154 +40,36 @@ public sealed class SkiaTextThumbnailRenderer : ITextThumbnailRenderer
 
     private static byte[]? RenderCore(string text, int maxDimension, CancellationToken cancellationToken)
     {
-        var width = maxDimension;
-        var height = (int)Math.Round(width * PageAspect);
-        if (height <= 0)
+        using var page = SkiaPageRenderer.TryCreate(maxDimension);
+        if (page is null)
         {
             return null;
         }
 
-        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        using var surface = SKSurface.Create(info);
-        if (surface is null)
+        text = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        var font = page.GetFont(SKFontStyle.Normal);
+
+        foreach (var token in SkiaPageText.TokenizePreservingNewlines(text))
         {
-            return null;
-        }
+            cancellationToken.ThrowIfCancellationRequested();
 
-        var face = SKTypeface.FromFamilyName(FontFamily, SKFontStyle.Normal);
-        if (face is null)
-        {
-            return null;
-        }
-
-        using (face)
-        {
-            var fontSize = Math.Max(8f, width / 40f);
-            var lineHeight = fontSize * 1.35f;
-            var margin = Math.Max(8f, width / 12f);
-
-            using var font = new SKFont(face, fontSize);
-            using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-
-            var canvas = surface.Canvas;
-            canvas.Clear(SKColors.White);
-
-            var left = margin;
-            var right = width - margin;
-            var x = left;
-            var baseline = margin + fontSize;
-            var drawn = 0;
-            var finished = false;
-
-            void NewLine()
+            if (token == "\n")
             {
-                x = left;
-                baseline += lineHeight;
-                if (baseline > height - margin)
-                {
-                    finished = true;
-                }
-            }
-
-            bool DrawToken(string token)
-            {
-                if (finished)
-                {
-                    return false;
-                }
-
-                var tokenWidth = font.MeasureText(token);
-                if (x > left && x + tokenWidth > right)
-                {
-                    NewLine();
-                }
-
-                if (finished)
-                {
-                    return false;
-                }
-
-                if (!IsWhitespace(token))
-                {
-                    canvas.DrawText(token, x, baseline, font, paint);
-                    drawn += token.Length;
-                }
-
-                x += tokenWidth;
-                return true;
-            }
-
-            foreach (var token in Tokenize(text))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (token == "\n")
-                {
-                    NewLine();
-                    if (finished)
-                    {
-                        break;
-                    }
-
-                    continue;
-                }
-
-                if (!DrawToken(token))
+                page.AdvanceLine();
+                if (page.IsFinished)
                 {
                     break;
                 }
-            }
 
-            if (drawn == 0)
-            {
-                return null;
-            }
-
-            using var image = surface.Snapshot();
-            using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
-            return encoded?.ToArray();
-        }
-    }
-
-    private static bool IsWhitespace(string token)
-    {
-        foreach (var ch in token)
-        {
-            if (!char.IsWhiteSpace(ch))
-            {
-                return false;
-            }
-        }
-
-        return token.Length > 0;
-    }
-
-    private static List<string> Tokenize(string text)
-    {
-        var tokens = new List<string>();
-        var index = 0;
-        text = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-
-        while (index < text.Length)
-        {
-            if (text[index] == '\n')
-            {
-                tokens.Add("\n");
-                index++;
                 continue;
             }
 
-            var start = index;
-            var whitespace = char.IsWhiteSpace(text[index]);
-            while (index < text.Length && text[index] != '\n' &&
-                   char.IsWhiteSpace(text[index]) == whitespace)
+            if (!page.TryDrawToken(font, token))
             {
-                index++;
+                break;
             }
-
-            tokens.Add(text[start..index]);
         }
 
-        return tokens;
+        return page.EncodePng();
     }
 }

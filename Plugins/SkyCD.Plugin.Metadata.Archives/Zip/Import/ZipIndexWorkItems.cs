@@ -1,13 +1,14 @@
-using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Threading;
+using System.IO;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Zip.Import;
 
@@ -27,13 +28,13 @@ internal static class ZipIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("zip");
 
         try
         {
             await using var source = await request.OpenSource(cancellationToken).ConfigureAwait(false);
-            using var archive = OpenArchive(source, tempRoot, out var ownedSource);
+            using var archive = OpenArchive(source, workspace.Root, out var ownedSource,
+                cancellationToken);
             try
             {
                 var items = new List<IndexWorkItem>();
@@ -43,7 +44,7 @@ internal static class ZipIndexWorkItems
                 for (var index = 0; index < total; index++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var item = await ExtractEntryAsync(archive.Entries[index], index + 1, tempRoot, limits, budget,
+                    var item = await ExtractEntryAsync(archive.Entries[index], index + 1, workspace.Root, limits, budget,
                         cancellationToken).ConfigureAwait(false);
                     if (item is not null)
                     {
@@ -56,7 +57,7 @@ internal static class ZipIndexWorkItems
                 Report(request.Progress, total, total);
                 return new IndexWorkItemSet(items, () =>
                 {
-                    DeleteTemporaryDirectory(tempRoot);
+                    workspace.Dispose();
                     return ValueTask.CompletedTask;
                 });
             }
@@ -67,17 +68,17 @@ internal static class ZipIndexWorkItems
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
     }
@@ -127,33 +128,24 @@ internal static class ZipIndexWorkItems
 
             return new IndexWorkItem(normalized, length, token => OpenExtractedAsync(fullPath, token), modified);
         }
-        catch (OperationCanceledException)
-        {
-            TryDeleteFile(fullPath);
-            throw;
-        }
         catch (ArchiveEntryLimitExceededException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (NotSupportedException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (InvalidDataException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (IOException) when (!cancellationToken.IsCancellationRequested)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
     }
@@ -166,19 +158,13 @@ internal static class ZipIndexWorkItems
         return Task.FromResult(stream);
     }
 
-    private static ZipArchive OpenArchive(Stream source, string tempRoot, out Stream? ownedSource)
+    private static ZipArchive OpenArchive(Stream source, string tempRoot, out Stream? ownedSource,
+        CancellationToken cancellationToken)
     {
-        ownedSource = null;
-        if (!source.CanSeek)
-        {
-            var bufferPath = Path.Combine(tempRoot, ".skycd-index-source");
-            using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                source.CopyTo(buffer);
-            }
-
-            ownedSource = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        }
+        ownedSource = source.CanSeek
+            ? null
+            : NonSeekableSourceBuffer.BufferAsync(source, Path.Combine(tempRoot, ".skycd-index-source"),
+                cancellationToken).GetAwaiter().GetResult();
 
         return new ZipArchive(ownedSource ?? source, ZipArchiveMode.Read, leaveOpen: true);
     }
@@ -245,53 +231,6 @@ internal static class ZipIndexWorkItems
 
     private static void Report(IProgress<int>? progress, int completed, int total) =>
         progress?.Report(total <= 0 ? 100 : Math.Clamp(completed * 100 / total, 0, 100));
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 
     private sealed class ExtractionBudget
     {

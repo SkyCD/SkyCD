@@ -16,6 +16,7 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -28,41 +29,9 @@ namespace SkyCD.App.Tests;
 /// </summary>
 public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-undo-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+    private readonly AppDataSandbox sandbox = new();
 
-    public CatalogDeletionUndoIntegrationTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
-
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Couchbase Lite can release file handles slightly after dispose on some systems.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Database files can stay locked briefly after close on Windows.
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 
     // ---------------------------------------------------------------- nested and multi-selection deletion
 

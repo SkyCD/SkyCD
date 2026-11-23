@@ -9,6 +9,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -18,6 +19,7 @@ public sealed class ServiceRegistratorTests
     [Fact]
     public void PluginCapabilityServiceRegistrator_RegistersPluginCapabilities()
     {
+        using var workspace = new TestWorkspace();
         var plugin = new DiscoveredPlugin
         {
             Id = "tests.runtime.di",
@@ -33,9 +35,8 @@ public sealed class ServiceRegistratorTests
 
         using var provider = new DryIoc.Container();
         new CommonRuntimeServiceRegistrator().RegisterServices(provider);
-        var databasePath = Path.Combine(Path.GetTempPath(), "skycd-runtime-registrator-tests",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(databasePath);
+        var databasePath = workspace.CreateDirectory(Path.Combine("skycd-runtime-registrator-tests",
+            Guid.NewGuid().ToString("N")));
         provider.RegisterDelegate<DatabaseManager>(_ =>
         {
             var manager = new DatabaseManager();

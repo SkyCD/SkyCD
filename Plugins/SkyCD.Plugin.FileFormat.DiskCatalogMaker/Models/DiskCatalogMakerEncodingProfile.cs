@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 
 namespace SkyCD.Plugin.FileFormat.DiskCatalogMaker.Models;
 
@@ -32,7 +33,7 @@ public sealed class DiskCatalogMakerEncodingProfile
 
     public static DiskCatalogMakerEncodingProfile Windows1252 { get; } =
         new(DiskCatalogMakerEncodingKind.Windows1252, "Windows-1252 (ANSI)",
-            CodePagesEncodingProvider.Instance.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)!);
+            LegacyEncoding.StrictWindows1252);
 
     public static DiskCatalogMakerEncodingProfile Unknown { get; } =
         new(DiskCatalogMakerEncodingKind.Unknown, "Unknown", new UTF8Encoding(false, true));

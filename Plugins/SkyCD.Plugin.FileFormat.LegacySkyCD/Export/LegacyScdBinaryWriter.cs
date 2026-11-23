@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Exceptions;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Models;
 
@@ -15,7 +16,7 @@ internal static class LegacyScdBinaryWriter
     // as ANSI bytes and Date/Double values as eight-byte OLE Automation doubles.
     private const int HeaderLength = 127;
     private const int FixedPropertiesLength = 5392;
-    private static readonly Encoding Ansi = CodePagesEncodingProvider.Instance.GetEncoding(1252)!;
+    private static readonly Encoding Ansi = LegacyEncoding.Windows1252;
 
     public static void Write(Stream target, LegacyScdCatalog catalog, IProgress<int>? progress,
         CancellationToken cancellationToken)

@@ -13,6 +13,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -664,16 +665,11 @@ public class PropertiesDialogViewModelTests
     /// <summary>In-memory catalog plus media-cache stack that serves a stored AI description.</summary>
     private sealed class DescriptionStack : IDisposable
     {
-        private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-ai-prop-vm-{Guid.NewGuid():N}");
-        private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-        private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+        private readonly AppDataSandbox sandbox = new();
         private readonly DryIoc.Container container;
 
         public DescriptionStack()
         {
-            Directory.CreateDirectory(root);
-            Environment.SetEnvironmentVariable("APPDATA", root);
-            Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(root, "SkyCD"));
             container = new Container();
             new CouchbaseServiceRegistrator().RegisterServices(container);
             var repositories = container.Resolve<RepositoryManager>();
@@ -707,17 +703,7 @@ public class PropertiesDialogViewModelTests
         {
             Store.Dispose();
             container.Dispose();
-            Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-            Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-            try
-            {
-                Directory.Delete(root, recursive: true);
-            }
-            catch (IOException)
-            {
-                // Best effort: the temp catalog lives under the test process temp directory.
-
-            }
+            sandbox.Dispose();
         }
     }
 

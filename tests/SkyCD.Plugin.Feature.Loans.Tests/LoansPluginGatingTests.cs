@@ -11,6 +11,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 using SkyCD.Plugin.Feature.Loans.Models;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Presentation.Catalog;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Feature.Loans.Tests;
@@ -33,8 +34,8 @@ public sealed class LoansPluginGatingTests
     [Fact]
     public async Task AuxiliaryData_ReportsImportedLoansAndBorrowers()
     {
-        using var directory = new TemporaryDirectory();
-        using var database = OpenDatabase(directory.Path);
+        using var workspace = new TestWorkspace();
+        using var database = OpenDatabase(workspace.Root);
         var repository = OpenCatalog(database);
         repository.Save("book", new CatalogDocument { Id = "book", Name = "Book" });
         var plugin = new LoansPlugin();
@@ -51,9 +52,9 @@ public sealed class LoansPluginGatingTests
     [Fact]
     public async Task DisabledPluginLeavesImportedPropertiesPlainAndContributesNoSurfaces()
     {
-        using var directory = new TemporaryDirectory();
-        var catalogPath = Path.Combine(directory.Path, "catalog");
-        using (var database = OpenDatabase(directory.Path))
+        using var workspace = new TestWorkspace();
+        var catalogPath = Path.Combine(workspace.Root, "catalog");
+        using (var database = OpenDatabase(workspace.Root))
         {
             var repository = OpenCatalog(database);
             repository.Save("book", new CatalogDocument
@@ -84,7 +85,7 @@ public sealed class LoansPluginGatingTests
             Assert.Equal("2024-03-01", repository.Get("book")!.Properties["LoanDate"]);
         }
 
-        using var reopened = OpenDatabase(directory.Path);
+        using var reopened = OpenDatabase(workspace.Root);
         var loans = CatalogLoanService.Open(OpenCatalog(reopened));
         loans.CatalogPath = catalogPath;
         Assert.Empty(loans.GetHistory("book"));
@@ -94,8 +95,8 @@ public sealed class LoansPluginGatingTests
     [Fact]
     public async Task EnabledPluginCreatesLoansAndRestoresSurfacesAfterReEnable()
     {
-        using var directory = new TemporaryDirectory();
-        using var database = OpenDatabase(directory.Path);
+        using var workspace = new TestWorkspace();
+        using var database = OpenDatabase(workspace.Root);
         var repository = OpenCatalog(database);
         repository.Save("book", new CatalogDocument { Id = "book", Name = "Book" });
         var provider = new TestProvider(repository);
@@ -179,12 +180,5 @@ public sealed class LoansPluginGatingTests
             add { }
             remove { }
         }
-    }
-
-    private sealed class TemporaryDirectory : IDisposable
-    {
-        public string Path { get; } = Directory.CreateTempSubdirectory("skycd-loans-gating-").FullName;
-
-        public void Dispose() => Directory.Delete(Path, recursive: true);
     }
 }

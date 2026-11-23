@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -14,6 +13,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Locations;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -21,36 +21,15 @@ namespace SkyCD.UI.Tests;
 
 public sealed class LocationManagementViewTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-location-ui-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+    private readonly AppDataSandbox sandbox = new();
     private DryIoc.Container? container;
-
-    public LocationManagementViewTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
 
     public void Dispose()
     {
         container?.Dispose();
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch
-        {
-        }
+
+        // The sandbox deletes its directory, so the container above is released first.
+        sandbox.Dispose();
     }
 
     private sealed record Fixture(

@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskBase.Exceptions;
 
 namespace SkyCD.Plugin.FileFormat.DiskBase.Models;
@@ -15,11 +16,7 @@ internal static class DiskBaseFormat
     internal const int MaximumDepth = 512;
     internal static readonly byte[] Signature = Encoding.ASCII.GetBytes("QuickDir Database ");
 
-    internal static Encoding GetEncoding(int codePage)
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        return Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
-    }
+    internal static Encoding GetEncoding(int codePage) => LegacyEncoding.GetStrict(codePage);
 
     internal static string Decode(byte[] bytes, Encoding encoding)
     {
