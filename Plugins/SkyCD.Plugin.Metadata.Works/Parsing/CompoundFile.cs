@@ -11,8 +11,8 @@ namespace SkyCD.Plugin.Metadata.Works.Parsing;
 /// </summary>
 /// <remarks>
 /// Microsoft Works 3 and later wrap the document in a compound file. This reader exists instead of a package
-/// dependency because the established .NET compound-file library is MPL-2.0, which the repository's
-/// BSD-2-Clause outbound policy does not accept (<c>docs/legal/osadl-bsd-2-clause.json</c>). Only the read
+/// dependency to keep the dependency tree small; the established .NET compound-file library is MPL-2.0
+/// (<c>docs/legal/dependency-policy.md</c>). Only the read
 /// path is implemented: every declared sector, stream size and chain link is checked against the bytes
 /// actually present, and traversal is bounded by the sector count, so a damaged header cannot cause an
 /// unbounded walk or allocation.

@@ -147,7 +147,7 @@ state; an ordinary refresh never does.
 | `MaxPackagesPerManifest`, `MaxReleasesPerPackage` | 500 / 100 | Document shape limits. |
 
 ## NuGet client library decision
-`NuGet.Protocol` (Apache-2.0, compatible with `docs/legal/dependency-license-policy.json`) was evaluated and
+`NuGet.Protocol` (Apache-2.0, compatible with the Trivy license gate in `docs/legal/dependency-policy.md`) was evaluated and
 not adopted:
 
 - The client reads exactly two read-only documents (the service index and one version list) per package. A

@@ -113,8 +113,8 @@ reason. A bare `%PDF-` header followed by nonsense is caught here, not by the ma
 | `Docnet.Core` | 2.6.0 | MIT (over BSD-3 PDFium) | First-page rasterization |
 | `SkiaSharp` + native assets | 3.119.4 | MIT | Encode PDFium's raw BGRA raster to PNG |
 
-All on the allow-list in `docs/legal/dependency-license-policy.json`, verified with the same CycloneDX SBOM
-the CI license gate runs. `PdfiumViewer` and `Docnet` alternatives that pin Windows-only natives were
+All pass the Trivy license gate in `docs/legal/dependency-policy.md`, verified from the committed
+`packages.lock.json` files. `PdfiumViewer` and `Docnet` alternatives that pin Windows-only natives were
 rejected; `Ghostscript` bindings were rejected as AGPL.
 
 ## Limitations

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "FirebirdSql.Data.FirebirdClient": {
+        "type": "Direct",
+        "requested": "[10.3.4, )",
+        "resolved": "10.3.4",
+        "contentHash": "lmaY+XQvnhPl1YRrY+lzTZPD88YDbllelN5RhFMrzinqSmjWpWZRE0A4AI1L2mPBNAI346Q8MHAvnJjDPd7VnQ=="
+      },
+      "CsvHelper": {
+        "type": "Transitive",
+        "resolved": "34.0.0",
+        "contentHash": "yiFG6lPSgNFhraURmM/e4ROhbnNzMOZI1HxMvjNzn5lkc9dx3aN/sm/N4UM+rV6CPpZBQfrJfwEKUxkndeRKUQ=="
+      },
+      "skycd.plugin.abstractions": {
+        "type": "Project"
+      },
+      "skycd.plugin.fileformat.csv": {
+        "type": "Project",
+        "dependencies": {
+          "CsvHelper": "[34.0.0, )",
+          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+        }
+      }
+    }
+  }
+}

@@ -147,9 +147,8 @@ not encryption, and does not prevent metadata reading.
 The implementation uses .NET 10 `System.Xml.XmlReader` and `System.IO.Compression.GZipStream`
 (MIT-licensed .NET runtime), plus the existing plugin abstraction project. `dotnet list
 Plugins/SkyCD.Plugin.Metadata.AbiWord/SkyCD.Plugin.Metadata.AbiWord.csproj package --include-transitive` reports
-no NuGet dependencies. No additional direct/transitive licenses, whitelist entries or policy
-changes are needed; the blocked-license, unknown-license and explicit-whitelist rules in
-`docs/legal/dependency-license-policy.json` remain unchanged.
+no NuGet dependencies. No additional direct/transitive licenses or policy changes are needed; the
+Trivy classification gate in `docs/legal/dependency-policy.md` remains unchanged.
 
 Alternatives considered before adoption:
 
@@ -157,11 +156,11 @@ Alternatives considered before adoption:
   gzip but no AbiWord semantics; its latest release is from 2023 and recent maintenance was
   not established. It adds no useful capability over the runtime here.
 - **Aspose.Words 26.11.0**: maintained releases and explicit net10.0 assets, but the published
-  format list does not establish ABW support. Its proprietary EULA is not policy-approved.
+  format list does not establish ABW support. Its proprietary EULA is unacceptable.
 - **GroupDocs.Parser 26.10.0**: current release with a .NET 10 package variant, but its format
-  matrix does not establish ABW metadata support. Its proprietary EULA is not policy-approved.
-- Neither EULA package is whitelisted; their transitive graphs were not certified after
-  direct-license/functional rejection. AbiWord itself is GPL-2.0-or-later and is not linked,
+  matrix does not establish ABW metadata support. Its proprietary EULA is unacceptable.
+- Neither EULA package was adopted; their transitive graphs were not certified after the
+  functional and license review. AbiWord itself is GPL-2.0-or-later and is not linked,
   bundled, or copied into this implementation; upstream files are format references only.
 
 References: [AbiWord formats](https://github.com/AbiWord/abiword/blob/6940426ea7fd3810f1aa5477fa93c2d4278dea7d/abiword.1#L72-L73),
@@ -250,11 +249,9 @@ The implementation uses **OfficeIMO.IWork 3.6.2** (MIT, explicit `net10.0` asset
 maintenance) for the component archive: it identifies the application from the IWA root, reads the
 build history, projects Keynote slides and recognizes and validates embedded preview images. Its
 only dependency is `OfficeIMO.Core` 3.6.2 (also MIT, no further dependencies). Both pass the CI
-license gate: a CycloneDX SBOM generated for
-`Plugins/SkyCD.Plugin.Metadata.IWork/SkyCD.Plugin.Metadata.IWork.csproj` and checked with
-`tools/scripts/ci/check-license-compliance.ps1` against
-`docs/legal/dependency-license-policy.json` reports full compliance, and the blocked-license,
-unknown-license and explicit-whitelist rules are unchanged.
+license gate: the committed `packages.lock.json` files scanned by Trivy with the rules in
+[dependency-policy.md](../legal/dependency-policy.md) report full compliance, and the classification
+gate is unchanged.
 
 Alternatives considered:
 

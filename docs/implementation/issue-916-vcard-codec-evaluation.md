@@ -107,18 +107,16 @@ so it fails more than quoted-printable decoding.
 ## Licensing
 
 - The packaged commit `2a9253a1c457b4516d634f5370038ae3dd6460c0` ships a plain
-  MIT `LICENSE`. The nuspec declares only a legacy `licenseUrl`, so the
-  CycloneDX SBOM reports `Unknown - See URL` instead of an SPDX id.
-- `docs/legal/dependency-license-policy.json` maps
-  `https://github.com/bolorundurowb/vCardLib/blob/master/LICENSE` to `MIT` in
-  `licenseIdsByUrl`, the same mechanism used for the CC BY artwork URLs in
-  [#650](https://github.com/SkyCD/SkyCD/pull/650). MIT then flows through the
-  normal OSADL compatibility check against SkyCD's BSD-2-Clause.
+  MIT `LICENSE`. The nuspec declares only a legacy `licenseUrl`, so Trivy
+  reports the package license as UNKNOWN. The gate in
+  [dependency-policy.md](../legal/dependency-policy.md) fails only on
+  CRITICAL/HIGH classifications, so this package passes; the upstream `LICENSE`
+  remains the evidence behind that decision.
 - The declared dependencies (`System.Text.Encoding.CodePages`,
   `System.ValueTuple`) resolve from the .NET 10 shared framework and do not
-  appear as SBOM components.
-- `check-license-compliance.ps1` passes for all 180 components, with
-  `vCardLib.dll 6.3.2` reported as `MIT` / `Compliant`.
+  appear in the license scan.
+- The Trivy license scan passes for `vCardLib` 6.3.2; its unknown license is
+  reported without failing the gate.
 
 ## Fixtures and tests
 

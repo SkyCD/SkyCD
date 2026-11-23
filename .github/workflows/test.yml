@@ -94,10 +94,38 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
 
-      - name: Test license validator
-        shell: pwsh
-        run: ./tools/scripts/ci/test-license-compliance.ps1
+      # Trivy reads package licenses from the nuspec files in the NuGet global
+      # packages folder, so restore must run before the scan.
+      - name: Restore solution
+        run: dotnet restore SkyCD.slnx --locked-mode
+
+      - name: Scan dependency licenses
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: license
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+  sbom:
+    name: CycloneDX SBOM
+    if: github.event_name == 'push'
+    needs: style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
 
       - name: Install CycloneDX tool
         shell: pwsh
@@ -109,16 +137,7 @@ jobs:
         run: |
           dotnet-CycloneDX SkyCD.slnx --output artifacts/licenses --filename bom.json --output-format Json --exclude-test-projects
 
-      - name: Validate dependency license policy
-        shell: pwsh
-        run: |
-          ./tools/scripts/ci/check-license-compliance.ps1 `
-            -SbomPath artifacts/licenses/bom.json `
-            -PolicyPath docs/legal/dependency-license-policy.json `
-            -ReportPath artifacts/licenses/license-compliance.json
-
-      - name: Upload license artifacts
-        if: always()
+      - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
         with:
           name: license-artifacts

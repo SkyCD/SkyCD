@@ -26,8 +26,8 @@ engine is available in this environment.
   database files start with a binary header page, so content sniffing without
   an engine is not possible, and support must never be claimed from the
   extension alone.
-- VVV itself is GPL-2.0 (`vvvapp-code/COPYING`), a blocked license in
-  `docs/legal/dependency-license-policy.json`; upstream code must not be
+- VVV itself is GPL-2.0 (`vvvapp-code/COPYING`), rejected as Restricted/HIGH by the
+  gate in `docs/legal/dependency-policy.md`; upstream code must not be
   copied, and GPL-licensed helpers are unavailable as dependencies.
 
 ### Schema and versions (`vvvapp-code/VVV.sql`, generated 2024-05-02)

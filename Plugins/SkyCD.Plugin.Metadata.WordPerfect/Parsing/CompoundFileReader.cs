@@ -11,8 +11,8 @@ namespace SkyCD.Plugin.Metadata.WordPerfect.Parsing;
 /// </summary>
 /// <remarks>
 /// WordPerfect 7 and later wrap the document in a compound file and keep the WordPerfect stream under
-/// <c>PerfectOffice_MAIN</c>. This reader exists instead of a package dependency because the usual .NET
-/// compound-file library is MPL-2.0, which the repository's BSD-2-Clause outbound policy does not accept.
+/// <c>PerfectOffice_MAIN</c>. This reader exists instead of a package dependency to keep the dependency tree
+/// small; the usual .NET compound-file library is MPL-2.0 (<c>docs/legal/dependency-policy.md</c>).
 /// Only the read path is implemented, every declared size is checked against the bytes actually present, and
 /// chain traversal is bounded by the sector count, so a damaged header cannot cause an unbounded walk.
 /// </remarks>

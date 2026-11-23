@@ -7,7 +7,8 @@ Default CI validates only the v3 solution path (`SkyCD.slnx`) and does not build
 - `v3-ci`:
 - `style` job runs `dotnet format --verify-no-changes`.
 - `build-test` job restores/builds/tests `SkyCD.slnx` on `ubuntu-latest`, `windows-latest`, and `macos-latest`.
-- `license-compliance` job generates CycloneDX SBOM and validates dependency policy.
+- `license-compliance` job scans dependency licenses with Trivy and fails on CRITICAL/HIGH licenses.
+- `sbom` job (push to `main` only) generates the CycloneDX SBOM release artifact.
 - `dependabot-automerge`:
 - Dependabot-only metadata, approval, and auto-merge workflow.
 

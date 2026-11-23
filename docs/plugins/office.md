@@ -94,8 +94,8 @@ numbers and `VT_FILETIME` dates. Vector variants are not published.
 Both readers are lenient only where the data is optional. A damaged summary stream costs its fields while
 the document still publishes `Container` and `DocumentType`. A damaged container is a decode failure.
 
-The readers are in-tree rather than a package because the usual .NET compound-file library is MPL-2.0, which
-the repository's BSD-2-Clause outbound policy does not accept (see [Dependencies and licensing](#dependencies-and-licensing)).
+The readers are in-tree rather than a package to keep the dependency tree small; the usual .NET
+compound-file library is MPL-2.0 (see [Dependencies and licensing](#dependencies-and-licensing)).
 They are deliberately kept inside the plugin assemblies, matching the Microsoft Works and WordPerfect
 plugins; a shared OLE assembly would add a project and deployment surface for code that is only read.
 
@@ -134,7 +134,7 @@ property set parser, the compound-file reader and the source reader are implemen
 |---|---|---|---|
 | `DocumentFormat.OpenXml` | 3.5.1 | MIT | Rejected. Maintained and `.NET 10`-compatible, but it is an object model for the whole package; reading two `docProps` parts does not need it, and it adds a large dependency and API surface to audit. |
 | `NPOI` | 2.8.1 | Apache-2.0 | Rejected. Supports the legacy formats but is a full spreadsheet/document library; a metadata-only reader becomes a fraction of the dependency and carries no native code. |
-| `OpenMcdf` | 3.4.0 | MPL-2.0 | Rejected. Maintained and `.NET 10`-targeting, but the checked-in OSADL BSD-2-Clause outbound row marks MPL-2.0 incompatible, so the CI license gate rejects it without a policy change. |
+| `OpenMcdf` | 3.4.0 | MPL-2.0 | Not adopted. Maintained and `.NET 10`-targeting, but reading two `docProps` parts does not need a general compound-file library; the in-repo read-only reader keeps the dependency tree small. MPL-2.0 is Reciprocal/MEDIUM and passes the current license gate. |
 | `Bodu.IO.Compound` | 1.3.0 | MIT | Rejected. Reads CFB and targets `.NET 10`, but the package is new, has one maintainer and under 3,000 total downloads, so it adds supply-chain risk that the small read-only reader avoids. |
 
 No policy file change is made.

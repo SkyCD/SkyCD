@@ -75,9 +75,10 @@ reader.
 |---|---|---|---|
 | `XmpCore` | 6.1.10.1 | BSD-3-Clause | Packet parsing and property access |
 
-The package declares only a license URL rather than an SPDX expression; the URL is mapped to
-`BSD-3-Clause` in `docs/legal/dependency-license-policy.json` (`licenseIdsByUrl`), with Adobe's XMP SDK
-`LICENSE` and the upstream project README as evidence. The same package arrives transitively through
+The package declares only a legacy license URL rather than an SPDX expression, so the Trivy scan in
+[dependency-policy.md](../legal/dependency-policy.md) reports it as UNKNOWN and does not fail; Adobe's
+XMP SDK `LICENSE` and the upstream project README are the BSD-3-Clause evidence. The same package arrives
+transitively through
 `MetadataExtractor` in the image plugin, so both plugins use one XMP implementation. The locator, mapping
 logic and scan helpers are shared source from `Plugins/Shared/MediaMetadata/` (`XmpPacketLocator`,
 `XmpMetadataReader`, `XmpPacketReader`, `MetadataScan`, `MetadataText`, `MetadataValues`, `SourcePrefix`),

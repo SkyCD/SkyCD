@@ -143,16 +143,15 @@ crash.
 | Package | Version | License | Why |
 |---|---|---|---|
 | `MetadataExtractor` | 2.9.3 | Apache-2.0 | EXIF, IPTC-IIM, XMP, PNG, WebP and TIFF directories |
-| `XmpCore` (transitive) | 6.1.10.1 | BSD-3-Clause | XMP packet parsing; declared by URL, mapped in the policy |
+| `XmpCore` (transitive) | 6.1.10.1 | BSD-3-Clause | XMP packet parsing; declared by legacy URL, reported as UNKNOWN |
 | `SkiaSharp` | 3.119.4 | MIT | Decode, orientation-aware scaling, thumbnail encoding |
 | `SkiaSharp.NativeAssets.Win32` / `.Linux` / `.macOS` | 3.119.4 | MIT | Platform natives |
 
 `MetadataExtractor` 2.9.3 targets .NET 8 and therefore runs on .NET 10 without a compatibility package.
-Its `XmpCore` dependency declares only a license URL instead of an SPDX expression; the URL is mapped to
-`BSD-3-Clause` in `docs/legal/dependency-license-policy.json` (`licenseIdsByUrl`), with Adobe's XMP SDK
-`LICENSE` and the upstream project README as evidence and OSADL rating that license compatible. The gate
-then validates the actual license rather than blanket-allowing unknown licenses. All packages are
-verified with the same CycloneDX SBOM the CI license gate uses.
+Its `XmpCore` dependency declares only a legacy license URL instead of an SPDX expression, so the Trivy
+scan in [dependency-policy.md](../legal/dependency-policy.md) reports it as UNKNOWN and does not fail;
+Adobe's XMP SDK `LICENSE` and the upstream project README are the BSD-3-Clause evidence. All packages
+pass the gate from the committed `packages.lock.json` files.
 
 ## Limitations
 

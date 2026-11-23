@@ -224,8 +224,9 @@ budget exhaustion and cancellation still propagate, so a cancelled scan stops in
 | SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
 | DiscUtils.Iso9660 | 0.16.13 | MIT | Read the ISO 9660 volume a type 1 AppImage appends to its runtime |
 
-SkiaSharp and DiscUtils.Iso9660 are policy-allowed MIT dependencies already used by the Image, EBook, AudioCD and
-DiskImages plugins, so no license whitelist entry or policy change is needed.
+SkiaSharp and DiscUtils.Iso9660 are MIT dependencies that already pass the Trivy license gate in
+`docs/legal/dependency-policy.md` and are used by the Image, EBook, AudioCD and DiskImages plugins, so no
+policy change is needed.
 
 The PE/COFF header and section-table facts are read with
 `System.Reflection.PortableExecutable.PEHeaders`, which ships in-box with .NET 10 (`Microsoft.NETCore.App`, MIT)
@@ -238,8 +239,8 @@ PeNet 6.1.2 (Apache-2.0, published 2026-05, `System.Security.Cryptography.Pkcs` 
 and not adopted: it parses a complete in-memory buffer or a synchronously read stream, so reading through the
 host's bounded asynchronous `IMediaSource` would need a blocking adapter and either a whole-file buffer or a
 second resource-directory walk beside the icon pipeline. Its licence metadata is Apache-2.0 rather than the MIT
-assumed by the issue; both are compatible with BSD-2-Clause under the OSADL matrix, so licence compliance was not
-the deciding factor and no policy change is needed. Nothing is extracted to disk and no Windows-only API is used.
+assumed by the issue; both pass the Trivy license gate, so licence compliance was not the deciding factor and
+no policy change is needed. Nothing is extracted to disk and no Windows-only API is used.
 
 ## Tests
 

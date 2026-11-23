@@ -181,8 +181,9 @@ no dependencies on .NET Standard 2.0):
 **Package evaluation (recorded per #626).** No NuGet SMB client may be used: **SMBLibrary**
 (and every fork or wrapper — `SMBLibrary.Std`, `SMBLibrary.ForXamarin`, `SMBLibrary.Win32`,
 `SMBLibraryLite`, and the MIT-licensed `InkSoft.SmbAbstraction`, which depends on SMBLibrary)
-is **LGPL-3.0-or-later**, which `docs/legal/dependency-license-policy.json` blocks; the
-`SMBLibraryCore.Client` fork declares no license and is non-compliant under `failOnUnknownLicense`.
+is **LGPL-3.0-or-later**, which the Trivy gate in `docs/legal/dependency-policy.md` rejects as
+Restricted/HIGH; the `SMBLibraryCore.Client` fork declares no license and would only be reported as
+unknown.
 The provider therefore uses **`System.IO` over Windows UNC paths** — zero extra dependencies and
 zero SMB protocol code, trading cross-platform access away (see below).
 

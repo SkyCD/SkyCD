@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Avalonia": {
+        "type": "Direct",
+        "requested": "[12.1.6, )",
+        "resolved": "12.1.6",
+        "contentHash": "juogZu7ASS2KMtSqOMa8nGJ5I1Ile/3PG3JR+tD73liDr30qgilEsqNVQw3KIXJvuFc9m3Mf9NzGWc3sQvnlXA==",
+        "dependencies": {
+          "Avalonia.BuildServices": "11.3.2",
+          "Avalonia.Remote.Protocol": "12.1.6",
+          "MicroCom.Runtime": "0.11.6"
+        }
+      },
+      "Couchbase.Lite": {
+        "type": "Direct",
+        "requested": "[4.1.3, )",
+        "resolved": "4.1.3",
+        "contentHash": "eqb4TbfAcyqN9ZiC1RPVq6gc3WF6GM6eWBYR2ODJ3/tJtOkqcR4YpM+jLebEcJbKkdrd54cI9Ck5nnvf/H6lYw==",
+        "dependencies": {
+          "Couchbase.Lite.Support.NetDesktop": "[4.1.3]",
+          "Microsoft.Extensions.DependencyInjection": "9.0.8",
+          "SerialQueue": "2.1.0"
+        }
+      },
+      "Avalonia.BuildServices": {
+        "type": "Transitive",
+        "resolved": "11.3.2",
+        "contentHash": "qHDToxto1e3hci5YqbG9n0Ty8mlp3zBUN5wT66wKqaDVzXyQ0do3EnRILd4Ke9jpvsktaPpgE0YjEk7hornryQ=="
+      },
+      "Avalonia.Remote.Protocol": {
+        "type": "Transitive",
+        "resolved": "12.1.6",
+        "contentHash": "55fcjPpzkzPaSSMczUjpKHKWcuJo6dJHHkLXgT8nMP80ijYASzdPdf86173R7CqPitw8E8nJ229Jqpu/EyUVow=="
+      },
+      "Couchbase.Lite.Support.NetDesktop": {
+        "type": "Transitive",
+        "resolved": "4.1.3",
+        "contentHash": "Jtlac0cTR/iEOz27eBeetPxUoUcJdwsJDZiQF9fMD+InfDNiwozTrgZe4LBy75QJuHNv74qSWYsHSrZhsX5tOg=="
+      },
+      "DryIoc.dll": {
+        "type": "Transitive",
+        "resolved": "5.4.3",
+        "contentHash": "yhXOG3SOxeWYxBAWskNRDD8fzw5hriEawv4VN4WKaFHOuubiop4kxe2rkWTEyCnTgRVgxVUSQCDBBkZqwPm1iQ=="
+      },
+      "Humanizer.Core": {
+        "type": "Transitive",
+        "resolved": "3.0.10",
+        "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
+      },
+      "MicroCom.Runtime": {
+        "type": "Transitive",
+        "resolved": "0.11.6",
+        "contentHash": "NdNWGDiZ6eS/Mf/9+QHR91cj1K7Hy+PX9yrHI/zM7xFYuj9IWT2uxtB6sCHjrnxAeLV9fut1R6zHDUGKX6f9lQ=="
+      },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "JJjI2Fa+QtZcUyuNjbKn04OjIUX5IgFGFu/Xc+qvzh1rXdZHLcnqqVXhR4093bGirTwacRlHiVg1XYI9xum6QQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.8"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "xY3lTjj4+ZYmiKIkyWitddrp1uL5uYiweQjqo4BKBw01ZC4HhcfgLghDpPZcUlppgWAFqFy9SgkiYWOMx365pw=="
+      },
+      "SerialQueue": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "rmQcrFXgcrqT9M6+xdxAK/JWx1vFuCRT8fTdce4ALdze2/8N5yMRW9Vmkresw+JpL+JC8zuC1HfDkrfVgBUIqA=="
+      },
+      "SmartFormat": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "LMgV9QqRhYn+mBkGurpAf7U5LOJJ1MviD9s0MjN/DXn7BdUNWRzhgNmqzjDdrEQBoYaKjS2VkEYlcJQx560BaQ==",
+        "dependencies": {
+          "ZString": "2.6.0"
+        }
+      },
+      "YamlDotNet": {
+        "type": "Transitive",
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
+      },
+      "ZString": {
+        "type": "Transitive",
+        "resolved": "2.6.0",
+        "contentHash": "XE8a+11nZg0LRaf+RGABEWaHIf8yGd5w8v/Ra1iWxMBmAVzwuKbW7G21mS0U7w7sh1lYcgckInWGgnz4qyET8A=="
+      },
+      "skycd.couchbase": {
+        "type": "Project",
+        "dependencies": {
+          "Couchbase.Lite": "[4.1.3, )",
+          "DryIoc.dll": "[5.4.3, )"
+        }
+      },
+      "skycd.formatting": {
+        "type": "Project",
+        "dependencies": {
+          "Humanizer.Core": "[3.0.10, )"
+        }
+      },
+      "skycd.plugin.abstractions": {
+        "type": "Project"
+      },
+      "skycd.ui": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.6, )",
+          "SkyCD.Formatting": "[1.0.0, )",
+          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
+          "SmartFormat": "[3.6.2, )",
+          "YamlDotNet": "[18.1.0, )"
+        }
+      }
+    }
+  }
+}

@@ -163,8 +163,8 @@ ZIP reading uses `System.IO.Compression` from the framework and the ZIP, Palm da
 FictionBook parsing is plugin code, so no archive or e-book package was added. SkiaSharp and Avalonia are
 already used by the repository (`SkyCD.Plugin.Metadata.Image` and the plugin configuration samples), so the plugin
 introduces no new dependency tree for the policy gate. Every package and its transitive dependencies resolve
-to MIT or another license allowed by `docs/legal/dependency-license-policy.json`; no blocked, unknown or
-whitelist-dependent license is involved.
+to MIT or another license that passes the Trivy gate in `docs/legal/dependency-policy.md`; no rejected
+or unknown license is involved.
 
 ## Limitations
 

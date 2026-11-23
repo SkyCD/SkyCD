@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "XmpCore": {
+        "type": "Direct",
+        "requested": "[6.1.10.1, )",
+        "resolved": "6.1.10.1",
+        "contentHash": "/Tp2/e39e7z8hLtS4TXt0FNNZHbf5yNFfHS0/59soXlgOzZlyRZivvzWpvujyaWkTWWgecp/1nHxkuc5vntn7A=="
+      },
+      "skycd.plugin.abstractions": {
+        "type": "Project"
+      }
+    }
+  }
+}
