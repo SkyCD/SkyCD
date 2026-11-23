@@ -1,0 +1,155 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:conv="clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls"
+        xmlns:system="clr-namespace:System;assembly=System.Runtime">
+
+    <Styles.Resources>
+        <converters:MenuIconConverter x:Key="MenuIconConverter" />
+        <converters:MenuHotKeyConverter x:Key="MenuHotKeyConverter" />
+        <conv:PlatformKeyGestureConverter x:Key="SkyMenuGestureTextConverter" />
+
+        <!--
+            Issue #1003: project-owned menu row theme. Every metric comes from the design tokens;
+            the check/icon gutter is one fixed column, the hotkey column ends on the shared right
+            edge and the submenu arrow column is always reserved, so labels start and end on the
+            same x in every menu regardless of checked state, icon, arrow or hotkey.
+            The functional reflection bindings and the recursive ItemContainerTheme are
+            load-bearing for submenu construction and checked state and must stay.
+        -->
+        <ControlTheme x:Key="AppMenuItemTheme"
+                      TargetType="MenuItem"
+                      BasedOn="{StaticResource {x:Type MenuItem}}">
+            <Setter Property="Padding" Value="{DynamicResource SkyMenuItemPadding}" />
+            <Setter Property="MinHeight" Value="{DynamicResource SkyMenuItemMinHeight}" />
+            <Setter Property="Header"
+                    Value="{ReflectionBinding DataContext.Header, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="HotKey"
+                    Value="{ReflectionBinding DataContext.HotKey, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuHotKeyConverter}}" />
+            <Setter Property="InputGesture"
+                    Value="{ReflectionBinding DataContext.InputGesture, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuHotKeyConverter}}" />
+            <Setter Property="Icon"
+                    Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuIconConverter}}" />
+            <Setter Property="Command"
+                    Value="{ReflectionBinding DataContext.Command, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="CommandParameter"
+                    Value="{ReflectionBinding DataContext.CommandParameter, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="ToggleType"
+                    Value="{ReflectionBinding DataContext.ToggleType, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="IsChecked"
+                    Value="{ReflectionBinding DataContext.IsChecked, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="IsEnabled"
+                    Value="{ReflectionBinding DataContext.IsEnabled, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="ItemsSource"
+                    Value="{ReflectionBinding DataContext.Items, RelativeSource={RelativeSource Self}}" />
+            <Setter Property="ItemContainerTheme" Value="{DynamicResource AppMenuItemTheme}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            MinHeight="{DynamicResource SkyMenuItemMinHeight}">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                            <!-- One fixed gutter holds the toggle glyph and the item icon. -->
+                            <Panel Name="IconGutter"
+                                   Grid.Column="0"
+                                   Width="{DynamicResource SkyMenuGutterWidth}">
+                                <ContentControl Name="PART_ToggleIconPresenter"
+                                                Width="{DynamicResource SkyIconSize}"
+                                                Height="{DynamicResource SkyIconSize}"
+                                                Margin="{DynamicResource SkyMenuIconMargin}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IsVisible="False" />
+                                <ContentPresenter Name="PART_IconPresenter"
+                                                  Width="{DynamicResource SkyIconSize}"
+                                                  Height="{DynamicResource SkyIconSize}"
+                                                  Margin="{DynamicResource SkyMenuIconMargin}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Content="{TemplateBinding Icon}" />
+                            </Panel>
+                            <ContentPresenter Name="PART_HeaderPresenter"
+                                              Grid.Column="1"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"
+                                              Content="{TemplateBinding Header}"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}">
+                                <ContentPresenter.DataTemplates>
+                                    <DataTemplate DataType="{x:Type system:String}">
+                                        <AccessText Text="{Binding}" />
+                                    </DataTemplate>
+                                </ContentPresenter.DataTemplates>
+                            </ContentPresenter>
+                            <TextBlock Name="PART_InputGestureText"
+                                       Grid.Column="2"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       Text="{TemplateBinding InputGesture, Converter={StaticResource SkyMenuGestureTextConverter}}" />
+                            <!-- Always reserved so hotkeys line up on rows without a submenu. -->
+                            <Panel Grid.Column="3"
+                                   Width="{DynamicResource SkyMenuArrowColumnWidth}">
+                                <Path Name="rightArrow"
+                                      Data="M0,0L4,3.5 0,7z"
+                                      Fill="{DynamicResource ThemeForegroundBrush}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center" />
+                            </Panel>
+                            <Popup Name="PART_Popup"
+                                   IsLightDismissEnabled="False"
+                                   IsOpen="{TemplateBinding IsSubMenuOpen, Mode=TwoWay}"
+                                   Placement="RightEdgeAlignedTop">
+                                <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                                        BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                    <ScrollViewer Theme="{StaticResource SimpleMenuScrollViewer}">
+                                        <ItemsPresenter Name="PART_ItemsPresenter"
+                                                        Margin="{DynamicResource SkyInsetXxs}"
+                                                        Grid.IsSharedSizeScope="True"
+                                                        ItemsPanel="{TemplateBinding ItemsPanel}" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+
+            <!--
+                A "-" header becomes a separator row in MenuItem itself (pseudo-class, not focusable).
+                The line reuses the item padding as its margin, so both insets start where the item
+                text starts and the line never touches the popup border.
+            -->
+            <Style Selector="^:separator">
+                <Setter Property="MinHeight" Value="{DynamicResource SkyMenuSeparatorRowHeight}" />
+                <Setter Property="IsHitTestVisible" Value="False" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Panel Width="{DynamicResource SkyMenuGutterWidth}" />
+                            <Border Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Height="{DynamicResource SkyMenuSeparatorHeight}"
+                                    Margin="{DynamicResource SkyMenuItemPadding}"
+                                    Background="{DynamicResource ThemeControlMidBrush}" />
+                            <Panel Grid.Column="2" Width="{DynamicResource SkyMenuArrowColumnWidth}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter>
+            </Style>
+        </ControlTheme>
+    </Styles.Resources>
+
+    <!-- Menu bar headers share the row height and text padding of their drop-down items. -->
+    <Style Selector="Menu > MenuItem">
+        <Setter Property="Padding" Value="{DynamicResource SkyMenuItemPadding}" />
+        <Setter Property="MinHeight" Value="{DynamicResource SkyMenuItemMinHeight}" />
+    </Style>
+
+    <!-- Every context menu in the application uses the same row theme. -->
+    <Style Selector="ContextMenu">
+        <Setter Property="ItemContainerTheme" Value="{StaticResource AppMenuItemTheme}" />
+    </Style>
+</Styles>

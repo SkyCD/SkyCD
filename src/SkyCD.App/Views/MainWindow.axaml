@@ -35,65 +35,29 @@
 
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
-        <converters:MenuIconConverter x:Key="MenuIconConverter" />
-        <converters:MenuHotKeyConverter x:Key="MenuHotKeyConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
-        <ControlTheme x:Key="DynamicMenuItemTheme"
-                      TargetType="MenuItem"
-                      BasedOn="{StaticResource {x:Type MenuItem}}">
-            <Setter Property="Padding" Value="6,1" />
-            <Setter Property="MinHeight" Value="20" />
-            <Setter Property="Header"
-                    Value="{ReflectionBinding DataContext.Header, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="HotKey"
-                    Value="{ReflectionBinding DataContext.HotKey, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuHotKeyConverter}}" />
-            <Setter Property="InputGesture"
-                    Value="{ReflectionBinding DataContext.InputGesture, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuHotKeyConverter}}" />
-            <Setter Property="Icon"
-                    Value="{ReflectionBinding DataContext.Icon, RelativeSource={RelativeSource Self}, Converter={StaticResource MenuIconConverter}}" />
-            <Setter Property="Command"
-                    Value="{ReflectionBinding DataContext.Command, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="CommandParameter"
-                    Value="{ReflectionBinding DataContext.CommandParameter, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="ToggleType"
-                    Value="{ReflectionBinding DataContext.ToggleType, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="IsChecked"
-                    Value="{ReflectionBinding DataContext.IsChecked, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="IsEnabled"
-                    Value="{ReflectionBinding DataContext.IsEnabled, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="ItemsSource"
-                    Value="{ReflectionBinding DataContext.Items, RelativeSource={RelativeSource Self}}" />
-            <Setter Property="ItemContainerTheme" Value="{DynamicResource DynamicMenuItemTheme}" />
-        </ControlTheme>
-        <ContextMenu x:Key="BrowserContextMenu" ItemsSource="{Binding BrowserContextMenuItems}">
-            <ContextMenu.ItemContainerTheme>
-                <StaticResource ResourceKey="DynamicMenuItemTheme" />
-            </ContextMenu.ItemContainerTheme>
-        </ContextMenu>
-        <ContextMenu x:Key="DetailsHeaderContextMenu" ItemsSource="{Binding DetailsHeaderMenuItems}">
-            <ContextMenu.ItemContainerTheme>
-                <StaticResource ResourceKey="DynamicMenuItemTheme" />
-            </ContextMenu.ItemContainerTheme>
-        </ContextMenu>
+        <!-- Menu row metrics live in Styles/MenuStyles.axaml so every menu surface shares them. -->
+        <ContextMenu x:Key="BrowserContextMenu" ItemsSource="{Binding BrowserContextMenuItems}" />
+        <ContextMenu x:Key="DetailsHeaderContextMenu" ItemsSource="{Binding DetailsHeaderMenuItems}" />
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top" IsEnabled="{Binding IsCatalogInteractionEnabled}">
             <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.FileMenu}}"
                       ItemsSource="{Binding FileMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
+                      ItemContainerTheme="{StaticResource AppMenuItemTheme}" />
             <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.EditMenu}}"
                       ItemsSource="{Binding EditMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
+                      ItemContainerTheme="{StaticResource AppMenuItemTheme}" />
             <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.ViewMenu}}"
                       ItemsSource="{Binding ViewMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
+                      ItemContainerTheme="{StaticResource AppMenuItemTheme}" />
             <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.ToolsMenu}}"
                       ItemsSource="{Binding ToolsMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
+                      ItemContainerTheme="{StaticResource AppMenuItemTheme}" />
             <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.HelpMenu}}"
                       ItemsSource="{Binding HelpMenuItems}"
-                      ItemContainerTheme="{StaticResource DynamicMenuItemTheme}" />
+                      ItemContainerTheme="{StaticResource AppMenuItemTheme}" />
         </Menu>
 
         <ct:ClassicToolbar x:Name="MainToolbar" DockPanel.Dock="Top" />
@@ -150,11 +114,7 @@
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
                 <TreeView.ContextMenu>
-                    <ContextMenu ItemsSource="{Binding TreeContextMenuItems}">
-                        <ContextMenu.ItemContainerTheme>
-                            <StaticResource ResourceKey="DynamicMenuItemTheme" />
-                        </ContextMenu.ItemContainerTheme>
-                    </ContextMenu>
+                    <ContextMenu ItemsSource="{Binding TreeContextMenuItems}" />
                 </TreeView.ContextMenu>
             </TreeView>
 
