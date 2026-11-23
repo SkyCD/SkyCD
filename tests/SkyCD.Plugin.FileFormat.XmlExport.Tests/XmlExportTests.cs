@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -450,6 +451,33 @@ public class XmlExportTests
         Assert.False(result.Success);
         Assert.Contains("sized.txt", result.Error);
         Assert.Contains("Size", result.Error);
+    }
+
+    [Fact]
+    public async Task Catalog_WriteAsync_CurrentCulture_KeepsInvariantSizeAndUtcDate()
+    {
+        var service = CreateService();
+        var payload = new List<Dictionary<string, object?>>
+        {
+            Row(("kind", "file"), ("name", "culture.txt"),
+                ("size", "1234567"), ("date", "2024-01-05 10:01:00"))
+        };
+
+        var original = CultureInfo.CurrentCulture;
+        string xml;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            xml = await WriteAsync(service, "skycd-xml-catalog",
+                new XmlExportRequest { Rows = payload, DatabaseName = "Culture" });
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+
+        Assert.Contains("<File Name=\"culture.txt\" Size=\"1234567\" Date=\"2024-01-05T10:01:00Z\" />", xml);
+        Assert.Empty(ValidateAgainstSchema(xml, CatalogXsd));
     }
 
     [Fact]

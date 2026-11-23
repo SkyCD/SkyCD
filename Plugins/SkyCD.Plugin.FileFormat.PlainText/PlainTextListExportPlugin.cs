@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.EncodingProfiles;
+using SkyCD.Plugin.ExportFormatting;
 using SkyCD.Plugin.FileFormat.PlainText.Exceptions;
 using SkyCD.Plugin.FileFormat.PlainText.Models;
 
@@ -586,134 +587,11 @@ public sealed class PlainTextListExportPlugin : IFileFormatPluginCapability, IDa
             }
 
             var text = column.Equals("SizeBytes", StringComparison.OrdinalIgnoreCase)
-                ? FormatSize(value)
+                ? ExportValueFormatting.FormatSize(value, culture)
                 : column.Equals("Modified", StringComparison.OrdinalIgnoreCase)
-                    ? FormatTimestamp(value)
-                    : ToDisplayText(value);
-            return text is null ? null : NormalizeControls(text);
-        }
-
-        private string? FormatSize(object? value)
-        {
-            if (value is null)
-            {
-                return null;
-            }
-
-            if (value is long integer)
-            {
-                return culture is null
-                    ? integer.ToString(CultureInfo.InvariantCulture)
-                    : integer.ToString("N0", culture);
-            }
-
-            if (value is int small)
-            {
-                return culture is null
-                    ? small.ToString(CultureInfo.InvariantCulture)
-                    : small.ToString("N0", culture);
-            }
-
-            if (value is double number)
-            {
-                return culture is null
-                    ? number.ToString("R", CultureInfo.InvariantCulture)
-                    : number.ToString("N", culture);
-            }
-
-            var text = Convert.ToString(value, CultureInfo.InvariantCulture)?.Trim();
-            if (string.IsNullOrEmpty(text))
-            {
-                return null;
-            }
-
-            if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedLong))
-            {
-                return culture is null
-                    ? parsedLong.ToString(CultureInfo.InvariantCulture)
-                    : parsedLong.ToString("N0", culture);
-            }
-
-            if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedDouble))
-            {
-                return culture is null
-                    ? parsedDouble.ToString("R", CultureInfo.InvariantCulture)
-                    : parsedDouble.ToString("N", culture);
-            }
-
-            return text;
-        }
-
-        private string? FormatTimestamp(object? value)
-        {
-            switch (value)
-            {
-                case null:
-                    return null;
-                case DateTimeOffset offset:
-                    return culture is null
-                        ? offset.ToString("o", CultureInfo.InvariantCulture)
-                        : offset.ToString(culture);
-                case DateTime dateTime:
-                    var zoned = dateTime.Kind == DateTimeKind.Unspecified
-                        ? DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)
-                        : dateTime;
-                    return culture is null
-                        ? new DateTimeOffset(zoned).ToString("o", CultureInfo.InvariantCulture)
-                        : zoned.ToString(culture);
-                default:
-                    return FormatTimestampText(Convert.ToString(value, CultureInfo.InvariantCulture));
-            }
-        }
-
-        private string? FormatTimestampText(string? text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return null;
-            }
-
-            var trimmed = text.Trim();
-            string[] formats =
-            [
-                "o", "yyyy-MM-ddTHH:mm:ss.FFFFFFFK", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd",
-                "yyyy/MM/dd HH:mm:ss", "yyyy/MM/dd", "MM/dd/yyyy HH:mm:ss", "MM/dd/yyyy",
-                "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy"
-            ];
-            if (DateTimeOffset.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
-            {
-                return culture is null
-                    ? parsed.ToString("o", CultureInfo.InvariantCulture)
-                    : parsed.ToString(culture);
-            }
-
-            return trimmed;
-        }
-
-        private string? ToDisplayText(object? value) => value switch
-        {
-            null => null,
-            string text => text,
-            bool flag => flag ? bool.TrueString : bool.FalseString,
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => Convert.ToString(value, CultureInfo.InvariantCulture)
-        };
-
-        private static string NormalizeControls(string text)
-        {
-            if (text.IndexOfAny(['\r', '\n', '\t']) < 0)
-            {
-                return text;
-            }
-
-            var builder = new StringBuilder(text.Length);
-            foreach (var character in text)
-            {
-                builder.Append(character is '\r' or '\n' or '\t' ? ' ' : character);
-            }
-
-            return builder.ToString();
+                    ? ExportValueFormatting.FormatTimestamp(value, culture)
+                    : ExportValueFormatting.ToDisplayText(value);
+            return text is null ? null : ExportValueFormatting.NormalizeControls(text);
         }
     }
 }

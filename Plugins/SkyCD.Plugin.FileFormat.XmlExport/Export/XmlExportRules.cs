@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using SkyCD.Plugin.ExportFormatting;
 using SkyCD.Plugin.FileFormat.XmlExport.Exceptions;
 
 namespace SkyCD.Plugin.FileFormat.XmlExport.Export;
@@ -50,14 +51,7 @@ internal static class XmlExportRules
         return null;
     }
 
-    internal static string? ToDisplayText(object? value) => value switch
-    {
-        null => null,
-        string text => text,
-        bool flag => flag ? bool.TrueString : bool.FalseString,
-        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-        _ => Convert.ToString(value, CultureInfo.InvariantCulture)
-    };
+    internal static string? ToDisplayText(object? value) => ExportValueFormatting.ToDisplayText(value);
 
     internal static void ValidateText(string item, string field, string? value)
     {
@@ -111,14 +105,14 @@ internal static class XmlExportRules
             return 0;
         }
 
-        var text = raw.Trim();
+        var text = ExportValueFormatting.FormatSize(raw, null);
         if (ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
         {
             return parsed;
         }
 
         throw new XmlExportInvalidValueException(item, field,
-            $"Value '{text}' is not an unsigned decimal byte size.");
+            $"Value '{raw.Trim()}' is not an unsigned decimal byte size.");
     }
 
     /// <summary>
@@ -136,14 +130,7 @@ internal static class XmlExportRules
 
         DateTimeOffset parsed;
         var trimmed = raw.Trim();
-        string[] formats =
-        [
-            "o", "yyyy-MM-ddTHH:mm:ss.FFFFFFFK", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd",
-            "yyyy/MM/dd HH:mm:ss", "yyyy/MM/dd", "MM/dd/yyyy HH:mm:ss", "MM/dd/yyyy",
-            "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy"
-        ];
-        if (!DateTimeOffset.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out parsed)
+        if (!ExportValueFormatting.TryParseTimestamp(trimmed, out parsed)
             && !DateTimeOffset.TryParse(trimmed, CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out parsed))
         {
