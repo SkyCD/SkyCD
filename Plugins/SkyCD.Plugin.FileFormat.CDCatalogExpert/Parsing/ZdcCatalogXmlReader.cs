@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Xml;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Exceptions;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Models;
 
 namespace SkyCD.Plugin.FileFormat.CDCatalogExpert.Parsing;
@@ -23,12 +24,7 @@ namespace SkyCD.Plugin.FileFormat.CDCatalogExpert.Parsing;
 /// </remarks>
 public static class ZdcCatalogXmlReader
 {
-    private static readonly Encoding Windows1252 = CreateWindows1252();
-
-    static ZdcCatalogXmlReader()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
+    private static readonly Encoding Windows1252 = LegacyEncoding.StrictWindows1252;
 
     /// <summary>Parses the catalog index member.</summary>
     public static ZdcCatalog ReadIndex(
@@ -50,12 +46,6 @@ public static class ZdcCatalogXmlReader
     {
         var parser = new Parser(payload, warnings, cancellationToken);
         return parser.ParseDiscTree();
-    }
-
-    private static Encoding CreateWindows1252()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        return Encoding.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
     }
 
     private static readonly string[] CatalogAttributes = ["N", "D"];

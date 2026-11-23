@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
         <ProjectReference Include="..\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj"/>
         <PackageReference Include="Microsoft.Data.Sqlite" Version="11.0.0"/>

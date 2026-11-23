@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Ded.Exceptions;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Ded.Models;
 
@@ -17,11 +18,7 @@ public static class DedTextCodec
 
     static DedTextCodec()
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        Windows1252 = Encoding.GetEncoding(
-            1252,
-            EncoderFallback.ExceptionFallback,
-            DecoderFallback.ExceptionFallback);
+        Windows1252 = LegacyEncoding.StrictWindows1252;
     }
 
     /// <summary>Chooses Windows-1252 when representable, UTF-8 otherwise.</summary>

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.CDPlayer.Ini.Exceptions;
 using SkyCD.Plugin.FileFormat.CDPlayer.Ini.Models;
 
@@ -27,12 +28,6 @@ public static class CdPlayerIniParser
         "numplay",
         "entrytype"
     };
-
-    static CdPlayerIniParser()
-    {
-        // Register CodePagesEncodingProvider for Windows-1252 / ANSI code page lookups
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
 
     /// <summary>
     /// Checks whether stream content looks like a valid CDPlayer.ini file without modifying position.
@@ -349,7 +344,7 @@ public static class CdPlayerIniParser
             // Fall back to Windows-1252 (ANSI) or Latin1
             try
             {
-                return Encoding.GetEncoding(1252);
+                return LegacyEncoding.Windows1252;
             }
             catch
             {
