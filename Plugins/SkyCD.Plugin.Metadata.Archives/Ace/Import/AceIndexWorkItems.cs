@@ -1,13 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Ace.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Ace.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Ace.Import;
 
@@ -30,47 +31,47 @@ internal static class AceIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-ace-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("ace");
 
         try
         {
             byte[] archiveBytes;
             await using (var source = await request.OpenSource(cancellationToken).ConfigureAwait(false))
             {
-                archiveBytes = await ReadAllBytesAsync(source, tempRoot, cancellationToken).ConfigureAwait(false);
+                archiveBytes = await ReadAllBytesAsync(source, workspace.Root, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             var headers = new AceHeaderReader().Read(new MemoryStream(archiveBytes, writable: false),
                 cancellationToken);
-            var extraction = ExtractEntries(headers, archiveBytes, tempRoot, limits, request.Progress,
+            var extraction = ExtractEntries(headers, archiveBytes, workspace.Root, limits, request.Progress,
                 cancellationToken);
 
             var set = new IndexWorkItemSet(extraction.Items, () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
             return new AceIndexResult(set, extraction.Skipped);
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (AceEncryptedArchiveException exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return AceIndexResult.ForFailure("ACE_ENCRYPTED", exception.Message);
         }
         catch (AceUnsupportedBlockException exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return AceIndexResult.ForFailure("ACE_UNSUPPORTED", exception.Message);
         }
         catch (Exception exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             if (!AceArchiveFailures.IsArchiveFailure(exception))
             {
                 throw;
@@ -194,7 +195,6 @@ internal static class AceIndexWorkItems
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            TryDeleteFile(fullPath);
             skipped.Add(new AceSkippedEntry(normalized, "ACE_DAMAGED", exception.Message));
             return null;
         }
@@ -239,60 +239,12 @@ internal static class AceIndexWorkItems
         }
 
         var bufferPath = Path.Combine(tempRoot, ".skycd-ace-source");
-        await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                         FileShare.None, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        await using (var buffer = await NonSeekableSourceBuffer.BufferAsync(source, bufferPath, cancellationToken)
+                         .ConfigureAwait(false))
         {
-            await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
         }
 
         return await File.ReadAllBytesAsync(bufferPath, cancellationToken).ConfigureAwait(false);
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
     }
 
     private sealed record Extraction(List<IndexWorkItem> Items, List<AceSkippedEntry> Skipped);
