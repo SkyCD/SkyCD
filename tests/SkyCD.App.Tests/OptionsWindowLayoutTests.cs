@@ -180,6 +180,78 @@ public class OptionsWindowLayoutTests
         Assert.Equal("3", (string?)alert.Attribute("Grid.Row"));
     }
 
+    [Fact]
+    public void ScanSection_HostsSettingsInScrollableViewerAboveTheRulesTable()
+    {
+        var section = GetScanSection();
+
+        Assert.Equal("Grid", section.Name.LocalName);
+        Assert.Equal("Auto,*,Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+
+        var viewer = Assert.Single(section.Elements(Avalonia + "ScrollViewer"));
+        Assert.Equal("1", (string?)viewer.Attribute("Grid.Row"));
+        Assert.Equal("ScanSettingsScrollViewer", (string?)viewer.Attribute(Xaml2006 + "Name"));
+        Assert.Equal("Auto", (string?)viewer.Attribute("VerticalScrollBarVisibility"));
+        Assert.Equal("Disabled", (string?)viewer.Attribute("HorizontalScrollBarVisibility"));
+
+        var settings = Assert.Single(viewer.Elements(Avalonia + "StackPanel"));
+        var settingsMarkup = settings.ToString();
+        Assert.Contains("UiKeys.ScanSettings", settingsMarkup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.ScanCompletionHeader", settingsMarkup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.ActivateMainWindowAfterScan", settingsMarkup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.PlaySoundAfterScan", settingsMarkup, StringComparison.Ordinal);
+
+        // The settings stack must not sit loose in the page grid again.
+        Assert.DoesNotContain(section.Elements(Avalonia + "StackPanel"),
+            panel => panel.ToString().Contains("UiKeys.ScanSettings", StringComparison.Ordinal));
+
+        var rulesToolbar = Assert.Single(section.Elements(Avalonia + "Grid"),
+            grid => (string?)grid.Attribute("Grid.Row") == "3");
+        var toolbarMarkup = rulesToolbar.ToString();
+        Assert.Contains("ResetScanExclusionRulesCommand", toolbarMarkup, StringComparison.Ordinal);
+        Assert.Contains("AddScanExclusionRuleCommand", toolbarMarkup, StringComparison.Ordinal);
+        Assert.Contains("RemoveScanExclusionRuleCommand", toolbarMarkup, StringComparison.Ordinal);
+
+        var rulesBorder = Assert.Single(section.Elements(Avalonia + "Border"),
+            border => (string?)border.Attribute(Xaml2006 + "Name") == "ScanExclusionRulesBorder");
+        Assert.Equal("4", (string?)rulesBorder.Attribute("Grid.Row"));
+        var rulesHost = Assert.Single(rulesBorder.Elements(Avalonia + "Grid"));
+        Assert.Equal("Auto,*", (string?)rulesHost.Attribute("RowDefinitions"));
+
+        var rulesList = Assert.Single(rulesHost.Descendants(Avalonia + "ListBox"));
+        Assert.Equal("1", (string?)rulesList.Attribute("Grid.Row"));
+        Assert.Equal("ScanExclusionRulesList", (string?)rulesList.Attribute(Xaml2006 + "Name"));
+        Assert.Equal("Auto", (string?)rulesList.Attribute("ScrollViewer.VerticalScrollBarVisibility"));
+    }
+
+    [Fact]
+    public void RootGrid_KeepsSaveCancelFooterOutOfTheContentRow()
+    {
+        var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml"));
+        var rootGrid = Assert.Single(document.Root!.Elements(Avalonia + "Grid"));
+
+        Assert.Equal("Auto,*,Auto", (string?)rootGrid.Attribute("RowDefinitions"));
+
+        var footer = Assert.Single(rootGrid.Elements(Avalonia + "Border"),
+            border => (string?)border.Attribute("Grid.Row") == "2");
+        Assert.Contains("ConfirmCommand", footer.ToString(), StringComparison.Ordinal);
+        Assert.Contains("OnCancelClicked", footer.ToString(), StringComparison.Ordinal);
+
+        var contentGrid = Assert.Single(rootGrid.Elements(Avalonia + "Grid"),
+            grid => (string?)grid.Attribute("Grid.Row") == "1");
+        Assert.Contains(contentGrid.Descendants(Avalonia + "ScrollViewer"),
+            viewer => (string?)viewer.Attribute(Xaml2006 + "Name") == "ScanSettingsScrollViewer");
+    }
+
+    private static XElement GetScanSection()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+
+        return Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowScanSection}");
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();
