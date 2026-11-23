@@ -12,6 +12,8 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.Plugin.Metadata.AbiWord.Export;
+using SkyCD.Plugin.Metadata.AbiWord.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Controls.Preview;
@@ -64,20 +66,24 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsMetadataOnly_FromAssemblyMetadata()
+    public void AssemblyDiscovery_FindsMetadataAndPreview_FromAssemblyMetadata()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(AbiWordMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
-        Assert.Equal("AbiWord Document Metadata", plugin.Name);
-        var capability = Assert.IsAssignableFrom<IMediaMetadataCapability>(Assert.Single(plugin.Capabilities));
-        Assert.DoesNotContain(plugin.Capabilities, candidate => candidate is IMediaPreviewCapability);
+        Assert.Equal("AbiWord Document Metadata and Preview", plugin.Name);
+        Assert.Equal(2, plugin.Capabilities.Count);
+        var capability = Assert.Single(plugin.Capabilities.OfType<IMediaMetadataCapability>());
+        var preview = Assert.Single(plugin.Capabilities.OfType<IMediaPreviewCapability>());
         Assert.Equal(SchemaId, capability.Descriptor.Schema.Id);
         Assert.Equal(1, capability.Descriptor.Schema.Version);
         Assert.Equal(MediaMetadataType.Text,
             capability.Descriptor.Schema.Fields.Single(field => field.Key == "Title").Type);
         Assert.Equal(MediaMetadataType.Text,
             capability.Descriptor.Schema.Fields.Single(field => field.Key == "Author").Type);
+        Assert.Equal(AbiWordSchema.PreviewSchemaId, preview.Descriptor.Schema.Id);
+        Assert.Equal(capability.Descriptor.Extensions, preview.Descriptor.Extensions);
+        Assert.Equal(capability.Descriptor.ContentTypes, preview.Descriptor.ContentTypes);
     }
 
     [Theory]
@@ -89,9 +95,12 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
     [InlineData(".unknown", "APPLICATION/X-ABIWORD")]
     public void Host_SelectsAbiWordByExtensionOrMime(string extension, string? contentType)
     {
-        var provider = Assert.Single(CreateManager().ResolveProviders(new MediaItem(extension, contentType, 10)));
+        var providers = CreateManager().ResolveProviders(new MediaItem(extension, contentType, 10));
 
-        Assert.Equal(PluginId, provider.PluginId);
+        Assert.Equal(2, providers.Count);
+        Assert.All(providers, provider => Assert.Equal(PluginId, provider.PluginId));
+        Assert.Single(providers, provider => provider.Capability == typeof(AbiWordMetadataPlugin).FullName);
+        Assert.Single(providers, provider => provider.Capability == typeof(AbiWordPreviewPlugin).FullName);
     }
 
     [Fact]
@@ -110,7 +119,8 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
         var document = Document(compressed);
         var result = Assert.Single(await CreateManager().ProcessAsync(
             new MediaItem(extension, "application/x-abiword", document.Length),
-            _ => Task.FromResult<Stream>(new MemoryStream(document))));
+            _ => Task.FromResult<Stream>(new MemoryStream(document)),
+            selection: MediaProviderSelection.StandardMetadata));
 
         Assert.False(result.Failed);
         Assert.False(result.TimedOut);
@@ -126,24 +136,117 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
         Assert.Equal("A. Writer", author.Text);
     }
 
+    [Theory]
+    [InlineData(".abw", false)]
+    [InlineData(".zabw", true)]
+    public async Task Host_RunsMetadataAndPreviewForASingleDocument(string extension, bool compressed)
+    {
+        var document = Document(compressed);
+        var results = await CreateManager().ProcessAsync(
+            new MediaItem(extension, "application/x-abiword", document.Length),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = results.Single(result => result.Metadata is not null);
+        var preview = results.Single(result => result.Preview is not null);
+
+        Assert.False(metadata.Failed);
+        Assert.False(preview.Failed);
+        Assert.Equal(SchemaId, metadata.Schema!.Id);
+        Assert.Equal(AbiWordSchema.PreviewSchemaId, preview.Schema!.Id);
+        Assert.Equal("Offline report",
+            metadata.Metadata!.Values.Single(value => value.Key == "Title").Text);
+        Assert.Equal(RenderedThumbnail, Assert.Single(preview.Preview!.Artifacts).Data.ToArray());
+    }
+
+    [Theory]
+    [InlineData(".abw", false)]
+    [InlineData(".zabw", true)]
+    public async Task Host_MissingBodyPreviewIsEmptyButMetadataStillSucceeds(string extension, bool compressed)
+    {
+        var xml = Encoding.UTF8.GetBytes(
+            "<abiword xmlns=\"http://www.abisource.com/awml.dtd\"><metadata><m key=\"dc.title\">Title only</m></metadata></abiword>");
+        var document = compressed ? AbiWordFixtures.Gzip(xml) : xml;
+        var results = await CreateManager().ProcessAsync(
+            new MediaItem(extension, "application/x-abiword", document.Length),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = results.Single(result => result.Metadata is not null);
+        var preview = results.Single(result => result.Capability.Contains(
+            nameof(AbiWordPreviewPlugin), StringComparison.Ordinal));
+
+        Assert.False(metadata.Failed);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+        Assert.Equal("Title only", metadata.Metadata!.Values.Single(value => value.Key == "Title").Text);
+    }
+
     [Fact]
-    public async Task MalformedXml_IsIsolatedByHost_AndDoesNotBreakTheNextPass()
+    public async Task Host_NoRenderer_StillStoresMetadataWithNoArtifact()
+    {
+        var document = Document(compressed: false);
+        var results = await CreateManager(rendererAvailable: false).ProcessAsync(
+            new MediaItem(".abw", "application/x-abiword", document.Length),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var preview = results.Single(result => result.Capability.Contains(
+            nameof(AbiWordPreviewPlugin), StringComparison.Ordinal));
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+
+        var metadata = results.Single(result => result.Metadata is not null);
+        Assert.Equal("Offline report", metadata.Metadata!.Values.Single(value => value.Key == "Title").Text);
+    }
+
+    [Fact]
+    public async Task Scheduler_StoresMetadataAndThumbnail_presentedOffline()
+    {
+        var document = Document(compressed: false);
+        using var database = OpenDatabase();
+        var catalog = CreateCatalogRepository(database);
+        var entry = SeedCatalog(catalog, document.Length, ".abw");
+        using var store = MediaCacheStore.Create(database);
+
+        var outcome = await CreateScheduler(store).ProcessAsync(MediaExtractionRequest.ForCatalogEntry(
+            entry, _ => Task.FromResult<Stream>(new MemoryStream(document)), catalog.GetAll()));
+
+        Assert.True(outcome.Published);
+
+        var records = store.GetRecordsForEntry(entry.Id);
+        Assert.Equal(2, records.Count);
+        var metadata = Assert.Single(records, record => record.SchemaId == SchemaId);
+        var thumbnail = Assert.Single(records, record => record.SchemaId == AbiWordSchema.PreviewSchemaId);
+        Assert.Equal(MediaCacheRecordState.Captured, metadata.State);
+        Assert.Equal(MediaCacheRecordState.Captured, thumbnail.State);
+        Assert.Contains(metadata.Metadata, value => value.Key == "Title");
+        Assert.True(store.TryReadArtifact(thumbnail.Id, Assert.Single(thumbnail.Artifacts).Key, out var png));
+        Assert.Equal(RenderedThumbnail, png);
+    }
+
+    [Fact]
+    public async Task MalformedXml_PublishesNoMetadataAndAnEmptyPreview_AndDoesNotBreakTheNextPass()
     {
         var manager = CreateManager();
         var malformed = Encoding.UTF8.GetBytes("<abiword><metadata><m key=\"dc.title\">unfinished");
-        var failure = Assert.Single(await manager.ProcessAsync(
+        var failed = await manager.ProcessAsync(
             new MediaItem(".abw", "application/x-abiword", malformed.Length),
-            _ => Task.FromResult<Stream>(new MemoryStream(malformed))));
+            _ => Task.FromResult<Stream>(new MemoryStream(malformed)));
 
-        Assert.True(failure.Failed);
-        Assert.False(failure.TimedOut);
-        Assert.Null(failure.Metadata);
-        Assert.Null(failure.Preview);
+        var metadataFailure = Assert.Single(failed, result => result.Capability.Contains(
+            nameof(AbiWordMetadataPlugin), StringComparison.Ordinal));
+        var previewResult = Assert.Single(failed, result => result.Capability.Contains(
+            nameof(AbiWordPreviewPlugin), StringComparison.Ordinal));
+        Assert.True(metadataFailure.Failed);
+        Assert.False(metadataFailure.TimedOut);
+        Assert.Null(metadataFailure.Metadata);
+        Assert.Null(metadataFailure.Preview);
+        Assert.False(previewResult.Failed);
+        Assert.Empty(previewResult.Preview!.Artifacts);
 
         var document = Document(compressed: false);
         var success = Assert.Single(await manager.ProcessAsync(
             new MediaItem(".abw", "application/x-abiword", document.Length),
-            _ => Task.FromResult<Stream>(new MemoryStream(document))));
+            _ => Task.FromResult<Stream>(new MemoryStream(document)),
+            selection: MediaProviderSelection.StandardMetadata));
 
         Assert.False(success.Failed);
         Assert.Equal("Offline report", success.Metadata!.Values.Single(value => value.Key == "Title").Text);
@@ -156,14 +259,18 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
     {
         var document = Document(compressed);
         var manager = CreateManager(new MediaExecutionLimits(SourceBytes: 16));
-        var result = Assert.Single(await manager.ProcessAsync(
+        var results = await manager.ProcessAsync(
             new MediaItem(extension, "application/x-abiword", document.Length),
-            _ => Task.FromResult<Stream>(new MemoryStream(document))));
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
-        Assert.True(result.Failed);
-        Assert.False(result.TimedOut);
-        Assert.Null(result.Metadata);
-        Assert.Null(result.Preview);
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result =>
+        {
+            Assert.True(result.Failed);
+            Assert.False(result.TimedOut);
+            Assert.Null(result.Metadata);
+            Assert.Null(result.Preview);
+        });
     }
 
     [Theory]
@@ -197,9 +304,10 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
 
             Assert.Equal("report" + extension, entry.Name);
             Assert.Equal(MediaPreviewState.Ready, snapshot.State);
-            Assert.Equal(PreviewPayloadKind.None, snapshot.PayloadKind);
+            Assert.Equal(PreviewPayloadKind.Image, snapshot.PayloadKind);
             Assert.Equal(PluginId, snapshot.ProviderId);
-            Assert.False(resolver.TryReadPayload(snapshot, out _));
+            Assert.True(resolver.TryReadPayload(snapshot, out var png));
+            Assert.Equal(RenderedThumbnail, png);
             Assert.Equal("Offline report", FieldText(snapshot, "Title"));
             Assert.Equal("A. Writer", FieldText(snapshot, "Author"));
         }
@@ -245,8 +353,34 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
     private static string FieldText(EntryPreviewSnapshot snapshot, string key) =>
         Assert.IsType<string>(snapshot.Fields.Single(field => field.Key == key).Value);
 
-    private static MediaExtensionManager CreateManager(MediaExecutionLimits? limits = null) =>
-        new([new MediaProvider(PluginId, "1.0.0", new AbiWordMetadataPlugin())], limits);
+    private static MediaExtensionManager CreateManager(
+        MediaExecutionLimits? limits = null, bool rendererAvailable = true) =>
+        new(new[]
+        {
+            new MediaProvider(PluginId, "1.0.0", new AbiWordMetadataPlugin()),
+            new MediaProvider(PluginId, "1.0.0", new AbiWordPreviewPlugin(
+                AbiWordPluginOptions.Default,
+                new StubRenderer(rendererAvailable)))
+        }, limits);
+
+    private static readonly byte[] RenderedThumbnail =
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+
+    /// <summary>Stands in for the Skia renderer so host tests assert plumbing, not rasterization.</summary>
+    private sealed class StubRenderer(bool available) : IAbiWordThumbnailRenderer
+    {
+        public bool IsAvailable => available;
+
+        public Task<byte[]?> RenderAsync(
+            string text,
+            int maxDimension,
+            int maxCharacters,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<byte[]?>(available ? RenderedThumbnail : null);
+        }
+    }
 
     private static MediaExtractionScheduler CreateScheduler(IMediaCacheStore store) => new(CreateManager(), store);
 
