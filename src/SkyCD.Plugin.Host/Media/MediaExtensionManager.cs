@@ -27,7 +27,7 @@ public sealed class MediaExtensionManager
         Func<string, IReadOnlyDictionary<string, string?>>? settingsSource = null)
     {
         this.providers = providers.Where(p => p.Capability is IMediaMetadataCapability
-            or ILocalMediaMetadataCapability or IMediaPreviewCapability).ToArray();
+            or ILocalMediaMetadataCapability or IMediaPreviewCapability or ILocalMediaPreviewCapability).ToArray();
         this.limits = limits ?? new MediaExecutionLimits();
         this.settingsSource = settingsSource;
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.SourceBytes);
@@ -40,16 +40,20 @@ public sealed class MediaExtensionManager
     public bool HasMetadataProviders => providers.Any(IsMetadataProvider);
 
     /// <summary>True when a preview would be produced by an indexing pass.</summary>
-    public bool HasIndexingPreviewProviders => providers.Any(provider =>
-        provider.Capability is IMediaPreviewCapability preview &&
-        preview.Descriptor is { IsOptIn: false, IndexTimePreview: true });
+    public bool HasIndexingPreviewProviders => providers.Any(provider => provider.Capability switch
+    {
+        IMediaPreviewCapability preview => preview.Descriptor is { IsOptIn: false, IndexTimePreview: true },
+        ILocalMediaPreviewCapability local => local.Descriptor is { IsOptIn: false, IndexTimePreview: true },
+        _ => false
+    });
 
     /// <summary>The factory must return a new readable stream; the host owns and disposes it.</summary>
     /// <summary>
     /// Runs matching providers. A per-call <paramref name="limits"/> override exists for explicit operations
     /// such as whole-file hashing, whose source budget and duration are set by the requested file rather than
     /// by the preview defaults. <paramref name="sourcePath"/> is the validated local path of the source while
-    /// it is available; providers that read OS-assigned metadata need it and are skipped without it.
+    /// it is available; providers that read OS-assigned metadata or sibling artwork need it and are skipped
+    /// without it.
     /// </summary>
     public async Task<IReadOnlyList<MediaProviderResult>> ProcessAsync(MediaItem item,
         Func<CancellationToken, Task<Stream>> openSource, IProgress<MediaProgress>? progress = null,
@@ -206,6 +210,7 @@ public sealed class MediaExtensionManager
         IMediaMetadataCapability metadata => metadata.Descriptor,
         ILocalMediaMetadataCapability local => local.Descriptor,
         IMediaPreviewCapability preview => preview.Descriptor,
+        ILocalMediaPreviewCapability localPreview => localPreview.Descriptor,
         _ => null
     };
 
@@ -229,15 +234,22 @@ public sealed class MediaExtensionManager
                 ValidateSchema(descriptor.Schema);
                 MediaExtractionResult? extraction = null;
                 MediaPreviewResult? artifacts = null;
-                if (provider.Capability is ILocalMediaMetadataCapability localCapability)
+                if (provider.Capability is ILocalMediaMetadataCapability or ILocalMediaPreviewCapability)
                 {
-                    // OS-assigned metadata is addressed by path; without one this provider has nothing to
-                    // read, and reporting a failure would wrongly downgrade cached values.
+                    // Path-addressed metadata and artwork are unavailable to a provider without a validated
+                    // local source; reporting a failure would wrongly downgrade cached values.
                     if (string.IsNullOrWhiteSpace(sourcePath)) return null;
-                    var raw = await localCapability.ExtractAsync(
-                        new LocalMediaContext(sourcePath, item.Extension, item.ContentType, item.Length),
-                        progress, token);
-                    extraction = ValidateExtraction(descriptor, raw, limits);
+                    var context = new LocalMediaContext(sourcePath, item.Extension, item.ContentType, item.Length);
+                    if (provider.Capability is ILocalMediaMetadataCapability localMetadata)
+                    {
+                        var raw = await localMetadata.ExtractAsync(context, progress, token);
+                        extraction = ValidateExtraction(descriptor, raw, limits);
+                    }
+                    if (provider.Capability is ILocalMediaPreviewCapability localPreview && RunsPreview(selection, descriptor))
+                    {
+                        var raw = await localPreview.GeneratePreviewAsync(context, progress, token);
+                        artifacts = ValidateArtifacts(raw, limits);
+                    }
                 }
                 else
                 {
@@ -251,16 +263,7 @@ public sealed class MediaExtensionManager
                     if (provider.Capability is IMediaPreviewCapability previewCapability && RunsPreview(selection, descriptor))
                     {
                         var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
-                        long bytes = 0;
-                        var copies = new List<MediaPreviewArtifact>();
-                        foreach (var artifact in raw.Artifacts)
-                        {
-                            bytes = checked(bytes + artifact.Data.Length);
-                            if (bytes > limits.ArtifactBytes || string.IsNullOrWhiteSpace(artifact.ContentType))
-                                throw new MediaLimitExceededException("artifact bytes");
-                            copies.Add(new MediaPreviewArtifact(artifact.ContentType, artifact.Data.ToArray()));
-                        }
-                        artifacts = new MediaPreviewResult(copies.ToArray());
+                        artifacts = ValidateArtifacts(raw, limits);
                     }
                 }
                 return ((int Priority, MediaProviderResult Result)?)(descriptor.Priority,
@@ -292,7 +295,8 @@ public sealed class MediaExtensionManager
             MediaProviderSelection.OptInOnly => descriptor.IsOptIn,
             MediaProviderSelection.StandardMetadata => !descriptor.IsOptIn &&
                 (IsMetadataProvider(provider) ||
-                 (provider.Capability is IMediaPreviewCapability && descriptor.IndexTimePreview)),
+                 ((provider.Capability is IMediaPreviewCapability or ILocalMediaPreviewCapability) &&
+                  descriptor.IndexTimePreview)),
             MediaProviderSelection.OptInMetadata => IsMetadataProvider(provider) && descriptor.IsOptIn,
             _ => true
         };
@@ -333,6 +337,22 @@ public sealed class MediaExtensionManager
         }
 
         return extraction;
+    }
+
+    /// <summary>Copies preview artifacts so a provider cannot mutate them after returning, within the output bound.</summary>
+    private static MediaPreviewResult ValidateArtifacts(MediaPreviewResult raw, MediaExecutionLimits limits)
+    {
+        long bytes = 0;
+        var copies = new List<MediaPreviewArtifact>();
+        foreach (var artifact in raw.Artifacts)
+        {
+            bytes = checked(bytes + artifact.Data.Length);
+            if (bytes > limits.ArtifactBytes || string.IsNullOrWhiteSpace(artifact.ContentType))
+                throw new MediaLimitExceededException("artifact bytes");
+            copies.Add(new MediaPreviewArtifact(artifact.ContentType, artifact.Data.ToArray()));
+        }
+
+        return new MediaPreviewResult(copies.ToArray());
     }
 
     private static bool ValidValue(MediaMetadataValue value) =>

@@ -20,8 +20,9 @@ name, or silently replace previously stored metadata. A failed provider does not
 
 The caller supplies a factory for a fresh readable stream per provider. The host owns each
 returned stream and disposes it after the worker exits. Byte-reading plugins receive bounded read
-access, not a path, UI control or persistence entity; the only path-addressed contract is
-`ILocalMediaMetadataCapability`, described below. Reads charge a cumulative byte budget, including
+access, not a path, UI control or persistence entity; the path-addressed contracts are
+`ILocalMediaMetadataCapability` and `ILocalMediaPreviewCapability`, described below. Reads charge a
+cumulative byte budget, including
 repeated reads. Non-seekable streams support sequential reads. Preview data is copied before
 return, with an aggregate artifact byte limit; metadata text is also bounded. Progress and
 cancellation use the standard .NET interfaces.
@@ -62,6 +63,27 @@ limits are identical to `IMediaMetadataCapability`. Selection treats these provi
 providers for `MediaProviderSelection.StandardMetadata` and `OptInMetadata`; whole-file hashing and
 preview passes do not select them. Adding the interface and its context record is a MINOR SDK
 addition under `docs/plugins/sdk-versioning-policy.md`; existing capabilities are unchanged.
+
+## OS-addressed previews
+
+Some artwork is not in the source bytes either: a freedesktop launcher's `Icon=` file, a desktop
+theme image stored on the scanned volume, or a bundle icon in a sibling folder. Such an icon cannot
+be reached through `IMediaSource`, so `ILocalMediaPreviewCapability` receives the same
+`LocalMediaContext(Path, Extension, ContentType, Length)` instead of a stream, under exactly the
+same host-owned path rules as `ILocalMediaMetadataCapability`.
+
+It is the preview counterpart of the metadata contract:
+
+- The descriptor declares extensions, content types, schema and priority like any preview, and may
+  be marked `IndexTimePreview` so the indexing pass stores the artwork with the metadata.
+- The provider is selected by preview passes only — `Standard` and `StandardMetadata` (where an
+  index-time preview runs); a metadata-only opt-in pass does not select it, because a source whose
+  bytes carry no metadata has nothing to say to that pass.
+- When no local path is available it is **skipped**: it contributes no result at all, not an empty
+  one and not a failure, so an offline entry keeps the preview the catalog already stored.
+- The path is never persisted, logged or published, and never appears in an artifact name. Because
+  the provider reads the real file rather than a bounded stream, it applies its own file-size bound
+  and publishes only bounded artifacts through the same copied-artifact output limits.
 
 ## AbiWord document metadata
 

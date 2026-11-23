@@ -177,6 +177,52 @@ public sealed class MediaCapabilityTests
         Assert.Empty(manager.ResolveProviders(item, MediaProviderSelection.OptInMetadata));
     }
 
+    [Fact]
+    public async Task LocalPreviewProvider_IsSkippedWithoutAPathInsteadOfFailing()
+    {
+        var provider = new FakeLocalPreviewCapability();
+        var manager = new MediaExtensionManager([new MediaProvider("test", "1", provider)]);
+
+        Assert.True(manager.HasIndexingPreviewProviders);
+        var results = await manager.ProcessAsync(new MediaItem(".fake", null, 3), Open,
+            selection: MediaProviderSelection.StandardMetadata);
+
+        Assert.Empty(results);
+        Assert.Equal(0, provider.Calls);
+    }
+
+    [Fact]
+    public async Task LocalPreviewProvider_ReceivesTheValidatedContextAndCopiesArtifacts()
+    {
+        var provider = new FakeLocalPreviewCapability();
+        var manager = new MediaExtensionManager([new MediaProvider("test", "1", provider)]);
+        var path = Path.Combine(Path.GetTempPath(), "launcher.desktop");
+
+        var results = await manager.ProcessAsync(new MediaItem(".fake", "application/fake", 3), Open,
+            selection: MediaProviderSelection.StandardMetadata, sourcePath: path);
+
+        var result = Assert.Single(results);
+        Assert.False(result.Failed);
+        provider.Bytes[0] = 99;
+        Assert.Equal(1, Assert.Single(result.Preview!.Artifacts).Data.Span[0]);
+        Assert.Equal(path, provider.Context!.Path);
+        Assert.Equal(".fake", provider.Context.Extension);
+        Assert.Equal("application/fake", provider.Context.ContentType);
+        Assert.Equal(3, provider.Context.Length);
+    }
+
+    [Fact]
+    public void LocalPreviewProvider_IsResolvedForPreviewPassesOnly()
+    {
+        var manager = new MediaExtensionManager([new MediaProvider("test", "1", new FakeLocalPreviewCapability())]);
+        var item = new MediaItem(".fake", null, 3);
+
+        Assert.Single(manager.ResolveProviders(item, MediaProviderSelection.Standard));
+        Assert.Single(manager.ResolveProviders(item, MediaProviderSelection.StandardMetadata));
+        Assert.Empty(manager.ResolveProviders(item, MediaProviderSelection.OptInMetadata));
+        Assert.False(manager.HasMetadataProviders);
+    }
+
     private sealed class BlockedMediaCapability(TaskCompletionSource entered, TaskCompletionSource release) : IMediaMetadataCapability
     {
         public MediaDescriptor Descriptor => new([".fake"], [], new MediaMetadataSchema("blocked", 1, []));
@@ -249,4 +295,22 @@ public sealed class FakePreviewCapability : IMediaPreviewCapability
     public Task<MediaPreviewResult> GeneratePreviewAsync(MediaItem item, IMediaSource source,
         IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
         Task.FromResult(new MediaPreviewResult([new("image/png", Bytes)]));
+}
+
+public sealed class FakeLocalPreviewCapability : ILocalMediaPreviewCapability
+{
+    public int Calls { get; private set; }
+    public LocalMediaContext? Context { get; private set; }
+    public byte[] Bytes { get; } = [1, 2, 3];
+
+    public MediaDescriptor Descriptor => new([".fake"], [],
+        new MediaMetadataSchema("local-preview", 1, []), IndexTimePreview: true);
+
+    public Task<MediaPreviewResult> GeneratePreviewAsync(LocalMediaContext source,
+        IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+    {
+        Calls++;
+        Context = source;
+        return Task.FromResult(new MediaPreviewResult([new MediaPreviewArtifact("image/png", Bytes)]));
+    }
 }

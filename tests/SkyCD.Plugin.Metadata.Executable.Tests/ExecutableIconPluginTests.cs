@@ -24,7 +24,7 @@ public sealed class ExecutableIconPluginTests
         Assert.True(descriptor.IndexTimePreview);
         Assert.False(descriptor.IsOptIn);
         Assert.Equal(ExecutableSchema.PreviewSchemaId, descriptor.Schema.Id);
-        Assert.Same(ExecutableSchema.Extensions, descriptor.Extensions);
+        Assert.Same(ExecutableSchema.IconExtensions, descriptor.Extensions);
     }
 
     [Fact]

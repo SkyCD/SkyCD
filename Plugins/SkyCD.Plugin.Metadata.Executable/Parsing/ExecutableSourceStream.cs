@@ -13,18 +13,34 @@ namespace SkyCD.Plugin.Metadata.Executable.Parsing;
 /// </summary>
 /// <remarks>
 /// The host runs capabilities on worker threads without a synchronization context, so waiting for the source read
-/// synchronously cannot deadlock.
+/// synchronously cannot deadlock. A windowed instance exposes an embedded filesystem, such as the ISO9660
+/// volume an AppImage carries after its runtime, with stream position zero at the window's origin.
 /// </remarks>
 internal sealed class ExecutableSourceStream : Stream
 {
     private readonly ExecutableSource source;
     private readonly CancellationToken cancellationToken;
+    private readonly long origin;
+    private readonly long length;
     private long position;
 
     public ExecutableSourceStream(ExecutableSource source, CancellationToken cancellationToken)
+        : this(source, cancellationToken, 0, source?.Length ?? 0)
+    {
+    }
+
+    public ExecutableSourceStream(ExecutableSource source, CancellationToken cancellationToken, long origin,
+        long length)
     {
         this.source = source ?? throw new ArgumentNullException(nameof(source));
+        if (origin < 0 || length < 0 || origin > source.Length || length > source.Length - origin)
+        {
+            throw new ExecutableReadException("the stream window lies outside the readable image");
+        }
+
         this.cancellationToken = cancellationToken;
+        this.origin = origin;
+        this.length = length;
     }
 
     public override bool CanRead => true;
@@ -33,7 +49,7 @@ internal sealed class ExecutableSourceStream : Stream
 
     public override bool CanWrite => false;
 
-    public override long Length => source.Length;
+    public override long Length => length;
 
     public override long Position
     {
@@ -50,14 +66,13 @@ internal sealed class ExecutableSourceStream : Stream
     public override int Read(Span<byte> buffer)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var length = source.Length;
         if (position >= length || buffer.IsEmpty)
         {
             return 0;
         }
 
         var count = (int)Math.Min(buffer.Length, length - position);
-        var data = source.ReadAsync(position, count, cancellationToken).GetAwaiter().GetResult();
+        var data = source.ReadAsync(origin + position, count, cancellationToken).GetAwaiter().GetResult();
         var read = Math.Min(data.Length, count);
         data.AsSpan(0, read).CopyTo(buffer);
         position += read;
@@ -76,7 +91,7 @@ internal sealed class ExecutableSourceStream : Stream
 
         if (target < 0)
         {
-            throw new ExecutableReadException("the PE reader seeked before the start of the source");
+            throw new ExecutableReadException("the reader seeked before the start of the source");
         }
 
         position = target;

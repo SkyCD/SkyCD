@@ -21,7 +21,7 @@ Format roles — what the plugin does with files:
 | --- | --- |
 | `FileFormat` | A format the user opens through File > Open or writes through File > Save As, implemented as `IFileFormatPluginCapability` (read or write support is enough), including content-aware, folder-aware and index work-item companions that belong to the same reader. |
 | `Metadata` | Data collected by inspecting files while a path is scanned: `IMediaMetadataCapability`, `ILocalMediaMetadataCapability`, `IAudioCdMetadataCapability`, and entry listings contributed through `IIndexWorkItemProvider` (archives, disk images, containers) that become subentries of generated catalog entries. |
-| `Preview` | Implements `IMediaPreviewCapability` as the assembly's own purpose. |
+| `Preview` | Implements `IMediaPreviewCapability` or `ILocalMediaPreviewCapability` as the assembly's own purpose. |
 | `Config` | Implements `IPluginConfigurationCapability` as the assembly's own purpose. |
 
 Feature / domain roles — what the plugin adds to the application when it is not a format reader:

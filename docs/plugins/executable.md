@@ -1,36 +1,42 @@
 # Executable metadata and icon plugin
 
-Implements #733 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
+Implements #733 and #924 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.Executable/` → plugin id `SkyCD.Plugin.Metadata.Executable`.
 Tests: `tests/SkyCD.Plugin.Metadata.Executable.Tests/`.
 
 This plugin claims Windows executables and reads two things from them: the version information Windows shows in
 a file's properties, and the program's own icon, which it stores as a PNG during indexing so the catalog can show
-it later without the file being present.
+it later without the file being present. It also reads the icon sources the other platforms use, because Linux
+and macOS do not embed artwork in their binaries: macOS `.icns` containers, the ISO 9660 volume inside a type 1
+AppImage, and the path a freedesktop `.desktop` launcher names.
 
 ## What it provides
 
-Two independently discovered capabilities in one assembly:
+Three independently discovered capabilities in one assembly:
 
 | Capability | Type | Schema |
 |---|---|---|
 | Executable facts and version strings | `ExecutableMetadataPlugin : IMediaMetadataCapability` | `skycd.executable.metadata` v1 |
-| Bounded icon preview | `ExecutableIconPlugin : IMediaPreviewCapability` | `skycd.executable.icon` v1 |
+| Bounded icon preview read from the bytes | `ExecutableIconPlugin : IMediaPreviewCapability` | `skycd.executable.icon` v2 |
+| Launcher icon resolved through the local path | `LauncherIconPlugin : ILocalMediaPreviewCapability` | `skycd.executable.icon` v2 |
 
 Discovery uses assembly metadata and implemented capability types only — there is no `plugin.json`.
 
-The preview descriptor is marked `IndexTimePreview`, so the indexing pass stores the icon in the catalog together
-with the metadata. The browser then renders it from the cached artifact, which means the icon survives the media
-going offline, and reopening the item never reads the program again.
+The preview descriptors are marked `IndexTimePreview`, so the indexing pass stores the icon in the catalog
+together with the metadata. The browser then renders it from the cached artifact, which means the icon survives
+the media going offline, and reopening the item never reads the program again. Preview schema version 2 covers
+the platform icon sources, so previews cached by version 1 are re-extracted.
 
-Default extensions are `.exe`, `.dll`, `.scr` and `.com`, with the common Windows executable MIME types
-(`application/vnd.microsoft.portable-executable`, `application/x-msdownload`, `application/x-msdos-program`,
-`application/x-dosexec`).
+The byte-reading icon capability claims `.exe`, `.dll`, `.scr` and `.com` with the common Windows executable
+MIME types (`application/vnd.microsoft.portable-executable`, `application/x-msdownload`, `application/x-msdos-program`,
+`application/x-dosexec`), plus `.icns` and `.appimage` with `image/icns`, `image/x-icns`,
+`application/x-appimage` and `application/x-iso9660-appimage`. The launcher capability claims `.desktop` and
+`application/x-desktop`; the metadata capability keeps the Windows extensions only.
 
-**Nothing is extracted to disk and no file is modified.** The headers, the resource directory nodes and the icon
-payload are read through the host's bounded `IMediaSource`; only the bytes actually parsed are charged to the
-source budget.
+**Nothing is extracted to disk and no file is modified.** The headers, the resource directory nodes, the icon
+payload and the AppImage volume are read through the host's bounded `IMediaSource` or through the host-owned
+local path; only the bytes actually parsed are charged to the source budget.
 
 ## Supported files
 
@@ -39,11 +45,17 @@ source budget.
 | PE32 and PE32+ images (`.exe`, `.dll`, `.scr`) | Header facts, version resource, icon facts | Yes, from `RT_GROUP_ICON` / `RT_ICON` |
 | Bare DOS executables (`MZ` without a reachable PE header, e.g. `.com`-style stubs) | `Container = mz-16` only | No |
 | A PE image with no resource directory | Header facts | No |
-| A damaged header, section table or resource directory | Whatever was read before the damage | No |
+| macOS `.icns` container | No values | Yes, the largest decodable PNG or JPEG chunk |
+| AppImage with an ISO 9660 payload (type 1) | No values | Yes, from `.DirIcon` in the appended volume |
+| AppImage with a squashfs payload (type 2) | No values | No; no compliant reader, see below |
+| A plain ELF or Mach-O executable | No values | No icon resource exists in the bytes |
+| `.desktop` launcher | No values | Yes, the `Icon=` path or theme name, while the file is local |
+| A damaged header, section table, resource directory or container | Whatever was read before the damage | No |
 | Any other file | No values | No |
 
-Recognition is structural: the file must start with `MZ`, and a PE image must also carry the `PE\0\0` signature
-the DOS stub points at. The extension is not trusted.
+Recognition is structural: Windows images must start with `MZ` and a PE image must also carry the `PE\0\0`
+signature the DOS stub points at; `.icns` must start with the container signature; an AppImage must start with
+an ELF header whose AppImage marker says ISO 9660 or squashfs. The extension is not trusted.
 
 ## Metadata schema
 
@@ -87,6 +99,51 @@ The preview follows the icon format's own path:
 The stored PNG is therefore always square and exactly `IconSize` pixels on a side (128 by default, clamped to
 16–128).
 
+### macOS `.icns`
+
+An `.icns` file is an eight-byte `icns` header followed by chunks, each with a four-character type and a
+big-endian length that includes the eight-byte chunk header. Only chunks whose payload is a standalone PNG or
+JPEG are decoded — the modern `ic07`–`ic14` and `icp4`–`icp6` types. Chunks are sorted by their documented edge
+and by payload size, and the first one that decodes within the existing byte and pixel bounds wins. At most 256
+chunks are walked and at most `MaxIndexedIconImages` payloads are decoded, so a crafted chunk list is truncated
+rather than followed.
+
+### AppImage type 1
+
+An AppImage is an ELF runtime followed by the packed application directory; the type byte at offset ten selects
+ISO 9660 (type 1) or squashfs (type 2). For type 1 the plugin locates the volume's primary volume descriptor in
+the first 4 MiB of the file, then opens the volume over a windowed, bounded stream — the archive is never
+mounted, extracted to disk or executed. The icon is the root `.DirIcon` entry, which is usually a Rock Ridge
+symlink to a PNG beside it, so links inside the volume are followed with an eight-hop limit and a check that the
+target never leaves the volume root. If `.DirIcon` is missing or unresolvable, the largest PNG or JPEG under the
+root and `usr/share/icons` is decoded as a best-effort substitute.
+
+### `.desktop` launchers
+
+The launcher capability reads the `[Desktop Entry]` group, ignores localized `Icon[xx]` keys and other groups,
+and resolves the `Icon=` value in this order:
+
+1. An absolute path, or a path relative to the launcher, when it names a `.png`, `.jpg` or `.jpeg` file
+   (the same extensions are tried when the value has no extension).
+2. A plain file name looked up beside the launcher.
+3. A theme name looked up in `<volume>/usr/share/icons/<theme>/<size>/apps` (and `mimetypes`), then the
+   `hicolor` theme, then `<volume>/usr/share/pixmaps`. The volume is found by walking up from the launcher
+   until a folder carries XDG icon data, so a launcher scanned from a mounted volume never resolves against the
+   host's own theme.
+
+Only a PNG or JPEG that decodes is published; an SVG, an XPM or a text file named `.png` produces no icon. The
+launcher entry itself is bounded to 256 KiB and at most 32 candidate files are examined. The local path is
+host-owned per the SDK contract: it is never logged, and the diagnostic trace records only the kind of reason
+(for example "the launcher entry has no Icon key").
+
+### `.app` bundles
+
+A macOS `.app` is a directory, so its bytes are not a source this plugin can claim. Resolving
+`Contents/Info.plist` → `CFBundleIconFile` → `Contents/Resources/*.icns` would need folder-level previews in the
+host or a catalog-scanning step; that is deliberately left out here, and the issue that adds it inherits the
+`.icns` reader above. A plain Mach-O executable, which is the only file-level source inside the bundle, has no
+icon resource and keeps the explicit no-icon state.
+
 ## "No icon" is not a failure
 
 The explicit empty artifact list leaves the item on its type icon and never affects the metadata. It covers:
@@ -95,6 +152,10 @@ The explicit empty artifact list leaves the item on its type icon and never affe
 - A bitmap at an unsupported bit depth, a truncated bitmap, or a PNG that does not decode.
 - An icon image whose decoded pixels carry no visible pixels at all.
 - An encoded PNG above `MaxPngBytes`, or a source above `MaxIconSourceBytes`.
+- A malformed `.icns` container, or one whose decodable chunks are all above the byte or pixel bound.
+- An AppImage with a squashfs payload, a damaged ISO 9660 volume, or no `.DirIcon` and no usable image file.
+- A `.desktop` entry without a usable `Icon` key, an unresolved theme name, or an icon that is not a PNG or JPEG.
+- A plain ELF or Mach-O executable, and any `.app` bundle (whose bytes are a directory, not a source).
 
 ## Bounds
 
@@ -111,6 +172,16 @@ Every value is a hard ceiling so a crafted file cannot make the plugin allocate 
 | `IconSize` | 128 | Edge of the encoded PNG, clamped to 16–128 |
 | `MaxMetadataValueCharacters` | 512 | Each published text value |
 
+Besides the host limits, each container has its own internal ceilings:
+
+| Source | Ceiling |
+|---|---|
+| `.icns` | 256 chunks walked, then at most `MaxIndexedIconImages` payloads decoded, each at most `MaxIconBytes` |
+| AppImage | 4 MiB probed for the volume descriptor (first 512 KiB, then the rest), 8 symlink hops, 48 folders and 64 image files scanned, each at most `MaxIconBytes` |
+| `.desktop` | 256 KiB entry, at most 32 candidate files and 32 size folders examined, each image at most `MaxIconBytes` |
+
+An AppImage above `MaxIconSourceBytes` keeps the no-icon state like any other oversized source.
+
 The metadata capability also reads the icon group only to count images and report the largest declared size; it
 does not decode pixels.
 
@@ -122,6 +193,14 @@ Rejected instead of approximated, because a wrong icon is worse than a type fall
 - Icon bitmaps above 256 × 256 pixels.
 - Named resources and named languages: the plugin selects the neutral language first, then the lowest numeric
   language id, which is the convention icon groups use.
+- Legacy `.icns` RLE chunks (`is32`, `il32`, `ih32`, `it32`) and the 24-bit `ic04`/`ic05` chunks: they store
+  packed bitmaps this plugin does not approximate.
+- SVG and XPM launcher icons: neither can be decoded into the bounded PNG preview without adding an XML or
+  raster reader for a format that would render a wrong image if approximated.
+- AppImage squashfs (type 2) payloads: no squashfs reader with a policy-compliant licence is available, so the
+  whole container reports no icon instead of guessing.
+- `.app` bundles: `Contents/Info.plist` → `CFBundleIconFile` → `Contents/Resources/*.icns` needs a folder-level
+  preview path in the host; the `.icns` reader it would use already exists.
 
 ## Failure behaviour
 
@@ -141,11 +220,12 @@ budget exhaustion and cancellation still propagate, so a cancelled scan stops in
 
 | Package | Version | License | Use |
 |---|---|---|---|
-| SkiaSharp | 3.119.4 | MIT | Decode embedded PNG icons and encode the bounded preview |
+| SkiaSharp | 3.119.4 | MIT | Decode embedded PNG/JPEG icons and encode the bounded preview |
 | SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
+| DiscUtils.Iso9660 | 0.16.13 | MIT | Read the ISO 9660 volume a type 1 AppImage appends to its runtime |
 
-SkiaSharp is a policy-allowed MIT dependency already used by the Image, EBook and AudioCD plugins, so no license
-whitelist entry or policy change is needed.
+SkiaSharp and DiscUtils.Iso9660 are policy-allowed MIT dependencies already used by the Image, EBook, AudioCD and
+DiskImages plugins, so no license whitelist entry or policy change is needed.
 
 The PE/COFF header and section-table facts are read with
 `System.Reflection.PortableExecutable.PEHeaders`, which ships in-box with .NET 10 (`Microsoft.NETCore.App`, MIT)
@@ -180,3 +260,10 @@ fixture is checked in. The tests cover:
 - A structurally valid PNG whose header declares 4096 × 4096 pixels is refused by the header bound before any
   raster is allocated (decompression-bomb protection).
 - Option validation and the `MaxIconSourceBytes` ≤ `MaxSourceBytes` rule.
+- `PlatformIconPluginTests` builds synthetic `.icns` containers, ISO 9660 volumes and AppImage prefixes in
+  memory and covers: the largest icns chunk winning, an oversized chunk being skipped for the next one, the
+  chunk byte bound, malformed containers, `.DirIcon` extraction, the themed-icon fallback, a type 2 payload,
+  a damaged volume, and plain ELF and Mach-O producing no artifact.
+- `PlatformIconPluginTests` also writes temporary `.desktop` files and covers: absolute, sibling and relative
+  icon paths, a theme name resolved from a volume layout, an unresolved theme name, localized keys and desktop
+  actions, and a text file named `.png`.
