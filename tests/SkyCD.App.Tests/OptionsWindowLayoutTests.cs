@@ -103,6 +103,57 @@ public class OptionsWindowLayoutTests
     }
 
     [Fact]
+    public void LocationsSection_UsesListAnchoredToolbarAndFlexibleList()
+    {
+        var section = GetLocationsSection();
+
+        Assert.Equal("Grid", section.Name.LocalName);
+        Assert.Equal("Auto,*", (string?)section.Attribute("RowDefinitions"));
+
+        // The four list actions sit in a toolbar anchored to the list.
+        var toolbar = Assert.Single(section.Descendants(Avalonia + "StackPanel"),
+            panel => (string?)panel.Attribute("Orientation") == "Horizontal");
+        var commands = toolbar.Elements(Avalonia + "Button")
+            .Select(button => button.Attribute("Command")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.Equal(
+        [
+            "{Binding CreateLocationCommand}",
+            "{Binding BeginRenameLocationCommand}",
+            "{Binding MergeLocationsCommand}",
+            "{Binding DeleteLocationCommand}"
+        ], commands);
+
+        // No standalone Rename textbox or Merge combo remains.
+        Assert.DoesNotContain(section.Descendants(Avalonia + "ComboBox"), comboBox =>
+            comboBox.ToString().Contains("MergeTarget", StringComparison.Ordinal) ||
+            comboBox.ToString().Contains("MergeLocationsCommand", StringComparison.Ordinal));
+        Assert.DoesNotContain(section.Descendants(Avalonia + "TextBox"), textBox =>
+            textBox.ToString().Contains("RenameTo", StringComparison.Ordinal) ||
+            textBox.ToString().Contains("NewLocationName", StringComparison.Ordinal));
+
+        var list = Assert.Single(section.Descendants(Avalonia + "ListBox"));
+        Assert.Contains("Binding EditName", list.ToString(), StringComparison.Ordinal);
+        Assert.Contains("OnLocationsListKeyDown", list.ToString(), StringComparison.Ordinal);
+        Assert.Contains("OnLocationNameEditorKeyDown", list.ToString(), StringComparison.Ordinal);
+
+        var listBorder = Assert.Single(section.Descendants(Avalonia + "Border"),
+            border => border.Elements(Avalonia + "ListBox").Any());
+        Assert.Equal("1", (string?)listBorder.Attribute("Grid.Row"));
+        Assert.Null(listBorder.Attribute("MinHeight"));
+        Assert.Contains("LocationsStatusText", section.ToString(), StringComparison.Ordinal);
+    }
+
+    private static XElement GetLocationsSection()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+
+        return Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowLocationsSection}");
+    }
+
+    [Fact]
     public void ToolbarSection_HostsTheToolbarCustomizationControls()
     {
         var section = GetToolbarSection();
