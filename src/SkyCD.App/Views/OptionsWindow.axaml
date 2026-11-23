@@ -805,122 +805,127 @@
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowScanSection}"
-                          RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+                          RowDefinitions="Auto,*,Auto,Auto,*,Auto"
                           RowSpacing="{DynamicResource SkySpaceSm}">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanExclusions}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
-                        <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanSettings}}" FontWeight="SemiBold" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipSymbolicLinks}}"
-                                      IsChecked="{Binding SkipSymbolicLinks}" />
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.HiddenSystemEntries}}"
-                                           VerticalAlignment="Center" />
-                                <ComboBox Grid.Column="1"
-                                          MinWidth="220"
-                                          HorizontalAlignment="Left"
-                                          ItemsSource="{Binding HiddenSystemPolicyOptions}"
-                                          SelectedIndex="{Binding SelectedHiddenSystemPolicyIndex}" />
-                            </Grid>
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipRecycleBins}}"
-                                      IsChecked="{Binding SkipRecycleBins}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipWellKnownSystemFolders}}"
-                                      IsChecked="{Binding SkipWellKnownSystemFolders}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipEmptyFolders}}"
-                                      IsChecked="{Binding SkipEmptyFolders}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipOnlineOnlyCloudFiles}}"
-                                      IsChecked="{Binding SkipOnlineOnlyCloudFiles}"
-                                      IsVisible="{Binding IsOnlineOnlyCloudFilesOptionVisible}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
-                                      IsChecked="{Binding IncludeExtendedInfo}" />
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHeader}}"
-                                       Margin="0,8,0,0"
-                                       FontWeight="SemiBold" />
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyMode}}"
-                                           VerticalAlignment="Center" />
-                                <ComboBox Grid.Column="1"
-                                          MinWidth="220"
-                                          HorizontalAlignment="Left"
-                                          ItemsSource="{Binding ScanConcurrencyModeOptions}"
-                                          SelectedIndex="{Binding SelectedScanConcurrencyModeIndex}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}"
-                                  IsVisible="{Binding IsManualScanConcurrency}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyManualWorkers}}"
-                                           VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Column="1"
-                                               Width="140"
-                                               HorizontalAlignment="Left"
-                                               Minimum="1"
-                                               Maximum="32"
-                                               Increment="1"
-                                               FormatString="0"
-                                               Value="{Binding ScanConcurrencyManualWorkers}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyCpuShare}}"
-                                           VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Column="1"
-                                               Width="140"
-                                               HorizontalAlignment="Left"
-                                               Minimum="1"
-                                               Maximum="100"
-                                               Increment="5"
-                                               FormatString="0"
-                                               Value="{Binding ScanConcurrencyCpuSharePercent}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadShrink}}"
-                                           VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Column="1"
-                                               Width="140"
-                                               HorizontalAlignment="Left"
-                                               Minimum="1"
-                                               Maximum="99"
-                                               Increment="5"
-                                               FormatString="0"
-                                               Value="{Binding ScanConcurrencyLoadShrinkPercent}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadSuspend}}"
-                                           VerticalAlignment="Center" />
-                                <NumericUpDown Grid.Column="1"
-                                               Width="140"
-                                               HorizontalAlignment="Left"
-                                               Minimum="2"
-                                               Maximum="100"
-                                               Increment="5"
-                                               FormatString="0"
-                                               Value="{Binding ScanConcurrencyLoadSuspendPercent}" />
-                            </Grid>
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHint}}"
-                                       FontSize="{DynamicResource SkyFontCaption}"
-                                       TextWrapping="Wrap"
-                                       Opacity="0.75" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ShowScanErrorsAfterScan}}"
-                                      IsChecked="{Binding ShowScanErrorsAfterScan}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SaveScanErrorsToComments}}"
-                                      IsChecked="{Binding SaveScanErrorsToComments}" />
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanCompletionHeader}}"
-                                       Margin="0,8,0,0"
-                                       FontWeight="SemiBold" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.EjectMediaAfterScan}}"
-                                      IsChecked="{Binding EjectMediaAfterScan}"
-                                      IsEnabled="{Binding IsMediaEjectionSupported}" />
-                            <TextBlock Text="{Binding MediaEjectionSupportHint}"
-                                       Margin="28,0,0,0"
-                                       FontSize="{DynamicResource SkyFontCaption}"
-                                       TextWrapping="Wrap"
-                                       Opacity="0.75" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ActivateMainWindowAfterScan}}"
-                                      IsChecked="{Binding ActivateMainWindowAfterScan}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.PlaySoundAfterScan}}"
-                                      IsChecked="{Binding PlaySoundAfterScan}" />
-                        </StackPanel>
+                        <ScrollViewer Grid.Row="1"
+                                      x:Name="ScanSettingsScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanSettings}}" FontWeight="SemiBold" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipSymbolicLinks}}"
+                                          IsChecked="{Binding SkipSymbolicLinks}" />
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.HiddenSystemEntries}}"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="220"
+                                              HorizontalAlignment="Left"
+                                              ItemsSource="{Binding HiddenSystemPolicyOptions}"
+                                              SelectedIndex="{Binding SelectedHiddenSystemPolicyIndex}" />
+                                </Grid>
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipRecycleBins}}"
+                                          IsChecked="{Binding SkipRecycleBins}" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipWellKnownSystemFolders}}"
+                                          IsChecked="{Binding SkipWellKnownSystemFolders}" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipEmptyFolders}}"
+                                          IsChecked="{Binding SkipEmptyFolders}" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipOnlineOnlyCloudFiles}}"
+                                          IsChecked="{Binding SkipOnlineOnlyCloudFiles}"
+                                          IsVisible="{Binding IsOnlineOnlyCloudFilesOptionVisible}" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeExtendedInfo}}"
+                                          IsChecked="{Binding IncludeExtendedInfo}" />
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHeader}}"
+                                           Margin="0,8,0,0"
+                                           FontWeight="SemiBold" />
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyMode}}"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="220"
+                                              HorizontalAlignment="Left"
+                                              ItemsSource="{Binding ScanConcurrencyModeOptions}"
+                                              SelectedIndex="{Binding SelectedScanConcurrencyModeIndex}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}"
+                                      IsVisible="{Binding IsManualScanConcurrency}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyManualWorkers}}"
+                                               VerticalAlignment="Center" />
+                                    <NumericUpDown Grid.Column="1"
+                                                   Width="140"
+                                                   HorizontalAlignment="Left"
+                                                   Minimum="1"
+                                                   Maximum="32"
+                                                   Increment="1"
+                                                   FormatString="0"
+                                                   Value="{Binding ScanConcurrencyManualWorkers}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyCpuShare}}"
+                                               VerticalAlignment="Center" />
+                                    <NumericUpDown Grid.Column="1"
+                                                   Width="140"
+                                                   HorizontalAlignment="Left"
+                                                   Minimum="1"
+                                                   Maximum="100"
+                                                   Increment="5"
+                                                   FormatString="0"
+                                                   Value="{Binding ScanConcurrencyCpuSharePercent}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadShrink}}"
+                                               VerticalAlignment="Center" />
+                                    <NumericUpDown Grid.Column="1"
+                                                   Width="140"
+                                                   HorizontalAlignment="Left"
+                                                   Minimum="1"
+                                                   Maximum="99"
+                                                   Increment="5"
+                                                   FormatString="0"
+                                                   Value="{Binding ScanConcurrencyLoadShrinkPercent}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadSuspend}}"
+                                               VerticalAlignment="Center" />
+                                    <NumericUpDown Grid.Column="1"
+                                                   Width="140"
+                                                   HorizontalAlignment="Left"
+                                                   Minimum="2"
+                                                   Maximum="100"
+                                                   Increment="5"
+                                                   FormatString="0"
+                                                   Value="{Binding ScanConcurrencyLoadSuspendPercent}" />
+                                </Grid>
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHint}}"
+                                           FontSize="{DynamicResource SkyFontCaption}"
+                                           TextWrapping="Wrap"
+                                           Opacity="0.75" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ShowScanErrorsAfterScan}}"
+                                          IsChecked="{Binding ShowScanErrorsAfterScan}" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SaveScanErrorsToComments}}"
+                                          IsChecked="{Binding SaveScanErrorsToComments}" />
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanCompletionHeader}}"
+                                           Margin="0,8,0,0"
+                                           FontWeight="SemiBold" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.EjectMediaAfterScan}}"
+                                          IsChecked="{Binding EjectMediaAfterScan}"
+                                          IsEnabled="{Binding IsMediaEjectionSupported}" />
+                                <TextBlock Text="{Binding MediaEjectionSupportHint}"
+                                           Margin="28,0,0,0"
+                                           FontSize="{DynamicResource SkyFontCaption}"
+                                           TextWrapping="Wrap"
+                                           Opacity="0.75" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ActivateMainWindowAfterScan}}"
+                                          IsChecked="{Binding ActivateMainWindowAfterScan}" />
+                                <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.PlaySoundAfterScan}}"
+                                          IsChecked="{Binding PlaySoundAfterScan}" />
+                            </StackPanel>
+                        </ScrollViewer>
 
                         <Border Grid.Row="2"
                                 Height="1"
@@ -957,7 +962,8 @@
 
                         <Border BorderBrush="#2E2E2E"
                                 BorderThickness="1"
-                                Grid.Row="4">
+                                Grid.Row="4"
+                                x:Name="ScanExclusionRulesBorder">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
                                     <Grid ColumnDefinitions="2*,160,120" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -971,6 +977,7 @@
                                     </Grid>
                                 </Border>
                                 <ListBox Grid.Row="1"
+                                         x:Name="ScanExclusionRulesList"
                                          ItemsSource="{Binding ScanExclusionRules}"
                                          SelectedItem="{Binding SelectedScanExclusionRule}"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
