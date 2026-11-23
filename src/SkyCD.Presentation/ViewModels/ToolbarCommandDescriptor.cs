@@ -25,4 +25,16 @@ public sealed class ToolbarCommandDescriptor
     public required ICommand Command { get; init; }
 
     public object? CommandParameter { get; init; }
+
+    /// <summary>
+    /// Whether the command is a checkable view toggle. Non-toggle commands never report a checked state
+    /// and keep invoke-only automation semantics.
+    /// </summary>
+    public bool IsToggle { get; init; }
+
+    /// <summary>
+    /// The current checked state of a toggle command, derived from the same view-model state the View menu
+    /// uses, so the toolbar and the menu never disagree.
+    /// </summary>
+    public bool IsChecked { get; init; }
 }

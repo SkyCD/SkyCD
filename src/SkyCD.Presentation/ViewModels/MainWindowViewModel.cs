@@ -3945,6 +3945,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(BrowserGridItemWidth));
         OnPropertyChanged(nameof(BrowserGridItemHeight));
         OnPropertyChanged(nameof(ShowDetailsColumns));
+        RaiseToolbarStateChanged();
         RefreshTopMenuState();
     }
 
@@ -4003,11 +4004,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnIsStatusBarVisibleChanged(bool value)
     {
+        RaiseToolbarStateChanged();
         RefreshTopMenuState();
     }
 
     partial void OnIsPreviewPaneVisibleChanged(bool value)
     {
+        RaiseToolbarStateChanged();
         RefreshTopMenuState();
     }
 
