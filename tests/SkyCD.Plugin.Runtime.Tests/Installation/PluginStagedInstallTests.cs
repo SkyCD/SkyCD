@@ -248,6 +248,8 @@ public sealed class PluginStagedInstallTests : IDisposable
     [InlineData("traversal", PluginInstallFailureReason.UnsafeArchivePath)]
     [InlineData("backslash-traversal", PluginInstallFailureReason.UnsafeArchivePath)]
     [InlineData("absolute-path", PluginInstallFailureReason.UnsafeArchivePath)]
+    [InlineData("drive-qualified-path", PluginInstallFailureReason.UnsafeArchivePath)]
+    [InlineData("control-character", PluginInstallFailureReason.UnsafeArchivePath)]
     [InlineData("duplicate-entry", PluginInstallFailureReason.UnsafeArchivePath)]
     [InlineData("nuspec-id", PluginInstallFailureReason.PackageIdentityMismatch)]
     [InlineData("nuspec-version", PluginInstallFailureReason.PackageIdentityMismatch)]
@@ -583,6 +585,14 @@ public sealed class PluginStagedInstallTests : IDisposable
             case "absolute-path":
                 feed.DownloadOverride = fixtures.Build(fixture, mutate: archive =>
                     PluginPackageFixtures.WriteEntry(archive, "/skycd-evil.dll", [0x4D, 0x5A]));
+                break;
+            case "drive-qualified-path":
+                feed.DownloadOverride = fixtures.Build(fixture, mutate: archive =>
+                    PluginPackageFixtures.WriteEntry(archive, "C:/skycd-evil.dll", [0x4D, 0x5A]));
+                break;
+            case "control-character":
+                feed.DownloadOverride = fixtures.Build(fixture, mutate: archive =>
+                    PluginPackageFixtures.WriteEntry(archive, "lib/net10.0/evil\u0001.dll", [0x4D, 0x5A]));
                 break;
             case "duplicate-entry":
                 feed.DownloadOverride = fixtures.Build(fixture, mutate: archive =>

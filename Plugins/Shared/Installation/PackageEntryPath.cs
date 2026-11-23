@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace SkyCD.Plugin.Metadata.Archives.Models;
+namespace SkyCD.PackagePaths;
 
-/// <summary>Per-format deviations from the default archive entry path rules.</summary>
-internal enum ArchiveEntryPathRules
+/// <summary>Per-format deviations from the default package entry path rules.</summary>
+internal enum PackageEntryPathRules
 {
     /// <summary>Treats "." and ".." segments as unsafe and otherwise keeps every segment.</summary>
     None = 0,
@@ -18,20 +18,29 @@ internal enum ArchiveEntryPathRules
 }
 
 /// <summary>
-/// Normalizes and validates archive entry paths so extraction cannot escape the temporary directory.
+/// Normalizes and validates package and archive entry paths so extraction cannot escape the target directory.
 /// </summary>
-internal static class ArchiveEntryPath
+/// <remarks>
+/// This file is linked into the host (SkyCD.Core) and the archive and disk image plugins, so package and archive
+/// entry rules cannot drift.
+/// </remarks>
+internal static class PackageEntryPath
 {
+    /// <summary>Rules for plugin package entries: drop "." segments and reject control characters.</summary>
+    public const PackageEntryPathRules PackageRules =
+        PackageEntryPathRules.SkipCurrentDirectorySegments | PackageEntryPathRules.RejectControlCharacters;
+
     private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;
 
     /// <summary>
-    /// Normalizes a raw archive entry path to forward slashes. Returns <c>false</c> when the entry has no path.
-    /// <paramref name="safe"/> is <c>false</c> when the path is absolute, drive-qualified, or contains traversal segments.
+    /// Normalizes a raw entry path to forward slashes. Returns <c>false</c> when the entry has no path.
+    /// <paramref name="safe"/> is <c>false</c> when the path is absolute, drive-qualified, or contains traversal
+    /// segments.
     /// </summary>
     public static bool TryNormalize(string? raw, out string normalized, out bool safe,
-        ArchiveEntryPathRules rules = ArchiveEntryPathRules.None)
+        PackageEntryPathRules rules = PackageEntryPathRules.None)
     {
         normalized = string.Empty;
         safe = false;
@@ -62,13 +71,13 @@ internal static class ArchiveEntryPath
         var safeSegments = new List<string>(segments.Length);
         foreach (var segment in segments)
         {
-            if (segment == "." && rules.HasFlag(ArchiveEntryPathRules.SkipCurrentDirectorySegments))
+            if (segment == "." && rules.HasFlag(PackageEntryPathRules.SkipCurrentDirectorySegments))
             {
                 continue;
             }
 
             if (segment is "." or ".."
-                || (rules.HasFlag(ArchiveEntryPathRules.RejectControlCharacters) && HasControlCharacter(segment)))
+                || (rules.HasFlag(PackageEntryPathRules.RejectControlCharacters) && HasControlCharacter(segment)))
             {
                 normalized = string.Join('/', segments);
                 return true;
@@ -81,6 +90,11 @@ internal static class ArchiveEntryPath
         safe = normalized.Length > 0;
         return true;
     }
+
+    /// <summary>True only when the raw path normalizes and is safe.</summary>
+    public static bool TryNormalizeSafe(string? raw, out string normalized,
+        PackageEntryPathRules rules = PackageEntryPathRules.None) =>
+        TryNormalize(raw, out normalized, out var safe, rules) && safe;
 
     /// <summary>
     /// Resolves a normalized, safe entry path under <paramref name="root"/> and verifies containment.

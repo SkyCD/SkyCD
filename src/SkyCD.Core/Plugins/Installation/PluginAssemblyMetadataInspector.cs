@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Lifecycle;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Installation.Exceptions;
@@ -81,7 +82,10 @@ internal static class PluginAssemblyMetadataInspector
             AssemblyVersion = normalizedVersion,
             MinHostVersion = minHostVersion,
             MaxHostVersion = maxHostVersion,
-            EntryAssemblyPath = packagePath.Replace('\\', '/')
+            EntryAssemblyPath = PackageEntryPath.TryNormalizeSafe(packagePath, out var normalizedPath,
+                PackageEntryPath.PackageRules)
+                ? normalizedPath
+                : packagePath
         };
     }
 
@@ -117,10 +121,8 @@ internal static class PluginAssemblyMetadataInspector
     public static PluginAssemblyIdentitySnapshot ReadEntryIdentity(string packageId, string contentDirectory,
         string entryAssemblyPath)
     {
-        var fullPath = Path.GetFullPath(Path.Combine(contentDirectory, entryAssemblyPath));
-        var contentRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(contentDirectory)) +
-                          Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(contentRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+        if (!PackageEntryPath.TryResolveUnderRoot(contentDirectory, entryAssemblyPath, out var fullPath) ||
+            !File.Exists(fullPath))
         {
             throw new PluginPackageAssemblyException(packageId,
                 $"the entry assembly '{entryAssemblyPath}' is missing");
@@ -146,11 +148,8 @@ internal static class PluginAssemblyMetadataInspector
 
     /// <summary>Validates a candidate entry assembly path below the package content root.</summary>
     public static bool IsSafeRelativeAssemblyPath(string? path) =>
-        !string.IsNullOrWhiteSpace(path) &&
-        !Path.IsPathRooted(path) &&
-        path.IndexOfAny([':', '\0']) < 0 &&
-        !path.Split('/', '\\').Any(static segment => segment is ".." or "." or "") &&
-        path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
+        PackageEntryPath.TryNormalizeSafe(path, out var normalized, PackageEntryPath.PackageRules) &&
+        normalized.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
 
     private static string? ResolveAttributeTypeName(MetadataReader reader, CustomAttribute attribute)
     {

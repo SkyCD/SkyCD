@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Cab.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Cab.Models;
@@ -152,11 +153,11 @@ internal static class CabIndexWorkItems
 
                 var candidate = string.Empty;
                 var fullPathCandidate = string.Empty;
-                var safeName = ArchiveEntryPath.TryNormalize(file.Name, out candidate, out var safe);
+                var safeName = PackageEntryPath.TryNormalize(file.Name, out candidate, out var safe);
                 var keep = safeName
                            && safe
                            && uniqueNames.Add(candidate)
-                           && ArchiveEntryPath.TryResolveUnderRoot(tempRoot, candidate, out fullPathCandidate)
+                           && PackageEntryPath.TryResolveUnderRoot(tempRoot, candidate, out fullPathCandidate)
                            && !budget.IsExhausted(uniqueNames.Count, file.Size, limits);
                 var normalized = candidate;
                 var fullPath = fullPathCandidate;

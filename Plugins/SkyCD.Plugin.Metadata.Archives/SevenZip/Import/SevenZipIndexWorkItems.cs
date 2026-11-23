@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
@@ -99,14 +100,14 @@ internal static class SevenZipIndexWorkItems
         }
 
         var modified = TryGetModified(entry);
-        if (!ArchiveEntryPath.TryNormalize(entry.Key, out var normalized, out var safe))
+        if (!PackageEntryPath.TryNormalize(entry.Key, out var normalized, out var safe))
         {
             return null;
         }
 
         var length = TryGetLength(entry);
         if (index > limits.MaxEntries || !safe ||
-            !ArchiveEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
+            !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
         {
             return null;
         }

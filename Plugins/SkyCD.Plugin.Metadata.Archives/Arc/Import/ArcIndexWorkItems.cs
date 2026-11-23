@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Arc.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Arc.Models;
@@ -102,10 +103,10 @@ internal static class ArcIndexWorkItems
                 continue;
             }
 
-            if (!ArchiveEntryPath.TryNormalize(entry.Name, out var normalized, out var safe)
+            if (!PackageEntryPath.TryNormalize(entry.Name, out var normalized, out var safe)
                 || !safe
                 || !seenNames.Add(normalized)
-                || !ArchiveEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
+                || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
             {
                 continue;
             }

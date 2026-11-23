@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Metadata.Archives;
 using SkyCD.Plugin.Metadata.Archives.Rar;
 using SkyCD.Plugin.Metadata.Archives.Rar.Exceptions;
@@ -115,7 +116,7 @@ public sealed class RarInternalsTests
     [InlineData("C:\\windows\\file.txt", "C:/windows/file.txt", false)]
     public void EntryPath_NormalizesAndFlagsUnsafePaths(string raw, string expected, bool safe)
     {
-        Assert.True(ArchiveEntryPath.TryNormalize(raw, out var normalized, out var isSafe, ArchiveEntryPathRules.SkipCurrentDirectorySegments));
+        Assert.True(PackageEntryPath.TryNormalize(raw, out var normalized, out var isSafe, PackageEntryPathRules.SkipCurrentDirectorySegments));
         Assert.Equal(expected, normalized);
         Assert.Equal(safe, isSafe);
     }
@@ -125,7 +126,7 @@ public sealed class RarInternalsTests
     [InlineData("   ")]
     public void EntryPath_RejectsEmptyNames(string raw)
     {
-        Assert.False(ArchiveEntryPath.TryNormalize(raw, out _, out _, ArchiveEntryPathRules.SkipCurrentDirectorySegments));
+        Assert.False(PackageEntryPath.TryNormalize(raw, out _, out _, PackageEntryPathRules.SkipCurrentDirectorySegments));
     }
 
     [Fact]
@@ -134,9 +135,9 @@ public sealed class RarInternalsTests
         var root = RarTestHelpers.CreateTemporaryDirectory();
         try
         {
-            Assert.True(ArchiveEntryPath.TryResolveUnderRoot(root, "sub/file.txt", out var inside));
+            Assert.True(PackageEntryPath.TryResolveUnderRoot(root, "sub/file.txt", out var inside));
             Assert.StartsWith(root, inside, StringComparison.OrdinalIgnoreCase);
-            Assert.False(ArchiveEntryPath.TryResolveUnderRoot(root, "../outside.txt", out _));
+            Assert.False(PackageEntryPath.TryResolveUnderRoot(root, "../outside.txt", out _));
         }
         finally
         {

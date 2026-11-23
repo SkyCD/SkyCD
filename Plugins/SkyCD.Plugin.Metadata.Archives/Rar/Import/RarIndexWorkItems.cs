@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
@@ -125,9 +126,9 @@ internal static class RarIndexWorkItems
                 continue;
             }
 
-            if (!ArchiveEntryPath.TryNormalize(entry.Key, out var normalized, out var safe, ArchiveEntryPathRules.SkipCurrentDirectorySegments)
+            if (!PackageEntryPath.TryNormalize(entry.Key, out var normalized, out var safe, PackageEntryPathRules.SkipCurrentDirectorySegments)
                 || !safe
-                || !ArchiveEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
+                || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
             {
                 continue;
             }
