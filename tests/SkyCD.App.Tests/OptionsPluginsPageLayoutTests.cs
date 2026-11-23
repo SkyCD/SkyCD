@@ -1,0 +1,162 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using Xunit;
+
+namespace SkyCD.App.Tests;
+
+/// <summary>
+/// Guards the JetBrains-style Options → Plug-ins page: one search/filter toolbar, a single scrollable
+/// installed + marketplace list, and the two contextual detail panes with their tabs.
+/// </summary>
+public sealed class OptionsPluginsPageLayoutTests
+{
+    [Fact]
+    public void PluginsPage_HasSearchBarWithUpdateAllAndSettingsFlyouts()
+    {
+        var page = GetPluginsPage();
+        var markup = page.ToString();
+
+        Assert.Contains("Text=\"{Binding PluginSearchText", markup);
+        Assert.Contains("<TextBox.InnerLeftContent>", markup);
+        Assert.Contains("Command=\"{Binding UpdateAllPluginsCommand}\"", markup);
+
+        var flyouts = page.Descendants().OfType<XElement>()
+            .Where(element => element.Name.LocalName == "Flyout")
+            .ToList();
+        Assert.Equal(2, flyouts.Count);
+        var settingsFlyout = Assert.Single(flyouts, flyout => flyout.Descendants()
+            .Any(element => (string?)element.Attribute("Text") == "{Binding PluginPath}"));
+        Assert.Contains(settingsFlyout.Descendants(),
+            element => (string?)element.Attribute("Command") == "{Binding BrowsePluginPathCommand}");
+
+        var filterFlyout = Assert.Single(flyouts, flyout => flyout.Descendants()
+            .Any(element => (string?)element.Attribute("Command") == "{Binding ShowAllPluginSectionsCommand}"));
+        foreach (var command in new[]
+                 {
+                     "ShowInstalledPluginsOnlyCommand", "ShowMarketplacePluginsOnlyCommand"
+                 })
+        {
+            Assert.Contains(filterFlyout.Descendants(),
+                element => (string?)element.Attribute("Command") == $"{{Binding {command}}}");
+        }
+    }
+
+    [Fact]
+    public void PluginsPage_UsesOuterScrollWithTwoSectionHeaders()
+    {
+        var page = GetPluginsPage();
+
+        var outerScroll = Assert.Single(page.Descendants().OfType<XElement>(),
+            element => element.Name.LocalName == "ScrollViewer" &&
+                       (string?)element.Attribute("VerticalScrollBarVisibility") == "Auto");
+        var lists = outerScroll.Descendants().OfType<XElement>()
+            .Where(element => element.Name.LocalName == "ListBox")
+            .ToList();
+        Assert.Equal(2, lists.Count);
+        Assert.All(lists, list =>
+            Assert.Equal("Disabled", (string?)list.Attribute("ScrollViewer.VerticalScrollBarVisibility")));
+
+        Assert.Contains(page.Descendants(),
+            element => (string?)element.Attribute("Text") == "{Binding InstalledPluginsHeader}");
+        Assert.Contains(page.Descendants(),
+            element => (string?)element.Attribute("Text") == "{Binding MarketplacePluginsHeader}");
+        Assert.Contains(page.Descendants(),
+            element => (string?)element.Attribute("Content") == "{Binding MarketplaceSectionToggleText}");
+        Assert.Contains(page.Descendants(),
+            element => element.Name.LocalName == "ProgressBar" &&
+                       (string?)element.Attribute("IsVisible") == "{Binding IsMarketplaceLoading}");
+        Assert.Contains(page.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowMarketplacePaneEmptyState}");
+    }
+
+    [Fact]
+    public void PluginsPage_InstalledRowsToggleAndMarketplaceRowsExposeInstallAction()
+    {
+        var page = GetPluginsPage();
+
+        var toggle = Assert.Single(page.Descendants().OfType<XElement>(),
+            element => element.Name.LocalName == "ToggleSwitch");
+        Assert.Equal("{Binding IsEnabled, Mode=TwoWay}", (string?)toggle.Attribute("IsChecked"));
+        Assert.Equal(string.Empty, (string?)toggle.Attribute("OnContent"));
+        Assert.Equal(string.Empty, (string?)toggle.Attribute("OffContent"));
+
+        Assert.Contains(page.Descendants(),
+            element => element.Name.LocalName == "Button" &&
+                       (string?)element.Attribute("IsVisible") == "{Binding ShowPrimaryAction}" &&
+                       ((string?)element.Attribute("Command"))?.Contains("RequestMarketplaceInstallCommand") == true &&
+                       (string?)element.Attribute("CommandParameter") == "{Binding}");
+    }
+
+    [Fact]
+    public void PluginsPage_DetailPanesExposeOverviewConfigurationAndAdditionalInfoTabs()
+    {
+        var page = GetPluginsPage();
+
+        var tabControls = page.Descendants().OfType<XElement>()
+            .Where(element => element.Name.LocalName == "TabControl")
+            .ToList();
+        Assert.Equal(2, tabControls.Count);
+
+        var installedTabs = tabControls.Single(tabs => tabs.Descendants()
+            .Any(element => (string?)element.Attribute("IsSelected") == "{Binding IsPluginConfigurationTabSelected, Mode=TwoWay}"));
+        foreach (var key in new[] { "PluginTabOverview", "PluginTabConfiguration", "PluginTabAdditionalInfo" })
+        {
+            Assert.Contains(installedTabs.Descendants(),
+                element => ((string?)element.Attribute("Header"))?.Contains($"UiKeys.{key}") == true);
+        }
+
+        var marketTabs = tabControls.Except([installedTabs]).Single();
+        foreach (var key in new[] { "PluginTabOverview", "PluginTabAdditionalInfo" })
+        {
+            Assert.Contains(marketTabs.Descendants(),
+                element => ((string?)element.Attribute("Header"))?.Contains($"UiKeys.{key}") == true);
+        }
+    }
+
+    [Fact]
+    public void PluginsPage_KeepsLiteralTypographyAndSpacingOutOfTheSplice()
+    {
+        var markup = GetPluginsPage().ToString();
+
+        Assert.DoesNotMatch(new Regex("(FontSize|Spacing|RowSpacing|ColumnSpacing)=\"[0-9.]+\""), markup);
+        Assert.DoesNotMatch(new Regex("#[0-9A-Fa-f]{6,8}"), markup);
+    }
+
+    /// <summary>
+    /// The plug-ins page occupies the old installed/marketplace block between the plugin list switch and the
+    /// plugin settings section; slicing by those markers keeps the assertions independent of the rest of the window.
+    /// </summary>
+    private static XElement GetPluginsPage()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+        var page = Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowPluginListSection}");
+        return page;
+    }
+
+    private static string ReadRepoFile(params string[] parts)
+    {
+        var root = FindRepoRoot();
+        return File.ReadAllText(Path.Combine([root, .. parts]));
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "SkyCD.slnx")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root with SkyCD.slnx was not found.");
+    }
+}

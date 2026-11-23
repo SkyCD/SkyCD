@@ -32,6 +32,8 @@ public partial class OptionsDialogViewModel
             pluginPages.Remove(key);
         }
         RefreshCategoriesPreservingSelection();
+        OnPropertyChanged(nameof(SelectedPluginConfigurationPage));
+        OnPropertyChanged(nameof(HasPluginConfigurationPage));
     }
 
     public void RestoreSettingCategory(string? categoryId, int legacyTabIndex)

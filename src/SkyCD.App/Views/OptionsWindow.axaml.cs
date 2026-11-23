@@ -186,6 +186,22 @@ public partial class OptionsWindow : Window
         }
     }
 
+    private void OnInstalledPluginsSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel { SelectedPlugin: not null } vm)
+        {
+            vm.ShowInstalledPluginsCommand.Execute(null);
+        }
+    }
+
+    private void OnMarketplacePluginsSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel { SelectedMarketplacePlugin: not null } vm)
+        {
+            vm.ShowMarketplacePluginsCommand.Execute(null);
+        }
+    }
+
     private async void OnMergeLocationsRequested(object? sender, EventArgs e)
     {
         if (DataContext is not OptionsDialogViewModel { SelectedLocation: { } source } vm)

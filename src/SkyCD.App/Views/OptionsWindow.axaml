@@ -68,6 +68,7 @@
         <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
         <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
         <converters:ToolbarIconConverter x:Key="ToolbarIconConverter" />
+        <converters:PluginEnabledStateIndexConverter x:Key="PluginEnabledStateIndexConverter" />
         <ItemsPanelTemplate x:Key="AcpAgentCardsPanel">
             <UniformGrid Columns="2" />
         </ItemsPanelTemplate>
@@ -190,293 +191,416 @@
                         <Run Text="{Binding CurrentCategoryPath}" />
                     </TextBlock>
 
-                    <StackPanel Grid.Row="1"
-                                IsVisible="{Binding ShowPluginViewSwitcher}"
-                                Spacing="{DynamicResource SkySpaceSm}">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="{DynamicResource SkySpaceXs}"
-                                    HorizontalAlignment="Right">
-                            <ToggleButton Content="{i18n:Translate {x:Static i18n:UiKeys.Installed}}"
-                                          IsChecked="{Binding !IsMarketplaceBrowseSelected}"
-                                          Command="{Binding ShowInstalledPluginsCommand}"
-                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" />
-                            <ToggleButton Content="{i18n:Translate {x:Static i18n:UiKeys.BrowseCatalog}}"
-                                          IsChecked="{Binding IsMarketplaceBrowseSelected}"
-                                          Command="{Binding ShowMarketplacePluginsCommand}"
-                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.BrowseCatalog}}" />
-                        </StackPanel>
-                        <StackPanel IsVisible="{Binding ShowInstalledPluginPathSection}" Spacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ProjectSettings}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
-                        </Grid>
-                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding PluginPath}" />
-                            <Button Grid.Column="2"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
-                                    MinWidth="90"
-                                    Command="{Binding BrowsePluginPathCommand}" />
-                        </Grid>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <Grid Grid.Row="2"
-                          IsVisible="{Binding ShowInstalledPluginListSection}"
-                          RowDefinitions="Auto,Auto,*"
-                          RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
-                        </Grid>
-                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBox Width="260"
-                                     Text="{Binding PluginFilterText, UpdateSourceTrigger=PropertyChanged}"
-                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}" />
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       Foreground="#8C8C8C"
-                                       Text="{Binding InfoMessage}" />
-                        </Grid>
-                        <Border Grid.Row="2"
-                                BorderBrush="#2E2E2E"
-                                BorderThickness="1">
-                            <Grid ColumnDefinitions="2*,3*">
-                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
-                                    <Grid RowDefinitions="Auto,*">
-                                        <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.On}}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" FontWeight="SemiBold" />
+                <Grid Grid.Row="2"
+                      IsVisible="{Binding ShowPluginListSection}"
+                      RowDefinitions="Auto,*"
+                      RowSpacing="{DynamicResource SkySpaceSm}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <TextBox Text="{Binding PluginSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}">
+                            <TextBox.InnerLeftContent>
+                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Search}"
+                                                           Width="14"
+                                                           Height="14"
+                                                           Margin="6,0,0,0"
+                                                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdateAll}}"
+                                    Command="{Binding UpdateAllPluginsCommand}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdateAll}}" />
+                            <Button AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}">
+                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Settings}"
+                                                           Width="14"
+                                                           Height="14" />
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedRight">
+                                        <StackPanel Width="320" Spacing="{DynamicResource SkySpaceSm}">
+                                            <TextBlock Classes="caption"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}" />
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
+                                                <TextBox Text="{Binding PluginPath}"
+                                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" />
+                                                <Button Grid.Column="1"
+                                                        Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
+                                                        Command="{Binding BrowsePluginPathCommand}" />
                                             </Grid>
-                                        </Border>
-                                        <ListBox Grid.Row="1"
-                                                 ItemsSource="{Binding FilteredPlugins}"
-                                                 SelectedItem="{Binding SelectedPlugin}">
+                                            <TextBlock Classes="caption"
+                                                       Text="{Binding InfoMessage}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginFilterAll}}"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.PluginManageHint}}">
+                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Funnel}"
+                                                           Width="14"
+                                                           Height="14" />
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedRight">
+                                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginFilterAll}}"
+                                                    Command="{Binding ShowAllPluginSectionsCommand}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginFilterInstalled}}"
+                                                    Command="{Binding ShowInstalledPluginsOnlyCommand}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginFilterMarketplace}}"
+                                                    Command="{Binding ShowMarketplacePluginsOnlyCommand}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="2*,3*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                    <StackPanel IsVisible="{Binding ShowInstalledPluginSection}"
+                                                Spacing="{DynamicResource SkySpaceXxs}">
+                                        <TextBlock Text="{Binding InstalledPluginsHeader}"
+                                                   FontWeight="SemiBold"
+                                                   Padding="{DynamicResource SkyInsetXs}" />
+                                        <ListBox ItemsSource="{Binding FilteredPlugins}"
+                                                 SelectedItem="{Binding SelectedPlugin}"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                                 SelectionChanged="OnInstalledPluginsSelectionChanged">
+                                            <ListBox.Styles>
+                                                <Style Selector="ListBoxItem">
+                                                    <Setter Property="Padding" Value="0" />
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                </Style>
+                                            </ListBox.Styles>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:OptionsPluginItem">
-                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
-                                                            Padding="8,6">
-                                                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                                            <CheckBox
-                                                                IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                VerticalAlignment="Top" Margin="0,2,0,0" />
-                                                            <Panel Grid.Column="1"
-                                                                   Width="24"
-                                                                   Height="24"
-                                                                   VerticalAlignment="Top">
-                                                                <Image
-                                                                    Source="{Binding IconKey, Converter={StaticResource PluginIconConverter}}"
-                                                                    IsVisible="{Binding HasIcon}" />
+                                                    <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                                            BorderThickness="0,0,0,1"
+                                                            Padding="{DynamicResource SkyInsetSm}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                                              ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                            <Panel Width="24" Height="24" VerticalAlignment="Center">
+                                                                <Image Source="{Binding IconKey, Converter={StaticResource PluginIconConverter}}"
+                                                                       IsVisible="{Binding HasIcon}" />
                                                                 <iconPacks:PackIconControl
                                                                     Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
                                                                     Width="20"
                                                                     Height="20"
-                                                                    Foreground="#9CA3AF"
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
+                                                                    Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                                                     IsVisible="{Binding !HasIcon}" />
                                                             </Panel>
-                                                            <StackPanel Grid.Column="2" Spacing="{DynamicResource SkySpaceXxs}">
-                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                            <StackPanel Grid.Column="1"
+                                                                        VerticalAlignment="Center"
+                                                                        Spacing="{DynamicResource SkySpaceXxs}">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           FontWeight="SemiBold"
                                                                            TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding Type}" Foreground="#9CA3AF"
+                                                                <TextBlock Text="{Binding Type}"
+                                                                           Classes="caption"
                                                                            TextTrimming="CharacterEllipsis" />
                                                             </StackPanel>
+                                                            <ToggleSwitch Grid.Column="2"
+                                                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                          OnContent=""
+                                                                          OffContent=""
+                                                                          MinWidth="0"
+                                                                          VerticalAlignment="Center"
+                                                                          AutomationProperties.Name="{Binding Name}" />
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
-                                    </Grid>
-                                </Border>
+                                    </StackPanel>
 
-                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource SkySpaceSm}" Margin="12">
-                                    <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                                        <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="{DynamicResource SkyFontSubtitle}"
-                                                   FontWeight="SemiBold" />
-                                        <Button Content="{Binding SelectedPlugin.Type}"
-                                                Foreground="#9CA3AF"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Padding="0"
-                                                HorizontalAlignment="Left"
-                                                Command="{Binding OpenSelectedPluginAuthorUrlCommand}" />
-                                        <TextBlock Text="{Binding SelectedPlugin.ExtendedInfo}" Foreground="#8C8C8C"
-                                                   TextWrapping="Wrap" />
+                                    <StackPanel IsVisible="{Binding ShowMarketplacePluginSection}"
+                                                Spacing="{DynamicResource SkySpaceXxs}">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding MarketplacePluginsHeader}"
+                                                       FontWeight="SemiBold"
+                                                       Padding="{DynamicResource SkyInsetXs}" />
+                                            <Button Grid.Column="1"
+                                                    Content="{Binding MarketplaceSectionToggleText}"
+                                                    Command="{Binding ToggleMarketplaceSectionCommand}"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="{DynamicResource SkyInsetXs}" />
+                                        </Grid>
+                                        <StackPanel IsVisible="{Binding ShowMarketplaceSectionContent}"
+                                                    Spacing="{DynamicResource SkySpaceXs}">
+                                            <ProgressBar Height="3"
+                                                         IsIndeterminate="True"
+                                                         IsVisible="{Binding IsMarketplaceLoading}" />
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginCatalogEmpty}}"
+                                                       Classes="caption"
+                                                       Padding="{DynamicResource SkyInsetSm}"
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding ShowMarketplacePaneEmptyState}" />
+                                            <TextBlock Text="{Binding MarketplaceStatusMessage}"
+                                                       Classes="caption"
+                                                       Padding="{DynamicResource SkyInsetSm}"
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding ShowMarketplaceStatusMessage}" />
+                                            <ListBox ItemsSource="{Binding FilteredMarketplacePlugins}"
+                                                     SelectedItem="{Binding SelectedMarketplacePlugin}"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                                     SelectionChanged="OnMarketplacePluginsSelectionChanged">
+                                                <ListBox.Styles>
+                                                    <Style Selector="ListBoxItem">
+                                                        <Setter Property="Padding" Value="0" />
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    </Style>
+                                                </ListBox.Styles>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="marketplace:MarketplacePluginItem">
+                                                        <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                                                BorderThickness="0,0,0,1"
+                                                                Padding="{DynamicResource SkyInsetSm}">
+                                                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                                                  ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                                <Panel Width="24" Height="24" VerticalAlignment="Center">
+                                                                    <iconPacks:PackIconControl
+                                                                        Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
+                                                                        Width="20"
+                                                                        Height="20"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                                                                </Panel>
+                                                                <StackPanel Grid.Column="1"
+                                                                            VerticalAlignment="Center"
+                                                                            Spacing="{DynamicResource SkySpaceXxs}">
+                                                                    <TextBlock Text="{Binding Title}"
+                                                                               FontWeight="SemiBold"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Text="{Binding Publisher}"
+                                                                               Classes="caption"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Text="{Binding VersionSummary}"
+                                                                               Classes="caption"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                                <Button Grid.Column="2"
+                                                                        Content="{Binding PrimaryActionLabel}"
+                                                                        IsVisible="{Binding ShowPrimaryAction}"
+                                                                        VerticalAlignment="Center"
+                                                                        Command="{Binding $parent[Window].((vm:OptionsDialogViewModel)DataContext).RequestMarketplaceInstallCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </StackPanel>
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
-                                                MinWidth="90"
-                                                Command="{Binding RefreshPluginsCommand}" />
-                                    </StackPanel>
-                                    <Border Grid.Row="2"
-                                            BorderBrush="#2E2E2E"
-                                            BorderThickness="1"
-                                            CornerRadius="4"
-                                            Padding="10">
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <Grid Grid.Column="1"
+                              IsVisible="{Binding !IsMarketplaceBrowseSelected}"
+                              RowDefinitions="Auto,Auto,*"
+                              RowSpacing="{DynamicResource SkySpaceSm}">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                <TextBlock Text="{Binding SelectedPlugin.Name}"
+                                           Classes="h2"
+                                           TextWrapping="Wrap" />
+                                <Button Content="{Binding SelectedPlugin.Type}"
+                                        Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="0"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding OpenSelectedPluginAuthorUrlCommand}" />
+                            </StackPanel>
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <ComboBox SelectedIndex="{Binding SelectedPlugin.IsEnabled, Mode=TwoWay, Converter={StaticResource PluginEnabledStateIndexConverter}}"
+                                          MinWidth="120"
+                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginStateEnabled}}">
+                                    <ComboBoxItem Content="{i18n:Translate {x:Static i18n:UiKeys.PluginStateEnabled}}" />
+                                    <ComboBoxItem Content="{i18n:Translate {x:Static i18n:UiKeys.PluginStateDisabled}}" />
+                                </ComboBox>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SelectedPluginDetailsVersion}"
+                                           Classes="caption"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                            <TabControl Grid.Row="2">
+                                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabOverview}}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                                         <TextBlock Text="{Binding SelectedPluginDescription}"
                                                    TextWrapping="Wrap"
-                                                   Foreground="#CFCFCF" />
-                                    </Border>
-                                </Grid>
-                            </Grid>
-                        </Border>
-                    </Grid>
-
-                    <Grid Grid.Row="2"
-                          IsVisible="{Binding ShowMarketplaceSection}"
-                          RowDefinitions="Auto,Auto,Auto,Auto,*"
-                          RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
-                        </Grid>
-
-                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBox Width="260"
-                                     Text="{Binding MarketplaceFilterText, UpdateSourceTrigger=PropertyChanged}"
-                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMarketplacePlugins}}"
-                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMarketplacePlugins}}" />
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       Foreground="#9CA3AF"
-                                       TextWrapping="Wrap"
-                                       Text="{Binding MarketplaceStatusMessage}"
-                                       IsVisible="{Binding ShowMarketplaceStatusMessage}" />
-                            <Button Grid.Column="2"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
-                                    MinWidth="90"
-                                    Command="{Binding RefreshMarketplaceCommand}" />
-                        </Grid>
-
-                        <Border Grid.Row="2"
-                                IsVisible="{Binding IsInstallConfirmationVisible}"
-                                BorderBrush="#5795D6"
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                Padding="10">
-                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{Binding ConfirmationPrompt}"
-                                           FontWeight="SemiBold"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}"
-                                           Foreground="#9CA3AF"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginRunsCodeNotice}}"
-                                           Foreground="#9CA3AF"
-                                           TextWrapping="Wrap" />
-                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                    <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
-                                            MinWidth="90"
-                                            Command="{Binding ConfirmMarketplaceInstallCommand}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
-                                            MinWidth="90"
-                                            Command="{Binding CancelMarketplaceInstallCommand}" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <ProgressBar Grid.Row="3"
-                                     Height="3"
-                                     IsIndeterminate="True"
-                                     IsVisible="{Binding IsMarketplaceLoading}" />
-
-                        <Border Grid.Row="4"
-                                BorderBrush="#2E2E2E"
-                                BorderThickness="1">
-                            <Grid ColumnDefinitions="2*,3*">
-                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
-                                    <Grid RowDefinitions="Auto,*">
-                                        <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontWeight="SemiBold" />
-                                        </Border>
-                                        <ListBox Grid.Row="1"
-                                                 ItemsSource="{Binding FilteredMarketplacePlugins}"
-                                                 SelectedItem="{Binding SelectedMarketplacePlugin}"
-                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate x:DataType="marketplace:MarketplacePluginItem">
-                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
-                                                            Padding="8,6">
-                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding Publisher}" Foreground="#9CA3AF"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding Source}" Foreground="#8C8C8C"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding VersionSummary}" Foreground="#8C8C8C"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                            </StackPanel>
-                                                            <TextBlock Grid.Column="1" Text="{Binding StatusLabel}"
-                                                                       Foreground="#9CA3AF" VerticalAlignment="Top" />
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                        <TextBlock Grid.Row="1"
-                                                   Text="{i18n:Translate {x:Static i18n:TextKeys.PluginCatalogEmpty}}"
-                                                   Foreground="#9CA3AF"
-                                                   TextWrapping="Wrap"
-                                                   Margin="16"
-                                                   VerticalAlignment="Top"
-                                                   IsVisible="{Binding ShowMarketplaceEmptyState}" />
-                                    </Grid>
-                                </Border>
-
-                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource SkySpaceSm}" Margin="12">
-                                    <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Title}" FontSize="{DynamicResource SkyFontSubtitle}"
-                                                   FontWeight="SemiBold" TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Publisher}" Foreground="#9CA3AF" />
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}" Foreground="#8C8C8C" />
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.CompatibilityMessage}"
-                                                   Foreground="#8C8C8C" TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.StatusLabel}"
-                                                   Foreground="#9CA3AF" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceSm}">
+                                                   Foreground="{DynamicResource ThemeForegroundBrush}" />
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabConfiguration}}"
+                                         IsVisible="{Binding HasPluginConfigurationPage}"
+                                         IsSelected="{Binding IsPluginConfigurationTabSelected, Mode=TwoWay}">
+                                    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
                                         <ProgressBar Height="3"
                                                      IsIndeterminate="True"
-                                                     IsVisible="{Binding SelectedMarketplacePlugin.IsBusy}" />
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.StatusMessage}"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="#CFCFCF"
-                                                   IsVisible="{Binding SelectedMarketplacePlugin.HasStatusMessage}" />
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.ErrorMessage}"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="#E58383"
-                                                   IsVisible="{Binding SelectedMarketplacePlugin.HasError}" />
+                                                     IsVisible="{Binding SelectedPluginConfigurationPage.IsLoading}" />
+                                        <TextBlock Grid.Row="1"
+                                                   Text="{Binding SelectedPluginConfigurationPage.Error}"
+                                                   IsVisible="{Binding SelectedPluginConfigurationPage.HasError}"
+                                                   TextWrapping="Wrap" />
+                                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+                                            <ContentControl Content="{Binding SelectedPluginConfigurationPage.Content}"
+                                                            HorizontalContentAlignment="Stretch" />
+                                        </ScrollViewer>
+                                    </Grid>
+                                </TabItem>
+                                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabAdditionalInfo}}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                        <Grid ColumnDefinitions="Auto,*"
+                                              RowDefinitions="Auto,Auto,Auto"
+                                              RowSpacing="{DynamicResource SkySpaceXs}"
+                                              ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginIdentityLabel}}"
+                                                       Classes="caption" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedPluginDetailsId}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Type}}"
+                                                       Classes="caption" />
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.Column="1"
+                                                       Text="{Binding SelectedPluginDetailsType}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="2"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginExtensionLabel}}"
+                                                       Classes="caption"
+                                                       IsVisible="{Binding HasSelectedPluginDetailsExtension}" />
+                                            <TextBlock Grid.Row="2"
+                                                       Grid.Column="1"
+                                                       Text="{Binding SelectedPluginDetailsExtension}"
+                                                       IsVisible="{Binding HasSelectedPluginDetailsExtension}" />
+                                        </Grid>
+                                    </ScrollViewer>
+                                </TabItem>
+                            </TabControl>
+                        </Grid>
+
+                        <Grid Grid.Column="1"
+                              IsVisible="{Binding IsMarketplaceBrowseSelected}"
+                              RowDefinitions="Auto,Auto,*"
+                              RowSpacing="{DynamicResource SkySpaceSm}">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.Title}"
+                                           Classes="h2"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.Publisher}"
+                                           Classes="caption" />
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}"
+                                           Classes="caption" />
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.CompatibilityMessage}"
+                                           Classes="caption"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceSm}">
+                                <Border IsVisible="{Binding IsInstallConfirmationVisible}"
+                                        BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource SkyCornerRadius}"
+                                        Padding="{DynamicResource SkyInsetSm}">
+                                    <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                        <TextBlock Text="{Binding ConfirmationPrompt}"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginRunsCodeNotice}}"
+                                                   Classes="caption"
+                                                   TextWrapping="Wrap" />
                                         <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                             <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
                                                     MinWidth="90"
-                                                    IsVisible="{Binding SelectedMarketplacePlugin.ShowPrimaryAction}"
-                                                    Command="{Binding RequestMarketplaceInstallCommand}"
-                                                    CommandParameter="{Binding SelectedMarketplacePlugin}" />
-                                            <Button Content="{i18n:Translate {x:Static i18n:TextKeys.PluginRetryAction}}"
+                                                    Command="{Binding ConfirmMarketplaceInstallCommand}" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
                                                     MinWidth="90"
-                                                    IsVisible="{Binding SelectedMarketplacePlugin.ShowRetryAction}"
-                                                    Command="{Binding RequestMarketplaceInstallCommand}"
-                                                    CommandParameter="{Binding SelectedMarketplacePlugin}" />
+                                                    Command="{Binding CancelMarketplaceInstallCommand}" />
                                         </StackPanel>
                                     </StackPanel>
-                                    <Border Grid.Row="2"
-                                            BorderBrush="#2E2E2E"
-                                            BorderThickness="1"
-                                            CornerRadius="4"
-                                            Padding="10">
+                                </Border>
+                                <ProgressBar Height="3"
+                                             IsIndeterminate="True"
+                                             IsVisible="{Binding SelectedMarketplacePlugin.IsBusy}" />
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.StatusMessage}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding SelectedMarketplacePlugin.HasStatusMessage}" />
+                                <TextBlock Text="{Binding SelectedMarketplacePlugin.ErrorMessage}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding SelectedMarketplacePlugin.HasError}" />
+                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                    <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
+                                            MinWidth="90"
+                                            IsVisible="{Binding SelectedMarketplacePlugin.ShowPrimaryAction}"
+                                            Command="{Binding RequestMarketplaceInstallCommand}"
+                                            CommandParameter="{Binding SelectedMarketplacePlugin}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:TextKeys.PluginRetryAction}}"
+                                            MinWidth="90"
+                                            IsVisible="{Binding SelectedMarketplacePlugin.ShowRetryAction}"
+                                            Command="{Binding RequestMarketplaceInstallCommand}"
+                                            CommandParameter="{Binding SelectedMarketplacePlugin}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <TabControl Grid.Row="2">
+                                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabOverview}}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                                         <TextBlock Text="{Binding SelectedMarketplacePlugin.Summary}"
                                                    TextWrapping="Wrap"
-                                                   Foreground="#CFCFCF"
                                                    IsVisible="{Binding SelectedMarketplacePlugin.HasSummary}" />
-                                    </Border>
-                                </Grid>
-                            </Grid>
-                        </Border>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabAdditionalInfo}}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                        <Grid ColumnDefinitions="Auto,*"
+                                              RowDefinitions="Auto,Auto,Auto,Auto"
+                                              RowSpacing="{DynamicResource SkySpaceXs}"
+                                              ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginPublisherLabel}}"
+                                                       Classes="caption" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SelectedMarketplacePlugin.Publisher}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSourceLabel}}"
+                                                       Classes="caption" />
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.Column="1"
+                                                       Text="{Binding SelectedMarketplacePlugin.Source}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="2"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginVersionLabel}}"
+                                                       Classes="caption" />
+                                            <TextBlock Grid.Row="2"
+                                                       Grid.Column="1"
+                                                       Text="{Binding SelectedMarketplacePlugin.VersionSummary}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="3"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Status}}"
+                                                       Classes="caption" />
+                                            <TextBlock Grid.Row="3"
+                                                       Grid.Column="1"
+                                                       Text="{Binding SelectedMarketplacePlugin.StatusLabel}"
+                                                       TextWrapping="Wrap" />
+                                        </Grid>
+                                    </ScrollViewer>
+                                </TabItem>
+                            </TabControl>
+                        </Grid>
                     </Grid>
+                </Grid>
 
                     <StackPanel Grid.Row="3"
                                 IsVisible="False"
