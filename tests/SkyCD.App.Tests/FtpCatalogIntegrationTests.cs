@@ -16,6 +16,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -27,38 +28,17 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
     private const string UrlPassword = "url-only-secret";
     private const string Username = "catalog-user";
 
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-ftp-cblite-{Guid.NewGuid():N}");
+    private readonly AppDataSandbox sandbox = new();
     private readonly string ftpRoot = Path.Combine(Path.GetTempPath(), $"skycd-ftp-root-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
     public FtpCatalogIntegrationTests()
     {
-        Directory.CreateDirectory(appDataRoot);
         Directory.CreateDirectory(ftpRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
     }
 
     public void Dispose()
     {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch
-        {
-            // The database file can stay locked until the process releases it.
-        }
+        sandbox.Dispose();
 
         try
         {
@@ -153,7 +133,7 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
         Assert.Contains(withoutMetadata, document => document.Name == "note.txt" && document.ParentId != null);
 
         await viewModel.AddImportedDocumentsAsync(scanned);
-        viewModel.CompleteSaveCatalog(Path.Combine(appDataRoot, "remote.scd"));
+        viewModel.CompleteSaveCatalog(Path.Combine(sandbox.Root, "remote.scd"));
         Assert.False(viewModel.IsDirtyDocument);
 
         var stored = catalogRepository.GetAll();

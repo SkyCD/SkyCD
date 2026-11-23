@@ -15,24 +15,14 @@ using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class CouchbasePersistenceTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-cblite-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
-
-    public CouchbasePersistenceTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
+    private readonly AppDataSandbox sandbox = new();
 
     [Fact]
     public void ToolbarLayout_PersistsCustomCommandsAndSeparatorsAcrossRepositoryInstances()
@@ -102,7 +92,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
-        Assert.StartsWith(Path.Combine(appDataRoot, "SkyCD") + Path.DirectorySeparatorChar,
+        Assert.StartsWith(sandbox.DatabaseDirectory + Path.DirectorySeparatorChar,
             provider.Resolve<DatabaseManager>().GetDatabase().Path, StringComparison.Ordinal);
         var repositoryManager = provider.Resolve<RepositoryManager>();
         var catalogRepository = (CatalogDocumentRepository)repositoryManager.For<CatalogDocument>();
@@ -419,12 +409,12 @@ public sealed class CouchbasePersistenceTests : IDisposable
             AppStartCount = 7
         };
 
-        var databaseDirectory = Path.Combine(appDataRoot, "SkyCD");
-        Directory.CreateDirectory(databaseDirectory);
+        var testDatabaseDirectory = sandbox.DatabaseDirectory;
+        Directory.CreateDirectory(testDatabaseDirectory);
 
         var configuration = new DatabaseConfiguration
         {
-            Directory = databaseDirectory
+            Directory = testDatabaseDirectory
         };
 
         using (var writerDb = new Database("default", configuration))
@@ -570,24 +560,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
             result!.Timestamp);
     }
 
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        if (Directory.Exists(appDataRoot))
-        {
-            try
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-            catch (IOException)
-            {
-                // Couchbase Lite can release file handles slightly after dispose on some systems.
-            }
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 
     private sealed class DateContainerDocument
     {

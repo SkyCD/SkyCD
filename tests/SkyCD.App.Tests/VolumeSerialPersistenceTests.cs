@@ -16,6 +16,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.Volume;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -23,22 +24,15 @@ namespace SkyCD.App.Tests;
 
 public sealed class VolumeSerialPersistenceTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-volume-serial-cblite-{Guid.NewGuid():N}");
+    private readonly AppDataSandbox sandbox = new();
     private readonly string scanTestDirectory = Path.Combine(Path.GetTempPath(), $"skycd-volume-serial-source-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
     private readonly CultureInfo originalServiceCulture = LocalizationService.Current.CurrentCulture;
     private readonly CultureInfo originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo originalUiCulture = CultureInfo.CurrentUICulture;
 
     public VolumeSerialPersistenceTests()
     {
-        Directory.CreateDirectory(appDataRoot);
         Directory.CreateDirectory(scanTestDirectory);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
     }
 
     public void Dispose()
@@ -46,18 +40,7 @@ public sealed class VolumeSerialPersistenceTests : IDisposable
         LocalizationService.Current.SetCulture(originalServiceCulture);
         CultureInfo.CurrentCulture = originalCulture;
         CultureInfo.CurrentUICulture = originalUiCulture;
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch { }
+        sandbox.Dispose();
 
         try
         {
