@@ -507,6 +507,9 @@
           "SkyCD.Plugin.Host": "[1.0.0, )"
         }
       },
+      "skycd.testsupport": {
+        "type": "Project"
+      },
       "skycd.ui": {
         "type": "Project",
         "dependencies": {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Couchbase.Lite;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
@@ -11,6 +10,7 @@ using SkyCD.Plugin.Feature.Loans.Models;
 using SkyCD.Plugin.Feature.Loans.Parsing;
 using SkyCD.Plugin.Feature.Loans.Views;
 using SkyCD.Presentation.Staging;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Feature.Loans.Tests;
@@ -35,8 +35,8 @@ public sealed class CatalogLoanIntegrationTests
                 ("DueDate", "invalid"),
                 ("LoanUid", "orphan"))
         };
-        using var directory = new TemporaryDirectory();
-        using (var database = OpenDatabase(directory.Path))
+        using var workspace = new TestWorkspace();
+        using (var database = OpenDatabase(workspace.Root))
         {
             var catalog = OpenCatalog(database);
             foreach (var entry in entries)
@@ -59,7 +59,7 @@ public sealed class CatalogLoanIntegrationTests
             mapper.Import(entries);
         }
 
-        using var reopened = OpenDatabase(directory.Path);
+        using var reopened = OpenDatabase(workspace.Root);
         var repository = OpenCatalog(reopened);
         var lending = CatalogLoanService.Open(repository);
         var gcstar = lending.GetHistory("gcstar");
@@ -78,8 +78,8 @@ public sealed class CatalogLoanIntegrationTests
     [Fact]
     public void SyncRemapsScannedIdsAndPreservesLoansAndRenamedBorrowerReferences()
     {
-        using var directory = new TemporaryDirectory();
-        using var database = OpenDatabase(directory.Path);
+        using var workspace = new TestWorkspace();
+        using var database = OpenDatabase(workspace.Root);
         var catalog = OpenCatalog(database);
         var original = new CatalogDocument { Id = "existing", Name = "Disk" };
         catalog.Save(original.Id, original);
@@ -113,10 +113,10 @@ public sealed class CatalogLoanIntegrationTests
     [Fact]
     public void ContactsPersistLoanLinksAndVCardDetailsAcrossReopen()
     {
-        using var directory = new TemporaryDirectory();
+        using var workspace = new TestWorkspace();
         string contactId;
         const string itemId = "album";
-        using (var database = OpenDatabase(directory.Path))
+        using (var database = OpenDatabase(workspace.Root))
         {
             var catalog = OpenCatalog(database);
             catalog.Save(itemId, new CatalogDocument { Id = itemId, Name = "Album" });
@@ -137,7 +137,7 @@ public sealed class CatalogLoanIntegrationTests
             Assert.Throws<ContactEditException>(() => service.DeleteContact(contactId));
         }
 
-        using (var reopened = OpenDatabase(directory.Path))
+        using (var reopened = OpenDatabase(workspace.Root))
         {
             var catalog = OpenCatalog(reopened);
             var service = CatalogLoanService.Open(catalog);
@@ -158,8 +158,8 @@ public sealed class CatalogLoanIntegrationTests
     [Fact]
     public void VCardImportMergesByEmailAndUnusedContactsStayDeletable()
     {
-        using var directory = new TemporaryDirectory();
-        using var database = OpenDatabase(directory.Path);
+        using var workspace = new TestWorkspace();
+        using var database = OpenDatabase(workspace.Root);
         var service = CatalogLoanService.Open(OpenCatalog(database));
 
         const string original = """
@@ -214,12 +214,5 @@ public sealed class CatalogLoanIntegrationTests
         var repository = new CatalogDocumentRepository();
         repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
         return repository;
-    }
-
-    private sealed class TemporaryDirectory : IDisposable
-    {
-        public string Path { get; } = Directory.CreateTempSubdirectory("skycd-loans-").FullName;
-
-        public void Dispose() => Directory.Delete(Path, recursive: true);
     }
 }
