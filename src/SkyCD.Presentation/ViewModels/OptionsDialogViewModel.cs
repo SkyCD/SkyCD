@@ -190,6 +190,10 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     AiProviderCategoryIndex, Group: aiGroup));
             }
 
+            // Tool exposure applies to the MCP server itself, so the page stays available without AI plugins.
+            categories.Add(new(McpToolsCategoryId, LocalizationService.Current.Get(UiKeys.McpTools),
+                McpToolsCategoryIndex, Group: LocalizationService.Current.Get(UiKeys.AiGroup)));
+
             categories.AddRange(pluginPages.Values
                 .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
@@ -268,7 +272,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
         ShowDetailsColumnsSection || ShowLocationsSection || ShowToolbarSection ||
-        ShowAiDescriptionSection || ShowAiProviderSection ||
+        ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
@@ -601,12 +605,25 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
             return true;
         }
 
-        return category.Id == ToolbarCategoryId &&
-               MatchesSearch(
-                   LocalizationService.Current.Get(UiKeys.CustomizeToolbar),
-                   LocalizationService.Current.Get(UiKeys.CustomizeToolbarHint),
-                   LocalizationService.Current.Get(UiKeys.ToolbarCommands),
-                   LocalizationService.Current.Get(UiKeys.ToolbarButtons));
+        if (category.Id == ToolbarCategoryId)
+        {
+            return MatchesSearch(
+                LocalizationService.Current.Get(UiKeys.CustomizeToolbar),
+                LocalizationService.Current.Get(UiKeys.CustomizeToolbarHint),
+                LocalizationService.Current.Get(UiKeys.ToolbarCommands),
+                LocalizationService.Current.Get(UiKeys.ToolbarButtons));
+        }
+
+        if (category.Id == McpToolsCategoryId)
+        {
+            return MatchesSearch(
+                LocalizationService.Current.Get(UiKeys.McpTools),
+                LocalizationService.Current.Get(UiKeys.McpServer),
+                "tools",
+                "exposed");
+        }
+
+        return false;
     }
 
     partial void OnSelectedSettingCategoryChanged(OptionsSettingCategory? value)
@@ -659,6 +676,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         RefreshScanLocalization();
         RefreshDetailsColumnsLocalization();
         RefreshCategoriesPreservingSelection();
+        NotifyMcpToolsLocalizationChanged();
         NotifySettingsVisibilityChanged();
     }
 
@@ -773,6 +791,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowAiDescriptionSection));
         OnPropertyChanged(nameof(IsAiProviderCategorySelected));
         OnPropertyChanged(nameof(ShowAiProviderSection));
+        OnPropertyChanged(nameof(IsMcpToolsCategorySelected));
+        OnPropertyChanged(nameof(ShowMcpToolsSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }
 

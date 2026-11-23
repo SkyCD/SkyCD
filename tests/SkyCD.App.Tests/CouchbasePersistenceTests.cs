@@ -404,6 +404,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
             IsMcpServerEnabled = false,
             McpPort = 8787,
             IsMcpStatusIconVisible = false,
+            ExposedMcpTools = ["skycd.open", "skycd.plugins.list"],
             Language = "Lithuanian",
             OptionsTabIndex = 2,
             AppStartCount = 7
@@ -452,9 +453,29 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.Equal(expected.IsMcpServerEnabled, actual.IsMcpServerEnabled);
         Assert.Equal(expected.McpPort, actual.McpPort);
         Assert.Equal(expected.IsMcpStatusIconVisible, actual.IsMcpStatusIconVisible);
+        Assert.Equal(expected.ExposedMcpTools, actual.ExposedMcpTools);
         Assert.Equal(expected.Language, actual.Language);
         Assert.Equal(expected.OptionsTabIndex, actual.OptionsTabIndex);
         Assert.Equal(expected.AppStartCount, actual.AppStartCount);
+    }
+
+    [Fact]
+    public void AppOptionsRepository_ExposedMcpToolsDefaultToNullAndPersistAnEmptySelection()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+
+        var options = optionsRepository.GetOrCreateAppOptions();
+        Assert.Null(options.ExposedMcpTools);
+
+        options.ExposedMcpTools = [];
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var restored = optionsRepository.GetOrCreateAppOptions();
+        Assert.NotNull(restored.ExposedMcpTools);
+        Assert.Empty(restored.ExposedMcpTools!);
     }
 
     [Fact]

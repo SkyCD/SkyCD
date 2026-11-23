@@ -43,7 +43,8 @@ public partial class OptionsDialogViewModel
             return;
         }
 
-        var aiWasSelected = SelectedBuiltInIndex >= AiDescriptionCategoryIndex;
+        // The MCP tool page always follows the AI group, so only the AI-dependent pages trigger the fallback.
+        var aiWasSelected = SelectedBuiltInIndex is AiDescriptionCategoryIndex or AiProviderCategoryIndex;
         IsAiDescriptionAvailable = available;
         if (!available && aiWasSelected)
         {

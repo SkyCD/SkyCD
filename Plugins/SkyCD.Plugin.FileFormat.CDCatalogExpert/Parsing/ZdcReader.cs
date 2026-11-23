@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Xml;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Exceptions;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Models;
 
@@ -437,6 +438,9 @@ public static class ZdcReader
         {
             try
             {
+                // XmlReader resolves the declared Windows-1252 code page through the system
+                // provider, which must be registered before the first byte stream is parsed.
+                _ = LegacyEncoding.Windows1252;
                 var settings = new XmlReaderSettings
                 {
                     DtdProcessing = DtdProcessing.Prohibit,

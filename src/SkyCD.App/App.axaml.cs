@@ -71,7 +71,7 @@ public partial class App : Avalonia.Application
                 InitializeDefaultScanExclusionRules(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultAiScanExclusions(appServiceProvider.Resolve<RepositoryManager>());
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
-                mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort);
+                mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort, options.ExposedMcpTools);
                 backgroundServiceHost = appServiceProvider.Resolve<AppBackgroundServiceHost>();
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
                 mainWindowViewModel.AttachOpenCatalogState(appServiceProvider.Resolve<OpenCatalogState>());
@@ -276,7 +276,7 @@ public partial class App : Avalonia.Application
         var repositoryManager = appServiceProvider.Resolve<RepositoryManager>();
         var appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
         var options = appOptionsRepository.GetOrCreateAppOptions();
-        mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort);
+        mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort, options.ExposedMcpTools);
         await mcpServerHost.ApplyConfigurationAsync(cancellationToken);
     }
 
@@ -288,5 +288,14 @@ public partial class App : Avalonia.Application
         }
 
         return (mcpServerHost.IsRunning, mcpServerHost.BaseUrl);
+    }
+
+    /// <summary>Discovers the MCP tools the Options page lists; returns none before the host is resolved.</summary>
+    public Task<IReadOnlyList<SkyCD.Cli.Mcp.CliMcpToolDescriptor>> GetMcpToolsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return mcpServerHost is null
+            ? Task.FromResult<IReadOnlyList<SkyCD.Cli.Mcp.CliMcpToolDescriptor>>([])
+            : mcpServerHost.ListToolsAsync(cancellationToken);
     }
 }

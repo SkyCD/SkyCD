@@ -114,14 +114,16 @@ public sealed class PluginOptionsTests : IDisposable
         Assert.All(withoutAi.Take(10), category => Assert.Equal(withoutAi.IndexOf(category), category.BuiltInIndex));
         Assert.Equal("locations", withoutAi[8].Id);
         Assert.Equal("toolbar", withoutAi[9].Id);
-        Assert.All(withoutAi.Skip(10), category => Assert.Equal(-1, category.BuiltInIndex));
+        Assert.Equal((12, "mcp-tools"), (withoutAi[10].BuiltInIndex, withoutAi[10].Id));
+        Assert.All(withoutAi.Skip(11), category => Assert.Equal(-1, category.BuiltInIndex));
 
         vm.SetAiDescriptionAvailable(true);
         var categories = vm.SettingCategories.ToList();
         Assert.Equal((9, "toolbar"), (categories[9].BuiltInIndex, categories[9].Id));
         Assert.Equal((10, "ai-description"), (categories[10].BuiltInIndex, categories[10].Id));
         Assert.Equal((11, "ai-provider"), (categories[11].BuiltInIndex, categories[11].Id));
-        Assert.All(categories.Skip(12), category =>
+        Assert.Equal((12, "mcp-tools"), (categories[12].BuiltInIndex, categories[12].Id));
+        Assert.All(categories.Skip(13), category =>
         {
             Assert.Equal(-1, category.BuiltInIndex);
             Assert.NotNull(category.PluginPage);
@@ -139,7 +141,7 @@ public sealed class PluginOptionsTests : IDisposable
         Assert.Equal("Audio CD", category.Title);
         Assert.Contains(vm.FilteredSettingCategories, filtered => filtered.Id == category.Id);
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "Metadata");
         Assert.Equal("Metadata", header.Title);
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1).TakeWhile(entry => !entry.IsGroupHeader).ToList();
@@ -157,7 +159,7 @@ public sealed class PluginOptionsTests : IDisposable
         OptionsTestCapability.Title = "Audio CD";
         using var vm = CreateViewModel();
         var category = TestCategory(vm);
-        var header = vm.SidebarEntries.Single(entry => entry.IsGroupHeader);
+        var header = vm.SidebarEntries.Single(entry => entry.IsGroupHeader && entry.Title == "Metadata");
 
         vm.SelectedSidebarEntry = header;
 
@@ -209,15 +211,15 @@ public sealed class PluginOptionsTests : IDisposable
         try
         {
             var list = window.FindControl<ListBox>("SettingsCategoriesList")!;
-            list.ScrollIntoView(childIndex);
+            // Selecting the child scrolls it into view; ScrollIntoView alone does not realize
+            // off-screen containers in this headless window.
+            list.SelectedIndex = childIndex;
             Dispatcher.UIThread.RunJobs();
             var headerContainer = Assert.IsType<ListBoxItem>(list.ContainerFromIndex(childIndex - 1));
             var childContainer = Assert.IsType<ListBoxItem>(list.ContainerFromIndex(childIndex));
             Assert.False(headerContainer.Focusable);
             Assert.True(childContainer.Focusable);
 
-            list.SelectedIndex = childIndex;
-            Dispatcher.UIThread.RunJobs();
             childContainer.Focus();
             window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();

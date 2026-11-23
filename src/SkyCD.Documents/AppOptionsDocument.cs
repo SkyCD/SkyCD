@@ -40,6 +40,9 @@ public sealed class AppOptionsDocument
 
     public bool IsMcpStatusIconVisible { get; set; } = true;
 
+    /// <summary>MCP tool names the server exposes; <c>null</c> exposes every discovered tool, an empty list exposes none.</summary>
+    public System.Collections.Generic.List<string>? ExposedMcpTools { get; set; }
+
     public bool IsBackgroundMediaSyncEnabled { get; set; }
 
     public bool SkipSymbolicLinks { get; set; } = false;
