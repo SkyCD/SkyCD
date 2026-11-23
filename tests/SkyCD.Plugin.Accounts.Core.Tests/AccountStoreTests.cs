@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using Xunit;
 using SkyCD.Plugin.Accounts.Core.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Accounts.Core.Tests;
 
@@ -11,7 +12,8 @@ public sealed class AccountStoreTests
     [Fact]
     public void Load_MissingFile_ReturnsEmptyData()
     {
-        var store = new AccountStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "accounts.json"));
+        using var workspace = new TestWorkspace();
+        var store = new AccountStore(workspace.GetPath(Path.Combine("missing", Guid.NewGuid().ToString("N"), "accounts.json")));
         var data = store.Load();
         Assert.Empty(data.Licenses);
         Assert.Empty(data.Subscriptions);
@@ -20,7 +22,8 @@ public sealed class AccountStoreTests
     [Fact]
     public void SaveAndLoad_RoundTripsRecords()
     {
-        var path = TempPath();
+        using var workspace = new TestWorkspace();
+        var path = TempPath(workspace);
         var store = new AccountStore(path);
         var data = new AccountData();
         data.Licenses.Add(new LicenseRecord
@@ -53,7 +56,8 @@ public sealed class AccountStoreTests
     [Fact]
     public void Upsert_ReplacesByIdAndSorts()
     {
-        var store = new AccountStore(TempPath());
+        using var workspace = new TestWorkspace();
+        var store = new AccountStore(TempPath(workspace));
         var data = new AccountData();
         var (added, updated) = store.Upsert(data,
             [new LicenseRecord { Id = "b", Provider = "jetbrains", Product = "B" }],
@@ -80,6 +84,6 @@ public sealed class AccountStoreTests
         Assert.Equal("no-renewal", new SubscriptionRecord { Id = "a", Provider = "p", Product = "x" }.EvaluateStatus(now));
     }
 
-    private static string TempPath() =>
-        Path.Combine(Path.GetTempPath(), "skycd-accounts-" + Guid.NewGuid().ToString("N"), "accounts.json");
+    private static string TempPath(TestWorkspace workspace) =>
+        workspace.GetPath(Path.Combine("skycd-accounts-" + Guid.NewGuid().ToString("N"), "accounts.json"));
 }

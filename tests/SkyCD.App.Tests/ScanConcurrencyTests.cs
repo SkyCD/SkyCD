@@ -8,13 +8,28 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
-public sealed class ScanConcurrencyTests
+public sealed class ScanConcurrencyTests : IDisposable
 {
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-concurrency-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
+
+    private readonly string root;
+
+    public ScanConcurrencyTests()
+    {
+        // Scans run against an in-memory file system, so nothing is created here; the workspace only
+        // supplies a unique absolute base path that exists on disk (and is cleaned up on disposal).
+        root = workspace.GetPath(Path.Combine("skycd-concurrency", Guid.NewGuid().ToString("N")));
+    }
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
 
     [Theory]
     [InlineData(DriveType.Removable, "FAT12", 1_440_000L, null, ScanSourceKind.SlowRemovable)]

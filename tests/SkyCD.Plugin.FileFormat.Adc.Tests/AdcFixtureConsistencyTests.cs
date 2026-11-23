@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.Adc.Tests;
@@ -9,7 +10,8 @@ public sealed class AdcFixtureConsistencyTests
     [Fact]
     public void CommittedFixtures_MatchGenerator()
     {
-        var expectedDirectory = Path.Combine(Path.GetTempPath(), "skycd-adc-fixtures-" + Guid.NewGuid().ToString("N"));
+        using var workspace = new TestWorkspace();
+        var expectedDirectory = workspace.CreateDirectory("skycd-adc-fixtures-" + Guid.NewGuid().ToString("N"));
         try
         {
             AdcFixtures.WriteAll(expectedDirectory);
@@ -33,10 +35,7 @@ public sealed class AdcFixtureConsistencyTests
         }
         finally
         {
-            if (Directory.Exists(expectedDirectory))
-            {
-                Directory.Delete(expectedDirectory, recursive: true);
-            }
+            workspace.Dispose();
         }
     }
 

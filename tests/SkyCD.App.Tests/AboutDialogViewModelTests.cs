@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using SkyCD.Formatting;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -30,12 +31,13 @@ public class AboutDialogViewModelTests
     [Fact]
     public void Constructor_InitializesWithCustomValues()
     {
+        using var workspace = new TestWorkspace();
         var vm = new AboutDialogViewModel(
             "MyApp",
             "1.2.3",
             "https://example.com",
             loadedAssemblies: [typeof(string).Assembly],
-            baseDirectory: Path.GetTempPath());
+            baseDirectory: workspace.Root);
 
         Assert.Equal("MyApp", vm.ProductName);
         Assert.Equal("1.2.3", vm.Version);
@@ -53,12 +55,13 @@ public class AboutDialogViewModelTests
     [Fact]
     public void ConfirmCommand_SetsDialogAcceptedTrue()
     {
+        using var workspace = new TestWorkspace();
         var vm = new AboutDialogViewModel(
             "SkyCD",
             "3.0.0",
             "https://github.com/SkyCD/SkyCD",
             loadedAssemblies: [typeof(string).Assembly],
-            baseDirectory: Path.GetTempPath());
+            baseDirectory: workspace.Root);
 
         vm.ConfirmCommand.Execute(null);
 
@@ -68,7 +71,8 @@ public class AboutDialogViewModelTests
     [Fact]
     public void Constructor_UsesLicenseFallback_WhenLicenseFileIsMissing()
     {
-        var baseDirectory = Path.Combine(Path.GetTempPath(), $"skycd-about-{Guid.NewGuid():N}");
+        using var workspace = new TestWorkspace();
+        var baseDirectory = workspace.CreateDirectory("app");
         var expectedMarkdownPath = Path.Combine(baseDirectory, "LICENSE.md");
         var expectedPlainPath = Path.Combine(baseDirectory, "LICENSE");
 
@@ -86,12 +90,10 @@ public class AboutDialogViewModelTests
     [Fact]
     public void Constructor_LoadsLicense_FromParentDirectoryPlainLicenseFile()
     {
-        var rootDirectory = Path.Combine(Path.GetTempPath(), $"skycd-about-{Guid.NewGuid():N}");
-        var childDirectory = Path.Combine(rootDirectory, "bin", "Debug", "net10.0");
-        Directory.CreateDirectory(childDirectory);
+        using var workspace = new TestWorkspace();
+        var childDirectory = workspace.CreateDirectory(Path.Combine("app", "bin", "Debug", "net10.0"));
 
-        var licensePath = Path.Combine(rootDirectory, "LICENSE");
-        File.WriteAllText(licensePath, "Test License Content");
+        var licensePath = workspace.CreateFile(Path.Combine("app", "LICENSE"), "Test License Content");
 
         var vm = new AboutDialogViewModel(
             "SkyCD",
@@ -107,6 +109,7 @@ public class AboutDialogViewModelTests
     [Fact]
     public void Constructor_PopulatesLoadedAssembliesContract()
     {
+        using var workspace = new TestWorkspace();
         var assemblies = new[]
         {
             typeof(string).Assembly,
@@ -118,7 +121,7 @@ public class AboutDialogViewModelTests
             "3.0.0",
             "https://github.com/SkyCD/SkyCD",
             loadedAssemblies: assemblies,
-            baseDirectory: Path.GetTempPath());
+            baseDirectory: workspace.Root);
 
         Assert.Equal(2, vm.LoadedAssemblies.Count);
         Assert.All(vm.LoadedAssemblies, entry =>
