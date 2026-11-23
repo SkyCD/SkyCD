@@ -1,0 +1,45 @@
+<!--
+    Project-owned toolbar glyphs (issue #933). Each key is the IconPath a ToolbarCommandDescriptor exposes,
+    so the toolbar buttons and the Options toolbar lists render the same artwork from one source.
+
+    Glyphs are original 16x16 outline drawings on an integer pixel grid: every outline is a 1px rectangle on a
+    half-pixel offset, so the geometry stays crisp at 100% and 150% scaling. They carry no theme brush of their
+    own; the app paints them with ThemeForegroundBrush, so they read on the dark and light themes alike. Solid
+    fills mark the active side of a toggle, for example the current view mode or a shown pane.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- File -->
+    <StreamGeometry x:Key="ToolbarIcon.NewCatalog">F0 M3.5,1.5 L9.5,1.5 L13.5,5.5 L13.5,15.5 L3.5,15.5 Z M10,7 L11,7 L11,10 L13,10 L13,11 L11,11 L11,14 L10,14 L10,11 L8,11 L8,10 L10,10 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.OpenCatalog">F0 M0.5,1.5 L5.5,1.5 L7.5,3.5 L15.5,3.5 L15.5,14.5 L0.5,14.5 Z M0.5,6 L15.5,6</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.SaveCatalog">F0 M1.5,1.5 L12.5,1.5 L14.5,3.5 L14.5,14.5 L0.5,14.5 L0.5,1.5 Z M4.5,1.5 L4.5,5.5 L10.5,5.5 L10.5,1.5 Z M4.5,9 L10.5,9 L10.5,14 L4.5,14 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.SaveCatalogAs">F0 M0.5,1.5 L10.5,1.5 L13,4 L13,6 L0.5,6 Z M3.5,1.5 L3.5,4 L8.5,4 L8.5,1.5 Z M0.5,8.5 L12.5,8.5 L12.5,10.5 L0.5,10.5 Z M0.5,12.5 L9.5,12.5 L9.5,14.5 L0.5,14.5 Z M12,8 L13,8 L13,13 L16,13 L16,14 L13,14 L13,15 L12,15 L12,14 L9,14 L9,13 L12,13 Z</StreamGeometry>
+
+    <!-- Edit -->
+    <StreamGeometry x:Key="ToolbarIcon.Undo">F0 M0.5,7.5 L5.5,3.5 L5.5,6 L9.5,6 A5,5 0 0 1 14.5,11 L14.5,14.5 L12.5,14.5 L12.5,11 A3,3 0 0 0 9.5,8 L5.5,8 L5.5,11.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Redo">F0 M15.5,7.5 L10.5,3.5 L10.5,6 L6.5,6 A5,5 0 0 0 1.5,11 L1.5,14.5 L3.5,14.5 L3.5,11 A3,3 0 0 1 6.5,8 L10.5,8 L10.5,11.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.AddItem">F0 M7,0.5 L8,0.5 L8,15.5 L7,15.5 Z M0.5,7 L15.5,7 L15.5,8 L0.5,8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.DeleteItem">F0 M0.5,2.5 L15.5,2.5 L15.5,4.5 L0.5,4.5 Z M2.5,4.5 L13.5,4.5 L13.5,15.5 L2.5,15.5 Z M5.5,0.5 L10.5,0.5 L10.5,2.5 L5.5,2.5 Z M6,6.5 L7,6.5 L7,13.5 L6,13.5 Z M9,6.5 L10,6.5 L10,13.5 L9,13.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Properties">F0 M0.5,1.5 L14.5,1.5 L14.5,14.5 L0.5,14.5 Z M2.5,3.5 L11.5,3.5 L11.5,5 L2.5,5 Z M2.5,7 L11.5,7 L11.5,8.5 L2.5,8.5 Z M2.5,10.5 L8.5,10.5 L8.5,12 L2.5,12 Z M11.5,9.5 L15.5,9.5 L15.5,15.5 L11.5,15.5 Z M13,10.5 L13,14.5 M11.5,12.5 L15.5,12.5</StreamGeometry>
+
+    <!-- View: one family whose left block encodes the mode, so the mode buttons read consistently. -->
+    <StreamGeometry x:Key="ToolbarIcon.ViewTiles">F0 M0.5,0.5 L4.5,0.5 L4.5,4.5 L0.5,4.5 Z M6,0.5 L10,0.5 L10,4.5 L6,4.5 Z M11.5,0.5 L15.5,0.5 L15.5,4.5 L11.5,4.5 Z M0.5,6 L4.5,6 L4.5,10 L0.5,10 Z M6,6 L10,6 L10,10 L6,10 Z M11.5,6 L15.5,6 L15.5,10 L11.5,10 Z M0.5,11.5 L4.5,11.5 L4.5,15.5 L0.5,15.5 Z M6,11.5 L10,11.5 L10,15.5 L6,15.5 Z M11.5,11.5 L15.5,11.5 L15.5,15.5 L11.5,15.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.ViewSmallIcons">F0 M0.5,0.5 L4.5,0.5 L4.5,4.5 L0.5,4.5 Z M6.5,1.5 L15.5,1.5 L15.5,2.5 L6.5,2.5 Z M6.5,3.5 L13.5,3.5 L13.5,4.5 L6.5,4.5 Z M0.5,5.5 L4.5,5.5 L4.5,9.5 L0.5,9.5 Z M6.5,6.5 L15.5,6.5 L15.5,7.5 L6.5,7.5 Z M6.5,8.5 L13.5,8.5 L13.5,9.5 L6.5,9.5 Z M0.5,10.5 L4.5,10.5 L4.5,14.5 L0.5,14.5 Z M6.5,11.5 L15.5,11.5 L15.5,12.5 L6.5,12.5 Z M6.5,13.5 L11.5,13.5 L11.5,14.5 L6.5,14.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.ViewLargeIcons">F0 M0.5,0.5 L7.5,0.5 L7.5,6.5 L0.5,6.5 Z M9.5,2.5 L15.5,2.5 L15.5,4.5 L9.5,4.5 Z M0.5,8.5 L7.5,8.5 L7.5,15.5 L0.5,15.5 Z M9.5,8.5 L14.5,8.5 L14.5,10.5 L9.5,10.5 Z M9.5,12.5 L12.5,12.5 L12.5,14.5 L9.5,14.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.ViewList">F0 M3.5,0.5 L5.5,0.5 L5.5,2.5 L3.5,2.5 Z M8.5,0.5 L15.5,0.5 L15.5,2.5 L8.5,2.5 Z M3.5,5.5 L5.5,5.5 L5.5,8.5 L3.5,8.5 Z M8.5,5.5 L12.5,5.5 L12.5,8.5 L8.5,8.5 Z M3.5,10.5 L5.5,10.5 L5.5,13.5 L3.5,13.5 Z M8.5,10.5 L15.5,10.5 L15.5,13.5 L8.5,13.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.ViewDetails">F0 M0.5,0.5 L6.5,0.5 L6.5,4.5 L0.5,4.5 Z M8.5,1.5 L15.5,1.5 L15.5,3.5 L8.5,3.5 Z M0.5,6.5 L15.5,6.5 L15.5,7.5 L0.5,7.5 Z M0.5,9.5 L15.5,9.5 L15.5,10.5 L0.5,10.5 Z M0.5,12.5 L15.5,12.5 L15.5,13.5 L0.5,13.5 Z</StreamGeometry>
+
+    <!-- Panes: the shown pane is the filled part (outer frame minus the other pane). -->
+    <StreamGeometry x:Key="ToolbarIcon.StatusBar">F0 M0.5,1.5 L15.5,1.5 L15.5,14.5 L0.5,14.5 Z M0.5,1.5 L15.5,1.5 L15.5,9.5 L0.5,9.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.PreviewPane">F0 M0.5,1.5 L15.5,1.5 L15.5,14.5 L0.5,14.5 Z M0.5,1.5 L9.5,1.5 L9.5,14.5 L0.5,14.5 Z</StreamGeometry>
+
+    <!-- Tools -->
+    <StreamGeometry x:Key="ToolbarIcon.Refresh">F1 M8,0.5 A7.5,7.5 0 1 1 7.5,0.5 L7.5,2.5 A5.5,5.5 0 1 0 8,2.5 Z M10,0 L16,3.5 L10,7 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Find">F0 M1.5,0.5 L10.5,0.5 L10.5,9.5 L1.5,9.5 Z M3.5,2.5 L8.5,2.5 L8.5,3.5 L3.5,3.5 Z M9.5,8 L15,13.5 L13.5,15 L8,9.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.AdvancedFind">F0 M0.5,0.5 L8.5,0.5 L8.5,8.5 L0.5,8.5 Z M2.5,2.5 L6.5,2.5 L6.5,3.5 L2.5,3.5 Z M8,7 L12,11 L11,12 L7,8 Z M10.5,1.5 L15.5,1.5 L15.5,2.5 L10.5,2.5 Z M10.5,4.5 L13.5,4.5 L13.5,5.5 L10.5,5.5 Z M10.5,7.5 L15.5,7.5 L15.5,8.5 L10.5,8.5 Z M10.5,10.5 L14.5,10.5 L14.5,11.5 L10.5,11.5 Z M10.5,13.5 L12.5,13.5 L12.5,14.5 L10.5,14.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Options">F0 M2.5,0.5 L5.5,0.5 L5.5,2.5 L2.5,2.5 Z M7,0.5 L14.5,0.5 L14.5,2.5 L7,2.5 Z M2.5,5.5 L5.5,5.5 L5.5,7.5 L2.5,7.5 Z M7,5.5 L15.5,5.5 L15.5,7.5 L7,7.5 Z M2.5,10.5 L5.5,10.5 L5.5,12.5 L2.5,12.5 Z M7,10.5 L13.5,10.5 L13.5,12.5 L7,12.5 Z M2.5,14.5 L5.5,14.5 L5.5,15.5 L2.5,15.5 Z M7,14.5 L12.5,14.5 L12.5,15.5 L7,15.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Tags">F0 M0.5,1.5 L8.5,1.5 L15.5,8.5 L8.5,15.5 L0.5,15.5 Z M2.5,3.5 L4.5,3.5 L4.5,5.5 L2.5,5.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Collections">F0 M0.5,4.5 L11.5,4.5 L11.5,15.5 L0.5,15.5 Z M4.5,0.5 L15.5,0.5 L15.5,11.5 L4.5,11.5 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Locations">F0 M4,4.5 C4.5,2.5 6.5,1 9,1 C12,1 14,3 14,5.5 C14,9 8,15 8,15 C8,15 4.5,9.5 4,6.5 Z M6.5,4.5 A2.5,2.5 0 1 0 11.5,4.5 A2.5,2.5 0 1 0 6.5,4.5 Z</StreamGeometry>
+</ResourceDictionary>

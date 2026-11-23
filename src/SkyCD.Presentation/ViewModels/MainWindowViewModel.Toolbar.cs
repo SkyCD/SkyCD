@@ -37,7 +37,8 @@ public partial class MainWindowViewModel
 
     /// <summary>
     /// The commands the toolbar can host, grouped for the customization dialog. Labels are resolved on each
-    /// call so a language change is reflected; an unavailable command simply renders disabled.
+    /// call so a language change is reflected; an unavailable command simply renders disabled. Every command
+    /// carries an icon so a toolbar button never falls back to text only.
     /// </summary>
     public IReadOnlyList<ToolbarCommandDescriptor> ToolbarCommands()
     {
@@ -47,29 +48,29 @@ public partial class MainWindowViewModel
         var tools = ToolbarCategory(UiKeys.ToolsMenu);
         return
         [
-            Descriptor(ToolbarCommandIds.NewCatalog, file, TextKeys.New, NewCatalogCommand, icon: "/Assets/new.png"),
-            Descriptor(ToolbarCommandIds.OpenCatalog, file, TextKeys.Open, OpenCatalogCommand, icon: "/Assets/open.png"),
-            Descriptor(ToolbarCommandIds.SaveCatalog, file, TextKeys.Save, SaveCatalogCommand, icon: "/Assets/save.png"),
-            Descriptor(ToolbarCommandIds.SaveCatalogAs, file, TextKeys.SaveAs, SaveCatalogAsCommand),
-            Descriptor(ToolbarCommandIds.Undo, edit, TextKeys.Undo, UndoCommand),
-            Descriptor(ToolbarCommandIds.Redo, edit, TextKeys.Redo, RedoCommand),
-            Descriptor(ToolbarCommandIds.AddItem, edit, TextKeys.Add, AddItemCommand),
-            Descriptor(ToolbarCommandIds.DeleteItem, edit, TextKeys.Delete, DeleteItemCommand),
-            Descriptor(ToolbarCommandIds.Properties, edit, TextKeys.Properties, OpenPropertiesCommand),
-            Descriptor(ToolbarCommandIds.ViewTiles, view, TextKeys.Tiles, SetViewModeCommand, "Tiles"),
-            Descriptor(ToolbarCommandIds.ViewSmallIcons, view, TextKeys.SmallIcons2, SetViewModeCommand, "SmallIcons"),
-            Descriptor(ToolbarCommandIds.ViewLargeIcons, view, TextKeys.LargeIconsMenu, SetViewModeCommand, "LargeIcons"),
-            Descriptor(ToolbarCommandIds.ViewList, view, TextKeys.List, SetViewModeCommand, "List"),
-            Descriptor(ToolbarCommandIds.ViewDetails, view, TextKeys.Details, SetViewModeCommand, "Details"),
-            Descriptor(ToolbarCommandIds.StatusBar, view, TextKeys.StatusBar, ToggleStatusBarCommand),
-            Descriptor(ToolbarCommandIds.PreviewPane, view, PreviewKeys.PreviewPane, TogglePreviewPaneCommand),
-            Descriptor(ToolbarCommandIds.Refresh, tools, TextKeys.Refresh, RefreshCommand),
-            Descriptor(ToolbarCommandIds.Find, tools, TextKeys.Find, FindCatalogCommand),
-            Descriptor(ToolbarCommandIds.AdvancedFind, tools, TextKeys.AdvancedFind, AdvancedFindCatalogCommand),
-            Descriptor(ToolbarCommandIds.Options, tools, UiKeys.Options, OpenOptionsCommand),
-            Descriptor(ToolbarCommandIds.Tags, tools, UiKeys.ManageTags, OpenTagsDialogCommand),
-            Descriptor(ToolbarCommandIds.Collections, tools, UiKeys.ManageCollections, OpenCollectionsDialogCommand),
-            Descriptor(ToolbarCommandIds.Locations, tools, UiKeys.ManageLocations, OpenLocationsDialogCommand)
+            Descriptor(ToolbarCommandIds.NewCatalog, file, TextKeys.New, NewCatalogCommand, icon: ToolbarIconKeys.NewCatalog),
+            Descriptor(ToolbarCommandIds.OpenCatalog, file, TextKeys.Open, OpenCatalogCommand, icon: ToolbarIconKeys.OpenCatalog),
+            Descriptor(ToolbarCommandIds.SaveCatalog, file, TextKeys.Save, SaveCatalogCommand, icon: ToolbarIconKeys.SaveCatalog),
+            Descriptor(ToolbarCommandIds.SaveCatalogAs, file, TextKeys.SaveAs, SaveCatalogAsCommand, icon: ToolbarIconKeys.SaveCatalogAs),
+            Descriptor(ToolbarCommandIds.Undo, edit, TextKeys.Undo, UndoCommand, icon: ToolbarIconKeys.Undo),
+            Descriptor(ToolbarCommandIds.Redo, edit, TextKeys.Redo, RedoCommand, icon: ToolbarIconKeys.Redo),
+            Descriptor(ToolbarCommandIds.AddItem, edit, TextKeys.Add, AddItemCommand, icon: ToolbarIconKeys.AddItem),
+            Descriptor(ToolbarCommandIds.DeleteItem, edit, TextKeys.Delete, DeleteItemCommand, icon: ToolbarIconKeys.DeleteItem),
+            Descriptor(ToolbarCommandIds.Properties, edit, TextKeys.Properties, OpenPropertiesCommand, icon: ToolbarIconKeys.Properties),
+            Descriptor(ToolbarCommandIds.ViewTiles, view, TextKeys.Tiles, SetViewModeCommand, "Tiles", ToolbarIconKeys.ViewTiles),
+            Descriptor(ToolbarCommandIds.ViewSmallIcons, view, TextKeys.SmallIcons2, SetViewModeCommand, "SmallIcons", ToolbarIconKeys.ViewSmallIcons),
+            Descriptor(ToolbarCommandIds.ViewLargeIcons, view, TextKeys.LargeIconsMenu, SetViewModeCommand, "LargeIcons", ToolbarIconKeys.ViewLargeIcons),
+            Descriptor(ToolbarCommandIds.ViewList, view, TextKeys.List, SetViewModeCommand, "List", ToolbarIconKeys.ViewList),
+            Descriptor(ToolbarCommandIds.ViewDetails, view, TextKeys.Details, SetViewModeCommand, "Details", ToolbarIconKeys.ViewDetails),
+            Descriptor(ToolbarCommandIds.StatusBar, view, TextKeys.StatusBar, ToggleStatusBarCommand, icon: ToolbarIconKeys.StatusBar),
+            Descriptor(ToolbarCommandIds.PreviewPane, view, PreviewKeys.PreviewPane, TogglePreviewPaneCommand, icon: ToolbarIconKeys.PreviewPane),
+            Descriptor(ToolbarCommandIds.Refresh, tools, TextKeys.Refresh, RefreshCommand, icon: ToolbarIconKeys.Refresh),
+            Descriptor(ToolbarCommandIds.Find, tools, TextKeys.Find, FindCatalogCommand, icon: ToolbarIconKeys.Find),
+            Descriptor(ToolbarCommandIds.AdvancedFind, tools, TextKeys.AdvancedFind, AdvancedFindCatalogCommand, icon: ToolbarIconKeys.AdvancedFind),
+            Descriptor(ToolbarCommandIds.Options, tools, UiKeys.Options, OpenOptionsCommand, icon: ToolbarIconKeys.Options),
+            Descriptor(ToolbarCommandIds.Tags, tools, UiKeys.ManageTags, OpenTagsDialogCommand, icon: ToolbarIconKeys.Tags),
+            Descriptor(ToolbarCommandIds.Collections, tools, UiKeys.ManageCollections, OpenCollectionsDialogCommand, icon: ToolbarIconKeys.Collections),
+            Descriptor(ToolbarCommandIds.Locations, tools, UiKeys.ManageLocations, OpenLocationsDialogCommand, icon: ToolbarIconKeys.Locations)
         ];
     }
 

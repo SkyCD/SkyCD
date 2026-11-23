@@ -23,7 +23,8 @@ Tokens live in [DesignTokens.axaml](../../src/SkyCD.App/Styles/DesignTokens.axam
 | `SkyFontTitle` | 20 | dialog title |
 | `SkyFontWindowTitle` | 24 | main window title |
 
-Metrics: `SkyWindowPadding` (12), `SkySectionPadding` (12), `SkyControlPadding` (8,4),
+Metrics: `SkyIconSize` (16, the toolbar button icon slot and the matching glyphs in the Options
+toolbar lists), `SkyWindowPadding` (12), `SkySectionPadding` (12), `SkyControlPadding` (8,4),
 `SkyInsetXxs`/`Xs`/`Sm`/`Md`/`Lg` (2/4/8/12/16 as `Thickness` for `Margin` and `Padding`),
 `SkyCornerRadius` (4), `SkyCornerRadiusLarge` (8), `SkyFontFamily` (`Segoe UI, Inter`).
 The app keeps the classic Windows font (Segoe UI) and falls back to the packaged Inter font on

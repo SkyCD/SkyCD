@@ -64,6 +64,37 @@ public static class ToolbarCommandIds
 }
 
 /// <summary>
+/// Keys of the project-owned toolbar glyphs, defined once in <c>src/SkyCD.App/Styles/ToolbarIcons.axaml</c>.
+/// The view resolves a descriptor's <see cref="ToolbarCommandDescriptor.IconPath"/> through the same key.
+/// </summary>
+public static class ToolbarIconKeys
+{
+    public const string NewCatalog = "ToolbarIcon.NewCatalog";
+    public const string OpenCatalog = "ToolbarIcon.OpenCatalog";
+    public const string SaveCatalog = "ToolbarIcon.SaveCatalog";
+    public const string SaveCatalogAs = "ToolbarIcon.SaveCatalogAs";
+    public const string Undo = "ToolbarIcon.Undo";
+    public const string Redo = "ToolbarIcon.Redo";
+    public const string AddItem = "ToolbarIcon.AddItem";
+    public const string DeleteItem = "ToolbarIcon.DeleteItem";
+    public const string Properties = "ToolbarIcon.Properties";
+    public const string ViewTiles = "ToolbarIcon.ViewTiles";
+    public const string ViewSmallIcons = "ToolbarIcon.ViewSmallIcons";
+    public const string ViewLargeIcons = "ToolbarIcon.ViewLargeIcons";
+    public const string ViewList = "ToolbarIcon.ViewList";
+    public const string ViewDetails = "ToolbarIcon.ViewDetails";
+    public const string StatusBar = "ToolbarIcon.StatusBar";
+    public const string PreviewPane = "ToolbarIcon.PreviewPane";
+    public const string Refresh = "ToolbarIcon.Refresh";
+    public const string Find = "ToolbarIcon.Find";
+    public const string AdvancedFind = "ToolbarIcon.AdvancedFind";
+    public const string Options = "ToolbarIcon.Options";
+    public const string Tags = "ToolbarIcon.Tags";
+    public const string Collections = "ToolbarIcon.Collections";
+    public const string Locations = "ToolbarIcon.Locations";
+}
+
+/// <summary>
 /// The toolbar layout contract: which entries are valid, what a fresh install shows and how a saved or
 /// hand-edited layout is repaired before it reaches the toolbar.
 /// </summary>

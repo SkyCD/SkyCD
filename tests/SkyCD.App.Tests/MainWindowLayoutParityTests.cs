@@ -62,14 +62,16 @@ public class MainWindowLayoutParityTests
     }
 
     [Fact]
-    public void MainWindow_Toolbar_MatchesLegacyCommandArtworkAndCompactStructure()
+    public void MainWindow_Toolbar_UsesTheProjectGlyphDictionaryAndCompactStructure()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
         var toolbarCommands = ReadRepoFile("src", "SkyCD.Presentation", "ViewModels", "MainWindowViewModel.Toolbar.cs");
 
-        Assert.Contains("\"/Assets/new.png\"", toolbarCommands, StringComparison.Ordinal);
-        Assert.Contains("\"/Assets/open.png\"", toolbarCommands, StringComparison.Ordinal);
-        Assert.Contains("\"/Assets/save.png\"", toolbarCommands, StringComparison.Ordinal);
+        // Issue #933 replaced the three legacy PNGs with project-owned vector glyphs for every command.
+        Assert.Contains("ToolbarIconKeys.NewCatalog", toolbarCommands, StringComparison.Ordinal);
+        Assert.Contains("ToolbarIconKeys.OpenCatalog", toolbarCommands, StringComparison.Ordinal);
+        Assert.Contains("ToolbarIconKeys.SaveCatalog", toolbarCommands, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Assets/new.png", toolbarCommands, StringComparison.Ordinal);
 
         Assert.DoesNotContain("/Assets/add-from-media.png", toolbarCommands, StringComparison.Ordinal);
         Assert.DoesNotContain("/Assets/add-from-folder.png", toolbarCommands, StringComparison.Ordinal);
@@ -89,6 +91,10 @@ public class MainWindowLayoutParityTests
         Assert.Contains("Selector=\"ct|ClassicToolbarButton\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("<AccessText", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Border Name=\"PART_ButtonBorder\"", stylesXaml, StringComparison.Ordinal);
+
+        // Issue #933: the 16px icon slot comes from the design tokens, not a literal size.
+        Assert.Contains("Name=\"PART_Image\"", stylesXaml, StringComparison.Ordinal);
+        Assert.Contains("Width=\"{DynamicResource SkyIconSize}\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"ct|ClassicToolbarButton:pointerover\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"ct|ClassicToolbarButton:pressed\"", stylesXaml, StringComparison.Ordinal);
         Assert.Contains("Selector=\"ct|ClassicToolbarButton:focus-visible\"", stylesXaml, StringComparison.Ordinal);

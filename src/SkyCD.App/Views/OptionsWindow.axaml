@@ -67,6 +67,7 @@
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
         <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
         <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
+        <converters:ToolbarIconConverter x:Key="ToolbarIconConverter" />
         <ItemsPanelTemplate x:Key="AcpAgentCardsPanel">
             <UniformGrid Columns="2" />
         </ItemsPanelTemplate>
@@ -1159,12 +1160,22 @@
                                          DoubleTapped="OnToolbarCommandDoubleTapped">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ToolbarCommandChoiceViewModel">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Label}" />
-                                                <TextBlock Text="{Binding Category}"
-                                                           FontSize="{DynamicResource SkyFontCaption}"
-                                                           Opacity="0.65" />
-                                            </StackPanel>
+                                            <!-- Every command carries an icon (issue #933); it shares the toolbar slot. -->
+                                            <Grid ColumnDefinitions="Auto,*"
+                                                  ColumnSpacing="{DynamicResource SkySpaceXs}"
+                                                  Margin="0,1">
+                                                <Image Width="{DynamicResource SkyIconSize}"
+                                                       Height="{DynamicResource SkyIconSize}"
+                                                       Source="{Binding IconPath, Converter={StaticResource ToolbarIconConverter}}"
+                                                       Stretch="Uniform"
+                                                       VerticalAlignment="Top" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Label}" />
+                                                    <TextBlock Text="{Binding Category}"
+                                                               FontSize="{DynamicResource SkyFontCaption}"
+                                                               Opacity="0.65" />
+                                                </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
@@ -1201,15 +1212,26 @@
                                          SelectedItem="{Binding Toolbar.SelectedItem}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ToolbarEntryViewModel">
-                                            <Grid Margin="2,1">
-                                                <TextBlock Text="{Binding Label}"
+                                            <Grid Margin="2,1"
+                                                  ColumnDefinitions="Auto,*"
+                                                  ColumnSpacing="{DynamicResource SkySpaceXs}">
+                                                <!-- A separator keeps its plain line: its IconPath is null, so no image resolves and the line spans the row. -->
+                                                <Image Width="{DynamicResource SkyIconSize}"
+                                                       Height="{DynamicResource SkyIconSize}"
+                                                       Source="{Binding IconPath, Converter={StaticResource ToolbarIconConverter}}"
+                                                       IsVisible="{Binding !IsSeparator}"
+                                                       Stretch="Uniform"
+                                                       VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Label}"
                                                            IsVisible="{Binding !IsSeparator}"
                                                            VerticalAlignment="Center" />
-                                                <Border Height="1"
+                                                <Border Grid.Column="0"
+                                                        Grid.ColumnSpan="2"
+                                                        Height="1"
                                                         Background="{DynamicResource ThemeBorderMidBrush}"
                                                         IsVisible="{Binding IsSeparator}"
-                                                        VerticalAlignment="Center"
-                                                        Margin="0,0,12,0" />
+                                                        VerticalAlignment="Center" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
