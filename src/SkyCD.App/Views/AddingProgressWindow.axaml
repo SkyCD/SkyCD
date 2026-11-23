@@ -58,7 +58,7 @@
         </StackPanel>
 
         <Grid Grid.Column="1"
-              RowDefinitions="Auto,Auto,Auto,*,Auto"
+              RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
               RowSpacing="{DynamicResource SkySpaceSm}">
             <!-- Filtering line: what is currently being examined -->
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceXs}">
@@ -129,8 +129,26 @@
                              Height="14" />
             </StackPanel>
 
+            <!-- Newest thumbnail of the running operation; hidden until one has been produced -->
+            <StackPanel Grid.Row="3"
+                        Spacing="{DynamicResource SkySpaceXs}"
+                        IsVisible="{Binding HasLatestThumbnail}">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.LatestThumbnail}}" FontWeight="SemiBold" />
+                <Border Height="96"
+                        BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource SkyCornerRadius}"
+                        Background="{DynamicResource ThemeBackgroundBrush}">
+                    <Image Source="{Binding LatestThumbnail}"
+                           Stretch="Uniform"
+                           Margin="{DynamicResource SkyInsetXs}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                </Border>
+            </StackPanel>
+
             <!-- Always-visible error log -->
-            <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceXs}">
+            <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceXs}">
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ErrorLog}}"
                                FontWeight="SemiBold"
@@ -169,7 +187,7 @@
             </Grid>
 
             <!-- Footer: status, analysis time and Cancel -->
-            <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PleaseWait}}"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource ThemeForegroundLowBrush}" />

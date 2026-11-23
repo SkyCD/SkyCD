@@ -1966,7 +1966,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         progress.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
                             stagePercentage: (index + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Count,
                             stageCurrent: index, stageTotal: files.Count));
-                    var outcome = await service!.CollectAsync(file, catalog, itemProgress, token, batchId);
+                    var thumbnailProgress = progress is IThumbnailProgress thumbnailTarget
+                        ? new Progress<MediaThumbnail>(thumbnail => _ = thumbnailTarget.ReportThumbnail(thumbnail))
+                        : null;
+                    var outcome = await service!.CollectAsync(file, catalog, itemProgress, token, batchId, thumbnailProgress);
                     if (outcome.SkipReason == MediaMetadataSkipReason.Failed)
                     {
                         progress?.ReportWarning(outcome.FailureReason ?? outcome.SkipReason.ToString(), itemPath: file.Name);
