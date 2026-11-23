@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -22,6 +23,9 @@ internal static class OpenOfficeFixtures
     private const string OdfManifestNamespace = "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0";
     private const string DublinCoreNamespace = "http://purl.org/dc/elements/1.1/";
     private const string XLinkNamespace = "http://www.w3.org/1999/xlink";
+    private const string ThumbnailEntryName = "Thumbnails/thumbnail.png";
+
+    private static readonly byte[] PngSignature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
 
     public static byte[] OdfDocument(
         string? metaXml = null,
@@ -40,6 +44,73 @@ internal static class OpenOfficeFixtures
     public static byte[] LegacyDocument(string? metaXml = null, string contentType = LegacyWriterContentType) =>
         BuildPackage(contentType, includeMimeType: true,
             metaXml ?? LegacyMetadata(FullMetadata("Legacy Report")), manifestXml: null);
+
+    public static byte[] OdfDocumentWithThumbnail(byte[]? thumbnail = null) =>
+        WithBinaryEntry(OdfDocument(), ThumbnailEntryName, thumbnail ?? Png(96, 64));
+
+    public static byte[] LegacyDocumentWithThumbnail(byte[]? thumbnail = null) =>
+        WithBinaryEntry(LegacyDocument(), ThumbnailEntryName, thumbnail ?? Png(96, 64));
+
+    /// <summary>A ZIP package that carries the thumbnail under a differently cased member name.</summary>
+    public static byte[] OdfDocumentWithCasedThumbnail() =>
+        WithBinaryEntry(OdfDocument(), "thumbnails/THUMBNAIL.PNG", Png(32, 32));
+
+    /// <summary>An encrypted package that also carries a plain preview, so only the encryption signal can stop it.</summary>
+    public static byte[] OdfDocumentWithEncryptedThumbnail() =>
+        WithBinaryEntry(
+            OdfDocument(metaXml: OdfMetadata(FullMetadata()),
+                manifestXml: Manifest(true)),
+            ThumbnailEntryName,
+            Png(96, 64));
+
+    /// <summary>A structurally readable baseline PNG carrying a signature and a valid IHDR chunk.</summary>
+    public static byte[] Png(int width, int height, int padding = 0)
+    {
+        var ihdr = new byte[33];
+        PngSignature.CopyTo(ihdr, 0);
+        BinaryPrimitives.WriteInt32BigEndian(ihdr.AsSpan(8), 13);
+        "IHDR"u8.CopyTo(ihdr.AsSpan(12));
+        BinaryPrimitives.WriteInt32BigEndian(ihdr.AsSpan(16), width);
+        BinaryPrimitives.WriteInt32BigEndian(ihdr.AsSpan(20), height);
+        ihdr[24] = 8;
+        ihdr[25] = 6;
+        BinaryPrimitives.WriteUInt32BigEndian(ihdr.AsSpan(29), Crc32(ihdr.AsSpan(12, 17)));
+
+        return padding <= 0 ? ihdr : [.. ihdr, .. new byte[padding]];
+    }
+
+    private static uint Crc32(ReadOnlySpan<byte> data)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in data)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) == 1 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+            }
+        }
+
+        return ~crc;
+    }
+
+    public static byte[] WithBinaryEntry(byte[] package, string name, byte[] data)
+    {
+        using var input = new MemoryStream(package, writable: false);
+        using var source = new ZipArchive(input, ZipArchiveMode.Read);
+        using var output = new MemoryStream();
+        using (var target = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                AddEntry(target, entry.FullName, ReadEntry(entry));
+            }
+
+            AddEntry(target, name, data);
+        }
+
+        return output.ToArray();
+    }
 
     public static string OdfMetadata(string body, string version = "1.2") => $"""
         <?xml version="1.0" encoding="UTF-8"?>
@@ -159,11 +230,21 @@ internal static class OpenOfficeFixtures
         return stream.ToArray();
     }
 
-    private static void AddEntry(ZipArchive archive, string name, string content)
+    private static byte[] ReadEntry(ZipArchiveEntry entry)
+    {
+        using var stream = entry.Open();
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
+    }
+
+    private static void AddEntry(ZipArchive archive, string name, string content) =>
+        AddEntry(archive, name, Encoding.UTF8.GetBytes(content));
+
+    private static void AddEntry(ZipArchive archive, string name, byte[] content)
     {
         var entry = archive.CreateEntry(name, CompressionLevel.Fastest);
         using var entryStream = entry.Open();
-        var bytes = Encoding.UTF8.GetBytes(content);
-        entryStream.Write(bytes, 0, bytes.Length);
+        entryStream.Write(content, 0, content.Length);
     }
 }
