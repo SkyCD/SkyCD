@@ -10,6 +10,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -17,18 +18,7 @@ namespace SkyCD.App.Tests;
 public sealed class ScanExclusionRuleTests : IDisposable
 {
     private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-exclusions-{Guid.NewGuid():N}");
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-cblite-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
-
-    public ScanExclusionRuleTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
+    private readonly AppDataSandbox sandbox = new();
 
     private CatalogScanResult ScanWith(Action<FakeScanFileSystem> populate, ScanTraversalOptions traversal)
     {
@@ -465,22 +455,5 @@ public sealed class ScanExclusionRuleTests : IDisposable
         Assert.True(resetRaised);
     }
 
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        if (Directory.Exists(appDataRoot))
-        {
-            try
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-            catch (IOException)
-            {
-                // Couchbase Lite can release file handles slightly after dispose on some systems.
-            }
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 }

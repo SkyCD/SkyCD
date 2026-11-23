@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -16,6 +15,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Tree;
 using Xunit;
 
@@ -27,20 +27,9 @@ namespace SkyCD.UI.Tests;
 /// </summary>
 public sealed class TreeUndoViewTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-tree-undo-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+    private readonly AppDataSandbox sandbox = new();
     private DryIoc.Container? container;
     private bool databaseClosed;
-
-    public TreeUndoViewTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
 
     [AvaloniaFact]
     public async Task UndoAfterTreeDelete_BringsTheNodeBackInTheTreeView()
@@ -385,20 +374,7 @@ public sealed class TreeUndoViewTests : IDisposable
 
         container?.Dispose();
 
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(appDataRoot))
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // The database file can stay locked until the process releases it.
-        }
+        // The sandbox deletes its directory, so the database and container above are released first.
+        sandbox.Dispose();
     }
 }

@@ -13,24 +13,14 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class AiScanExclusionTests : IDisposable
 {
-    private readonly string appDataRoot = Path.Combine(Path.GetTempPath(), $"skycd-ai-scan-{Guid.NewGuid():N}");
-    private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-    private readonly string? previousXdgConfig = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-    private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
-
-    public AiScanExclusionTests()
-    {
-        Directory.CreateDirectory(appDataRoot);
-        Environment.SetEnvironmentVariable("APPDATA", appDataRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", appDataRoot);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(appDataRoot, "SkyCD"));
-    }
+    private readonly AppDataSandbox sandbox = new();
 
     private static CatalogDocument Entry(string id, string name, long size = 128) => new()
     {
@@ -276,22 +266,5 @@ public sealed class AiScanExclusionTests : IDisposable
             new DescriptionContextOptions(Filename: true));
     }
 
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdgConfig);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        if (Directory.Exists(appDataRoot))
-        {
-            try
-            {
-                Directory.Delete(appDataRoot, recursive: true);
-            }
-            catch (IOException)
-            {
-                // Couchbase Lite can release file handles slightly after dispose on some systems.
-            }
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 }

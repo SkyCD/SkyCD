@@ -15,6 +15,7 @@ using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Abstractions.Capabilities;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -34,38 +35,9 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
 
     private static readonly byte[] PreviewBytes = [9, 8, 7, 6];
 
-    private readonly string databaseDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-preview-browse-{Guid.NewGuid():N}");
+    private readonly AppDataSandbox sandbox = new();
 
-    private readonly string? previousDatabaseDirectory =
-        Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
-
-    public MediaPreviewBrowsingIntegrationTests()
-    {
-        Directory.CreateDirectory(databaseDirectory);
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", databaseDirectory);
-    }
-
-    public void Dispose()
-    {
-        Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(databaseDirectory))
-            {
-                Directory.Delete(databaseDirectory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Couchbase Lite can release file handles slightly after dispose on some systems.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Blob files can stay locked briefly after the database is closed on Windows.
-        }
-    }
+    public void Dispose() => sandbox.Dispose();
 
     [Fact]
     public async Task CapturedPreviewAndFields_AreBrowsable_WithoutSourceOrPlugins()
@@ -546,7 +518,7 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
         await CaptureAsync(store, entry, catalog);
 
         // The catalog points at a path that does not exist; browsing must not care.
-        var disconnected = WithProperty(entry, "FullName", Path.Combine(databaseDirectory, "gone", "track.mp3"));
+        var disconnected = WithProperty(entry, "FullName", Path.Combine(sandbox.DatabaseDirectory, "gone", "track.mp3"));
         Assert.False(File.Exists(disconnected.Properties["FullName"]!.ToString()));
 
         var snapshot = new MediaPreviewResolver(store).Resolve(disconnected);
@@ -599,7 +571,7 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
         Task.FromResult<Stream>(new MemoryStream(new byte[64]));
 
     private Database OpenDatabase() =>
-        new("preview-browsing-tests", new DatabaseConfiguration { Directory = databaseDirectory });
+        new("preview-browsing-tests", new DatabaseConfiguration { Directory = sandbox.DatabaseDirectory });
 
     private static CatalogDocumentRepository CreateCatalogRepository(Database database)
     {
