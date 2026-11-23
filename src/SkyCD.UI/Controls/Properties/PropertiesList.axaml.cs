@@ -43,6 +43,13 @@ public partial class PropertiesList : UserControl
     public static readonly StyledProperty<bool> EditValueInPlaceProperty =
         AvaloniaProperty.Register<PropertiesList, bool>(nameof(EditValueInPlace));
 
+    /// <summary>
+    /// Key of the single description row in <see cref="PropertiesData"/>; null when this list has none. The
+    /// dialog sets its localized header, so the richer value surface follows the active language.
+    /// </summary>
+    public static readonly StyledProperty<string?> DescriptionRowHeaderProperty =
+        AvaloniaProperty.Register<PropertiesList, string?>(nameof(DescriptionRowHeader));
+
     private const string ValueCellClass = "value-cell";
 
     public PropertiesList()
@@ -124,6 +131,12 @@ public partial class PropertiesList : UserControl
     {
         get => GetValue(EditValueInPlaceProperty);
         set => SetValue(EditValueInPlaceProperty, value);
+    }
+
+    public string? DescriptionRowHeader
+    {
+        get => GetValue(DescriptionRowHeaderProperty);
+        set => SetValue(DescriptionRowHeaderProperty, value);
     }
 
     public AvaloniaList<PropertiesRow> PropertiesRows { get; }
@@ -249,9 +262,9 @@ public partial class PropertiesList : UserControl
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == PropertiesDataProperty)
+        if (change.Property == PropertiesDataProperty || change.Property == DescriptionRowHeaderProperty)
         {
-            RebuildRows(change.GetNewValue<IReadOnlyDictionary<string, object?>?>());
+            RebuildRows(PropertiesData);
         }
     }
 
@@ -263,11 +276,17 @@ public partial class PropertiesList : UserControl
             return;
         }
 
+        var descriptionHeader = DescriptionRowHeader;
         foreach (var (key, value) in properties)
         {
-            PropertiesRows.Add(new PropertiesRow(key, value?.ToString() ?? string.Empty));
+            var isDescriptionRow = descriptionHeader is not null && string.Equals(key, descriptionHeader, StringComparison.Ordinal);
+            PropertiesRows.Add(new PropertiesRow(key, value?.ToString() ?? string.Empty, isDescriptionRow));
         }
     }
 }
 
-public sealed record PropertiesRow(string Key, string Value);
+/// <summary>
+/// One rendered key/value row. <paramref name="IsDescriptionRow"/> marks the entry's description so its value
+/// cell can host the richer description surface while keeping the plain key/value text.
+/// </summary>
+public sealed record PropertiesRow(string Key, string Value, bool IsDescriptionRow = false);
