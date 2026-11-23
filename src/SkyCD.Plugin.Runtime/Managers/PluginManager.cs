@@ -130,10 +130,12 @@ public sealed class PluginManager(
                 ? null
                 : plugin;
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception)
         {
+            // Plugin binaries are untrusted: a stale assembly can throw binding errors (for example
+            // MissingMethodException) while being inspected, and discovery must stay fail-safe.
             logger.LogWarning(exception,
-                "Skipped assembly '{AssemblyName}' because it does not expose a compatible plugin type.",
+                "Skipped assembly '{AssemblyName}' because it could not be loaded as a compatible plugin.",
                 assembly.FullName);
             return null;
         }
