@@ -873,6 +873,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool IsSaveEnabled => IsDirtyDocument;
 
+    /// <summary>
+    /// Whether at least one loaded file-format plugin can read files. Defaults to enabled so hosts that do
+    /// not report plugin availability keep the commands usable.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenCatalogCommand))]
+    private bool isOpenEnabled = true;
+
+    /// <summary>
+    /// Whether at least one loaded file-format plugin can write files. Defaults to enabled so hosts that do
+    /// not report plugin availability keep the commands usable.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCatalogAsCommand))]
+    private bool isSaveAsEnabled = true;
+
+    /// <summary>Applies the file-format capabilities the host currently has loaded.</summary>
+    public void SetFileFormatAvailability(bool hasReadable, bool hasWritable)
+    {
+        IsOpenEnabled = hasReadable;
+        IsSaveAsEnabled = hasWritable;
+    }
+
     public bool IsDeleteEnabled => CanDeleteItem(null);
 
     [ObservableProperty]
@@ -1260,7 +1283,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         UpdateUndoRedoState();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsOpenEnabled))]
     private void OpenCatalog()
     {
         if (OpenCatalogRequested is not null)
@@ -1342,7 +1365,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IsDirtyDocument = false;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsSaveAsEnabled))]
     private void SaveCatalogAs()
     {
         if (SaveCatalogAsRequested is not null)
@@ -3782,6 +3805,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTopMenuState();
     }
 
+    partial void OnIsOpenEnabledChanged(bool value)
+    {
+        RefreshTopMenuState();
+    }
+
+    partial void OnIsSaveAsEnabledChanged(bool value)
+    {
+        RefreshTopMenuState();
+    }
+
     partial void OnProgressValueChanged(int value)
     {
         OnPropertyChanged(nameof(ProgressText));
@@ -3818,10 +3851,25 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 [
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.New), HotKey = "Ctrl+N", InputGesture = "Ctrl+N", Command = NewCatalogCommand },
                     Separator(),
-                    new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Open), HotKey = "Ctrl+O", InputGesture = "Ctrl+O", Command = OpenCatalogCommand },
+                    new MainMenuItemViewModel
+                    {
+                        Key = "file_open",
+                        Header = LocalizationService.Current.Get(TextKeys.Open),
+                        HotKey = "Ctrl+O",
+                        InputGesture = "Ctrl+O",
+                        Command = OpenCatalogCommand,
+                        IsEnabled = IsOpenEnabled
+                    },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Save), HotKey = "Ctrl+S", InputGesture = "Ctrl+S", Command = SaveCatalogCommand },
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.SaveAs), HotKey = "F12", InputGesture = "F12", Command = SaveCatalogAsCommand },
+                    {
+                        Key = "file_save_as",
+                        Header = LocalizationService.Current.Get(TextKeys.SaveAs),
+                        HotKey = "F12",
+                        InputGesture = "F12",
+                        Command = SaveCatalogAsCommand,
+                        IsEnabled = IsSaveAsEnabled
+                    },
                     Separator(),
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.Properties), HotKey = "Alt+Enter", InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
@@ -4086,6 +4134,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
         SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
+        SetMenuEnabled(byKey, "file_open", IsOpenEnabled);
+        SetMenuEnabled(byKey, "file_save_as", IsSaveAsEnabled);
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 

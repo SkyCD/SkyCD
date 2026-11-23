@@ -200,6 +200,7 @@ public partial class MainWindow : Window
             var appOptions = LoadAppOptions();
             subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
             subscribedViewModel.LoadToolbarLayout(appOptions.Toolbar);
+            PushFileFormatAvailability();
             UpdateWindowTitle();
         }
     }
@@ -2011,32 +2012,40 @@ public partial class MainWindow : Window
                 ServiceProvider.Resolve<IndexWorkItemSequence>(),
                 ServiceProvider.Resolve<IAudioCdMetadataProvider>());
             viewModel.RefreshDescriptionServices(descriptionManager);
+            PushFileFormatAvailability();
         }
     }
 
     private void EnsureFileFormatProvidersLoaded()
     {
-        if (fileFormatManager.GetReadableFormats().Count > 0)
+        if (fileFormatManager.GetReadableFormats().Count == 0)
         {
-            return;
+            SyncPluginRuntimeState();
+            if (fileFormatManager.GetReadableFormats().Count == 0)
+            {
+                var availableDescriptors = pluginManager.GetAvailablePluginIds<IFileFormatPluginCapability>()
+                    .Select(static id => (id, IsEnabled: true))
+                    .ToArray();
+                if (availableDescriptors.Length > 0)
+                {
+                    pluginManager.SavePluginEnabledStates(availableDescriptors);
+                    SyncPluginRuntimeState();
+                }
+            }
         }
 
-        SyncPluginRuntimeState();
-        if (fileFormatManager.GetReadableFormats().Count > 0)
-        {
-            return;
-        }
+        // Pushed after the auto-enable fallback so installed-but-disabled plugins are reflected correctly.
+        PushFileFormatAvailability();
+    }
 
-        var availableDescriptors = pluginManager.GetAvailablePluginIds<IFileFormatPluginCapability>()
-            .Select(static id => (id, IsEnabled: true))
-            .ToArray();
-        if (availableDescriptors.Length == 0)
+    private void PushFileFormatAvailability()
+    {
+        if (DataContext is MainWindowViewModel viewModel)
         {
-            return;
+            viewModel.SetFileFormatAvailability(
+                fileFormatManager.GetOpenFormats().Count > 0,
+                fileFormatManager.GetSaveFormats().Count > 0);
         }
-
-        pluginManager.SavePluginEnabledStates(availableDescriptors);
-        SyncPluginRuntimeState();
     }
 
     private static string ResolvePluginDiscoveryPath(string? configuredPath)

@@ -7,6 +7,7 @@ using Avalonia.Input;
 using SkyCD.App.Converters;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
+using SkyCD.Plugin.Host.Menu;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
@@ -1377,6 +1378,89 @@ public class MainWindowViewModelTests
         Assert.DoesNotContain(
             AllMenuItems(vm),
             item => item.HotKey == "Ctrl+Shift+O" || item.InputGesture == "Ctrl+Shift+O");
+    }
+
+    [Fact]
+    public void FileFormatAvailability_DefaultsToEnabledBeforeHostReports()
+    {
+        var vm = CreateViewModel();
+
+        Assert.True(vm.IsOpenEnabled);
+        Assert.True(vm.IsSaveAsEnabled);
+        Assert.True(vm.OpenCatalogCommand.CanExecute(null));
+        Assert.True(vm.SaveCatalogAsCommand.CanExecute(null));
+        Assert.True(FileMenuItem(vm, vm.OpenCatalogCommand).IsEnabled);
+        Assert.True(FileMenuItem(vm, vm.SaveCatalogAsCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void SetFileFormatAvailability_WithoutReadableOrWritableFormats_DisablesOpenAndSaveAs()
+    {
+        var vm = CreateViewModel();
+
+        vm.SetFileFormatAvailability(hasReadable: false, hasWritable: false);
+
+        Assert.False(vm.OpenCatalogCommand.CanExecute(null));
+        Assert.False(vm.SaveCatalogAsCommand.CanExecute(null));
+        Assert.False(FileMenuItem(vm, vm.OpenCatalogCommand).IsEnabled);
+        Assert.False(FileMenuItem(vm, vm.SaveCatalogAsCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void SetFileFormatAvailability_WithOnlyReadableFormats_DisablesSaveAs()
+    {
+        var vm = CreateViewModel();
+
+        vm.SetFileFormatAvailability(hasReadable: true, hasWritable: false);
+
+        Assert.True(vm.OpenCatalogCommand.CanExecute(null));
+        Assert.False(vm.SaveCatalogAsCommand.CanExecute(null));
+        Assert.True(FileMenuItem(vm, vm.OpenCatalogCommand).IsEnabled);
+        Assert.False(FileMenuItem(vm, vm.SaveCatalogAsCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void SetFileFormatAvailability_WhenFormatsReturn_ReenablesCommandsAndMenuItems()
+    {
+        var vm = CreateViewModel();
+        vm.SetFileFormatAvailability(hasReadable: false, hasWritable: false);
+
+        vm.SetFileFormatAvailability(hasReadable: true, hasWritable: true);
+
+        Assert.True(vm.OpenCatalogCommand.CanExecute(null));
+        Assert.True(vm.SaveCatalogAsCommand.CanExecute(null));
+        Assert.True(FileMenuItem(vm, vm.OpenCatalogCommand).IsEnabled);
+        Assert.True(FileMenuItem(vm, vm.SaveCatalogAsCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void FileFormatAvailability_SurvivesPluginMenuRefresh()
+    {
+        var vm = CreateViewModel();
+        vm.SetFileFormatAvailability(hasReadable: false, hasWritable: false);
+
+        vm.RefreshPluginMenuServices(new MenuExtensionManager([]));
+
+        Assert.False(FileMenuItem(vm, vm.OpenCatalogCommand).IsEnabled);
+        Assert.False(FileMenuItem(vm, vm.SaveCatalogAsCommand).IsEnabled);
+        Assert.False(vm.OpenCatalogCommand.CanExecute(null));
+        Assert.False(vm.SaveCatalogAsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SaveCatalogCommand_IsUnaffectedByFileFormatAvailability()
+    {
+        var vm = CreateViewModel();
+        vm.IsDirtyDocument = true;
+
+        vm.SetFileFormatAvailability(hasReadable: false, hasWritable: false);
+
+        Assert.True(vm.SaveCatalogCommand.CanExecute(null));
+    }
+
+    private static MainMenuItemViewModel FileMenuItem(MainWindowViewModel vm, ICommand command)
+    {
+        return Assert.Single(vm.FileMenuItems, item => ReferenceEquals(item.Command, command));
     }
 
     [Fact]
