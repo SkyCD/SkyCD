@@ -30,3 +30,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+OpenCvSharp
+Copyright (c) 2008-2026 shimat
+Source: https://github.com/shimat/opencvsharp
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+The video metadata plugin decodes poster frames in-process with OpenCvSharp4 4.13.0.20261107 and its
+Windows x64 runtime package:
+https://www.nuget.org/packages/OpenCvSharp4/4.13.0.20261107
+https://www.nuget.org/packages/OpenCvSharp4.runtime.win/4.13.0.20261107
+
+OpenCV
+Copyright (c) 2000-2026 Intel Corporation, 2009-2026 OpenCV contributors
+Source: https://github.com/opencv/opencv
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+OpenCvSharp4.runtime.win bundles the native OpenCV library (OpenCvSharpExtern.dll).
+
+FFmpeg videoio backend (bundled inside OpenCvSharp4.runtime.win)
+Source: https://github.com/FFmpeg/FFmpeg
+License: GNU Lesser General Public License 2.1
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+The Windows runtime package also ships opencv_videoio_ffmpeg4130_64.dll, an LGPL-2.1 build of the
+FFmpeg-based OpenCV video I/O backend. It is loaded dynamically by OpenCV at runtime from the plugin
+folder, is not statically linked into SkyCD, and can be replaced by the operator.
+

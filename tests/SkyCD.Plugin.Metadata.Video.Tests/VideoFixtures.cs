@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using OpenCvSharp;
+using SkyCD.Plugin.Metadata.Video.Parsing;
 
 namespace SkyCD.Plugin.Metadata.Video.Tests;
 
@@ -307,6 +309,73 @@ internal static class VideoFixtures
         LittleEndian((uint)(channels * 2), 2),
         LittleEndian(16u, 2),
         LittleEndian(0u, 2));
+
+    /// <summary>
+    /// A genuinely decodable MJPEG-in-AVI clip. The JPEG frames are encoded at runtime, so the suite still
+    /// commits no binary and the bundled decoder is exercised against a real bitstream rather than headers.
+    /// </summary>
+    internal static byte[] MjpegAvi(int width = 64, int height = 48, int fps = 10, int frames = 5)
+    {
+        if (!OpenCvNativeBootstrap.EnsureLoaded())
+        {
+            throw new InvalidOperationException("The OpenCV native runtime is not available on this platform.");
+        }
+
+        var encodedFrames = new byte[frames][];
+        for (var index = 0; index < frames; index++)
+        {
+            using var image = new Mat(
+                new Size(width, height),
+                MatType.CV_8UC3,
+                new Scalar(20 + (index * 30), 60, 200 - (index * 25)));
+            Cv2.ImEncode(".jpg", image, out var jpeg);
+            encodedFrames[index] = jpeg;
+        }
+
+        var avih = Chunk("avih", Concat(
+            LittleEndian((uint)(1_000_000 / fps)),
+            LittleEndian(0u),
+            LittleEndian(0u),
+            LittleEndian(0x10u),                    // flags: AVIF_HASINDEX
+            LittleEndian((uint)frames),
+            LittleEndian(0u),
+            LittleEndian(1u),                       // streams
+            LittleEndian(0u),
+            LittleEndian((uint)width),
+            LittleEndian((uint)height),
+            new byte[16]));
+
+        var strh = Chunk("strh", Concat(
+            Encoding.ASCII.GetBytes("vids"),
+            Encoding.ASCII.GetBytes("MJPG"),
+            LittleEndian(0u),
+            LittleEndian(0u, 2),
+            LittleEndian(0u, 2),
+            LittleEndian(0u),
+            LittleEndian(1u),                       // scale
+            LittleEndian((uint)fps),                // rate
+            LittleEndian(0u),
+            LittleEndian((uint)frames),
+            LittleEndian(0u),
+            LittleEndian(0xFFFFFFFFu),              // quality
+            LittleEndian(0u),
+            new byte[8]));
+
+        var strf = Chunk("strf", Concat(
+            LittleEndian(40u),
+            LittleEndian((uint)width),
+            LittleEndian((uint)height),
+            LittleEndian(1u, 2),                    // planes
+            LittleEndian(24u, 2),                   // bit count
+            Encoding.ASCII.GetBytes("MJPG"),
+            new byte[20]));
+
+        var hdrl = List("hdrl", Concat(avih, List("strl", Concat(strh, strf))));
+        var movi = List("movi", Concat(encodedFrames.Select(frame => Chunk("00dc", frame)).ToArray()));
+        var body = Concat(Encoding.ASCII.GetBytes("AVI "), hdrl, movi);
+
+        return Concat(Encoding.ASCII.GetBytes("RIFF"), LittleEndian((uint)body.Length), body);
+    }
 
     private static byte[] Chunk(string fourCc, byte[] payload)
     {

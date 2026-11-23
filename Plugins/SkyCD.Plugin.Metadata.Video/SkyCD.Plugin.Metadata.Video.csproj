@@ -9,8 +9,28 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Video Metadata and Poster Frames</AssemblyTitle>
-        <Description>Reads container metadata from MP4, Matroska, WebM and AVI sources, and renders one bounded poster frame through an explicitly configured external decoder when one is available.</Description>
+        <Description>Reads container metadata from MP4, Matroska, WebM and AVI sources, and renders one bounded poster frame in-process with the bundled OpenCV decoder, falling back to an explicitly configured external decoder when one is available.</Description>
     </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="OpenCvSharp4" Version="4.13.0.20261107"/>
+        <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20261107" GeneratePathProperty="true"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!--
+            Plugin assemblies load through Assembly.LoadFrom into the host's default context, so the host's
+            deps.json never lists these native assets. OpenCvSharp probes the calling assembly's directory, so
+            both DLLs must sit next to OpenCvSharp.dll in the plugin output. Linking them as content also
+            flows them to projects and tests that reference this one.
+        -->
+        <None Include="$(PkgOpenCvSharp4_runtime_win)/runtimes/win-x64/native/OpenCvSharpExtern.dll"
+              Link="OpenCvSharpExtern.dll"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+        <None Include="$(PkgOpenCvSharp4_runtime_win)/runtimes/win-x64/native/opencv_videoio_ffmpeg4130_64.dll"
+              Link="opencv_videoio_ffmpeg4130_64.dll"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
     </ItemGroup>
