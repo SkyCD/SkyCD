@@ -81,6 +81,7 @@ public sealed class WorksMetadataPlugin : IMediaMetadataCapability
             return new MediaExtractionResult(values);
         }
         catch (Exception exception) when (exception is WorksDecodeException
+                                              or WorksAuthenticationRequiredException
                                               or WorksSourceTooLargeException
                                               or OperationCanceledException)
         {

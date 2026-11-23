@@ -13,6 +13,9 @@ public static class WorksSchema
     public const string MetadataSchemaId = "skycd.works.metadata";
     public const int MetadataSchemaVersion = 1;
 
+    public const string PreviewSchemaId = "skycd.works.preview";
+    public const int PreviewSchemaVersion = 1;
+
     public const string Container = "Container";
     public const string Storage = "Storage";
     public const string FormatVersion = "FormatVersion";
@@ -71,4 +74,6 @@ public static class WorksSchema
         new MediaMetadataField(WordCount, MediaMetadataType.Integer),
         new MediaMetadataField(CharacterCount, MediaMetadataType.Integer)
     ]);
+
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }
