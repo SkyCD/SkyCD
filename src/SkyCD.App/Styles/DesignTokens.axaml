@@ -1,0 +1,39 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        The single source of spacing, type and control metrics (issue #898).
+        Windows and shared controls reference these keys instead of literals; plugin views
+        rendered inside host surfaces resolve the same application-level resources.
+        Spacing follows a 2/4/8/12/16/24/32 ramp; 2 is the hairline step for dense legacy layouts.
+    -->
+    <x:Double x:Key="SkySpaceXxs">2</x:Double>
+    <x:Double x:Key="SkySpaceXs">4</x:Double>
+    <x:Double x:Key="SkySpaceSm">8</x:Double>
+    <x:Double x:Key="SkySpaceMd">12</x:Double>
+    <x:Double x:Key="SkySpaceLg">16</x:Double>
+    <x:Double x:Key="SkySpaceXl">24</x:Double>
+    <x:Double x:Key="SkySpaceXxl">32</x:Double>
+
+    <Thickness x:Key="SkyWindowPadding">12</Thickness>
+    <Thickness x:Key="SkySectionPadding">12</Thickness>
+    <Thickness x:Key="SkyControlPadding">8,4</Thickness>
+    <Thickness x:Key="SkyInsetXxs">2</Thickness>
+    <Thickness x:Key="SkyInsetXs">4</Thickness>
+    <Thickness x:Key="SkyInsetSm">8</Thickness>
+    <Thickness x:Key="SkyInsetMd">12</Thickness>
+    <Thickness x:Key="SkyInsetLg">16</Thickness>
+
+    <CornerRadius x:Key="SkyCornerRadius">4</CornerRadius>
+    <CornerRadius x:Key="SkyCornerRadiusLarge">8</CornerRadius>
+
+    <!-- Type scale: caption/small, secondary, body, subtitle, title, window title. -->
+    <x:Double x:Key="SkyFontCaption">11</x:Double>
+    <x:Double x:Key="SkyFontSecondary">12</x:Double>
+    <x:Double x:Key="SkyFontBody">14</x:Double>
+    <x:Double x:Key="SkyFontSubtitle">16</x:Double>
+    <x:Double x:Key="SkyFontTitle">20</x:Double>
+    <x:Double x:Key="SkyFontWindowTitle">24</x:Double>
+
+    <!-- Classic Windows look, with the packaged Inter font as the cross-platform fallback. -->
+    <FontFamily x:Key="SkyFontFamily">Segoe UI, Inter</FontFamily>
+</ResourceDictionary>

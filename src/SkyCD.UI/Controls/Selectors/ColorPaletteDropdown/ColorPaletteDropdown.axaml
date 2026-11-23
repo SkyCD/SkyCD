@@ -16,7 +16,7 @@
                     Background="{DynamicResource ThemeBackgroundBrush}"
                     CornerRadius="4"
                     Padding="8,6">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                     <Border Width="16"
                             Height="16"
                             CornerRadius="2"
@@ -45,10 +45,10 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="10">
-                <StackPanel Spacing="10">
+                <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Color}}"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource SkyFontSecondary}"
                                FontWeight="SemiBold" />
                     <Border x:Name="SvSurfaceBorder"
                             Width="200"
@@ -77,7 +77,7 @@
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Hue}}"
                                Margin="0,2,0,0"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource SkyFontSecondary}"
                                FontWeight="SemiBold" />
                     <Border x:Name="HueBarBorder"
                             Width="200"
@@ -105,7 +105,7 @@
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Hex}}"
                                Margin="0,2,0,0"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource SkyFontSecondary}"
                                FontWeight="SemiBold" />
                     <TextBox x:Name="HexTextBox"
                              Width="200"

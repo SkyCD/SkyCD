@@ -11,10 +11,10 @@
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}">
     <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceSm}" Margin="0,10,0,0">
             <TextBlock Text="{Binding StatusText}" Foreground="Gray" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Error}" Foreground="Firebrick" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                 <Button Content="{i18n:Translate {x:Static loans:LoansKeys.NewContact}}"
                         Command="{Binding AddContactCommand}" />
                 <Button Grid.Column="1" Content="{i18n:Translate {x:Static loans:LoansKeys.DeleteContact}}"
@@ -40,9 +40,9 @@
                          AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="loans:ContactListItem">
-                            <StackPanel Spacing="1">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{Binding Name}" />
-                                <TextBlock Text="{Binding DisplayLabel}" FontSize="11" Foreground="Gray" />
+                                <TextBlock Text="{Binding DisplayLabel}" FontSize="{DynamicResource SkyFontCaption}" Foreground="Gray" />
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -52,53 +52,53 @@
             <TabControl Grid.Column="2">
                 <TabItem Header="{i18n:Translate {x:Static loans:LoansKeys.ContactDetails}}">
                     <ScrollViewer Margin="8">
-                        <StackPanel Spacing="6">
-                            <StackPanel Spacing="2">
+                        <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NameLabel}}" />
                                 <TextBox Text="{Binding ContactName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactDisplayName}}" />
                                 <TextBox Text="{Binding ContactDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                             <Grid ColumnDefinitions="*,8,*">
-                                <StackPanel Spacing="2">
+                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactPhone}}" />
                                     <TextBox Text="{Binding ContactPhone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="2">
+                                <StackPanel Grid.Column="2" Spacing="{DynamicResource SkySpaceXxs}">
                                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactFax}}" />
                                     <TextBox Text="{Binding ContactFax, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Grid>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactEmail}}" />
                                 <TextBox Text="{Binding ContactEmail, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactWebPage}}" />
                                 <TextBox Text="{Binding ContactWebPage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactMessenger}}" />
                                 <TextBox Text="{Binding ContactMessenger, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactAddress}}" />
                                 <TextBox Text="{Binding ContactAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          AcceptsReturn="True" TextWrapping="Wrap" Height="54" />
                             </StackPanel>
                             <Grid ColumnDefinitions="*,8,*">
-                                <StackPanel Spacing="2">
+                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactCompany}}" />
                                     <TextBox Text="{Binding ContactCompany, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="2">
+                                <StackPanel Grid.Column="2" Spacing="{DynamicResource SkySpaceXxs}">
                                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.ContactPosition}}" />
                                     <TextBox Text="{Binding ContactPosition, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Grid>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CommentsLabel}}" />
                                 <TextBox Text="{Binding ContactComments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          AcceptsReturn="True" TextWrapping="Wrap" Height="72" />

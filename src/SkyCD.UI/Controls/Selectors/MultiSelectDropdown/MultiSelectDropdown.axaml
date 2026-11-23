@@ -8,7 +8,7 @@
                 CornerRadius="4"
                 Padding="8,6"
                 Height="32">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                 <TextBox x:Name="InlineSearchTextBox"
                          Background="Transparent"
                          BorderThickness="0"
@@ -76,7 +76,7 @@
                                             <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
                                         </Style>
                                     </Border.Styles>
-                                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <CheckBox IsChecked="{Binding IsSelected}"
                                                   AutomationProperties.Name="{Binding Label}"
                                                   PointerPressed="OnItemCheckBoxPointerPressed"
@@ -123,7 +123,7 @@
                                             <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
                                         </Style>
                                     </Border.Styles>
-                                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <CheckBox IsChecked="{Binding $parent[ListBoxItem].IsSelected, Mode=OneWay}"
                                                   IsHitTestVisible="False"
                                                   VerticalAlignment="Center" />

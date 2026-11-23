@@ -6,21 +6,27 @@
     <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Resources>
-        <!-- The packaged IconPacks theme was compiled against an older Avalonia binding API. -->
-        <ControlTheme x:Key="{x:Type iconPacks:PackIconControl}" TargetType="iconPacks:PackIconControl">
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Path Data="{TemplateBinding Data}"
-                          Fill="{TemplateBinding Foreground}"
-                          Stretch="Uniform"
-                          UseLayoutRounding="False" />
-                </ControlTemplate>
-            </Setter>
-        </ControlTheme>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SkyCD.App/Styles/DesignTokens.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <!-- The packaged IconPacks theme was compiled against an older Avalonia binding API. -->
+            <ControlTheme x:Key="{x:Type iconPacks:PackIconControl}" TargetType="iconPacks:PackIconControl">
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Path Data="{TemplateBinding Data}"
+                              Fill="{TemplateBinding Foreground}"
+                              Stretch="Uniform"
+                              UseLayoutRounding="False" />
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+        </ResourceDictionary>
     </Application.Resources>
 
     <Application.Styles>
         <SimpleTheme />
+        <StyleInclude Source="avares://SkyCD.App/Styles/GlobalStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/TabControlStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/IconStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/ButtonStyles.axaml" />
