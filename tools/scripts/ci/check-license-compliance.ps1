@@ -36,6 +36,57 @@ foreach ($id in $policy.blockedLicenseIds) { [void]$blocked.Add([string]$id) }
 $allowedUnknownPackages = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 foreach ($pkg in @($policy.allowedUnknownLicensePackages)) { [void]$allowedUnknownPackages.Add([string]$pkg) }
 
+# Weak/file-scoped copyleft licenses may be used only for an exact package version that the
+# policy lists explicitly. Strong copyleft is never eligible, even if listed by mistake.
+$conditionalLicenses = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+foreach ($id in @($policy.conditionalLicenseIds)) {
+    $licenseId = [string]$id
+    if ([string]::IsNullOrWhiteSpace($licenseId)) { continue }
+
+    if ($licenseId -match '^(A?GPL|SSPL)-' -or $licenseId -match '^CC-BY-NC') {
+        throw "Conditional license '$licenseId' belongs to a strong-copyleft or noncommercial family and cannot be allowed by condition."
+    }
+
+    $verdict = $matrix.inboundLicenses.PSObject.Properties[$licenseId].Value
+    if (-not $blocked.Contains($licenseId) -and $verdict -ne "No") {
+        throw "Conditional license '$licenseId' must be a known license that the compatibility matrix marks 'No' or that is explicitly blocked."
+    }
+
+    [void]$conditionalLicenses.Add($licenseId)
+}
+
+$conditionalAllowances = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+foreach ($allowance in @($policy.allowedWithConditions)) {
+    $packageName = [string]$allowance.package
+    $packageVersion = [string]$allowance.version
+    $licenseId = [string]$allowance.licenseId
+
+    if ([string]::IsNullOrWhiteSpace($packageName) -or [string]::IsNullOrWhiteSpace($packageVersion) -or [string]::IsNullOrWhiteSpace($licenseId)) {
+        throw "Conditional allowance entries require package, version and licenseId."
+    }
+
+    $verdict = $matrix.inboundLicenses.PSObject.Properties[$licenseId].Value
+    if (-not $blocked.Contains($licenseId) -and $verdict -ne "No") {
+        throw "Conditional allowance for '$packageName' uses '$licenseId', which is not a conditional license that the matrix marks 'No' or that is explicitly blocked."
+    }
+
+    if (-not $conditionalLicenses.Contains($licenseId)) {
+        throw "Conditional allowance for '$packageName' uses '$licenseId', which is not listed in conditionalLicenseIds."
+    }
+
+    if (@($allowance.conditions | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -eq 0) {
+        throw "Conditional allowance for '$packageName' '$packageVersion' must record the conditions it relies on."
+    }
+
+    if ([string]::IsNullOrWhiteSpace([string]$allowance.approvalIssue)) {
+        throw "Conditional allowance for '$packageName' '$packageVersion' must record the approval issue."
+    }
+
+    if (-not $conditionalAllowances.Add("$packageName|$packageVersion|$licenseId")) {
+        throw "Duplicate conditional allowance for '$packageName' '$packageVersion' '$licenseId'."
+    }
+}
+
 function Resolve-LicenseTokens {
     param([string]$LicenseValue)
 
@@ -57,6 +108,8 @@ $nonCompliant = @()
 $components = @($sbom.components)
 foreach ($component in $components) {
     $licenseValues = @()
+    $componentName = [string]$component.name
+    $componentVersion = [string]$component.version
 
     foreach ($licenseEntry in @($component.licenses)) {
         if ($null -ne $licenseEntry.license.id) {
@@ -86,6 +139,7 @@ foreach ($component in $components) {
 
     $status = "Compliant"
     $reasons = @()
+    $conditionalMatch = $false
 
     if ($licenseValues.Count -eq 0) {
         $status = "Unknown"
@@ -105,6 +159,12 @@ foreach ($component in $components) {
 
         foreach ($token in $allTokens) {
             $compatibility = $matrix.inboundLicenses.PSObject.Properties[$token].Value
+            if ($conditionalLicenses.Contains($token) -and $conditionalAllowances.Contains("$componentName|$componentVersion|$token")) {
+                $conditionalMatch = $true
+                $reasons += "Conditional allowance for '$token' in '$componentName' '$componentVersion'."
+                continue
+            }
+
             if ($blocked.Contains($token)) {
                 $status = "Blocked"
                 $reasons += "Blocked license '$token'."
@@ -125,6 +185,10 @@ foreach ($component in $components) {
                 $reasons += "Compatibility with '$($policy.projectLicenseId)' could not be determined for '$token'."
             }
         }
+    }
+
+    if ($status -eq "Compliant" -and $conditionalMatch) {
+        $status = "CompliantByCondition"
     }
 
     $item = [PSCustomObject]@{
