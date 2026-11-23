@@ -1,22 +1,24 @@
 # Markdown document metadata plugin
 
-Implements #738 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
+Implements #738 and #951 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.Markdown/` → plugin id `SkyCD.Plugin.Metadata.Markdown`.
 Tests: `tests/SkyCD.Plugin.Metadata.Markdown.Tests/`.
 
 This plugin is separate from `SkyCD.Plugin.FileFormat.Markdown`, which writes catalog exports and is write-only for
-reading. The metadata plugin claims only `.md`, `.markdown`, `.mdown` and `.mkd`
-(`text/markdown`, `text/x-markdown`), so a Markdown file is never also routed through the plain-text reader.
+reading. The plugin claims only `.md`, `.markdown`, `.mdown` and `.mkd`
+(`text/markdown`, `text/x-markdown`). The text plugin claims the same extensions and provides the readable
+pane excerpt; the priority described under "Rendered page thumbnail" decides which page image wins.
 
 ## What it provides
 
 | Capability | Type | Schema |
 |---|---|---|
 | Metadata, structure and bounded text | `MarkdownMetadataPlugin : IMediaMetadataCapability` | `skycd.markdown.metadata` v1 |
+| Rendered page thumbnail | `MarkdownPreviewPlugin : IMediaPreviewCapability` | `skycd.markdown.preview` v1 |
 
 Discovery uses assembly metadata and implemented capability types only. There is no `plugin.json`, and a
-test asserts none exists.
+test asserts none exists. Both capabilities live in the same assembly and are discovered independently.
 
 ## Metadata schema
 
@@ -74,6 +76,31 @@ The excerpt is bounded by characters (`MaxTextExcerptCharacters`, 4096). `TextEx
 whether the bound cut the text short, because truncation changes what search can find: a term past the bound
 is genuinely absent from the stored data, not absent from the document.
 
+## Rendered page thumbnail
+
+`MarkdownPreviewPlugin` draws the leading content of the document as an A-series page and publishes exactly
+one `image/png` artifact. The page is not a rendering of the source: no HTML is produced and nothing is
+executed. Top-level blocks are walked in document order and their visible text is drawn — headings larger
+and bold, paragraphs, list items, block quotes and code blocks as normal text. Front matter is not drawn,
+because it is metadata rather than page content. HTML blocks and thematic breaks contribute nothing.
+
+The page width is `MaxThumbnailDimension` (768) and the height follows the A-series ratio; the margin is a
+twelfth of the width, the body font a fortieth, and drawing stops at the bottom margin. The lines handed to
+the renderer are bounded by `MaxRenderedBlocks` (200) and `MaxRenderedCharacters` (6000), so even a huge
+document costs a bounded parse-to-page step.
+
+The Markdown image must win the list thumbnail without taking over the preview pane. The text plugin also
+claims `.md` and publishes `text/plain` plus its own page image. The Markdown descriptor therefore carries
+`Priority: 10` against the text plugin's default `0`: the host already prefers a text artifact for the pane,
+so the pane keeps the readable excerpt while the higher-priority record supplies the list thumbnail.
+
+There is no failure path for an undrawable document. A missing rasterizer, a surface or font that cannot be
+created, an empty or whitespace-only source, a front-matter-only document, or a source already larger than
+`MaxSourceBytes` all produce **no preview artifact** instead of an error, and an oversized source is
+rejected before a byte is charged. The capability leaves `IndexTimePreview` at its default, like the other
+page renderers, so a metadata-only indexing pass does not rasterize documents; the page is produced when a
+capture pass requests previews.
+
 ## No scripts, no external references
 
 Two structural guarantees rather than a policy promise:
@@ -106,10 +133,11 @@ after parsing and before the excerpt is assembled.
 |---|---|---|---|
 | `Markdig` | 1.6.0 | BSD-2-Clause | CommonMark/GFM parsing, syntax tree and plain-text rendering |
 | `YamlDotNet` | 18.1.0 | MIT | Safe representation-model reading of the front matter block |
+| `SkiaSharp` + `NativeAssets.Linux` / `macOS` / `Win32` | 3.119.4 | MIT | Layout and PNG encoding of the page thumbnail |
 
-Both pass the Trivy license gate in `docs/legal/dependency-policy.md`. YamlDotNet 18.1.0 is already
+All pass the Trivy license gate in `docs/legal/dependency-policy.md`. YamlDotNet 18.1.0 is already
 used by the YAML plugin and the UI; Markdig is new, has no dependencies on `net10.0`, and is actively
-maintained.
+maintained. SkiaSharp is the same package set, at the same version, as the RTF and Text preview plugins.
 
 ## Limitations
 
@@ -119,8 +147,8 @@ maintained.
   value is not parseable.
 - Word and character counts describe the rendered plain text, not the raw source, so markup syntax is not
   counted.
-- There is no thumbnail: Markdown has no fixed page geometry to rasterize, and this issue's scope is
-  metadata collection.
+- The thumbnail is a reflowed page of the leading content, not a faithful page layout: tables render as
+  their cell text and nested lists lose their indentation.
 - A Markdown file with no front matter has no `FrontMatterValid` value at all; the absence of that field is
   the "no front matter" state, while `HasFrontMatter = false` states it explicitly.
 
@@ -136,3 +164,11 @@ Coverage includes every front matter field and its aliases; omitted fields when 
 with the body preserved; exact truncation assertion; zero counts for a textless document; schema conformance
 of every returned value; source bytes unchanged; the read budget charged exactly once; host provider
 selection, budget and failure isolation; and assembly discovery without a manifest.
+
+The preview capability is covered by `MarkdownPreviewPluginTests`: descriptor claims and schema identity,
+a real decoded PNG at the configured width, empty and front-matter-only documents producing no artifact, the
+parsed lines (headings flagged, front matter excluded) handed to a stub renderer, an unavailable renderer
+producing nothing, an oversized source charged nothing, and cancellation before the first read. The host
+integration tests assert that a document produces both the metadata record and the preview record with one
+`image/png` artifact, and that a textless document still has its metadata but no preview artifacts. The
+Markdown-versus-Text thumbnail selection is covered in `MediaPreviewBrowsingIntegrationTests`.

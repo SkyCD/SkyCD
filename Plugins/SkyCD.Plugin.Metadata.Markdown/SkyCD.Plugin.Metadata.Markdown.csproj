@@ -8,6 +8,13 @@
         <!-- MIT: reads the YAML front matter block that Markdown documents commonly use. -->
         <PackageReference Include="YamlDotNet" Version="18.1.0"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: renders the leading document content to a page thumbnail. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
@@ -15,7 +22,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Markdown Document Metadata</AssemblyTitle>
-        <Description>Reads YAML front matter and the document structure of Markdown files, and publishes a bounded plain-text excerpt. The source is never modified and external references are never followed.</Description>
+        <Description>Reads YAML front matter and the document structure of Markdown files, publishes a bounded plain-text excerpt, and renders the leading content as a page thumbnail. The source is never modified, markup is never interpreted as code, and external references are never followed.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

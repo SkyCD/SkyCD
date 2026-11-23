@@ -352,6 +352,39 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void MarkdownPage_WinsTheListThumbnail_WhileTheTextExcerptStaysInThePane()
+    {
+        var entry = NotesEntry();
+        using var database = OpenDatabase();
+        using var store = MediaCacheStore.Create(database);
+        var excerpt = Encoding.UTF8.GetBytes("readable markdown excerpt");
+        var page = SmallPngBytes();
+
+        // Both plugins claim .md: the text plugin publishes text/plain plus its own page at the default
+        // priority, the Markdown plugin publishes a page at a higher priority.
+        SaveArtifactRecord(store, entry.Id, MediaCacheRecordState.Captured, "SkyCD.Plugin.Text", "1.0.0",
+        [
+            new MediaPreviewArtifact("text/plain", excerpt),
+            new MediaPreviewArtifact("image/png", page)
+        ], priority: 0);
+        SaveArtifactRecord(store, entry.Id, MediaCacheRecordState.Captured, "SkyCD.Plugin.Markdown.Metadata",
+            "1.0.0", [new MediaPreviewArtifact("image/png", page)], priority: 10);
+
+        var resolver = new MediaPreviewResolver(store);
+
+        var pane = resolver.Resolve(entry);
+        Assert.Equal(PreviewPayloadKind.Text, pane.PayloadKind);
+        Assert.Equal("SkyCD.Plugin.Text", pane.ProviderId);
+        Assert.Equal("readable markdown excerpt", pane.TextPreview);
+
+        var thumbnail = resolver.ResolveThumbnail(entry);
+        Assert.NotNull(thumbnail);
+        Assert.Equal(PreviewPayloadKind.Image, thumbnail!.PayloadKind);
+        Assert.Equal("SkyCD.Plugin.Markdown.Metadata", thumbnail.ProviderId);
+        Assert.Equal("image/png", thumbnail.Artifact!.ContentType);
+    }
+
+    [Fact]
     public void ImageOnlyRecord_ResolvesTheSameArtifactForThePaneAndTheList()
     {
         var entry = AudioEntry();
@@ -653,7 +686,8 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
         MediaCacheRecordState state,
         string pluginId,
         string pluginVersion,
-        IReadOnlyList<MediaPreviewArtifact> artifacts)
+        IReadOnlyList<MediaPreviewArtifact> artifacts,
+        int priority = 0)
     {
         var payloads = new Dictionary<string, byte[]>();
         var references = new List<MediaArtifactReference>();
@@ -682,6 +716,7 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
             Capability = "Preview",
             SchemaId = "fake.preview",
             SchemaVersion = 1,
+            Priority = priority,
             State = state,
             CapturedAtUtc = DateTimeOffset.UtcNow,
             LastUsedAtUtc = DateTimeOffset.UtcNow,
