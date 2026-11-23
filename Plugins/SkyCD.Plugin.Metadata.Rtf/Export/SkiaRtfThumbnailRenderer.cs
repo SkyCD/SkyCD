@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
 using SkyCD.Formatting.Rtf;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.Rtf.Export;
 
@@ -17,9 +17,6 @@ namespace SkyCD.Plugin.Metadata.Rtf.Export;
 /// </remarks>
 public sealed class SkiaRtfThumbnailRenderer : IRtfThumbnailRenderer
 {
-    private const float PageAspect = 1.4142f;
-    private const string FontFamily = "sans-serif";
-
     public bool IsAvailable => true;
 
     public Task<byte[]?> RenderAsync(
@@ -53,239 +50,91 @@ public sealed class SkiaRtfThumbnailRenderer : IRtfThumbnailRenderer
         int maxCharacters,
         CancellationToken cancellationToken)
     {
-        var width = maxDimension;
-        var height = (int)Math.Round(width * PageAspect);
-        if (height <= 0)
+        using var page = SkiaPageRenderer.TryCreate(maxDimension);
+        if (page is null)
         {
             return null;
         }
 
-        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        using var surface = SKSurface.Create(info);
-        if (surface is null)
+        var regularFont = page.GetFont(SKFontStyle.Normal);
+        var boldFont = page.GetFont(SKFontStyle.Bold);
+        var italicFont = page.GetFont(SKFontStyle.Italic);
+        var boldItalicFont = page.GetFont(SKFontStyle.BoldItalic);
+
+        var finished = false;
+
+        SKFont SelectFont(RichTextSpan span) => span switch
         {
-            return null;
+            { Bold: true, Italic: true } => boldItalicFont,
+            { Bold: true } => boldFont,
+            { Italic: true } => italicFont,
+            _ => regularFont
+        };
+
+        bool DrawToken(string token, SKFont font, RichTextSpan? style)
+        {
+            var drawn = page.TryDrawToken(
+                font,
+                token,
+                maxCharacters: maxCharacters,
+                underline: style?.Underline == true,
+                strikeout: style?.Strikeout == true);
+            finished = !drawn;
+            return drawn;
         }
-
-        var faces = new List<SKTypeface>();
-        try
+        foreach (var paragraph in document.Paragraphs)
         {
-            var regularFace = SKTypeface.FromFamilyName(FontFamily, SKFontStyle.Normal);
-            if (regularFace is null)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (finished)
             {
-                return null;
+                break;
             }
 
-            faces.Add(regularFace);
-            var boldFace = CreateFace(faces, SKFontStyle.Bold) ?? regularFace;
-            var italicFace = CreateFace(faces, SKFontStyle.Italic) ?? regularFace;
-            var boldItalicFace = CreateFace(faces, SKFontStyle.BoldItalic) ?? regularFace;
-
-            var fontSize = Math.Max(8f, width / 40f);
-            var lineHeight = fontSize * 1.35f;
-            var margin = Math.Max(8f, width / 12f);
-
-            using var regularFont = new SKFont(regularFace, fontSize);
-            using var boldFont = new SKFont(boldFace, fontSize);
-            using var italicFont = new SKFont(italicFace, fontSize);
-            using var boldItalicFont = new SKFont(boldItalicFace, fontSize);
-            using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-            using var linePaint = new SKPaint
+            if (paragraph.IsBullet && !DrawToken("• ", regularFont, null))
             {
-                Color = SKColors.Black,
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = Math.Max(1f, fontSize / 18f),
-                IsAntialias = true
-            };
-
-            var canvas = surface.Canvas;
-            canvas.Clear(SKColors.White);
-
-            var left = margin;
-            var right = width - margin;
-            var x = left;
-            var baseline = margin + fontSize;
-            var drawn = 0;
-            var finished = false;
-
-            void NewLine()
-            {
-                x = left;
-                baseline += lineHeight;
-                if (baseline > height - margin)
-                {
-                    finished = true;
-                }
+                break;
             }
 
-            bool DrawToken(string token, SKFont font, RichTextSpan? style)
+            foreach (var span in paragraph.Spans)
             {
-                if (finished)
-                {
-                    return false;
-                }
+                var font = SelectFont(span);
+                var spanText = span.Text.Replace("\t", "    ", StringComparison.Ordinal);
 
-                var tokenWidth = font.MeasureText(token);
-                if (x > left && x + tokenWidth > right)
+                foreach (var token in SkiaPageText.TokenizePreservingNewlines(spanText))
                 {
-                    NewLine();
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                if (finished)
-                {
-                    return false;
-                }
-
-                if (!IsWhitespace(token))
-                {
-                    canvas.DrawText(token, x, baseline, font, paint);
-
-                    if (style?.Underline == true)
+                    if (token == "\n")
                     {
-                        canvas.DrawLine(x, baseline + fontSize * 0.15f, x + tokenWidth,
-                            baseline + fontSize * 0.15f, linePaint);
-                    }
-
-                    if (style?.Strikeout == true)
-                    {
-                        canvas.DrawLine(x, baseline - fontSize * 0.3f, x + tokenWidth,
-                            baseline - fontSize * 0.3f, linePaint);
-                    }
-                }
-
-                x += tokenWidth;
-                drawn += token.Length;
-                return drawn < maxCharacters;
-            }
-
-            SKFont SelectFont(RichTextSpan span) => span switch
-            {
-                { Bold: true, Italic: true } => boldItalicFont,
-                { Bold: true } => boldFont,
-                { Italic: true } => italicFont,
-                _ => regularFont
-            };
-
-            foreach (var paragraph in document.Paragraphs)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (finished)
-                {
-                    break;
-                }
-
-                if (paragraph.IsBullet && !DrawToken("• ", regularFont, null))
-                {
-                    finished = true;
-                    break;
-                }
-
-                foreach (var span in paragraph.Spans)
-                {
-                    var font = SelectFont(span);
-                    var spanText = span.Text.Replace("\t", "    ", StringComparison.Ordinal);
-
-                    foreach (var token in Tokenize(spanText))
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        if (token == "\n")
+                        page.AdvanceLine();
+                        finished = page.IsFinished;
+                        if (finished)
                         {
-                            NewLine();
-                            if (finished)
-                            {
-                                break;
-                            }
-
-                            continue;
-                        }
-
-                        if (!DrawToken(token, font, span))
-                        {
-                            finished = true;
                             break;
                         }
+
+                        continue;
                     }
 
-                    if (finished)
+                    if (!DrawToken(token, font, span))
                     {
                         break;
                     }
                 }
 
-                if (!finished)
+                if (finished)
                 {
-                    NewLine();
+                    break;
                 }
             }
 
-            if (drawn == 0)
+            if (!finished)
             {
-                return null;
-            }
-
-            using var image = surface.Snapshot();
-            using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
-            return encoded?.ToArray();
-        }
-        finally
-        {
-            foreach (var face in faces)
-            {
-                face.Dispose();
-            }
-        }
-    }
-
-    private static SKTypeface? CreateFace(List<SKTypeface> faces, SKFontStyle style)
-    {
-        var face = SKTypeface.FromFamilyName(FontFamily, style);
-        if (face is not null)
-        {
-            faces.Add(face);
-        }
-
-        return face;
-    }
-
-    private static bool IsWhitespace(string token)
-    {
-        foreach (var ch in token)
-        {
-            if (!char.IsWhiteSpace(ch))
-            {
-                return false;
+                page.AdvanceLine();
+                finished = page.IsFinished;
             }
         }
 
-        return token.Length > 0;
-    }
-
-    private static List<string> Tokenize(string text)
-    {
-        var tokens = new List<string>();
-        var index = 0;
-
-        while (index < text.Length)
-        {
-            if (text[index] == '\n')
-            {
-                tokens.Add("\n");
-                index++;
-                continue;
-            }
-
-            var start = index;
-            var whitespace = char.IsWhiteSpace(text[index]);
-            while (index < text.Length && text[index] != '\n' &&
-                   char.IsWhiteSpace(text[index]) == whitespace)
-            {
-                index++;
-            }
-
-            tokens.Add(text[start..index]);
-        }
-
-        return tokens;
+        return page.EncodePng();
     }
 }
