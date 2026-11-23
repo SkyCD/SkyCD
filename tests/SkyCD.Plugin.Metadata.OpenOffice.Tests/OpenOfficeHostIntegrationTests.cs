@@ -17,7 +17,8 @@ namespace SkyCD.Plugin.Metadata.OpenOffice.Tests;
 
 /// <summary>
 /// End-to-end coverage inside the host pipeline: extension and content-type matching, provider selection,
-/// failure classification, assembly discovery without a manifest, and the metadata the catalog cache stores.
+/// failure classification, assembly discovery without a manifest, the metadata the catalog cache stores and
+/// the preview artifacts the preview capability publishes next to it.
 /// </summary>
 public sealed class OpenOfficeHostIntegrationTests
 {
@@ -135,14 +136,135 @@ public sealed class OpenOfficeHostIntegrationTests
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsTheMetadataCapabilityWithoutAManifest()
+    public async Task StandardPass_WithThePreviewProvider_PublishesMetadataAndTheThumbnail()
+    {
+        var document = OpenOfficeFixtures.OdfDocumentWithThumbnail();
+        var manager = CreateManager(includePreview: true);
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".odt", null, document.Length),
+            Open(document),
+            selection: MediaProviderSelection.Standard);
+
+        var metadata = Assert.Single(results, result => result.Metadata is not null);
+        Assert.False(metadata.Failed);
+        Assert.Contains(metadata.Metadata!.Values,
+            value => value.Key == OpenOfficeSchema.Title && value.Text == "Annual Report");
+
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        var artifact = Assert.Single(preview.Preview!.Artifacts);
+        Assert.Equal("image/png", artifact.ContentType);
+        Assert.Equal(0x89, artifact.Data.Span[0]);
+    }
+
+    [Fact]
+    public async Task LegacyPackage_WithThePreviewProvider_PublishesMetadataAndTheThumbnail()
+    {
+        var document = OpenOfficeFixtures.LegacyDocumentWithThumbnail();
+        var manager = CreateManager(includePreview: true);
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".sxw", null, document.Length),
+            Open(document),
+            selection: MediaProviderSelection.Standard);
+
+        Assert.False(Assert.Single(results, result => result.Metadata is not null).Failed);
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Equal("image/png", Assert.Single(preview.Preview!.Artifacts).ContentType);
+    }
+
+    [Fact]
+    public async Task MissingThumbnail_KeepsTheMetadataAndYieldsNoPreview()
+    {
+        var document = OpenOfficeFixtures.OdfDocument();
+        var manager = CreateManager(includePreview: true);
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".odt", null, document.Length),
+            Open(document),
+            selection: MediaProviderSelection.Standard);
+
+        Assert.False(Assert.Single(results, result => result.Metadata is not null).Failed);
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+    }
+
+    [Fact]
+    public async Task UnreadableThumbnail_KeepsTheMetadataAndYieldsNoPreview()
+    {
+        var document = OpenOfficeFixtures.OdfDocumentWithThumbnail(
+        [
+            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, (byte)'J', (byte)'F', (byte)'I', (byte)'F', 0x00
+        ]);
+        var manager = CreateManager(includePreview: true);
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".odt", null, document.Length),
+            Open(document),
+            selection: MediaProviderSelection.Standard);
+
+        Assert.False(Assert.Single(results, result => result.Metadata is not null).Failed);
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+    }
+
+    [Fact]
+    public async Task ProtectedPackage_FailsMetadataWithoutAnExceptionAndYieldsNoPreview()
+    {
+        var document = OpenOfficeFixtures.OdfDocument(
+            includeMetadata: false,
+            manifestXml: OpenOfficeFixtures.Manifest(true));
+        var manager = CreateManager(includePreview: true);
+
+        var results = await manager.ProcessAsync(
+            new MediaItem(".odt", null, document.Length),
+            Open(document),
+            selection: MediaProviderSelection.Standard);
+
+        var metadata = Assert.Single(results,
+            result => result.Capability == typeof(OpenOfficeMetadataPlugin).FullName);
+        Assert.True(metadata.Failed);
+        Assert.Null(metadata.Metadata);
+
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+    }
+
+    [Fact]
+    public async Task Scheduler_StoresTheThumbnailNextToTheMetadata()
+    {
+        var document = OpenOfficeFixtures.OdfDocumentWithThumbnail();
+        var entry = CreateEntry(document);
+        using var store = new InMemoryMediaCacheStore();
+        var scheduler = new MediaExtractionScheduler(CreateManager(includePreview: true), store);
+
+        var outcome = await scheduler.ProcessAsync(MediaExtractionRequest.ForCatalogEntry(
+            entry,
+            Open(document),
+            new[] { entry }));
+
+        Assert.True(outcome.Published);
+
+        var records = store.GetRecordsForEntry(entry.Id);
+        Assert.Contains(records, record => record.SchemaId == OpenOfficeSchema.MetadataSchemaId);
+        Assert.Contains(records, record => record.SchemaId == OpenOfficeSchema.PreviewSchemaId);
+    }
+
+    [Fact]
+    public void AssemblyDiscovery_FindsTheCapabilitiesWithoutAManifest()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(OpenOfficeMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
         Assert.Equal("OpenOffice Document Metadata", plugin.Name);
-        var capability = Assert.Single(plugin.Capabilities);
-        Assert.IsType<OpenOfficeMetadataPlugin>(capability);
+        Assert.Contains(plugin.Capabilities, capability => capability is OpenOfficeMetadataPlugin);
+        Assert.Contains(plugin.Capabilities, capability => capability is OpenOfficePreviewPlugin);
+        Assert.Equal(2, plugin.Capabilities.Count);
     }
 
     [Fact]
@@ -154,8 +276,13 @@ public sealed class OpenOfficeHostIntegrationTests
         Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
-    private static MediaExtensionManager CreateManager() =>
-        new(new[] { new MediaProvider(PluginId, "1.0.0", new OpenOfficeMetadataPlugin()) });
+    private static MediaExtensionManager CreateManager(bool includePreview = false) =>
+        new(includePreview
+            ? [
+                new MediaProvider(PluginId, "1.0.0", new OpenOfficeMetadataPlugin()),
+                new MediaProvider(PluginId, "1.0.0", new OpenOfficePreviewPlugin())
+            ]
+            : [new MediaProvider(PluginId, "1.0.0", new OpenOfficeMetadataPlugin())]);
 
     private static Func<CancellationToken, Task<Stream>> Open(byte[] document) =>
         _ => Task.FromResult<Stream>(new MemoryStream(document, writable: false));

@@ -1,6 +1,7 @@
 # OpenOffice document metadata plugin
 
-Implements #734 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
+Implements #734 and the embedded thumbnail preview from #946 on the capability contracts from #435
+(`docs/plugins/media-capabilities.md`).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.OpenOffice/` → plugin id `SkyCD.Plugin.Metadata.OpenOffice`.
 Tests: `tests/SkyCD.Plugin.Metadata.OpenOffice.Tests/`.
@@ -14,6 +15,7 @@ another metadata reader.
 | Capability | Type | Schema |
 |---|---|---|
 | Document metadata | `OpenOfficeMetadataPlugin : IMediaMetadataCapability` | `skycd.openoffice.metadata` v1 |
+| Thumbnail preview | `OpenOfficePreviewPlugin : IMediaPreviewCapability` | `skycd.openoffice.preview` v1 |
 
 Discovery uses assembly metadata and implemented capability types only. There is no `plugin.json`, and a test
 asserts none exists.
@@ -72,6 +74,23 @@ Dates are XML Schema `dateTime` values. A value with a UTC offset keeps that off
 published as a nominal time with a zero offset rather than being shifted by the machine's current time zone,
 so the same file always yields the same value. A date or duration that cannot be parsed is omitted.
 
+## Thumbnail preview
+
+The preview capability copies the picture the package already embeds; it renders nothing. Schema
+`skycd.openoffice.preview` version 1 carries identity only, and the descriptor claims the same extensions and
+MIME types as the metadata capability, so every supported package also matches the preview.
+
+- **Both package generations:** OpenOffice and LibreOffice write the preview as
+  `Thumbnails/thumbnail.png` inside the ZIP container, and the member name is matched case-insensitively.
+  Those bytes are published as a single `image/png` artifact after the PNG signature and the IHDR chunk are
+  checked and both edges are inside `MaxPreviewDimension` (1024 px).
+- **Explicit "no preview":** a missing member, a protected package, a picture that is not a readable PNG, a
+  member above `MaxPreviewBytes` (4 MiB) and a damaged container all return an empty artifact list, which the
+  host records as "no preview". The preview capability never throws for such input, so the metadata
+  capability's result is not put at risk.
+- **Protected packages:** when the manifest declares encrypted content anywhere, the preview is skipped
+  because the issue requires protected documents to stay preview-free. Nothing is decrypted either way.
+
 ## Missing, damaged and protected packages
 
 A readable package without `meta.xml` still publishes `Container`, `DocumentType` and `IsEncrypted`, so a
@@ -93,17 +112,18 @@ logged, or used to decrypt anything**, and the plugin does not implement the pac
 ## Resource behaviour
 
 `OpenOfficeSourceReader` reads the source once into a buffer in 256 KiB chunks, so the host's budget charge
-equals the source size, once; tests assert both the single read and the exact charge. Only three package
-members are ever opened: `mimetype`, `META-INF/manifest.xml` and `meta.xml`. Each is read into memory with a
-bound checked on the bytes actually decompressed, so a member that declares a small size but expands beyond
-the bound is refused instead of materialised. The plugin only ever holds bytes and never a path, so a package
-that references another file has no way to make it open that file.
+equals the source size, once; tests assert both the single read and the exact charge. Only four package
+members are ever opened: `mimetype`, `META-INF/manifest.xml`, `meta.xml` and `Thumbnails/thumbnail.png`. Each
+is read into memory with a bound checked on the bytes actually decompressed, so a member that declares a small
+size but expands beyond the bound is refused instead of materialised. The plugin only ever holds bytes and
+never a path, so a package that references another file has no way to make it open that file.
 
 XML parsing disables DTD processing, supplies no resolver and caps the characters in the document, so a
 DOCTYPE, an external entity or a small highly compressed member cannot pull in a file or expand without limit.
 
 `MaxSourceBytes` (64 MiB, above the host's 16 MiB default) rejects oversized sources before a byte is charged.
-`MaxMetadataBytes` (1 MiB) bounds each XML member. An empty source, cancellation before the first read and
+`MaxMetadataBytes` (1 MiB) bounds each XML member, `MaxPreviewBytes` (4 MiB) bounds the embedded thumbnail and
+`MaxPreviewDimension` (1024 px) bounds its edges. An empty source, cancellation before the first read and
 cancellation after reading all charge only what was actually read. Cancellation is checked before the first
 read, between chunks and between parsing steps.
 
@@ -128,7 +148,8 @@ reference. No third-party code is linked, bundled or copied.
 
 ## Limitations
 
-- Only `meta.xml` is read. Document text, styles, embedded objects, thumbnails and the document body are out of
+- Only `meta.xml` is read for metadata; the preview capability additionally copies the package's
+  `Thumbnails/thumbnail.png` member. Document text, styles, embedded objects and the document body are out of
   scope; this plugin does not render or extract content.
 - Only the nine `meta:document-statistic` attributes listed above are published. Other statistics and
   `meta:user-defined` fields are not, because the schema is a fixed cached-data contract.
@@ -154,5 +175,8 @@ precedence, omission of blank, invalid and negative values, offset and offsetles
 durations, zero statistics, container and document-type resolution from MIME type and extension, encrypted
 and damaged classification, empty and oversized inputs with zero bytes charged, cancellation, the exact
 budget charge and read count, the host's extension and content-type matching, standard and opt-in selection,
-failure classification, assembly discovery without a manifest, and storage through the real scheduler and
-in-memory cache store.
+failure classification, assembly discovery without a manifest, storage through the real scheduler and
+in-memory cache store, and the preview capability: the embedded PNG published as one artifact for OpenDocument
+and legacy packages, a case-insensitive member name, missing, non-PNG, truncated, degenerate-dimension and
+oversized previews, an encrypted package, an oversized source with zero bytes charged, cancellation, and the
+thumbnail being stored next to the metadata by the scheduler.

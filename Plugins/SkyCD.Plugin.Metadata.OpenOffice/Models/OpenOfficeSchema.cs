@@ -13,6 +13,9 @@ public static class OpenOfficeSchema
     public const string MetadataSchemaId = "skycd.openoffice.metadata";
     public const int MetadataSchemaVersion = 1;
 
+    public const string PreviewSchemaId = "skycd.openoffice.preview";
+    public const int PreviewSchemaVersion = 1;
+
     public const string Container = "Container";
     public const string DocumentType = "DocumentType";
     public const string FormatVersion = "FormatVersion";
@@ -138,4 +141,7 @@ public static class OpenOfficeSchema
         new MediaMetadataField(CellCount, MediaMetadataType.Integer),
         new MediaMetadataField(SheetCount, MediaMetadataType.Integer)
     ]);
+
+    /// <summary>Preview results carry the embedded thumbnail rather than values, so the schema is identity only.</summary>
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }
