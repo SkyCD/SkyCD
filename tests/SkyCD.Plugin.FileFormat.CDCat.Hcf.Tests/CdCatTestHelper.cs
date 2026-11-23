@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.FileFormat.CDCat.Hcf.Tests;
 
@@ -104,56 +105,12 @@ public static class CdCatTestHelper
         </datafile>
         """;
 
-    public static void EnsureFixtureFilesExist(string fixtureDir)
+    public static string EnsureSampleHcfExists(TestWorkspace workspace) =>
+        EnsureHcfExists(workspace, "cdcat-sample-v2.1.hcf", () => CreateGzipXml(SampleV21Xml));
+
+    private static string EnsureHcfExists(TestWorkspace workspace, string fileName, Func<byte[]> createBytes)
     {
-        Directory.CreateDirectory(fixtureDir);
-
-        var samplePath = Path.Combine(fixtureDir, "cdcat-sample-v2.1.hcf");
-        if (!File.Exists(samplePath))
-        {
-            File.WriteAllBytes(samplePath, CreateGzipXml(SampleV21Xml));
-        }
-
-        var unicodePath = Path.Combine(fixtureDir, "cdcat-unicode.hcf");
-        if (!File.Exists(unicodePath))
-        {
-            File.WriteAllBytes(unicodePath, CreateGzipXml(UnicodeXml));
-        }
-
-        var uncompressedPath = Path.Combine(fixtureDir, "cdcat-uncompressed.xml");
-        if (!File.Exists(uncompressedPath))
-        {
-            File.WriteAllText(uncompressedPath, SampleV21Xml, Encoding.UTF8);
-        }
-
-        var v30Path = Path.Combine(fixtureDir, "cdcat-unsupported-version-3.0.hcf");
-        if (!File.Exists(v30Path))
-        {
-            File.WriteAllBytes(v30Path, CreateGzipXml(Version30Xml));
-        }
-
-        var v22Path = Path.Combine(fixtureDir, "cdcat-unsupported-version-2.2.hcf");
-        if (!File.Exists(v22Path))
-        {
-            File.WriteAllBytes(v22Path, CreateGzipXml(Version22Xml));
-        }
-
-        var emptyPath = Path.Combine(fixtureDir, "cdcat-empty.hcf");
-        if (!File.Exists(emptyPath))
-        {
-            File.WriteAllBytes(emptyPath, CreateGzipXml(EmptyCatalogXml));
-        }
-
-        var malformedXmlPath = Path.Combine(fixtureDir, "cdcat-malformed-xml.hcf");
-        if (!File.Exists(malformedXmlPath))
-        {
-            File.WriteAllBytes(malformedXmlPath, CreateGzipXml("<datafile><catalog><media><unclosed>"));
-        }
-
-        var malformedGzipPath = Path.Combine(fixtureDir, "cdcat-malformed-gzip.hcf");
-        if (!File.Exists(malformedGzipPath))
-        {
-            File.WriteAllBytes(malformedGzipPath, [0x1F, 0x8B, 0x08, 0x00, 0xFF, 0xFE, 0xFD]);
-        }
+        var path = workspace.GetPath(fileName);
+        return File.Exists(path) ? path : workspace.CreateFile(fileName, createBytes());
     }
 }

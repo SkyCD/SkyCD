@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
@@ -25,16 +26,10 @@ public sealed class KatalogCsvIdxDetectionTests
     [Fact]
     public void CanHandleFolder_WithEmptyDirectory_ReturnsFalse()
     {
-        var temp = Path.Combine(Path.GetTempPath(), "empty-katalog-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(temp);
-        try
-        {
-            Assert.False(plugin.CanHandleFolder(temp));
-        }
-        finally
-        {
-            Directory.Delete(temp);
-        }
+        using var workspace = new TestWorkspace();
+        var temp = workspace.CreateDirectory("empty-katalog");
+
+        Assert.False(plugin.CanHandleFolder(temp));
     }
 
     [Fact]

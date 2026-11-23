@@ -1,6 +1,6 @@
-using System;
 using System.IO;
 using SkyCD.Plugin.FileFormat.CDCollect;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect.Tests;
@@ -10,74 +10,41 @@ public sealed class CdCollectDetectionTests
     [Fact]
     public void CanHandleContent_ValidCdCollectDatabase_ReturnsTrue()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_det_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            CdCollectTestHelper.EnsureFixtureFilesExist(tempDir);
-            var dbPath = Path.Combine(tempDir, "cdcollect-sample-v4.db");
+        using var workspace = new TestWorkspace();
+        var dbPath = CdCollectTestHelper.EnsureSampleV4DatabaseExists(workspace);
 
-            var plugin = new CdCollectPlugin();
-            using var fileStream = File.OpenRead(dbPath);
+        var plugin = new CdCollectPlugin();
+        using var fileStream = File.OpenRead(dbPath);
 
-            var canHandle = plugin.CanHandleContent(fileStream, "mycatalog.db");
-            Assert.True(canHandle);
-            Assert.Equal(0, fileStream.Position);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+        var canHandle = plugin.CanHandleContent(fileStream, "mycatalog.db");
+        Assert.True(canHandle);
+        Assert.Equal(0, fileStream.Position);
     }
 
     [Fact]
     public void CanHandleContent_CdCollectExtension_ReturnsTrue()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_det_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            CdCollectTestHelper.EnsureFixtureFilesExist(tempDir);
-            var dbPath = Path.Combine(tempDir, "cdcollect-sample-v4.db");
+        using var workspace = new TestWorkspace();
+        var dbPath = CdCollectTestHelper.EnsureSampleV4DatabaseExists(workspace);
 
-            var plugin = new CdCollectPlugin();
-            using var fileStream = File.OpenRead(dbPath);
+        var plugin = new CdCollectPlugin();
+        using var fileStream = File.OpenRead(dbPath);
 
-            var canHandle = plugin.CanHandleContent(fileStream, "backup.cdcollect");
-            Assert.True(canHandle);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+        var canHandle = plugin.CanHandleContent(fileStream, "backup.cdcollect");
+        Assert.True(canHandle);
     }
 
     [Fact]
     public void CanHandleContent_NonCdCollectDatabase_ReturnsFalse()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_det_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            CdCollectTestHelper.EnsureFixtureFilesExist(tempDir);
-            var dbPath = Path.Combine(tempDir, "non-cdcollect.db");
+        using var workspace = new TestWorkspace();
+        var dbPath = CdCollectTestHelper.EnsureNonCdCollectDatabaseExists(workspace);
 
-            var plugin = new CdCollectPlugin();
-            using var fileStream = File.OpenRead(dbPath);
+        var plugin = new CdCollectPlugin();
+        using var fileStream = File.OpenRead(dbPath);
 
-            var canHandle = plugin.CanHandleContent(fileStream, "non-cdcollect.db");
-            Assert.False(canHandle);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+        var canHandle = plugin.CanHandleContent(fileStream, "non-cdcollect.db");
+        Assert.False(canHandle);
     }
 
     [Fact]

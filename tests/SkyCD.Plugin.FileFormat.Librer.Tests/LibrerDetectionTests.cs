@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.Librer.Tests;
@@ -26,24 +27,14 @@ public sealed class LibrerDetectionTests
     [Fact]
     public void CanHandleContent_ValidLibrerFile_ReturnsTrue()
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), $"librer_det_{Guid.NewGuid():N}.librer_data");
-        try
-        {
-            LibrerTestHelper.CreateSampleLibrerCatalog(tempFile);
-            using var stream = File.OpenRead(tempFile);
+        using var workspace = new TestWorkspace();
+        var tempFile = LibrerTestHelper.CreateSampleLibrerCatalog(workspace, "detected.librer_data");
+        using var stream = File.OpenRead(tempFile);
 
-            var canHandle = _plugin.CanHandleContent(stream, tempFile);
+        var canHandle = _plugin.CanHandleContent(stream, tempFile);
 
-            Assert.True(canHandle);
-            Assert.Equal(0, stream.Position);
-        }
-        finally
-        {
-            if (File.Exists(tempFile))
-            {
-                File.Delete(tempFile);
-            }
-        }
+        Assert.True(canHandle);
+        Assert.Equal(0, stream.Position);
     }
 
     [Fact]

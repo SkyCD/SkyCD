@@ -16,6 +16,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;
 
@@ -26,6 +27,7 @@ public sealed class CdCollectIntegrationTests
     [Fact]
     public async Task LegacySqlite2Fixture_LoadsIntoDomainAndPersistsHierarchyAndMetadata()
     {
+        using var workspace = new TestWorkspace();
         var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Sqlite2", "cds.db");
         var service = new CatalogLoadService(new FileFormatManager([new CdCollectPlugin(), new CdCollectSqlite2Plugin()]));
         var count = await service.LoadAsync(path, (payload, _) =>
@@ -41,7 +43,7 @@ public sealed class CdCollectIntegrationTests
             Assert.Equal("rock, backups", media.Properties["Keywords"]);
             Assert.Equal("2005-03-15", media.Properties["Date"]);
             Assert.Equal("cdrom", media.Properties["Icon"]);
-            Persist(documents);
+            Persist(workspace, documents);
             return documents.Count;
         }, new Progress<int>());
         Assert.Equal(6, count);
@@ -50,6 +52,7 @@ public sealed class CdCollectIntegrationTests
     [Fact]
     public async Task CommittedFixture_ImportsIntoDomainAndPersistsThumbnail()
     {
+        using var workspace = new TestWorkspace();
         var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "cds3.db");
         using var source = File.OpenRead(path);
         var result = await new CdCollectPlugin().ReadAsync(new FileFormatReadRequest
@@ -58,95 +61,73 @@ public sealed class CdCollectIntegrationTests
         var documents = Extract(result.Payload!);
         var cover = documents.Single(d => d.Name == "cover.png");
         Assert.StartsWith("data:image/png;base64,", cover.Properties["Thumbnail"]?.ToString());
-        Persist(documents);
+        Persist(workspace, documents);
     }
 
     [Fact]
     public async Task ReadAsync_StandardDatabase_BuildsDocumentAndSummary()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_int_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            CdCollectTestHelper.EnsureFixtureFilesExist(tempDir);
-            var samplePath = Path.Combine(tempDir, "cdcollect-sample-v4.db");
-            var plugin = new CdCollectPlugin();
+        using var workspace = new TestWorkspace();
+        var samplePath = CdCollectTestHelper.EnsureSampleV4DatabaseExists(workspace);
+        var plugin = new CdCollectPlugin();
 
-            using var fileStream = File.OpenRead(samplePath);
-            var result = await plugin.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = "cdcollect-db",
-                Source = fileStream,
-                SourcePath = samplePath
-            });
-
-            Assert.True(result.Success, result.Error);
-            var reportDoc = Assert.IsType<CdCollectReportDocument>(result.Payload);
-            Assert.NotNull(reportDoc.Summary);
-            Assert.Equal(4, reportDoc.Summary.CatalogVersion);
-            Assert.Equal(2, reportDoc.Summary.MediaCount);
-            Assert.Equal(2, reportDoc.Summary.DirectoryCount);
-            Assert.Equal(4, reportDoc.Summary.FileCount);
-        }
-        finally
+        using var fileStream = File.OpenRead(samplePath);
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+            FormatId = "cdcollect-db",
+            Source = fileStream,
+            SourcePath = samplePath
+        });
+
+        Assert.True(result.Success, result.Error);
+        var reportDoc = Assert.IsType<CdCollectReportDocument>(result.Payload);
+        Assert.NotNull(reportDoc.Summary);
+        Assert.Equal(4, reportDoc.Summary.CatalogVersion);
+        Assert.Equal(2, reportDoc.Summary.MediaCount);
+        Assert.Equal(2, reportDoc.Summary.DirectoryCount);
+        Assert.Equal(4, reportDoc.Summary.FileCount);
     }
 
     [Fact]
     public async Task LoadAsync_WithCatalogLoadService_PersistsAndReopensAccurately()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_int_" + Guid.NewGuid().ToString("N"));
-        try
+        using var workspace = new TestWorkspace();
+        var samplePath = CdCollectTestHelper.EnsureSampleV4DatabaseExists(workspace);
+        var manager = new FileFormatManager([new CdCollectPlugin()]);
+        var loadService = new CatalogLoadService(manager);
+
+        var loadedCount = await loadService.LoadAsync(samplePath, (payload, _) =>
         {
-            CdCollectTestHelper.EnsureFixtureFilesExist(tempDir);
-            var samplePath = Path.Combine(tempDir, "cdcollect-sample-v4.db");
-            var manager = new FileFormatManager([new CdCollectPlugin()]);
-            var loadService = new CatalogLoadService(manager);
+            var documents = Extract(payload!);
+            Assert.NotEmpty(documents);
 
-            var loadedCount = await loadService.LoadAsync(samplePath, (payload, _) =>
+            Persist(workspace, documents, vm =>
             {
-                var documents = Extract(payload!);
-                Assert.NotEmpty(documents);
+                // Verify tree roots (media items)
+                var rootKeys = vm.TreeNodes.Select(node => node.Key).ToList();
+                Assert.Contains("cd_1", rootKeys);
+                Assert.Contains("cd_2", rootKeys);
 
-                Persist(documents, vm =>
-                {
-                    // Verify tree roots (media items)
-                    var rootKeys = vm.TreeNodes.Select(node => node.Key).ToList();
-                    Assert.Contains("cd_1", rootKeys);
-                    Assert.Contains("cd_2", rootKeys);
+                var rockNode = vm.TreeNodes.First(node => node.Key == "cd_1");
+                Assert.Equal("Rock Albums 2024", rockNode.Title);
+                Assert.Contains(rockNode.Children, child => child.Key == "cd_1_n1");
 
-                    var rockNode = vm.TreeNodes.First(node => node.Key == "cd_1");
-                    Assert.Equal("Rock Albums 2024", rockNode.Title);
-                    Assert.Contains(rockNode.Children, child => child.Key == "cd_1_n1");
+                var musicFolderNode = rockNode.Children.First(child => child.Key == "cd_1_n1");
+                Assert.Equal("Music", musicFolderNode.Title);
 
-                    var musicFolderNode = rockNode.Children.First(child => child.Key == "cd_1_n1");
-                    Assert.Equal("Music", musicFolderNode.Title);
+                // Verify track01 document
+                var trackDoc = documents.FirstOrDefault(d => d.Name == "track01.mp3");
+                Assert.NotNull(trackDoc);
+                Assert.Equal(8400000L, trackDoc.Size);
+                Assert.True(trackDoc.Properties.ContainsKey("Album"));
+                Assert.Equal("A Night at the Opera", trackDoc.Properties["Album"]?.ToString());
+                Assert.Equal("Queen", trackDoc.Properties["Artist"]?.ToString());
+            });
 
-                    // Verify track01 document
-                    var trackDoc = documents.FirstOrDefault(d => d.Name == "track01.mp3");
-                    Assert.NotNull(trackDoc);
-                    Assert.Equal(8400000L, trackDoc.Size);
-                    Assert.True(trackDoc.Properties.ContainsKey("Album"));
-                    Assert.Equal("A Night at the Opera", trackDoc.Properties["Album"]?.ToString());
-                    Assert.Equal("Queen", trackDoc.Properties["Artist"]?.ToString());
-                });
+            return documents.Count;
+        }, new Progress<int>());
 
-                return documents.Count;
-            }, new Progress<int>());
-
-            Assert.True(loadedCount > 0);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+        Assert.True(loadedCount > 0);
     }
 
     [Fact]
@@ -168,33 +149,22 @@ public sealed class CdCollectIntegrationTests
     [Fact]
     public async Task ReadAsync_RespectsCancellationToken()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "cdcollect_int_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            CdCollectTestHelper.EnsureFixtureFilesExist(tempDir);
-            var samplePath = Path.Combine(tempDir, "cdcollect-sample-v4.db");
+        using var workspace = new TestWorkspace();
+        var samplePath = CdCollectTestHelper.EnsureSampleV4DatabaseExists(workspace);
 
-            var plugin = new CdCollectPlugin();
-            using var cts = new CancellationTokenSource();
-            cts.Cancel();
+        var plugin = new CdCollectPlugin();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
 
-            using var fileStream = File.OpenRead(samplePath);
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            {
-                await plugin.ReadAsync(new FileFormatReadRequest
-                {
-                    FormatId = "cdcollect-db",
-                    Source = fileStream
-                }, cts.Token);
-            });
-        }
-        finally
+        using var fileStream = File.OpenRead(samplePath);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
         {
-            if (Directory.Exists(tempDir))
+            await plugin.ReadAsync(new FileFormatReadRequest
             {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+                FormatId = "cdcollect-db",
+                Source = fileStream
+            }, cts.Token);
+        });
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
@@ -203,45 +173,36 @@ public sealed class CdCollectIntegrationTests
         return Assert.IsAssignableFrom<IReadOnlyList<CatalogDocument>>(method.Invoke(null, [payload]));
     }
 
-    private static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
+    private static void Persist(TestWorkspace workspace, IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-cdcollect-" + Guid.NewGuid().ToString("N"));
-        try
+        var directory = workspace.CreateDirectory("catalog");
+        using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var collection = database.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var collection = database.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var document = entry.ToMutableDocument(entry.Id);
-                collection.Save(document);
-            }
-
-            foreach (var entry in documents)
-            {
-                using var saved = collection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.Type, restored.Type);
-            }
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-
-            verify?.Invoke(vm);
+            using var document = entry.ToMutableDocument(entry.Id);
+            collection.Save(document);
         }
-        finally
+
+        foreach (var entry in documents)
         {
-            if (Directory.Exists(directory))
-            {
-                try { Directory.Delete(directory, true); } catch { /* ignore */ }
-            }
+            using var saved = collection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.Type, restored.Type);
         }
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+
+        verify?.Invoke(vm);
+        database.Close();
     }
 }

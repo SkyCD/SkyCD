@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Data.Sqlite;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 
@@ -12,39 +13,21 @@ namespace SkyCD.Plugin.FileFormat.Katalog.Tests;
 /// </summary>
 public sealed class KatalogFixtureBuilder : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
     private readonly string directory;
-    private readonly List<string> files = [];
 
     public KatalogFixtureBuilder()
     {
-        directory = Path.Combine(Path.GetTempPath(), $"skycd-katalog-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
+        directory = workspace.Root;
     }
 
     public string DirectoryPath => directory;
 
-    public void Dispose()
-    {
-        foreach (var file in files)
-        {
-            DeleteQuietly(file);
-            DeleteQuietly(file + "-wal");
-            DeleteQuietly(file + "-shm");
-            DeleteQuietly(file + "-journal");
-        }
-
-        try { Directory.Delete(directory, recursive: true); } catch { }
-    }
-
-    private static void DeleteQuietly(string path)
-    {
-        try { if (File.Exists(path)) File.Delete(path); } catch { }
-    }
+    public void Dispose() => workspace.Dispose();
 
     public string CreateFullCollection(string fileName = "collection.db", string version = "2.10")
     {
         var path = Path.Combine(directory, fileName);
-        files.Add(path);
         using var connection = new SqliteConnection($"Data Source={path};Pooling=false");
         connection.Open();
 
@@ -168,7 +151,6 @@ public sealed class KatalogFixtureBuilder : IDisposable
     public string CreateMinimalCollection(string fileName = "minimal.db", string version = "2.8")
     {
         var path = Path.Combine(directory, fileName);
-        files.Add(path);
         using var connection = new SqliteConnection($"Data Source={path};Pooling=false");
         connection.Open();
 
@@ -190,7 +172,6 @@ public sealed class KatalogFixtureBuilder : IDisposable
     public string CreateEmptyCatalogs(string fileName = "empty.db")
     {
         var path = Path.Combine(directory, fileName);
-        files.Add(path);
         using var connection = new SqliteConnection($"Data Source={path};Pooling=false");
         connection.Open();
 
@@ -209,7 +190,6 @@ public sealed class KatalogFixtureBuilder : IDisposable
     public string CreateNonKatalogDatabase(string fileName = "other.db")
     {
         var path = Path.Combine(directory, fileName);
-        files.Add(path);
         using var connection = new SqliteConnection($"Data Source={path};Pooling=false");
         connection.Open();
 
@@ -238,6 +218,3 @@ public sealed class KatalogFixtureBuilder : IDisposable
         command.ExecuteNonQuery();
     }
 }
-
-
-
