@@ -43,7 +43,8 @@ public sealed class MediaMetadataService
         IReadOnlyList<CatalogDocument> catalog,
         IProgress<MediaProgress>? progress = null,
         CancellationToken cancellationToken = default,
-        string? batchId = null)
+        string? batchId = null,
+        IProgress<MediaThumbnail>? thumbnailProgress = null)
     {
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -76,6 +77,8 @@ public sealed class MediaMetadataService
 
         var stored = false;
         MediaMetadataOutcome? failure = null;
+        var pending = thumbnailProgress is null ? null : new FirstThumbnailForwarder(thumbnailProgress);
+        var name = entry.Name ?? Path.GetFileName(path);
         foreach (var selection in new[] { MediaProviderSelection.StandardMetadata, MediaProviderSelection.OptInMetadata })
         {
             var request = MediaExtractionRequest.ForCatalogEntry(
@@ -89,7 +92,11 @@ public sealed class MediaMetadataService
                 ? new MediaExecutionLimits(SourceBytes: Math.Max(file.Length, 1), Concurrency: 1,
                     TimeoutMilliseconds: int.MaxValue)
                 : null;
-            var outcome = await scheduler.ProcessAsync(request, progress, cancellationToken, limits).ConfigureAwait(false);
+            var selectionThumbnails = pending is null
+                ? null
+                : new Progress<MediaThumbnail>(thumbnail => pending.Offer(name, thumbnail));
+            var outcome = await scheduler.ProcessAsync(request, progress, cancellationToken, limits, selectionThumbnails)
+                .ConfigureAwait(false);
             if (outcome.SourceUnavailable)
             {
                 failure ??= MediaMetadataOutcome.Skipped(entry.Id, MediaMetadataSkipReason.SourceUnavailable);
@@ -210,6 +217,20 @@ public sealed class MediaMetadataService
         Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             FileBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
         return Task.FromResult(stream);
+    }
+
+    /// <summary>Lets the first thumbnail of one entry reach the caller once, whichever selection produced it.</summary>
+    private sealed class FirstThumbnailForwarder(IProgress<MediaThumbnail> target)
+    {
+        private int reported;
+
+        public void Offer(string name, MediaThumbnail thumbnail)
+        {
+            if (Interlocked.Exchange(ref reported, 1) == 0)
+            {
+                target.Report(new MediaThumbnail(name, thumbnail.Data, thumbnail.ContentType));
+            }
+        }
     }
 
     internal static bool MatchesRecordedTimestamp(CatalogDocument entry, FileInfo file)

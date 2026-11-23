@@ -259,6 +259,7 @@ public static class UiKeys
     public const string Errors = "core.ui.Errors";
     public const string Warnings = "core.ui.Warnings";
     public const string ErrorLog = "core.ui.ErrorLog";
+    public const string LatestThumbnail = "core.ui.LatestThumbnail";
     public const string AnalysisTime = "core.ui.AnalysisTime";
     public const string PleaseWait = "core.ui.PleaseWait";
     public const string ClearLog = "core.ui.ClearLog";
