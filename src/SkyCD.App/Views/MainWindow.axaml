@@ -20,6 +20,19 @@
         MinHeight="200"
         Title="SkyCD">
 
+    <Window.Styles>
+        <Style Selector="TextBox.rename-editor">
+            <Setter Property="MinWidth" Value="90" />
+            <Setter Property="MinHeight" Value="20" />
+            <Setter Property="Padding" Value="2,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBox.rename-editor.invalid">
+            <Setter Property="BorderBrush" Value="#DC2626" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </Window.Styles>
+
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:MenuIconConverter x:Key="MenuIconConverter" />
@@ -113,16 +126,6 @@
                     <Style Selector="TreeViewItem" x:DataType="vm:BrowserTreeNode">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
-                    <Style Selector="TextBox.rename-editor">
-                        <Setter Property="MinWidth" Value="90" />
-                        <Setter Property="MinHeight" Value="20" />
-                        <Setter Property="Padding" Value="2,0" />
-                        <Setter Property="VerticalContentAlignment" Value="Center" />
-                    </Style>
-                    <Style Selector="TextBox.rename-editor.invalid">
-                        <Setter Property="BorderBrush" Value="#DC2626" />
-                        <Setter Property="BorderThickness" Value="1" />
-                    </Style>
                 </TreeView.Styles>
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:BrowserTreeNode" ItemsSource="{Binding Children}">
@@ -201,6 +204,13 @@
                                          IsVisible="{Binding ShowBrowserItems}"
                                          SelectedItem="{Binding SelectedBrowserItem}"
                                          SelectedItems="{Binding SelectedBrowserItems}"
+                                         EditingItemId="{Binding EditingBrowserItemId}"
+                                         RenameText="{Binding BrowserItemRenameText, Mode=TwoWay}"
+                                         RenameError="{Binding BrowserItemRenameError}"
+                                         HasRenameError="{Binding HasBrowserItemRenameError}"
+                                         RenameCommitted="OnBrowserRenameCommitted"
+                                         RenameCancelled="OnBrowserRenameCancelled"
+                                         RenameAbandoned="OnBrowserRenameAbandoned"
                                          ViewMode="{Binding CurrentViewMode}"
                                          DetailsColumns="{Binding BrowserDetailsColumns}"
                                          BrowserGridItemWidth="{Binding BrowserGridItemWidth}"

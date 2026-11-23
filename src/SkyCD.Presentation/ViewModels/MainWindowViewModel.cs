@@ -1966,7 +1966,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         progress.ReportStage(LocalizationService.Current.Get(TextKeys.ReadingMediaMetadata),
                             stagePercentage: (index + Math.Clamp(value.Fraction, 0, 1)) * 100d / files.Count,
                             stageCurrent: index, stageTotal: files.Count));
-                    var outcome = await service!.CollectAsync(file, catalog, itemProgress, token, batchId);
+                    var thumbnailProgress = progress is IThumbnailProgress thumbnailTarget
+                        ? new Progress<MediaThumbnail>(thumbnail => _ = thumbnailTarget.ReportThumbnail(thumbnail))
+                        : null;
+                    var outcome = await service!.CollectAsync(file, catalog, itemProgress, token, batchId, thumbnailProgress);
                     if (outcome.SkipReason == MediaMetadataSkipReason.Failed)
                     {
                         progress?.ReportWarning(outcome.FailureReason ?? outcome.SkipReason.ToString(), itemPath: file.Name);
@@ -2423,7 +2426,21 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool CanRenameItem(object? parameter = null)
     {
-        return ResolveTargetPane(parameter) == ActivePane.Tree && CanRenameTreeNode(SelectedTreeNode);
+        return ResolveTargetPane(parameter) == ActivePane.Tree
+            ? CanRenameTreeNode(SelectedTreeNode)
+            : CanRenameBrowserItem(SelectedBrowserItem);
+    }
+
+    /// <summary>Inline rename is offered only when exactly one browser item is selected.</summary>
+    public bool CanRenameBrowserItem(CatalogDocument? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Id))
+        {
+            return false;
+        }
+
+        var selected = GetSelectedBrowserItems();
+        return selected.Count == 1 && string.Equals(selected[0].Id, item.Id, StringComparison.Ordinal);
     }
 
     [RelayCommand(CanExecute = nameof(CanRenameItem))]
@@ -2434,7 +2451,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        BeginRename(SelectedTreeNode!);
+        if (ResolveTargetPane(parameter) == ActivePane.Tree)
+        {
+            BeginRename(SelectedTreeNode!);
+            return;
+        }
+
+        BeginBrowserItemRename(SelectedBrowserItem!);
     }
 
     /// <summary>
@@ -2451,6 +2474,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (renamingNode is not null && !ReferenceEquals(renamingNode, node))
         {
             CancelRename(renamingNode, restoreFocus: false);
+        }
+
+        if (EditingBrowserItemId is not null)
+        {
+            CancelBrowserItemRename(restoreFocus: false);
         }
 
         renamingNode = node;
@@ -2485,7 +2513,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (!TryPersistTreeRename(node, newName))
+        if (!TryPersistCatalogRename(node.Key, newName))
         {
             FinishRename(node);
             StatusText = LocalizationService.Current.Format(TextKeys.RenameStaleEntry, previousName);
@@ -2531,11 +2559,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool TryPersistTreeRename(BrowserTreeNode node, string newName)
+    private bool TryPersistCatalogRename(string entryId, string newName)
     {
         if (catalogRepository is not null)
         {
-            var stored = catalogRepository.Get(node.Key);
+            var stored = catalogRepository.Get(entryId);
             if (stored is null)
             {
                 return false;
@@ -2555,7 +2583,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var index = inMemoryCatalogEntries.FindIndex(entry =>
-            string.Equals(entry.Id, node.Key, StringComparison.Ordinal));
+            string.Equals(entry.Id, entryId, StringComparison.Ordinal));
         if (index < 0)
         {
             return false;
@@ -2563,6 +2591,152 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         inMemoryCatalogEntries[index] = inMemoryCatalogEntries[index].WithName(newName);
         return true;
+    }
+
+    // Browser list rename state: one item is edited at a time and the list templates swap that row's
+    // label for an editor while EditingBrowserItemId matches the row.
+    [ObservableProperty] private string? editingBrowserItemId;
+
+    [ObservableProperty] private string browserItemRenameText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBrowserItemRenameError))]
+    private string? browserItemRenameError;
+
+    public bool HasBrowserItemRenameError => !string.IsNullOrEmpty(BrowserItemRenameError);
+
+    /// <summary>
+    /// Starts an inline edit over the given browser item's name. The displayed document is not touched
+    /// until the edit is committed, so cancelling leaves the list and catalog exactly as they were.
+    /// </summary>
+    public void BeginBrowserItemRename(CatalogDocument item)
+    {
+        if (!CanRenameBrowserItem(item))
+        {
+            return;
+        }
+
+        if (renamingNode is not null)
+        {
+            CancelRename(renamingNode, restoreFocus: false);
+        }
+
+        EditingBrowserItemId = item.Id;
+        BrowserItemRenameError = null;
+        BrowserItemRenameText = item.Name;
+        SelectedBrowserItem = item;
+        RenameRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void CommitBrowserItemRename()
+    {
+        var item = FindEditingBrowserItem();
+        if (item is null)
+        {
+            FinishBrowserItemRename();
+            return;
+        }
+
+        var newName = (BrowserItemRenameText ?? string.Empty).Trim();
+        if (newName.Length == 0)
+        {
+            BrowserItemRenameError = LocalizationService.Current.Get(TextKeys.CatalogNameRequired);
+            StatusText = BrowserItemRenameError;
+            return;
+        }
+
+        var previousName = item.Name;
+        if (string.Equals(newName, previousName, StringComparison.Ordinal))
+        {
+            FinishBrowserItemRename();
+            FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        var renamedId = item.Id;
+        if (!TryPersistBrowserItemRename(item, newName))
+        {
+            FinishBrowserItemRename();
+            StatusText = LocalizationService.Current.Format(TextKeys.RenameStaleEntry, previousName);
+            FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        FinishBrowserItemRename();
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+        SelectedBrowserItem = FindBrowserItemById(renamedId) ?? SelectedBrowserItem;
+        IsDirtyDocument = true;
+        StatusText = LocalizationService.Current.Format(TextKeys.Renamed, newName);
+        FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <param name="restoreFocus">
+    /// False when the edit ended because the user moved focus elsewhere; pulling focus back to the
+    /// list in that case would fight the click that ended the edit.
+    /// </param>
+    public void CancelBrowserItemRename(bool restoreFocus = true)
+    {
+        if (EditingBrowserItemId is null)
+        {
+            return;
+        }
+
+        FinishBrowserItemRename();
+        if (restoreFocus)
+        {
+            FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void FinishBrowserItemRename()
+    {
+        EditingBrowserItemId = null;
+        BrowserItemRenameText = string.Empty;
+        BrowserItemRenameError = null;
+    }
+
+    private CatalogDocument? FindEditingBrowserItem()
+    {
+        if (EditingBrowserItemId is not { Length: > 0 } editingId)
+        {
+            return null;
+        }
+
+        return FindBrowserItemById(editingId);
+    }
+
+    private CatalogDocument? FindBrowserItemById(string itemId) =>
+        BrowserItems.FirstOrDefault(item => string.Equals(item.Id, itemId, StringComparison.Ordinal));
+
+    private bool TryPersistBrowserItemRename(CatalogDocument item, string newName)
+    {
+        if (catalogRepository is null)
+        {
+            return TryPersistCatalogRename(item.Id, newName);
+        }
+
+        if (TryPersistCatalogRename(item.Id, newName))
+        {
+            return true;
+        }
+
+        // Entries projected by a plugin are not stored in the catalog; stage the rename the same way
+        // the Properties dialog does so the list shows it for the rest of the session.
+        StageBrowserItemRename(SelectedTreeNode?.Key ?? "library", item.Name, newName);
+        return true;
+    }
+
+    private void StageBrowserItemRename(string nodeKey, string currentName, string newName)
+    {
+        var originalName = ResolveOriginalBrowserItemName(nodeKey, currentName);
+        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
+        {
+            renamedItems = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            renamedBrowserItemNamesByNodeKey[nodeKey] = renamedItems;
+        }
+
+        renamedItems[originalName] = newName;
     }
 
     private static BrowserTreeNode? FindParentTreeNode(IEnumerable<BrowserTreeNode> nodes, string childKey)
@@ -3559,14 +3733,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var originalName = ResolveOriginalBrowserItemName(nodeKey, currentDisplayName);
-        if (!renamedBrowserItemNamesByNodeKey.TryGetValue(nodeKey, out var renamedItems))
-        {
-            renamedItems = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            renamedBrowserItemNamesByNodeKey[nodeKey] = renamedItems;
-        }
-
-        renamedItems[originalName] = requestedName;
+        StageBrowserItemRename(nodeKey, currentDisplayName, requestedName);
         RefreshBrowserItemsForSelection();
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
             item.Name.Equals(requestedName, StringComparison.OrdinalIgnoreCase));
@@ -3592,6 +3759,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedTreeNodeChanged(BrowserTreeNode? value)
     {
+        if (EditingBrowserItemId is not null)
+        {
+            CancelBrowserItemRename(restoreFocus: false);
+        }
+
         RefreshBrowserItemsForSelection();
         OnPropertyChanged(nameof(IsDeleteEnabled));
         OnPropertyChanged(nameof(IsPropertiesEnabled));
@@ -3671,6 +3843,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsCopyEnabled));
         OnPropertyChanged(nameof(IsCutEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
+        RenameItemCommand.NotifyCanExecuteChanged();
         OpenPropertiesCommand.NotifyCanExecuteChanged();
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
@@ -3712,6 +3885,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(IsCopyEnabled));
             OnPropertyChanged(nameof(IsCutEnabled));
             DeleteItemCommand.NotifyCanExecuteChanged();
+            RenameItemCommand.NotifyCanExecuteChanged();
             OpenPropertiesCommand.NotifyCanExecuteChanged();
             CopyCommand.NotifyCanExecuteChanged();
             CutCommand.NotifyCanExecuteChanged();
@@ -4265,6 +4439,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Add), HotKey = "F2", InputGesture = "F2", Command = AddItemCommand },
+            new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Rename), Command = RenameItemCommand, CommandParameter = "list" },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             BuildLocationsMenu(),

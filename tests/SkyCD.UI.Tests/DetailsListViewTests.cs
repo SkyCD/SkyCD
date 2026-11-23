@@ -222,15 +222,19 @@ public class DetailsListViewTests
         var rowGrid = Assert.IsType<Grid>(renderedRow);
         Assert.Equal(2, rowGrid.ColumnDefinitions.Count);
 
-        // Column 0 has icon gutter + text
+        // Column 0 has icon gutter + the name cell that swaps its label for a rename editor
         var col0Panel = Assert.IsType<DockPanel>(rowGrid.Children[0]);
-        var icon = col0Panel.Children.OfType<Grid>().Single();
+        var col0Grids = col0Panel.Children.OfType<Grid>().ToArray();
+        Assert.Equal(2, col0Grids.Length);
+        var icon = col0Grids[0];
         Assert.Equal(16, icon.Width);
         Assert.Equal(16, icon.Height);
 
-        var nameText = col0Panel.Children.OfType<TextBlock>().Single();
+        var nameCell = col0Grids[1];
+        var nameText = nameCell.Children.OfType<TextBlock>().Single();
         Assert.Equal(TextTrimming.CharacterEllipsis, nameText.TextTrimming);
         Assert.True(nameText.ClipToBounds);
+        Assert.Contains(nameCell.Children, child => child is TextBox editor && editor.Classes.Contains("rename-editor"));
 
         // Column 1 has size text
         var sizeText = Assert.IsType<TextBlock>(rowGrid.Children[1]);
@@ -647,7 +651,8 @@ public class DetailsListViewTests
         Assert.Equal(1, Grid.GetColumn(namePanel));
         var iconContainer = Assert.IsType<Grid>(namePanel.Children[0]);
         Assert.Equal(16, iconContainer.Width);
-        var nameText = Assert.IsType<TextBlock>(namePanel.Children[1]);
+        var nameCell = Assert.IsType<Grid>(namePanel.Children[1]);
+        var nameText = Assert.IsType<TextBlock>(nameCell.Children[0]);
         Assert.Equal("Alpha.dat", nameText.Text);
     }
 

@@ -417,6 +417,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
         RefreshCategoriesPreservingSelection();
         RefreshFilteredPlugins();
+        NotifyPluginsPageChanged();
         InfoMessage = LocalizationService.Current.Format(TextKeys.LoadedPluginS, Plugins.Count);
         OnPropertyChanged(nameof(SelectedPluginDescription));
     }
@@ -489,6 +490,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         pluginSelectionIsAuto = isAutoSelectingPlugin;
         OnPropertyChanged(nameof(SelectedPluginDescription));
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
+        if (value is not null && !pluginSelectionIsAuto) IsMarketplaceBrowseSelected = false;
+        NotifySelectedPluginDetailsChanged();
     }
 
     partial void OnSelectedStatusVariantChanged(StatusVariantItemViewModel? value)
@@ -684,6 +687,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 isAutoSelectingPlugin = false;
             }
         }
+
+        OnPropertyChanged(nameof(InstalledPluginsHeader));
+        OnPropertyChanged(nameof(InstalledPluginsCount));
     }
 
     private void RefreshFilteredCategories()

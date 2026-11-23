@@ -3,19 +3,25 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
-public partial class AddingProgressDialogViewModel : ObservableObject, IOperationProgress
+public partial class AddingProgressDialogViewModel : ObservableObject, IOperationProgress, IThumbnailProgress
 {
     private readonly CancellationTokenSource cancellationSource = new();
+    private readonly IPreviewImageDecoder thumbnailDecoder;
+    private CancellationTokenSource? thumbnailCancellation;
+    private int thumbnailGeneration;
     private bool cancellationFinished;
     private readonly TimeProvider timeProvider;
     private DateTimeOffset? analysisStartedAt;
@@ -44,6 +50,7 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
         CanCancel = false;
         cancellationFinished = true;
         StopAnalysis();
+        CancelThumbnailDecode();
         cancellationSource.Dispose();
     }
 
@@ -127,6 +134,12 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     public ObservableCollection<OperationLogEntry> LogEntries { get; } = new();
 
+    /// <summary>The most recently produced thumbnail of the running operation, once it has been decoded.</summary>
+    [ObservableProperty]
+    private IImage? latestThumbnail;
+
+    public bool HasLatestThumbnail => LatestThumbnail is not null;
+
     public string FilteringText => !string.IsNullOrEmpty(CurrentItemText)
         ? CurrentItemText
         : !string.IsNullOrEmpty(CurrentStageText)
@@ -178,9 +191,10 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     {
     }
 
-    public AddingProgressDialogViewModel(TimeProvider timeProvider)
+    public AddingProgressDialogViewModel(TimeProvider timeProvider, IPreviewImageDecoder? thumbnailDecoder = null)
     {
         this.timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        this.thumbnailDecoder = thumbnailDecoder ?? new AvaloniaPreviewImageDecoder();
     }
 
     /// <summary>Starts the analysis clock once; later calls while running are ignored.</summary>
@@ -225,6 +239,8 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     partial void OnCurrentItemTextChanged(string value) => OnPropertyChanged(nameof(FilteringText));
 
+    partial void OnLatestThumbnailChanged(IImage? value) => OnPropertyChanged(nameof(HasLatestThumbnail));
+
     partial void OnCurrentStageTextChanged(string value)
     {
         OnPropertyChanged(nameof(FilteringText));
@@ -242,6 +258,92 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
         OnPropertyChanged(nameof(MediaSourceIconOpacity));
         OnPropertyChanged(nameof(FolderSourceIconOpacity));
         OnPropertyChanged(nameof(InternetSourceIconOpacity));
+    }
+
+    /// <summary>
+    /// Starts decoding a freshly produced thumbnail. The newest report always wins: every earlier decode is
+    /// cancelled and its result discarded, even when it completes later. Decode failures are ignored, because
+    /// a plugin payload the platform cannot read must never fail the running operation.
+    /// </summary>
+    /// <returns>The decode that publishes this thumbnail, which finishes without applying a superseded result.</returns>
+    public Task ReportThumbnail(MediaThumbnail thumbnail)
+    {
+        ArgumentNullException.ThrowIfNull(thumbnail);
+        if (cancellationFinished)
+        {
+            return Task.CompletedTask;
+        }
+
+        var generation = Interlocked.Increment(ref thumbnailGeneration);
+
+        CancellationTokenSource cancellation;
+        try
+        {
+            cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationSource.Token);
+        }
+        catch (ObjectDisposedException)
+        {
+            return Task.CompletedTask;
+        }
+
+        var previous = Interlocked.Exchange(ref thumbnailCancellation, cancellation);
+        previous?.Cancel();
+        previous?.Dispose();
+
+        if (cancellation.IsCancellationRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        return DecodeThumbnailAsync(generation, thumbnail.Data, thumbnail.ContentType, cancellation.Token);
+    }
+
+    private async Task DecodeThumbnailAsync(
+        int generation,
+        byte[] data,
+        string contentType,
+        CancellationToken cancellationToken)
+    {
+        IImage? image;
+        try
+        {
+            image = await thumbnailDecoder.DecodeAsync(data, contentType, data.Length, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        if (image is null || IsThumbnailSuperseded(generation, cancellationToken))
+        {
+            return;
+        }
+
+        RunOnUi(() =>
+        {
+            if (IsThumbnailSuperseded(generation, cancellationToken))
+            {
+                return;
+            }
+
+            LatestThumbnail = image;
+        });
+    }
+
+    private bool IsThumbnailSuperseded(int generation, CancellationToken cancellationToken) =>
+        Volatile.Read(ref thumbnailGeneration) != generation || cancellationToken.IsCancellationRequested;
+
+    private void CancelThumbnailDecode()
+    {
+        Interlocked.Increment(ref thumbnailGeneration);
+        var cancellation = Interlocked.Exchange(ref thumbnailCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
     }
 
     private void StartAnalysisTicker()

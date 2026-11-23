@@ -20,21 +20,50 @@ namespace SkyCD.App.Tests;
 public sealed class AiDescriptionUiContractTests
 {
     [Fact]
-    public void PropertiesWindow_ShowsUnifiedDescriptionWithSourceAndActions()
+    public void PropertiesWindow_ShowsUnifiedDescriptionAsARowInThePropertiesList()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "PropertiesWindow.axaml");
+        var propertiesTab = SectionOf(xaml, "<TabItem Header=\"{i18n:Translate {x:Static i18n:UiKeys.Properties}}\"");
+        var generalTab = SectionOf(xaml, "<TabItem Header=\"{i18n:Translate {x:Static i18n:UiKeys.General}}\"");
 
-        Assert.Contains("Text=\"{i18n:Translate {x:Static i18n:UiKeys.Description}}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("IsVisible=\"{Binding HasDescriptionSection}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding Description.SourceText}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding Description.StateText}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding Description.GenerateCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding Description.CopyCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Command=\"{Binding Description.ClearCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("RtfText=\"{Binding Comments, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+        // The description row lives in the Properties list, not as a block under the comments editor.
+        Assert.Contains("<cp:PropertiesList x:Name=\"InfoPropertiesList\"", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains("<cp:PropertiesList.ValueCellTemplate>", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding IsDescriptionRow}\"", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.DescriptionText}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.SourceText}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.StateText}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.GenerateCommand}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.CopyCommand}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.ClearCommand}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.CanShowGenerate}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.CanCopy}", propertiesTab, StringComparison.Ordinal);
+        Assert.Contains(".Description.CanShowClear}", propertiesTab, StringComparison.Ordinal);
         Assert.DoesNotContain("Description.AdoptCommand", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("UiKeys.AiDescription}}", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("RtfText=\"{Binding DescriptionText", xaml, StringComparison.Ordinal);
+
+        // General keeps only the name, rating and comments; comments take the space the block used.
+        Assert.Contains("RtfText=\"{Binding Comments, Mode=TwoWay}\"", generalTab, StringComparison.Ordinal);
+        Assert.Contains("RowDefinitions=\"Auto,*\"", generalTab, StringComparison.Ordinal);
+        Assert.DoesNotContain("Description", generalTab, StringComparison.Ordinal);
+        Assert.DoesNotContain("HasDescriptionSection", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("RowDefinitions=\"Auto,*,Auto\"", xaml, StringComparison.Ordinal);
+    }
+
+    /// <summary>Returns the XAML of one tab, up to the next tab item or the tab control end.</summary>
+    private static string SectionOf(string xaml, string start)
+    {
+        var begin = xaml.IndexOf(start, StringComparison.Ordinal);
+        Assert.True(begin >= 0, $"'{start}' was not found.");
+        var end = xaml.IndexOf("<TabItem ", begin + start.Length, StringComparison.Ordinal);
+        var close = xaml.IndexOf("</TabControl>", begin, StringComparison.Ordinal);
+        if (end < 0 || (close >= 0 && close < end))
+        {
+            end = close;
+        }
+
+        return end < 0 ? xaml[begin..] : xaml[begin..end];
     }
 
     [Fact]
@@ -177,7 +206,9 @@ public sealed class AiDescriptionUiContractTests
         string? copied = null;
         dialog.CopyTextRequested += text => copied = text;
 
-        Assert.True(dialog.HasDescriptionSection);
+        Assert.True(dialog.HasDescription);
+        Assert.Equal("Generated text", dialog.InfoProperties[dialog.DescriptionHeader]);
+        Assert.Single(dialog.InfoProperties);
         Assert.NotNull(dialog.Description);
         Assert.Equal("Generated text", dialog.Description!.DescriptionText);
         Assert.Equal("Existing comment", dialog.Comments);
@@ -190,21 +221,32 @@ public sealed class AiDescriptionUiContractTests
     }
 
     [Fact]
-    public void PropertiesDialog_ImportedDescriptionWinsAndIsHiddenFromThePropertyList()
+    public void PropertiesDialog_ImportedDescriptionWinsAndShowsOnceInThePropertyList()
     {
         using var stack = new DescriptionStack();
         var dialog = new PropertiesDialogViewModel(
             "item", "entry", string.Empty, "Existing comment",
             new PropertiesCollection { ["Description"] = "Imported description", ["Size"] = 10 });
 
-        Assert.True(dialog.HasDescriptionSection);
+        Assert.True(dialog.HasDescription);
         Assert.NotNull(dialog.Description);
         Assert.Equal("Imported description", dialog.Description!.DescriptionText);
+        Assert.Equal(DescriptionCatalogSourceText, dialog.Description.SourceText);
         Assert.False(dialog.Description.IsAiSourced);
         Assert.False(dialog.Description.HasActions);
         Assert.True(dialog.InfoProperties.ContainsKey("Size"));
-        Assert.False(dialog.InfoProperties.ContainsKey("Description"));
+
+        // Exactly one description row, carrying the stored value; AI text never replaces it.
+        dialog.InitializeDescription(stack.Service("entry", "Generated text"), "entry");
+        var row = Assert.Single(dialog.InfoProperties,
+            item => string.Equals(item.Key, dialog.DescriptionHeader, StringComparison.CurrentCultureIgnoreCase));
+        Assert.Equal("Imported description", row.Value);
+        Assert.Equal("Imported description", dialog.Description.DescriptionText);
+        Assert.False(dialog.Description.CanGenerate);
     }
+
+    private static string DescriptionCatalogSourceText =>
+        SkyCD.UI.Localization.LocalizationService.Current.Get(SkyCD.UI.Localization.UiKeys.DescriptionCatalogSource);
 
     private sealed class DescriptionStack : IDisposable
     {

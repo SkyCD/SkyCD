@@ -1,10 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using DryIoc;
+using SkyCD.Couchbase;
+using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
+using SkyCD.Documents.Enum;
+using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -63,8 +72,6 @@ public class PropertiesDialogViewModelTests
     [InlineData("rEaLdIrEcToRyNaMe")]
     [InlineData("Comment")]
     [InlineData("cOmMeNt")]
-    [InlineData("Description")]
-    [InlineData("dEsCrIpTiOn")]
     public void Constructor_HidesGeneralTabPropertiesWithoutChangingStoredValues(string key)
     {
         var source = new PropertiesCollection { [key] = "original" };
@@ -77,30 +84,113 @@ public class PropertiesDialogViewModelTests
     }
 
     [Fact]
-    public void Constructor_ExposesCatalogDescriptionAsUnifiedValueWithoutDuplicatingIt()
+    public void Constructor_ExposesCatalogDescriptionAsAPropertiesListRowExactlyOnce()
     {
         var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
             new PropertiesCollection { ["Description"] = "Imported description", ["Size"] = 1 });
 
-        Assert.True(vm.HasDescriptionSection);
+        Assert.True(vm.HasDescription);
         Assert.NotNull(vm.Description);
         Assert.Equal("Imported description", vm.Description!.DescriptionText);
         Assert.False(vm.Description.IsAiSourced);
         Assert.False(vm.Description.HasActions);
         Assert.Equal("Imported description", vm.GetProperties()["Description"]);
-        Assert.False(vm.InfoProperties.ContainsKey("Description"));
+        var row = Assert.Single(vm.InfoProperties, item =>
+            string.Equals(item.Key, vm.DescriptionHeader, StringComparison.CurrentCultureIgnoreCase));
+        Assert.Equal("Imported description", row.Value);
         Assert.True(vm.InfoProperties.ContainsKey("Size"));
+    }
+
+    [Fact]
+    public void Constructor_PlacesTheDescriptionRowFirstInEveryCulture()
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("lt-LT");
+            var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+                new PropertiesCollection { ["Description"] = "Importuotas aprašymas", ["Size"] = 1, ["FullName"] = "/item" });
+
+            // The description position does not depend on the localized label's alphabetical place.
+            Assert.Equal([vm.DescriptionHeader, "FullName", "Size"], vm.InfoProperties.Keys);
+            Assert.Equal("Importuotas aprašymas", vm.InfoProperties[vm.DescriptionHeader]);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
     }
 
     [Fact]
     public void Constructor_IgnoresBlankCatalogDescription()
     {
         var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
-            new PropertiesCollection { ["Description"] = "  " });
+            new PropertiesCollection { ["Description"] = "  ", ["Size"] = 1 });
 
-        Assert.False(vm.HasDescriptionSection);
+        Assert.False(vm.HasDescription);
         Assert.Null(vm.Description);
         Assert.False(vm.InfoProperties.ContainsKey("Description"));
+        Assert.Equal(["Size"], vm.InfoProperties.Keys);
+    }
+
+    [Fact]
+    public void InitializeDescription_ProjectsTheAiTextIntoTheRowWhenNothingIsStored()
+    {
+        using var stack = new DescriptionStack();
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+            new PropertiesCollection { ["Size"] = 1 });
+
+        vm.InitializeDescription(stack.Service("key", "Generated text"), "key");
+
+        Assert.True(vm.HasDescription);
+        Assert.NotNull(vm.Description);
+        Assert.True(vm.Description!.IsAiSourced);
+        Assert.True(vm.Description.HasActions);
+        Assert.Equal(["Description", "Size"], vm.InfoProperties.Keys);
+        Assert.Equal("Generated text", vm.InfoProperties[vm.DescriptionHeader]);
+        Assert.Equal("Generated text", vm.Description.DescriptionText);
+        // Projection is display-only: the read-time row does not become a stored catalog property.
+        Assert.False(vm.GetProperties().ContainsKey("Description"));
+    }
+
+    [Fact]
+    public void InitializeDescription_KeepsTheStoredDescriptionRowAheadOfAiText()
+    {
+        using var stack = new DescriptionStack();
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+            new PropertiesCollection { ["Description"] = "Imported description", ["Size"] = 1 });
+
+        vm.InitializeDescription(stack.Service("key", "Generated text"), "key");
+
+        Assert.Equal(["Description", "Size"], vm.InfoProperties.Keys);
+        Assert.Equal("Imported description", vm.InfoProperties[vm.DescriptionHeader]);
+        Assert.False(vm.Description!.IsAiSourced);
+        Assert.Equal("Imported description", vm.Description.DescriptionText);
+    }
+
+    [Fact]
+    public void ClearingTheAiDescription_RemovesTheRowAndRaisesInfoPropertiesChanged()
+    {
+        using var stack = new DescriptionStack();
+        var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+            new PropertiesCollection { ["Size"] = 1 });
+        vm.InitializeDescription(stack.Service("key", "Generated text"), "key");
+        Assert.Equal(["Description", "Size"], vm.InfoProperties.Keys);
+        var changes = 0;
+        vm.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(PropertiesDialogViewModel.InfoProperties))
+            {
+                changes++;
+            }
+        };
+
+        vm.Description!.ClearCommand.Execute(null);
+
+        Assert.False(vm.Description.HasDescription);
+        Assert.False(vm.InfoProperties.ContainsKey(vm.DescriptionHeader));
+        Assert.Equal(["Size"], vm.InfoProperties.Keys);
+        Assert.True(changes > 0);
     }
 
     [Fact]
@@ -543,6 +633,92 @@ public class PropertiesDialogViewModelTests
         vm.InitializeDetailsTabs([second]);
 
         Assert.Equal("demo.second", Assert.Single(vm.DetailsTabs).Key);
+    }
+
+    [Fact]
+    public void RefreshLocalization_KeepsTheSingleDescriptionRowFirst()
+    {
+        using var stack = new DescriptionStack();
+        var previous = LocalizationService.Current.CurrentCulture;
+        try
+        {
+            // The label lookup follows the UI culture only when one is set, so one view model covers both locales.
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("en"));
+            var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
+                new PropertiesCollection { ["Description"] = "Imported description", ["Size"] = 1 });
+            vm.InitializeDescription(stack.Service("key", "Generated text"), "key");
+
+            // Lithuanian sorts "Aprašymas" before "Size"; English sorts "Description" after it.
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("lt"));
+            var localizedHeader = vm.DescriptionHeader;
+
+            Assert.Equal([localizedHeader, "Size"], vm.InfoProperties.Keys);
+            Assert.Equal("Imported description", vm.InfoProperties[localizedHeader]);
+        }
+        finally
+        {
+            LocalizationService.Current.SetCulture(previous);
+        }
+    }
+
+    /// <summary>In-memory catalog plus media-cache stack that serves a stored AI description.</summary>
+    private sealed class DescriptionStack : IDisposable
+    {
+        private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-ai-prop-vm-{Guid.NewGuid():N}");
+        private readonly string? previousAppData = Environment.GetEnvironmentVariable("APPDATA");
+        private readonly string? previousDatabaseDirectory = Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
+        private readonly DryIoc.Container container;
+
+        public DescriptionStack()
+        {
+            Directory.CreateDirectory(root);
+            Environment.SetEnvironmentVariable("APPDATA", root);
+            Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", Path.Combine(root, "SkyCD"));
+            container = new Container();
+            new CouchbaseServiceRegistrator().RegisterServices(container);
+            var repositories = container.Resolve<RepositoryManager>();
+            Catalog = (CatalogDocumentRepository)repositories.For<CatalogDocument>();
+            Store = new CouchbaseMediaCacheStore(Catalog.Collection.Database);
+        }
+
+        public CatalogDocumentRepository Catalog { get; }
+
+        public CouchbaseMediaCacheStore Store { get; }
+
+        public AiDescriptionService Service(string entryId, string text)
+        {
+            Catalog.Save(entryId, new CatalogDocument
+            {
+                Id = entryId,
+                Name = entryId,
+                Type = CatalogDocumentType.File,
+                Size = 1,
+                Properties = new PropertiesCollection()
+            });
+            var descriptions = new CatalogDescriptionService(Catalog, Store);
+            var context = descriptions.Build(entryId, new());
+            descriptions.Save(context, new GeneratedDescription(
+                text, "agent", "model", "1.0.0", "prompt", "English",
+                "content-based AI description", "local-inference", DateTimeOffset.UtcNow));
+            return new AiDescriptionService(Catalog, Store);
+        }
+
+        public void Dispose()
+        {
+            Store.Dispose();
+            container.Dispose();
+            Environment.SetEnvironmentVariable("APPDATA", previousAppData);
+            Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Best effort: the temp catalog lives under the test process temp directory.
+
+            }
+        }
     }
 
     private static PropertiesDialogViewModel CreateWithCulture(object value, CultureInfo culture, string key = "Value")

@@ -354,6 +354,12 @@ public partial class MainWindow : Window
     {
         Dispatcher.UIThread.Post(() =>
         {
+            if (subscribedViewModel?.EditingBrowserItemId is not null)
+            {
+                FocusBrowserRenameEditor(attempts: 3);
+                return;
+            }
+
             var treeView = this.FindControl<TreeView>("MainTreeView");
             if (treeView is null || subscribedViewModel?.SelectedTreeNode is not { IsRenaming: true } node)
             {
@@ -371,6 +377,34 @@ public partial class MainWindow : Window
             editor.Focus();
             editor.SelectAll();
         }, DispatcherPriority.Loaded);
+    }
+
+    // The row may not be realized yet when the edit starts, so retry until virtualization has
+    // produced the editor.
+    private void FocusBrowserRenameEditor(int attempts)
+    {
+        var browserView = this.FindControl<BrowserItemsView>("MainBrowserItemsView");
+        if (browserView?.FocusRenameEditor() == true || attempts <= 0)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => FocusBrowserRenameEditor(attempts - 1), DispatcherPriority.Background);
+    }
+
+    private void OnBrowserRenameCommitted(object? sender, EventArgs e)
+    {
+        subscribedViewModel?.CommitBrowserItemRename();
+    }
+
+    private void OnBrowserRenameCancelled(object? sender, EventArgs e)
+    {
+        subscribedViewModel?.CancelBrowserItemRename();
+    }
+
+    private void OnBrowserRenameAbandoned(object? sender, EventArgs e)
+    {
+        subscribedViewModel?.CancelBrowserItemRename(restoreFocus: false);
     }
 
     private void OnRenameEditorKeyDown(object? sender, KeyEventArgs e)
