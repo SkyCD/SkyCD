@@ -12,7 +12,8 @@
         SkyCD.Plugin.<Kind>.<Subject>[.<Variant>] with a known <Kind>;
       - a production plugin uses Menu, Modal or Cli as <Kind> or first subject token;
       - a test project directly under tests/ is not named <subject>.Tests
-        (fixture projects are allow-listed).
+        (fixture projects are allow-listed; a subject may also name a
+        source-linked shared folder under Plugins/Shared/).
 #>
 param(
     [string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
@@ -45,6 +46,16 @@ function Add-Violation([string]$message) {
 
 function Get-RelativePath([string]$path) {
     [System.IO.Path]::GetRelativePath($RepositoryRoot, $path).Replace('\', '/')
+}
+
+function Test-SharedSourceSubject([string]$subject) {
+    $folder = $subject -replace '^SkyCD\.Plugin\.', ''
+    $sharedPath = Join-Path $RepositoryRoot "Plugins/Shared/$folder"
+    if (-not (Test-Path -LiteralPath $sharedPath -PathType Container)) {
+        return $false
+    }
+
+    return [bool](Get-ChildItem -LiteralPath $sharedPath -Recurse -Filter "*.cs" -File)
 }
 
 $propsPath = Join-Path $RepositoryRoot "Directory.Build.props"
@@ -137,7 +148,7 @@ foreach ($projectFile in $projectFiles) {
     $projectName = [System.IO.Path]::GetFileNameWithoutExtension($projectFile.Name)
     if ($projectName -like "*.Tests") {
         $subject = $projectName.Substring(0, $projectName.Length - ".Tests".Length)
-        if (-not $projectNames.Contains($subject)) {
+        if (-not $projectNames.Contains($subject) -and -not (Test-SharedSourceSubject $subject)) {
             Add-Violation "Test project '$projectName' has no matching project named '$subject'."
         }
     }

@@ -103,7 +103,8 @@ is `Feature.WebBrowser`.
 - `tools/scripts/ci/check-naming.ps1` fails when a project folder, `.csproj` name and assembly name
   differ, when a plugin name does not match the grammar or uses an unknown kind, when a production
   plugin uses a surface word, when two projects produce the same assembly simple name, or when a test
-  project does not follow `<subject>.Tests`. It runs in `.github/workflows/test.yml` and
+  project does not follow `<subject>.Tests`. A test subject may also be a source-linked folder under
+  `Plugins/Shared/`, which has no assembly of its own. It runs in `.github/workflows/test.yml` and
   `tools/scripts/ci/validate.ps1`.
 
 ## Plugin ids
