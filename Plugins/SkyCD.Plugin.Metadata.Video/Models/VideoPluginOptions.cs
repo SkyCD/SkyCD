@@ -3,15 +3,17 @@ using System;
 namespace SkyCD.Plugin.Metadata.Video.Models;
 
 /// <summary>
-/// Bounds and external-decoder configuration for the video plugin.
+/// Bounds and decoder configuration for the video plugin.
 /// </summary>
 /// <remarks>
-/// An external decoder is opt-in and never fetched: <see cref="FFmpegPath"/> is an explicit path, and when it
-/// is null the plugin looks at <see cref="FFmpegPathEnvironmentVariable"/> and then at <c>PATH</c>. Nothing is
-/// downloaded and no codec pack is assumed, because FFmpeg builds differ in license — a GPL build with
-/// <c>--enable-libx264</c> and an LGPL build are not interchangeable, so the operator decides which binary
-/// the plugin may run. When no binary is found, poster generation is skipped and metadata-only results are
-/// stored, which is the documented fallback rather than an error.
+/// Poster frames decode in-process through the OpenCV videoio runtime that ships with the plugin. An external
+/// FFmpeg decoder is optional and never fetched: <see cref="FFmpegPath"/> is an explicit path, and when it is
+/// null the plugin looks at <see cref="FFmpegPathEnvironmentVariable"/> and then at <c>PATH</c>. Nothing is
+/// downloaded and no external codec pack is assumed; the fallback exists because FFmpeg builds differ in
+/// license — a GPL build with <c>--enable-libx264</c> and an LGPL build are not interchangeable — so which
+/// binary the plugin may run is the operator's decision. When no fallback is found and the bundled decoder
+/// cannot read the source, poster generation is skipped and metadata-only results are stored, which is the
+/// documented outcome rather than an error.
 /// </remarks>
 public sealed record VideoPluginOptions
 {
@@ -43,7 +45,7 @@ public sealed record VideoPluginOptions
     public int HeaderScanBytes { get; }
 
     /// <summary>
-    /// Sources larger than this cannot be piped to an external decoder, so they are stored metadata-only.
+    /// Sources larger than this are not handed to a decoder, so they are stored metadata-only.
     /// Aligned with the host's per-provider source budget by default, since that is what bounds the read.
     /// </summary>
     public long MaxPosterSourceBytes { get; }
@@ -57,10 +59,10 @@ public sealed record VideoPluginOptions
     /// </summary>
     public double PosterTimestampSeconds { get; }
 
-    /// <summary>Wall-clock limit for one external decoder run, on top of the host's provider timeout.</summary>
+    /// <summary>Wall-clock limit for one decoder run, on top of the host's provider timeout.</summary>
     public int DecoderTimeoutMilliseconds { get; }
 
-    /// <summary>Explicit decoder executable, or null to discover one.</summary>
+    /// <summary>Explicit fallback decoder executable, or null to discover one.</summary>
     public string? FFmpegPath { get; }
 
     public static VideoPluginOptions Default { get; } = new();

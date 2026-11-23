@@ -277,6 +277,16 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "OpenCvSharp4": {
+        "type": "Transitive",
+        "resolved": "4.13.0.20261107",
+        "contentHash": "QzWQnOQg7pLYEFqiZuzX0K/UwA1K9OhXmY1X9P4pm6iRFp93UJxLHhU87Q60mGHFM+T4QyBfQr177mUlE2XIIQ=="
+      },
+      "OpenCvSharp4.runtime.win": {
+        "type": "Transitive",
+        "resolved": "4.13.0.20261107",
+        "contentHash": "suj3kBH9QX9x/zLvgHgmdudU7/wPbJQInyt2UmnIChgsJQ3x8xyjbFsVKi2hCYyV4J3ENvydgV5jGAcC+oZPVg=="
+      },
       "SerialQueue": {
         "type": "Transitive",
         "resolved": "2.1.0",
@@ -455,6 +465,8 @@
       "skycd.plugin.metadata.video": {
         "type": "Project",
         "dependencies": {
+          "OpenCvSharp4": "[4.13.0.20261107, )",
+          "OpenCvSharp4.runtime.win": "[4.13.0.20261107, )",
           "SkyCD.Plugin.Abstractions": "[3.0.0, )"
         }
       },

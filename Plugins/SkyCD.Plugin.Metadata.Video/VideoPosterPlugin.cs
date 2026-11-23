@@ -12,11 +12,12 @@ namespace SkyCD.Plugin.Metadata.Video;
 /// Produces one bounded poster frame per video, when a decoder is available.
 /// </summary>
 /// <remarks>
-/// Producing a frame needs a video decoder, and no license-compatible managed decoder covers the codecs these
-/// containers carry, so the work is delegated to an operator-supplied external tool. When none is configured
-/// or found, and when the source is larger than what may be piped, the capability returns no artifact: the
-/// metadata result stands on its own and the browser shows the honest "no preview stored" state. Nothing is
-/// ever downloaded.
+/// Frames are decoded in-process by the OpenCV videoio backend that ships with the plugin, so a fresh install
+/// stores a poster without any external tool. An operator-supplied FFmpeg binary remains a fallback for
+/// codecs OpenCV's bundled backend cannot decode and for platforms without the Windows native runtime; when
+/// neither can produce a frame, and when the source is larger than what may be read, the capability returns
+/// no artifact: the metadata result stands on its own and the browser shows the honest "no preview stored"
+/// state. Nothing is ever downloaded.
 /// </remarks>
 public sealed class VideoPosterPlugin : IMediaPreviewCapability
 {
@@ -26,12 +27,12 @@ public sealed class VideoPosterPlugin : IMediaPreviewCapability
     private readonly IVideoFrameExtractor extractor;
 
     public VideoPosterPlugin()
-        : this(VideoPluginOptions.Default, new FFmpegFrameExtractor(VideoPluginOptions.Default))
+        : this(VideoPluginOptions.Default)
     {
     }
 
     public VideoPosterPlugin(VideoPluginOptions options)
-        : this(options, new FFmpegFrameExtractor(options))
+        : this(options, new CompositeVideoFrameExtractor(options))
     {
     }
 
@@ -63,7 +64,7 @@ public sealed class VideoPosterPlugin : IMediaPreviewCapability
         var length = source.Length > 0 ? source.Length : item.Length;
         if (length <= 0 || length > options.MaxPosterSourceBytes)
         {
-            // Too large to pipe within the host budget; metadata-only is the documented outcome.
+            // Too large to hand to a decoder within the host budget; metadata-only is the documented outcome.
             progress?.Report(new MediaProgress(1));
             return new MediaPreviewResult([]);
         }
