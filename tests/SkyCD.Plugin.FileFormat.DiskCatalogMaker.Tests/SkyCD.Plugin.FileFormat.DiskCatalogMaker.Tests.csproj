@@ -21,6 +21,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.DiskExplorer\SkyCD.Plugin.FileFormat.DiskExplorer.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.DiskCatalogMaker\SkyCD.Plugin.FileFormat.DiskCatalogMaker.csproj"/>
+        <ProjectReference Include="..\SkyCD.TestSupport\SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <None Update="Fixtures\**\*">

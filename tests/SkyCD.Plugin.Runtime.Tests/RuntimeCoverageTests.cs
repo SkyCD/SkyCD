@@ -17,6 +17,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Repositories;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -146,8 +147,8 @@ public sealed class RuntimeCoverageTests
     [Fact]
     public void PluginRepository_UpsertPreservesEnabledAndMarksMissingUnavailable()
     {
-        var path = Path.Combine(Path.GetTempPath(), "skycd-plugin-runtime-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
+        using var workspace = new TestWorkspace();
+        var path = workspace.CreateDirectory(Path.Combine("skycd-plugin-runtime-tests", Guid.NewGuid().ToString("N")));
 
         using var databaseManager = new DatabaseManager();
         databaseManager.Connect("default", path);

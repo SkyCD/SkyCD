@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using SkyCD.App;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -23,7 +24,8 @@ public sealed class SystemMediaEjectorTests
     [Fact]
     public void Eject_FolderSource_IsNotApplicable()
     {
-        var folder = Path.Combine(Path.GetTempPath(), "skycd-eject-folder");
+        using var workspace = new TestWorkspace();
+        var folder = workspace.CreateDirectory("eject-folder");
         var ejector = new SystemMediaEjector();
 
         Assert.Equal(MediaEjectionOutcome.NotApplicable, ejector.Eject(folder));

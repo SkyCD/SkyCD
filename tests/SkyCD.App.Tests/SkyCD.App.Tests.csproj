@@ -35,6 +35,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Katalog\SkyCD.Plugin.FileFormat.Katalog.csproj" />
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj" />
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj" />
+        <ProjectReference Include="..\SkyCD.TestSupport\SkyCD.TestSupport.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\legacy\SkyCD\Samples\ftpz.ascd" Link="FormatFixtures\ftpz.ascd" CopyToOutputDirectory="PreserveNewest" />

@@ -20,6 +20,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.Search;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using UCanAccess.File;
 using Xunit;
 using Database = Couchbase.Lite.Database;
@@ -31,7 +32,8 @@ public sealed class MyCatalogueIntegrationTests
     [Fact]
     public async Task HostOpen_ImportsHierarchyAndMetadataWithoutChangingSource()
     {
-        var directory = MyCatalogueFixture.CreateDirectory();
+        using var workspace = new TestWorkspace();
+        var directory = workspace.CreateDirectory("catalog");
         try
         {
             var path = Path.Combine(directory, "catalog.mdb");
@@ -94,15 +96,16 @@ public sealed class MyCatalogueIntegrationTests
             Assert.Equal("media:mycatalogue:2", documents.Single(item => item.Name == "root.bin").ParentId);
             Assert.Equal(hash, SHA256.HashData(await File.ReadAllBytesAsync(path)));
             Assert.Single(Directory.GetFiles(directory));
-            VerifyPersistence(documents);
+            VerifyPersistence(workspace, documents);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { workspace.Dispose(); }
     }
 
     [Fact]
     public async Task ReadAsync_PreservesGroupsEvenWithoutDisks()
     {
-        var directory = MyCatalogueFixture.CreateDirectory();
+        using var workspace = new TestWorkspace();
+        var directory = workspace.CreateDirectory("catalog");
         try
         {
             var path = Path.Combine(directory, "catalog.mdb");
@@ -116,7 +119,7 @@ public sealed class MyCatalogueIntegrationTests
             Assert.Equal("group:mycatalogue:1", documents.Single(document => document.Id == "group:mycatalogue:2").ParentId);
             Assert.Contains(documents, document => document.Name == "Empty group");
         }
-        finally { Directory.Delete(directory, true); }
+        finally { workspace.Dispose(); }
     }
 
     [Theory]
@@ -135,7 +138,8 @@ public sealed class MyCatalogueIntegrationTests
     [InlineData("version", "version 1.2")]
     public async Task ReadAsync_RejectsInvalidRelationshipsAndValues(string variant, string message)
     {
-        var directory = MyCatalogueFixture.CreateDirectory();
+        using var workspace = new TestWorkspace();
+        var directory = workspace.CreateDirectory("catalog");
         try
         {
             var path = Path.Combine(directory, "catalog.mdb");
@@ -145,13 +149,14 @@ public sealed class MyCatalogueIntegrationTests
             Assert.False(result.Success);
             Assert.Contains(message, result.Error, StringComparison.OrdinalIgnoreCase);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { workspace.Dispose(); }
     }
 
     [Fact]
     public async Task DetectionAndRead_RejectTruncatedUnrelatedAndUnsupportedCatalogs()
     {
-        var directory = MyCatalogueFixture.CreateDirectory();
+        using var workspace = new TestWorkspace();
+        var directory = workspace.CreateDirectory("catalog");
         try
         {
             var path = Path.Combine(directory, "catalog.mdb");
@@ -174,7 +179,7 @@ public sealed class MyCatalogueIntegrationTests
             await using var unsupportedStream = File.OpenRead(unsupported);
             Assert.False(plugin.CanHandleContent(unsupportedStream));
         }
-        finally { Directory.Delete(directory, true); }
+        finally { workspace.Dispose(); }
     }
 
     [Fact]
@@ -191,7 +196,8 @@ public sealed class MyCatalogueIntegrationTests
     [Fact]
     public async Task ReadAsync_CancellationDuringImportIsPropagated()
     {
-        var directory = MyCatalogueFixture.CreateDirectory();
+        using var workspace = new TestWorkspace();
+        var directory = workspace.CreateDirectory("catalog");
         try
         {
             var path = Path.Combine(directory, "catalog.mdb");
@@ -207,7 +213,7 @@ public sealed class MyCatalogueIntegrationTests
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new MyCataloguePlugin().ReadAsync(request, cancellation.Token));
             Assert.Single(Directory.GetFiles(directory));
         }
-        finally { Directory.Delete(directory, true); }
+        finally { workspace.Dispose(); }
     }
 
     [Fact]
@@ -224,52 +230,48 @@ public sealed class MyCatalogueIntegrationTests
         Assert.Contains("read-only", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void VerifyPersistence(IReadOnlyList<CatalogDocument> documents)
+    private static void VerifyPersistence(TestWorkspace workspace, IReadOnlyList<CatalogDocument> documents)
     {
-        var directory = MyCatalogueFixture.CreateDirectory();
-        try
+        var directory = workspace.CreateDirectory("persistence");
+        using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var collection = database.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var collection = database.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var document = entry.ToMutableDocument(entry.Id);
-                collection.Save(document);
-            }
-            database.Close();
-
-            using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            collection = reopened.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var saved = collection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Type, restored.Type);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.HasKnownSize, restored.HasKnownSize);
-            }
-            using var missingSize = collection.GetDocument("item:mycatalogue:4");
-            Assert.Equal(string.Empty, missingSize.FromDocument<CatalogDocument>()!.DisplaySize);
-            using var checkedFile = collection.GetDocument("item:mycatalogue:2");
-            var restoredFile = checkedFile.FromDocument<CatalogDocument>()!;
-            Assert.Equal("80000000", restoredFile.Properties["CRC32"]);
-            Assert.Equal("2021-02-03T04:05:06.0000000", restoredFile.Properties["DateCreated"]);
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-            var group = vm.TreeNodes.Single(node => node.Key == "group:mycatalogue:1");
-            var nested = group.Children.Single(node => node.Key == "group:mycatalogue:2");
-            Assert.Contains(nested.Children, node => node.Key == "media:mycatalogue:1");
-            Assert.Contains(vm.TreeNodes, node => node.Key == "group:mycatalogue:3");
+            using var document = entry.ToMutableDocument(entry.Id);
+            collection.Save(document);
         }
-        finally { Directory.Delete(directory, true); }
+        database.Close();
+
+        using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        collection = reopened.GetDefaultCollection();
+        foreach (var entry in documents)
+        {
+            using var saved = collection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Type, restored.Type);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.HasKnownSize, restored.HasKnownSize);
+        }
+        using var missingSize = collection.GetDocument("item:mycatalogue:4");
+        Assert.Equal(string.Empty, missingSize.FromDocument<CatalogDocument>()!.DisplaySize);
+        using var checkedFile = collection.GetDocument("item:mycatalogue:2");
+        var restoredFile = checkedFile.FromDocument<CatalogDocument>()!;
+        Assert.Equal("80000000", restoredFile.Properties["CRC32"]);
+        Assert.Equal("2021-02-03T04:05:06.0000000", restoredFile.Properties["DateCreated"]);
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+        var group = vm.TreeNodes.Single(node => node.Key == "group:mycatalogue:1");
+        var nested = group.Children.Single(node => node.Key == "group:mycatalogue:2");
+        Assert.Contains(nested.Children, node => node.Key == "media:mycatalogue:1");
+        Assert.Contains(vm.TreeNodes, node => node.Key == "group:mycatalogue:3");
     }
 
     private static IReadOnlyList<CatalogFindResult> SearchSize(CatalogSearchIndex index, AdvancedCatalogOperator comparison, object? value = null) =>
