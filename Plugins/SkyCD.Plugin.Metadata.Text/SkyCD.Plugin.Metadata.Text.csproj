@@ -2,6 +2,13 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: renders the bounded excerpt to a page thumbnail. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
@@ -9,7 +16,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Plain Text Previews and Searchable Excerpts</AssemblyTitle>
-        <Description>Reads a bounded plain-text excerpt and typed encoding facts from text, Markdown, CSV and common source files. Binary input is rejected, markup is never interpreted, and originals are never modified.</Description>
+        <Description>Reads a bounded plain-text excerpt and typed encoding facts from text, Markdown, CSV and common source files, and renders a bounded page thumbnail of the excerpt. Binary input is rejected, markup is never interpreted, and originals are never modified.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

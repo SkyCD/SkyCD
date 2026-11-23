@@ -12,12 +12,14 @@ public sealed record TextPluginOptions
         long maxScanBytes = 16 * 1024 * 1024,
         long maxSourceBytes = 64 * 1024 * 1024,
         int binaryDetectionWindowBytes = 8192,
-        double maxBinaryControlRatio = 0.02)
+        double maxBinaryControlRatio = 0.02,
+        int maxThumbnailDimension = 768)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxExcerptCharacters);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxScanBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxSourceBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(binaryDetectionWindowBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxThumbnailDimension);
 
         if (maxBinaryControlRatio is < 0 or > 1)
         {
@@ -30,6 +32,7 @@ public sealed record TextPluginOptions
         MaxSourceBytes = maxSourceBytes;
         BinaryDetectionWindowBytes = binaryDetectionWindowBytes;
         MaxBinaryControlRatio = maxBinaryControlRatio;
+        MaxThumbnailDimension = maxThumbnailDimension;
     }
 
     /// <summary>Upper bound of the published excerpt, in characters.</summary>
@@ -52,6 +55,9 @@ public sealed record TextPluginOptions
     /// than displayed as arbitrary bytes.
     /// </summary>
     public double MaxBinaryControlRatio { get; }
+
+    /// <summary>Longest edge of the rendered page thumbnail, in pixels.</summary>
+    public int MaxThumbnailDimension { get; }
 
     public static TextPluginOptions Default { get; } = new();
 }

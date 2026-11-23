@@ -79,6 +79,7 @@ public sealed class MediaPreviewResolver
 
         var sawMissingArtifact = false;
         var sawOversizedArtifact = false;
+        var candidates = new List<(MediaCacheRecord Record, MediaArtifactReference Artifact)>();
 
         foreach (var record in OrderPreviewRecords(records))
         {
@@ -100,10 +101,23 @@ public sealed class MediaPreviewResolver
                 continue;
             }
 
-            var snapshot = BuildPayloadSnapshot(entry.Id, record, artifact, fields);
+            candidates.Add((record, artifact));
+        }
+
+        // The pane prefers a readable text excerpt over any image the same capture also published.
+        var selected = candidates.Find(candidate =>
+            ClassifyPayload(candidate.Artifact.ContentType) == PreviewPayloadKind.Text);
+        if (selected.Record is null)
+        {
+            selected = candidates.Count > 0 ? candidates[0] : default;
+        }
+
+        if (selected.Record is not null)
+        {
+            var snapshot = BuildPayloadSnapshot(entry.Id, selected.Record, selected.Artifact, fields);
             if (markServed)
             {
-                store.Touch(record.Id, timeProvider.GetUtcNow());
+                store.Touch(selected.Record.Id, timeProvider.GetUtcNow());
             }
 
             return snapshot;
@@ -117,6 +131,42 @@ public sealed class MediaPreviewResolver
             ProviderId = ResolveProviderId(records),
             Fields = fields
         };
+    }
+
+    /// <summary>
+    /// Resolves the entry's first displayable image artifact for the list thumbnail, independently of the
+    /// pane's preferred payload so an entry can keep a readable text excerpt and still show a page image.
+    /// </summary>
+    /// <remarks>Store-only and synchronous like <see cref="Resolve"/>; no record is touched for LRU order.</remarks>
+    public EntryPreviewSnapshot? ResolveThumbnail(CatalogDocument? entry)
+    {
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Id))
+        {
+            return null;
+        }
+
+        foreach (var record in OrderPreviewRecords(store.GetRecordsForEntry(entry.Id)))
+        {
+            if (record.State == MediaCacheRecordState.Missing)
+            {
+                continue;
+            }
+
+            foreach (var artifact in record.Artifacts
+                         .Where(artifact => !string.IsNullOrWhiteSpace(artifact.Key))
+                         .OrderBy(artifact => artifact.Key, StringComparer.Ordinal))
+            {
+                if (artifact.Length > Policy.MaxDecodedArtifactBytes ||
+                    ClassifyPayload(artifact.ContentType) != PreviewPayloadKind.Image)
+                {
+                    continue;
+                }
+
+                return BuildPayloadSnapshot(entry.Id, record, artifact, []);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Reads the stored bytes of a resolved payload; false when the payload is unavailable.</summary>
