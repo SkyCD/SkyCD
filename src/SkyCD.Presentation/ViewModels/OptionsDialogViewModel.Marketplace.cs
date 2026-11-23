@@ -10,6 +10,7 @@ using SkyCD.Plugin.Abstractions;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Marketplace.Models;
 using SkyCD.Presentation.Marketplace;
+using SkyCD.Presentation.Plugins;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -41,6 +42,9 @@ public partial class OptionsDialogViewModel
     [ObservableProperty] private bool isInstallConfirmationVisible;
 
     public bool HasSelectedMarketplacePlugin => SelectedMarketplacePlugin is not null;
+
+    public bool HasSelectedMarketplaceProjectUrl =>
+        ExternalLinkLauncher.IsLaunchable(SelectedMarketplacePlugin?.ProjectUrl);
 
     public string ConfirmationPrompt => SelectedMarketplacePlugin is { } item
         ? LocalizationService.Current.Format(TextKeys.PluginInstallConfirmation, item.Title, item.Publisher)
@@ -74,6 +78,15 @@ public partial class OptionsDialogViewModel
     {
         IsMarketplaceBrowseSelected = false;
     }
+
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedMarketplaceProjectUrl))]
+    private void OpenSelectedMarketplaceProjectUrl()
+    {
+        ExternalLinkLauncher.TryOpen(SelectedMarketplacePlugin?.ProjectUrl);
+    }
+
+    private bool CanOpenSelectedMarketplaceProjectUrl() =>
+        ExternalLinkLauncher.IsLaunchable(SelectedMarketplacePlugin?.ProjectUrl);
 
     [RelayCommand]
     private async Task ShowMarketplacePluginsAsync()
@@ -269,7 +282,9 @@ public partial class OptionsDialogViewModel
     {
         IsInstallConfirmationVisible = false;
         OnPropertyChanged(nameof(HasSelectedMarketplacePlugin));
+        OnPropertyChanged(nameof(HasSelectedMarketplaceProjectUrl));
         OnPropertyChanged(nameof(ConfirmationPrompt));
+        OpenSelectedMarketplaceProjectUrlCommand.NotifyCanExecuteChanged();
         if (value is not null) IsMarketplaceBrowseSelected = true;
     }
 

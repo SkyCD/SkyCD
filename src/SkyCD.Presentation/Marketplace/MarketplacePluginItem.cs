@@ -37,6 +37,7 @@ public sealed partial class MarketplacePluginItem : ObservableObject
             ? LocalizationService.Current.Get(TextKeys.PluginUnknownPublisher)
             : package.Publisher;
         Source = package.SourceUri.IsAbsoluteUri ? package.SourceUri.Host : package.SourceUri.OriginalString;
+        ProjectUrl = package.ProjectUrl?.AbsoluteUri;
         Summary = package.Summary ?? string.Empty;
         CompatibilityMessage = ResolveCompatibilityMessage(package);
         ApplyState(installState);
@@ -54,6 +55,8 @@ public sealed partial class MarketplacePluginItem : ObservableObject
     public string Publisher { get; }
 
     public string Source { get; }
+
+    public string? ProjectUrl { get; }
 
     public string Summary { get; }
 

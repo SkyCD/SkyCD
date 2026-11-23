@@ -43,6 +43,7 @@ public sealed class DiscoveredPluginFactory
             Description = metadata.Description,
             PrimaryExtension = ResolvePrimaryExtension(capabilities),
             FileName = metadata.FileName,
+            AssemblyLocation = assembly.Location,
             Capabilities = capabilities
         };
     }

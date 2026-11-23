@@ -41,11 +41,15 @@ using SkyCD.Plugin.Abstractions;
 using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Configuration;
+using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Documents;
+using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
@@ -2025,46 +2029,76 @@ public partial class MainWindow : Window
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
         var descriptors = pluginManager.GetPluginDescriptors();
-        var loadedById = pluginManager.Plugins
+        var discoveredById = pluginManager.AvailablePlugins
             .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
+        var installStates = pluginMarketplaceService.GetInstallStates();
         var configurationManager = ServiceProvider.Resolve<PluginConfigurationManager>();
 
         var plugins = descriptors
-            .Select(descriptor =>
-            {
-                if (loadedById.TryGetValue(descriptor.Id, out var loaded))
-                {
-                    return new OptionsPluginItem(
-                        loaded.Name,
-                        string.IsNullOrWhiteSpace(loaded.Author?.Name) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : loaded.Author.Name,
-                        $"{loaded.Id} v{loaded.Version}",
-                        isEnabled: descriptor.IsEnabled,
-                        id: loaded.Id,
-                        authorUrl: loaded.Author?.Url,
-                        description: loaded.Description,
-                        primaryExtension: loaded.PrimaryExtension);
-                }
-
-                var authorSummary = string.IsNullOrWhiteSpace(descriptor.Author?.Name)
-                    ? LocalizationService.Current.Get(TextKeys.UnknownAuthor)
-                    : descriptor.Author.Name;
-                var extendedInfo = $"{descriptor.Id} v{descriptor.Version}";
-
-                return new OptionsPluginItem(
-                    descriptor.Name,
-                    authorSummary,
-                    extendedInfo,
-                    isEnabled: descriptor.IsEnabled,
-                    id: descriptor.Id,
-                    authorUrl: descriptor.Author?.Url,
-                    description: descriptor.Description,
-                    primaryExtension: descriptor.PrimaryExtension);
-            })
+            .Select(descriptor => CreateOptionsPluginItem(descriptor, discoveredById, installStates))
             .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
         dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
+    }
+
+    /// <summary>
+    /// Combines the persisted descriptor (enabled state, stale plugins) with the freshly discovered
+    /// assembly metadata so the Additional Info tab can show links, version, size and update source.
+    /// </summary>
+    private static OptionsPluginItem CreateOptionsPluginItem(
+        PluginDocument descriptor,
+        IReadOnlyDictionary<string, DiscoveredPlugin> discoveredById,
+        IReadOnlyDictionary<string, PluginInstallState> installStates)
+    {
+        discoveredById.TryGetValue(descriptor.Id, out var discovered);
+
+        var authorName = discovered?.Author?.Name ?? descriptor.Author?.Name;
+        var version = discovered is null ? descriptor.Version : discovered.Version.ToString();
+        return new OptionsPluginItem(
+            discovered?.Name ?? descriptor.Name,
+            string.IsNullOrWhiteSpace(authorName) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : authorName,
+            $"{descriptor.Id} v{version}",
+            isEnabled: descriptor.IsEnabled,
+            id: descriptor.Id,
+            authorUrl: discovered?.Author?.Url ?? descriptor.Author?.Url,
+            description: discovered?.Description ?? descriptor.Description,
+            primaryExtension: discovered?.PrimaryExtension ?? descriptor.PrimaryExtension,
+            projectUrl: discovered?.ProjectUrl ?? descriptor.ProjectUrl,
+            version: version,
+            capabilityType: ResolveCapabilityType(discovered),
+            sizeBytes: PluginFolderSize.TryComputeBytes(discovered?.AssemblyLocation),
+            updateSource: ResolveUpdateSource(descriptor.Id, discovered, installStates));
+    }
+
+    private static string? ResolveCapabilityType(DiscoveredPlugin? plugin)
+    {
+        if (plugin is null || plugin.Capabilities.Count == 0)
+        {
+            return null;
+        }
+
+        return string.Join(", ", plugin.Capabilities
+            .Select(static capability => capability.GetType().Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static PluginUpdateSource? ResolveUpdateSource(
+        string pluginId,
+        DiscoveredPlugin? discovered,
+        IReadOnlyDictionary<string, PluginInstallState> installStates)
+    {
+        if (discovered is null)
+        {
+            return null;
+        }
+
+        return installStates.TryGetValue(pluginId, out var state) &&
+               state.Status != PluginInstallOperationStatus.NotInstalled
+            ? PluginUpdateSource.Marketplace
+            : PluginUpdateSource.PluginFolder;
     }
 
     private void SyncPluginRuntimeState()
