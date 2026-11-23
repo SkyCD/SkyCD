@@ -442,7 +442,7 @@ public class DetailsListViewTests
             window.MouseUp(typePoint.Value + new Vector(3, 0), MouseButton.Left);
             Assert.Empty(reordered);
 
-            // Dropping before the leading required column clamps to the first movable slot.
+            // Dropping before the leading column places it at index 0.
             var namePoint = headerGrid.TranslatePoint(new Point(10, 10), window);
             Assert.NotNull(namePoint);
             window.MouseDown(typePoint.Value, MouseButton.Left);
@@ -452,14 +452,18 @@ public class DetailsListViewTests
 
             move = Assert.Single(reordered);
             Assert.Equal(DetailsColumnsCatalog.TypeId, move.ColumnId);
-            Assert.Equal(1, move.TargetIndex);
+            Assert.Equal(0, move.TargetIndex);
 
-            // The required Name header is not draggable.
+            // The required Name header is draggable like every other header.
             reordered.Clear();
             window.MouseDown(namePoint.Value, MouseButton.Left);
+            window.MouseMove(namePoint.Value + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
             window.MouseMove(drop.Value, RawInputModifiers.LeftMouseButton);
             window.MouseUp(drop.Value, MouseButton.Left);
-            Assert.Empty(reordered);
+
+            move = Assert.Single(reordered);
+            Assert.Equal(DetailsColumnsCatalog.NameId, move.ColumnId);
+            Assert.Equal(3, move.TargetIndex);
         }
         finally
         {
@@ -510,11 +514,11 @@ public class DetailsListViewTests
             Assert.Equal(DetailsColumnsCatalog.SizeId, Assert.IsType<TextBlock>(ghost.Child).Text);
             Assert.Equal(typeCell.Bounds.Left, Canvas.GetLeft(marker), 3);
 
-            // Dragging over the leading required column clamps to the first movable slot.
+            // Dragging over the leading column places the marker at its leading edge.
             var namePoint = nameCell.TranslatePoint(new Point(10, 10), window)!.Value;
             window.MouseMove(namePoint, RawInputModifiers.LeftMouseButton);
             Assert.True(marker.IsVisible);
-            Assert.Equal(sizeCell.Bounds.Left, Canvas.GetLeft(marker), 3);
+            Assert.Equal(nameCell.Bounds.Left, Canvas.GetLeft(marker), 3);
 
             // The marker tracks the pointer to the far column.
             var locationPoint = locationCell.TranslatePoint(new Point(30, 10), window)!.Value;
@@ -568,6 +572,83 @@ public class DetailsListViewTests
         {
             window.Close();
         }
+    }
+
+    [AvaloniaFact]
+    public void DetailHeaders_RequiredNameShowsDragCursor()
+    {
+        var (window, _, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120));
+
+        try
+        {
+            var headerCells = headerGrid.Children.OfType<Grid>().ToArray();
+            Assert.Equal(2, headerCells.Length);
+            Assert.All(headerCells, cell =>
+            {
+                var headerBorder = Assert.IsType<Border>(cell.Children[0]);
+                Assert.NotNull(headerBorder.Cursor);
+            });
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void DetailsRow_IconAndNameFollowNameColumnWhenItIsNotFirst()
+    {
+        var columns = new[]
+        {
+            new BrowserDetailsColumn
+            {
+                Id = DetailsColumnsCatalog.SizeId,
+                Header = "Size",
+                ValuePath = "DisplaySize",
+                Width = new GridLength(100, GridUnitType.Pixel),
+                ValueAlignment = HorizontalAlignment.Right
+            },
+            new BrowserDetailsColumn
+            {
+                Id = DetailsColumnsCatalog.NameId,
+                Header = "Name",
+                ValuePath = "Name",
+                Width = new GridLength(500, GridUnitType.Pixel),
+                IsRequired = true,
+                ShowsItemIcon = true
+            }
+        };
+
+        var view = new BrowserItemsView
+        {
+            DetailsColumns = columns,
+            ViewMode = BrowserViewMode.Details
+        };
+
+        var detailsListView = view.FindControl<DetailsListView>("DetailsListView")!;
+        var item = new BrowserViewModesTests.TestBrowserItem
+        {
+            Name = "Alpha.dat",
+            DisplaySize = "1 KB"
+        };
+
+        var renderedRow = detailsListView.RowTemplate!.Build(item)!;
+        renderedRow.DataContext = item;
+        Dispatcher.UIThread.RunJobs();
+
+        var rowGrid = Assert.IsType<Grid>(renderedRow);
+        var sizeText = Assert.IsType<TextBlock>(rowGrid.Children[0]);
+        Assert.Equal(0, Grid.GetColumn(sizeText));
+        Assert.Equal(HorizontalAlignment.Right, sizeText.HorizontalAlignment);
+
+        var namePanel = Assert.IsType<DockPanel>(rowGrid.Children[1]);
+        Assert.Equal(1, Grid.GetColumn(namePanel));
+        var iconContainer = Assert.IsType<Grid>(namePanel.Children[0]);
+        Assert.Equal(16, iconContainer.Width);
+        var nameText = Assert.IsType<TextBlock>(namePanel.Children[1]);
+        Assert.Equal("Alpha.dat", nameText.Text);
     }
 
     private static Border FindHeaderVisual(Grid headerGrid, string name)
