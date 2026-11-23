@@ -20,51 +20,71 @@
         <vm:AdvancedCatalogFindDialogViewModel />
     </Design.DataContext>
 
+    <!--
+        Sections, top to bottom: scope, criteria toolbar, filter list, sort/pagination, results,
+        status, saved searches, dialog actions. The filter and result lists share the remaining
+        height by a 2:3 ratio instead of a fixed pixel row (#1002).
+    -->
     <Grid Margin="{DynamicResource SkyWindowPadding}"
-          RowDefinitions="Auto,Auto,170,Auto,*,Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto,Auto,2*,Auto,3*,Auto,Auto,Auto"
           RowSpacing="{DynamicResource SkySpaceSm}">
-        <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-            <WrapPanel Orientation="Horizontal">
-                <CheckBox IsChecked="{Binding SearchSubtree}" IsEnabled="{Binding HasScopeRoot}"
-                          Content="{i18n:Translate {x:Static i18n:UiKeys.SearchSubtree}}"
-                          Margin="0,0,8,0" />
-                <TextBlock VerticalAlignment="Center" Margin="0,0,12,0"
-                           Text="{Binding ScopeRootLabel}" IsVisible="{Binding HasScopeRoot}" />
-                <CheckBox IsChecked="{Binding IncludeDescendants}" IsEnabled="{Binding SearchSubtree}"
-                          Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeDescendants}}" />
-            </WrapPanel>
-            <WrapPanel Orientation="Horizontal">
-            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" VerticalAlignment="Center" />
-            <ComboBox ItemsSource="{Binding AvailableCombinations}"
-                      SelectedItem="{Binding SelectedCombination}"
-                      MinWidth="90"
-                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" />
-            <ComboBox ItemsSource="{Binding AvailableScopeTypes}"
-                      SelectedItem="{Binding SelectedScopeType}"
-                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchScopeAll}}"
-                      MinWidth="110"
-                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Scope}}" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddFilter}}"
-                    Command="{Binding AddFilterCommand}" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ClearFilters}}"
-                    Command="{Binding ClearFiltersCommand}" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ResetFilters}}"
-                    Command="{Binding ResetFiltersCommand}" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
-                    Command="{Binding SearchCommand}" IsDefault="True" MinWidth="90" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
-                    Command="{Binding CancelSearchCommand}" MinWidth="90" />
-            </WrapPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+            <CheckBox IsChecked="{Binding SearchSubtree}" IsEnabled="{Binding HasScopeRoot}"
+                      Content="{i18n:Translate {x:Static i18n:UiKeys.SearchSubtree}}" />
+            <TextBlock VerticalAlignment="Center"
+                       Text="{Binding ScopeRootLabel}" IsVisible="{Binding HasScopeRoot}" />
+            <CheckBox IsChecked="{Binding IncludeDescendants}" IsEnabled="{Binding SearchSubtree}"
+                      Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeDescendants}}" />
         </StackPanel>
 
-        <Grid Grid.Row="1" ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <WrapPanel Orientation="Horizontal"
+                       ItemSpacing="{DynamicResource SkySpaceSm}"
+                       VerticalAlignment="Center">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" VerticalAlignment="Center" />
+                <ComboBox ItemsSource="{Binding AvailableCombinations}"
+                          SelectedItem="{Binding SelectedCombination}"
+                          MinWidth="90"
+                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.MatchMode}}" />
+                <ComboBox ItemsSource="{Binding AvailableScopeTypes}"
+                          SelectedItem="{Binding SelectedScopeType}"
+                          PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchScopeAll}}"
+                          MinWidth="110"
+                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Scope}}" />
+            </WrapPanel>
+            <!-- Filter-editing actions stay grouped apart from the run actions. -->
+            <WrapPanel Grid.Column="2"
+                       Orientation="Horizontal"
+                       ItemSpacing="{DynamicResource SkySpaceMd}"
+                       LineSpacing="{DynamicResource SkySpaceSm}"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddFilter}}"
+                            Command="{Binding AddFilterCommand}" />
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ClearFilters}}"
+                            Command="{Binding ClearFiltersCommand}" />
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ResetFilters}}"
+                            Command="{Binding ResetFiltersCommand}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
+                            Command="{Binding SearchCommand}" IsDefault="True" MinWidth="90" />
+                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                            Command="{Binding CancelSearchCommand}" MinWidth="90" />
+                </StackPanel>
+            </WrapPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FilterField}}" Opacity="0.7" />
             <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.FilterOperator}}" Opacity="0.7" />
             <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}" Opacity="0.7" />
             <TextBlock Grid.Column="3" Text="{i18n:Translate {x:Static i18n:UiKeys.Value}}" Opacity="0.7" />
         </Grid>
 
-        <ListBox Grid.Row="2" ItemsSource="{Binding Filters}">
+        <ListBox Grid.Row="3" ItemsSource="{Binding Filters}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:AdvancedCatalogFilterRowViewModel">
                     <Grid ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -109,7 +129,7 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}" VerticalAlignment="Center">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}" VerticalAlignment="Center">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SortBy}}" VerticalAlignment="Center" />
             <ComboBox ItemsSource="{Binding AvailableSortKeys}"
                       SelectedItem="{Binding SelectedSortKey}"
@@ -124,43 +144,55 @@
                     Command="{Binding NextPageCommand}" />
         </StackPanel>
 
-        <ListBox x:Name="ResultsList" Grid.Row="4" ItemsSource="{Binding Results}"
+        <ListBox x:Name="ResultsList" Grid.Row="5" ItemsSource="{Binding Results}"
                  SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Results}}"
                  DoubleTapped="OnResultsDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:CatalogFindResult">
-                    <Grid Margin="4,3" ColumnDefinitions="2*,4*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceMd}">
-                        <TextBlock Text="{Binding Document.Name}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding FullPath}" TextTrimming="CharacterEllipsis"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <TextBlock Grid.Column="2" Text="{Binding Document.DisplayType}" TextTrimming="CharacterEllipsis"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                        <TextBlock Grid.Column="3" Text="{Binding Document.Status}" TextTrimming="CharacterEllipsis"
-                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                    </Grid>
+                    <Border Padding="{DynamicResource SkyInsetXxs}">
+                        <Grid ColumnDefinitions="2*,4*,Auto,Auto"
+                              ColumnSpacing="{DynamicResource SkySpaceMd}">
+                            <TextBlock Text="{Binding Document.Name}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="{Binding FullPath}" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Document.DisplayType}" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                            <TextBlock Grid.Column="3" Text="{Binding Document.Status}" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <TextBlock Grid.Row="5" Text="{Binding StatusText}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="6" Text="{Binding StatusText}" TextWrapping="Wrap" />
 
-        <WrapPanel Grid.Row="7" IsVisible="{Binding CanSaveSearch}">
-            <TextBox Width="150" Text="{Binding SavedSearchName}"
-                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SaveSearchName}}"
-                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SaveSearchName}}" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SaveSearch}}" Command="{Binding SaveSearchCommand}" />
-            <ComboBox Width="150" ItemsSource="{Binding SavedSearches}" SelectedItem="{Binding SelectedSavedSearch}"
-                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.LoadSearch}}" Command="{Binding LoadSavedSearchCommand}" />
-            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.UpdateSearch}}" Command="{Binding UpdateSavedSearchCommand}" />
-        </WrapPanel>
+        <!-- Saved searches form a separated footer band above the dialog actions. -->
+        <Border Grid.Row="7"
+                IsVisible="{Binding CanSaveSearch}"
+                BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="{DynamicResource SkyInsetSm}">
+            <WrapPanel Orientation="Horizontal"
+                       ItemSpacing="{DynamicResource SkySpaceSm}"
+                       LineSpacing="{DynamicResource SkySpaceXs}">
+                <TextBox Width="150" Text="{Binding SavedSearchName}"
+                         PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SaveSearchName}}"
+                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SaveSearchName}}" />
+                <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SaveSearch}}" Command="{Binding SaveSearchCommand}" />
+                <ComboBox Width="150" ItemsSource="{Binding SavedSearches}" SelectedItem="{Binding SelectedSavedSearch}"
+                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="{i18n:Translate {x:Static i18n:UiKeys.LoadSearch}}" Command="{Binding LoadSavedSearchCommand}" />
+                <Button Content="{i18n:Translate {x:Static i18n:UiKeys.UpdateSearch}}" Command="{Binding UpdateSavedSearchCommand}" />
+            </WrapPanel>
+        </Border>
 
-        <Grid Grid.Row="6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+        <Grid Grid.Row="8" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
             <Button Grid.Column="1" MinWidth="90"
                     Content="{i18n:Translate {x:Static i18n:UiKeys.OpenResult}}"
                     IsEnabled="{Binding HasSelectedResult}"
