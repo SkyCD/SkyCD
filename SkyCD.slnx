@@ -160,6 +160,7 @@
         <Project Path="tests/SkyCD.Plugin.Sample.Config.Tests/SkyCD.Plugin.Sample.Config.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Menu.Tests/SkyCD.Plugin.Sample.Menu.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Modal.Tests/SkyCD.Plugin.Sample.Modal.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Storage.Tests/SkyCD.Plugin.Storage.Tests.csproj"/>
         <Project Path="tests/SkyCD.UI.Tests/SkyCD.UI.Tests.csproj"/>
     </Folder>
     <Folder Name="/tests/slices/">

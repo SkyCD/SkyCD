@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.CDCollect.Export;
 using SkyCD.Plugin.FileFormat.CDCollect.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect;
 
@@ -66,37 +67,18 @@ public sealed class CdCollectPlugin : IFileFormatPluginCapability, IContentAware
             // Confirm the catalog schema; a SQLite header alone is not format detection.
             if (stream.CanSeek)
             {
-                var tempFile = Path.Combine(Path.GetTempPath(), $"cdcollect_detect_{Guid.NewGuid():N}.db");
                 try
                 {
                     stream.Position = 0;
-                    using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        stream.CopyTo(fs);
-                    }
-
-                    using (var conn = new SqliteConnection($"Data Source={tempFile};Mode=ReadOnly;Pooling=False"))
-                    {
-                        conn.Open();
-                        return CdCollectParser.HasCatalogSchema(conn);
-                    }
+                    using var database = TemporaryDatabase.CopyFrom(stream, ".db");
+                    using var conn = new SqliteConnection(
+                        $"Data Source={database.Path};Mode=ReadOnly;Pooling=False");
+                    conn.Open();
+                    return CdCollectParser.HasCatalogSchema(conn);
                 }
                 catch
                 {
                     return false;
-                }
-                finally
-                {
-                    try
-                    {
-                        if (File.Exists(tempFile))
-                        {
-                            File.Delete(tempFile);
-                        }
-                    }
-                    catch
-                    {
-                    }
                 }
             }
 
