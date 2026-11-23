@@ -19,6 +19,9 @@ internal static class ExecutableIconDecoder
 {
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
+    /// <summary>The start-of-image marker every JPEG file begins with.</summary>
+    private static ReadOnlySpan<byte> JpegSignature => [0xFF, 0xD8, 0xFF];
+
     /// <summary>
     /// Decodes the resource at its own pixel size. Fitting it to the preview edge is the encoder's job; an
     /// image above <paramref name="maximumPixels"/> raises <see cref="ExecutableIconException"/> after its
@@ -30,10 +33,29 @@ internal static class ExecutableIconDecoder
 
         if (HasPngSignature(data))
         {
-            return DecodePng(data, maximumPixels);
+            return DecodeSkiaImage(data, maximumPixels);
         }
 
         return DecodeBitmap(data, maximumPixels);
+    }
+
+    /// <summary>True when the data starts with a PNG signature or a JPEG start-of-image marker.</summary>
+    public static bool HasEncodedImageSignature(ReadOnlySpan<byte> data) => HasPngSignature(data) ||
+        (data.Length >= JpegSignature.Length && data[..JpegSignature.Length].SequenceEqual(JpegSignature));
+
+    /// <summary>
+    /// Decodes a standalone PNG or JPEG image, such as an <c>.icns</c> payload, an AppImage <c>.DirIcon</c>
+    /// or a launcher's icon file. The pixel bound is checked against the header before any raster exists.
+    /// </summary>
+    public static ExecutableIconImage DecodeEncodedImage(ReadOnlySpan<byte> data, int maximumPixels)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumPixels);
+        if (!HasEncodedImageSignature(data))
+        {
+            throw new ExecutableIconException("the image is neither a PNG nor a JPEG");
+        }
+
+        return DecodeSkiaImage(data, maximumPixels);
     }
 
     /// <summary>Reads the pixel dimensions an icon bitmap declares, or null when it is not a readable bitmap.</summary>
@@ -196,31 +218,32 @@ internal static class ExecutableIconDecoder
         data.Length >= 8 && data[..8].SequenceEqual(PngSignature);
 
     /// <summary>
-    /// Decodes a bare PNG icon. The pixel bound is checked against the header dimensions, so a decompression
-    /// bomb that merely declares a huge image is refused before any raster exists.
+    /// Decodes an encoded PNG or JPEG image through Skia. The pixel bound is checked against the header
+    /// dimensions, so a decompression bomb that merely declares a huge image is refused before any raster
+    /// exists.
     /// </summary>
-    private static ExecutableIconImage DecodePng(ReadOnlySpan<byte> data, int maximumPixels)
+    private static ExecutableIconImage DecodeSkiaImage(ReadOnlySpan<byte> data, int maximumPixels)
     {
         using var buffer = SKData.CreateCopy(data.ToArray());
         using var codec = SKCodec.Create(buffer) ??
-                          throw new ExecutableIconException("the icon PNG could not be recognized");
+                          throw new ExecutableIconException("the icon image could not be recognized");
 
         var info = codec.Info;
         if (info.Width <= 0 || info.Height <= 0)
         {
-            throw new ExecutableIconException("the icon PNG declares empty dimensions");
+            throw new ExecutableIconException("the icon image declares empty dimensions");
         }
 
         if ((long)info.Width * info.Height > maximumPixels)
         {
-            throw new ExecutableIconException("the icon PNG exceeds the allowed pixel count");
+            throw new ExecutableIconException("the icon image exceeds the allowed pixel count");
         }
 
         var decodeInfo = new SKImageInfo(info.Width, info.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var bitmap = new SKBitmap(decodeInfo);
         if (codec.GetPixels(decodeInfo, bitmap.GetPixels()) != SKCodecResult.Success)
         {
-            throw new ExecutableIconException("the icon PNG pixels could not be decoded");
+            throw new ExecutableIconException("the icon image pixels could not be decoded");
         }
 
         return new ExecutableIconImage(info.Width, info.Height, ToStraightRgba(bitmap));

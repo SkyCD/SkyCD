@@ -27,3 +27,23 @@ public interface ILocalMediaMetadataCapability : IPluginCapability
     Task<MediaExtractionResult> ExtractAsync(LocalMediaContext source, IProgress<MediaProgress>? progress,
         CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Assembly-discovered preview generation addressed by a local path, for artwork that is stored beside the
+/// source or elsewhere on its volume instead of inside the source bytes: a launcher entry's <c>Icon=</c>
+/// file, a desktop theme image resolved from the volume, or a bundle icon stored in a sibling folder.
+/// </summary>
+/// <remarks>
+/// Like <see cref="ILocalMediaMetadataCapability"/>, the path is host-owned: it is supplied only while the
+/// source is available locally and must never be persisted, logged or published. Without a path the provider
+/// contributes no result at all, so an offline entry keeps whatever preview the catalog already stored.
+/// </remarks>
+public interface ILocalMediaPreviewCapability : IPluginCapability
+{
+    /// <summary>Supported source types and schema identity.</summary>
+    MediaDescriptor Descriptor { get; }
+
+    /// <summary>Produces read-only artifacts for a locally available source.</summary>
+    Task<MediaPreviewResult> GeneratePreviewAsync(LocalMediaContext source, IProgress<MediaProgress>? progress,
+        CancellationToken cancellationToken);
+}

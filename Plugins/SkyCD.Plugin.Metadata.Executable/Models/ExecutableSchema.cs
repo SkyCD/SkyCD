@@ -15,7 +15,13 @@ public static class ExecutableSchema
 
     /// <summary>Identity of the icon preview contract; it stores a PNG artifact rather than metadata values.</summary>
     public const string PreviewSchemaId = "skycd.executable.icon";
-    public const int PreviewSchemaVersion = 1;
+
+    /// <summary>
+    /// Version 2 adds the platform-specific icon sources — <c>.icns</c> containers, AppImage <c>.DirIcon</c>
+    /// artwork and <c>.desktop</c> launcher icons — beside the Windows PE icon resources of version 1, so
+    /// cached previews produced before those sources existed are re-extracted.
+    /// </summary>
+    public const int PreviewSchemaVersion = 2;
 
     /// <summary>Executable family the source belongs to, for example <c>pe</c> or <c>mz-16</c>.</summary>
     public const string Container = "Container";
@@ -49,6 +55,26 @@ public static class ExecutableSchema
         "application/x-msdos-program",
         "application/x-dosexec"
     ];
+
+    /// <summary>
+    /// Sources the byte-reading icon capability claims: Windows images with PE icon resources, macOS
+    /// <c>.icns</c> containers and AppImage files whose <c>.DirIcon</c> the plugin can read.
+    /// </summary>
+    public static readonly IReadOnlyList<string> IconExtensions = [".exe", ".dll", ".scr", ".com", ".icns", ".appimage"];
+
+    public static readonly IReadOnlyList<string> IconContentTypes =
+    [
+        .. ContentTypes,
+        "image/icns",
+        "image/x-icns",
+        "application/x-appimage",
+        "application/x-iso9660-appimage"
+    ];
+
+    /// <summary>Sources whose icon lives beside the entry and is resolved through its local path.</summary>
+    public static readonly IReadOnlyList<string> LauncherExtensions = [".desktop"];
+
+    public static readonly IReadOnlyList<string> LauncherContentTypes = ["application/x-desktop"];
 
     public static MediaMetadataSchema Metadata { get; } = new(MetadataSchemaId, MetadataSchemaVersion,
     [

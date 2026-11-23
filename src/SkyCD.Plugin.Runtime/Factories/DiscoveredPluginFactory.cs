@@ -75,6 +75,15 @@ public sealed class DiscoveredPluginFactory
             }
         }
 
+        foreach (var capability in capabilities.OfType<ILocalMediaPreviewCapability>())
+        {
+            var extension = TryResolveFirstExtension(() => capability.Descriptor.Extensions);
+            if (extension is not null)
+            {
+                return extension;
+            }
+        }
+
         foreach (var capability in capabilities.OfType<IAudioCdMetadataCapability>())
         {
             var extension = TryResolveFirstExtension(() =>
