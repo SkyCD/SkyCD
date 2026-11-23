@@ -1,20 +1,23 @@
 # Microsoft Office document metadata plugin
 
-Implements #736 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
+Implements #736 and the embedded thumbnail preview from #945 on the capability contracts from #435
+(`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Office/` → plugin id `SkyCD.Plugin.Metadata.Office`.
+Assembly: `Plugins/SkyCD.Plugin.Metadata.Office/` → plugin id `SkyCD.Plugin.Office`.
 Tests: `tests/SkyCD.Plugin.Metadata.Office.Tests/`.
 
 The plugin claims the Word, Excel and PowerPoint filename extensions and MIME types, so an Office document
 is never routed through another metadata reader. It follows the PDF and Works plugins' conventions: a
 versioned schema, a bounded single-pass source read, omission instead of empty values, and a sanitized
 decode failure. It does not need Microsoft Office, an Office Open XML SDK, or a platform-specific library.
+Documents that carry a preview picture also publish it as a thumbnail for the browser and preview pane.
 
 ## What it provides
 
 | Capability | Type | Schema |
 |---|---|---|
 | Document metadata | `OfficeMetadataPlugin : IMediaMetadataCapability` | `skycd.office.metadata` v1 |
+| Thumbnail preview | `OfficePreviewPlugin : IMediaPreviewCapability` | `skycd.office.preview` v1 |
 
 Discovery uses assembly metadata and implemented capability types only. There is no `plugin.json`, and a
 test asserts none exists.
@@ -99,6 +102,25 @@ compound-file library is MPL-2.0 (see [Dependencies and licensing](#dependencies
 They are deliberately kept inside the plugin assemblies, matching the Microsoft Works and WordPerfect
 plugins; a shared OLE assembly would add a project and deployment surface for code that is only read.
 
+## Thumbnail preview
+
+The preview capability copies a picture the document already embeds; it renders nothing. Schema
+`skycd.office.preview` version 1 carries identity only, and the descriptor claims the same extensions and
+MIME types as the metadata capability.
+
+- **OOXML packages:** the standard `docProps/thumbnail.jpeg` part is decompressed under the same cap as a
+  metadata part and published as one `image/jpeg` artifact. The JPEG frame header is parsed first, and a
+  part that is not a JPEG or whose edges exceed `OfficePluginOptions.MaxThumbnailDimension` (1024 px) is
+  treated as absent.
+- **Legacy compound documents:** the thumbnail is the `VT_CF` clipboard property (id 17) of
+  `\x05SummaryInformation`. Only the device-independent bitmap forms (`CF_DIB` and `CF_DIBV5`) are
+  published; the packed DIB gains a 14-byte bitmap file header and is published as `image/bmp`, which the
+  host decodes natively. Metafile clipboard formats stay unrendered because the plugin adds no rasterizer.
+- **Explicit "no preview":** a missing thumbnail, an encrypted package, an unreadable part, an unsupported
+  clipboard format and a part above `MaxPreviewBytes` (4 MiB) all return an empty artifact list, which the
+  host records as "no preview". A damaged ZIP container is a decode failure, exactly as for metadata, and a
+  preview failure never discards the metadata capability's result.
+
 ## Encryption
 
 Office 2007 and later protect an OOXML package by wrapping it, byte for byte, in a compound file with
@@ -121,8 +143,9 @@ with `ZipArchive`, so no temporary file is created.
 
 `OfficePluginOptions.MaxSourceBytes` (64 MiB, above the host's 16 MiB default) rejects oversized sources
 before a byte is charged, so the host budget is what normally binds. `MaxMetadataPartBytes` (4 MiB) bounds
-each metadata part. An empty source fails with `OfficeDecodeException`; cancellation is checked before the
-first read, between chunks, between parts and after parsing, and a cancelled extraction publishes nothing.
+each metadata part, and `MaxPreviewBytes` (4 MiB) bounds the embedded thumbnail and the summary stream it is
+read from. An empty source fails with `OfficeDecodeException`; cancellation is checked before the first
+read, between chunks, between parts and after parsing, and a cancelled extraction publishes nothing.
 
 ## Dependencies and licensing
 
@@ -152,6 +175,11 @@ No policy file change is made.
   not recompute them when a document is saved by another application.
 - Encrypted OOXML packages are identified but not opened, so they publish no document properties.
 - There is no credential path by design. Password-protected content is never decrypted.
+- The thumbnail preview publishes only what a document already embeds. `wmf`/`emf` OOXML thumbnails and
+  metafile clipboard thumbnails in legacy documents are not converted, because no rasterizer is added;
+  such documents keep metadata and show "no preview".
+- A legacy bitmap thumbnail is published only with a `BITMAPINFOHEADER` or later header; a header with a
+  palette is supported, while the 12-byte bitmap core header is treated as absent.
 
 ## Testing
 
@@ -166,4 +194,6 @@ Coverage includes the descriptor and schema, every published field, omission of 
 whitespace folding, date parsing, integer parsing, every damage path, truncation and header checks, the exact
 budget charge and read count, cancellation, progress reporting, the host's extension and content type
 matching, failure classification, assembly discovery without a manifest, and offline storage through the real
-scheduler and in-memory cache store.
+scheduler and in-memory cache store. Preview coverage adds an embedded JPEG published as one artifact, a
+missing or non-JPEG part, byte and pixel bounds, a legacy clipboard bitmap wrapped as a bitmap file, a
+metafile clipboard format, encrypted packages, and a captured thumbnail surviving a reopen without the plugin.

@@ -13,6 +13,9 @@ public static class OfficeSchema
     public const string MetadataSchemaId = "skycd.office.metadata";
     public const int MetadataSchemaVersion = 1;
 
+    public const string PreviewSchemaId = "skycd.office.preview";
+    public const int PreviewSchemaVersion = 1;
+
     /// <summary>How the document is stored: <c>ooxml</c> for a ZIP package, <c>ole</c> for a compound file.</summary>
     public const string Container = "Container";
 
@@ -105,4 +108,7 @@ public static class OfficeSchema
         new MediaMetadataField(CharacterCount, MediaMetadataType.Integer),
         new MediaMetadataField(SlideCount, MediaMetadataType.Integer)
     ]);
+
+    /// <summary>Preview results carry the embedded thumbnail rather than values, so the schema is identity only.</summary>
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }

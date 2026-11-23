@@ -81,6 +81,60 @@ public sealed class SampleConfigurationPluginTests : IDisposable
     }
 
     [Fact]
+    public void PluginManager_SkipsAssembly_WhenConfigurationCapabilityCannotBeRead()
+    {
+        CopyPluginAssembly(typeof(SampleConfigurationPluginTests).Assembly);
+        var testPluginId = typeof(SampleConfigurationPluginTests).Assembly.GetName().Name!;
+        TestStubConfigurationCapability.ThrowOnConfigurationRead = true;
+
+        try
+        {
+            var exception = Record.Exception(() => pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0)));
+
+            Assert.Null(exception);
+            Assert.DoesNotContain(pluginManager.AvailablePlugins, plugin => plugin.Id == testPluginId);
+            Assert.DoesNotContain(configurationManager.GetRegistrations(includeDisabled: true),
+                registration => registration.PluginId == testPluginId);
+        }
+        finally
+        {
+            TestStubConfigurationCapability.ThrowOnConfigurationRead = false;
+        }
+    }
+
+    [Fact]
+    public void GetRegistrations_IsolatesDescriptorFailure_WithoutLosingOtherPlugins()
+    {
+        CopyPluginAssembly(typeof(SampleConfigurationPlugin).Assembly);
+        CopyPluginAssembly(typeof(SampleConfigurationPluginTests).Assembly);
+        pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
+
+        var testPluginId = typeof(SampleConfigurationPluginTests).Assembly.GetName().Name!;
+        Assert.Contains(configurationManager.GetRegistrations(includeDisabled: true),
+            registration => registration.PluginId == testPluginId);
+
+        PluginFailure? reportedFailure = null;
+        Action<PluginFailure> handler = failure => reportedFailure = failure;
+        PluginFailure.Reported += handler;
+        TestStubConfigurationCapability.ThrowOnConfigurationRead = true;
+
+        try
+        {
+            var registrations = configurationManager.GetRegistrations(includeDisabled: true);
+
+            Assert.DoesNotContain(registrations, registration => registration.PluginId == testPluginId);
+            Assert.Contains(registrations, registration => registration.PluginId == "SkyCD.Plugin.Sample.Configuration");
+            Assert.NotNull(reportedFailure);
+            Assert.Equal("configure", reportedFailure.Operation);
+        }
+        finally
+        {
+            TestStubConfigurationCapability.ThrowOnConfigurationRead = false;
+            PluginFailure.Reported -= handler;
+        }
+    }
+
+    [Fact]
     public async Task PageSession_SavesSettings_WhenSuccessful()
     {
         CopyPluginAssembly(typeof(SampleConfigurationPlugin).Assembly);
@@ -350,9 +404,13 @@ public enum TestStubMode
 public sealed class TestStubConfigurationCapability : IPluginConfigurationCapability
 {
     public static TestStubMode Mode { get; set; } = TestStubMode.Success;
+    public static bool ThrowOnConfigurationRead { get; set; }
     public static Task<PluginConfigurationPage>? DeferredPage { get; set; }
 
-    public PluginConfigurationDescriptor Configuration => new("tests.sample.config", "Test Stub Configuration");
+    public PluginConfigurationDescriptor Configuration => ThrowOnConfigurationRead
+        ? throw new MissingMethodException(
+            "Method not found: 'Void SkyCD.Plugin.Abstractions.Capabilities.Configuration.PluginConfigurationDescriptor..ctor(System.String, System.String)'.")
+        : new PluginConfigurationDescriptor("tests.sample.config", "Test Stub Configuration");
 
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)

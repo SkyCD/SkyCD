@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using DryIoc;
+using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Documents;
@@ -130,56 +131,64 @@ public sealed class LocationManagementViewTests : IDisposable
         Assert.Equal(3, options.Locations.Single(location => location.LocationId == fixture.GarageId).UsageCount);
         Assert.Equal(1, options.Locations.Single(location => location.LocationId == fixture.ShelfId).UsageCount);
 
-        options.NewLocationName = "Attic";
+        // "New location" appends an unstored row that edits its name in place and stages nothing yet.
         options.CreateLocationCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        var attic = Assert.Single(options.Locations, location => location.Name == "Attic");
+        var attic = Assert.Single(options.Locations, location => location.IsEditing);
         Assert.False(attic.IsStored);
+        Assert.Empty(attic.Name);
+        Assert.True(options.BuildLocationChangeSet().IsEmpty);
 
+        attic.EditName = "Attic";
+        Assert.True(options.CommitLocationRename(attic));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("Attic", attic.Name);
+        Assert.False(attic.IsEditing);
+
+        // Renaming an unstored row replaces its pending creation name instead of staging a rename.
         options.SelectedLocation = attic;
         Dispatcher.UIThread.RunJobs();
-        options.RenameTo = "Loft";
-        options.RenameLocationCommand.Execute(null);
+        options.BeginLocationEdit(attic);
+        attic.EditName = "Loft";
+        Assert.True(options.CommitLocationRename(attic));
         Dispatcher.UIThread.RunJobs();
         Assert.Contains(options.Locations, location => location.Name == "Loft");
         Assert.DoesNotContain(options.BuildLocationChangeSet().Changes,
             change => change is LocationChange.Rename { LocationId: var id } && id == attic.LocationId);
-        Assert.Contains(options.BuildLocationChangeSet().Changes,
-            change => change is LocationChange.Create { Name: "Loft" });
+        Assert.Single(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create { Name: "Loft" });
 
         var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
-        Dispatcher.UIThread.RunJobs();
 
         // Unsaved rows have no stored definition, so they cannot be merged away yet.
-        options.SelectedLocation = options.Locations.Single(location => location.Name == "Loft");
-        Dispatcher.UIThread.RunJobs();
-        options.MergeTarget = garage;
-        options.MergeLocationsCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.Contains(options.Locations, location => location.Name == "Loft");
+        options.ConfirmMergeLocations(attic, garage);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.LocationUnsaved), options.LocationsStatusText);
         Assert.DoesNotContain(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Merge);
 
         // Deleting an unsaved row drops its pending creation.
+        options.SelectedLocation = attic;
+        Dispatcher.UIThread.RunJobs();
         options.DeleteLocationCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         Assert.DoesNotContain(options.Locations, location => location.Name == "Loft");
         Assert.DoesNotContain(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create);
 
         // A row created in this session is only created on save, under the name it carries then.
-        options.NewLocationName = "Attic";
         options.CreateLocationCommand.Execute(null);
-        options.SelectedLocation = options.Locations.Single(location => location.Name == "Attic");
         Dispatcher.UIThread.RunJobs();
-        options.RenameTo = "Loft";
-        options.RenameLocationCommand.Execute(null);
+        var loft = Assert.Single(options.Locations, location => location.IsEditing);
+        loft.EditName = "Attic";
+        Assert.True(options.CommitLocationRename(loft));
+        options.BeginLocationEdit(loft);
+        loft.EditName = "Loft";
+        Assert.True(options.CommitLocationRename(loft));
         Dispatcher.UIThread.RunJobs();
         Assert.Contains(options.Locations, location => location.Name == "Loft");
         Assert.Contains(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create { Name: "Loft" });
 
-        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        var shelf = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        options.SelectedLocation = shelf;
         Dispatcher.UIThread.RunJobs();
-        options.MergeTarget = garage;
-        options.MergeLocationsCommand.Execute(null);
+        options.ConfirmMergeLocations(shelf, garage);
         Dispatcher.UIThread.RunJobs();
         Assert.DoesNotContain(options.Locations, location => location.Name == "Shelf");
         Assert.Equal(4, garage.UsageCount);
@@ -188,7 +197,6 @@ public sealed class LocationManagementViewTests : IDisposable
         // With the merged row gone from the list, the remaining target becomes the selection.
         Assert.DoesNotContain(options.Locations, location => location.LocationId == fixture.ShelfId);
         Assert.Same(garage, options.SelectedLocation);
-        Assert.Equal("Garage", options.RenameTo);
 
         // Nothing reached the store until the dialog is saved.
         Assert.Equal(["Garage", "Shelf"], StoredNames(fixture.Locations));
@@ -208,16 +216,155 @@ public sealed class LocationManagementViewTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void OptionsLocations_InlineRename_CommitsAndCancels()
+    {
+        var fixture = CreateFixture();
+        var options = OpenLocationsOptions(fixture.ViewModel);
+        Dispatcher.UIThread.RunJobs();
+
+        var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.SelectedLocation = garage;
+        Dispatcher.UIThread.RunJobs();
+        options.BeginLocationEdit(garage);
+        Assert.True(garage.IsEditing);
+        Assert.Equal("Garage", garage.EditName);
+
+        garage.EditName = "Carport";
+        Assert.True(options.CommitLocationRename(garage));
+        Assert.False(garage.IsEditing);
+        Assert.Equal("Carport", garage.Name);
+        Assert.Contains(options.BuildLocationChangeSet().Changes,
+            change => change is LocationChange.Rename { LocationId: var id, NewName: "Carport" } && id == fixture.GarageId);
+
+        // Cancelling drops the draft, restores the committed name and stages nothing new.
+        options.BeginLocationEdit(garage);
+        garage.EditName = "Temporary";
+        options.CancelLocationRename(garage);
+        Assert.False(garage.IsEditing);
+        Assert.Equal("Carport", garage.Name);
+        Assert.Single(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Rename);
+
+        // Empty and duplicate names keep the editor open with the existing validation messages.
+        var shelf = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        options.BeginLocationEdit(shelf);
+        shelf.EditName = "   ";
+        Assert.False(options.CommitLocationRename(shelf));
+        Assert.True(shelf.IsEditing);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.LocationNameRequired), options.LocationsStatusText);
+
+        shelf.EditName = "CARPORT";
+        Assert.False(options.CommitLocationRename(shelf));
+        Assert.True(shelf.IsEditing);
+        Assert.Equal(new LocationDuplicateNameException("CARPORT").Message, options.LocationsStatusText);
+
+        // Only one row edits at a time; opening another editor leaves the previous name untouched.
+        options.BeginLocationEdit(garage);
+        Assert.False(shelf.IsEditing);
+        Assert.Equal("Shelf", shelf.Name);
+        Assert.True(garage.IsEditing);
+    }
+
+    [AvaloniaFact]
+    public void OptionsLocations_NewLocationStartsInlineAndCancelDropsUnnamedRow()
+    {
+        var fixture = CreateFixture();
+        var options = OpenLocationsOptions(fixture.ViewModel);
+        Dispatcher.UIThread.RunJobs();
+
+        options.CreateLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        var created = Assert.Single(options.Locations, location => location.IsEditing);
+        Assert.False(created.IsStored);
+        Assert.Empty(created.Name);
+        Assert.True(options.BuildLocationChangeSet().IsEmpty);
+        Assert.False(options.MergeLocationsCommand.CanExecute(null));
+
+        options.CancelLocationRename(created);
+        Assert.DoesNotContain(created, options.Locations);
+        Assert.True(options.BuildLocationChangeSet().IsEmpty);
+        Assert.Equal("Garage", options.Locations[0].Name);
+
+        // Starting another new row abandons the previous unnamed one.
+        options.CreateLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        var first = Assert.Single(options.Locations, location => location.IsEditing);
+        options.CreateLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        var second = Assert.Single(options.Locations, location => location.IsEditing);
+
+        Assert.NotSame(first, second);
+        Assert.DoesNotContain(first, options.Locations);
+    }
+
+    [AvaloniaFact]
+    public void OptionsLocations_MergeDialogStagesOnlyOnConfirm()
+    {
+        var fixture = CreateFixture();
+        var options = OpenLocationsOptions(fixture.ViewModel);
+        Dispatcher.UIThread.RunJobs();
+
+        // An unstored row is never offered as a merge destination.
+        options.CreateLocationCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var shelf = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.SelectedLocation = shelf;
+        Dispatcher.UIThread.RunJobs();
+
+        var destinations = options.GetMergeDestinations(shelf);
+        var destination = Assert.Single(destinations);
+        Assert.Same(garage, destination);
+
+        var dialog = new MergeLocationsDialogViewModel(shelf, destinations);
+        Assert.Equal("Shelf", dialog.SourceName);
+        Assert.Equal(1, dialog.UsageCount);
+        Assert.Contains("Shelf", dialog.Summary, StringComparison.Ordinal);
+        Assert.False(dialog.CanConfirm);
+
+        dialog.SelectedDestination = destination;
+        Assert.True(dialog.CanConfirm);
+
+        // Dismissing the dialog without confirming leaves the staged changes untouched.
+        Assert.DoesNotContain(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Merge);
+
+        // Confirming stages the merge and moves the usage onto the destination.
+        options.ConfirmMergeLocations(shelf, dialog.SelectedDestination!);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains(options.BuildLocationChangeSet().Changes,
+            change => change is LocationChange.Merge { SourceId: var sourceId, TargetId: var targetId } &&
+                      sourceId == fixture.ShelfId && targetId == fixture.GarageId);
+        Assert.Equal(4, garage.UsageCount);
+        Assert.DoesNotContain(options.Locations, location => location.LocationId == fixture.ShelfId);
+        Assert.Same(garage, options.SelectedLocation);
+    }
+
+    [AvaloniaFact]
+    public void MergeLocationsWindow_LoadsWithDestinationChoices()
+    {
+        var source = new LocationItemViewModel("shelf", "Shelf", 1);
+        var destination = new LocationItemViewModel("garage", "Garage", 3);
+
+        var window = new MergeLocationsWindow(new MergeLocationsDialogViewModel(source, [destination]));
+
+        var viewModel = Assert.IsType<MergeLocationsDialogViewModel>(window.DataContext);
+        Assert.Equal("Shelf", viewModel.SourceName);
+        Assert.Same(destination, Assert.Single(viewModel.Destinations));
+        Assert.False(viewModel.CanConfirm);
+    }
+
+    [AvaloniaFact]
     public void OptionsLocations_MergeReassignsEntriesToTarget()
     {
         var fixture = CreateFixture();
         var options = OpenLocationsOptions(fixture.ViewModel);
         Dispatcher.UIThread.RunJobs();
 
-        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        var shelf = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.SelectedLocation = shelf;
         Dispatcher.UIThread.RunJobs();
-        options.MergeTarget = options.Locations.Single(location => location.LocationId == fixture.GarageId);
-        options.MergeLocationsCommand.Execute(null);
+        options.ConfirmMergeLocations(shelf, garage);
         Dispatcher.UIThread.RunJobs();
 
         fixture.ViewModel.ApplyLocationChanges(options.BuildLocationChangeSet());
@@ -235,14 +382,17 @@ public sealed class LocationManagementViewTests : IDisposable
         var options = OpenLocationsOptions(fixture.ViewModel);
         Dispatcher.UIThread.RunJobs();
 
-        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.SelectedLocation = garage;
         Dispatcher.UIThread.RunJobs();
-        options.RenameTo = "Carport";
-        options.RenameLocationCommand.Execute(null);
-        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        options.BeginLocationEdit(garage);
+        garage.EditName = "Carport";
+        Assert.True(options.CommitLocationRename(garage));
+
+        var shelf = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
+        options.SelectedLocation = shelf;
         Dispatcher.UIThread.RunJobs();
-        options.MergeTarget = options.Locations.Single(location => location.LocationId == fixture.GarageId);
-        options.MergeLocationsCommand.Execute(null);
+        options.ConfirmMergeLocations(shelf, garage);
         Dispatcher.UIThread.RunJobs();
 
         fixture.ViewModel.ApplyLocationChanges(options.BuildLocationChangeSet());
@@ -260,12 +410,18 @@ public sealed class LocationManagementViewTests : IDisposable
         var options = OpenLocationsOptions(fixture.ViewModel);
         Dispatcher.UIThread.RunJobs();
 
-        options.NewLocationName = "Basement";
         options.CreateLocationCommand.Execute(null);
-        options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        var basement = Assert.Single(options.Locations, location => location.IsEditing);
+        basement.EditName = "Basement";
+        Assert.True(options.CommitLocationRename(basement));
+
+        var garage = options.Locations.Single(location => location.LocationId == fixture.GarageId);
+        options.SelectedLocation = garage;
         Dispatcher.UIThread.RunJobs();
-        options.RenameTo = "Garage 2";
-        options.RenameLocationCommand.Execute(null);
+        options.BeginLocationEdit(garage);
+        garage.EditName = "Garage 2";
+        Assert.True(options.CommitLocationRename(garage));
+
         options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.ShelfId);
         Dispatcher.UIThread.RunJobs();
         options.DeleteLocationCommand.Execute(null);
@@ -292,23 +448,33 @@ public sealed class LocationManagementViewTests : IDisposable
         var options = OpenLocationsOptions(fixture.ViewModel);
         Dispatcher.UIThread.RunJobs();
 
-        options.NewLocationName = "   ";
         options.CreateLocationCommand.Execute(null);
+        var created = Assert.Single(options.Locations, location => location.IsEditing);
+        created.EditName = "   ";
+        Assert.False(options.CommitLocationRename(created));
+        Assert.True(created.IsEditing);
         Assert.Equal(LocalizationService.Current.Get(TextKeys.LocationNameRequired), options.LocationsStatusText);
 
-        options.NewLocationName = "SHELF";
-        options.CreateLocationCommand.Execute(null);
+        created.EditName = "SHELF";
+        Assert.False(options.CommitLocationRename(created));
+        Assert.True(created.IsEditing);
         Assert.Equal("A location named 'SHELF' already exists. Location names are unique ignoring case.", options.LocationsStatusText);
-        Assert.Equal(2, options.Locations.Count);
+        Assert.Equal(3, options.Locations.Count);
+
+        created.EditName = "Attic";
+        Assert.True(options.CommitLocationRename(created));
 
         // A staged name is taken too, before anything is stored.
-        options.NewLocationName = "Attic";
         options.CreateLocationCommand.Execute(null);
-        options.NewLocationName = "Attic";
-        options.CreateLocationCommand.Execute(null);
+        var duplicate = Assert.Single(options.Locations, location => location.IsEditing);
+        duplicate.EditName = "Attic";
+        Assert.False(options.CommitLocationRename(duplicate));
         Assert.Equal(new LocationDuplicateNameException("Attic").Message, options.LocationsStatusText);
-        Assert.Equal(3, options.Locations.Count);
+        Assert.Equal(4, options.Locations.Count);
         Assert.Single(options.BuildLocationChangeSet().Changes, change => change is LocationChange.Create { Name: "Attic" });
+
+        options.CancelLocationRename(duplicate);
+        Assert.Equal(3, options.Locations.Count);
 
         // Deleting a location that is still in use reports how many entries it has.
         options.SelectedLocation = options.Locations.Single(location => location.LocationId == fixture.GarageId);

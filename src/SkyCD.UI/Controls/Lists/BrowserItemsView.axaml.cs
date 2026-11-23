@@ -696,7 +696,7 @@ public partial class BrowserItemsView : UserControl
                 BorderThickness = new Thickness(0, 0, 1, 1),
                 Padding = new Thickness(6, 3),
                 MinHeight = 24,
-                Cursor = column.IsRequired ? null : headerCursor
+                Cursor = headerCursor
             };
             cellBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
             cellBorder.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
@@ -784,33 +784,24 @@ public partial class BrowserItemsView : UserControl
 
             cellGrid.Children.Add(splitter);
 
-            if (!column.IsRequired)
+            var columnIndex = i;
+            cellGrid.PointerPressed += (_, e) =>
             {
-                var columnIndex = i;
-                cellGrid.PointerPressed += (_, e) =>
+                var point = e.GetCurrentPoint(cellGrid);
+                if (!point.Properties.IsLeftButtonPressed)
                 {
-                    var point = e.GetCurrentPoint(cellGrid);
-                    if (!point.Properties.IsLeftButtonPressed)
-                    {
-                        return;
-                    }
+                    return;
+                }
 
-                    pointerDrag.Begin(e.Pointer, e.GetPosition(grid).X, columnIndex, targetColumn.Id);
-                    e.Pointer.Capture(grid);
-                    e.Handled = true;
-                };
-            }
+                pointerDrag.Begin(e.Pointer, e.GetPosition(grid).X, columnIndex, targetColumn.Id);
+                e.Pointer.Capture(grid);
+                e.Handled = true;
+            };
 
             Grid.SetColumn(cellGrid, i);
             grid.Children.Add(cellGrid);
             headerCells.Add(cellGrid);
             headerBorders.Add(cellBorder);
-        }
-
-        var leadingRequiredCount = 0;
-        while (leadingRequiredCount < detailsColumns.Count && detailsColumns[leadingRequiredCount].IsRequired)
-        {
-            leadingRequiredCount++;
         }
 
         var dragOverlay = new Canvas
@@ -896,7 +887,7 @@ public partial class BrowserItemsView : UserControl
             {
                 if (headerCells.Count > 0)
                 {
-                    var dropIndex = GetDetailsHeaderDropIndex(headerCells, position.X, leadingRequiredCount);
+                    var dropIndex = GetDetailsHeaderDropIndex(headerCells, position.X);
                     Canvas.SetLeft(dropMarker, headerCells[dropIndex].Bounds.Left);
                     Canvas.SetTop(dropMarker, 0);
                     dropMarker.IsVisible = true;
@@ -928,10 +919,7 @@ public partial class BrowserItemsView : UserControl
 
             if (wasDragging)
             {
-                var targetIndex = GetDetailsHeaderDropIndex(
-                    headerCells,
-                    e.GetPosition(grid).X,
-                    leadingRequiredCount);
+                var targetIndex = GetDetailsHeaderDropIndex(headerCells, e.GetPosition(grid).X);
                 if (targetIndex != sourceIndex)
                 {
                     DetailsColumnReordered?.Invoke(this, new DetailsColumnReorderedEventArgs(columnId, targetIndex));
@@ -966,6 +954,21 @@ public partial class BrowserItemsView : UserControl
 
     private IDataTemplate BuildDetailsRowTemplate(IReadOnlyList<BrowserDetailsColumn> detailsColumns)
     {
+        var iconColumnIndex = -1;
+        for (var i = 0; i < detailsColumns.Count; i++)
+        {
+            if (detailsColumns[i].ShowsItemIcon)
+            {
+                iconColumnIndex = i;
+                break;
+            }
+        }
+
+        if (iconColumnIndex < 0 && detailsColumns.Count > 0)
+        {
+            iconColumnIndex = 0;
+        }
+
         return new FuncDataTemplate<object?>((item, _) =>
         {
             var grid = new Grid
@@ -974,70 +977,75 @@ public partial class BrowserItemsView : UserControl
                 ColumnDefinitions = BuildDetailsColumnDefinitions(detailsColumns, isHeader: false)
             };
 
-            var col0Panel = new DockPanel
+            if (detailsColumns.Count == 0)
             {
-                ClipToBounds = true,
-                Margin = new Thickness(4, 0, 2, 0),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            var iconWithIndicator = BuildIconWithStatusIndicator(16, 16);
-            DockPanel.SetDock(iconWithIndicator, Dock.Left);
-            col0Panel.Children.Add(iconWithIndicator);
-
-            var firstCol = detailsColumns.Count > 0 ? detailsColumns[0] : null;
-            var valuePath = firstCol?.ValuePath ?? "Name";
-            var valueAlignment = firstCol?.ValueAlignment ?? HorizontalAlignment.Left;
-
-            var firstText = new TextBlock
-            {
-                HorizontalAlignment = valueAlignment,
-                VerticalAlignment = VerticalAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                Margin = new Thickness(4, 0, 0, 0),
-                ClipToBounds = true
-            };
-            if (valuePath == "DisplayType")
-            {
-                firstText.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
+                grid.Children.Add(BuildDetailsIconPanel(
+                    item,
+                    new BrowserDetailsColumn { Header = string.Empty, ValuePath = "Name" }));
+                return grid;
             }
-            else
-            {
-                firstText.Bind(TextBlock.TextProperty, new Binding(valuePath));
-            }
-            col0Panel.Children.Add(firstText);
-            Grid.SetColumn(col0Panel, 0);
-            grid.Children.Add(col0Panel);
 
-            for (var i = 1; i < detailsColumns.Count; i++)
+            for (var i = 0; i < detailsColumns.Count; i++)
             {
                 var column = detailsColumns[i];
-                var valueCell = new TextBlock
+                if (i == iconColumnIndex)
                 {
-                    HorizontalAlignment = column.ValueAlignment,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    Margin = new Thickness(6, 0),
-                    ClipToBounds = true
-                };
-                if (column.ValueSelector is { } selector)
-                {
-                    valueCell.Text = selector(item) ?? string.Empty;
+                    var iconPanel = BuildDetailsIconPanel(item, column);
+                    Grid.SetColumn(iconPanel, i);
+                    grid.Children.Add(iconPanel);
+                    continue;
                 }
-                else if (column.ValuePath == "DisplayType")
-                {
-                    valueCell.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
-                }
-                else
-                {
-                    valueCell.Bind(TextBlock.TextProperty, new Binding(column.ValuePath));
-                }
+
+                var valueCell = BuildDetailsValueCell(item, column, new Thickness(6, 0));
                 Grid.SetColumn(valueCell, i);
                 grid.Children.Add(valueCell);
             }
 
             return grid;
         });
+    }
+
+    private Control BuildDetailsIconPanel(object? item, BrowserDetailsColumn column)
+    {
+        var iconPanel = new DockPanel
+        {
+            ClipToBounds = true,
+            Margin = new Thickness(4, 0, 2, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var iconWithIndicator = BuildIconWithStatusIndicator(16, 16);
+        DockPanel.SetDock(iconWithIndicator, Dock.Left);
+        iconPanel.Children.Add(iconWithIndicator);
+        iconPanel.Children.Add(BuildDetailsValueCell(item, column, new Thickness(4, 0, 0, 0)));
+        return iconPanel;
+    }
+
+    private static TextBlock BuildDetailsValueCell(object? item, BrowserDetailsColumn column, Thickness margin)
+    {
+        var valueCell = new TextBlock
+        {
+            HorizontalAlignment = column.ValueAlignment,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = margin,
+            ClipToBounds = true
+        };
+
+        if (column.ValueSelector is { } selector)
+        {
+            valueCell.Text = selector(item) ?? string.Empty;
+        }
+        else if (column.ValuePath == "DisplayType")
+        {
+            valueCell.Bind(TextBlock.TextProperty, SkyCD.UI.Localization.DisplayTypeBinding.Create());
+        }
+        else
+        {
+            valueCell.Bind(TextBlock.TextProperty, new Binding(column.ValuePath));
+        }
+
+        return valueCell;
     }
 
     private Control BuildIconWithStatusIndicator(
@@ -1161,13 +1169,9 @@ public partial class BrowserItemsView : UserControl
 
     /// <summary>
     /// Resolves the drop position for a dragged header: the index of the header cell under
-    /// <paramref name="pointerX"/>, clamped to the first movable slot (the leading required column
-    /// stays pinned) and to the last column.
+    /// <paramref name="pointerX"/>, clamped to the visible column range.
     /// </summary>
-    private static int GetDetailsHeaderDropIndex(
-        IReadOnlyList<Grid> headerCells,
-        double pointerX,
-        int firstMovableIndex)
+    private static int GetDetailsHeaderDropIndex(IReadOnlyList<Grid> headerCells, double pointerX)
     {
         if (headerCells.Count == 0)
         {
@@ -1180,7 +1184,7 @@ public partial class BrowserItemsView : UserControl
             index++;
         }
 
-        return Math.Clamp(index, Math.Min(firstMovableIndex, headerCells.Count - 1), headerCells.Count - 1);
+        return Math.Clamp(index, 0, headerCells.Count - 1);
     }
 
     private sealed class DetailsHeaderPointerDrag

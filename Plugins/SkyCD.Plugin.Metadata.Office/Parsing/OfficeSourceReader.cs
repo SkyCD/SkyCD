@@ -21,10 +21,10 @@ internal static class OfficeSourceReader
 {
     private const int ChunkBytes = 256 * 1024;
 
-    private const string SummaryStream = "\u0005SummaryInformation";
-    private const string DocumentSummaryStream = "\u0005DocumentSummaryInformation";
-    private const string EncryptionInfoStream = "EncryptionInfo";
-    private const string EncryptedPackageStream = "EncryptedPackage";
+    public const string SummaryStream = "\u0005SummaryInformation";
+    public const string DocumentSummaryStream = "\u0005DocumentSummaryInformation";
+    public const string EncryptionInfoStream = "EncryptionInfo";
+    public const string EncryptedPackageStream = "EncryptedPackage";
 
     private static readonly IReadOnlyDictionary<uint, object> NoValues = new Dictionary<uint, object>();
 
@@ -60,7 +60,7 @@ internal static class OfficeSourceReader
         var compound = CompoundFile.Open(data);
 
         // Office 2007 and later protect an OOXML package by wrapping it, unchanged, in a compound file.
-        if (compound.ContainsStream(EncryptionInfoStream) && compound.ContainsStream(EncryptedPackageStream))
+        if (IsEncryptedWrapper(compound))
         {
             return OfficeMetadata.Encrypted;
         }
@@ -74,6 +74,10 @@ internal static class OfficeSourceReader
             ReadPropertyStream(compound, SummaryStream, options),
             ReadPropertyStream(compound, DocumentSummaryStream, options));
     }
+
+    /// <summary>True when the compound file wraps an encrypted OOXML package rather than a legacy document.</summary>
+    public static bool IsEncryptedWrapper(CompoundFile compound) =>
+        compound.ContainsStream(EncryptionInfoStream) && compound.ContainsStream(EncryptedPackageStream);
 
     private static string? DetectCompoundDocumentType(CompoundFile compound)
     {
@@ -108,7 +112,8 @@ internal static class OfficeSourceReader
         }
     }
 
-    private static async Task<byte[]> ReadSourceAsync(
+    /// <summary>Reads the whole source into memory, charging the host budget exactly once.</summary>
+    public static async Task<byte[]> ReadSourceAsync(
         MediaItem item,
         IMediaSource source,
         OfficePluginOptions options,

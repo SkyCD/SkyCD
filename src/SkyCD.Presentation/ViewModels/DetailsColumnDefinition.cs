@@ -25,6 +25,9 @@ public sealed class DetailsColumnDefinition
 
     public bool IsRequired { get; init; }
 
+    /// <summary>Renders the item icon and status indicator inside this column's row cell.</summary>
+    public bool ShowsItemIcon { get; init; }
+
     public bool IsVisibleByDefault { get; init; } = true;
 
     /// <summary>
@@ -50,6 +53,7 @@ public sealed class DetailsColumnDefinition
         Width = width is > 0 ? new GridLength(width.Value, GridUnitType.Pixel) : Width,
         HeaderAlignment = HeaderAlignment,
         ValueAlignment = ValueAlignment,
-        IsRequired = IsRequired
+        IsRequired = IsRequired,
+        ShowsItemIcon = ShowsItemIcon
     };
 }

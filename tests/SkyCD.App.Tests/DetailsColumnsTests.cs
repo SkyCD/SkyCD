@@ -209,24 +209,68 @@ public class DetailsColumnsTests
     }
 
     [Fact]
-    public void MoveDetailsColumn_IgnoresRequiredAndUnknownColumnsAndClampsToFirstMovableSlot()
+    public void MoveDetailsColumn_MovesRequiredNameColumnAndIgnoresUnknownColumns()
     {
         using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
         var raised = 0;
         vm.DetailsColumnsChanged += (_, _) => raised++;
-        var before = vm.GetDetailsColumnSettings().Select(setting => setting.Id).ToArray();
 
-        Assert.False(vm.MoveDetailsColumn(DetailsColumnsCatalog.NameId, 3));
         Assert.False(vm.MoveDetailsColumn("unknown-column", 1));
-
         Assert.Equal(0, raised);
-        Assert.Equal(before, vm.GetDetailsColumnSettings().Select(setting => setting.Id));
 
-        Assert.True(vm.MoveDetailsColumn(DetailsColumnsCatalog.LocationId, -5));
+        Assert.True(vm.MoveDetailsColumn(DetailsColumnsCatalog.NameId, 2));
 
         Assert.Equal(1, raised);
+        Assert.Equal(
+        [
+            DetailsColumnsCatalog.SizeId,
+            DetailsColumnsCatalog.LocationId,
+            DetailsColumnsCatalog.NameId
+        ], vm.BrowserDetailsColumns.Select(column => column.Id));
+        Assert.True(vm.GetDetailsColumnSettings()
+            .Single(setting => setting.Id == DetailsColumnsCatalog.NameId).IsVisible);
+
+        Assert.True(vm.MoveDetailsColumn(DetailsColumnsCatalog.NameId, -5));
+
         Assert.Equal(DetailsColumnsCatalog.NameId, vm.BrowserDetailsColumns[0].Id);
-        Assert.Equal(DetailsColumnsCatalog.LocationId, vm.BrowserDetailsColumns[1].Id);
+    }
+
+    [Fact]
+    public void MoveDetailsColumn_NameOrderSurvivesReopen()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+
+        Assert.True(vm.MoveDetailsColumn(DetailsColumnsCatalog.NameId, 2));
+        Assert.True(vm.MoveDetailsColumn(DetailsColumnsCatalog.LocationId, 0));
+        var saved = vm.GetDetailsColumnSettings();
+
+        using var reopened = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        reopened.ApplyDetailsColumnSettings(saved);
+
+        Assert.Equal(
+        [
+            DetailsColumnsCatalog.LocationId,
+            DetailsColumnsCatalog.SizeId,
+            DetailsColumnsCatalog.NameId
+        ], reopened.BrowserDetailsColumns.Select(column => column.Id));
+        Assert.True(reopened.BrowserDetailsColumns
+            .Single(column => column.Id == DetailsColumnsCatalog.NameId).ShowsItemIcon);
+    }
+
+    [Fact]
+    public void OptionsDialog_CanMoveRequiredNameColumn()
+    {
+        var dialog = new OptionsDialogViewModel(["English"]);
+        dialog.SelectedDetailsColumn = dialog.DetailsColumns.Single(item => item.Id == DetailsColumnsCatalog.NameId);
+
+        Assert.False(dialog.MoveDetailsColumnUpCommand.CanExecute(null));
+        Assert.True(dialog.MoveDetailsColumnDownCommand.CanExecute(null));
+
+        dialog.MoveDetailsColumnDownCommand.Execute(null);
+
+        Assert.Equal(DetailsColumnsCatalog.NameId, dialog.DetailsColumns[1].Id);
+        Assert.Equal(1, dialog.GetDetailsColumns().ToList()
+            .FindIndex(setting => setting.Id == DetailsColumnsCatalog.NameId));
     }
 
     [Fact]

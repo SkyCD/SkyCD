@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Abstractions.Lifecycle;
@@ -168,8 +169,30 @@ public sealed class DiscoveredPluginFactory
             })
             .Where(static capability => capability is not null)
             .Select(static capability => capability!)
+            .Where(static capability => IsInspectable(capability))
             .DistinctBy(static capability => capability.GetType())
             .ToList();
+    }
+
+    /// <summary>
+    /// Rejects capabilities the host cannot read safely. A plugin compiled against an older abstractions
+    /// contract binds lazily, so member access throws <see cref="MissingMethodException"/> only when invoked.
+    /// </summary>
+    private static bool IsInspectable(IPluginCapability capability)
+    {
+        try
+        {
+            if (capability is IPluginConfigurationCapability configuration)
+            {
+                _ = configuration.Configuration;
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static (string Id, string Name, string AuthorName, string? AuthorUrl, string? ProjectUrl, System.Version

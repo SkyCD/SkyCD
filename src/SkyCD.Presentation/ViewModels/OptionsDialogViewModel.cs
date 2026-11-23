@@ -343,6 +343,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task ConfirmAsync()
     {
+        if (!CommitPendingLocationRename())
+        {
+            return;
+        }
+
         if (CustomProperties.Any(property => string.IsNullOrWhiteSpace(property.Name)) ||
             CustomProperties.Select(property => property.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != CustomProperties.Count)
         {

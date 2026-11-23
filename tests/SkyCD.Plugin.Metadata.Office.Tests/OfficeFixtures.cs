@@ -95,6 +95,72 @@ internal static class OfficeFixtures
     public static byte[] PackageWithoutDocumentPart(string? core = null, string? app = null) =>
         Package(null, core, app);
 
+    /// <summary>Copies a package and adds one binary member, mirroring how a producer embeds a thumbnail.</summary>
+    public static byte[] WithBinaryEntry(byte[] package, string name, byte[] data)
+    {
+        using var input = new MemoryStream(package, writable: false);
+        using var source = new ZipArchive(input, ZipArchiveMode.Read);
+        using var output = new MemoryStream();
+        using (var target = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                var copy = target.CreateEntry(entry.FullName, CompressionLevel.Fastest);
+                using var from = entry.Open();
+                using var to = copy.Open();
+                from.CopyTo(to);
+            }
+
+            var added = target.CreateEntry(name, CompressionLevel.Fastest);
+            using var stream = added.Open();
+            stream.Write(data);
+        }
+
+        return output.ToArray();
+    }
+
+    /// <summary>A structurally readable baseline JPEG carrying only an APP0 segment and a frame header.</summary>
+    public static byte[] Jpeg(int width, int height) =>
+    [
+        0xFF, 0xD8,
+        0xFF, 0xE0, 0x00, 0x10, (byte)'J', (byte)'F', (byte)'I', (byte)'F', 0x00,
+        0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+        0xFF, 0xC0, 0x00, 0x11, 0x08, (byte)(height >> 8), (byte)height,
+        (byte)(width >> 8), (byte)width,
+        0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+        0xFF, 0xD9
+    ];
+
+    /// <summary>A document package whose <c>docProps/thumbnail.jpeg</c> part carries the given bytes.</summary>
+    public static byte[] DocxWithThumbnail(byte[]? thumbnail = null) =>
+        WithBinaryEntry(Package("word/document.xml", FullCore(), FullApp()), "docProps/thumbnail.jpeg",
+            thumbnail ?? Jpeg(96, 64));
+
+    /// <summary>An uncompressed 24-bit device-independent bitmap as a thumbnail clipboard would carry it.</summary>
+    public static byte[] Dib(int width, int height)
+    {
+        var stride = ((width * 3) + 3) & ~3;
+        var data = new byte[40 + (stride * height)];
+        WriteU32(data, 0, 40);
+        WriteU32(data, 4, (uint)width);
+        WriteU32(data, 8, (uint)height);
+        data[12] = 1;
+        data[13] = 0;
+        data[14] = 24;
+        WriteU32(data, 20, (uint)(stride * height));
+        return data;
+    }
+
+    /// <summary>A <c>VT_CF</c> summary property holding one clipboard picture.</summary>
+    public static SummaryProperty ClipboardThumbnail(uint format, byte[] data)
+    {
+        var payload = new byte[8 + data.Length];
+        WriteU32(payload, 0, (uint)(4 + data.Length));
+        WriteU32(payload, 4, format);
+        data.CopyTo(payload, 8);
+        return new SummaryProperty(17, 0x0047, payload);
+    }
+
     public static string Core(params (string Name, string Value)[] values) =>
         "<cp:coreProperties" +
         " xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\"" +

@@ -24,15 +24,15 @@ public partial class OptionsDialogViewModel
 
     [ObservableProperty] private LocationItemViewModel? selectedLocation;
 
-    [ObservableProperty] private string newLocationName = string.Empty;
-
-    [ObservableProperty] private string renameTo = string.Empty;
-
-    [ObservableProperty] private LocationItemViewModel? mergeTarget;
-
     [ObservableProperty] private string locationsStatusText = string.Empty;
 
     private readonly List<LocationChange> stagedLocationChanges = [];
+
+    /// <summary>
+    /// Raised when the merge toolbar action runs; the host answers by showing the destination picker and
+    /// calling <see cref="ConfirmMergeLocations"/> when the user confirms it.
+    /// </summary>
+    public event EventHandler? MergeLocationsRequested;
 
     public bool IsLocationsCategorySelected => SelectedBuiltInIndex == LocationsCategoryIndex;
 
@@ -58,13 +58,9 @@ public partial class OptionsDialogViewModel
             Locations.Add(new LocationItemViewModel(location.Id, location.Name, location.UsageCount));
         }
 
-        NewLocationName = string.Empty;
-        RenameTo = string.Empty;
-        MergeTarget = null;
         LocationsStatusText = string.Empty;
         SelectedLocation = Locations.FirstOrDefault();
-        DeleteLocationCommand.NotifyCanExecuteChanged();
-        MergeLocationsCommand.NotifyCanExecuteChanged();
+        NotifyLocationCommands();
     }
 
     /// <summary>
@@ -73,84 +69,156 @@ public partial class OptionsDialogViewModel
     /// </summary>
     public LocationChangeSet BuildLocationChangeSet() => new(stagedLocationChanges);
 
+    /// <summary>
+    /// Appends an unstored row and opens its name editor. Nothing is staged until the row is named, so
+    /// cancelling an unnamed row leaves the stored state untouched.
+    /// </summary>
     [RelayCommand]
     private void CreateLocation()
     {
-        var name = NewLocationName?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            LocationsStatusText = LocalizationService.Current.Get(TextKeys.LocationNameRequired);
-            return;
-        }
-
-        if (FindDuplicate(name) is not null)
-        {
-            LocationsStatusText = new LocationDuplicateNameException(name).Message;
-            return;
-        }
-
-        // Unstored rows carry a temporary id and are only marked as created; the host creates them on Save.
-        var created = new LocationItemViewModel($"new:{Guid.NewGuid():N}", name, isStored: false)
-        {
-            PendingCreateName = name
-        };
+        var created = new LocationItemViewModel($"new:{Guid.NewGuid():N}", string.Empty, isStored: false);
         Locations.Add(created);
-        stagedLocationChanges.Add(new LocationChange.Create(name));
-        NewLocationName = string.Empty;
-        LocationsStatusText = LocalizationService.Current.Format(TextKeys.LocationCreated, name);
         SelectedLocation = created;
+        LocationsStatusText = string.Empty;
+        BeginLocationEdit(created);
+        NotifyLocationCommands();
     }
 
-    [RelayCommand]
-    private void RenameLocation()
+    /// <summary>Opens the inline name editor on <paramref name="row"/>; only one row edits at a time.</summary>
+    public void BeginLocationEdit(LocationItemViewModel row)
     {
-        if (SelectedLocation is not { } location)
+        if (!Locations.Contains(row))
         {
             return;
         }
 
-        var name = RenameTo?.Trim() ?? string.Empty;
+        foreach (var other in Locations.Where(location => location.IsEditing && !ReferenceEquals(location, row)).ToArray())
+        {
+            LeaveLocationEdit(other);
+        }
+
+        row.BeginEdit();
+    }
+
+    /// <summary>
+    /// Commits the inline editor of <paramref name="row"/> using the same validation as the staged list:
+    /// empty and duplicate names keep the editor open with the status message.
+    /// </summary>
+    /// <returns>True when the row left edit mode.</returns>
+    public bool CommitLocationRename(LocationItemViewModel row)
+    {
+        if (!row.IsEditing)
+        {
+            return true;
+        }
+
+        var name = row.EditName?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
             LocationsStatusText = LocalizationService.Current.Get(TextKeys.LocationNameRequired);
-            return;
+            return false;
         }
 
-        if (FindDuplicate(name) is { } duplicate && !ReferenceEquals(duplicate, location))
+        if (FindDuplicate(name) is { } duplicate && !ReferenceEquals(duplicate, row))
         {
             LocationsStatusText = new LocationDuplicateNameException(name).Message;
-            return;
+            return false;
         }
 
-        if (string.Equals(location.Name, name, StringComparison.Ordinal))
+        if (string.Equals(row.Name, name, StringComparison.Ordinal))
         {
-            return;
+            row.CancelEdit();
+            return true;
         }
 
-        if (location.IsStored)
+        var isCreation = !row.IsStored && string.IsNullOrEmpty(row.PendingCreateName);
+        if (row.IsStored)
         {
             // Only the current name matters: the store derives the id from it, so earlier renames of the
             // same row in this session need no replay.
             stagedLocationChanges.RemoveAll(change =>
                 change is LocationChange.Rename rename &&
-                string.Equals(rename.LocationId, location.LocationId, StringComparison.Ordinal));
-            stagedLocationChanges.Add(new LocationChange.Rename(location.LocationId, location.Name, name));
+                string.Equals(rename.LocationId, row.LocationId, StringComparison.Ordinal));
+            stagedLocationChanges.Add(new LocationChange.Rename(row.LocationId, row.Name, name));
         }
         else
         {
             // Unstored rows have no definition yet; the host creates them under the name shown on Save.
-            SetPendingCreationName(location, name);
+            SetPendingCreationName(row, name);
         }
 
-        location.Name = name;
-        RenameTo = name;
-        LocationsStatusText = LocalizationService.Current.Format(TextKeys.LocationRenamed, name);
+        row.Name = name;
+        row.CancelEdit();
+        LocationsStatusText = isCreation
+            ? LocalizationService.Current.Format(TextKeys.LocationCreated, name)
+            : LocalizationService.Current.Format(TextKeys.LocationRenamed, name);
+        return true;
     }
 
-    [RelayCommand(CanExecute = nameof(CanMergeLocations))]
-    private void MergeLocations()
+    /// <summary>
+    /// Drops the draft and closes the editor. A row created in this session that was never named is
+    /// removed again, because it stands for no pending creation.
+    /// </summary>
+    public void CancelLocationRename(LocationItemViewModel row)
     {
-        if (SelectedLocation is not { } source || MergeTarget is not { } target || ReferenceEquals(source, target))
+        if (row.IsEditing)
+        {
+            LeaveLocationEdit(row);
+        }
+    }
+
+    /// <summary>
+    /// Commits an open inline editor when the dialog is accepted. An invalid name keeps the dialog open
+    /// and brings the Locations page forward so the status message is visible.
+    /// </summary>
+    public bool CommitPendingLocationRename()
+    {
+        foreach (var row in Locations.Where(location => location.IsEditing).ToArray())
+        {
+            if (!CommitLocationRename(row))
+            {
+                SettingsSearchText = string.Empty;
+                SelectedTabIndex = LocationsCategoryIndex;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanBeginRenameLocation))]
+    private void BeginRenameLocation()
+    {
+        if (SelectedLocation is { } row)
+        {
+            BeginLocationEdit(row);
+        }
+    }
+
+    private bool CanBeginRenameLocation() => SelectedLocation is not null;
+
+    /// <summary>
+    /// The host shows the destination picker for this command and stages the merge on confirm.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanMergeLocations))]
+    private void MergeLocations() => MergeLocationsRequested?.Invoke(this, EventArgs.Empty);
+
+    private bool CanMergeLocations() =>
+        SelectedLocation is { IsStored: true } source &&
+        Locations.Any(location => location.IsStored && !ReferenceEquals(location, source));
+
+    /// <summary>Rows the merge dialog may offer as a destination: stored rows other than the source.</summary>
+    public IReadOnlyList<LocationItemViewModel> GetMergeDestinations(LocationItemViewModel source) =>
+        Locations
+            .Where(location => location.IsStored && !ReferenceEquals(location, source))
+            .ToArray();
+
+    /// <summary>Stages the merge chosen in the destination picker.</summary>
+    public void ConfirmMergeLocations(LocationItemViewModel source, LocationItemViewModel target)
+    {
+        if (ReferenceEquals(source, target) ||
+            !Locations.Contains(source) ||
+            !Locations.Contains(target))
         {
             return;
         }
@@ -165,9 +233,9 @@ public partial class OptionsDialogViewModel
         stagedLocationChanges.Add(new LocationChange.Merge(source.LocationId, source.Name, target.LocationId));
         target.UsageCount += source.UsageCount;
         Locations.Remove(source);
-        MergeTarget = null;
         LocationsStatusText = LocalizationService.Current.Format(TextKeys.LocationMerged, source.Name, target.Name);
         SelectedLocation = target;
+        NotifyLocationCommands();
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteLocation))]
@@ -195,24 +263,19 @@ public partial class OptionsDialogViewModel
         LocationsStatusText = usageCount > 0
             ? LocalizationService.Current.Format(TextKeys.LocationDeletedInUse, location.Name, usageCount)
             : LocalizationService.Current.Format(TextKeys.LocationDeleted, location.Name);
+        NotifyLocationCommands();
     }
 
     private bool CanDeleteLocation() => SelectedLocation is not null;
 
-    private bool CanMergeLocations() => SelectedLocation is not null && MergeTarget is not null;
+    partial void OnSelectedLocationChanged(LocationItemViewModel? value) => NotifyLocationCommands();
 
-    partial void OnSelectedLocationChanged(LocationItemViewModel? value)
+    private void NotifyLocationCommands()
     {
-        if (value is not null)
-        {
-            RenameTo = value.Name;
-        }
-
+        BeginRenameLocationCommand.NotifyCanExecuteChanged();
         DeleteLocationCommand.NotifyCanExecuteChanged();
         MergeLocationsCommand.NotifyCanExecuteChanged();
     }
-
-    partial void OnMergeTargetChanged(LocationItemViewModel? value) => MergeLocationsCommand.NotifyCanExecuteChanged();
 
     private LocationItemViewModel? FindDuplicate(string name) =>
         Locations.FirstOrDefault(location =>
@@ -228,6 +291,10 @@ public partial class OptionsDialogViewModel
         if (index >= 0)
         {
             stagedLocationChanges[index] = new LocationChange.Create(name);
+        }
+        else if (!row.IsStored)
+        {
+            stagedLocationChanges.Add(new LocationChange.Create(name));
         }
 
         row.PendingCreateName = name;
@@ -248,6 +315,7 @@ public partial class OptionsDialogViewModel
         for (var index = 0; index < stagedLocationChanges.Count; index++)
         {
             if (stagedLocationChanges[index] is LocationChange.Create created &&
+                row.PendingCreateName is not null &&
                 string.Equals(created.Name, row.PendingCreateName, StringComparison.Ordinal))
             {
                 return index;
@@ -255,5 +323,23 @@ public partial class OptionsDialogViewModel
         }
 
         return -1;
+    }
+
+    private void LeaveLocationEdit(LocationItemViewModel row)
+    {
+        row.CancelEdit();
+
+        // An unstored row that never received a name stands for no pending creation, so cancelling its
+        // editor abandons the row altogether instead of leaving a blank entry behind.
+        if (!row.IsStored && string.IsNullOrEmpty(row.PendingCreateName))
+        {
+            Locations.Remove(row);
+            if (ReferenceEquals(SelectedLocation, row))
+            {
+                SelectedLocation = Locations.FirstOrDefault();
+            }
+
+            NotifyLocationCommands();
+        }
     }
 }
