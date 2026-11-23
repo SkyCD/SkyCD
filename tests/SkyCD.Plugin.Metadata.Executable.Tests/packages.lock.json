@@ -94,6 +94,27 @@
         "resolved": "4.1.3",
         "contentHash": "Jtlac0cTR/iEOz27eBeetPxUoUcJdwsJDZiQF9fMD+InfDNiwozTrgZe4LBy75QJuHNv74qSWYsHSrZhsX5tOg=="
       },
+      "DiscUtils.Core": {
+        "type": "Transitive",
+        "resolved": "0.16.13",
+        "contentHash": "TU/Ns5RMa3060K7AsSDqG94/H7eaWaz1XoYuCUur40Mg+t0/ubtKqxCffkoiB1e/cFMGvHL0evFoY6uDL9Ocmw==",
+        "dependencies": {
+          "DiscUtils.Streams": "0.16.13"
+        }
+      },
+      "DiscUtils.Iso9660": {
+        "type": "Transitive",
+        "resolved": "0.16.13",
+        "contentHash": "hT0DbN+sIqg5Bu3/sCQUuKLwIrceF9BZvn7AeRe+f2iY0p4mgN9xEmXpFWQshnBBxN9r75364agBHDeb5owiUA==",
+        "dependencies": {
+          "DiscUtils.Core": "0.16.13"
+        }
+      },
+      "DiscUtils.Streams": {
+        "type": "Transitive",
+        "resolved": "0.16.13",
+        "contentHash": "BSrywAX2mmvt6j00u6VQYQLtxc6jDniK2aP4p0q20bbTGXImtW4N26eUZYKfkW9aj6XLaqISFgtWfssKURixeA=="
+      },
       "DryIoc.dll": {
         "type": "Transitive",
         "resolved": "5.4.3",
@@ -479,6 +500,7 @@
       "skycd.plugin.metadata.executable": {
         "type": "Project",
         "dependencies": {
+          "DiscUtils.Iso9660": "[0.16.13, )",
           "SkiaSharp": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
