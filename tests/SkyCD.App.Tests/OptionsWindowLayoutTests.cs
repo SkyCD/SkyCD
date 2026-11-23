@@ -177,6 +177,50 @@ public class OptionsWindowLayoutTests
     }
 
     [Fact]
+    public void ToolbarSection_ShowsACommandIconInBothLists()
+    {
+        // Issue #933: commands are recognizable before they are added, so both lists carry the icon column.
+        var section = GetToolbarSection();
+        var lists = section.Descendants(Avalonia + "ListBox").ToArray();
+        Assert.Equal(2, lists.Length);
+
+        foreach (var list in lists)
+        {
+            var template = Assert.Single(list.Descendants(Avalonia + "DataTemplate"));
+            var icon = Assert.Single(template.Descendants(Avalonia + "Image"));
+            Assert.Contains("IconPath", (string?)icon.Attribute("Source"), StringComparison.Ordinal);
+            Assert.Contains("ToolbarIconConverter", (string?)icon.Attribute("Source"), StringComparison.Ordinal);
+            Assert.Equal("{DynamicResource SkyIconSize}", (string?)icon.Attribute("Width"));
+            Assert.Equal("{DynamicResource SkyIconSize}", (string?)icon.Attribute("Height"));
+
+            // The icon owns the first column; the label (or the separator line) sits beside it in the second.
+            var row = Assert.IsType<XElement>(icon.Parent);
+            Assert.Equal("Grid", row.Name.LocalName);
+            Assert.Equal("Auto,*", (string?)row.Attribute("ColumnDefinitions"));
+            Assert.Null(icon.Attribute("Grid.Column"));
+            string ColumnOf(XElement element) => element.AncestorsAndSelf()
+                .Select(node => (string?)node.Attribute("Grid.Column"))
+                .First(column => column is not null)!;
+            var label = row.Descendants().First(element => (string?)element.Attribute("Text") == "{Binding Label}");
+            var separatorLine = row.Descendants()
+                .Where(element => (string?)element.Attribute("IsVisible") == "{Binding IsSeparator}")
+                .ToArray();
+            Assert.Equal("1", ColumnOf(label));
+
+            // The separator spans the whole row so the line, not the icon slot, is the plain boundary.
+            Assert.All(separatorLine, element =>
+            {
+                Assert.Equal("0", ColumnOf(element));
+                Assert.Equal("2", (string?)element.Attribute("Grid.ColumnSpan"));
+            });
+        }
+
+        // The commands list shows the category under the label; the toolbar list keeps the plain separator line.
+        Assert.Contains(lists[0].Descendants(Avalonia + "TextBlock"), text => (string?)text.Attribute("Text") == "{Binding Category}");
+        Assert.Contains(lists[1].Descendants(Avalonia + "Border"), border => (string?)border.Attribute("Height") == "1");
+    }
+
+    [Fact]
     public void ToolbarCategory_ShipsForEverySupportedCulture()
     {
         foreach (var culture in new[] { "en", "lt" })

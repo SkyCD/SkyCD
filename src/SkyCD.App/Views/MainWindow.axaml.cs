@@ -17,13 +17,12 @@ using Avalonia.Interactivity;
 using DryIoc;
 using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
+using SkyCD.App.Icons;
 using SkyCD.App.Marketplace;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
@@ -286,20 +285,22 @@ public partial class MainWindow : Window
         }
     }
 
-    private IImage? LoadToolbarIcon(string? assetPath)
+    private IImage? LoadToolbarIcon(string? iconPath)
     {
-        if (string.IsNullOrEmpty(assetPath))
+        if (string.IsNullOrEmpty(iconPath))
         {
             return null;
         }
 
-        if (toolbarIcons.TryGetValue(assetPath, out var cached))
+        if (toolbarIcons.TryGetValue(iconPath, out var cached))
         {
             return cached;
         }
 
-        var icon = new Bitmap(AssetLoader.Open(new Uri($"avares://SkyCD.App{assetPath}")));
-        toolbarIcons[assetPath] = icon;
+        // Keys of the project-owned glyph dictionary render as vector images; asset paths fall back to bitmaps.
+        var icon = ToolbarIconResolver.Resolve(iconPath)
+            ?? throw new InvalidOperationException($"Toolbar command icon '{iconPath}' could not be resolved.");
+        toolbarIcons[iconPath] = icon;
         return icon;
     }
 

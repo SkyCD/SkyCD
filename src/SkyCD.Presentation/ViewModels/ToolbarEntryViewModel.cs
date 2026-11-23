@@ -20,6 +20,9 @@ public sealed class ToolbarEntryViewModel
 
     public string Label { get; }
 
+    /// <summary>The command's icon reference; a separator has none and renders as a plain line.</summary>
+    public string? IconPath => Descriptor?.IconPath;
+
     public static ToolbarEntryViewModel FromCommand(ToolbarCommandDescriptor descriptor)
     {
         System.ArgumentNullException.ThrowIfNull(descriptor);

@@ -24,8 +24,8 @@
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center">
                         <Image Name="PART_Image"
-                               Width="16"
-                               Height="16"
+                               Width="{DynamicResource SkyIconSize}"
+                               Height="{DynamicResource SkyIconSize}"
                                Source="{TemplateBinding ImageSrc}"
                                IsVisible="{ReflectionBinding ImageSrc, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static ObjectConverters.IsNotNull}}"
                                VerticalAlignment="Center" />

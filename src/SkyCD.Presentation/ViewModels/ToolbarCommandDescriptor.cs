@@ -14,7 +14,12 @@ public sealed class ToolbarCommandDescriptor
 
     public required string Label { get; init; }
 
-    /// <summary>Application asset path such as <c>/Assets/new.png</c>; null for a text-only button.</summary>
+    /// <summary>
+    /// Icon reference: a key of the project-owned glyph dictionary
+    /// (<c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c>, for example <c>ToolbarIcon.Undo</c>) or a plain
+    /// application asset path such as <c>/Assets/new.png</c>. Every toolbar command carries one; null only
+    /// means a text-only button, which no shipped command uses.
+    /// </summary>
     public string? IconPath { get; init; }
 
     public required ICommand Command { get; init; }
