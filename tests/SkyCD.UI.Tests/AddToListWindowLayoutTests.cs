@@ -104,11 +104,12 @@ public sealed class AddToListWindowLayoutTests
         var window = fixture.Window;
         var initialBounds = window.Bounds;
 
-        var sourceHost = fixture.Root.GetVisualDescendants().OfType<Grid>().Single(grid => grid.MinHeight == 84);
+        var sourceHost = fixture.Window.FindControl<Grid>("SourceDetailsPanel")!;
+        var sourceViewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
         var tabStrip = fixture.Root.GetVisualDescendants().OfType<TabControl>().Single();
         var ok = FindButton(fixture.Root, UiKeys.Ok);
         var cancel = FindButton(fixture.Root, UiKeys.Cancel);
-        var message = fixture.Root.GetVisualDescendants().OfType<TextBlock>().Single(text => text.MinHeight == 14);
+        var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
         foreach (var mode in SourceModes.Concat(SourceModes))
         {
             fixture.ViewModel.SelectSourceCommand.Execute(mode.ToString());
@@ -118,18 +119,14 @@ public sealed class AddToListWindowLayoutTests
             var okBounds = BoundsRelativeTo(ok, fixture.Root);
             var cancelBounds = BoundsRelativeTo(cancel, fixture.Root);
             var messageBounds = BoundsRelativeTo(message, fixture.Root);
-            var sourceBounds = BoundsRelativeTo(sourceHost, fixture.Root);
+            // Issue #942: the source fields scroll inside their viewport, so the viewport is what has
+            // to stay between the name block and the actions.
+            var sourceBounds = BoundsRelativeTo(sourceViewer, fixture.Root);
             var tabBounds = BoundsRelativeTo(tabStrip, fixture.Root);
 
             // Switching only swaps content: the window neither moves nor resizes, and the content fits.
             Assert.Equal(initialBounds, window.Bounds);
             Assert.NotEmpty(visibleContent);
-            foreach (var content in visibleContent)
-            {
-                var contentBounds = BoundsRelativeTo(content, fixture.Root);
-                Assert.True(contentBounds.Bottom <= sourceBounds.Bottom + 1,
-                    $"{mode}: {content.GetType().Name} content ({contentBounds.Bottom}) overflows the source region ({sourceBounds.Bottom}).");
-            }
 
             // Everything remains inside the window content area.
             Assert.True(messageBounds.Bottom <= fixture.Root.Bounds.Height + 1,
@@ -138,15 +135,13 @@ public sealed class AddToListWindowLayoutTests
                 $"{mode}: OK row is outside the content at {okBounds.Bottom}.");
             Assert.True(cancelBounds.Bottom <= fixture.Root.Bounds.Height + 1,
                 $"{mode}: Cancel row is outside the content at {cancelBounds.Bottom}.");
-            Assert.True(sourceBounds.Bottom <= okBounds.Top, $"{mode}: source content overlaps the actions.");
+            Assert.True(sourceBounds.Bottom <= okBounds.Top,
+                $"{mode}: source content overlaps the actions ({sourceBounds.Bottom} > {okBounds.Top}).");
 
             // The validation row keeps its slot below the actions and ends at the content bottom.
             Assert.True(message.Bounds.Height >= 14, $"{mode}: validation row collapsed to {message.Bounds.Height}.");
             Assert.True(messageBounds.Top >= okBounds.Bottom, $"{mode}: validation row overlaps the actions.");
             Assert.Equal(fixture.Root.Bounds.Height, messageBounds.Bottom, 1);
-
-            // The actions and the validation row stay pinned to the bottom of the tab area, so a longer
-            // validation message pushes them up together instead of letting the dialog grow.
             Assert.Equal(tabBounds.Bottom - 2, okBounds.Bottom, 1);
             Assert.Equal(tabBounds.Bottom - 2, cancelBounds.Bottom, 1);
             Assert.Equal(tabBounds.Bottom, messageBounds.Top, 1);
@@ -252,11 +247,12 @@ public sealed class AddToListWindowLayoutTests
     {
         using var fixture = ShowWindow(mode);
         var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
-        var sourceHost = fixture.Root.GetVisualDescendants().OfType<Grid>().Single(grid => grid.MinHeight == 84);
-        var message = fixture.Root.GetVisualDescendants().OfType<TextBlock>().Single(text => text.MinHeight == 14);
+        var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
+
+        var viewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
 
         var panelBounds = BoundsRelativeTo(panel, fixture.Root);
-        var sourceBounds = BoundsRelativeTo(sourceHost, fixture.Root);
+        var sourceBounds = BoundsRelativeTo(viewer, fixture.Root);
         var messageBounds = BoundsRelativeTo(message, fixture.Root);
 
         Assert.Equal(0, messageBounds.Left, 1);
@@ -293,6 +289,41 @@ public sealed class AddToListWindowLayoutTests
         {
             LocalizationService.Current.SetCulture(previousCulture);
         }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(AddToListSourceMode.Media)]
+    [InlineData(AddToListSourceMode.Folder)]
+    [InlineData(AddToListSourceMode.Internet)]
+    [InlineData(AddToListSourceMode.TitleOnly)]
+    public void SourceContent_StaysBetweenTheLocationPickerAndTheActionBar(AddToListSourceMode mode)
+    {
+        // Issue #942: the source panel used to sit in a fixed 6 px row and drew over the name/Location block.
+        using var fixture = ShowWindow(mode);
+        var sourceHost = fixture.Window.FindControl<Grid>("SourceDetailsPanel")!;
+        var nameBlock = fixture.Window.FindControl<StackPanel>("NameLocationBlock")!;
+        var viewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
+        var visibleContent = sourceHost.Children.OfType<Control>().Single(control => control.IsVisible);
+        var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
+        var ok = FindButton(fixture.Root, UiKeys.Ok);
+
+        var contentBounds = BoundsRelativeTo(visibleContent, fixture.Root);
+        var nameBounds = BoundsRelativeTo(nameBlock, fixture.Root);
+        var viewerBounds = BoundsRelativeTo(viewer, fixture.Root);
+        var messageBounds = BoundsRelativeTo(message, fixture.Root);
+        var okBounds = BoundsRelativeTo(ok, fixture.Root);
+
+        // The name/Location block keeps the top of the form; the source fields start below it and
+        // scroll inside their viewport instead of drawing over the block or the actions.
+        Assert.True(contentBounds.Top >= nameBounds.Bottom - 0.5,
+            $"{mode}: source content starts above the name/Location block ({contentBounds.Top} < {nameBounds.Bottom}).");
+        Assert.True(viewerBounds.Bottom <= okBounds.Top + 0.5,
+            $"{mode}: source content overlaps the action bar ({viewerBounds.Bottom} > {okBounds.Top}).");
+        Assert.True(okBounds.Bottom <= messageBounds.Top + 0.5,
+            $"{mode}: the validation line overlaps the action bar.");
+        Assert.True(messageBounds.Bottom <= fixture.Root.Bounds.Height + 1,
+            $"{mode}: validation line is clipped at {messageBounds.Bottom}.");
+        Assert.True(message.Bounds.Height >= 14, $"{mode}: validation line collapsed to {message.Bounds.Height}.");
     }
 
     private static double MeasureNaturalHeight(AddToListSourceMode mode)
