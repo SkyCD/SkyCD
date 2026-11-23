@@ -77,7 +77,7 @@ public sealed class SkiaWorksThumbnailRenderer : IWorksThumbnailRenderer
                 }
                 else
                 {
-                    finished = !page.TryDrawToken(font, token, maxCharacters: maxCharacters);
+                    finished = !page.TryDrawToken(font, token, maxCharacters: maxCharacters, countWhitespace: true);
                 }
 
                 if (finished)

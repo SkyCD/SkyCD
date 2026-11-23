@@ -58,9 +58,9 @@ public sealed class SkiaMarkdownThumbnailRenderer : IMarkdownThumbnailRenderer
         }
 
         var bodyFont = page.GetFont(SKFontStyle.Normal);
-        var headingFont = page.GetFont(SKFontStyle.Bold);
-        var bodyLineHeight = page.FontSize * LineHeightScale;
         var headingSize = page.FontSize * HeadingScale;
+        var headingFont = page.GetFont(SKFontStyle.Bold, headingSize);
+        var bodyLineHeight = page.FontSize * LineHeightScale;
         var headingLineHeight = headingSize * LineHeightScale;
 
         foreach (var line in lines)

@@ -21,8 +21,10 @@ internal sealed class SkiaPageRenderer : IDisposable
 
     private readonly SKSurface _surface;
     private readonly SKTypeface _regularFace;
+    private readonly List<SKTypeface> _ownedFaces = new();
     private readonly SKPaint _paint = new() { Color = SKColors.Black, IsAntialias = true };
-    private readonly Dictionary<SKFontStyle, SKFont> _fonts = new();
+    private readonly Dictionary<(SKFontStyle Style, float Size), SKFont> _fonts = new();
+    private readonly Dictionary<SKFontStyle, SKTypeface> _faces = new();
     private SKPaint? _linePaint;
     private float _x;
     private float _baseline;
@@ -96,25 +98,41 @@ internal sealed class SkiaPageRenderer : IDisposable
     /// <summary>
     /// Returns the cached font for a style at <see cref="FontSize"/>; a missing face falls back to the regular one.
     /// </summary>
-    internal SKFont GetFont(SKFontStyle style)
+    internal SKFont GetFont(SKFontStyle style) => GetFont(style, FontSize);
+
+    /// <summary>Returns the cached font for a style and size; a missing face falls back to the regular one.</summary>
+    internal SKFont GetFont(SKFontStyle style, float size)
     {
-        if (_fonts.TryGetValue(style, out var font))
+        if (_fonts.TryGetValue((style, size), out var font))
         {
             return font;
         }
 
-        var face = style == SKFontStyle.Normal
-            ? _regularFace
-            : SKTypeface.FromFamilyName(FontFamily, style) ?? _regularFace;
-        font = new SKFont(face, FontSize);
-        _fonts.Add(style, font);
+        font = new SKFont(GetFace(style), size);
+        _fonts.Add((style, size), font);
+        return font;
+    }
 
-        if (face != _regularFace)
+    private SKTypeface GetFace(SKFontStyle style)
+    {
+        if (style == SKFontStyle.Normal)
         {
-            face.Dispose();
+            return _regularFace;
         }
 
-        return font;
+        if (_faces.TryGetValue(style, out var cached))
+        {
+            return cached;
+        }
+
+        var face = SKTypeface.FromFamilyName(FontFamily, style) ?? _regularFace;
+        if (face != _regularFace)
+        {
+            _ownedFaces.Add(face);
+        }
+
+        _faces.Add(style, face);
+        return face;
     }
 
     /// <summary>Moves to the start of the next line using <see cref="LineHeight"/>.</summary>
@@ -141,7 +159,8 @@ internal sealed class SkiaPageRenderer : IDisposable
         float? wrapLineHeight = null,
         int maxCharacters = int.MaxValue,
         bool underline = false,
-        bool strikeout = false)
+        bool strikeout = false,
+        bool countWhitespace = false)
     {
         if (_isFinished)
         {
@@ -158,7 +177,8 @@ internal sealed class SkiaPageRenderer : IDisposable
             }
         }
 
-        if (!SkiaPageText.IsWhitespace(token))
+        var whitespace = SkiaPageText.IsWhitespace(token);
+        if (!whitespace)
         {
             Canvas.DrawText(token, _x, _baseline, font, _paint);
 
@@ -173,7 +193,10 @@ internal sealed class SkiaPageRenderer : IDisposable
                 var y = _baseline - FontSize * 0.3f;
                 Canvas.DrawLine(_x, y, _x + tokenWidth, y, GetLinePaint());
             }
+        }
 
+        if (!whitespace || countWhitespace)
+        {
             DrawnCharacters += token.Length;
         }
 
@@ -201,6 +224,13 @@ internal sealed class SkiaPageRenderer : IDisposable
         }
 
         _fonts.Clear();
+        _faces.Clear();
+        foreach (var face in _ownedFaces)
+        {
+            face.Dispose();
+        }
+
+        _ownedFaces.Clear();
         _linePaint?.Dispose();
         _paint.Dispose();
         _regularFace.Dispose();

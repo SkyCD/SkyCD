@@ -78,7 +78,8 @@ public sealed class SkiaRtfThumbnailRenderer : IRtfThumbnailRenderer
                 token,
                 maxCharacters: maxCharacters,
                 underline: style?.Underline == true,
-                strikeout: style?.Strikeout == true);
+                strikeout: style?.Strikeout == true,
+                countWhitespace: true);
             finished = !drawn;
             return drawn;
         }
