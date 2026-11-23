@@ -111,7 +111,7 @@ internal static class OfficePackageReader
     }
 
     /// <summary>Decompresses a part, refusing to hold more than the configured cap even if the entry lies about its size.</summary>
-    private static byte[]? ReadBounded(ZipArchiveEntry entry, int maxBytes, CancellationToken cancellationToken)
+    public static byte[]? ReadBounded(ZipArchiveEntry entry, int maxBytes, CancellationToken cancellationToken)
     {
         try
         {
@@ -139,7 +139,7 @@ internal static class OfficePackageReader
         }
     }
 
-    private static ZipArchiveEntry? FindEntry(ZipArchive archive, string name) =>
+    public static ZipArchiveEntry? FindEntry(ZipArchive archive, string name) =>
         archive.Entries.FirstOrDefault(entry =>
             string.Equals(entry.FullName, name, StringComparison.OrdinalIgnoreCase));
 }
