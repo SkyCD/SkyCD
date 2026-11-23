@@ -7,6 +7,8 @@ public static class AbiWordSchema
 {
     public const string MetadataSchemaId = "skycd.abiword.metadata";
     public const int MetadataSchemaVersion = 1;
+    public const string PreviewSchemaId = "skycd.abiword.preview";
+    public const int PreviewSchemaVersion = 1;
     public const string Container = "Container";
     public const string Title = "Title";
     public const string Author = "Author";
@@ -54,4 +56,7 @@ public static class AbiWordSchema
         new(Generator, MediaMetadataType.Text),
         new(FormatVersion, MediaMetadataType.Text)
     ]);
+
+    /// <summary>Preview results carry the rendered page rather than values, so the schema is identity only.</summary>
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }

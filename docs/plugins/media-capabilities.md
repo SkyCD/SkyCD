@@ -85,12 +85,12 @@ It is the preview counterpart of the metadata contract:
   the provider reads the real file rather than a bounded stream, it applies its own file-size bound
   and publishes only bounded artifacts through the same copied-artifact output limits.
 
-## AbiWord document metadata
+## AbiWord document metadata and thumbnail
 
-`SkyCD.Plugin.Metadata.AbiWord` implements `IMediaMetadataCapability` and is discovered from assembly
-metadata, without `plugin.json`. Enable it through the normal plugin pipeline. During indexing,
-its results use the existing media scheduler/cache and remain available offline with the item.
-It does not provide thumbnails, render documents, extract body text, or require AbiWord installed.
+`SkyCD.Plugin.Metadata.AbiWord` implements `IMediaMetadataCapability` and `IMediaPreviewCapability` and is
+discovered from assembly metadata, without `plugin.json`. Enable it through the normal plugin pipeline. During
+indexing, its results use the existing media scheduler/cache and remain available offline with the item. The
+thumbnail pass recovers the leading body text and draws it to a page image; AbiWord itself is not required.
 
 ### Supported input and fields
 
@@ -121,17 +121,46 @@ repeated keys keep the last nonblank value. Dates remain text because AbiWord ca
 ctime-style local dates without a timezone. `dc.date` is a lifecycle date, not necessarily
 creation time; missing/stale dates are not replaced with filesystem timestamps.
 
+### Rendered page thumbnail
+
+`AbiWordPreviewPlugin` publishes schema `skycd.abiword.preview`, version 1, which is identity only because the
+result is the image, not values. The thumbnail walks the same AWML tree the metadata pass accepts and collects
+the leading body text:
+
+- Only direct `abiword/section/p` paragraphs are read. Runs inside a paragraph are concatenated, and paragraphs
+  are joined by line breaks. Self-closing and whitespace-only paragraphs contribute no line.
+- A block nested inside a paragraph, such as a table, contributes nothing; tables, lists, endnotes, headers and
+  footers live in sibling elements and are not walked.
+- The same XML hardening applies: the DOCTYPE is ignored, custom entities are never expanded, undeclared named
+  entities are parse errors, and no external resource is resolved. Character and predefined entity references
+  are decoded.
+- Collection stops at `MaxRenderedCharacters` (20,000) or `MaxRenderedParagraphs` (200) leading paragraphs, so a
+  large body costs no more than the sample it produces. `maxThumbnailDimension` is 768.
+
+`SkiaAbiWordThumbnailRenderer` draws the trimmed text as a white page with black sans-serif text: the page width
+equals `MaxThumbnailDimension`, the height follows the A-series page aspect, and lines wrap inside a proportional
+margin. The result is a single `image/png` artifact and progress reports 0.5 before drawing and 1 on completion.
+A renderer that cannot run reports no preview before the source is read, and text with nothing to draw produces
+an empty artifact list, which is the host's explicit "no preview" state.
+
+A document whose XML cannot be parsed as AbiWord reports no preview without failing the pass, so its metadata
+is still published. A damaged gzip container, an oversized source or a mixed-namespace body keeps the reader's
+own classification (`AbiWordDecodeException` / `AbiWordLimitExceededException`), and cancellation propagates.
+
 ### Safety and limitations
 
-The plugin works on .NET 10 on Windows, Linux and macOS without native dependencies. XML
-encoding declarations/BOMs are respected. Standard AbiWord DOCTYPE declarations are ignored,
+The metadata pass works on .NET 10 on Windows, Linux and macOS without native dependencies;
+the thumbnail pass adds the SkiaSharp native rasterizer and degrades to "no preview" when it
+cannot load. XML encoding declarations/BOMs are respected. Standard AbiWord DOCTYPE declarations are ignored,
 not resolved; external resources are never loaded and custom entities are not expanded.
 The entire XML document is parsed before metadata is published. Invalid XML, damaged gzip,
 unsupported containers, nested metadata markup, or exceeded limits fail only that provider
-through the host's sanitized failure boundary. Cancellation propagates without publishing.
+through the host's sanitized failure boundary; unparseable XML only suppresses the thumbnail.
+Cancellation propagates without publishing.
 
 Defaults: 16 MiB source bytes, 32 MiB decoded bytes/XML characters, 64 XML nesting levels,
-and 4,096 characters per metadata field. `AbiWordPluginOptions` configures the byte/field
+4,096 characters per metadata field, a 768-pixel longest thumbnail edge, and 20,000 leading body
+characters across at most 200 paragraphs for the thumbnail. `AbiWordPluginOptions` configures these
 limits; host source/output/time limits still apply. Gzip checksum validation is provided by
 `GZipStream`, with an additional size-footer check for truncated trailers. Concatenated gzip
 members and trailing data are not supported. No partial metadata is published on failure.
@@ -144,11 +173,12 @@ not encryption, and does not prevent metadata reading.
 
 ### Dependency evaluation (2026-11-20)
 
-The implementation uses .NET 10 `System.Xml.XmlReader` and `System.IO.Compression.GZipStream`
-(MIT-licensed .NET runtime), plus the existing plugin abstraction project. `dotnet list
-Plugins/SkyCD.Plugin.Metadata.AbiWord/SkyCD.Plugin.Metadata.AbiWord.csproj package --include-transitive` reports
-no NuGet dependencies. No additional direct/transitive licenses or policy changes are needed; the
-Trivy classification gate in `docs/legal/dependency-policy.md` remains unchanged.
+The metadata implementation uses .NET 10 `System.Xml.XmlReader` and `System.IO.Compression.GZipStream`
+(MIT-licensed .NET runtime), plus the existing plugin abstraction project. The thumbnail pass adds
+`SkiaSharp` and `SkiaSharp.NativeAssets.{Linux,macOS,Win32}` 3.119.4 (MIT), the same package set the RTF and
+WordPerfect preview plugins use; the metadata path itself still pulls no NuGet dependency. No additional
+direct/transitive licenses or policy changes are needed; the Trivy classification gate in
+`docs/legal/dependency-policy.md` remains unchanged.
 
 Alternatives considered before adoption:
 
