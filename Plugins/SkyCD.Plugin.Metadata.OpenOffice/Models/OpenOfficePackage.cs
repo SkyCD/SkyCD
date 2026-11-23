@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using System.Threading;
 using System.Xml;
 using SkyCD.Plugin.Metadata.OpenOffice.Exceptions;
 using SkyCD.Plugin.Metadata.OpenOffice.Parsing;
@@ -23,6 +24,7 @@ internal sealed class OpenOfficePackage : IDisposable
     private const string MimeTypeEntryName = "mimetype";
     private const string MetadataEntryName = "meta.xml";
     private const string ManifestEntryName = "META-INF/manifest.xml";
+    private const string ThumbnailEntryName = "Thumbnails/thumbnail.png";
     private const int ChunkBytes = 64 * 1024;
 
     private readonly ZipArchive archive;
@@ -71,6 +73,13 @@ internal sealed class OpenOfficePackage : IDisposable
     public byte[]? TryReadMetadata(int maxBytes) => TryReadEntry(MetadataEntryName, maxBytes);
 
     /// <summary>
+    /// The <c>Thumbnails/thumbnail.png</c> bytes, or <see langword="null"/> when the member is absent, empty,
+    /// over the bound or damaged.
+    /// </summary>
+    public byte[]? TryReadThumbnail(int maxBytes, CancellationToken cancellationToken) =>
+        TryReadEntry(ThumbnailEntryName, maxBytes, cancellationToken);
+
+    /// <summary>
     /// True when the package manifest declares encrypted content. The manifest itself is never encrypted, so
     /// it is the reliable signal that the readable members need a credential the host does not hold.
     /// </summary>
@@ -111,7 +120,7 @@ internal sealed class OpenOfficePackage : IDisposable
     /// decompressed bytes actually produced exceed it. A short, damaged or unsupported member reads as
     /// absent so that the container facts already known are still published.
     /// </summary>
-    private byte[]? TryReadEntry(string name, int maxBytes)
+    private byte[]? TryReadEntry(string name, int maxBytes, CancellationToken cancellationToken = default)
     {
         if (!entries.TryGetValue(name, out var entry) || entry.Length <= 0 || entry.Length > maxBytes)
         {
@@ -120,13 +129,15 @@ internal sealed class OpenOfficePackage : IDisposable
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var stream = entry.Open();
             using var buffer = new MemoryStream((int)Math.Min(entry.Length, maxBytes));
             var chunk = new byte[Math.Min(ChunkBytes, maxBytes)];
             var total = 0;
             int read;
-            while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
+            while ((read = stream.Read(chunk, 0, (int)Math.Min(chunk.Length, maxBytes - total))) > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 total += read;
                 if (total > maxBytes)
                 {

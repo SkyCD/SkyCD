@@ -26,8 +26,6 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         "Name",
         "RealDirectoryName",
         "Comment",
-        // The description is shown once as a unified value with its author annotation.
-        DescriptionPropertyKey,
         "LocationId",
         // The rating is edited with the star control at the top of the General tab.
         StarRating.PropertyKey
@@ -56,13 +54,13 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         sourceProperties = new PropertiesCollection(infoProperties.ToDictionary(item => item.Key, item => item.Value));
         catalogDescription = ReadCatalogDescription(sourceProperties);
         valueLocalizer = localizer ?? new PropertyValueLocalizer();
-        InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
+        // Imported or user-entered descriptions render without AI actions even when no provider is available.
+        description = catalogDescription is null
+            ? null
+            : new DescriptionViewModel(catalogDescription, null, objectKey);
+        AttachDescription();
+        InfoProperties = BuildInfoProperties();
         rating = ReadStoredRating();
-        if (catalogDescription is not null)
-        {
-            // Imported or user-entered descriptions render without AI actions even when no provider is available.
-            Description = new DescriptionViewModel(catalogDescription, null, objectKey);
-        }
 
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
@@ -73,7 +71,7 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
     public System.Collections.ObjectModel.ObservableCollection<TagAssignmentViewModel> TagAssignments { get; } = [];
     public bool HasTagsTab => TagAssignments.Count > 0;
 
-    /// <summary>Unified description surface; absent only when the entry has no description to show.</summary>
+    /// <summary>Unified description surface backing the Description row; absent only when the entry has no description to show.</summary>
     [ObservableProperty] private DescriptionViewModel? description;
 
     /// <summary>Tabs contributed by enabled feature plugins; empty when no plugin offers a surface.</summary>
@@ -108,8 +106,12 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasDetailsTabs));
     }
 
-    /// <summary>Releases the plugin-owned tab content.</summary>
-    public void Dispose() => DisposeDetailsTabs();
+    /// <summary>Releases the plugin-owned tab content and the description subscription.</summary>
+    public void Dispose()
+    {
+        DetachDescription();
+        DisposeDetailsTabs();
+    }
 
     private void DisposeDetailsTabs()
     {
@@ -121,14 +123,19 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         DetailsTabs.Clear();
     }
 
-    public bool HasDescriptionSection => Description is not null;
+    public bool HasDescription => Description is not null;
+
+    /// <summary>Localized label of the single Description row in the Properties list.</summary>
+    public string DescriptionHeader => MediaMetadataValueFormatter.ResolveLabel(DescriptionPropertyKey);
 
     /// <summary>Raised with text the view should place on the clipboard.</summary>
     public event Action<string>? CopyTextRequested;
 
     partial void OnDescriptionChanged(DescriptionViewModel? value)
     {
-        OnPropertyChanged(nameof(HasDescriptionSection));
+        // A surface assigned directly (instead of through InitializeDescription) is observed the same way.
+        AttachDescription();
+        NotifyDescriptionStateChanged();
     }
 
     /// <summary>
@@ -139,16 +146,57 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
-        if (Description is not null)
+        DetachDescription();
+        Description = new DescriptionViewModel(catalogDescription, service, entryId);
+    }
+
+    private DescriptionViewModel? attachedDescription;
+
+    private void AttachDescription()
+    {
+        if (Description is not { } description || ReferenceEquals(attachedDescription, description))
         {
-            Description.CopyRequested -= OnDescriptionCopyRequested;
+            return;
         }
 
-        Description = new DescriptionViewModel(catalogDescription, service, entryId);
-        Description.CopyRequested += OnDescriptionCopyRequested;
+        DetachDescription();
+        attachedDescription = description;
+        description.CopyRequested += OnDescriptionCopyRequested;
+        description.PropertyChanged += OnDescriptionPropertyChanged;
+    }
+
+    private void DetachDescription()
+    {
+        if (attachedDescription is not { } description)
+        {
+            return;
+        }
+
+        attachedDescription = null;
+        description.CopyRequested -= OnDescriptionCopyRequested;
+        description.PropertyChanged -= OnDescriptionPropertyChanged;
     }
 
     private void OnDescriptionCopyRequested(string text) => CopyTextRequested?.Invoke(text);
+
+    private void OnDescriptionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // The row template binds to the nested surface directly, while the row itself is rebuilt from
+        // InfoProperties, which carries the projected description text.
+        if (e.PropertyName is nameof(DescriptionViewModel.DescriptionText) or nameof(DescriptionViewModel.HasDescription))
+        {
+            NotifyDescriptionStateChanged();
+        }
+    }
+
+    private void NotifyDescriptionStateChanged()
+    {
+        InfoProperties = BuildInfoProperties();
+        OnPropertyChanged(nameof(InfoProperties));
+        OnPropertyChanged(nameof(HasInfoTab));
+        OnPropertyChanged(nameof(HasDescription));
+        OnPropertyChanged(nameof(DescriptionHeader));
+    }
 
     public void ApplyCustomPropertyDefaults(IEnumerable<SkyCD.Documents.CustomPropertyDocument>? properties)
     {
@@ -225,10 +273,46 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 
     private void RefreshLocalization()
     {
-        InfoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
+        InfoProperties = BuildInfoProperties();
         OnPropertyChanged(nameof(InfoProperties));
         OnPropertyChanged(nameof(HasInfoTab));
+        OnPropertyChanged(nameof(DescriptionHeader));
         OnPropertyChanged(nameof(RatingValueText));
+    }
+
+    /// <summary>
+    /// Builds the normalized properties plus the single Description row. The row is projected at read time
+    /// from the stored catalog Description or, when none is stored, the cached AI text; it is rebuilt from
+    /// scratch so refreshed localization and AI updates cannot duplicate or drop it.
+    /// </summary>
+    private PropertiesCollection BuildInfoProperties()
+    {
+        var infoProperties = NormalizeInfoProperties(sourceProperties, valueLocalizer);
+        var header = DescriptionHeader;
+
+        // The stored key resolves to its label through the metadata catalog; take that row over so the
+        // description is shown once even in a locale where the label differs from the stored key.
+        var descriptionKey = infoProperties.Keys.FirstOrDefault(
+            key => string.Equals(key, header, StringComparison.CurrentCultureIgnoreCase) ||
+                   string.Equals(key, DescriptionPropertyKey, StringComparison.CurrentCultureIgnoreCase));
+        if (descriptionKey is not null)
+        {
+            infoProperties.Remove(descriptionKey);
+        }
+
+        if (Description is not { HasDescription: true } description)
+        {
+            return infoProperties;
+        }
+
+        // The description is the first row so its position stays deterministic in every locale.
+        var withDescription = new PropertiesCollection { [header] = description.DescriptionText };
+        foreach (var (key, value) in infoProperties)
+        {
+            withDescription[key] = value;
+        }
+
+        return withDescription;
     }
 
     public bool HasInfoTab => InfoProperties.Count > 0;

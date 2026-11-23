@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,7 +50,8 @@ public sealed class MediaExtractionScheduler
         MediaExtractionRequest request,
         IProgress<MediaProgress>? progress = null,
         CancellationToken cancellationToken = default,
-        MediaExecutionLimits? limits = null)
+        MediaExecutionLimits? limits = null,
+        IProgress<MediaThumbnail>? thumbnailProgress = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.EntryId);
@@ -76,7 +78,8 @@ public sealed class MediaExtractionScheduler
                 return StageAndPublish(request, batchId, ownsBatch, existing, identityKeys, now,
                     payloads: marker.Staged ? [new MediaCachePayload(marker.Record)] : [],
                     records: [marker.Record],
-                    reusedCacheHit: !marker.Staged);
+                    reusedCacheHit: !marker.Staged,
+                    thumbnailProgress: thumbnailProgress);
             }
 
             var reused = FindReusableRecords(request, existing, identities);
@@ -88,7 +91,7 @@ public sealed class MediaExtractionScheduler
                 }
 
                 return StageAndPublish(request, batchId, ownsBatch, existing, identityKeys, now,
-                    payloads: [], records: reused, reusedCacheHit: true);
+                    payloads: [], records: reused, reusedCacheHit: true, thumbnailProgress: thumbnailProgress);
             }
 
             var results = await manager.ProcessAsync(request.Item, request.OpenSource, progress, cancellationToken,
@@ -126,7 +129,8 @@ public sealed class MediaExtractionScheduler
             return StageAndPublish(request, batchId, ownsBatch, existing, identityKeys, now,
                 payloads: plan.Payloads,
                 records: plan.Payloads.Select(payload => payload.Record).ToArray(),
-                preservedCount: plan.PreservedCount);
+                preservedCount: plan.PreservedCount,
+                thumbnailProgress: thumbnailProgress);
         }
         catch (Exception) when (ownsBatch)
         {
@@ -169,7 +173,8 @@ public sealed class MediaExtractionScheduler
         List<MediaCachePayload> payloads,
         IReadOnlyList<MediaCacheRecord> records,
         bool reusedCacheHit = false,
-        int preservedCount = 0)
+        int preservedCount = 0,
+        IProgress<MediaThumbnail>? thumbnailProgress = null)
     {
         var writtenIds = payloads
             .Select(payload => payload.Record.Id)
@@ -192,6 +197,8 @@ public sealed class MediaExtractionScheduler
             store.PublishBatch(batchId);
         }
 
+        ReportFirstThumbnail(payloads, ResolveSourceName(request), thumbnailProgress);
+
         return new MediaExtractionOutcome
         {
             EntryId = request.EntryId,
@@ -204,6 +211,58 @@ public sealed class MediaExtractionScheduler
             PreservedRecordCount = preservedCount
         };
     }
+
+    /// <summary>
+    /// Reports the first image artifact of the newest captured payload, so a running operation sees at most
+    /// one thumbnail per pass. Reporting faults are swallowed: a progress surface must never fail extraction.
+    /// </summary>
+    private static void ReportFirstThumbnail(
+        IReadOnlyList<MediaCachePayload> payloads,
+        string name,
+        IProgress<MediaThumbnail>? thumbnailProgress)
+    {
+        if (thumbnailProgress is null)
+        {
+            return;
+        }
+
+        var payload = payloads
+            .Where(candidate => candidate.Record.State == MediaCacheRecordState.Captured)
+            .LastOrDefault(candidate => SelectThumbnailArtifact(candidate) is not null);
+        if (payload is null)
+        {
+            return;
+        }
+
+        var thumbnail = SelectThumbnailArtifact(payload)!;
+        try
+        {
+            thumbnailProgress.Report(new MediaThumbnail(name, thumbnail.Data, thumbnail.ContentType));
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private static string ResolveSourceName(MediaExtractionRequest request) =>
+        string.IsNullOrWhiteSpace(request.SourcePath) ? string.Empty : Path.GetFileName(request.SourcePath);
+
+    private static MediaThumbnailArtifact? SelectThumbnailArtifact(MediaCachePayload payload)
+    {
+        foreach (var reference in payload.Record.Artifacts
+                     .Where(reference => reference.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(reference => reference.Key, StringComparer.Ordinal))
+        {
+            if (payload.Artifacts.TryGetValue(reference.Key, out var data) && data.Length > 0)
+            {
+                return new MediaThumbnailArtifact(data, reference.ContentType);
+            }
+        }
+
+        return null;
+    }
+
+    private sealed record MediaThumbnailArtifact(byte[] Data, string ContentType);
 
     private IReadOnlyList<MediaCacheRecord>? FindReusableRecords(
         MediaExtractionRequest request,
