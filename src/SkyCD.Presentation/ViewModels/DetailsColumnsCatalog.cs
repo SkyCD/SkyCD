@@ -29,7 +29,8 @@ public static class DetailsColumnsCatalog
             HeaderKey = TextKeys.Name2,
             ValuePath = nameof(CatalogDocument.DisplayName),
             Width = new GridLength(500, GridUnitType.Pixel),
-            IsRequired = true
+            IsRequired = true,
+            ShowsItemIcon = true
         },
         new()
         {
@@ -162,9 +163,9 @@ public static class DetailsColumnsCatalog
     }
 
     /// <summary>
-    /// Moves a visible, non-required column to <paramref name="targetVisibleIndex"/> inside the visible
-    /// order. Hidden columns keep their slots in the saved configuration (and their saved widths), and
-    /// leading required columns (Name) always stay first.
+    /// Moves a visible column to <paramref name="targetVisibleIndex"/> inside the visible order. Hidden
+    /// columns keep their slots in the saved configuration (and their saved widths). Required columns
+    /// remain visible but, like every other column, can be moved to any position.
     /// </summary>
     public static List<DetailsColumnSettingDocument> MoveVisibleColumn(
         IEnumerable<DetailsColumnSettingDocument>? settings,
@@ -173,7 +174,7 @@ public static class DetailsColumnsCatalog
     {
         var normalized = Normalize(settings);
         var definition = Find(columnId);
-        if (definition is null || definition.IsRequired)
+        if (definition is null)
         {
             return normalized;
         }
@@ -189,8 +190,7 @@ public static class DetailsColumnsCatalog
             return normalized;
         }
 
-        var leadingRequiredCount = CountLeadingRequired(visibleSlots.Select(static pair => pair.setting).ToList());
-        var clampedTarget = Math.Clamp(targetVisibleIndex, leadingRequiredCount, visibleSlots.Count - 1);
+        var clampedTarget = Math.Clamp(targetVisibleIndex, 0, visibleSlots.Count - 1);
         if (clampedTarget == sourceVisibleIndex)
         {
             return normalized;
@@ -239,16 +239,5 @@ public static class DetailsColumnsCatalog
     private static double? ToSavedWidth(double? width)
     {
         return width is > 0 && double.IsFinite(width.Value) ? width : null;
-    }
-
-    private static int CountLeadingRequired(IReadOnlyList<DetailsColumnSettingDocument> visibleSettings)
-    {
-        var count = 0;
-        while (count < visibleSettings.Count && Find(visibleSettings[count].Id)?.IsRequired == true)
-        {
-            count++;
-        }
-
-        return count;
     }
 }

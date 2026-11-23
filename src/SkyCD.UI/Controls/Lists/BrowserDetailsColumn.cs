@@ -35,6 +35,12 @@ public sealed class BrowserDetailsColumn : AvaloniaObject
 
     public double MinWidth { get; init; } = 30;
 
-    /// <summary>Required columns stay visible and cannot be dragged to a different position.</summary>
+    /// <summary>Required columns stay visible; they can still be reordered and resized.</summary>
     public bool IsRequired { get; init; }
+
+    /// <summary>
+    /// When set, the row renders the item icon and status indicator inside this column's cell. The icon
+    /// follows the column wherever it is moved.
+    /// </summary>
+    public bool ShowsItemIcon { get; init; }
 }
