@@ -40,6 +40,20 @@
         <Style Selector="Button.acpUseAgent">
             <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
         </Style>
+        <!-- External links stay Buttons so Tab/Enter activate them, but render as links with the ↗ affordance. -->
+        <Style Selector="Button.pluginLink">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.pluginLink TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}" />
+        </Style>
+        <Style Selector="Button.pluginLink:pointerover TextBlock">
+            <Setter Property="TextDecorations" Value="Underline" />
+        </Style>
         <Style Selector="Border.acpAgentCard.selected Button.acpUseAgent">
             <Setter Property="IsEnabled" Value="False" />
             <Setter Property="Theme">
@@ -273,6 +287,7 @@
                                                    Padding="{DynamicResource SkyInsetXs}" />
                                         <ListBox ItemsSource="{Binding FilteredPlugins}"
                                                  SelectedItem="{Binding SelectedPlugin}"
+                                                 IsVisible="{Binding !ShowInstalledPluginsEmptyState}"
                                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                                  SelectionChanged="OnInstalledPluginsSelectionChanged">
                                             <ListBox.Styles>
@@ -322,6 +337,13 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginFilterNoMatches}}"
+                                                   Classes="caption"
+                                                   Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                   Padding="{DynamicResource SkyInsetSm}"
+                                                   TextWrapping="Wrap"
+                                                   IsHitTestVisible="False"
+                                                   IsVisible="{Binding ShowInstalledPluginsEmptyState}" />
                                     </StackPanel>
 
                                     <StackPanel IsVisible="{Binding ShowMarketplacePluginSection}"
@@ -344,9 +366,18 @@
                                                          IsVisible="{Binding IsMarketplaceLoading}" />
                                             <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginCatalogEmpty}}"
                                                        Classes="caption"
+                                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                                        Padding="{DynamicResource SkyInsetSm}"
                                                        TextWrapping="Wrap"
+                                                       IsHitTestVisible="False"
                                                        IsVisible="{Binding ShowMarketplacePaneEmptyState}" />
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginMarketplaceFilterNoMatches}}"
+                                                       Classes="caption"
+                                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                       Padding="{DynamicResource SkyInsetSm}"
+                                                       TextWrapping="Wrap"
+                                                       IsHitTestVisible="False"
+                                                       IsVisible="{Binding ShowMarketplacePaneFilterEmptyState}" />
                                             <TextBlock Text="{Binding MarketplaceStatusMessage}"
                                                        Classes="caption"
                                                        Padding="{DynamicResource SkyInsetSm}"
@@ -354,6 +385,7 @@
                                                        IsVisible="{Binding ShowMarketplaceStatusMessage}" />
                                             <ListBox ItemsSource="{Binding FilteredMarketplacePlugins}"
                                                      SelectedItem="{Binding SelectedMarketplacePlugin}"
+                                                     IsVisible="{Binding ShowMarketplacePaneList}"
                                                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                                      SelectionChanged="OnMarketplacePluginsSelectionChanged">
                                                 <ListBox.Styles>
@@ -472,31 +504,91 @@
                                 </TabItem>
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabAdditionalInfo}}">
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                        <Grid ColumnDefinitions="Auto,*"
-                                              RowDefinitions="Auto,Auto,Auto"
-                                              RowSpacing="{DynamicResource SkySpaceXs}"
-                                              ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginIdentityLabel}}"
-                                                       Classes="caption" />
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding SelectedPluginDetailsId}"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="1"
-                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Type}}"
-                                                       Classes="caption" />
-                                            <TextBlock Grid.Row="1"
-                                                       Grid.Column="1"
-                                                       Text="{Binding SelectedPluginDetailsType}"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="2"
-                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginExtensionLabel}}"
-                                                       Classes="caption"
-                                                       IsVisible="{Binding HasSelectedPluginDetailsExtension}" />
-                                            <TextBlock Grid.Row="2"
-                                                       Grid.Column="1"
-                                                       Text="{Binding SelectedPluginDetailsExtension}"
-                                                       IsVisible="{Binding HasSelectedPluginDetailsExtension}" />
-                                        </Grid>
+                                        <StackPanel Spacing="{DynamicResource SkySpaceMd}">
+                                            <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                                                <Button Classes="pluginLink"
+                                                        IsVisible="{Binding HasSelectedPluginDetailsProjectUrl}"
+                                                        Command="{Binding OpenSelectedPluginProjectUrlCommand}"
+                                                        ToolTip.Tip="{Binding SelectedPlugin.ProjectUrl}"
+                                                        AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginProjectLinkLabel}}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
+                                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginProjectLinkLabel}}" />
+                                                        <TextBlock Text="↗" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Classes="pluginLink"
+                                                        IsVisible="{Binding HasSelectedPluginDetailsAuthorUrl}"
+                                                        Command="{Binding OpenSelectedPluginAuthorUrlCommand}"
+                                                        ToolTip.Tip="{Binding SelectedPlugin.AuthorUrl}"
+                                                        AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginAuthorLinkLabel}}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
+                                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginAuthorLinkLabel}}" />
+                                                        <TextBlock Text="↗" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                            <Grid ColumnDefinitions="Auto,*"
+                                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                                  RowSpacing="{DynamicResource SkySpaceXs}"
+                                                  ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginVendorLabel}}"
+                                                           Classes="caption"
+                                                           IsVisible="{Binding HasSelectedPluginDetailsType}" />
+                                                <SelectableTextBlock Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsType}"
+                                                                     TextWrapping="Wrap"
+                                                                     IsVisible="{Binding HasSelectedPluginDetailsType}" />
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginVersionLabel}}"
+                                                           Classes="caption"
+                                                           IsVisible="{Binding HasSelectedPluginDetailsVersionNumber}" />
+                                                <SelectableTextBlock Grid.Row="1"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsVersionNumber}"
+                                                                     TextWrapping="Wrap"
+                                                                     IsVisible="{Binding HasSelectedPluginDetailsVersionNumber}" />
+                                                <TextBlock Grid.Row="2"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSizeLabel}}"
+                                                           Classes="caption"
+                                                           IsVisible="{Binding HasSelectedPluginDetailsSize}" />
+                                                <SelectableTextBlock Grid.Row="2"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsSize}"
+                                                                     IsVisible="{Binding HasSelectedPluginDetailsSize}" />
+                                                <TextBlock Grid.Row="3"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginIdentityLabel}}"
+                                                           Classes="caption" />
+                                                <SelectableTextBlock Grid.Row="3"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsId}"
+                                                                     TextWrapping="Wrap" />
+                                                <TextBlock Grid.Row="4"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.Type}}"
+                                                           Classes="caption"
+                                                           IsVisible="{Binding HasSelectedPluginDetailsCapabilityType}" />
+                                                <SelectableTextBlock Grid.Row="4"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsCapabilityType}"
+                                                                     TextWrapping="Wrap"
+                                                                     IsVisible="{Binding HasSelectedPluginDetailsCapabilityType}" />
+                                                <TextBlock Grid.Row="5"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginExtensionLabel}}"
+                                                           Classes="caption"
+                                                           IsVisible="{Binding HasSelectedPluginDetailsExtension}" />
+                                                <SelectableTextBlock Grid.Row="5"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsExtension}"
+                                                                     IsVisible="{Binding HasSelectedPluginDetailsExtension}" />
+                                                <TextBlock Grid.Row="6"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdatesFromLabel}}"
+                                                           Classes="caption"
+                                                           IsVisible="{Binding HasSelectedPluginDetailsUpdateSource}" />
+                                                <SelectableTextBlock Grid.Row="6"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedPluginDetailsUpdateSource}"
+                                                                     IsVisible="{Binding HasSelectedPluginDetailsUpdateSource}" />
+                                            </Grid>
+                                        </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>
                             </TabControl>
@@ -581,37 +673,49 @@
                                 </TabItem>
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabAdditionalInfo}}">
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                        <Grid ColumnDefinitions="Auto,*"
-                                              RowDefinitions="Auto,Auto,Auto,Auto"
-                                              RowSpacing="{DynamicResource SkySpaceXs}"
-                                              ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginPublisherLabel}}"
-                                                       Classes="caption" />
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding SelectedMarketplacePlugin.Publisher}"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="1"
-                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSourceLabel}}"
-                                                       Classes="caption" />
-                                            <TextBlock Grid.Row="1"
-                                                       Grid.Column="1"
-                                                       Text="{Binding SelectedMarketplacePlugin.Source}"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="2"
-                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginVersionLabel}}"
-                                                       Classes="caption" />
-                                            <TextBlock Grid.Row="2"
-                                                       Grid.Column="1"
-                                                       Text="{Binding SelectedMarketplacePlugin.VersionSummary}"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="3"
-                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Status}}"
-                                                       Classes="caption" />
-                                            <TextBlock Grid.Row="3"
-                                                       Grid.Column="1"
-                                                       Text="{Binding SelectedMarketplacePlugin.StatusLabel}"
-                                                       TextWrapping="Wrap" />
-                                        </Grid>
+                                        <StackPanel Spacing="{DynamicResource SkySpaceMd}">
+                                            <Button Classes="pluginLink"
+                                                    IsVisible="{Binding HasSelectedMarketplaceProjectUrl}"
+                                                    Command="{Binding OpenSelectedMarketplaceProjectUrlCommand}"
+                                                    ToolTip.Tip="{Binding SelectedMarketplacePlugin.ProjectUrl}"
+                                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginProjectLinkLabel}}">
+                                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
+                                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginProjectLinkLabel}}" />
+                                                    <TextBlock Text="↗" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Grid ColumnDefinitions="Auto,*"
+                                                  RowDefinitions="Auto,Auto,Auto,Auto"
+                                                  RowSpacing="{DynamicResource SkySpaceXs}"
+                                                  ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginPublisherLabel}}"
+                                                           Classes="caption" />
+                                                <SelectableTextBlock Grid.Column="1"
+                                                                     Text="{Binding SelectedMarketplacePlugin.Publisher}"
+                                                                     TextWrapping="Wrap" />
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSourceLabel}}"
+                                                           Classes="caption" />
+                                                <SelectableTextBlock Grid.Row="1"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedMarketplacePlugin.Source}"
+                                                                     TextWrapping="Wrap" />
+                                                <TextBlock Grid.Row="2"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginVersionLabel}}"
+                                                           Classes="caption" />
+                                                <SelectableTextBlock Grid.Row="2"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedMarketplacePlugin.VersionSummary}"
+                                                                     TextWrapping="Wrap" />
+                                                <TextBlock Grid.Row="3"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.Status}}"
+                                                           Classes="caption" />
+                                                <SelectableTextBlock Grid.Row="3"
+                                                                     Grid.Column="1"
+                                                                     Text="{Binding SelectedMarketplacePlugin.StatusLabel}"
+                                                                     TextWrapping="Wrap" />
+                                            </Grid>
+                                        </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>
                             </TabControl>

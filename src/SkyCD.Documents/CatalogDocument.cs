@@ -113,10 +113,54 @@ public sealed class CatalogDocument
 
     public string DisplayType => Type.ToDisplayName();
 
-    public bool HasKnownSize => !Properties.TryGetValue("SizeKnown", out var value) ||
+    /// <summary>
+    /// Property key that marks a stored size as unknown. Importers that cannot read a size, and manually
+    /// created entries that have never been scanned, write <c>false</c> so the surfaces can leave the size
+    /// empty instead of presenting the default zero as a real total.
+    /// </summary>
+    public const string SizeKnownPropertyKey = "SizeKnown";
+
+    public bool HasKnownSize => !Properties.TryGetValue(SizeKnownPropertyKey, out var value) ||
                                 !bool.TryParse(value?.ToString(), out var known) || known;
 
     public string DisplaySize => HasKnownSize ? SizeFormatting.FormatBytes(Size, "0.##") : string.Empty;
+
+    /// <summary>
+    /// Returns a copy carrying a maintained size. A known size drops the unknown marker, because the stored
+    /// total now describes the entry; an unknown size keeps it and leaves the last stored value untouched so
+    /// nothing is silently zeroed.
+    /// </summary>
+    public CatalogDocument WithSize(long size, bool sizeKnown)
+    {
+        var properties = new PropertiesCollection(Properties);
+        if (sizeKnown)
+        {
+            properties.Remove(SizeKnownPropertyKey);
+        }
+        else
+        {
+            properties[SizeKnownPropertyKey] = false;
+        }
+
+        return new CatalogDocument
+        {
+            Id = Id,
+            Name = Name,
+            ParentId = ParentId,
+            Type = Type,
+            Size = size,
+            ChildrenCount = ChildrenCount,
+            ContentsState = ContentsState,
+            Status = Status,
+            Properties = properties,
+            locationName = locationName,
+            displayName = displayName,
+            badgeText = badgeText,
+            badgeIcon = badgeIcon,
+            badgeTooltip = badgeTooltip,
+            badgeAttention = badgeAttention
+        };
+    }
 
     public string IconGlyph => ResolveIconGlyph();
 

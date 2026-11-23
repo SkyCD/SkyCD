@@ -242,3 +242,5 @@ text.PluginCatalogOffline: "Įskiepių katalogo pasiekti nepavyko. Įdiegti įsk
 text.PluginCatalogFailure: "Įskiepių katalogo įkelti nepavyko. Įdiegti įskiepiai vis dar prieinami."
 text.PluginCatalogPartialFailure: "Kai kurių katalogo šaltinių pasiekti nepavyko; rodomi prieinami rezultatai."
 text.PluginCatalogEmpty: "Kataloge dar nėra paskelbtų įskiepių."
+text.PluginFilterNoMatches: "Joks įskiepis neatitinka filtro."
+text.PluginMarketplaceFilterNoMatches: "Joks rinkos įskiepis neatitinka filtro."

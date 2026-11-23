@@ -49,6 +49,73 @@ public sealed class OptionsPluginsPageTests
     }
 
     [Fact]
+    public async Task EmptyCatalog_ShowsCatalogEmptyStateInsteadOfFilterMessage()
+    {
+        var service = new FakeMarketplaceService();
+        using var vm = CreateViewModel(service);
+
+        await vm.ToggleMarketplaceSectionCommand.ExecuteAsync(null);
+
+        Assert.True(vm.ShowMarketplacePaneEmptyState);
+        Assert.False(vm.ShowMarketplacePaneFilterEmptyState);
+        Assert.False(vm.ShowMarketplacePaneList);
+        Assert.False(vm.ShowMarketplaceStatusMessage);
+        Assert.Equal(string.Empty, vm.MarketplaceStatusMessage);
+    }
+
+    [Fact]
+    public async Task FilterWithNoMatches_ShowsEmptyStatesAndKeepsHeaderCounts()
+    {
+        var service = new FakeMarketplaceService
+        {
+            Snapshot = SnapshotAt(Package("acme.xml", "1.0.0", displayName: "XML"))
+        };
+        using var vm = CreateViewModel(service);
+        vm.SetPlugins([new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "acme.xml")]);
+        await vm.LoadMarketplaceAsync(forceRefresh: false);
+        await vm.ToggleMarketplaceSectionCommand.ExecuteAsync(null);
+
+        Assert.False(vm.ShowInstalledPluginsEmptyState);
+        Assert.True(vm.ShowMarketplacePaneList);
+        Assert.False(vm.ShowMarketplacePaneFilterEmptyState);
+        Assert.False(vm.ShowMarketplacePaneEmptyState);
+
+        vm.PluginSearchText = "no-such-plugin";
+
+        Assert.True(vm.ShowInstalledPluginsEmptyState);
+        Assert.False(vm.ShowMarketplacePaneList);
+        Assert.True(vm.ShowMarketplacePaneFilterEmptyState);
+        Assert.False(vm.ShowMarketplacePaneEmptyState);
+        Assert.Empty(vm.FilteredPlugins);
+        Assert.Empty(vm.FilteredMarketplacePlugins);
+        Assert.Equal(0, vm.InstalledPluginsCount);
+        Assert.Equal(0, vm.MarketplacePluginsCount);
+        Assert.Contains("0", vm.InstalledPluginsHeader);
+        Assert.Contains("0", vm.MarketplacePluginsHeader);
+        Assert.False(vm.ShowMarketplaceStatusMessage);
+
+        vm.PluginSearchText = string.Empty;
+
+        Assert.False(vm.ShowInstalledPluginsEmptyState);
+        Assert.True(vm.ShowMarketplacePaneList);
+        Assert.False(vm.ShowMarketplacePaneFilterEmptyState);
+    }
+
+    [Fact]
+    public async Task CatalogFailure_ShowsOnlyTheFailureStatusWithoutEmptyStateMessages()
+    {
+        var service = new FakeMarketplaceService { LoadFailure = new InvalidOperationException("network down") };
+        using var vm = CreateViewModel(service);
+
+        await vm.ToggleMarketplaceSectionCommand.ExecuteAsync(null);
+
+        Assert.True(vm.ShowMarketplaceStatusMessage);
+        Assert.False(vm.ShowMarketplacePaneEmptyState);
+        Assert.False(vm.ShowMarketplacePaneFilterEmptyState);
+        Assert.False(vm.ShowMarketplacePaneList);
+    }
+
+    [Fact]
     public async Task MarketplaceSection_StartsCollapsed_AndExpandsWithOneLoad()
     {
         var service = new FakeMarketplaceService
@@ -271,10 +338,17 @@ public sealed class OptionsPluginsPageTests
 
         public List<MarketplaceRelease> StagedReleases { get; } = [];
 
+        public Exception? LoadFailure { get; set; }
+
         public Dictionary<string, PluginInstallState> States { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public Task<PluginCatalogSnapshot> LoadAsync(bool forceRefresh, CancellationToken cancellationToken)
         {
+            if (LoadFailure is not null)
+            {
+                return Task.FromException<PluginCatalogSnapshot>(LoadFailure);
+            }
+
             // Record the snapshot and the install states handed out for that load, not live references.
             LastStates = new Dictionary<string, PluginInstallState>(States, StringComparer.OrdinalIgnoreCase);
             Loads.Add((forceRefresh, Snapshot));

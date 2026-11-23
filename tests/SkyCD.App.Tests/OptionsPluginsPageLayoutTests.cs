@@ -73,6 +73,42 @@ public sealed class OptionsPluginsPageLayoutTests
     }
 
     [Fact]
+    public void PluginsPage_EmptyStatesAreNonSelectableAndReplaceEmptyLists()
+    {
+        var page = GetPluginsPage();
+
+        var installedEmpty = Assert.Single(page.Descendants(), element =>
+            (string?)element.Attribute("Text") == "{i18n:Translate {x:Static i18n:TextKeys.PluginFilterNoMatches}}");
+        Assert.Equal("{Binding ShowInstalledPluginsEmptyState}", (string?)installedEmpty.Attribute("IsVisible"));
+        Assert.Empty(installedEmpty.Elements());
+
+        var marketplaceFilterEmpty = Assert.Single(page.Descendants(), element =>
+            (string?)element.Attribute("Text") ==
+            "{i18n:Translate {x:Static i18n:TextKeys.PluginMarketplaceFilterNoMatches}}");
+        Assert.Equal("{Binding ShowMarketplacePaneFilterEmptyState}",
+            (string?)marketplaceFilterEmpty.Attribute("IsVisible"));
+
+        foreach (var emptyState in new[] { installedEmpty, marketplaceFilterEmpty })
+        {
+            Assert.Equal("caption", (string?)emptyState.Attribute("Classes"));
+            Assert.Equal("False", (string?)emptyState.Attribute("IsHitTestVisible"));
+            Assert.Equal("Wrap", (string?)emptyState.Attribute("TextWrapping"));
+            Assert.Equal("{DynamicResource ThemeForegroundLowBrush}", (string?)emptyState.Attribute("Foreground"));
+            Assert.Equal("{DynamicResource SkyInsetSm}", (string?)emptyState.Attribute("Padding"));
+        }
+
+        var installedList = Assert.Single(page.Descendants(), element =>
+            element.Name.LocalName == "ListBox" &&
+            (string?)element.Attribute("ItemsSource") == "{Binding FilteredPlugins}");
+        Assert.Equal("{Binding !ShowInstalledPluginsEmptyState}", (string?)installedList.Attribute("IsVisible"));
+
+        var marketplaceList = Assert.Single(page.Descendants(), element =>
+            element.Name.LocalName == "ListBox" &&
+            (string?)element.Attribute("ItemsSource") == "{Binding FilteredMarketplacePlugins}");
+        Assert.Equal("{Binding ShowMarketplacePaneList}", (string?)marketplaceList.Attribute("IsVisible"));
+    }
+
+    [Fact]
     public void PluginsPage_InstalledRowsToggleAndMarketplaceRowsExposeInstallAction()
     {
         var page = GetPluginsPage();

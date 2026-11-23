@@ -91,6 +91,28 @@ public sealed class LanguagePackTests : IDisposable
         }
     }
 
+    [Fact]
+    public void PluginEmptyStateKeys_ResolveInBothShippedLanguagePacks()
+    {
+        var english = CultureInfo.GetCultureInfo("en");
+        var lithuanian = CultureInfo.GetCultureInfo("lt");
+        var service = new LocalizationService();
+
+        var keys = new[] { TextKeys.PluginFilterNoMatches, TextKeys.PluginMarketplaceFilterNoMatches };
+        foreach (var key in keys)
+        {
+            var en = service.Get(key, english);
+            var lt = service.Get(key, lithuanian);
+            Assert.NotEqual(key, en);
+            Assert.NotEqual(key, lt);
+            Assert.NotEqual(en, lt);
+        }
+
+        // The filter result wording must never reuse the "catalog is empty" sentence.
+        Assert.NotEqual(service.Get(TextKeys.PluginCatalogEmpty, english), service.Get(keys[0], english));
+        Assert.NotEqual(service.Get(TextKeys.PluginCatalogEmpty, english), service.Get(keys[1], english));
+    }
+
     [Theory]
     [InlineData(false, "en")]
     [InlineData(true, "fr")]

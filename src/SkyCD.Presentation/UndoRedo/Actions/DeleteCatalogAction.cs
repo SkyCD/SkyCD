@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
+using SkyCD.Presentation.Catalog;
 
 namespace SkyCD.Presentation.UndoRedo.Actions
 {
@@ -30,6 +31,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
         private readonly List<CatalogDocument> _restoreOrder;
         private readonly List<CatalogDocument> _removalOrder;
         private readonly string[] _affectedIds;
+        private readonly IReadOnlyList<string> _externalParentIds;
         private readonly CatalogHistoryCachePins? _pins;
 
         public DeleteCatalogAction(
@@ -46,6 +48,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
 
             _restoreOrder = OrderParentsFirst(_deletedDocuments);
             _removalOrder = _restoreOrder.AsEnumerable().Reverse().ToList();
+            _externalParentIds = CatalogSizeMaintenance.ExternalParentIds(_restoreOrder);
             _affectedIds = _restoreOrder
                 .Select(static document => document.Id)
                 .Where(static id => !string.IsNullOrWhiteSpace(id))
@@ -82,6 +85,10 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                 }
             });
 
+            // The restored subtree carries the sizes it was deleted with; only the parents above it have to
+            // be summed again.
+            CatalogSizeMaintenance.RecalculateAncestors(_repository, _externalParentIds);
+
             return Task.CompletedTask;
         }
 
@@ -99,6 +106,8 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                     DeleteFromCollection(document.Id);
                 }
             });
+
+            CatalogSizeMaintenance.RecalculateAncestors(_repository, _externalParentIds);
 
             return Task.CompletedTask;
         }

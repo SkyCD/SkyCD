@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
+using SkyCD.Presentation.Catalog;
 
 namespace SkyCD.Presentation.UndoRedo.Actions;
 
@@ -16,6 +18,7 @@ public sealed class PublishScanAction : UndoableActionBase
     private readonly CatalogDocumentRepository repository;
     private readonly List<CatalogDocument> insertedDocuments;
     private readonly List<(CatalogDocument Previous, CatalogDocument Updated)> updatedDocuments;
+    private readonly IReadOnlyList<string> externalParentIds;
 
     public PublishScanAction(
         CatalogDocumentRepository repository,
@@ -27,6 +30,12 @@ public sealed class PublishScanAction : UndoableActionBase
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.insertedDocuments = new List<CatalogDocument>(insertedDocuments ?? throw new ArgumentNullException(nameof(insertedDocuments)));
         this.updatedDocuments = new List<(CatalogDocument Previous, CatalogDocument Updated)>(updatedDocuments ?? []);
+
+        // Entries inside the published set move together, so only parents outside it have to be summed
+        // again when the publication is reversed or replayed.
+        var changed = new List<CatalogDocument>(this.insertedDocuments);
+        changed.AddRange(this.updatedDocuments.Select(static pair => pair.Updated));
+        externalParentIds = CatalogSizeMaintenance.ExternalParentIds(changed);
     }
 
     public override bool CanUndo => true;
@@ -85,6 +94,8 @@ public sealed class PublishScanAction : UndoableActionBase
             }
         });
 
+        CatalogSizeMaintenance.RecalculateAncestors(repository, externalParentIds);
+
         return Task.CompletedTask;
     }
 
@@ -104,6 +115,8 @@ public sealed class PublishScanAction : UndoableActionBase
                 repository.Save(updated.Id, updated);
             }
         });
+
+        CatalogSizeMaintenance.RecalculateAncestors(repository, externalParentIds);
 
         return Task.CompletedTask;
     }

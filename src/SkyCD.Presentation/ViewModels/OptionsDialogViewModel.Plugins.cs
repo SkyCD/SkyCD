@@ -3,7 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SkyCD.Formatting;
 using SkyCD.Presentation.Marketplace;
+using SkyCD.Presentation.Plugins;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -44,13 +46,22 @@ public partial class OptionsDialogViewModel
 
     public int MarketplacePluginsCount => FilteredMarketplacePlugins.Count;
 
+    public bool ShowInstalledPluginsEmptyState => FilteredPlugins.Count == 0;
+
     public string MarketplaceSectionToggleText =>
         LocalizationService.Current.Get(IsMarketplaceSectionExpanded ? UiKeys.PluginShowLess : UiKeys.PluginShowMore);
 
     public bool ShowMarketplaceSectionContent => IsMarketplaceSectionExpanded;
 
     public bool ShowMarketplacePaneEmptyState =>
-        IsMarketplaceSectionExpanded && !IsMarketplaceLoading && FilteredMarketplacePlugins.Count == 0;
+        IsMarketplaceSectionExpanded && !IsMarketplaceLoading && marketplaceCatalogIsEmpty;
+
+    public bool ShowMarketplacePaneFilterEmptyState =>
+        IsMarketplaceSectionExpanded && !IsMarketplaceLoading &&
+        allMarketplaceItems.Count > 0 && FilteredMarketplacePlugins.Count == 0;
+
+    public bool ShowMarketplacePaneList =>
+        IsMarketplaceSectionExpanded && FilteredMarketplacePlugins.Count > 0;
 
     public bool HasAvailableMarketplaceUpdates =>
         allMarketplaceItems.Any(static item => item.UpdateAvailable);
@@ -66,7 +77,40 @@ public partial class OptionsDialogViewModel
 
     public string SelectedPluginDetailsId => SelectedPlugin?.Id ?? string.Empty;
 
+    /// <summary>Author/vendor row; the unknown-author fallback is applied when the item is built.</summary>
     public string SelectedPluginDetailsType => SelectedPlugin?.Type ?? string.Empty;
+
+    public bool HasSelectedPluginDetailsType => !string.IsNullOrWhiteSpace(SelectedPluginDetailsType);
+
+    public string SelectedPluginDetailsVersionNumber => SelectedPlugin?.Version ?? string.Empty;
+
+    public bool HasSelectedPluginDetailsVersionNumber => !string.IsNullOrWhiteSpace(SelectedPluginDetailsVersionNumber);
+
+    public string SelectedPluginDetailsSize => SelectedPlugin?.SizeBytes is { } bytes
+        ? SizeFormatting.FormatBytes(bytes)
+        : string.Empty;
+
+    public bool HasSelectedPluginDetailsSize => SelectedPlugin?.SizeBytes is not null;
+
+    public string SelectedPluginDetailsCapabilityType => SelectedPlugin?.CapabilityType ?? string.Empty;
+
+    public bool HasSelectedPluginDetailsCapabilityType =>
+        !string.IsNullOrWhiteSpace(SelectedPluginDetailsCapabilityType);
+
+    public string SelectedPluginDetailsUpdateSource => SelectedPlugin?.UpdateSource switch
+    {
+        PluginUpdateSource.Marketplace => LocalizationService.Current.Get(UiKeys.PluginUpdatesFromMarketplace),
+        PluginUpdateSource.PluginFolder => LocalizationService.Current.Get(UiKeys.PluginUpdatesFromPluginFolder),
+        _ => string.Empty
+    };
+
+    public bool HasSelectedPluginDetailsUpdateSource => SelectedPlugin?.UpdateSource is not null;
+
+    public bool HasSelectedPluginDetailsProjectUrl =>
+        ExternalLinkLauncher.IsLaunchable(SelectedPlugin?.ProjectUrl);
+
+    public bool HasSelectedPluginDetailsAuthorUrl =>
+        ExternalLinkLauncher.IsLaunchable(SelectedPlugin?.AuthorUrl);
 
     public string SelectedPluginDetailsExtension => SelectedPlugin?.PrimaryExtension ?? string.Empty;
 
@@ -125,6 +169,8 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(MarketplaceSectionToggleText));
         OnPropertyChanged(nameof(ShowMarketplaceSectionContent));
         OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
     }
 
     partial void OnIsPluginConfigurationTabSelectedChanged(bool value)
@@ -142,6 +188,8 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(InstalledPluginsCount));
         OnPropertyChanged(nameof(MarketplacePluginsCount));
         OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
         UpdateAllPluginsCommand.NotifyCanExecuteChanged();
     }
 
@@ -152,6 +200,17 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(SelectedPluginDetailsVersion));
         OnPropertyChanged(nameof(SelectedPluginDetailsId));
         OnPropertyChanged(nameof(SelectedPluginDetailsType));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsType));
+        OnPropertyChanged(nameof(SelectedPluginDetailsVersionNumber));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsVersionNumber));
+        OnPropertyChanged(nameof(SelectedPluginDetailsSize));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsSize));
+        OnPropertyChanged(nameof(SelectedPluginDetailsCapabilityType));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsCapabilityType));
+        OnPropertyChanged(nameof(SelectedPluginDetailsUpdateSource));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsUpdateSource));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsProjectUrl));
+        OnPropertyChanged(nameof(HasSelectedPluginDetailsAuthorUrl));
         OnPropertyChanged(nameof(SelectedPluginDetailsExtension));
         OnPropertyChanged(nameof(HasSelectedPluginDetailsExtension));
     }
