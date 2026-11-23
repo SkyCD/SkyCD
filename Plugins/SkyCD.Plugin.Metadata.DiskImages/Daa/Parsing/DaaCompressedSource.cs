@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Exceptions;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.DiskImages.Daa.Parsing;
 
@@ -13,14 +14,14 @@ internal sealed class DaaCompressedSource : IDisposable
 {
     private readonly List<Segment> segments;
     private readonly List<Stream> ownedStreams;
-    private readonly string? temporaryDirectory;
+    private readonly ArchiveExtractionWorkspace? temporarySource;
     private bool disposed;
 
-    public DaaCompressedSource(List<Segment> segments, List<Stream> ownedStreams, string? temporaryDirectory)
+    public DaaCompressedSource(List<Segment> segments, List<Stream> ownedStreams, ArchiveExtractionWorkspace? temporarySource)
     {
         this.segments = segments;
         this.ownedStreams = ownedStreams;
-        this.temporaryDirectory = temporaryDirectory;
+        this.temporarySource = temporarySource;
         Length = 0;
         foreach (var segment in segments)
         {
@@ -86,7 +87,8 @@ internal sealed class DaaCompressedSource : IDisposable
             }
         }
 
-        DeleteTemporaryDirectory(temporaryDirectory);
+        // The buffered source is removed only after every stream reading it is closed.
+        temporarySource?.Dispose();
     }
 
     private static void ReadExactlyFromStream(Stream stream, Span<byte> destination, CancellationToken cancellationToken)
@@ -102,27 +104,6 @@ internal sealed class DaaCompressedSource : IDisposable
             }
 
             read += current;
-        }
-    }
-
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
         }
     }
 

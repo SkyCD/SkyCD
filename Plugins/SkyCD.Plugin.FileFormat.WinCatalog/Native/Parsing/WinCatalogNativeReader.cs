@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.FileFormat.WinCatalog.Native.Exceptions;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.WinCatalog.Native.Parsing;
 
@@ -51,25 +52,9 @@ public static class WinCatalogNativeReader
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var snapshotPath = Path.Combine(
-            Path.GetTempPath(), $"skycd-wincatalog-{Guid.NewGuid():N}.db");
-        try
-        {
-            using (var fileStream = File.Create(snapshotPath))
-            {
-                await source.CopyToAsync(fileStream, cancellationToken);
-            }
-
-            progress?.Report(25);
-            return await ReadSnapshotAsync(snapshotPath, progress, cancellationToken);
-        }
-        finally
-        {
-            DeleteQuietly(snapshotPath);
-            DeleteQuietly(snapshotPath + "-wal");
-            DeleteQuietly(snapshotPath + "-shm");
-            DeleteQuietly(snapshotPath + "-journal");
-        }
+        using var snapshot = TemporaryDatabase.CopyFrom(source, ".db", cancellationToken: cancellationToken);
+        progress?.Report(25);
+        return await ReadSnapshotAsync(snapshot.Path, progress, cancellationToken);
     }
 
     private static async Task<Snapshot> ReadSnapshotAsync(
@@ -384,22 +369,5 @@ public static class WinCatalogNativeReader
         }
 
         return null;
-    }
-
-    private static void DeleteQuietly(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
     }
 }

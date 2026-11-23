@@ -3,9 +3,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Exceptions;
 using SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Import;
 using SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Models;
 using SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.SmartCDCatalogPro;
 
@@ -16,6 +18,8 @@ namespace SkyCD.Plugin.FileFormat.SmartCDCatalogPro;
 /// </summary>
 public sealed class SmartCdCatalogProPlugin : IFileFormatPluginCapability, IContentAwareFileFormatCapability
 {
+    private const long MaxDatabaseBytes = 2L * 1024 * 1024 * 1024;
+
     public FileFormatDescriptor SupportedFormat =>
         new(
             FormatId: "smart-cd-catalog-pro-scdc",
@@ -50,20 +54,11 @@ public sealed class SmartCdCatalogProPlugin : IFileFormatPluginCapability, ICont
                 return false;
             }
 
-            var temporaryPath = SmartCdTemporaryFile.CopyAsync(stream, CancellationToken.None)
+            using var temporary = TemporaryDatabase.CopyFrom(
+                stream, ".scdc", MaxDatabaseBytes, LimitExceeded);
+            return SmartCdCatalogProReader.HasExpectedSchemaAsync(temporary.Path, CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
-            try
-            {
-                return !string.IsNullOrEmpty(temporaryPath) &&
-                       SmartCdCatalogProReader.HasExpectedSchemaAsync(temporaryPath, CancellationToken.None)
-                           .GetAwaiter()
-                           .GetResult();
-            }
-            finally
-            {
-                SmartCdTemporaryFile.TryDelete(temporaryPath);
-            }
         }
         catch
         {
@@ -82,16 +77,16 @@ public sealed class SmartCdCatalogProPlugin : IFileFormatPluginCapability, ICont
         FileFormatReadRequest request,
         CancellationToken cancellationToken = default)
     {
-        string? temporaryPath = null;
         try
         {
             request.Progress?.Report(5);
-            temporaryPath = await SmartCdTemporaryFile.CopyAsync(request.Source, cancellationToken)
+            using var temporary = await TemporaryDatabase.CopyFromAsync(
+                    request.Source, ".scdc", MaxDatabaseBytes, LimitExceeded, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             using (var headerStream = new FileStream(
-                       temporaryPath,
+                       temporary.Path,
                        FileMode.Open,
                        FileAccess.Read,
                        FileShare.Read))
@@ -99,7 +94,7 @@ public sealed class SmartCdCatalogProPlugin : IFileFormatPluginCapability, ICont
                 SmartCdCatalogProRecognizer.ThrowIfInvalidHeader(headerStream);
             }
 
-            var snapshot = await SmartCdCatalogProReader.ReadAsync(temporaryPath, request.Progress, cancellationToken)
+            var snapshot = await SmartCdCatalogProReader.ReadAsync(temporary.Path, request.Progress, cancellationToken)
                 .ConfigureAwait(false);
             var rows = SmartCdCatalogProHierarchyBuilder.Build(
                 snapshot,
@@ -126,13 +121,6 @@ public sealed class SmartCdCatalogProPlugin : IFileFormatPluginCapability, ICont
                 Error = exception.Message
             };
         }
-        finally
-        {
-            if (temporaryPath is not null)
-            {
-                SmartCdTemporaryFile.TryDelete(temporaryPath);
-            }
-        }
     }
 
     public Task<FileFormatWriteResult> WriteAsync(
@@ -145,4 +133,8 @@ public sealed class SmartCdCatalogProPlugin : IFileFormatPluginCapability, ICont
             Error = "Smart CD Catalog PRO import is read-only."
         });
     }
+
+    private static Exception LimitExceeded(long maxBytes) =>
+        new SmartCdCatalogProInvalidFormatException(
+            $"the database exceeds the supported {maxBytes} byte limit");
 }

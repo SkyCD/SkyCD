@@ -10,6 +10,7 @@ using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using UCanAccess.File;
 using SkyCD.Plugin.FileFormat.Access.Exceptions;
 using SkyCD.Plugin.FileFormat.Access.Models;
+using SkyCD.Plugin.Storage;
 using FileDataType = UCanAccess.File.DataType;
 
 namespace SkyCD.Plugin.FileFormat.Access;
@@ -32,17 +33,16 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability, IDataL
 
     public async Task<FileFormatWriteResult> WriteAsync(FileFormatWriteRequest request, CancellationToken cancellationToken = default)
     {
-        string? temporary = null;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             var export = request.Payload as AccessListExportRequest ?? new AccessListExportRequest { Rows = CoerceRows(request.Payload) };
             var directory = request.Target is FileStream file
                 ? Path.GetDirectoryName(Path.GetFullPath(file.Name))! : Path.GetTempPath();
-            temporary = Path.Combine(directory, $".skycd-access-{Guid.NewGuid():N}.mdb");
-            await Task.Run(() => WriteDatabase(temporary, export, request.Progress, cancellationToken), cancellationToken);
+            using var temporary = TemporaryDatabase.CreateNew(".mdb", directory);
+            await Task.Run(() => WriteDatabase(temporary.Path, export, request.Progress, cancellationToken), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            await using var source = File.OpenRead(temporary);
+            await using var source = File.OpenRead(temporary.Path);
             await source.CopyToAsync(request.Target, cancellationToken);
             request.Progress?.Report(100);
             return new FileFormatWriteResult { Success = true };
@@ -51,10 +51,6 @@ public sealed class AccessListExportPlugin : IFileFormatPluginCapability, IDataL
         catch (Exception exception)
         {
             return new FileFormatWriteResult { Success = false, Error = exception.Message };
-        }
-        finally
-        {
-            if (temporary is not null && File.Exists(temporary)) File.Delete(temporary);
         }
     }
 

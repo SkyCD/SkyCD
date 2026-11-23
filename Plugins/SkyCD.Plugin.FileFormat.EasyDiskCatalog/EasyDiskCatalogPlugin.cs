@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.EasyDiskCatalog.Models;
 using SkyCD.Plugin.FileFormat.EasyDiskCatalog.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.EasyDiskCatalog;
 
@@ -37,27 +38,15 @@ public sealed class EasyDiskCatalogPlugin : IFileFormatPluginCapability, IConten
         }
 
         var initialPosition = stream.Position;
-        var tempFile = Path.Combine(Path.GetTempPath(), $"edcdb_detect_{Guid.NewGuid():N}.db");
         try
         {
             stream.Position = 0;
-            using (var output = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                stream.CopyTo(output);
-            }
-
-            try
-            {
-                using var database = EasyDiskCatalogReader.OpenDatabase(tempFile);
-                var tables = database.ReadTableNames();
-                return tables.Contains("Disks")
-                    && tables.Contains("Folders")
-                    && tables.Contains("Files");
-            }
-            catch
-            {
-                return false;
-            }
+            using var temporary = TemporaryDatabase.CopyFrom(stream, ".db");
+            using var database = EasyDiskCatalogReader.OpenDatabase(temporary.Path);
+            var tables = database.ReadTableNames();
+            return tables.Contains("Disks")
+                && tables.Contains("Folders")
+                && tables.Contains("Files");
         }
         catch
         {
@@ -65,17 +54,6 @@ public sealed class EasyDiskCatalogPlugin : IFileFormatPluginCapability, IConten
         }
         finally
         {
-            try
-            {
-                if (File.Exists(tempFile))
-                {
-                    File.Delete(tempFile);
-                }
-            }
-            catch
-            {
-            }
-
             if (stream.CanSeek)
             {
                 stream.Position = initialPosition;
@@ -99,30 +77,10 @@ public sealed class EasyDiskCatalogPlugin : IFileFormatPluginCapability, IConten
             }
             else
             {
-                var tempFile = Path.Combine(Path.GetTempPath(), $"edcdb_import_{Guid.NewGuid():N}.db");
-                try
-                {
-                    using (var output = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        request.Source.CopyTo(output);
-                    }
-
-                    document = EasyDiskCatalogReader.Parse(
-                        tempFile, null, request.Progress, cancellationToken);
-                }
-                finally
-                {
-                    try
-                    {
-                        if (File.Exists(tempFile))
-                        {
-                            File.Delete(tempFile);
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
+                using var temporary = TemporaryDatabase.CopyFrom(
+                    request.Source, ".db", cancellationToken: cancellationToken);
+                document = EasyDiskCatalogReader.Parse(
+                    temporary.Path, null, request.Progress, cancellationToken);
             }
 
             return Task.FromResult(new FileFormatReadResult
