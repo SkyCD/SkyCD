@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Installation.Exceptions;
@@ -77,8 +78,11 @@ internal sealed class PluginPackageStager(HttpMessageHandler? httpHandler, Versi
             }
         }
 
-        return new PluginPackagePlan(entry.PluginId, content.Manifest, entry, claimed,
-            entryPath.Replace('\\', '/'));
+        var normalizedEntryPath = PackageEntryPath.TryNormalizeSafe(entryPath, out var normalized,
+            PackageEntryPath.PackageRules)
+            ? normalized
+            : entryPath;
+        return new PluginPackagePlan(entry.PluginId, content.Manifest, entry, claimed, normalizedEntryPath);
     }
 
     public void EnsureCompatible(string packageId, string version, PluginAssemblyIdentitySnapshot entry)
@@ -95,16 +99,18 @@ internal sealed class PluginPackageStager(HttpMessageHandler? httpHandler, Versi
 
     private static string ResolveEntryAssemblyPath(string packageId, PluginPackageContent content)
     {
-        if (!string.IsNullOrWhiteSpace(content.Manifest.EntryAssembly))
+        var entryAssembly = content.Manifest.EntryAssembly;
+        if (!string.IsNullOrWhiteSpace(entryAssembly))
         {
-            if (!PluginAssemblyMetadataInspector.IsSafeRelativeAssemblyPath(content.Manifest.EntryAssembly))
+            if (!PackageEntryPath.TryNormalizeSafe(entryAssembly, out var declared, PackageEntryPath.PackageRules) ||
+                !declared.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
             {
-                throw new PluginUnsafeArchivePathException(packageId, content.Manifest.EntryAssembly);
+                throw new PluginUnsafeArchivePathException(packageId, entryAssembly);
             }
 
-            var declared = content.Manifest.EntryAssembly.Replace('\\', '/');
             var match = content.ExtractedFiles.FirstOrDefault(path =>
-                string.Equals(path.Replace('\\', '/'), declared, StringComparison.OrdinalIgnoreCase));
+                PackageEntryPath.TryNormalizeSafe(path, out var normalizedPath, PackageEntryPath.PackageRules) &&
+                string.Equals(normalizedPath, declared, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
                 return match;
@@ -118,7 +124,7 @@ internal sealed class PluginPackageStager(HttpMessageHandler? httpHandler, Versi
 
             return byName
                    ?? throw new PluginPackageAssemblyException(packageId,
-                       $"the declared entry assembly '{content.Manifest.EntryAssembly}' is not in the package");
+                       $"the declared entry assembly '{entryAssembly}' is not in the package");
         }
 
         var candidates = content.ExtractedFiles

@@ -8,6 +8,10 @@
     <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
     <ProjectReference Include="..\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj" />
   </ItemGroup>
+  <!-- Shared with the archive plugins: plugin package and archive entry paths use the same rules. -->
+  <ItemGroup>
+    <Compile Include="..\..\Plugins\Shared\Installation\PackageEntryPath.cs" Link="Plugins\Shared\Installation\PackageEntryPath.cs"/>
+  </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="SkyCD.Plugin.Runtime.Tests" />
     <PackageReference Include="Ace4896.DBus.Services.Secrets" Version="1.6.0" />

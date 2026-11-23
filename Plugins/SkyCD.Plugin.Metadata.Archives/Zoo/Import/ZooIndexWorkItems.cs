@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
@@ -105,9 +106,9 @@ internal static class ZooIndexWorkItems
             return null;
         }
 
-        if (!ArchiveEntryPath.TryNormalize(entry.Path, out var normalized, out var safe)
+        if (!PackageEntryPath.TryNormalize(entry.Path, out var normalized, out var safe)
             || !safe
-            || !ArchiveEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
+            || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
         {
             return null;
         }

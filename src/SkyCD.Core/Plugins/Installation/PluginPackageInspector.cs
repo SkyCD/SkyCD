@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Installation.Exceptions;
 
@@ -82,6 +83,7 @@ internal sealed class PluginPackageInspector
         foreach (var entry in archive.Entries)
         {
             var path = NormalizeEntryPath(packageId, entry.FullName);
+            var isDirectory = entry.FullName.EndsWith('/');
             if (path.Length == 0)
             {
                 continue;
@@ -97,7 +99,6 @@ internal sealed class PluginPackageInspector
                 throw new PluginUnsafeArchivePathException(packageId, entry.FullName);
             }
 
-            var isDirectory = path.EndsWith('/');
             if (!isDirectory)
             {
                 if (entry.Length > MaxEntryBytes)
@@ -122,50 +123,14 @@ internal sealed class PluginPackageInspector
 
     private static string NormalizeEntryPath(string packageId, string entryName)
     {
-        if (string.IsNullOrEmpty(entryName) ||
-            entryName.IndexOf('\0') >= 0 ||
-            entryName.Contains('\\', StringComparison.Ordinal) ||
-            entryName.Contains(':', StringComparison.Ordinal) ||
-            entryName.StartsWith('/'))
+        if (!PackageEntryPath.TryNormalize(entryName, out var normalized, out var safe,
+                PackageEntryPath.PackageRules) ||
+            !safe)
         {
             throw new PluginUnsafeArchivePathException(packageId, entryName);
         }
 
-        var segments = entryName.Split('/');
-        var normalized = new List<string>(segments.Length);
-        for (var index = 0; index < segments.Length; index++)
-        {
-            var segment = segments[index];
-            var isLast = index == segments.Length - 1;
-            if (!isLast && segment.Length == 0)
-            {
-                throw new PluginUnsafeArchivePathException(packageId, entryName);
-            }
-
-            if (segment == ".")
-            {
-                continue;
-            }
-
-            if (segment == "..")
-            {
-                throw new PluginUnsafeArchivePathException(packageId, entryName);
-            }
-
-            if (isLast && segment.Length == 0)
-            {
-                break;
-            }
-
-            normalized.Add(segment);
-        }
-
-        if (normalized.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return string.Join('/', normalized) + (entryName.EndsWith('/') ? "/" : string.Empty);
+        return normalized;
     }
 
     private static bool IsSymbolicLink(ZipArchiveEntry entry)
@@ -225,7 +190,9 @@ internal sealed class PluginPackageInspector
         // 'lib/<tfm>/<file>' source with an empty target, so it keeps its package-relative path. Older packages
         // without the section fall back to the first lib/<tfm>/ assembly file.
         var entryAssembly = ReadDeclaredEntryAssembly(document) ?? entries
-            .Select(static entry => entry.FullName.Replace('\\', '/'))
+            .Select(static entry => PackageEntryPath.TryNormalizeSafe(entry.FullName, out var path,
+                PackageEntryPath.PackageRules) ? path : null)
+            .OfType<string>()
             .Where(static path =>
                 path.StartsWith("lib/", StringComparison.OrdinalIgnoreCase) &&
                 path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) &&
@@ -249,10 +216,12 @@ internal sealed class PluginPackageInspector
         .FirstOrDefault(static element => element.Name.LocalName == "files")?
         .Elements()
         .Where(static element => element.Name.LocalName == "file")
-        .Select(static element => (string?)element.Attribute("src"))
-        .Where(static src => !string.IsNullOrWhiteSpace(src))
-        .Select(static src => src!.Trim().Replace('\\', '/'))
+        .Select(static element => PackageEntryPath.TryNormalizeSafe(
+            (string?)element.Attribute("src"), out var src, PackageEntryPath.PackageRules)
+            ? src
+            : null)
         .FirstOrDefault(static src =>
+            src is not null &&
             src.StartsWith("lib/", StringComparison.OrdinalIgnoreCase) &&
             src.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) &&
             src.Count(static character => character == '/') >= 2);
@@ -267,7 +236,9 @@ internal sealed class PluginPackageInspector
     {
         var files = entries
             .Where(static entry => !entry.FullName.EndsWith('/') && entry.Length > 0)
-            .Select(entry => (Entry: entry, Path: entry.FullName))
+            .Select(entry => (Entry: entry,
+                Path: PackageEntryPath.TryNormalizeSafe(entry.FullName, out var path,
+                    PackageEntryPath.PackageRules) ? path : entry.FullName))
             .Where(static item =>
                 !ExcludedRootFiles.Contains(item.Path, StringComparer.OrdinalIgnoreCase) &&
                 !ExcludedPrefixes.Any(prefix => item.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
@@ -293,17 +264,16 @@ internal sealed class PluginPackageInspector
 
         var extracted = new List<string>(selected.Count);
         var root = Path.GetFullPath(targetDirectory);
-        var rootPrefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
         Directory.CreateDirectory(root);
 
         foreach (var (entry, path) in selected)
         {
-            var relativePath = path.Replace('/', Path.DirectorySeparatorChar);
-            var destinationPath = Path.GetFullPath(Path.Combine(root, relativePath));
-            if (!destinationPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            if (!PackageEntryPath.TryResolveUnderRoot(root, path, out var destinationPath))
             {
                 throw new PluginUnsafeArchivePathException(packageId, entry.FullName);
             }
+
+            var relativePath = path.Replace('/', Path.DirectorySeparatorChar);
 
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             try

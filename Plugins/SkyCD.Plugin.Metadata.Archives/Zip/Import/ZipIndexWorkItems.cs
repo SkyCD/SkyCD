@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
@@ -97,13 +98,13 @@ internal static class ZipIndexWorkItems
         }
 
         var modified = TryGetModified(entry);
-        if (!ArchiveEntryPath.TryNormalize(entry.FullName, out var normalized, out var safe))
+        if (!PackageEntryPath.TryNormalize(entry.FullName, out var normalized, out var safe))
         {
             return null;
         }
 
         var length = TryGetLength(entry);
-        if (index > limits.MaxEntries || !safe || !ArchiveEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
+        if (index > limits.MaxEntries || !safe || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
         {
             return null;
         }

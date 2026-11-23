@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Ace.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Ace.Parsing;
@@ -133,9 +134,9 @@ internal static class AceIndexWorkItems
                 continue;
             }
 
-            if (!ArchiveEntryPath.TryNormalize(header.Name, out var normalized, out var safe)
+            if (!PackageEntryPath.TryNormalize(header.Name, out var normalized, out var safe)
                 || !safe
-                || !ArchiveEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath, suppressErrors: true))
+                || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath, suppressErrors: true))
             {
                 skipped.Add(new AceSkippedEntry(header.Name, "ACE_UNSAFE",
                     "The entry path escapes the extraction directory."));

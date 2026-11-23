@@ -8,6 +8,8 @@
         <!-- Shared with the disk image plugin: one extraction workspace and source buffer per index run. -->
         <Compile Include="..\Shared\Storage\ArchiveExtractionWorkspace.cs" Link="Shared\Storage\ArchiveExtractionWorkspace.cs"/>
         <Compile Include="..\Shared\Storage\NonSeekableSourceBuffer.cs" Link="Shared\Storage\NonSeekableSourceBuffer.cs"/>
+        <!-- Shared with the host and the disk image plugin: package and archive entry paths use the same rules. -->
+        <Compile Include="..\Shared\Installation\PackageEntryPath.cs" Link="Shared\Installation\PackageEntryPath.cs"/>
     </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
