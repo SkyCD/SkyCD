@@ -53,6 +53,28 @@ public sealed class PluginInstallLayout(string pluginRoot, string stagingRoot)
         return fullPath.Length > PluginRoot.Length && IsWithin(PluginRoot, fullPath);
     }
 
+    /// <summary>
+    /// True when <paramref name="path"/> is a folder directly below the plugin root. Destructive operations must
+    /// re-assert this immediately before touching the filesystem: it includes strict containment and rejects the
+    /// plugin root itself and every path that escapes it.
+    /// </summary>
+    public bool IsDirectChildOfPluginRoot(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        if (string.Equals(fullPath, PluginRoot, StringComparison.OrdinalIgnoreCase) ||
+            !IsStrictlyWithinPluginRoot(fullPath))
+        {
+            return false;
+        }
+
+        return string.Equals(Path.GetDirectoryName(fullPath), PluginRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>True when <paramref name="path"/> is the staging root or a descendant of it.</summary>
     public bool IsWithinStaging(string path) => IsWithin(StagingRoot, path);
 
