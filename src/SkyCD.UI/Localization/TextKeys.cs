@@ -223,6 +223,7 @@ public static class TextKeys
     public const string LocationCreated = "core.text.LocationCreated";
     public const string LocationRenamed = "core.text.LocationRenamed";
     public const string LocationMerged = "core.text.LocationMerged";
+    public const string MergeLocationSummary = "core.text.MergeLocationSummary";
     public const string LocationDeleted = "core.text.LocationDeleted";
     public const string LocationDeletedInUse = "core.text.LocationDeletedInUse";
     public const string LocationNameRequired = "core.text.LocationNameRequired";

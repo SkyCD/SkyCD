@@ -194,6 +194,7 @@ text.ScanFailedItems: "Nuskaitymo metu nepavyko apdoroti {0} elementų. Kataloga
 text.LocationCreated: "Sukurta vieta {0}."
 text.LocationRenamed: "Vieta pervadinta į {0}."
 text.LocationMerged: "Vieta {0} sujungta į {1}."
+text.MergeLocationSummary: "Sujungti {0} su pasirinkta vieta. Kartu bus perkelti {1} įrašai."
 text.LocationDeleted: "Ištrinta vieta {0}."
 text.LocationDeletedInUse: "Ištrinta vieta {0} (naudota {1} įrašų)."
 text.LocationNameRequired: "Įveskite vietos pavadinimą."
