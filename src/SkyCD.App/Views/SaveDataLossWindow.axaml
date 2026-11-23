@@ -37,7 +37,7 @@
         <StackPanel Grid.Row="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
-                    Spacing="8">
+                    Spacing="{DynamicResource SkySpaceSm}">
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SaveDataLossSaveAnyway}}"
                     MinWidth="110"
                     Click="OnSaveClicked" />

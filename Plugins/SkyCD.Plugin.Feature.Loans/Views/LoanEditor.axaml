@@ -6,7 +6,7 @@
              x:Class="SkyCD.Plugin.Feature.Loans.Views.LoanEditor"
              x:DataType="vm:LoanDialogViewModel">
     <ScrollViewer>
-        <StackPanel Margin="8" Spacing="5">
+        <StackPanel Margin="8" Spacing="{DynamicResource SkySpaceXs}">
             <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.Borrower}}" />
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding Borrowers}" SelectedItem="{Binding SelectedBorrower}"
@@ -17,25 +17,25 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="5">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
                 <TextBox Text="{Binding ContactName}" PlaceholderText="{i18n:Translate {x:Static loans:LoansKeys.BorrowerName}}" />
                 <Button Grid.Column="1" Content="{i18n:Translate {x:Static loans:LoansKeys.AddBorrower}}" Command="{Binding AddBorrowerCommand}" />
                 <Button Grid.Column="2" Content="{i18n:Translate {x:Static loans:LoansKeys.RenameBorrower}}" Command="{Binding RenameBorrowerCommand}" />
             </Grid>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <StackPanel Spacing="2">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanDateLabel}}" />
                     <TextBox Text="{Binding LoanDate}" PlaceholderText="YYYY-MM-DD"
                              AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanDateLabel}}" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="2">
+                <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanDueLabel}}" />
                     <TextBox Text="{Binding DueDate}" PlaceholderText="YYYY-MM-DD"
                              AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanDueLabel}}" />
                 </StackPanel>
             </Grid>
             <TextBox Text="{Binding Note}" PlaceholderText="{i18n:Translate {x:Static loans:LoansKeys.LoanNote}}" />
-            <StackPanel Orientation="Horizontal" Spacing="5">
+            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
                 <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkLent}}" Command="{Binding MarkLentCommand}" />
                 <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkReturned}}" Command="{Binding MarkReturnedCommand}" />
             </StackPanel>

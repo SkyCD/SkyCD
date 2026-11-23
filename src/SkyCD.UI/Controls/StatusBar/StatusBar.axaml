@@ -45,7 +45,7 @@
                        HorizontalAlignment="Right"
                        Foreground="{Binding McpStatusColor, ElementName=Root}"
                        Text="{Binding McpStatusGlyph, ElementName=Root}"
-                       FontSize="11"
+                       FontSize="{DynamicResource SkyFontCaption}"
                        ToolTip.Tip="{Binding McpStatusTooltip, ElementName=Root}"
                        IsVisible="{Binding IsMcpStatusVisible, ElementName=Root}" />
         </Grid>

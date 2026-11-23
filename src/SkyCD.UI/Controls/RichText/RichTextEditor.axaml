@@ -14,7 +14,7 @@
                     BorderThickness="0,0,0,1"
                     Background="{DynamicResource ThemeControlMidBrush}"
                     Padding="4,2">
-                <StackPanel Orientation="Horizontal" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
                     <ToggleButton Name="BoldButton"
                                   ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Bold}}"
                                   FontWeight="Bold"

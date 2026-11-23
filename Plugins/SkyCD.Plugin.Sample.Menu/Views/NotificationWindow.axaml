@@ -6,11 +6,11 @@
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         Title="SkyCD">
-    <StackPanel Margin="16" VerticalAlignment="Center" Spacing="16">
+    <StackPanel Margin="16" VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceLg}">
         <TextBlock x:Name="MessageText"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center"
-                   FontSize="13" />
+                   FontSize="{DynamicResource SkyFontSecondary}" />
         <Button Content="_OK"
                 HorizontalAlignment="Center"
                 MinWidth="75"

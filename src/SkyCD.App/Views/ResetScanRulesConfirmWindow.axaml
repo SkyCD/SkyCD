@@ -19,7 +19,7 @@
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
-                    Spacing="8"
+                    Spacing="{DynamicResource SkySpaceSm}"
                     Margin="0,14,0,0">
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Yes}}"
                     MinWidth="90"

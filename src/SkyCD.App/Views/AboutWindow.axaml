@@ -4,8 +4,8 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
-        Width="480"
-        Height="360"
+        Width="560"
+        Height="460"
         CanResize="False"
         CanMinimize="False"
         CanMaximize="False"
@@ -23,68 +23,75 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0" />
         </Style>
+        <Style Selector="TextBlock.RepositoryLink">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
     </Window.Styles>
 
-    <DockPanel Margin="8" LastChildFill="True">
-        <StackPanel DockPanel.Dock="Top" Spacing="6">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
-                <TextBlock Text="{Binding ProductName}" FontSize="21" FontWeight="Bold" />
-                <TextBlock Text="{Binding Version}" FontSize="12" VerticalAlignment="Bottom" Padding="0,0,0,3" />
+    <DockPanel Margin="{DynamicResource SkyWindowPadding}" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Spacing="{DynamicResource SkySpaceXs}">
+            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}" VerticalAlignment="Bottom">
+                <TextBlock x:Name="ProductNameText" Classes="h1" Text="{Binding ProductName}" />
+                <TextBlock Classes="caption" Text="{Binding Version}" VerticalAlignment="Bottom" />
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Margin="8" Spacing="6" Height="32" DockPanel.Dock="Bottom">
-            <Button HorizontalAlignment="Right" Width="80" Margin="0,8,0,0" Command="{Binding ConfirmCommand}" Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" />
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Width="80" Command="{Binding ConfirmCommand}" Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" />
         </StackPanel>
 
         <TabControl Name="MainTabs">
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.SystemInfo}}" FontSize="14">
-                <Grid Margin="8">
-                    <StackPanel Spacing="10">
-                        <StackPanel>
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.SystemInfo}}">
+                <Grid Margin="{DynamicResource SkyWindowPadding}">
+                    <StackPanel Spacing="{DynamicResource SkySpaceMd}">
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Cpu}}" FontWeight="SemiBold" />
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceSm}">
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10"
                                              Width="220" />
                                 <TextBlock Text="{Binding CpuUsage}" VerticalAlignment="Center" />
                             </StackPanel>
                         </StackPanel>
 
-                        <StackPanel>
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Memory}}" FontWeight="SemiBold" />
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceSm}">
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10"
                                              Width="220" />
                                 <StackPanel>
                                     <TextBlock Text="{Binding WorkingSet}" />
-                                    <TextBlock Text="{Binding ManagedHeap}" FontSize="11" Opacity="0.75" />
+                                    <TextBlock Classes="caption" Text="{Binding ManagedHeap}" />
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
 
-                        <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
-                            <Border Grid.Column="0" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE"
-                                    BorderThickness="1" Margin="0,0,8,0">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}" Margin="0,4,0,0">
+                            <Border Grid.Column="0" CornerRadius="{DynamicResource SkyCornerRadius}"
+                                    Padding="{DynamicResource SkyInsetSm}"
+                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Threads}}" FontWeight="SemiBold" FontSize="12" />
-                                    <TextBlock Text="{Binding ThreadInfo}" FontSize="20" FontWeight="Bold" />
+                                    <TextBlock Classes="caption" Text="{i18n:Translate {x:Static i18n:UiKeys.Threads}}" />
+                                    <TextBlock Classes="h2" Text="{Binding ThreadInfo}" />
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="1" CornerRadius="6" Padding="8" BorderBrush="#FFE6E9EE"
-                                    BorderThickness="1" Margin="8,0,0,0">
+                            <Border Grid.Column="1" CornerRadius="{DynamicResource SkyCornerRadius}"
+                                    Padding="{DynamicResource SkyInsetSm}"
+                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Uptime}}" FontWeight="SemiBold" FontSize="12" />
-                                    <TextBlock Text="{Binding UptimeFriendly}" FontSize="20" FontWeight="Bold" />
-                                    <TextBlock Text="{Binding StartTime}" FontSize="11" Opacity="0.75" />
+                                    <TextBlock Classes="caption" Text="{i18n:Translate {x:Static i18n:UiKeys.Uptime}}" />
+                                    <TextBlock Classes="h2" Text="{Binding UptimeFriendly}" />
+                                    <TextBlock Classes="caption" Text="{Binding StartTime}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
                     </StackPanel>
                 </Grid>
             </TabItem>
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}" FontSize="14">
-                <Grid Margin="8">
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}">
+                <Grid Margin="{DynamicResource SkyWindowPadding}">
                     <ListBox ItemsSource="{Binding LoadedAssemblies}"
                              SelectionMode="Multiple"
                              ScrollViewer.VerticalScrollBarVisibility="Visible"
@@ -102,72 +109,45 @@
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="VerticalContentAlignment" Value="Top" />
                             </Style>
-                            <Style Selector="ListBoxItem:selected">
-                                <Setter Property="Background" Value="#1E4F9A" />
-                                <Setter Property="Foreground" Value="#FFFFFFFF" />
-                            </Style>
-                            <Style Selector="ListBoxItem:pointerover">
-                                <Setter Property="Background" Value="#FDFEFE" />
-                                <Setter Property="Foreground" Value="#111111" />
-                            </Style>
-                            <Style Selector="ListBoxItem:selected:pointerover">
-                                <Setter Property="Background" Value="#2A62B9" />
-                                <Setter Property="Foreground" Value="#FFFFFFFF" />
-                            </Style>
-                            <Style Selector="ListBoxItem:pointerover TextBlock">
-                                <Setter Property="Foreground" Value="#111111" />
-                            </Style>
-                            <Style Selector="ListBoxItem:selected TextBlock">
-                                <Setter Property="Foreground" Value="#FFFFFFFF" />
-                            </Style>
-                            <Style Selector="ListBoxItem:selected:pointerover TextBlock">
-                                <Setter Property="Foreground" Value="#FFFFFFFF" />
-                            </Style>
-                            <Style Selector="TextBlock.RepositoryLink">
-                                <Setter Property="FontWeight" Value="SemiBold" />
-                            </Style>
                         </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
-                                <Border BorderBrush="#FFCCCCCC" BorderThickness="0,0,0,1" Padding="6">
-                                    <StackPanel VerticalAlignment="Top">
-                                        <Grid VerticalAlignment="Center">
+                                <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="{DynamicResource SkyInsetSm}">
+                                    <StackPanel VerticalAlignment="Top" Spacing="{DynamicResource SkySpaceXs}">
+                                        <Grid VerticalAlignment="Center" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0"
+                                                       Classes="h2"
                                                        Text="{Binding Name}"
-                                                       FontSize="18"
-                                                       FontWeight="Bold"
                                                        VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis"
                                                        TextWrapping="NoWrap"
-                                                       MaxLines="1"
-                                                       Margin="0,0,8,0" />
+                                                       MaxLines="1" />
                                             <TextBlock Grid.Column="1"
+                                                       Classes="body"
                                                        Text="{Binding Version}"
-                                                       FontSize="14"
                                                        VerticalAlignment="Center"
                                                        MinWidth="72"
                                                        TextAlignment="Right" />
                                         </Grid>
-                                        <TextBlock Text="{Binding Copyright}"
-                                                   FontSize="12"
+                                        <TextBlock Classes="caption"
+                                                   Text="{Binding Copyright}"
                                                    IsVisible="{Binding HasCopyright}"
                                                    TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="NoWrap"
-                                                   Margin="0,4,0,0" />
-                                        <TextBlock Text="{Binding RepositoryUrl}"
-                                                   Classes="RepositoryLink"
-                                                   FontSize="12"
+                                                   TextWrapping="NoWrap" />
+                                        <TextBlock Classes="caption RepositoryLink"
+                                                   Text="{Binding RepositoryUrl}"
                                                    Cursor="Hand"
                                                    TextDecorations="Underline"
                                                    IsVisible="{Binding HasRepositoryUrl}"
                                                    PointerPressed="OnOpenRepositoryUrl"
                                                    TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="NoWrap"
-                                                   Margin="0,4,0,0" />
+                                                   TextWrapping="NoWrap" />
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -175,17 +155,25 @@
                     </ListBox>
                 </Grid>
             </TabItem>
-            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}" FontSize="14" IsSelected="True">
-                <Grid Margin="8">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Visible"
-                                  AllowAutoHide="False">
-                        <TextBox Text="{Binding LicenseText}"
-                                 IsReadOnly="True"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 BorderThickness="0"
-                                 Background="Transparent" />
-                    </ScrollViewer>
+            <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}" IsSelected="True">
+                <Grid Margin="{DynamicResource SkyWindowPadding}">
+                    <Border x:Name="LicenseBox"
+                            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource SkyCornerRadius}"
+                            Background="{DynamicResource ThemeControlLowBrush}">
+                        <ScrollViewer x:Name="LicenseScroll"
+                                      HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                                      AllowAutoHide="False"
+                                      Padding="{DynamicResource SkyInsetSm}">
+                            <TextBox Text="{Binding LicenseText}"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     BorderThickness="0"
+                                     Background="Transparent" />
+                        </ScrollViewer>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>

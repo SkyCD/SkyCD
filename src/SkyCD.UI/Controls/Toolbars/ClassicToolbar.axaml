@@ -34,7 +34,7 @@
             <ItemsControl ItemsSource="{Binding Items, ElementName=Root}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}" VerticalAlignment="Center" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>

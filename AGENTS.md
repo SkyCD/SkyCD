@@ -57,6 +57,16 @@ Every first-party plugin project and its output assembly follow
   `tools/scripts/ci/check-naming.ps1` to verify folder, project and assembly names.
 - Keep existing `PluginId` values stable when renaming; id state is persisted.
 
+## UI Design Tokens
+Spacing, typography and control metrics come from
+[docs/implementation/issue-898-design-tokens.md](docs/implementation/issue-898-design-tokens.md).
+- Reference `Sky*` keys from `src/SkyCD.App/Styles/DesignTokens.axaml` (spacing ramp, type scale,
+  corner radius, font family) instead of literal `FontSize`, `Spacing`, `RowSpacing` or
+  `ColumnSpacing` values; use the `h1`/`h2`/`caption`/`body` classes for headings.
+- Dense legacy-parity dialogs use `Classes="compact"` instead of per-window font blocks.
+- Colors use theme brushes, not hex values.
+- Run `tools/scripts/ci/check-design-tokens.ps1` before committing UI changes.
+
 ## Build, Test, and PR Validation
 - Restore: `dotnet restore SkyCD.slnx`
 - Build (required before PR): `dotnet build SkyCD.slnx --configuration Release --no-restore`

@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="SkyCD.Plugin.Metadata.Fonts.Configuration.FontConfigurationPage">
-    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
         <CheckBox x:Name="CollectionEnabledCheckBox"
                   Content="Collect font metadata while indexing" />
         <CheckBox Grid.Row="1"

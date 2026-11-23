@@ -1,0 +1,85 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style Selector="Window">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+
+    <Style Selector="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="TextBox">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="ComboBox">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="CheckBox">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="RadioButton">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="ListBox">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+    <Style Selector="TabItem">
+        <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+    </Style>
+
+    <!--
+        Dense legacy-parity dialogs (Add to List, Collections, Advanced Find) opt into the caption
+        scale on the window instead of re-declaring font family and size per control.
+    -->
+    <Style Selector="Window.compact TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact Button">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact TextBox">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact ComboBox">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact CheckBox">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact RadioButton">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact ListBox">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+    <Style Selector="Window.compact TabItem">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+    </Style>
+
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontTitle}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontSubtitle}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
+        <Setter Property="Opacity" Value="0.75" />
+    </Style>
+    <Style Selector="TextBlock.body">
+        <Setter Property="FontSize" Value="{DynamicResource SkyFontBody}" />
+    </Style>
+</Styles>

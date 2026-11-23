@@ -72,7 +72,7 @@
                         <StackPanel x:Name="NameFields"
                                     Grid.RowSpan="2"
                                     Grid.Column="2"
-                                    Spacing="2">
+                                    Spacing="{DynamicResource SkySpaceXxs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NameLabel}}" VerticalAlignment="Top" />
                             <TextBox Text="{Binding Name}" />
                         </StackPanel>
@@ -102,20 +102,20 @@
                                            Margin="0,4,0,0"
                                            RtfText="{Binding Comments, Mode=TwoWay}" />
 
-                        <StackPanel Grid.Row="2" Spacing="4" Margin="0,8,0,0"
+                        <StackPanel Grid.Row="2" Spacing="{DynamicResource SkySpaceXs}" Margin="0,8,0,0"
                                     IsVisible="{Binding HasDescriptionSection}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Description}}" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Description.SourceText}" FontSize="11"
+                            <TextBlock Text="{Binding Description.SourceText}" FontSize="{DynamicResource SkyFontCaption}"
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource ThemeForegroundLowBrush}" />
                             <TextBlock Text="{Binding Description.DescriptionText}"
                                        TextWrapping="Wrap"
                                        MaxHeight="60"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Description.StateText}" FontSize="11"
+                            <TextBlock Text="{Binding Description.StateText}" FontSize="{DynamicResource SkyFontCaption}"
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                            <StackPanel Orientation="Horizontal" Spacing="4"
+                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}"
                                         IsVisible="{Binding Description.HasActions}">
                                 <Button Content="{Binding Description.GenerateButtonText}"
                                         Command="{Binding Description.GenerateCommand}"
@@ -197,7 +197,7 @@
               HorizontalAlignment="Right"
               Margin="0,10,12,10"
               ColumnDefinitions="Auto,Auto"
-              ColumnSpacing="6">
+              ColumnSpacing="{DynamicResource SkySpaceSm}">
             <Button Grid.Column="0"
                     Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
                     MinWidth="74"

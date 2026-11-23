@@ -12,7 +12,7 @@
         Width="560" Height="480"
         WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{DynamicResource SkySpaceSm}" Margin="0,12,0,0">
             <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="Gray" />
             <Button Content="{i18n:Translate {x:Static ui:UiKeys.Close}}" Command="{Binding ConfirmCommand}" IsDefault="True" MinWidth="90" />
         </StackPanel>
@@ -22,14 +22,14 @@
                      AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.Tags}}">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:TagAssignmentViewModel">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{Binding Name}" />
                             <TextBlock Text="{Binding UsageCount, StringFormat='({0})'}" Foreground="Gray" />
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <StackPanel Grid.Row="1" Grid.Column="2" Spacing="6">
+            <StackPanel Grid.Row="1" Grid.Column="2" Spacing="{DynamicResource SkySpaceSm}">
                 <TextBlock Text="{i18n:Translate {x:Static ui:UiKeys.NewTag}}" />
                 <TextBox Text="{Binding NewTagName, Mode=TwoWay}" AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.TagName}}" />
                 <Button x:Name="PART_CreateButton" Content="{i18n:Translate {x:Static ui:UiKeys.NewTag}}" Command="{Binding CreateTagCommand}" />
@@ -50,13 +50,13 @@
                 <Separator Margin="0,6,0,6" />
                 <Button Content="{i18n:Translate {x:Static ui:UiKeys.DeleteTag}}" Command="{Binding DeleteTagCommand}" />
             </StackPanel>
-            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,8,0,0" Spacing="6">
+            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,8,0,0" Spacing="{DynamicResource SkySpaceSm}">
                 <Button Content="{i18n:Translate {x:Static ui:UiKeys.ShowItems}}" Command="{Binding ShowItemsCommand}" HorizontalAlignment="Left" />
                 <ListBox ItemsSource="{Binding FilterResults}" SelectedItem="{Binding SelectedResult, Mode=TwoWay}" MaxHeight="120"
                          AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.AssignedItems}}">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:CatalogFindResult">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{Binding Document.Name}" />
                                 <TextBlock Text="{Binding FullPath}" Foreground="Gray" />
                             </StackPanel>

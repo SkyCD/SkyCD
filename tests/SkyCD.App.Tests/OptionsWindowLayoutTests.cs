@@ -18,7 +18,7 @@ public class OptionsWindowLayoutTests
 
         Assert.Equal("Grid", section.Name.LocalName);
         Assert.Equal("Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
-        Assert.Equal("8", (string?)section.Attribute("RowSpacing"));
+        Assert.Equal("{DynamicResource SkySpaceSm}", (string?)section.Attribute("RowSpacing"));
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class OptionsWindowLayoutTests
         {
             Assert.Equal("34", (string?)button.Attribute("Width"));
             Assert.Equal("28", (string?)button.Attribute("Height"));
-            Assert.Equal("16", (string?)button.Attribute("FontSize"));
+            Assert.Equal("{DynamicResource SkyFontSubtitle}", (string?)button.Attribute("FontSize"));
         });
         Assert.Contains("AddCustomPropertyCommand", buttons[0].ToString(), StringComparison.Ordinal);
         Assert.Contains("RemoveCustomPropertyCommand", buttons[1].ToString(), StringComparison.Ordinal);

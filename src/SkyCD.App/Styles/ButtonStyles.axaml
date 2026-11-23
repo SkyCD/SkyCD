@@ -20,7 +20,7 @@
                         CornerRadius="{TemplateBinding CornerRadius}"
                         Padding="{TemplateBinding Padding}">
                     <StackPanel Orientation="Horizontal"
-                                Spacing="4"
+                                Spacing="{DynamicResource SkySpaceXs}"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center">
                         <Image Name="PART_Image"

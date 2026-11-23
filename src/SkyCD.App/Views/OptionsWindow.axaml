@@ -81,7 +81,7 @@
                                            RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Window}}" />
                     </MultiBinding>
                 </Classes.selected>
-                <Grid ColumnDefinitions="34,*" ColumnSpacing="9" RowDefinitions="Auto,Auto" RowSpacing="8">
+                <Grid ColumnDefinitions="34,*" ColumnSpacing="{DynamicResource SkySpaceSm}" RowDefinitions="Auto,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
                     <Border Width="34" Height="34" CornerRadius="7" Background="#36516D"
                             VerticalAlignment="Top">
                         <Grid>
@@ -92,16 +92,16 @@
                                    Width="20" Height="20" />
                         </Grid>
                     </Border>
-                    <StackPanel Grid.Column="1" Spacing="3">
+                    <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXs}">
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                    ToolTip.Tip="{Binding Name}" />
                         <TextBlock Text="{Binding Description}" Opacity="0.78"
                                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}" />
                     </StackPanel>
-                    <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
                         <TextBlock Text="{Binding DisplayVersion}" Opacity="0.7"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
                             <Button Classes="acpUseAgent" IsVisible="{Binding IsInstalled}"
                                     Click="OnSelectAcpAgentClicked" />
                             <Button IsVisible="{Binding CanInstall}" Click="OnInstallAcpAgentClicked"
@@ -128,7 +128,7 @@
                 BorderThickness="0,0,0,1"
                 Padding="14,10,14,8">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Settings}}"
-                       FontSize="18"
+                       FontSize="{DynamicResource SkyFontSubtitle}"
                        FontWeight="SemiBold" />
         </Border>
 
@@ -136,13 +136,13 @@
               IsEnabled="{Binding !ConfirmCommand.IsRunning}"
               Margin="14,10,14,10"
               ColumnDefinitions="250,*"
-              ColumnSpacing="14">
+              ColumnSpacing="{DynamicResource SkySpaceLg}">
             <Border BorderBrush="#2E2E2E"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8"
                     Grid.RowSpan="2">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
                     <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
                              Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
@@ -171,7 +171,7 @@
 
                     <TextBlock Grid.Row="2"
                                Foreground="#8C8C8C"
-                               FontSize="11"
+                               FontSize="{DynamicResource SkyFontCaption}"
                                Text="{i18n:Translate {x:Static i18n:UiKeys.NavigateCategoriesHint}}" />
                 </Grid>
             </Border>
@@ -182,8 +182,8 @@
                     CornerRadius="4"
                     Padding="14">
                 <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
-                      RowSpacing="10">
-                    <TextBlock FontSize="16" FontWeight="SemiBold">
+                      RowSpacing="{DynamicResource SkySpaceSm}">
+                    <TextBlock FontSize="{DynamicResource SkyFontSubtitle}" FontWeight="SemiBold">
                         <Run Text="{i18n:Translate {x:Static i18n:UiKeys.Tools}}" />
                         <Run Text="  >  " />
                         <Run Text="{Binding CurrentCategoryPath}" />
@@ -191,9 +191,9 @@
 
                     <StackPanel Grid.Row="1"
                                 IsVisible="{Binding ShowPluginViewSwitcher}"
-                                Spacing="8">
+                                Spacing="{DynamicResource SkySpaceSm}">
                         <StackPanel Orientation="Horizontal"
-                                    Spacing="4"
+                                    Spacing="{DynamicResource SkySpaceXs}"
                                     HorizontalAlignment="Right">
                             <ToggleButton Content="{i18n:Translate {x:Static i18n:UiKeys.Installed}}"
                                           IsChecked="{Binding !IsMarketplaceBrowseSelected}"
@@ -204,12 +204,12 @@
                                           Command="{Binding ShowMarketplacePluginsCommand}"
                                           AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.BrowseCatalog}}" />
                         </StackPanel>
-                        <StackPanel IsVisible="{Binding ShowInstalledPluginPathSection}" Spacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ProjectSettings}}" FontSize="15" />
+                        <StackPanel IsVisible="{Binding ShowInstalledPluginPathSection}" Spacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ProjectSettings}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
-                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1" Text="{Binding PluginPath}" />
                             <Button Grid.Column="2"
@@ -223,12 +223,12 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowInstalledPluginListSection}"
                           RowDefinitions="Auto,Auto,*"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
-                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBox Width="260"
                                      Text="{Binding PluginFilterText, UpdateSourceTrigger=PropertyChanged}"
                                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}" />
@@ -244,7 +244,7 @@
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,1,0">
                                     <Grid RowDefinitions="Auto,*">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.On}}" FontWeight="SemiBold" />
                                                 <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Installed}}" FontWeight="SemiBold" />
                                             </Grid>
@@ -256,7 +256,7 @@
                                                 <DataTemplate x:DataType="vm:OptionsPluginItem">
                                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
                                                             Padding="8,6">
-                                                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                                                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                             <CheckBox
                                                                 IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 VerticalAlignment="Top" Margin="0,2,0,0" />
@@ -276,7 +276,7 @@
                                                                     VerticalAlignment="Center"
                                                                     IsVisible="{Binding !HasIcon}" />
                                                             </Panel>
-                                                            <StackPanel Grid.Column="2" Spacing="2">
+                                                            <StackPanel Grid.Column="2" Spacing="{DynamicResource SkySpaceXxs}">
                                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                                            TextTrimming="CharacterEllipsis" />
                                                                 <TextBlock Text="{Binding Type}" Foreground="#9CA3AF"
@@ -290,9 +290,9 @@
                                     </Grid>
                                 </Border>
 
-                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="12">
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="18"
+                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource SkySpaceSm}" Margin="12">
+                                    <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                                        <TextBlock Text="{Binding SelectedPlugin.Name}" FontSize="{DynamicResource SkyFontSubtitle}"
                                                    FontWeight="SemiBold" />
                                         <Button Content="{Binding SelectedPlugin.Type}"
                                                 Foreground="#9CA3AF"
@@ -304,7 +304,7 @@
                                         <TextBlock Text="{Binding SelectedPlugin.ExtendedInfo}" Foreground="#8C8C8C"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
                                                 MinWidth="90"
                                                 Command="{Binding RefreshPluginsCommand}" />
@@ -326,13 +326,13 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowMarketplaceSection}"
                           RowDefinitions="Auto,Auto,Auto,Auto,*"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Plugins}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
-                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBox Width="260"
                                      Text="{Binding MarketplaceFilterText, UpdateSourceTrigger=PropertyChanged}"
                                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMarketplacePlugins}}"
@@ -355,7 +355,7 @@
                                 BorderThickness="1"
                                 CornerRadius="4"
                                 Padding="10">
-                            <StackPanel Spacing="6">
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{Binding ConfirmationPrompt}"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap" />
@@ -365,7 +365,7 @@
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginRunsCodeNotice}}"
                                            Foreground="#9CA3AF"
                                            TextWrapping="Wrap" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                     <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
                                             MinWidth="90"
                                             Command="{Binding ConfirmMarketplaceInstallCommand}" />
@@ -398,8 +398,8 @@
                                                 <DataTemplate x:DataType="marketplace:MarketplacePluginItem">
                                                     <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1"
                                                             Padding="8,6">
-                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                            <StackPanel Spacing="2">
+                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
                                                                            TextTrimming="CharacterEllipsis" />
                                                                 <TextBlock Text="{Binding Publisher}" Foreground="#9CA3AF"
@@ -426,9 +426,9 @@
                                     </Grid>
                                 </Border>
 
-                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="12">
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Title}" FontSize="18"
+                                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource SkySpaceSm}" Margin="12">
+                                    <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Title}" FontSize="{DynamicResource SkyFontSubtitle}"
                                                    FontWeight="SemiBold" TextWrapping="Wrap" />
                                         <TextBlock Text="{Binding SelectedMarketplacePlugin.Publisher}" Foreground="#9CA3AF" />
                                         <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}" Foreground="#8C8C8C" />
@@ -437,7 +437,7 @@
                                         <TextBlock Text="{Binding SelectedMarketplacePlugin.StatusLabel}"
                                                    Foreground="#9CA3AF" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Spacing="6">
+                                    <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceSm}">
                                         <ProgressBar Height="3"
                                                      IsIndeterminate="True"
                                                      IsVisible="{Binding SelectedMarketplacePlugin.IsBusy}" />
@@ -449,7 +449,7 @@
                                                    TextWrapping="Wrap"
                                                    Foreground="#E58383"
                                                    IsVisible="{Binding SelectedMarketplacePlugin.HasError}" />
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                             <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
                                                     MinWidth="90"
                                                     IsVisible="{Binding SelectedMarketplacePlugin.ShowPrimaryAction}"
@@ -479,12 +479,12 @@
 
                     <StackPanel Grid.Row="3"
                                 IsVisible="False"
-                                Spacing="6">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Actions}}" FontSize="15" />
+                                Spacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Actions}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Refresh}}"
                                     MinWidth="90"
                                     Command="{Binding RefreshPluginsCommand}" />
@@ -494,7 +494,7 @@
                                    TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" RowSpacing="8"
+                    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource SkySpaceSm}"
                           IsVisible="{Binding ShowPluginSettingsSection}">
                         <ProgressBar IsIndeterminate="True" Height="3"
                                      IsVisible="{Binding SelectedPluginPage.IsLoading}" />
@@ -508,19 +508,19 @@
 
                     <StackPanel Grid.Row="2"
                                 IsVisible="{Binding ShowLanguageSection}"
-                                Spacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ApplicationSettings}}" FontSize="15" />
+                                Spacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ApplicationSettings}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
-                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Language}}" VerticalAlignment="Top" />
                             <ListBox Grid.Column="1"
                                      ItemsSource="{Binding Languages}"
                                      SelectedItem="{Binding SelectedLanguage}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:LanguageItem">
-                                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}"
                                                     AutomationProperties.Name="{Binding Name}">
                                             <Image Width="20" Height="16"
                                                    Source="{Binding Flag, Converter={StaticResource LanguageFlagImageConverter}}" />
@@ -534,32 +534,32 @@
 
                     <StackPanel Grid.Row="2"
                                 IsVisible="{Binding ShowMcpSection}"
-                                Spacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.McpServer}}" FontSize="15" />
+                                Spacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.McpServer}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
-                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Enabled}}" VerticalAlignment="Center" />
                             <CheckBox Grid.Column="1"
                                       IsChecked="{Binding IsMcpServerEnabled}"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Left" />
                         </Grid>
-                        <Grid ColumnDefinitions="140,*" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="140,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ShowStatusIcon}}" VerticalAlignment="Center" />
                             <CheckBox Grid.Column="1"
                                       IsChecked="{Binding IsMcpStatusIconVisible}"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Left" />
                         </Grid>
-                        <Grid ColumnDefinitions="140,120,*" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="140,120,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" VerticalAlignment="Center" />
                             <TextBox Grid.Column="1"
                                      IsEnabled="{Binding IsMcpServerEnabled}"
                                      Text="{Binding McpPort, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
-                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ServerUri}}" VerticalAlignment="Center" />
                             <TextBox x:Name="McpUrlTextBox"
                                      Grid.Column="1"
@@ -568,7 +568,7 @@
                                      DoubleTapped="OnMcpUrlDoubleTapped" />
                             <Button Grid.Column="2"
                                     Content="⧉"
-                                    FontSize="14"
+                                    FontSize="{DynamicResource SkyFontBody}"
                                     MinWidth="34"
                                     ToolTip.Tip="{Binding McpCopyTooltip}"
                                     Click="OnCopyMcpUrlClicked" />
@@ -588,29 +588,29 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowStatusesSection}"
                           RowDefinitions="Auto,Auto,*,Auto"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ItemStatuses}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ItemStatuses}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
                         <StackPanel Orientation="Horizontal"
                                     Grid.Row="1"
                                     HorizontalAlignment="Right"
-                                    Spacing="8">
+                                    Spacing="{DynamicResource SkySpaceSm}">
                             <Button Content="↺"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
                                     Width="34"
                                     Height="28"
                                     ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.ResetStatusesTooltip}}"
                                     Command="{Binding ResetStatusVariantsCommand}" />
                             <Button Content="+"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
                                     Width="34"
                                     Height="28"
                                     Command="{Binding AddStatusVariantCommand}" />
                             <Button Content="-"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
                                     Width="34"
                                     Height="28"
                                     Command="{Binding RemoveStatusVariantCommand}" />
@@ -621,7 +621,7 @@
                                 Grid.Row="2">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                    <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Status}}" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Icon}}" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.Type}}" FontWeight="SemiBold" />
@@ -636,7 +636,7 @@
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:StatusVariantItemViewModel">
                                             <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                                <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="10">
+                                                <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                     <TextBox Grid.Column="0"
                                                              Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                     <multiSelect:MultiSelectDropdown Grid.Column="1"
@@ -686,28 +686,28 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowCustomPropertiesSection}"
                           RowDefinitions="Auto,Auto,*,Auto"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
-                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomPropertiesDescription}}"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center" />
                             <StackPanel Grid.Column="1"
                                         Orientation="Horizontal"
                                         HorizontalAlignment="Right"
-                                        Spacing="8">
+                                        Spacing="{DynamicResource SkySpaceSm}">
                                 <Button Content="+"
-                                        FontSize="16"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
                                         Width="34"
                                         Height="28"
                                         Command="{Binding AddCustomPropertyCommand}"
                                         ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddProperty}}" />
                                 <Button Content="-"
-                                        FontSize="16"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
                                         Width="34"
                                         Height="28"
                                         Command="{Binding RemoveCustomPropertyCommand}"
@@ -720,7 +720,7 @@
                                 Grid.Row="2">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PropertyName}}" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="1"
                                                    Text="{i18n:Translate {x:Static i18n:UiKeys.DefaultValue}}"
@@ -735,7 +735,7 @@
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:CustomPropertyItemViewModel">
                                             <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                     <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                     <TextBox Grid.Column="1" Text="{Binding DefaultValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                 </Grid>
@@ -770,7 +770,7 @@
                             <Grid>
                                 <ScrollViewer IsVisible="{Binding !IsAcpLoading}"
                                               HorizontalScrollBarVisibility="Disabled">
-                                    <StackPanel Margin="12" Spacing="10">
+                                    <StackPanel Margin="12" Spacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentInstalled}}" IsVisible="{Binding HasInstalledAcpAgents}"
                                                    FontWeight="SemiBold" />
                                         <ItemsControl ItemsSource="{Binding InstalledAcpAgents}" IsVisible="{Binding HasInstalledAcpAgents}"
@@ -789,14 +789,14 @@
                                                HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75" />
                                 </Grid>
                                 <StackPanel IsVisible="{Binding IsAcpLoading}" HorizontalAlignment="Center"
-                                            VerticalAlignment="Center" Spacing="10">
+                                            VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceSm}">
                                     <ProgressBar Width="124" Height="5" IsIndeterminate="{Binding IsAcpLoading}" />
                                     <TextBlock Text="{Binding AcpLoadingLabel}" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Grid>
                         </Border>
 
-                        <StackPanel Grid.Row="2" Spacing="6">
+                        <StackPanel Grid.Row="2" Spacing="{DynamicResource SkySpaceSm}">
                             <TextBlock IsVisible="{Binding HasAcpRegistryStatus}" Text="{Binding AcpRegistryStatus}"
                                        Margin="0,6,0,0" TextWrapping="Wrap" />
                             <TextBlock IsVisible="{Binding HasAcpAlert}" Text="{Binding AcpAlertMessage}"
@@ -806,17 +806,17 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowScanSection}"
                           RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanExclusions}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanExclusions}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
-                        <StackPanel Grid.Row="1" Spacing="6">
+                        <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanSettings}}" FontWeight="SemiBold" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.SkipSymbolicLinks}}"
                                       IsChecked="{Binding SkipSymbolicLinks}" />
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.HiddenSystemEntries}}"
                                            VerticalAlignment="Center" />
                                 <ComboBox Grid.Column="1"
@@ -839,7 +839,7 @@
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHeader}}"
                                        Margin="0,8,0,0"
                                        FontWeight="SemiBold" />
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyMode}}"
                                            VerticalAlignment="Center" />
                                 <ComboBox Grid.Column="1"
@@ -848,7 +848,7 @@
                                           ItemsSource="{Binding ScanConcurrencyModeOptions}"
                                           SelectedIndex="{Binding SelectedScanConcurrencyModeIndex}" />
                             </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}"
                                   IsVisible="{Binding IsManualScanConcurrency}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyManualWorkers}}"
                                            VerticalAlignment="Center" />
@@ -861,7 +861,7 @@
                                                FormatString="0"
                                                Value="{Binding ScanConcurrencyManualWorkers}" />
                             </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyCpuShare}}"
                                            VerticalAlignment="Center" />
                                 <NumericUpDown Grid.Column="1"
@@ -873,7 +873,7 @@
                                                FormatString="0"
                                                Value="{Binding ScanConcurrencyCpuSharePercent}" />
                             </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadShrink}}"
                                            VerticalAlignment="Center" />
                                 <NumericUpDown Grid.Column="1"
@@ -885,7 +885,7 @@
                                                FormatString="0"
                                                Value="{Binding ScanConcurrencyLoadShrinkPercent}" />
                             </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyLoadSuspend}}"
                                            VerticalAlignment="Center" />
                                 <NumericUpDown Grid.Column="1"
@@ -898,7 +898,7 @@
                                                Value="{Binding ScanConcurrencyLoadSuspendPercent}" />
                             </Grid>
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanConcurrencyHint}}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource SkyFontCaption}"
                                        TextWrapping="Wrap"
                                        Opacity="0.75" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ShowScanErrorsAfterScan}}"
@@ -913,7 +913,7 @@
                                       IsEnabled="{Binding IsMediaEjectionSupported}" />
                             <TextBlock Text="{Binding MediaEjectionSupportHint}"
                                        Margin="28,0,0,0"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource SkyFontCaption}"
                                        TextWrapping="Wrap"
                                        Opacity="0.75" />
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.ActivateMainWindowAfterScan}}"
@@ -928,26 +928,26 @@
                                 Background="#2E2E2E"
                                 HorizontalAlignment="Stretch" />
 
-                        <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ExclusionRules}}" FontWeight="SemiBold" />
                             <StackPanel Grid.Column="1"
                                         Orientation="Horizontal"
                                         HorizontalAlignment="Right"
-                                        Spacing="8">
+                                        Spacing="{DynamicResource SkySpaceSm}">
                                 <Button Content="↺"
-                                        FontSize="16"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
                                         Width="34"
                                         Height="28"
                                         ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.ResetRulesTooltip}}"
                                         Command="{Binding ResetScanExclusionRulesCommand}" />
                                 <Button Content="+"
-                                        FontSize="16"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
                                         Width="34"
                                         Height="28"
                                         ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddRule}}"
                                         Command="{Binding AddScanExclusionRuleCommand}" />
                                 <Button Content="-"
-                                        FontSize="16"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
                                         Width="34"
                                         Height="28"
                                         ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveRule}}"
@@ -960,7 +960,7 @@
                                 Grid.Row="4">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                    <Grid ColumnDefinitions="2*,160,120" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="2*,160,120" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Pattern}}" FontWeight="SemiBold" />
                                         <TextBlock Grid.Column="1"
                                                    Text="{i18n:Translate {x:Static i18n:UiKeys.EntryType}}"
@@ -978,7 +978,7 @@
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ScanExclusionRuleItemViewModel">
                                             <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                                <Grid ColumnDefinitions="2*,160,120" ColumnSpacing="10">
+                                                <Grid ColumnDefinitions="2*,160,120" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                     <TextBox Text="{Binding Pattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                     <ComboBox Grid.Column="1"
                                                               ItemsSource="{Binding EntryTypeOptions}"
@@ -1010,9 +1010,9 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowLocationsSection}"
                           RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Locations}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Locations}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
@@ -1027,7 +1027,7 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:LocationItemViewModel">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                                                 <TextBlock Text="{Binding UsageCount, StringFormat='({0})'}"
                                                            Foreground="#8C8C8C"
@@ -1039,7 +1039,7 @@
                             </ListBox>
                         </Border>
 
-                        <Grid Grid.Row="2" ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                        <Grid Grid.Row="2" ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NewLocation}}"
                                        VerticalAlignment="Center" />
                             <TextBox Grid.Column="1"
@@ -1051,7 +1051,7 @@
                                     Command="{Binding CreateLocationCommand}" />
                         </Grid>
 
-                        <Grid Grid.Row="3" ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                        <Grid Grid.Row="3" ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.RenameLocation}}"
                                        VerticalAlignment="Center" />
                             <TextBox Grid.Column="1"
@@ -1063,7 +1063,7 @@
                                     Command="{Binding RenameLocationCommand}" />
                         </Grid>
 
-                        <Grid Grid.Row="4" ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                        <Grid Grid.Row="4" ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MergeInto}}"
                                        VerticalAlignment="Center" />
                             <ComboBox Grid.Column="1"
@@ -1082,7 +1082,7 @@
                                     Command="{Binding MergeLocationsCommand}" />
                         </Grid>
 
-                        <Grid Grid.Row="5" ColumnDefinitions="140,*,Auto" ColumnSpacing="10">
+                        <Grid Grid.Row="5" ColumnDefinitions="140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{Binding LocationsStatusText}"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center"
@@ -1096,9 +1096,9 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowDetailsColumnsSection}"
                           RowDefinitions="Auto,Auto,Auto,*"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumns}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumns}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
@@ -1107,15 +1107,15 @@
                                    TextWrapping="Wrap"
                                    Opacity="0.8" />
 
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                             <Button Content="↑"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
                                     Width="34"
                                     Height="28"
                                     Command="{Binding MoveDetailsColumnUpCommand}"
                                     ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.MoveUp}}" />
                             <Button Content="↓"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
                                     Width="34"
                                     Height="28"
                                     Command="{Binding MoveDetailsColumnDownCommand}"
@@ -1132,7 +1132,7 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:DetailsColumnOptionItemViewModel">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="8,6">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                 <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}"
                                                           IsEnabled="{Binding IsRemovable}"
                                                           VerticalAlignment="Center" />
@@ -1154,9 +1154,9 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowToolbarSection}"
                           RowDefinitions="Auto,Auto,*"
-                          RowSpacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Toolbar}}" FontSize="15" />
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Toolbar}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
 
@@ -1164,7 +1164,7 @@
                                    Text="{i18n:Translate {x:Static i18n:UiKeys.CustomizeToolbarHint}}"
                                    TextWrapping="Wrap" />
 
-                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <DockPanel Grid.Column="0">
                                 <TextBlock DockPanel.Dock="Top"
                                            Text="{i18n:Translate {x:Static i18n:UiKeys.ToolbarCommands}}"
@@ -1177,7 +1177,7 @@
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Label}" />
                                                 <TextBlock Text="{Binding Category}"
-                                                           FontSize="9"
+                                                           FontSize="{DynamicResource SkyFontCaption}"
                                                            Opacity="0.65" />
                                             </StackPanel>
                                         </DataTemplate>
@@ -1186,7 +1186,7 @@
                             </DockPanel>
 
                             <StackPanel Grid.Column="1"
-                                        Spacing="6"
+                                        Spacing="{DynamicResource SkySpaceSm}"
                                         VerticalAlignment="Center">
                                 <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddToolbarButton}}"
                                         Command="{Binding Toolbar.AddCommand}"
@@ -1235,18 +1235,18 @@
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowAiDescriptionSection}"
                           RowDefinitions="Auto,Auto,*,Auto"
-                          RowSpacing="8">
+                          RowSpacing="{DynamicResource SkySpaceSm}">
                         <ScrollViewer x:Name="AiDescriptionSettingsScrollViewer"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Spacing="8">
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" FontSize="15" />
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}" FontSize="{DynamicResource SkyFontBody}" />
                                     <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                                 </Grid>
 
                                 <Grid ColumnDefinitions="180,*"
-                                      ColumnSpacing="10"
+                                      ColumnSpacing="{DynamicResource SkySpaceSm}"
                                       IsVisible="{Binding ShowAiDescriptionImplementationSection}">
                                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiImplementation}}"
                                                VerticalAlignment="Center" />
@@ -1261,9 +1261,9 @@
                                     </ComboBox>
                                 </Grid>
 
-                                <StackPanel Spacing="6">
+                                <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiScanSettings}}" FontWeight="SemiBold" />
-                                    <Grid ColumnDefinitions="180,120,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,120,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.MaxAiScanFileSize}}"
                                                    VerticalAlignment="Center" />
                                         <TextBox Grid.Column="1"
@@ -1279,27 +1279,27 @@
                                 Margin="0,2"
                                 Background="#2E2E2E" />
 
-                        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="8">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiMimeExclusions}}" FontWeight="SemiBold" />
                                 <StackPanel Grid.Column="1"
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
-                                            Spacing="8">
+                                            Spacing="{DynamicResource SkySpaceSm}">
                                     <Button Content="↺"
-                                            FontSize="16"
+                                            FontSize="{DynamicResource SkyFontSubtitle}"
                                             Width="34"
                                             Height="28"
                                             ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.ResetMimeTypesTooltip}}"
                                             Command="{Binding ResetAiScanExclusionsCommand}" />
                                     <Button Content="+"
-                                            FontSize="16"
+                                            FontSize="{DynamicResource SkyFontSubtitle}"
                                             Width="34"
                                             Height="28"
                                             ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddMimeType}}"
                                             Command="{Binding AddAiScanExclusionCommand}" />
                                     <Button Content="-"
-                                            FontSize="16"
+                                            FontSize="{DynamicResource SkyFontSubtitle}"
                                             Width="34"
                                             Height="28"
                                             ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMimeType}}"
@@ -1349,9 +1349,9 @@
                                   IsVisible="{Binding ShowAiProviderSection}"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="10">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}" FontSize="15" />
+                        <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}" FontSize="{DynamicResource SkyFontBody}" />
                                 <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                             </Grid>
 
@@ -1359,10 +1359,10 @@
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     Padding="10">
-                                <StackPanel Spacing="8">
+                                <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderSettings}}"
                                                FontWeight="SemiBold" />
-                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProvider}}"
                                                    VerticalAlignment="Center" />
                                         <ComboBox Grid.Column="1"
@@ -1375,7 +1375,7 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </Grid>
-                                    <Grid ColumnDefinitions="180,120,120,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,120,120,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
                                                    VerticalAlignment="Center" />
                                         <ComboBox Grid.Column="1"
@@ -1388,27 +1388,27 @@
                                         <TextBox Grid.Column="3"
                                                  Text="{Binding AiProviderPort, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
-                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderAddress}}"
                                                    VerticalAlignment="Center" />
                                         <TextBox Grid.Column="1"
                                                  Text="{Binding AiProviderAddress, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
-                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderEndpoint}}"
                                                    VerticalAlignment="Center" />
                                         <TextBox Grid.Column="1"
                                                  IsReadOnly="True"
                                                  Text="{Binding AiProviderEndpointUrl}" />
                                     </Grid>
-                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKey}}"
                                                    VerticalAlignment="Center" />
                                         <TextBox Grid.Column="1"
                                                  PasswordChar="*"
                                                  Text="{Binding AiProviderApiKey, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
-                                    <Grid ColumnDefinitions="180,*,Auto" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderModel}}"
                                                    VerticalAlignment="Center" />
                                         <ComboBox Grid.Column="1"
@@ -1417,13 +1417,13 @@
                                                   Text="{Binding AiProviderModel, Mode=TwoWay}" />
                                         <Button Grid.Column="2"
                                                 Content="↻"
-                                                FontSize="16"
+                                                FontSize="{DynamicResource SkyFontSubtitle}"
                                                 Width="34"
                                                 Height="28"
                                                 ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AiProviderRefreshModels}}"
                                                 Command="{Binding RefreshAiProviderModelsCommand}" />
                                     </Grid>
-                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderOutputLanguage}}"
                                                    VerticalAlignment="Center" />
                                         <ComboBox Grid.Column="1"
@@ -1432,7 +1432,7 @@
                                     </Grid>
                                     <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderResizeImages}}"
                                               IsChecked="{Binding AiProviderResizeLargeImages}" />
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCheckConnection}}"
                                                 Command="{Binding CheckAiProviderConnectionCommand}" />
                                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderStartServer}}"
@@ -1472,7 +1472,7 @@
         <Border Grid.Row="2" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" Padding="14,10">
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
-                        Spacing="8">
+                        Spacing="{DynamicResource SkySpaceSm}">
                 <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Save}}"
                         MinWidth="90"
                         IsDefault="True"

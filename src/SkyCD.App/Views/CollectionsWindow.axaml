@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         x:Class="SkyCD.App.Views.CollectionsWindow"
         x:DataType="vm:CollectionsDialogViewModel"
+        Classes="compact"
         Width="640"
         Height="440"
         MinWidth="560"
@@ -18,30 +19,11 @@
         <vm:CollectionsDialogViewModel />
     </Design.DataContext>
 
-    <Window.Styles>
-        <Style Selector="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="Button">
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="TextBox">
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBox">
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-    </Window.Styles>
-
-    <Grid Margin="8"
+    <Grid Margin="{DynamicResource SkyWindowPadding}"
           RowDefinitions="Auto,*,Auto,Auto"
           ColumnDefinitions="220,*,260"
-          RowSpacing="6"
-          ColumnSpacing="8">
+          RowSpacing="{DynamicResource SkySpaceSm}"
+          ColumnSpacing="{DynamicResource SkySpaceSm}">
         <TextBlock Grid.Row="0"
                    Grid.Column="0"
                    Text="{i18n:Translate {x:Static i18n:UiKeys.Collections}}" />
@@ -56,7 +38,7 @@
                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Collections}}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                         <TextBlock Text="{Binding Name}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}" IsVisible="{Binding IsDynamic}" Opacity="0.7" />
                         <TextBlock Text="{Binding EntryCount, StringFormat='({0})'}"
@@ -68,7 +50,7 @@
 
         <StackPanel Grid.Row="1"
                     Grid.Column="1"
-                    Spacing="6"
+                    Spacing="{DynamicResource SkySpaceSm}"
                     VerticalAlignment="Top">
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" />
             <TextBox Text="{Binding NewCollectionName}" PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
@@ -96,7 +78,7 @@
                  DoubleTapped="OnMembersDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Spacing="1">
+                    <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                         <TextBlock Text="{Binding Name}" />
                         <TextBlock Text="{Binding FullPath}"
                                    Opacity="0.7"
