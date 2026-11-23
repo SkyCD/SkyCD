@@ -1,15 +1,16 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Cab.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Cab.Models;
 using SkyCD.Plugin.Metadata.Archives.Cab.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Cab.Import;
 
@@ -33,8 +34,7 @@ internal static class CabIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-cab-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("cab");
 
         Stream? bufferedSource = null;
         try
@@ -43,21 +43,14 @@ internal static class CabIndexWorkItems
             var archiveStream = source;
             if (!source.CanSeek)
             {
-                var bufferPath = Path.Combine(tempRoot, ".skycd-cab-source");
-                await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                                 FileShare.None, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                {
-                    await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-                }
-
-                bufferedSource = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                    CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
+                    workspace.GetPath(".skycd-cab-source"), cancellationToken).ConfigureAwait(false);
                 archiveStream = bufferedSource;
             }
 
             if (!CabArchive.HasSignature(archiveStream))
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
@@ -65,32 +58,32 @@ internal static class CabIndexWorkItems
             if (archive.IsMultiVolume)
             {
                 // Only the first cabinet of a set is available, so a partial listing would be misleading.
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
-            var items = await ExtractEntriesAsync(archiveStream, archive, tempRoot, limits, request.Progress,
+            var items = await ExtractEntriesAsync(archiveStream, archive, workspace.Root, limits, request.Progress,
                 cancellationToken).ConfigureAwait(false);
 
             return new IndexWorkItemSet(items, () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         finally
@@ -98,7 +91,6 @@ internal static class CabIndexWorkItems
             bufferedSource?.Dispose();
         }
     }
-
 
     private static async Task<List<IndexWorkItem>> ExtractEntriesAsync(
         Stream archiveStream,
@@ -239,7 +231,6 @@ internal static class CabIndexWorkItems
             {
                 // The folder ended before the declared entry size: the rest of the folder is unreadable.
                 budget.Release(file.Size);
-                TryDeleteFile(fullPath);
                 return (written, false);
             }
 
@@ -248,19 +239,16 @@ internal static class CabIndexWorkItems
         catch (OperationCanceledException)
         {
             budget.Release(file.Size);
-            TryDeleteFile(fullPath);
             throw;
         }
         catch (ArchiveEntryLimitExceededException)
         {
             budget.Release(file.Size);
-            TryDeleteFile(fullPath);
             return (written, false);
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
             budget.Release(file.Size);
-            TryDeleteFile(fullPath);
             return (written, false);
         }
     }
@@ -372,53 +360,6 @@ internal static class CabIndexWorkItems
     private static bool IsArchiveFailure(Exception exception) =>
         exception is CabDamagedException or CabUnsupportedEntryException
             or IOException or NotSupportedException or ArgumentException or InvalidOperationException;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 
     private sealed class ExtractionBudget
     {

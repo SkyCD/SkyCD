@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Exceptions;
 using SkyCD.Plugin.FileFormat.Katalog.Models;
 using SkyCD.Plugin.FileFormat.Katalog.Sqlite.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.Sqlite.Parsing;
 
@@ -40,27 +41,11 @@ public static class KatalogSqliteReader
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var snapshotPath = Path.Combine(
-            Path.GetTempPath(), $"skycd-katalog-{Guid.NewGuid():N}.db");
-        try
-        {
-            using (var fileStream = File.Create(snapshotPath))
-            {
-                await source.CopyToAsync(fileStream, cancellationToken);
-            }
+        using var snapshot = TemporaryDatabase.CopyFrom(
+            source, ".db", sidecarSourcePath: sourcePath, cancellationToken: cancellationToken);
+        progress?.Report(15);
 
-            CopySidecar(sourcePath, snapshotPath, "-wal");
-            CopySidecar(sourcePath, snapshotPath, "-shm");
-            progress?.Report(15);
-
-            return await ReadSnapshotAsync(snapshotPath, progress, cancellationToken);
-        }
-        finally
-        {
-            DeleteQuietly(snapshotPath);
-            DeleteQuietly(snapshotPath + "-wal");
-            DeleteQuietly(snapshotPath + "-shm");
-        }
+        return await ReadSnapshotAsync(snapshot.Path, progress, cancellationToken);
     }
 
     private static async Task<Snapshot> ReadSnapshotAsync(
@@ -182,44 +167,6 @@ public static class KatalogSqliteReader
         catch (SqliteException exception)
         {
             throw new KatalogSqliteCorruptException(exception.Message);
-        }
-    }
-
-    private static void CopySidecar(string? sourcePath, string snapshotPath, string suffix)
-    {
-        if (string.IsNullOrWhiteSpace(sourcePath))
-        {
-            return;
-        }
-
-        try
-        {
-            var sidecar = sourcePath + suffix;
-            if (File.Exists(sidecar))
-            {
-                File.Copy(sidecar, snapshotPath + suffix, overwrite: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Best effort: the main file alone still yields a consistent older snapshot.
-        }
-    }
-
-    private static void DeleteQuietly(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
         }
     }
 

@@ -4,6 +4,7 @@ using System.Threading;
 using SkiaSharp;
 using SkyCD.Plugin.Metadata.Fonts.Exceptions;
 using SkyCD.Plugin.Metadata.Fonts.Models;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.Fonts.Export;
 
@@ -73,13 +74,13 @@ internal static class FontPreviewRenderer
         }
 
         using var image = surface.Snapshot();
-        using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
-        if (encoded is null || encoded.Size == 0)
+        var encoded = PreviewArtifactEncoder.EncodePng(image);
+        if (encoded is null || encoded.Length == 0)
         {
             throw new FontPreviewException("the image could not be encoded");
         }
 
-        return encoded.ToArray();
+        return encoded;
     }
 
     private static SKTypeface? DecodeTypeface(byte[] fontData) =>
