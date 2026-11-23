@@ -2,14 +2,21 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: renders the recovered body text to a bounded PNG thumbnail. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
-        <AssemblyTitle>WordPerfect Document Metadata</AssemblyTitle>
-        <Description>Reads the extended document summary from Corel WordPerfect documents, including compound-document storage, without altering the source. Protected documents are reported as needing a credential and are never decrypted.</Description>
+        <AssemblyTitle>WordPerfect Document Metadata and Preview</AssemblyTitle>
+        <Description>Reads the extended document summary from Corel WordPerfect documents, including compound-document storage, and renders a bounded thumbnail of the leading body text, without altering the source. Protected documents are reported as needing a credential and are never decrypted.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

@@ -13,6 +13,9 @@ public static class WordPerfectSchema
     public const string MetadataSchemaId = "skycd.wordperfect.metadata";
     public const int MetadataSchemaVersion = 1;
 
+    public const string PreviewSchemaId = "skycd.wordperfect.preview";
+    public const int PreviewSchemaVersion = 1;
+
     public const string Container = "Container";
     public const string Storage = "Storage";
     public const string FormatVersion = "FormatVersion";
@@ -119,4 +122,7 @@ public static class WordPerfectSchema
         (39, ModifiedAt),
         (49, VersionDate)
     ];
+
+    /// <summary>Preview results carry the rendered page rather than values, so the schema is identity only.</summary>
+    public static MediaMetadataSchema Preview { get; } = new(PreviewSchemaId, PreviewSchemaVersion, []);
 }

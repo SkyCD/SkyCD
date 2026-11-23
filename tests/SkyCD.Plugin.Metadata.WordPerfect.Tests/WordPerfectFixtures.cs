@@ -11,6 +11,9 @@ internal static class WordPerfectFixtures
 {
     public const int IndexHeaderOffset = 512;
     public const int SummaryOffset = 1024;
+    public const int BodyOffset = 1536;
+
+    private static readonly byte[] FixedGroupSizes = [4, 5, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 8, 8];
 
     private const uint FreeSector = 0xFFFFFFFF;
     private const uint EndOfChain = 0xFFFFFFFE;
@@ -20,18 +23,29 @@ internal static class WordPerfectFixtures
 
     public static byte[] Document(params byte[][] groups) => WithSummary(Summary(groups));
 
+    public static byte[] DocumentWithBody(byte[] body, params byte[][] groups) =>
+        WithSummary(Summary(groups), body: body);
+
     public static byte[] WithoutSummary() => WithSummary([], includeSummary: false);
 
+    public static byte[] WithoutSummaryButBody(byte[] body) =>
+        WithSummary([], includeSummary: false, body: body);
+
     public static byte[] WithSummary(byte[] summary, byte fileType = 0x0A, byte majorVersion = 2,
-        byte minorVersion = 1, ushort encryption = 0, bool includeSummary = true)
+        byte minorVersion = 1, ushort encryption = 0, bool includeSummary = true, byte[]? body = null)
     {
         var length = Math.Max(SummaryOffset, SummaryOffset + summary.Length);
+        if (body is not null)
+        {
+            length = Math.Max(length, BodyOffset + body.Length);
+        }
+
         var data = new byte[length];
         data[0] = 0xFF;
         data[1] = (byte)'W';
         data[2] = (byte)'P';
         data[3] = (byte)'C';
-        WriteU32(data, 4, 16);
+        WriteU32(data, 4, body is not null ? (uint)BodyOffset : 16u);
         data[8] = 1;
         data[9] = fileType;
         data[10] = majorVersion;
@@ -53,6 +67,7 @@ internal static class WordPerfectFixtures
             summary.CopyTo(data, SummaryOffset);
         }
 
+        body?.CopyTo(data, BodyOffset);
         return data;
     }
 
@@ -83,6 +98,41 @@ internal static class WordPerfectFixtures
         Group(tag, WordString(name, 0), DateValue(year, month, day, hour, minute, second));
 
     public static byte[] EmptyGroup() => [0, 0];
+
+    public static byte[] Body(params byte[][] tokens) => Summary(tokens);
+
+    public static byte[] Text(string value) => Encoding.ASCII.GetBytes(value);
+
+    public static byte[] VariableGroup(byte id, byte subgroup, byte[] content, byte flags = 0)
+    {
+        var size = 10 + content.Length;
+        var group = new byte[size];
+        group[0] = id;
+        group[1] = subgroup;
+        WriteU16(group, 2, (ushort)size);
+        group[4] = flags;
+        WriteU16(group, 5, 0);
+        content.CopyTo(group, 7);
+        WriteU16(group, size - 3, (ushort)size);
+        group[size - 1] = id;
+        return group;
+    }
+
+    public static byte[] FixedGroup(byte id, params byte[] content)
+    {
+        var size = FixedGroupSizes[id - 0xF0];
+        if (content.Length > size - 2)
+        {
+            throw new ArgumentOutOfRangeException(nameof(content),
+                "The content does not fit the fixed-length group.");
+        }
+
+        var group = new byte[size];
+        group[0] = id;
+        content.CopyTo(group, 1);
+        group[size - 1] = id;
+        return group;
+    }
 
     public static byte[] WithDeclaredLength(byte[] group, ushort declaredLength)
     {
