@@ -25,5 +25,6 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EBook\SkyCD.Plugin.Metadata.EBook.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EComic\SkyCD.Plugin.Metadata.EComic.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.Fonts\SkyCD.Plugin.Metadata.Fonts.csproj"/>
+        <ProjectReference Include="..\SkyCD.TestSupport\SkyCD.TestSupport.csproj"/>
     </ItemGroup>
 </Project>
