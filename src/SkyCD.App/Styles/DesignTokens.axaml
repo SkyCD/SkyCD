@@ -33,6 +33,19 @@
     <!-- Icon slot: the 16px toolbar button image and the matching glyphs in the Options toolbar lists (issue #933). -->
     <x:Double x:Key="SkyIconSize">16</x:Double>
 
+    <!--
+        Menu rhythm (issue #1003): the menu bar, the browser/tree/details context menus and any
+        plugin context menu share one row metric set. Padding is a composed thickness because
+        XAML cannot assemble a Thickness from the scalar spacing ramp.
+    -->
+    <x:Double x:Key="SkyMenuItemMinHeight">22</x:Double>
+    <Thickness x:Key="SkyMenuItemPadding">8,2</Thickness>
+    <x:Double x:Key="SkyMenuGutterWidth">20</x:Double>
+    <Thickness x:Key="SkyMenuIconMargin">2</Thickness>
+    <x:Double x:Key="SkyMenuArrowColumnWidth">20</x:Double>
+    <x:Double x:Key="SkyMenuSeparatorHeight">1</x:Double>
+    <x:Double x:Key="SkyMenuSeparatorRowHeight">9</x:Double>
+
     <CornerRadius x:Key="SkyCornerRadius">4</CornerRadius>
     <CornerRadius x:Key="SkyCornerRadiusLarge">8</CornerRadius>
 
