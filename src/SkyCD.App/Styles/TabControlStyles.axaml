@@ -21,6 +21,8 @@
                 <Setter Property="Background" Value="{DynamicResource TabCardBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource TabCardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
+                <!-- One content inset for every card tab surface; window markup must not re-pad tab bodies. -->
+                <Setter Property="Padding" Value="{DynamicResource SkyInsetMd}" />
                 <Setter Property="Template">
                     <ControlTemplate>
                         <Grid RowDefinitions="Auto,*">

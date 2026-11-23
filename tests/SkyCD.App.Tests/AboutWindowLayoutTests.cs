@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -56,6 +58,19 @@ public sealed class AboutWindowLayoutTests
     public void Cards_UseTheSameInnerSpacingRhythm()
     {
         Assert.True(Occurrences(ReadAboutWindow(), SmallStackSpacing) >= 2);
+    }
+
+    [Fact]
+    public void SystemInfo_SectionsUseTheSectionGapToken()
+    {
+        var document = XDocument.Parse(ReadAboutWindow());
+        XNamespace avalonia = "https://github.com/avaloniaui";
+        var systemInfo = document.Descendants(avalonia + "TabItem")
+            .First()
+            .Elements().First();
+
+        Assert.Equal("StackPanel", systemInfo.Name.LocalName);
+        Assert.Equal("{DynamicResource SkySpaceMd}", (string?)systemInfo.Attribute("Spacing"));
     }
 
     private static int Occurrences(string text, string token) =>
