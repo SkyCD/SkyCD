@@ -140,6 +140,9 @@ public partial class OptionsDialogViewModel
             PluginFailure.Publish(GetType(), "install", exception);
             item.ApplyFailure(LocalizationService.Current.Format(TextKeys.PluginInstallFailedDetail, exception.Message));
         }
+
+        OnPropertyChanged(nameof(HasAvailableMarketplaceUpdates));
+        UpdateAllPluginsCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Loads the catalog once, or force-refreshes it; a failure keeps the installed list untouched.</summary>
@@ -174,6 +177,7 @@ public partial class OptionsDialogViewModel
         {
             IsMarketplaceLoading = false;
             OnPropertyChanged(nameof(ShowMarketplaceEmptyState));
+            OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
         }
     }
 
@@ -194,6 +198,8 @@ public partial class OptionsDialogViewModel
 
         allMarketplaceItems = items;
         RefreshFilteredMarketplacePlugins(keepSelection: true);
+        OnPropertyChanged(nameof(HasAvailableMarketplaceUpdates));
+        UpdateAllPluginsCommand.NotifyCanExecuteChanged();
     }
 
     private static PluginInstallState? FindInstallState(
@@ -246,6 +252,9 @@ public partial class OptionsDialogViewModel
             ? previous
             : filtered.FirstOrDefault();
         OnPropertyChanged(nameof(ShowMarketplaceEmptyState));
+        OnPropertyChanged(nameof(MarketplacePluginsHeader));
+        OnPropertyChanged(nameof(MarketplacePluginsCount));
+        OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
     }
 
     partial void OnMarketplaceFilterTextChanged(string value) => RefreshFilteredMarketplacePlugins();
@@ -255,6 +264,7 @@ public partial class OptionsDialogViewModel
         IsInstallConfirmationVisible = false;
         OnPropertyChanged(nameof(HasSelectedMarketplacePlugin));
         OnPropertyChanged(nameof(ConfirmationPrompt));
+        if (value is not null) IsMarketplaceBrowseSelected = true;
     }
 
     partial void OnIsMarketplaceBrowseSelectedChanged(bool value) => NotifyMarketplaceVisibilityChanged();
