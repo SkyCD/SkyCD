@@ -10,11 +10,12 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.Plugin.Metadata.Works.Export;
+using SkyCD.Plugin.Metadata.Works.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
-using SkyCD.Plugin.Metadata.Works.Models;
 
 namespace SkyCD.Plugin.Metadata.Works.Tests;
 
@@ -28,6 +29,12 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     private const string PluginId = "SkyCD.Plugin.Works";
     private const string MediaRootId = "media-root";
     private const string DocumentEntryId = "file-document-1";
+
+    private static readonly byte[] RenderedThumbnail = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+
+    private const string Body =
+        "Quarterly report for the regional sales meeting. Revenue grew by twelve percent this quarter, "
+        + "and the field team expects the trend to continue into the next period.";
 
     private readonly string databaseDirectory =
         Path.Combine(Path.GetTempPath(), $"skycd-works-plugin-{Guid.NewGuid():N}");
@@ -60,6 +67,79 @@ public sealed class WorksPluginIntegrationTests : IDisposable
         {
             // Blob files can stay locked briefly after the database is closed on Windows.
         }
+    }
+
+    [Fact]
+    public async Task Host_RunsBothCapabilitiesForASingleDocument()
+    {
+        var document = WorksFixtures.Works4WithBody(Body, WorksFixtures.FullSummary());
+        var results = await CreateManagerWithPreview().ProcessAsync(
+            WorksMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = results.Single(result => result.Metadata is not null);
+        var preview = results.Single(result => result.Preview is not null);
+
+        Assert.False(metadata.Failed);
+        Assert.False(preview.Failed);
+        Assert.Equal("skycd.works.metadata", metadata.Schema!.Id);
+        Assert.Equal("skycd.works.preview", preview.Schema!.Id);
+        Assert.Equal("Quarterly Report",
+            metadata.Metadata!.Values.Single(value => value.Key == WorksSchema.Title).Text);
+        Assert.Equal(RenderedThumbnail, Assert.Single(preview.Preview!.Artifacts).Data.ToArray());
+    }
+
+    [Fact]
+    public async Task DamagedBody_FailsOnlyThePreviewAndKeepsMetadata()
+    {
+        var document = WorksFixtures.Works4WithDamagedBodyChain();
+        var results = await CreateManagerWithPreview().ProcessAsync(
+            WorksMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = results.Single(result => result.Metadata is not null);
+        Assert.False(metadata.Failed);
+        Assert.Equal("works",
+            metadata.Metadata!.Values.Single(value => value.Key == WorksSchema.Container).Text);
+        Assert.Equal("compound",
+            metadata.Metadata.Values.Single(value => value.Key == WorksSchema.Storage).Text);
+
+        var preview = results.Single(result =>
+            result.Capability.Contains(nameof(WorksPreviewPlugin), StringComparison.Ordinal));
+        Assert.True(preview.Failed);
+        Assert.Null(preview.Preview);
+    }
+
+    [Fact]
+    public async Task EncryptedDocument_ReportsNoMetadataOrPreview()
+    {
+        var document = WorksFixtures.EncryptedWrapper();
+        var results = await CreateManagerWithPreview().ProcessAsync(
+            WorksMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.True(result.Failed));
+        Assert.All(results, result => Assert.Null(result.Metadata));
+        Assert.All(results, result => Assert.Null(result.Preview));
+    }
+
+    [Fact]
+    public async Task NoRenderer_StillStoresMetadataWithNoArtifact()
+    {
+        var document = WorksFixtures.Works4WithBody(Body, WorksFixtures.FullSummary());
+        var results = await CreateManagerWithPreview(availableRenderer: false).ProcessAsync(
+            WorksMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var preview = results.Single(result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+
+        var metadata = results.Single(result => result.Metadata is not null);
+        Assert.False(metadata.Failed);
+        Assert.Equal("Quarterly Report",
+            metadata.Metadata!.Values.Single(value => value.Key == WorksSchema.Title).Text);
     }
 
     [Fact]
@@ -180,14 +260,15 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsTheCapability_FromMetadataOnly()
+    public void AssemblyDiscovery_FindsBothCapabilities_FromMetadataOnly()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(WorksMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
-        Assert.Equal("Microsoft Works Document Metadata", plugin.Name);
-        var capability = Assert.Single(plugin.Capabilities);
-        Assert.IsAssignableFrom<IMediaMetadataCapability>(capability);
+        Assert.Equal("Microsoft Works Document Metadata and Preview", plugin.Name);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
+        Assert.Equal(2, plugin.Capabilities.Count);
     }
 
     [Fact]
@@ -214,8 +295,18 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     private static MediaProvider[] CreateProviders() =>
         [new MediaProvider(PluginId, "1.0.0", new WorksMetadataPlugin())];
 
+    private static MediaProvider[] CreateProvidersWithPreview(bool availableRenderer = true) =>
+    [
+        new(PluginId, "1.0.0", new WorksMetadataPlugin()),
+        new(PluginId, "1.0.0", new WorksPreviewPlugin(WorksPluginOptions.Default,
+            new StubRenderer(availableRenderer)))
+    ];
+
     private static MediaExtensionManager CreateManager(MediaExecutionLimits? limits = null) =>
         new(CreateProviders(), limits);
+
+    private static MediaExtensionManager CreateManagerWithPreview(bool availableRenderer = true) =>
+        new(CreateProvidersWithPreview(availableRenderer));
 
     private Database OpenDatabase() =>
         new("works-plugin-tests", new DatabaseConfiguration { Directory = databaseDirectory });
@@ -276,5 +367,20 @@ public sealed class WorksPluginIntegrationTests : IDisposable
         }
 
         throw new InvalidOperationException("Could not locate the Microsoft Works plugin project directory.");
+    }
+
+    private sealed class StubRenderer(bool available) : IWorksThumbnailRenderer
+    {
+        public bool IsAvailable => available;
+
+        public Task<byte[]?> RenderAsync(
+            System.Collections.Generic.IReadOnlyList<string> paragraphs,
+            int maxDimension,
+            int maxCharacters,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<byte[]?>(RenderedThumbnail);
+        }
     }
 }

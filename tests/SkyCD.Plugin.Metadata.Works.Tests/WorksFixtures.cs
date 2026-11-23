@@ -69,6 +69,42 @@ internal static class WorksFixtures
     public static byte[] Works7(params SummaryProperty[] summary) =>
         CompoundWorks(ContentsHeader("CHNKWKS"), summary, []);
 
+    /// <summary>A Works 4 compound document with single-byte leading body text in MN0.</summary>
+    public static byte[] Works4WithBody(string text, params SummaryProperty[] summary) =>
+        CompoundWorks(NarrowBody(0x06, text), summary, []);
+
+    /// <summary>A Works 2000 compound document with UTF-16 leading body text in CONTENTS.</summary>
+    public static byte[] Works2000WithBody(string text) =>
+        CompoundWorks(WideBody("CHNKINK", text), [], []);
+
+    /// <summary>A Works 7 compound document with UTF-16 leading body text in CONTENTS.</summary>
+    public static byte[] Works7WithBody(string text) =>
+        CompoundWorks(WideBody("CHNKWKS", text), [], []);
+
+    /// <summary>A Works 4 document carrying an embedded preview image stream.</summary>
+    public static byte[] Works4WithEmbeddedPreview(byte[] image) =>
+        CompoundWorks(Mn0Header(0x06), [], [], new CompoundStream("Preview", image));
+
+    /// <summary>A Works 4 document whose regular MN0 sector chain breaks after the header sector.</summary>
+    public static byte[] Works4WithDamagedBodyChain()
+    {
+        var data = Compound([new CompoundStream(Mn0Stream, NarrowBody(0x06,
+            "The body spans several sectors.", minimumLength: 7000))]);
+
+        // The single regular stream starts at sector 2; clearing fat[3] breaks the chain after the first
+        // data sector, so a prefix read still succeeds while the full body read must fail.
+        WriteU32(data, SectorSize + (3 * 4), FreeSector);
+        return data;
+    }
+
+    /// <summary>An OLE encryption wrapper with no readable Works body, as MS-OFFCRYPTO stores it.</summary>
+    public static byte[] EncryptedWrapper() =>
+        Compound(
+        [
+            new CompoundStream("EncryptionInfo", new byte[64]),
+            new CompoundStream("EncryptedPackage", new byte[128])
+        ]);
+
     /// <summary>
     /// A Works 4 document whose MN0 stream is larger than the mini-stream cutoff, so the reader takes the
     /// regular-sector path instead of the mini-stream path.
@@ -226,6 +262,24 @@ internal static class WorksFixtures
     {
         var data = new byte[length];
         Encoding.ASCII.GetBytes(magic).CopyTo(data, 0);
+        return data;
+    }
+
+    private static byte[] NarrowBody(byte version, string text, int minimumLength = 0)
+    {
+        var data = new byte[Math.Max(0x100 + text.Length + 16, minimumLength)];
+        data[0] = version;
+        data[1] = 0xFE;
+        Encoding.GetEncoding(1252).GetBytes(text).CopyTo(data, 0x100);
+        return data;
+    }
+
+    private static byte[] WideBody(string magic, string text)
+    {
+        var body = Encoding.Unicode.GetBytes(text);
+        var data = new byte[0x100 + body.Length + 16];
+        Encoding.ASCII.GetBytes(magic).CopyTo(data, 0);
+        body.CopyTo(data, 0x100);
         return data;
     }
 

@@ -25,15 +25,27 @@ internal static class WorksSourceReader
     private const int ChunkBytes = 256 * 1024;
     private const int MinimumFlatBytes = 0x100;
 
-    private const string Mn0Stream = "MN0";
-    private const string ContentsStream = "CONTENTS";
+    internal const string Mn0Stream = "MN0";
+    internal const string ContentsStream = "CONTENTS";
     private const string SummaryStream = "\u0005SummaryInformation";
     private const string DocumentSummaryStream = "\u0005DocumentSummaryInformation";
+    private const string EncryptionInfoStream = "EncryptionInfo";
 
     private static ReadOnlySpan<byte> ChnkInk => [0x43, 0x48, 0x4E, 0x4B, 0x49, 0x4E, 0x4B];
     private static ReadOnlySpan<byte> ChnkWks => [0x43, 0x48, 0x4E, 0x4B, 0x57, 0x4B, 0x53];
 
     public static async Task<WorksSource> ReadAllAsync(
+        MediaItem item,
+        IMediaSource source,
+        WorksPluginOptions options,
+        CancellationToken cancellationToken)
+    {
+        var buffer = await ReadBytesAsync(item, source, options, cancellationToken).ConfigureAwait(false);
+        return ParseBuffer(buffer, options);
+    }
+
+    /// <summary>Reads the whole bounded source, charging the host budget exactly once.</summary>
+    internal static async Task<byte[]> ReadBytesAsync(
         MediaItem item,
         IMediaSource source,
         WorksPluginOptions options,
@@ -72,16 +84,24 @@ internal static class WorksSourceReader
             offset += count;
         }
 
-        return CompoundFile.HasSignature(buffer)
-            ? ReadCompound(buffer, options)
-            : ReadFlat(buffer);
+        return buffer;
     }
 
-    private static WorksSource ReadCompound(byte[] data, WorksPluginOptions options)
-    {
-        var compound = CompoundFile.Open(data);
-        string formatVersion;
+    /// <summary>
+    /// Recognizes a Works source from its bytes and reads the summary streams. Shared by metadata and
+    /// preview so both capabilities apply the same structural and encryption rules.
+    /// </summary>
+    internal static WorksSource ParseBuffer(byte[] buffer, WorksPluginOptions options) =>
+        CompoundFile.HasSignature(buffer)
+            ? ReadCompound(buffer, options)
+            : ReadFlat(buffer);
 
+    /// <summary>
+    /// States the Work generation carried by an already opened compound file, or raises the same decode and
+    /// authentication exceptions the metadata capability raises.
+    /// </summary>
+    internal static string DetectCompoundFormat(CompoundFile compound)
+    {
         if (compound.TryReadStreamPrefix(Mn0Stream, 16, out var mn0, out var mn0Length))
         {
             if (mn0Length < MinimumFlatBytes || mn0.Length < 2 || mn0[1] != 0xFE || mn0[0] > 7)
@@ -89,9 +109,10 @@ internal static class WorksSourceReader
                 throw new WorksDecodeException("the MN0 stream does not begin with a Works header");
             }
 
-            formatVersion = ResolveCompoundVersion(mn0[0]);
+            return ResolveCompoundVersion(mn0[0]);
         }
-        else if (compound.TryReadStreamPrefix(ContentsStream, 16, out var contents, out var contentsLength))
+
+        if (compound.TryReadStreamPrefix(ContentsStream, 16, out var contents, out var contentsLength))
         {
             if (contentsLength < 7)
             {
@@ -101,21 +122,31 @@ internal static class WorksSourceReader
             var magic = contents.AsSpan(0, 7);
             if (magic.SequenceEqual(ChnkInk))
             {
-                formatVersion = "2000";
+                return "2000";
             }
-            else if (magic.SequenceEqual(ChnkWks))
+
+            if (magic.SequenceEqual(ChnkWks))
             {
-                formatVersion = "7/8";
+                return "7/8";
             }
-            else
-            {
-                throw new WorksDecodeException("the CONTENTS stream does not begin with a Works chunk header");
-            }
+
+            throw new WorksDecodeException("the CONTENTS stream does not begin with a Works chunk header");
         }
-        else
+
+        // An encrypted Office document is an OLE wrapper with an EncryptionInfo stream and no readable body.
+        if (compound.TryReadStreamPrefix(EncryptionInfoStream, 1, out _, out _))
         {
-            throw new WorksDecodeException("the compound document does not contain a Works document stream");
+            throw new WorksAuthenticationRequiredException(
+                "the compound document is wrapped in an encryption container");
         }
+
+        throw new WorksDecodeException("the compound document does not contain a Works document stream");
+    }
+
+    private static WorksSource ReadCompound(byte[] data, WorksPluginOptions options)
+    {
+        var compound = CompoundFile.Open(data);
+        var formatVersion = DetectCompoundFormat(compound);
 
         return new WorksSource(data, "compound", formatVersion,
             TryReadPropertyStream(compound, SummaryStream, options),

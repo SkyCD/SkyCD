@@ -241,6 +241,13 @@ public class WorksMetadataPluginTests
     }
 
     [Fact]
+    public async Task EncryptedWrapper_ReportsAuthenticationRequired()
+    {
+        await Assert.ThrowsAsync<WorksAuthenticationRequiredException>(
+            () => ExtractAsync(WorksFixtures.EncryptedWrapper()));
+    }
+
+    [Fact]
     public async Task DamagedStreamChain_FailsWithADecodeError()
     {
         // Pointing the first stream at a sector beyond the file leaves a chain the reader must reject.
