@@ -276,4 +276,17 @@ public static class TextKeys
     public const string PluginCatalogFailure = "core.text.PluginCatalogFailure";
     public const string PluginCatalogPartialFailure = "core.text.PluginCatalogPartialFailure";
     public const string PluginCatalogEmpty = "core.text.PluginCatalogEmpty";
+    public const string PluginEnableAction = "core.text.PluginEnableAction";
+    public const string PluginDisableAction = "core.text.PluginDisableAction";
+    public const string PluginUninstallAction = "core.text.PluginUninstallAction";
+    public const string PluginEnabledActionToolTip = "core.text.PluginEnabledActionToolTip";
+    public const string PluginDisabledActionToolTip = "core.text.PluginDisabledActionToolTip";
+    public const string PluginUninstallActionToolTip = "core.text.PluginUninstallActionToolTip";
+    public const string PluginMarketplaceActionToolTip = "core.text.PluginMarketplaceActionToolTip";
+    public const string PluginUninstallConfirmation = "core.text.PluginUninstallConfirmation";
+    public const string PluginUninstallFailed = "core.text.PluginUninstallFailed";
+    public const string PluginUninstallInvalidId = "core.text.PluginUninstallInvalidId";
+    public const string PluginUninstallUnsafePath = "core.text.PluginUninstallUnsafePath";
+    public const string PluginUninstallNotCatalogOwned = "core.text.PluginUninstallNotCatalogOwned";
+    public const string PluginUninstallFilesInUse = "core.text.PluginUninstallFilesInUse";
 }

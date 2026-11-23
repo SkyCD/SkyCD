@@ -10,6 +10,7 @@
         xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
+        xmlns:actions="clr-namespace:SkyCD.UI.Controls.Actions;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -68,7 +69,6 @@
         <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
         <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
         <converters:ToolbarIconConverter x:Key="ToolbarIconConverter" />
-        <converters:PluginEnabledStateIndexConverter x:Key="PluginEnabledStateIndexConverter" />
         <ItemsPanelTemplate x:Key="AcpAgentCardsPanel">
             <UniformGrid Columns="2" />
         </ItemsPanelTemplate>
@@ -424,18 +424,46 @@
                                         HorizontalAlignment="Left"
                                         Command="{Binding OpenSelectedPluginAuthorUrlCommand}" />
                             </StackPanel>
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ComboBox SelectedIndex="{Binding SelectedPlugin.IsEnabled, Mode=TwoWay, Converter={StaticResource PluginEnabledStateIndexConverter}}"
-                                          MinWidth="120"
-                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginStateEnabled}}">
-                                    <ComboBoxItem Content="{i18n:Translate {x:Static i18n:UiKeys.PluginStateEnabled}}" />
-                                    <ComboBoxItem Content="{i18n:Translate {x:Static i18n:UiKeys.PluginStateDisabled}}" />
-                                </ComboBox>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding SelectedPluginDetailsVersion}"
+                            <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceSm}">
+                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                    <actions:SplitActionButton x:Name="InstalledPluginActionButton"
+                                                               PrimaryContent="{Binding PluginPrimaryActionLabel}"
+                                                               PrimaryCommand="{Binding ToggleSelectedPluginEnabledCommand}"
+                                                               PrimaryToolTip="{Binding PluginPrimaryActionToolTip}"
+                                                               IsPrimaryEnabled="{Binding !IsPluginActionBusy}"
+                                                               IsSecondaryVisible="True"
+                                                               IsSecondaryEnabled="{Binding !IsPluginActionBusy}"
+                                                               SecondaryContent="{i18n:Translate {x:Static i18n:TextKeys.PluginUninstallAction}}"
+                                                               SecondaryCommand="{Binding RequestPluginUninstallCommand}"
+                                                               SecondaryToolTip="{i18n:Translate {x:Static i18n:TextKeys.PluginUninstallActionToolTip}}" />
+                                    <TextBlock Text="{Binding SelectedPluginDetailsVersion}"
+                                               Classes="caption"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Border IsVisible="{Binding HasPluginUninstallConfirmation}"
+                                        BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource SkyCornerRadius}"
+                                        Padding="{DynamicResource SkyInsetSm}">
+                                    <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                        <TextBlock Text="{Binding PluginUninstallConfirmationPrompt}"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" />
+                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                            <Button Content="{i18n:Translate {x:Static i18n:TextKeys.PluginUninstallAction}}"
+                                                    MinWidth="90"
+                                                    Command="{Binding ConfirmPluginUninstallCommand}" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                                                    MinWidth="90"
+                                                    Command="{Binding CancelPluginUninstallCommand}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="{Binding PluginActionAlertMessage}"
+                                           IsVisible="{Binding HasPluginActionAlert}"
                                            Classes="caption"
-                                           VerticalAlignment="Center" />
-                            </Grid>
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
                             <TabControl Grid.Row="2">
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabOverview}}">
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -541,18 +569,41 @@
                                 <TextBlock Text="{Binding SelectedMarketplacePlugin.ErrorMessage}"
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding SelectedMarketplacePlugin.HasError}" />
-                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                    <Button Content="{Binding SelectedMarketplacePlugin.PrimaryActionLabel}"
-                                            MinWidth="90"
-                                            IsVisible="{Binding SelectedMarketplacePlugin.ShowPrimaryAction}"
-                                            Command="{Binding RequestMarketplaceInstallCommand}"
-                                            CommandParameter="{Binding SelectedMarketplacePlugin}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:TextKeys.PluginRetryAction}}"
-                                            MinWidth="90"
-                                            IsVisible="{Binding SelectedMarketplacePlugin.ShowRetryAction}"
-                                            Command="{Binding RequestMarketplaceInstallCommand}"
-                                            CommandParameter="{Binding SelectedMarketplacePlugin}" />
-                                </StackPanel>
+                                <actions:SplitActionButton x:Name="MarketplacePluginActionButton"
+                                                           HorizontalAlignment="Left"
+                                                           PrimaryContent="{Binding SelectedMarketplacePlugin.StatusLabel}"
+                                                           PrimaryCommand="{Binding RequestMarketplaceInstallCommand}"
+                                                           PrimaryCommandParameter="{Binding SelectedMarketplacePlugin}"
+                                                           IsPrimaryEnabled="{Binding SelectedMarketplacePlugin.CanRunPrimaryAction}"
+                                                           PrimaryToolTip="{i18n:Translate {x:Static i18n:TextKeys.PluginMarketplaceActionToolTip}}"
+                                                           IsSecondaryVisible="{Binding SelectedMarketplacePlugin.CanUninstall}"
+                                                           IsSecondaryEnabled="{Binding !IsPluginActionBusy}"
+                                                           SecondaryContent="{i18n:Translate {x:Static i18n:TextKeys.PluginUninstallAction}}"
+                                                           SecondaryCommand="{Binding RequestMarketplacePluginUninstallCommand}"
+                                                           SecondaryToolTip="{i18n:Translate {x:Static i18n:TextKeys.PluginUninstallActionToolTip}}" />
+                                <Border IsVisible="{Binding HasPluginUninstallConfirmation}"
+                                        BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource SkyCornerRadius}"
+                                        Padding="{DynamicResource SkyInsetSm}">
+                                    <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                        <TextBlock Text="{Binding PluginUninstallConfirmationPrompt}"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" />
+                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                            <Button Content="{i18n:Translate {x:Static i18n:TextKeys.PluginUninstallAction}}"
+                                                    MinWidth="90"
+                                                    Command="{Binding ConfirmPluginUninstallCommand}" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                                                    MinWidth="90"
+                                                    Command="{Binding CancelPluginUninstallCommand}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="{Binding PluginActionAlertMessage}"
+                                           IsVisible="{Binding HasPluginActionAlert}"
+                                           Classes="caption"
+                                           TextWrapping="Wrap" />
                             </StackPanel>
                             <TabControl Grid.Row="2">
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabOverview}}">

@@ -37,6 +37,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Volume;
+using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Abstractions;
 using Avalonia.Threading;
 using SkyCD.Plugin.Runtime.Exceptions;
@@ -73,6 +74,7 @@ public partial class MainWindow : Window
     private readonly SystemMediaEjector mediaEjector = new();
     private readonly ScanCompletionService scanCompletionService;
     private readonly PluginMarketplaceService pluginMarketplaceService;
+    private readonly IPluginPackageUninstaller pluginUninstaller;
     private FileFormatManager fileFormatManager;
     private MainWindowViewModel? subscribedViewModel;
     private bool isCompletingConfirmedClose;
@@ -88,11 +90,13 @@ public partial class MainWindow : Window
         PluginManager pluginManager,
         FileFormatManager fileFormatManager,
         PluginMarketplaceService pluginMarketplaceService,
+        IPluginPackageUninstaller pluginUninstaller,
         OpenCatalogState openCatalogState,
         IMediaDriveProvider? mediaDriveProvider = null)
     {
         this.repositoryManager = repositoryManager;
         this.pluginMarketplaceService = pluginMarketplaceService;
+        this.pluginUninstaller = pluginUninstaller;
         this.openCatalogState = openCatalogState;
         this.mediaDriveProvider = mediaDriveProvider ?? new SystemMediaDriveProvider();
         appOptionsRepository = (AppOptionsDocumentRepository)repositoryManager.For<AppOptionsDocument>();
@@ -1509,6 +1513,7 @@ public partial class MainWindow : Window
             e.Dialog.SetLocations(locationsViewModel.GetLocationSnapshots());
         }
         e.Dialog.SetPluginMarketplace(pluginMarketplaceService);
+        e.Dialog.SetPluginUninstaller(pluginUninstaller);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
