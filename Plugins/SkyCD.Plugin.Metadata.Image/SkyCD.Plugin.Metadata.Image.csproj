@@ -3,6 +3,11 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one bounded cover pipeline and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\CoverImageRenderer.cs" Link="Shared\Preview\Export\CoverImageRenderer.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- Shared with the XMP sidecar plugin: one copy of the scan, text and XMP property mapping. -->
         <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
         <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>

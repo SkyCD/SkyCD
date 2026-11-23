@@ -3,6 +3,7 @@ using System.Threading;
 using SkiaSharp;
 using SkyCD.Plugin.Metadata.Image.Exceptions;
 using SkyCD.Plugin.Metadata.Image.Models;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.Image.Parsing;
 
@@ -85,29 +86,24 @@ internal static class ImageDecoder
         cancellationToken.ThrowIfCancellationRequested();
 
         using var snapshot = surface.Snapshot();
-        var format = probe.HasAlpha ? SKEncodedImageFormat.Png : SKEncodedImageFormat.Jpeg;
-        using var encoded = snapshot.Encode(format, probe.HasAlpha ? 100 : jpegQuality)
-                            ?? throw new ImageDecodeException("the thumbnail could not be encoded");
+        var encoded = probe.HasAlpha
+            ? PreviewArtifactEncoder.EncodePng(snapshot)
+            : PreviewArtifactEncoder.EncodeJpeg(snapshot, jpegQuality);
+        if (encoded is null)
+        {
+            throw new ImageDecodeException("the thumbnail could not be encoded");
+        }
 
         return new ImageThumbnail(
             probe.HasAlpha ? "image/png" : "image/jpeg",
-            encoded.ToArray(),
+            encoded,
             targetWidth,
             targetHeight);
     }
 
     /// <summary>Uniform downscale that never upscales and never drops an edge to zero pixels.</summary>
-    internal static (int Width, int Height) ScaleTo(int width, int height, int maxDimension)
-    {
-        var longest = Math.Max(width, height);
-        if (longest <= maxDimension)
-        {
-            return (width, height);
-        }
-
-        var scale = (double)maxDimension / longest;
-        return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
-    }
+    internal static (int Width, int Height) ScaleTo(int width, int height, int maxDimension) =>
+        CoverImageRenderer.ScaleTo(width, height, maxDimension);
 
     /// <summary>
     /// Maps stored pixel coordinates onto the oriented, scaled thumbnail. Orientation is decomposed into a
