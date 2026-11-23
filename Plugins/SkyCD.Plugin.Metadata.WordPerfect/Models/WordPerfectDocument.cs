@@ -18,11 +18,13 @@ internal sealed class WordPerfectDocument
         new Dictionary<ushort, WordPerfectSummaryValue>();
 
     private WordPerfectDocument(string formatVersion, string storage,
-        IReadOnlyDictionary<ushort, WordPerfectSummaryValue> summary)
+        IReadOnlyDictionary<ushort, WordPerfectSummaryValue> summary, bool supportsBodyText, int documentOffset)
     {
         FormatVersion = formatVersion;
         Storage = storage;
         Summary = summary;
+        SupportsBodyText = supportsBodyText;
+        DocumentOffset = documentOffset;
     }
 
     /// <summary>Product generation read from the header, for example <c>6.0</c> or <c>6.1+</c>.</summary>
@@ -33,6 +35,12 @@ internal sealed class WordPerfectDocument
 
     /// <summary>Summary groups keyed by their WordPerfect tag; empty for WP5 and Mac WP documents.</summary>
     public IReadOnlyDictionary<ushort, WordPerfectSummaryValue> Summary { get; }
+
+    /// <summary>True when the body stream uses the WP6 grammar this plugin can walk for leading text.</summary>
+    public bool SupportsBodyText { get; }
+
+    /// <summary>Offset of the first body byte, clamped so it never points into the header or past the end.</summary>
+    public int DocumentOffset { get; }
 
     public static bool HasMagic(ReadOnlySpan<byte> data) =>
         data.Length >= 4 && data[0] == 0xFF && data[1] == (byte)'W' && data[2] == (byte)'P' && data[3] == (byte)'C';
@@ -61,11 +69,11 @@ internal sealed class WordPerfectDocument
         }
 
         var formatVersion = ResolveFormatVersion(fileType, majorVersion, minorVersion);
-        var summary = fileType == WordPerfectFileType && majorVersion == WordPerfect6MajorVersion
-            ? ReadSummary(data)
-            : NoSummary;
+        var supportsBodyText = fileType == WordPerfectFileType && majorVersion == WordPerfect6MajorVersion;
+        var summary = supportsBodyText ? ReadSummary(data) : NoSummary;
+        var documentOffset = (int)Math.Clamp((long)ReadU32(data, 4), 16L, data.Length);
 
-        return new WordPerfectDocument(formatVersion, storage, summary);
+        return new WordPerfectDocument(formatVersion, storage, summary, supportsBodyText, documentOffset);
     }
 
     private static IReadOnlyDictionary<ushort, WordPerfectSummaryValue> ReadSummary(byte[] data)
