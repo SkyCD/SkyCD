@@ -41,6 +41,10 @@ public partial class OptionsDialogViewModel
 
     public bool HasSelectedMarketplacePlugin => SelectedMarketplacePlugin is not null;
 
+    /// <summary>The marketplace Overview tab shows its secondary "no description" line for a selected package without a summary.</summary>
+    public bool ShowMarketplacePluginSummaryEmptyState =>
+        SelectedMarketplacePlugin is { HasSummary: false };
+
     public string ConfirmationPrompt => SelectedMarketplacePlugin is { } item
         ? LocalizationService.Current.Format(TextKeys.PluginInstallConfirmation, item.Title, item.Publisher)
         : string.Empty;
@@ -263,6 +267,7 @@ public partial class OptionsDialogViewModel
     {
         IsInstallConfirmationVisible = false;
         OnPropertyChanged(nameof(HasSelectedMarketplacePlugin));
+        OnPropertyChanged(nameof(ShowMarketplacePluginSummaryEmptyState));
         OnPropertyChanged(nameof(ConfirmationPrompt));
         if (value is not null) IsMarketplaceBrowseSelected = true;
     }

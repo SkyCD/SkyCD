@@ -424,12 +424,16 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         NotifyPluginsPageChanged();
         InfoMessage = LocalizationService.Current.Format(TextKeys.LoadedPluginS, Plugins.Count);
         OnPropertyChanged(nameof(SelectedPluginDescription));
+        OnPropertyChanged(nameof(HasPluginDescription));
     }
 
+    /// <summary>Distinguishes a real plugin description from the localized placeholder in the Overview tab.</summary>
+    public bool HasPluginDescription => !string.IsNullOrWhiteSpace(SelectedPlugin?.Description);
+
     public string SelectedPluginDescription =>
-        string.IsNullOrWhiteSpace(SelectedPlugin?.Description)
-            ? LocalizationService.Current.Get(UiKeys.NoPluginDescription)
-            : SelectedPlugin.Description;
+        HasPluginDescription
+            ? SelectedPlugin!.Description
+            : LocalizationService.Current.Get(UiKeys.NoPluginDescription);
 
     public void SetDisabledPluginIds(IEnumerable<string>? pluginIds)
     {
@@ -493,6 +497,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     {
         pluginSelectionIsAuto = isAutoSelectingPlugin;
         OnPropertyChanged(nameof(SelectedPluginDescription));
+        OnPropertyChanged(nameof(HasPluginDescription));
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
         if (value is not null && !pluginSelectionIsAuto) IsMarketplaceBrowseSelected = false;
         NotifySelectedPluginDetailsChanged();

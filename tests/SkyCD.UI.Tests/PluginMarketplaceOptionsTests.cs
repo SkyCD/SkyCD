@@ -265,6 +265,27 @@ public sealed class PluginMarketplaceOptionsTests
         Assert.Single(vm.FilteredMarketplacePlugins);
     }
 
+    [AvaloniaFact]
+    public async Task OverviewEmptyState_FollowsTheSelectedPackageSummary()
+    {
+        var service = new FakeMarketplaceService
+        {
+            Snapshot = SnapshotAt(PackageWithoutRelease("acme.blank"), Package("acme.full", "1.0.0"))
+        };
+        using var vm = CreateViewModel(service);
+
+        await vm.ShowMarketplacePluginsCommand.ExecuteAsync(null);
+
+        var blank = vm.FilteredMarketplacePlugins.Single(item => item.PackageId == "acme.blank");
+        Assert.False(blank.HasSummary);
+        vm.SelectedMarketplacePlugin = blank;
+        Assert.True(vm.ShowMarketplacePluginSummaryEmptyState);
+
+        var full = vm.FilteredMarketplacePlugins.Single(item => item.PackageId == "acme.full");
+        vm.SelectedMarketplacePlugin = full;
+        Assert.False(vm.ShowMarketplacePluginSummaryEmptyState);
+    }
+
     private static OptionsDialogViewModel CreateViewModel(FakeMarketplaceService service)
     {
         var vm = new OptionsDialogViewModel(["English"]);
