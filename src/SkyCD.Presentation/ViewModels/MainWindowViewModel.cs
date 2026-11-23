@@ -168,6 +168,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AudioCdMetadataService? audioCdMetadataService;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
+
+    // Ancestor counts after a deletion run off the UI thread; cancelling this stops them when the view
+    // model closes so a recount cannot write into a repository the catalog owner has already released.
+    private readonly CancellationTokenSource sizeMaintenanceLifetime = new();
+
     private readonly ICpuLoadSampler cpuLoadSampler = new SystemCpuLoadSampler();
     private readonly object viewRefreshLock = new();
 
@@ -748,6 +753,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         isDisposed = true;
         pluginCommandCancellation?.Cancel();
         metadataLifetime.Cancel();
+        sizeMaintenanceLifetime.Cancel();
+        sizeMaintenanceLifetime.Dispose();
         backgroundMediaSync?.Dispose();
         localizationSubscription.Dispose();
 
@@ -2040,6 +2047,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         else if (inMemoryCatalogEntries is not null)
         {
             inMemoryCatalogEntries.AddRange(documents);
+            CatalogSizeMaintenance.RecalculateAncestors(
+                inMemoryCatalogEntries,
+                documents.Select(static document => document.ParentId));
         }
         else
         {
@@ -2081,7 +2091,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ParentId = nodeKey,
             Type = CatalogDocumentType.Folder,
             Size = 0,
-            ChildrenCount = 0
+            ChildrenCount = 0,
+            // A folder entered by hand has no measured contents; a zero here would claim an empty folder.
+            Properties = new PropertiesCollection { [CatalogDocument.SizeKnownPropertyKey] = false }
         };
 
         PublishImportedDocuments([importedItem], CancellationToken.None);
@@ -2392,6 +2404,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .ToList();
 
         inMemoryCatalogEntries.RemoveAll(entry => toDelete.Contains(entry.Id));
+
+        // Removed entries shrink their former parents; the recount runs against the list as it is now, so
+        // the ancestors are summed from what actually remains.
+        CatalogSizeMaintenance.RecalculateAncestors(
+            inMemoryCatalogEntries,
+            removed.Select(static entry => entry.ParentId));
 
         foreach (var deletedId in toDelete)
         {
@@ -3470,6 +3488,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
             var comments = GetObjectComments(objectKey, SelectedTreeNode.Key);
+            var document = FindCatalogDocument(SelectedTreeNode.Key);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -3477,7 +3496,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedTreeNode.IconGlyph,
                 comments,
                 GetBrowserItemInfoProperties(SelectedTreeNode.Key),
-                propertyValueLocalizer);
+                propertyValueLocalizer,
+                document?.Size,
+                document?.HasKnownSize ?? false);
             AttachDetailsTabs(dialog, initialDetailsTabKey);
             return true;
         }
@@ -3487,6 +3508,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var objectKey = GetBrowserItemObjectKey(SelectedBrowserItem);
             var comments = GetObjectComments(objectKey, SelectedBrowserItem.Id);
             var infoProperties = GetBrowserItemInfoProperties(SelectedBrowserItem.Id);
+            var document = FindCatalogDocument(SelectedBrowserItem.Id);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -3494,7 +3516,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedBrowserItem.IconGlyph,
                 comments,
                 infoProperties,
-                propertyValueLocalizer);
+                propertyValueLocalizer,
+                document?.Size,
+                document?.HasKnownSize ?? false);
             if (tagService is not null)
             {
                 dialog.InitializeTags(
@@ -3515,6 +3539,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             var objectKey = GetTreeNodeObjectKey(SelectedTreeNode);
             var comments = GetObjectComments(objectKey, SelectedTreeNode.Key);
+            var document = FindCatalogDocument(SelectedTreeNode.Key);
 
             dialog = new PropertiesDialogViewModel(
                 objectKey,
@@ -3522,7 +3547,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedTreeNode.IconGlyph,
                 comments,
                 GetBrowserItemInfoProperties(SelectedTreeNode.Key),
-                propertyValueLocalizer);
+                propertyValueLocalizer,
+                document?.Size,
+                document?.HasKnownSize ?? false);
             AttachDetailsTabs(dialog, initialDetailsTabKey);
             return true;
         }
@@ -4239,6 +4266,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var repository = viewModel.catalogRepository;
             if (repository is null || rootId is null || catalogPath != viewModel.CurrentCatalogPath)
                 throw new MotionCaptureCatalogUnavailableException();
+            var importedParents = new List<string?>();
             await Task.Run(() => repository.Collection.Database.InBatch(() =>
             {
                 string Folder(string parent, string name)
@@ -4257,8 +4285,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     var properties = new PropertiesCollection();
                     foreach (var property in file.Properties) properties[property.Key] = property.Value;
                     repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = file.Name, Size = file.Size, Properties = properties });
+                    importedParents.Add(parent);
                 }
             }), cancellationToken);
+
+            // Captured files land in folders that were just created empty, so their totals have to be
+            // summed from the files in the same pass (#1001).
+            await Task.Run(
+                () => CatalogSizeMaintenance.RecalculateAncestors(repository, importedParents),
+                cancellationToken);
             viewModel.RefreshTreeNodes();
             viewModel.RefreshBrowserItemsForSelection();
             viewModel.IsDirtyDocument = true;
@@ -4724,7 +4759,46 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             renamedBrowserItemNamesByNodeKey.Remove(descendantId);
         }
 
+        // The ancestors of what was removed now total less. The recount happens off the UI thread so a
+        // large catalog does not delay the deletion the user just made.
+        ScheduleSizeMaintenance(
+            snapshot
+                .Select(static entry => entry.ParentId)
+                .Where(static parentId => !string.IsNullOrWhiteSpace(parentId))
+                .ToArray());
+
         return snapshot;
+    }
+
+    /// <summary>
+    /// Recounts the given parents and their ancestors on a background thread after a deletion.
+    /// </summary>
+    /// <remarks>
+    /// Totals are derived data read back from the repository when a folder is shown, so the pass needs no UI
+    /// refresh of its own. <see cref="CatalogSizeMaintenance"/> recomputes from a fresh snapshot under a gate,
+    /// which keeps a recount started before a later change from writing stale numbers over it.
+    /// </remarks>
+    private void ScheduleSizeMaintenance(IReadOnlyList<string?> parentIds)
+    {
+        if (catalogRepository is not { } repository || isDisposed || parentIds.Count == 0)
+        {
+            return;
+        }
+
+        var token = sizeMaintenanceLifetime.Token;
+        _ = Task.Run(
+            () =>
+            {
+                try
+                {
+                    CatalogSizeMaintenance.RecalculateAncestors(repository, parentIds);
+                }
+                catch (Exception)
+                {
+                    // Best effort: a failed recount leaves the previous totals until the next catalog change.
+                }
+            },
+            token);
     }
 
     private PropertiesCollection GetBrowserItemInfoProperties(string itemId)

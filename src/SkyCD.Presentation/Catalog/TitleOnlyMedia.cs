@@ -18,7 +18,9 @@ public static class TitleOnlyMedia
 
         var properties = new PropertiesCollection
         {
-            [ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString()
+            [ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString(),
+            // Nothing was measured for a title-only entry, so a zero here must not read as a real 0 b.
+            [CatalogDocument.SizeKnownPropertyKey] = false
         };
 
         return new CatalogDocument
