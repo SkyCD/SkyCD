@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Docnet.Core;
 using Docnet.Core.Models;
 using SkiaSharp;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.Pdf.Export;
 
@@ -86,7 +87,6 @@ public sealed class DocnetPdfPageRenderer : IPdfPageRenderer
         Marshal.Copy(pixels, 0, target, Math.Min(pixels.Length, width * height * 4));
 
         using var image = SKImage.FromBitmap(bitmap);
-        using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
-        return encoded?.ToArray();
+        return PreviewArtifactEncoder.EncodePng(image);
     }
 }

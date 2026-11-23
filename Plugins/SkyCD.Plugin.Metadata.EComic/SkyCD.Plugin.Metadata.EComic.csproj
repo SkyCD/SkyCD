@@ -3,6 +3,11 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one bounded cover pipeline and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\CoverImageRenderer.cs" Link="Shared\Preview\Export\CoverImageRenderer.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- MIT: reads ComicInfo.xml and the first page from cbz/cbr/cb7 containers. SharpCompress is already
              used by SkyCD.Plugin.Metadata.Archives, so the license evaluation is shared (see docs/plugins/ecomic.md). -->
         <PackageReference Include="SharpCompress" Version="0.50.8"/>

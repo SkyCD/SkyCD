@@ -2,6 +2,7 @@ using System;
 using SkiaSharp;
 using SkyCD.Plugin.Metadata.Executable.Exceptions;
 using SkyCD.Plugin.Metadata.Executable.Models;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.Executable.Export;
 
@@ -143,9 +144,8 @@ internal static class ExecutableIconEncoder
         }
 
         using var imageHandle = SKImage.FromBitmap(bitmap);
-        using var encoded = imageHandle.Encode(SKEncodedImageFormat.Png, 100)
-                            ?? throw new ExecutableIconException("the encoded icon PNG is not available");
-        return encoded.ToArray();
+        return PreviewArtifactEncoder.EncodePng(imageHandle)
+               ?? throw new ExecutableIconException("the encoded icon PNG is not available");
     }
 
     private static byte Premultiply(byte value, byte alpha) => (byte)(((value * alpha) + 127) / 255);
