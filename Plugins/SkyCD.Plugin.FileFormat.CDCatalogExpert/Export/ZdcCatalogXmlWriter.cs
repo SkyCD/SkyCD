@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Exceptions;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Models;
 
 namespace SkyCD.Plugin.FileFormat.CDCatalogExpert.Export;
@@ -22,12 +23,7 @@ namespace SkyCD.Plugin.FileFormat.CDCatalogExpert.Export;
 /// </remarks>
 public static class ZdcCatalogXmlWriter
 {
-    private static readonly Encoding Windows1252 = CreateWindows1252();
-
-    static ZdcCatalogXmlWriter()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
+    private static readonly Encoding Windows1252 = LegacyEncoding.StrictWindows1252;
 
     /// <summary>Serializes the catalog index member.</summary>
     public static byte[] WriteIndex(ZdcCatalog catalog)
@@ -340,11 +336,5 @@ public static class ZdcCatalogXmlWriter
         {
             return false;
         }
-    }
-
-    private static Encoding CreateWindows1252()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        return Encoding.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
     }
 }

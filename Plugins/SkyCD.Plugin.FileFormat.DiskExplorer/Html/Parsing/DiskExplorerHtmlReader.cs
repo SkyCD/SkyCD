@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using AngleSharp.Html.Parser;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Html.Exceptions;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Html.Models;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Models;
@@ -476,8 +477,7 @@ public static class DiskExplorerHtmlReader
     {
         try
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            return Encoding.GetEncoding(1252);
+            return LegacyEncoding.Windows1252;
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
         {

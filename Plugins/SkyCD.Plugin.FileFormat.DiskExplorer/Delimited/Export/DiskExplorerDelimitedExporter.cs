@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited.Exceptions;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited.Models;
 
@@ -36,10 +37,7 @@ public static class DiskExplorerDelimitedExporter
             ? request.Columns.ToList()
             : DiskExplorerDelimitedColumns.DefaultExportColumns.ToList();
         var encoding = request.Encoding == DiskExplorerDelimitedEncoding.Windows1252
-            ? CodePagesEncodingProvider.Instance.GetEncoding(
-                1252,
-                EncoderFallback.ExceptionFallback,
-                DecoderFallback.ExceptionFallback)!
+            ? LegacyEncoding.StrictWindows1252
             : new UTF8Encoding(encoderShouldEmitUTF8Identifier: true, throwOnInvalidBytes: true);
         var newLine = request.NewLine
             ?? (request.Encoding == DiskExplorerDelimitedEncoding.Windows1252 ? "\r\n" : "\n");

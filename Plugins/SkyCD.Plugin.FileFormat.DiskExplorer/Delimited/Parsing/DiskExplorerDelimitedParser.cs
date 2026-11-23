@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited.Exceptions;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited.Import;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited.Models;
@@ -159,10 +160,7 @@ public static class DiskExplorerDelimitedParser
                 return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
             }
 
-            return CodePagesEncodingProvider.Instance.GetEncoding(
-                1252,
-                EncoderFallback.ExceptionFallback,
-                DecoderFallback.ExceptionFallback)!;
+            return LegacyEncoding.StrictWindows1252;
         }
         finally
         {

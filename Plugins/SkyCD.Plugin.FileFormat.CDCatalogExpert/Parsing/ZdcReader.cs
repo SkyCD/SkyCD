@@ -23,11 +23,6 @@ public static class ZdcReader
 {
     private const int CancelCheckEveryMembers = 100;
 
-    static ZdcReader()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
-
     /// <summary>
     /// Reads and validates a complete container.
     /// </summary>

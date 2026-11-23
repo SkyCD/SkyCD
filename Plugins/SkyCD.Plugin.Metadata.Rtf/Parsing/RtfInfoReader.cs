@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.Metadata.Rtf.Models;
 
 namespace SkyCD.Plugin.Metadata.Rtf.Parsing;
@@ -450,7 +451,7 @@ internal static class RtfInfoReader
 
         try
         {
-            return Encoding.GetEncoding(codePage).GetString(data);
+            return LegacyEncoding.Get(codePage).GetString(data);
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
         {

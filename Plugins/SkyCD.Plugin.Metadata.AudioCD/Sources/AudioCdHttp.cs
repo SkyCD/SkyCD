@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.Plugin.EncodingProfiles;
 
 namespace SkyCD.Plugin.Metadata.AudioCD.Sources;
 
@@ -51,7 +52,7 @@ internal static class AudioCdHttp
         {
             try
             {
-                encoding = System.Text.Encoding.GetEncoding(charset.Trim('"'));
+                encoding = LegacyEncoding.Get(charset.Trim('"'));
             }
             catch (ArgumentException)
             {

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.Metadata.EBook.Exceptions;
 using SkyCD.Plugin.Metadata.EBook.Models;
 
@@ -41,11 +42,6 @@ internal static class MobipocketReader
     private const uint ExthFakeCover = 203;
     private const uint ExthUpdatedTitle = 503;
     private const uint ExthLanguage = 524;
-
-    static MobipocketReader()
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
 
     public static async Task<EBookDocument> ReadAsync(
         IMediaSource source,
@@ -390,15 +386,15 @@ internal static class MobipocketReader
 
         try
         {
-            return Encoding.GetEncoding((int)codePage);
+            return LegacyEncoding.Get((int)codePage);
         }
         catch (ArgumentException)
         {
-            return Encoding.GetEncoding(1252);
+            return LegacyEncoding.Windows1252;
         }
         catch (NotSupportedException)
         {
-            return Encoding.GetEncoding(1252);
+            return LegacyEncoding.Windows1252;
         }
     }
 
