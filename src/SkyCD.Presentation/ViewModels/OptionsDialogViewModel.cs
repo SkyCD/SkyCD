@@ -708,6 +708,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(InstalledPluginsHeader));
         OnPropertyChanged(nameof(InstalledPluginsCount));
+        OnPropertyChanged(nameof(ShowInstalledPluginsEmptyState));
     }
 
     private void RefreshFilteredCategories()

@@ -44,13 +44,22 @@ public partial class OptionsDialogViewModel
 
     public int MarketplacePluginsCount => FilteredMarketplacePlugins.Count;
 
+    public bool ShowInstalledPluginsEmptyState => FilteredPlugins.Count == 0;
+
     public string MarketplaceSectionToggleText =>
         LocalizationService.Current.Get(IsMarketplaceSectionExpanded ? UiKeys.PluginShowLess : UiKeys.PluginShowMore);
 
     public bool ShowMarketplaceSectionContent => IsMarketplaceSectionExpanded;
 
     public bool ShowMarketplacePaneEmptyState =>
-        IsMarketplaceSectionExpanded && !IsMarketplaceLoading && FilteredMarketplacePlugins.Count == 0;
+        IsMarketplaceSectionExpanded && !IsMarketplaceLoading && marketplaceCatalogIsEmpty;
+
+    public bool ShowMarketplacePaneFilterEmptyState =>
+        IsMarketplaceSectionExpanded && !IsMarketplaceLoading &&
+        allMarketplaceItems.Count > 0 && FilteredMarketplacePlugins.Count == 0;
+
+    public bool ShowMarketplacePaneList =>
+        IsMarketplaceSectionExpanded && FilteredMarketplacePlugins.Count > 0;
 
     public bool HasAvailableMarketplaceUpdates =>
         allMarketplaceItems.Any(static item => item.UpdateAvailable);
@@ -125,6 +134,8 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(MarketplaceSectionToggleText));
         OnPropertyChanged(nameof(ShowMarketplaceSectionContent));
         OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
     }
 
     partial void OnIsPluginConfigurationTabSelectedChanged(bool value)
@@ -142,6 +153,8 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(InstalledPluginsCount));
         OnPropertyChanged(nameof(MarketplacePluginsCount));
         OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
         UpdateAllPluginsCommand.NotifyCanExecuteChanged();
     }
 

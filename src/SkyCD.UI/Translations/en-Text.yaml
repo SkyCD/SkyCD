@@ -275,3 +275,5 @@ text.PluginCatalogOffline: "The plugin catalog could not be reached. Installed p
 text.PluginCatalogFailure: "The plugin catalog could not be loaded. Installed plugins are still available."
 text.PluginCatalogPartialFailure: "Some catalog sources could not be reached; showing available results."
 text.PluginCatalogEmpty: "No plugins are published in the catalog yet."
+text.PluginFilterNoMatches: "No plugins match your filter."
+text.PluginMarketplaceFilterNoMatches: "No marketplace plugins match your filter."

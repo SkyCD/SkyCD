@@ -273,6 +273,7 @@
                                                    Padding="{DynamicResource SkyInsetXs}" />
                                         <ListBox ItemsSource="{Binding FilteredPlugins}"
                                                  SelectedItem="{Binding SelectedPlugin}"
+                                                 IsVisible="{Binding !ShowInstalledPluginsEmptyState}"
                                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                                  SelectionChanged="OnInstalledPluginsSelectionChanged">
                                             <ListBox.Styles>
@@ -322,6 +323,13 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginFilterNoMatches}}"
+                                                   Classes="caption"
+                                                   Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                   Padding="{DynamicResource SkyInsetSm}"
+                                                   TextWrapping="Wrap"
+                                                   IsHitTestVisible="False"
+                                                   IsVisible="{Binding ShowInstalledPluginsEmptyState}" />
                                     </StackPanel>
 
                                     <StackPanel IsVisible="{Binding ShowMarketplacePluginSection}"
@@ -344,9 +352,18 @@
                                                          IsVisible="{Binding IsMarketplaceLoading}" />
                                             <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginCatalogEmpty}}"
                                                        Classes="caption"
+                                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                                        Padding="{DynamicResource SkyInsetSm}"
                                                        TextWrapping="Wrap"
+                                                       IsHitTestVisible="False"
                                                        IsVisible="{Binding ShowMarketplacePaneEmptyState}" />
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:TextKeys.PluginMarketplaceFilterNoMatches}}"
+                                                       Classes="caption"
+                                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                       Padding="{DynamicResource SkyInsetSm}"
+                                                       TextWrapping="Wrap"
+                                                       IsHitTestVisible="False"
+                                                       IsVisible="{Binding ShowMarketplacePaneFilterEmptyState}" />
                                             <TextBlock Text="{Binding MarketplaceStatusMessage}"
                                                        Classes="caption"
                                                        Padding="{DynamicResource SkyInsetSm}"
@@ -354,6 +371,7 @@
                                                        IsVisible="{Binding ShowMarketplaceStatusMessage}" />
                                             <ListBox ItemsSource="{Binding FilteredMarketplacePlugins}"
                                                      SelectedItem="{Binding SelectedMarketplacePlugin}"
+                                                     IsVisible="{Binding ShowMarketplacePaneList}"
                                                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                                      SelectionChanged="OnMarketplacePluginsSelectionChanged">
                                                 <ListBox.Styles>
