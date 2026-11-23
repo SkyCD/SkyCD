@@ -21,9 +21,11 @@ public static class TestAppBuilder
         {
             var tokens = new Uri("avares://SkyCD.App/Styles/DesignTokens.axaml");
             var globalStyles = new Uri("avares://SkyCD.App/Styles/GlobalStyles.axaml");
+            var tabControlStyles = new Uri("avares://SkyCD.App/Styles/TabControlStyles.axaml");
             Resources.MergedDictionaries.Add(new ResourceInclude(tokens) { Source = tokens });
             Styles.Add(new SimpleTheme());
             Styles.Add(new StyleInclude(globalStyles) { Source = globalStyles });
+            Styles.Add(new StyleInclude(tabControlStyles) { Source = tabControlStyles });
         }
     }
 }

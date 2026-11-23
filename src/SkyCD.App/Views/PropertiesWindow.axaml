@@ -54,7 +54,7 @@
     <Grid RowDefinitions="*,Auto" Margin="0">
         <TabControl x:Name="Tabs" Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
-                <Grid Margin="10,8,10,10" RowDefinitions="Auto,*">
+                <Grid RowDefinitions="Auto,*">
                     <Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,8">
                         <Border Grid.RowSpan="2"
                                 Width="{Binding #NameFields.Bounds.Height}"
@@ -107,7 +107,6 @@
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Properties}}" IsVisible="{Binding HasInfoTab}">
                 <cp:PropertiesList x:Name="InfoPropertiesList"
-                                   Margin="8,8,8,10"
                                    PropertiesData="{Binding InfoProperties}"
                                    DescriptionRowHeader="{Binding DescriptionHeader}"
                                    PropertyHeader="{i18n:Translate {x:Static i18n:UiKeys.Property}}"
@@ -156,7 +155,7 @@
                 </cp:PropertiesList>
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.Tags}}" IsVisible="{Binding HasTagsTab}">
-                <ScrollViewer Margin="8">
+                <ScrollViewer>
                     <ItemsControl ItemsSource="{Binding TagAssignments}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TagAssignmentViewModel">
@@ -168,7 +167,6 @@
             </TabItem>
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" IsVisible="{Binding HasCustomProperties}">
                 <cp:PropertiesList x:Name="CustomPropertiesList"
-                                   Margin="8,8,8,10"
                                    Rows="{Binding CustomProperties}"
                                    RowIsTabStop="False"
                                    EditValueInPlace="True"
