@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Couchbase.Lite;
@@ -10,6 +9,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 using SkyCD.Plugin.Abstractions.Capabilities.Storage;
 using SkyCD.Presentation.Catalog;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -19,8 +19,8 @@ public sealed class PluginHostApiAdapterTests
     [Fact]
     public async Task CatalogApiProjectsEntriesWithPathsKindsAndProperties()
     {
-        using var directory = new TemporaryDirectory();
-        using var database = OpenDatabase(directory.Path);
+        using var workspace = new TestWorkspace();
+        using var database = OpenDatabase(workspace.Root);
         var repository = OpenCatalog(database);
         repository.Save("library", new CatalogDocument { Id = "library", Name = "Library", Type = CatalogDocumentType.Folder });
         repository.Save("movies", new CatalogDocument
@@ -57,8 +57,8 @@ public sealed class PluginHostApiAdapterTests
     [Fact]
     public void StorageIsNamespacedPerPluginAndSurvivesReopen()
     {
-        using var directory = new TemporaryDirectory();
-        using (var database = OpenDatabase(directory.Path))
+        using var workspace = new TestWorkspace();
+        using (var database = OpenDatabase(workspace.Root))
         {
             var state = AttachState(database);
             var notes = new PluginStorageApiFactory(state).ForPlugin("skycd.loans").OpenCollection("notes");
@@ -69,7 +69,7 @@ public sealed class PluginHostApiAdapterTests
             Assert.Equal("hello", Assert.Single(notes.GetAll()).Fields["Text"]);
         }
 
-        using (var reopened = OpenDatabase(directory.Path))
+        using (var reopened = OpenDatabase(workspace.Root))
         {
             var state = AttachState(reopened);
             var notes = new PluginStorageApiFactory(state).ForPlugin("skycd.loans").OpenCollection("notes");
@@ -107,12 +107,5 @@ public sealed class PluginHostApiAdapterTests
         var repository = new CatalogDocumentRepository();
         repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
         return repository;
-    }
-
-    private sealed class TemporaryDirectory : IDisposable
-    {
-        public string Path { get; } = Directory.CreateTempSubdirectory("skycd-adapters-").FullName;
-
-        public void Dispose() => Directory.Delete(Path, recursive: true);
     }
 }

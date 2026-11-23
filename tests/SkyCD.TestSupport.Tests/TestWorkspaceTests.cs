@@ -21,6 +21,21 @@ public sealed class TestWorkspaceTests
     }
 
     [Fact]
+    public void Root_IsADirectChildOfTheTempPathWithTheSkycdTestsPrefix()
+    {
+        using var workspace = new TestWorkspace();
+
+        var root = Path.GetFullPath(workspace.Root);
+        var tempPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.GetTempPath()));
+
+        Assert.Equal(
+            tempPath,
+            Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(root)!),
+            ignoreCase: true);
+        Assert.StartsWith("skycd-tests-", Path.GetFileName(root), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Root_IsNotCreatedUntilUsed()
     {
         var workspace = new TestWorkspace();
@@ -62,13 +77,13 @@ public sealed class TestWorkspaceTests
     public void Dispose_RemovesTheTree()
     {
         var workspace = new TestWorkspace();
-        var root = workspace.CreateDirectory("sub");
+        var root = workspace.Root;
+        workspace.CreateDirectory("sub");
         workspace.CreateEmptyFile(Path.Combine("sub", "file.txt"));
 
         workspace.Dispose();
 
         Assert.False(Directory.Exists(root));
-        Assert.False(Directory.Exists(Path.GetDirectoryName(root)!));
     }
 
     [Fact]

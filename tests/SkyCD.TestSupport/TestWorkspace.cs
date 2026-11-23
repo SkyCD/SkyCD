@@ -12,24 +12,25 @@ namespace SkyCD.TestSupport;
 /// <see cref="Dispose"/> or <see cref="DisposeAsync"/> to delete everything it created.
 /// </summary>
 /// <remarks>
-/// The root (<c>skycd-tests/&lt;guid&gt;</c>) is created on first use, not in the constructor.
+/// The root is a direct child of the system temp path named <c>skycd-tests-&lt;unique&gt;</c>, created with
+/// <see cref="Directory.CreateTempSubdirectory(string?)"/> on first use, not in the constructor.
 /// Disposal never throws: a tree that cannot be deleted is simply left behind, so a workspace that is
-/// never disposed (or whose deletion keeps failing) leaves exactly one <c>skycd-tests/&lt;guid&gt;</c>
-/// directory in the temp path for manual cleanup.
+/// never disposed (or whose deletion keeps failing) leaves exactly one <c>skycd-tests-*</c> directory in
+/// the temp path for manual cleanup.
 /// </remarks>
 public sealed class TestWorkspace : IDisposable, IAsyncDisposable
 {
-    private const string RootFolderName = "skycd-tests";
+    private const string RootPrefix = "skycd-tests-";
     private const int DeleteAttempts = 5;
     private const int DeleteRetryDelayMilliseconds = 50;
 
-    private readonly string root;
+    private readonly object gate = new();
+    private string? root;
     private bool disposed;
 
     /// <summary>Creates a workspace whose root is not created until the first path is requested.</summary>
     public TestWorkspace()
     {
-        root = Path.Combine(Path.GetTempPath(), RootFolderName, Guid.NewGuid().ToString("N"));
     }
 
     /// <summary>Absolute path of the workspace root; the directory is created on first access.</summary>
@@ -37,9 +38,12 @@ public sealed class TestWorkspace : IDisposable, IAsyncDisposable
     {
         get
         {
-            ObjectDisposedException.ThrowIf(disposed, this);
-            Directory.CreateDirectory(root);
-            return root;
+            lock (gate)
+            {
+                ObjectDisposedException.ThrowIf(disposed, this);
+                root ??= Directory.CreateTempSubdirectory(RootPrefix).FullName;
+                return root;
+            }
         }
     }
 
@@ -87,13 +91,22 @@ public sealed class TestWorkspace : IDisposable, IAsyncDisposable
     /// <summary>Deletes the workspace tree; never throws and is safe to call more than once.</summary>
     public void Dispose()
     {
-        if (disposed)
+        string? created;
+        lock (gate)
         {
-            return;
+            if (disposed)
+            {
+                return;
+            }
+
+            disposed = true;
+            created = root;
         }
 
-        disposed = true;
-        DeleteTree(root);
+        if (created is not null)
+        {
+            DeleteTree(created);
+        }
     }
 
     /// <summary>Deletes the workspace tree; the deletion is synchronous, so this simply calls <see cref="Dispose"/>.</summary>

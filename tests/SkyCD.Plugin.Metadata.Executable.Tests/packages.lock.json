@@ -545,6 +545,9 @@
           "WebDav.Client": "[2.9.0, )"
         }
       },
+      "skycd.testsupport": {
+        "type": "Project"
+      },
       "skycd.ui": {
         "type": "Project",
         "dependencies": {

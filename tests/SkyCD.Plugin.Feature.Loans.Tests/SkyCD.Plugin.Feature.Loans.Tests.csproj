@@ -18,6 +18,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Loans\SkyCD.Plugin.Feature.Loans.csproj"/>
+        <ProjectReference Include="..\SkyCD.TestSupport\SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <None Update="Fixtures\**\*">
