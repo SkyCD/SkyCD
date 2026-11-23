@@ -10,6 +10,7 @@ using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Exceptions;
 using SkyCD.Plugin.FileFormat.Katalog.Import;
 using SkyCD.Plugin.FileFormat.Katalog.Models;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
 
@@ -225,37 +226,27 @@ public sealed class KatalogCsvIdxPlugin :
         FileFormatReadRequest request,
         CancellationToken cancellationToken)
     {
-        var tempFile = Path.GetTempFileName();
-        try
+        if (request.Source.CanSeek) request.Source.Position = 0;
+        await using var temporary = await TemporaryDatabase.CopyFromAsync(
+            request.Source, ".idx", cancellationToken: cancellationToken);
+
+        var cat = await KatalogCsvIdxParser.ParseIdxAsync(temporary.Path, request.Progress, cancellationToken);
+        cat.CatalogName = Path.GetFileNameWithoutExtension(request.FileName ?? "Catalog");
+
+        var document = KatalogHierarchyBuilder.Build(
+            string.Empty,
+            new Dictionary<string, string>(),
+            [],
+            [],
+            [],
+            [cat],
+            new Dictionary<string, List<string>>());
+
+        return new FileFormatReadResult
         {
-            await using (var fs = File.Create(tempFile))
-            {
-                if (request.Source.CanSeek) request.Source.Position = 0;
-                await request.Source.CopyToAsync(fs, cancellationToken);
-            }
-
-            var cat = await KatalogCsvIdxParser.ParseIdxAsync(tempFile, request.Progress, cancellationToken);
-            cat.CatalogName = Path.GetFileNameWithoutExtension(request.FileName ?? "Catalog");
-
-            var document = KatalogHierarchyBuilder.Build(
-                string.Empty,
-                new Dictionary<string, string>(),
-                [],
-                [],
-                [],
-                [cat],
-                new Dictionary<string, List<string>>());
-
-            return new FileFormatReadResult
-            {
-                Success = true,
-                Payload = document
-            };
-        }
-        finally
-        {
-            try { File.Delete(tempFile); } catch { /* ignore */ }
-        }
+            Success = true,
+            Payload = document
+        };
     }
 
     private static bool IsKatalogIdxFile(string filePath)

@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using SkyCD.Native.Sqlite2;
 using SkyCD.Plugin.FileFormat.CDCollect.Exceptions;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect.Parsing;
 
@@ -38,11 +39,11 @@ public static class CdCollectSqlite2Parser
         }
         if (fileTable == "files" ? version != 0 : version != 4)
             throw new CdCollectSqlite2VersionException(version.ToString(CultureInfo.InvariantCulture));
-        var path = Path.Combine(Path.GetTempPath(), $"cdcollect_sqlite2_{Guid.NewGuid():N}.db");
+        using var database = TemporaryDatabase.CreateNew(".db");
         try
         {
             using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            { DataSource = path, Pooling = false }.ConnectionString))
+            { DataSource = database.Path, Pooling = false }.ConnectionString))
             {
                 connection.Open();
                 using var transaction = connection.BeginTransaction();
@@ -88,14 +89,13 @@ public static class CdCollectSqlite2Parser
                     command.ExecuteNonQuery();
                 }
             }
-            using var converted = File.OpenRead(path);
+            using var converted = File.OpenRead(database.Path);
             return CdCollectParser.Parse(converted, progress, cancellationToken, sourcePath);
         }
         catch (SqliteException ex)
         {
             throw new CdCollectSqlite2CorruptException(ex.Message);
         }
-        finally { File.Delete(path); }
     }
 
     internal static bool HasCatalogSchema(Stream source)
