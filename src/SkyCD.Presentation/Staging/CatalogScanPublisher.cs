@@ -5,6 +5,7 @@ using SkyCD.Core.UndoRedo;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.Staging.Exceptions;
 using SkyCD.Presentation.UndoRedo.Actions;
 
@@ -270,6 +271,22 @@ public sealed class CatalogScanPublisher(CatalogEntryMerger? entryMerger = null)
         catch (Exception ex)
         {
             throw new CatalogScanPublicationException(generationId, ex.Message);
+        }
+
+        // Newly inserted entries change the totals of their ancestors (#1001). Ancestors merged over an
+        // existing record keep the aggregated size the scan computed, because a partial traversal must not be
+        // replaced by a sum over children this publication never touched; new ancestors were built entirely
+        // from this batch, so their totals are recomputed from what was just persisted.
+        if (inserted.Count > 0)
+        {
+            var stagedIds = new HashSet<string>(
+                updated.Select(static pair => pair.Updated.Id),
+                StringComparer.Ordinal);
+            CatalogSizeMaintenance.RecalculateAncestors(
+                repository,
+                inserted
+                    .Select(static document => document.ParentId)
+                    .Where(parentId => !string.IsNullOrWhiteSpace(parentId) && !stagedIds.Contains(parentId)));
         }
 
         // Recorded only after every batch has been written, so a partial publication never leaves an undo

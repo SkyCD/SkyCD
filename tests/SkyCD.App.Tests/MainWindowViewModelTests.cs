@@ -816,6 +816,33 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void AddImportedItem_LeavesNewFolderSizeUnknown()
+    {
+        var vm = CreateViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes.Single();
+
+        vm.AddImportedItem("Imported Folder");
+
+        var imported = Assert.Single(vm.BrowserItems, item => item.Name == "Imported Folder");
+        Assert.False(imported.HasKnownSize);
+        Assert.Equal(string.Empty, imported.DisplaySize);
+    }
+
+    [Fact]
+    public void DeleteCommand_InMemoryCatalog_RecalculatesAncestorSizes()
+    {
+        var vm = CreateViewModel();
+        vm.SelectedTreeNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "movies");
+        vm.SelectedBrowserItem = vm.BrowserItems.Single(item => item.Id == "interstellar");
+
+        vm.DeleteItemCommand.Execute(null);
+
+        vm.SelectedTreeNode = vm.TreeNodes.Single();
+        var movies = Assert.Single(vm.BrowserItems, item => item.Id == "movies");
+        Assert.Equal(SkyCD.Formatting.SizeFormatting.FormatBytes(9400000000L, "0.##"), movies.DisplaySize);
+    }
+
+    [Fact]
     public void NewCatalogCommand_WithSubscriber_OnlyRaisesRequest()
     {
         var vm = CreateViewModel();
@@ -985,7 +1012,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void OpenPropertiesCommand_FolderItem_HidesInfoTab()
+    public void OpenPropertiesCommand_FolderItem_ShowsSizeWithoutOtherInfoRows()
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes[0];
@@ -997,12 +1024,16 @@ public class MainWindowViewModelTests
         vm.OpenPropertiesCommand.Execute(null);
 
         Assert.NotNull(request);
-        Assert.False(request!.Dialog.HasInfoTab);
-        Assert.Empty(request.Dialog.InfoProperties);
+        // A folder carries its accumulated total on the document rather than in stored properties, so the
+        // Properties tab is no longer empty: it shows the size row and nothing else.
+        Assert.True(request!.Dialog.HasInfoTab);
+        var row = Assert.Single(request.Dialog.InfoProperties);
+        Assert.Equal("Size", row.Key);
+        Assert.Equal("0 b (0 bytes)", row.Value);
     }
 
     [Fact]
-    public void OpenPropertiesCommand_TreeNode_HidesInfoTab()
+    public void OpenPropertiesCommand_TreeNode_ShowsSizeWithoutOtherInfoRows()
     {
         var vm = CreateViewModel();
         vm.SelectedBrowserItem = null;
@@ -1013,8 +1044,10 @@ public class MainWindowViewModelTests
         vm.OpenPropertiesCommand.Execute(null);
 
         Assert.NotNull(request);
-        Assert.False(request!.Dialog.HasInfoTab);
-        Assert.Empty(request.Dialog.InfoProperties);
+        Assert.True(request!.Dialog.HasInfoTab);
+        var row = Assert.Single(request.Dialog.InfoProperties);
+        Assert.Equal("Size", row.Key);
+        Assert.Equal("0 b (0 bytes)", row.Value);
     }
 
     [Theory]
@@ -1056,7 +1089,7 @@ public class MainWindowViewModelTests
         Assert.NotNull(request);
         Assert.Equal("Item", request.Dialog.Name);
         Assert.Equal("Imported comment", request.Dialog.Comments);
-        Assert.Equal(["Comments", "FullName"], request.Dialog.InfoProperties.Keys);
+        Assert.Equal(["Comments", "FullName", "Size"], request.Dialog.InfoProperties.Keys);
         Assert.Equal("Stored name", request.Dialog.GetProperties()["Name"]);
         Assert.Equal("Stored directory", request.Dialog.GetProperties()["RealDirectoryName"]);
         request.Complete(false, "Canceled comment");

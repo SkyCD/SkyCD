@@ -31,5 +31,6 @@
         <StyleInclude Source="avares://SkyCD.App/Styles/IconStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/ButtonStyles.axaml" />
         <StyleInclude Source="avares://SkyCD.App/Styles/TreeViewStyles.axaml" />
+        <StyleInclude Source="avares://SkyCD.App/Styles/MenuStyles.axaml" />
     </Application.Styles>
 </Application>

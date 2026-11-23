@@ -162,6 +162,13 @@ public static class UiKeys
     public const string PluginVersionLabel = "core.ui.PluginVersionLabel";
     public const string PluginSourceLabel = "core.ui.PluginSourceLabel";
     public const string PluginPublisherLabel = "core.ui.PluginPublisherLabel";
+    public const string PluginVendorLabel = "core.ui.PluginVendorLabel";
+    public const string PluginSizeLabel = "core.ui.PluginSizeLabel";
+    public const string PluginUpdatesFromLabel = "core.ui.PluginUpdatesFromLabel";
+    public const string PluginUpdatesFromMarketplace = "core.ui.PluginUpdatesFromMarketplace";
+    public const string PluginUpdatesFromPluginFolder = "core.ui.PluginUpdatesFromPluginFolder";
+    public const string PluginProjectLinkLabel = "core.ui.PluginProjectLinkLabel";
+    public const string PluginAuthorLinkLabel = "core.ui.PluginAuthorLinkLabel";
     public const string On = "core.ui.On";
     public const string Installed = "core.ui.Installed";
     public const string Refresh = "core.ui.Refresh";

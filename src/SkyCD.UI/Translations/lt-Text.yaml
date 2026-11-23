@@ -255,3 +255,5 @@ text.PluginUninstallInvalidId: "įskiepio aplanko pavadinimas netinkamas, todėl
 text.PluginUninstallUnsafePath: "įskiepio aplankas yra už įskiepių katalogo ribų, todėl nieko nebuvo ištrinta."
 text.PluginUninstallNotCatalogOwned: "šis įskiepis nebuvo įdiegtas per SkyCD, todėl jo failai nebuvo ištrinti."
 text.PluginUninstallFilesInUse: "įskiepio failai naudojami arba tik skaitomi, todėl nieko nebuvo ištrinta."
+text.PluginFilterNoMatches: "Joks įskiepis neatitinka filtro."
+text.PluginMarketplaceFilterNoMatches: "Joks rinkos įskiepis neatitinka filtro."

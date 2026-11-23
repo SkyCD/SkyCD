@@ -33,6 +33,9 @@ public sealed class DiscoveredPlugin
 
     public required string FileName { get; init; }
 
+    /// <summary>Full path of the discovered assembly, or empty when the host loaded it without a file location.</summary>
+    public string AssemblyLocation { get; init; } = string.Empty;
+
     public required IReadOnlyCollection<IPluginCapability> Capabilities { get; init; }
 
     public void RegisterPluginServices(IRegistrator registrator)

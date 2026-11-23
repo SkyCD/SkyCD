@@ -2,7 +2,6 @@ using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Globalization;
 using SkyCD.Plugin.Abstractions.Localization;
@@ -11,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
+using SkyCD.Presentation.Plugins;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -332,16 +332,13 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginAuthorUrl))]
     private void OpenSelectedPluginAuthorUrl()
     {
-        if (SelectedPlugin is null || string.IsNullOrWhiteSpace(SelectedPlugin.AuthorUrl))
-        {
-            return;
-        }
+        ExternalLinkLauncher.TryOpen(SelectedPlugin?.AuthorUrl);
+    }
 
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = SelectedPlugin.AuthorUrl,
-            UseShellExecute = true
-        });
+    [RelayCommand(CanExecute = nameof(CanOpenSelectedPluginProjectUrl))]
+    private void OpenSelectedPluginProjectUrl()
+    {
+        ExternalLinkLauncher.TryOpen(SelectedPlugin?.ProjectUrl);
     }
 
     [RelayCommand]
@@ -395,7 +392,12 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
     private bool CanOpenSelectedPluginAuthorUrl()
     {
-        return SelectedPlugin is not null && SelectedPlugin.HasAuthorUrl;
+        return ExternalLinkLauncher.IsLaunchable(SelectedPlugin?.AuthorUrl);
+    }
+
+    private bool CanOpenSelectedPluginProjectUrl()
+    {
+        return ExternalLinkLauncher.IsLaunchable(SelectedPlugin?.ProjectUrl);
     }
 
     public void SetPlugins(IEnumerable<OptionsPluginItem> plugins)
@@ -494,6 +496,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         pluginSelectionIsAuto = isAutoSelectingPlugin;
         OnPropertyChanged(nameof(SelectedPluginDescription));
         OpenSelectedPluginAuthorUrlCommand.NotifyCanExecuteChanged();
+        OpenSelectedPluginProjectUrlCommand.NotifyCanExecuteChanged();
         if (value is not null && !pluginSelectionIsAuto) IsMarketplaceBrowseSelected = false;
         NotifySelectedPluginDetailsChanged();
     }
@@ -676,6 +679,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         RefreshScanLocalization();
         RefreshDetailsColumnsLocalization();
         RefreshCategoriesPreservingSelection();
+        NotifySelectedPluginDetailsChanged();
         NotifyMcpToolsLocalizationChanged();
         NotifySettingsVisibilityChanged();
     }
@@ -708,6 +712,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(InstalledPluginsHeader));
         OnPropertyChanged(nameof(InstalledPluginsCount));
+        OnPropertyChanged(nameof(ShowInstalledPluginsEmptyState));
     }
 
     private void RefreshFilteredCategories()

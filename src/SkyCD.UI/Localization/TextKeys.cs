@@ -289,4 +289,6 @@ public static class TextKeys
     public const string PluginUninstallUnsafePath = "core.text.PluginUninstallUnsafePath";
     public const string PluginUninstallNotCatalogOwned = "core.text.PluginUninstallNotCatalogOwned";
     public const string PluginUninstallFilesInUse = "core.text.PluginUninstallFilesInUse";
+    public const string PluginFilterNoMatches = "core.text.PluginFilterNoMatches";
+    public const string PluginMarketplaceFilterNoMatches = "core.text.PluginMarketplaceFilterNoMatches";
 }

@@ -288,3 +288,5 @@ text.PluginUninstallInvalidId: "the plugin folder name is not valid, so nothing 
 text.PluginUninstallUnsafePath: "the plugin folder is outside the plugin directory, so nothing was deleted."
 text.PluginUninstallNotCatalogOwned: "this plugin was not installed by SkyCD, so its files were not deleted."
 text.PluginUninstallFilesInUse: "the plugin files are in use or read-only, so nothing was deleted."
+text.PluginFilterNoMatches: "No plugins match your filter."
+text.PluginMarketplaceFilterNoMatches: "No marketplace plugins match your filter."

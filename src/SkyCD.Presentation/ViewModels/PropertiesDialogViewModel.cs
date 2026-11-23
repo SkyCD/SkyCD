@@ -20,6 +20,7 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
 {
     private const string DescriptionPropertyKey = "Description";
+    private const string SizePropertyKey = "Size";
 
     private static readonly HashSet<string> HiddenInfoPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -27,6 +28,8 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         "RealDirectoryName",
         "Comment",
         "LocationId",
+        // The known/unknown marker only drives whether a size row appears; it is not a catalog property.
+        CatalogDocument.SizeKnownPropertyKey,
         // The rating is edited with the star control at the top of the General tab.
         StarRating.PropertyKey
     };
@@ -38,6 +41,8 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
     private readonly PropertiesCollection sourceProperties;
     private readonly IStringLocalizer valueLocalizer;
     private readonly string? catalogDescription;
+    private readonly long? size;
+    private readonly bool sizeKnown;
 
     public PropertiesDialogViewModel(
         string objectKey,
@@ -45,12 +50,16 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
         string iconGlyph,
         string comments,
         PropertiesCollection infoProperties,
-        IStringLocalizer? localizer = null)
+        IStringLocalizer? localizer = null,
+        long? size = null,
+        bool sizeKnown = false)
     {
         ObjectKey = objectKey;
         this.name = name;
         IconGlyph = iconGlyph;
         this.comments = comments;
+        this.size = size;
+        this.sizeKnown = sizeKnown;
         sourceProperties = new PropertiesCollection(infoProperties.ToDictionary(item => item.Key, item => item.Value));
         catalogDescription = ReadCatalogDescription(sourceProperties);
         valueLocalizer = localizer ?? new PropertyValueLocalizer();
@@ -281,9 +290,10 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Builds the normalized properties plus the single Description row. The row is projected at read time
-    /// from the stored catalog Description or, when none is stored, the cached AI text; it is rebuilt from
-    /// scratch so refreshed localization and AI updates cannot duplicate or drop it.
+    /// Builds the normalized properties plus the single Description row and the entry's size. Both rows are
+    /// projected at read time — the description from the stored catalog text or cached AI text, the size from
+    /// the document's catalog size — and rebuilt from scratch so refreshed localization and AI updates cannot
+    /// duplicate or drop them.
     /// </summary>
     private PropertiesCollection BuildInfoProperties()
     {
@@ -300,20 +310,55 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
             infoProperties.Remove(descriptionKey);
         }
 
-        if (Description is not { HasDescription: true } description)
+        var sizeLabel = MediaMetadataValueFormatter.ResolveLabel(SizePropertyKey);
+        string? sizeText = null;
+        if (size is not null)
+        {
+            // Folders carry their accumulated total only on the document, so the stored property is not the
+            // whole story. The row is projected from the catalog size instead; an unknown size has no row,
+            // which is how a title-only entry avoids claiming an empty 0 b.
+            var storedSizeKey = infoProperties.Keys.FirstOrDefault(
+                key => string.Equals(key, sizeLabel, StringComparison.CurrentCultureIgnoreCase) ||
+                       string.Equals(key, SizePropertyKey, StringComparison.CurrentCultureIgnoreCase));
+            if (storedSizeKey is not null)
+            {
+                infoProperties.Remove(storedSizeKey);
+            }
+
+            if (sizeKnown)
+            {
+                sizeText = FormatSize(size.Value);
+            }
+        }
+
+        var showDescription = Description is { HasDescription: true } description;
+        if (!showDescription && sizeText is null)
         {
             return infoProperties;
         }
 
-        // The description is the first row so its position stays deterministic in every locale.
-        var withDescription = new PropertiesCollection { [header] = description.DescriptionText };
-        foreach (var (key, value) in infoProperties)
+        // The description and size lead the list so their positions stay deterministic in every locale.
+        var withRows = new PropertiesCollection();
+        if (showDescription)
         {
-            withDescription[key] = value;
+            withRows[header] = Description!.DescriptionText;
         }
 
-        return withDescription;
+        if (sizeText is not null)
+        {
+            withRows[sizeLabel] = sizeText;
+        }
+
+        foreach (var (key, value) in infoProperties)
+        {
+            withRows[key] = value;
+        }
+
+        return withRows;
     }
+
+    private static string FormatSize(long bytes) =>
+        $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({bytes.ToString("N0", CultureInfo.CurrentCulture)} bytes)";
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 

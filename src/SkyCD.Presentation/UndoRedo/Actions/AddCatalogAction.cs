@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
+using SkyCD.Presentation.Catalog;
 
 namespace SkyCD.Presentation.UndoRedo.Actions
 {
@@ -15,6 +16,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
     {
         private readonly CatalogDocumentRepository _repository;
         private readonly List<CatalogDocument> _addedDocuments;
+        private readonly IReadOnlyList<string> _externalParentIds;
 
         public AddCatalogAction(
             CatalogDocumentRepository repository,
@@ -23,6 +25,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _addedDocuments = new List<CatalogDocument>(addedDocuments ?? throw new ArgumentNullException(nameof(addedDocuments)));
+            _externalParentIds = CatalogSizeMaintenance.ExternalParentIds(_addedDocuments);
         }
 
         public override bool CanUndo => true;
@@ -39,6 +42,8 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                     _repository.Collection.Delete(document);
                 }
             }
+
+            CatalogSizeMaintenance.RecalculateAncestors(_repository, _externalParentIds);
             return Task.CompletedTask;
         }
 
@@ -49,6 +54,8 @@ namespace SkyCD.Presentation.UndoRedo.Actions
             {
                 _repository.Save(doc.Id, doc);
             }
+
+            CatalogSizeMaintenance.RecalculateAncestors(_repository, _externalParentIds);
             return Task.CompletedTask;
         }
     }
