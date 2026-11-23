@@ -3,14 +3,21 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <!-- Shared with the XMP sidecar plugin: one copy of the XMP/IPTC/TIFF parsing, compiled into each. -->
-        <Compile Include="..\Shared\MediaMetadata\**\*.cs" Link="Shared\MediaMetadata\%(RecursiveDir)%(Filename)%(Extension)"/>
+        <!-- Shared with the XMP sidecar plugin: one copy of the scan, text and XMP property mapping. -->
+        <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Parsing\XmpMetadataReader.cs" Link="Shared\MediaMetadata\XmpMetadataReader.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Models\MetadataValues.cs" Link="Shared\MediaMetadata\MetadataValues.cs"/>
+        <Compile Include="..\Shared\MediaMetadata\Models\SourcePrefix.cs" Link="Shared\MediaMetadata\SourcePrefix.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Apache-2.0: EXIF, IPTC, XMP, PNG and WebP metadata directories. Its XmpCore dependency declares -->
+        <!-- only a license URL, which docs/legal/dependency-license-policy.json maps to BSD-3-Clause. -->
+        <PackageReference Include="MetadataExtractor" Version="2.9.3"/>
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: decoding, orientation-aware scaling and thumbnail encoding. -->
-        <!-- No general metadata library is referenced: the obvious candidate drags in an XMP toolkit whose -->
-        <!-- NuGet license the policy gate reports as unknown, so the few EXIF tags needed here are read -->
-        <!-- directly. See docs/plugins/image.md. -->
+        <!-- See docs/plugins/image.md for why SkiaSharp remains the only pixel decoder. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
@@ -23,7 +30,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Image Preview and Metadata</AssemblyTitle>
-        <Description>Extracts dimensions, format, orientation, capture date, embedded tags, comment and rating from JPEG, PNG and WebP sources, and renders bounded orientation-corrected thumbnails.</Description>
+        <Description>Extracts dimensions, format, orientation, capture date, embedded tags, comment and rating from JPEG, PNG, WebP, GIF and TIFF/RAW sources, and renders bounded orientation-corrected thumbnails.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

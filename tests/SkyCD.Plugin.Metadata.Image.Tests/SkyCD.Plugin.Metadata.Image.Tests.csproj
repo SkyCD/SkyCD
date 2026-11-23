@@ -12,6 +12,10 @@
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Locator only; the packet itself is parsed by the shared XMP reader under test. -->
+        <Compile Include="..\..\Plugins\Shared\MediaMetadata\Parsing\XmpPacketLocator.cs" Link="Shared\XmpPacketLocator.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>

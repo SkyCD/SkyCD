@@ -65,12 +65,15 @@ rather than extension:
 | WebP | `XMP ` packet, `EXIF` chunk |
 | GIF | none — no portable tag carrier |
 
-Compressed PNG text (`zTXt`, compressed `iTXt`) is not inflated: decompression is left to dedicated
-editors rather than paid in an index pass. XMP provides `dc:subject`, `pdf:Keywords`,
+Compressed PNG text (`zTXt`, compressed `iTXt`) is inflated by the library before mapping, so a tool that
+compresses its caption still reaches the catalog. XMP provides `dc:subject`, `pdf:Keywords`,
 `dc:description`, `exif:UserComment`, `xmp:Rating` and `MicrosoftPhoto:Rating`; IPTC-IIM provides
 2:25 keywords and 2:120 caption; TIFF ratings use the Shell 1–99 scale, negative values mean
-"rejected" and are ignored. The parsers are shared source files from `Plugins/Shared/MediaMetadata/`,
-compiled into this assembly and into the XMP sidecar plugin, which needs the same XMP and IPTC code.
+"rejected" and are ignored. Readers run from the most explicit carrier to the least — XMP, IPTC-IIM,
+the EXIF directory, PNG text chunks, JPEG COM — so a caption or rating written by a photo editor wins,
+while keywords from every carrier merge. The directory parsing comes from `MetadataExtractor`; only the
+portable-property mapping and the XMP property mapping are shared source files from
+`Plugins/Shared/MediaMetadata/`, compiled into this assembly and into the XMP sidecar plugin.
 
 ## Tags from TIFF and TIFF-based RAW
 
@@ -86,7 +89,7 @@ failing the pass.
 
 Carriers read from the TIFF directory structure: `XPKeywords`/`XPComment` (UCS-2LE), `ImageDescription`,
 `UserComment`, `Rating` and `RatingPercent`, plus the embedded XMP (tag 700) and IPTC-IIM (tag 33723)
-blobs, which are parsed with the same readers as the JPEG path. Maker notes are not parsed: they are
+blobs, which are mapped by the same reader as the JPEG path. Maker notes are not mapped: they are
 per-vendor and not portable. The scan reads at most the first 1 MiB of the source, in 256 KiB chunks and
 through the host's budget, so a RAW file is never buffered whole. Damaged directories contribute nothing
 rather than failing extraction.
@@ -131,35 +134,33 @@ crash.
   interruptible; the host's per-provider timeout covers a decoder that ignores cancellation.
 - Malformed and truncated sources raise `ImageDecodeException`, which the host turns into a `failed` record
   with a sanitized reason. Failures never surface plugin exception text to the catalog.
-- A malformed EXIF directory is not a failure. Every offset is bounds checked and the reader gives up on
-  tags while the geometry already extracted from the decoder stands.
+- A malformed EXIF directory is not a failure. The library reports the directories it could read, and a
+  container it cannot parse at all yields no tags while the geometry already extracted from the decoder
+  stands.
 
 ## Dependencies and licensing
 
 | Package | Version | License | Why |
 |---|---|---|---|
+| `MetadataExtractor` | 2.9.3 | Apache-2.0 | EXIF, IPTC-IIM, XMP, PNG, WebP and TIFF directories |
+| `XmpCore` (transitive) | 6.1.10.1 | BSD-3-Clause | XMP packet parsing; declared by URL, mapped in the policy |
 | `SkiaSharp` | 3.119.4 | MIT | Decode, orientation-aware scaling, thumbnail encoding |
 | `SkiaSharp.NativeAssets.Win32` / `.Linux` / `.macOS` | 3.119.4 | MIT | Platform natives |
 
-SkiaSharp is the only dependency, and 3.119.4 is the version Avalonia already resolves for the desktop app,
-so the plugin adds no second imaging stack. All packages are on the allow-list in
-`docs/legal/dependency-license-policy.json`, verified with the same CycloneDX SBOM the CI license gate uses.
-
-EXIF is read by `ExifReader` directly from the container's TIFF directory rather than through a metadata
-library. The obvious candidate (`MetadataExtractor`, Apache-2.0) drags in `XmpCore`, whose NuGet license is
-declared as a URL rather than an SPDX expression; the policy gate reports it as unknown and
-`failOnUnknownLicense` rejects it. Only two tags are actually needed — `DateTimeOriginal` with its
-`OffsetTimeOriginal` companion, falling back to IFD0 `DateTime` — so parsing them in-plugin is both smaller
-and license-clean. `SixLabors.ImageSharp` was likewise rejected: its Six Labors Split License is not on the
-allow-list.
+`MetadataExtractor` 2.9.3 targets .NET 8 and therefore runs on .NET 10 without a compatibility package.
+Its `XmpCore` dependency declares only a license URL instead of an SPDX expression; the URL is mapped to
+`BSD-3-Clause` in `docs/legal/dependency-license-policy.json` (`licenseIdsByUrl`), with Adobe's XMP SDK
+`LICENSE` and the upstream project README as evidence and OSADL rating that license compatible. The gate
+then validates the actual license rather than blanket-allowing unknown licenses. All packages are
+verified with the same CycloneDX SBOM the CI license gate uses.
 
 ## Limitations
 
 - JPEG, PNG, WebP and GIF are decoded. TIFF, HEIF, AVIF and RAW are never decoded; TIFF-based containers
   are claimed by the tags-only capability, and OS-assigned properties are the file metadata plugin's job.
   HEIF and AVIF are not claimed at all.
-- Tags are whatever portable carriers the container holds. A tool that stores keywords only in a format
-  the reader does not parse (compressed PNG text, maker notes) leaves them uncached.
+- Tags are whatever portable carriers the container holds. A tool that stores keywords only in maker notes
+  leaves them uncached.
 - EXIF local time carries no zone unless `OffsetTimeOriginal` is present. When it is absent the value is
   stored with a zero offset rather than being guessed from the host's time zone.
 - Animated WebP and APNG report a frame count but, like GIF, are previewed by the first frame only.
@@ -185,5 +186,9 @@ and a GIF asserting that no tag fields are published. `ContainerTagsPluginTests`
 directories carrying the XP tags, `RatingPercent`, `Rating`, embedded XMP (tag 700) and IPTC (tag 33723),
 and covers non-TIFF bytes under a `.tif` name, malformed and absurd directories, an empty source, the 1 MiB
 prefix bound, cancellation, progress, and the descriptor claiming TIFF and RAW extensions only.
+`EmbeddedMetadataReaderTests` assembles TIFF directories with an Exif sub-IFD to pin the date rules down —
+`OffsetTimeOriginal` is applied to the value, `DateTimeOriginal` beats the IFD0 fallback, an unreadable
+date produces no timestamp — and asserts that XMP wins the caption and rating while keywords from every
+carrier merge, and that UCS-2 XP comments and big-endian `UserComment` text decode.
 `ImagePluginIntegrationTests` also asserts that discovery finds all three capabilities from assembly
 metadata alone.

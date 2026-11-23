@@ -108,16 +108,50 @@ internal static class MetadataFixtures
     public static TiffEntry Raw(ushort tag, byte[] value, ushort type = 1) =>
         new(tag, type, (uint)value.Length, value);
 
-    public static byte[] Tiff(bool littleEndian, params TiffEntry[] entries)
+    public static byte[] Tiff(bool littleEndian, params TiffEntry[] entries) =>
+        BuildTiff(littleEndian, entries, subIfdEntries: null);
+
+    /// <summary>A TIFF whose IFD0 points at an Exif sub-IFD holding the original timestamp tags.</summary>
+    public static byte[] TiffWithSubIfd(bool littleEndian, TiffEntry[] ifd0, TiffEntry[] subIfd) =>
+        BuildTiff(littleEndian, ifd0, subIfd);
+
+    private static byte[] BuildTiff(bool littleEndian, TiffEntry[] ifd0Entries, TiffEntry[]? subIfdEntries)
     {
+        const ushort ExifSubIfdPointer = 0x8769;
+
+        var ifd0Start = 8;
+        var pointerEntries = subIfdEntries is null ? 0 : 1;
+        var ifd0Size = 2 + (((ifd0Entries.Length + pointerEntries) * 12)) + 4;
+        var subIfdStart = ifd0Start + ifd0Size;
+        var subIfdSize = subIfdEntries is null ? 0 : 2 + (subIfdEntries.Length * 12) + 4;
+        var dataStart = subIfdStart + subIfdSize;
+
+        var ifd0 = subIfdEntries is null
+            ? ifd0Entries
+            : [.. ifd0Entries,
+                new TiffEntry(ExifSubIfdPointer, 4, 1, LongBytes((uint)subIfdStart, littleEndian))];
+
         using var stream = new MemoryStream();
         stream.Write(littleEndian ? "II"u8 : "MM"u8);
         WriteUInt16(stream, 42, littleEndian);
-        WriteUInt32(stream, 8, littleEndian);
-        WriteUInt16(stream, (ushort)entries.Length, littleEndian);
+        WriteUInt32(stream, (uint)ifd0Start, littleEndian);
 
-        var dataStart = 8 + 2 + entries.Length * 12 + 4;
         var data = new MemoryStream();
+        WriteDirectory(stream, ifd0, data, dataStart, littleEndian);
+        if (subIfdEntries is not null)
+        {
+            WriteDirectory(stream, subIfdEntries, data, dataStart, littleEndian);
+        }
+
+        data.Position = 0;
+        data.CopyTo(stream);
+        return stream.ToArray();
+    }
+
+    private static void WriteDirectory(Stream stream, IReadOnlyList<TiffEntry> entries, MemoryStream data,
+        int dataStart, bool littleEndian)
+    {
+        WriteUInt16(stream, (ushort)entries.Count, littleEndian);
         foreach (var entry in entries)
         {
             WriteUInt16(stream, entry.Tag, littleEndian);
@@ -141,10 +175,11 @@ internal static class MetadataFixtures
         }
 
         WriteUInt32(stream, 0, littleEndian);
-        data.Position = 0;
-        data.CopyTo(stream);
-        return stream.ToArray();
     }
+
+    private static byte[] LongBytes(uint value, bool littleEndian) => littleEndian
+        ? [(byte)value, (byte)(value >> 8), (byte)(value >> 16), (byte)(value >> 24)]
+        : [(byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value];
 
     private static void WriteUInt16(Stream stream, ushort value, bool littleEndian)
     {

@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.MediaMetadata;
+using SkyCD.Plugin.MediaMetadata.Models;
 using SkyCD.Plugin.Metadata.Image.Models;
 using SkyCD.Plugin.Metadata.Image.Parsing;
-using SkyCD.Plugin.MediaMetadata.Models;
-using SkyCD.Plugin.MediaMetadata.Parsing;
 
 namespace SkyCD.Plugin.Metadata.Image;
 
@@ -46,8 +44,9 @@ public sealed class ImageMetadataPlugin : IMediaMetadataCapability
         var probe = ImageDecoder.Probe(data);
         progress?.Report(new MediaProgress(0.7));
 
-        // Best-effort: geometry is already known, so a source without EXIF still yields a full result.
-        var capturedAt = ExifReader.TryReadCapturedAt(data);
+        // Best-effort: geometry is already known, so a source without tag carriers still yields a full
+        // result, and the reader maps a damaged carrier to no values instead of failing the item.
+        var embedded = EmbeddedMetadataReader.Read(data);
         progress?.Report(new MediaProgress(1));
 
         var values = new List<MediaMetadataValue>
@@ -62,26 +61,13 @@ public sealed class ImageMetadataPlugin : IMediaMetadataCapability
             new(ImageSchema.IsAnimated, MediaMetadataType.Boolean, Boolean: probe.IsAnimated)
         };
 
-        if (capturedAt is { } timestamp)
+        if (embedded.CapturedAt is { } timestamp)
         {
             values.Add(new MediaMetadataValue(
                 ImageSchema.CapturedAt, MediaMetadataType.Timestamp, Timestamp: timestamp));
         }
 
-        MetadataScan? tags = null;
-        try
-        {
-            tags = ImageTagsReader.Scan(data);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            // A damaged container must never fail the item; the image keeps its geometry without tags.
-        }
-
-        if (tags is not null)
-        {
-            values.AddRange(MetadataValues.Build(tags, ImageSchema.Tags, ImageSchema.Comment, ImageSchema.Rating));
-        }
+        values.AddRange(MetadataValues.Build(embedded.Tags, ImageSchema.Tags, ImageSchema.Comment, ImageSchema.Rating));
 
         return new MediaExtractionResult(values);
     }

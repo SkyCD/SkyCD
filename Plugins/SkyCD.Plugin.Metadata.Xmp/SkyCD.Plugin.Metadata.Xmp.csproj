@@ -3,6 +3,11 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- BSD-3-Clause per its upstream README and Adobe's XMP SDK LICENSE; the package declares only a -->
+        <!-- license URL, which docs/legal/dependency-license-policy.json maps to BSD-3-Clause. -->
+        <PackageReference Include="XmpCore" Version="6.1.10.1"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- Shared with the image plugin, which reads the same packet out of JPEG, PNG, WebP and TIFF. -->
         <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataScan.cs" Link="Shared\MediaMetadata\MetadataScan.cs"/>
         <Compile Include="..\Shared\MediaMetadata\Parsing\MetadataText.cs" Link="Shared\MediaMetadata\MetadataText.cs"/>

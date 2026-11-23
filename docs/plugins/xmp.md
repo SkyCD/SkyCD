@@ -47,9 +47,11 @@ Both keyword sources merge and deduplicate case-insensitively. Ratings use the S
 (1–12 → 1★, 13–37 → 2★, 38–62 → 3★, 63–87 → 4★, 88–99 → 5★); zero, negative ("rejected") and absent
 values produce no rating.
 
-XML is parsed with DTD processing prohibited and no external resolver, so a hostile sidecar cannot pull
-in external entities. The packet is located either as a wrapped packet (`<?xpacket ...?>` around
-`x:xmpmeta`) or as bare `rdf:RDF`, because some tools write the RDF without the wrapper.
+The packet is located either as a wrapped packet (`<?xpacket ...?>` around `x:xmpmeta`) or as bare
+`rdf:RDF`, because some tools write the RDF without the wrapper; a byte-slice locator cuts it out of the
+bounded prefix. Parsing and property access are delegated to XmpCore, the XMP toolkit that
+`MetadataExtractor` also bundles on every target framework, so the plugin carries no hand-written XML
+reader.
 
 ## Resource behaviour
 
@@ -69,12 +71,18 @@ in external entities. The packet is located either as a wrapped packet (`<?xpack
 
 ## Dependencies and licensing
 
-The reader is pure BCL (`System.Xml.Linq`) and adds no NuGet packages. The general-purpose XMP toolkit
-was rejected: its NuGet license is declared as a URL rather than an SPDX expression, which the
-dependency-license policy gate reports as unknown and fails. The parsing is shared source from
-`Plugins/Shared/MediaMetadata/` (`XmpPacketLocator`, `XmpMetadataReader`, `XmpPacketReader`,
-`MetadataScan`, `MetadataText`, `MetadataValues`, `SourcePrefix`), compiled into this assembly and into
-`SkyCD.Plugin.Metadata.Image`, which needs the same code for embedded packets.
+| Package | Version | License | Why |
+|---|---|---|---|
+| `XmpCore` | 6.1.10.1 | BSD-3-Clause | Packet parsing and property access |
+
+The package declares only a license URL rather than an SPDX expression; the URL is mapped to
+`BSD-3-Clause` in `docs/legal/dependency-license-policy.json` (`licenseIdsByUrl`), with Adobe's XMP SDK
+`LICENSE` and the upstream project README as evidence. The same package arrives transitively through
+`MetadataExtractor` in the image plugin, so both plugins use one XMP implementation. The locator, mapping
+logic and scan helpers are shared source from `Plugins/Shared/MediaMetadata/` (`XmpPacketLocator`,
+`XmpMetadataReader`, `XmpPacketReader`, `MetadataScan`, `MetadataText`, `MetadataValues`, `SourcePrefix`),
+compiled into this assembly and into `SkyCD.Plugin.Metadata.Image`, which needs the same code for embedded
+packets.
 
 ## Tests
 

@@ -64,7 +64,7 @@ Plugins/SkyCD.Plugin.FileFormat.DiskExplorer/
 
 Plugins/Shared/MediaMetadata/
   Models/MetadataValues.cs
-  Parsing/TiffMetadataReader.cs
+  Parsing/MetadataScan.cs
 ```
 
 Shared files are linked into the consuming projects with `<Compile Include>`. When shared files
