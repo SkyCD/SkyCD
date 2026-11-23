@@ -153,8 +153,8 @@ All container and file-system access uses DiscUtils `0.16.13` (MIT packages:
 `DiscUtils.Iso9660`, `DiscUtils.Udf`, `DiscUtils.Dmg`, `DiscUtils.Ext`, `DiscUtils.Fat`,
 `DiscUtils.HfsPlus`, `DiscUtils.Ntfs`, `DiscUtils.Vhd`, `DiscUtils.Vhdx` and `DiscUtils.Vmdk`),
 already used by these plugins before the consolidation. DAA decoding uses
-`System.IO.Compression.DeflateStream`. Every package is allowed by
-`docs/legal/dependency-license-policy.json`.
+`System.IO.Compression.DeflateStream`. Every package passes the Trivy license gate in
+`docs/legal/dependency-policy.md`.
 
 ## Tests
 

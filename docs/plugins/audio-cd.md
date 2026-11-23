@@ -155,8 +155,9 @@ already manages, and published atomically with the file records:
 | SkiaSharp.NativeAssets.Win32 / Linux / macOS | 3.119.4 | MIT | Native renderer for each RID |
 | Avalonia, Avalonia.Desktop | 12.1.6 | MIT | Embedded settings page, same pattern as Sample.Configuration |
 
-All three families are already policy-allowed and already used by the repo (`SkyCD.Plugin.Metadata.Image` uses
-SkiaSharp; every UI plugin uses Avalonia), so no policy whitelist entry or change is needed. Network and JSON
+All three families already pass the Trivy license gate in `docs/legal/dependency-policy.md` and are already
+used by the repo (`SkyCD.Plugin.Metadata.Image` uses SkiaSharp; every UI plugin uses Avalonia), so no policy
+change is needed. Network and JSON
 use the MIT .NET runtime (`HttpClient`, `System.Text.Json`); no HTTP or JSON package is added.
 
 Alternatives considered:

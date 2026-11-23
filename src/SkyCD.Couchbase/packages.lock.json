@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Couchbase.Lite": {
+        "type": "Direct",
+        "requested": "[4.1.3, )",
+        "resolved": "4.1.3",
+        "contentHash": "eqb4TbfAcyqN9ZiC1RPVq6gc3WF6GM6eWBYR2ODJ3/tJtOkqcR4YpM+jLebEcJbKkdrd54cI9Ck5nnvf/H6lYw==",
+        "dependencies": {
+          "Couchbase.Lite.Support.NetDesktop": "[4.1.3]",
+          "Microsoft.Extensions.DependencyInjection": "9.0.8",
+          "SerialQueue": "2.1.0"
+        }
+      },
+      "DryIoc.dll": {
+        "type": "Direct",
+        "requested": "[5.4.3, )",
+        "resolved": "5.4.3",
+        "contentHash": "yhXOG3SOxeWYxBAWskNRDD8fzw5hriEawv4VN4WKaFHOuubiop4kxe2rkWTEyCnTgRVgxVUSQCDBBkZqwPm1iQ=="
+      },
+      "Couchbase.Lite.Support.NetDesktop": {
+        "type": "Transitive",
+        "resolved": "4.1.3",
+        "contentHash": "Jtlac0cTR/iEOz27eBeetPxUoUcJdwsJDZiQF9fMD+InfDNiwozTrgZe4LBy75QJuHNv74qSWYsHSrZhsX5tOg=="
+      },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "JJjI2Fa+QtZcUyuNjbKn04OjIUX5IgFGFu/Xc+qvzh1rXdZHLcnqqVXhR4093bGirTwacRlHiVg1XYI9xum6QQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.8"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "xY3lTjj4+ZYmiKIkyWitddrp1uL5uYiweQjqo4BKBw01ZC4HhcfgLghDpPZcUlppgWAFqFy9SgkiYWOMx365pw=="
+      },
+      "SerialQueue": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "rmQcrFXgcrqT9M6+xdxAK/JWx1vFuCRT8fTdce4ALdze2/8N5yMRW9Vmkresw+JpL+JC8zuC1HfDkrfVgBUIqA=="
+      }
+    }
+  }
+}

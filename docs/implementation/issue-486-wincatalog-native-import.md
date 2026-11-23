@@ -31,8 +31,8 @@ resolved from assembly metadata; no `plugin.json`).
   `WinCatalogNativeLegacyProfileException`,
   `WinCatalogNativeUnsupportedVersionException`.
 - New dependencies: `Microsoft.Data.Sqlite` 11.0.0 (Apache-2.0) and
-  `SQLitePCLRaw.lib.e_sqlite3` 2.1.14 (Apache-2.0); both allowed by
-  `docs/legal/dependency-license-policy.json`.
+  `SQLitePCLRaw.lib.e_sqlite3` 2.1.14 (Apache-2.0); both pass the Trivy
+  license gate in `docs/legal/dependency-policy.md`.
 
 ## Legacy profiles
 `.wcat`/`.wca`/`.wcl` are recognized by extension only to produce the

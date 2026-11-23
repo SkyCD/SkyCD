@@ -112,15 +112,15 @@ read, between chunks and between parsing steps.
 This plugin has **no NuGet dependencies**. The metadata parser, the package reader and the source reader are
 implemented in the project on top of the .NET 10 runtime libraries `System.IO.Compression` and
 `System.Xml.Linq` (MIT-licensed .NET runtime). Running `dotnet list` with `package --include-transitive` on
-the plugin project reports no packages, so the blocked-license, unknown-license and explicit-whitelist rules in
-`docs/legal/dependency-license-policy.json` are unchanged and no policy file change is made.
+the plugin project reports no packages, so the Trivy license gate in
+`docs/legal/dependency-policy.md` sees no new packages and no policy change is made.
 
 | Candidate | Version | License | Decision |
 |---|---|---|---|
 | ODF Toolkit (Apache) | – | Apache-2.0 | Rejected. A Java library: not consumable from .NET 10. |
-| AODL | – | LGPL-2.1 | Rejected. The checked-in policy blocks the LGPL family, and the library is unmaintained. |
+| AODL | – | LGPL-2.1 | Rejected. The license gate rejects the LGPL family, and the library is unmaintained. |
 | Open XML SDK | – | MIT | Rejected. Reads OOXML, not OpenDocument packages. |
-| Aspose.Words / GroupDocs.Parser | – | Proprietary EULA | Rejected. Both support OpenDocument metadata, but the EULA is not policy-approved and the first-party parser is small and sufficient. |
+| Aspose.Words / GroupDocs.Parser | – | Proprietary EULA | Rejected. Both support OpenDocument metadata, but the proprietary EULA is unacceptable and the first-party parser is small and sufficient. |
 | SharpZipLib | 1.4.2 | MIT | Rejected. Adds nothing over `System.IO.Compression` for reading a few members. |
 
 The format facts come from the OASIS OpenDocument specification and the OpenOffice.org 1.x XML format

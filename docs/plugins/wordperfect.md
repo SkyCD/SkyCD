@@ -88,8 +88,8 @@ WordPerfect 7 and later wrap the document in an OLE2 compound file (the `.doc`/`
 regular sector chain and the mini stream used for streams below 4096 bytes. Every declared sector, stream size
 and chain link is checked against the bytes actually present, chain traversal is bounded by the sector count,
 and a loop or a pointer outside the file is rejected instead of followed. The reader is in-tree rather than a
-package because the usual .NET compound-file library is MPL-2.0, which the repository's BSD-2-Clause outbound
-policy does not accept (see [Dependencies and licensing](#dependencies-and-licensing)).
+package to keep the dependency tree small; the usual .NET compound-file library is MPL-2.0
+(see [Dependencies and licensing](#dependencies-and-licensing)).
 
 ## Encrypted documents
 
@@ -117,7 +117,7 @@ reader are implemented in the project.
 
 | Candidate | Version | License | Decision |
 |---|---|---|---|
-| `OpenMcdf` | 3.4.0 | MPL-2.0 | Rejected. Maintained and `.NET 10`-targeting, but the checked-in OSADL BSD-2-Clause outbound row marks MPL-2.0 incompatible, so the CI license gate rejects it without a policy change. |
+| `OpenMcdf` | 3.4.0 | MPL-2.0 | Not adopted. Maintained and `.NET 10`-targeting, but the in-repo read-only reader covers the needed streams while keeping the dependency tree small. MPL-2.0 is Reciprocal/MEDIUM and passes the current license gate. |
 | `Bodu.IO.Compound` | 1.3.0 | MIT | Rejected. Reads CFB and targets `.NET 10`, but the package is new, has one maintainer and under 3,000 total downloads, so it adds supply-chain risk that the small read-only reader avoids. |
 | `DocWright.Ole` | 1.12.0 | MIT | Rejected for the same adoption and maintenance reasons as `Bodu.IO.Compound`. |
 | libwpd | 0.10.3 | MPL-2.0 / LGPL-2.1+ | Reference only, not a dependency. Used to cross-check the header, index and summary layouts; no code is linked or shipped. |

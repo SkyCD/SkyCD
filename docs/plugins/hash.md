@@ -68,4 +68,4 @@ looking never-computed, and an existing captured value is kept when a later hash
 ## Dependency licence
 
 `BouncyCastle.Cryptography` 2.7.0 supplies MD4 and Tiger. It is MIT-licensed, has no dependencies, and
-is on the allowed list in `docs/legal/dependency-license-policy.json`.
+passes the Trivy license gate in `docs/legal/dependency-policy.md`.

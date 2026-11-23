@@ -25,9 +25,9 @@ This policy defines how automated dependency update pull requests are handled in
 
 ## License Guardrails (BSD-2)
 - Every dependency update PR must pass the license compliance gate defined in:
-- [dependency-license-policy.json](dependency-license-policy.json)
-- [.github/workflows/v3-ci.yml](../../.github/workflows/v3-ci.yml)
-- Packages violating policy are blocked until approved policy changes are merged.
+- [dependency-policy.md](dependency-policy.md)
+- [.github/workflows/test.yml](../../.github/workflows/test.yml)
+- A dependency whose license Trivy classifies as CRITICAL or HIGH blocks the PR until the dependency is replaced.
 
 ## Changelog Policy
 - Routine dependency PRs do not require changelog entries.

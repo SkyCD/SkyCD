@@ -135,8 +135,8 @@ member size.
 - TAR, gzip, ZIP and ARC stored/squashed handling use the .NET 10 runtime and plugin code.
 - CAB, ACE, ZOO and the 7-Zip/ARJ/RAR header checks are implemented in the plugin.
 
-All packages expose `PackageLicenseExpression` `MIT`, target `net10.0`, and are allowed by
-`docs/legal/dependency-license-policy.json`. `unace` and its .NET ports are GPL-licensed and therefore
-blocked, which is why ACE ships a header parser without a decompressor, and no compliant maintained
+All packages expose `PackageLicenseExpression` `MIT`, target `net10.0`, and pass the Trivy license
+gate in `docs/legal/dependency-policy.md`. `unace` and its .NET ports are GPL-licensed and therefore
+rejected, which is why ACE ships a header parser without a decompressor, and no compliant maintained
 ZOO package exists, which is why the ZOO reader is a small custom implementation written from the
 public-domain format description.

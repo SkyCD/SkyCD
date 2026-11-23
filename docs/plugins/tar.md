@@ -27,4 +27,4 @@ disable the other.
 
 The plugin adds no NuGet dependency: it uses the .NET 10 runtime's `System.Formats.Tar` and
 `System.IO.Compression` (MIT-licensed .NET runtime) plus the plugin abstractions project.
-`docs/legal/dependency-license-policy.json` is unchanged.
+The Trivy license gate in `docs/legal/dependency-policy.md` is unchanged.

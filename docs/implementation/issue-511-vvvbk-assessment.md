@@ -111,21 +111,20 @@ configured.
 
 ## Licensing
 
-[SkyCD's policy](../legal/dependency-license-policy.json) allowlists specific
-licenses, rejects unknown licenses by default and blocks GPL-family licenses.
+[SkyCD's policy](../legal/dependency-policy.md) fails on licenses that Trivy
+classifies as CRITICAL/HIGH and reports unknown licenses without failing.
 VVV is [GPL-2.0-or-later](https://sourceforge.net/p/vvvapp/code/492/tree/trunk/COPYING),
 so its code must not be copied into SkyCD; the importer uses only the documented
 schema and fixture evidence.
 
 The
 [FirebirdSql.Data.FirebirdClient 10.3.4 license](https://www.nuget.org/packages/FirebirdSql.Data.FirebirdClient/10.3.4/License)
-is IDPL 1.0, which has no SPDX identifier, so CycloneDX reports it as unknown.
+is IDPL 1.0, which has no SPDX identifier and is declared through a legacy
+`licenseUrl`, so the license scan reports it as unknown and does not fail.
 Issue [#618](https://github.com/SkyCD/SkyCD/issues/618) and
-[PR #617](https://github.com/SkyCD/SkyCD/pull/617) record IDPL 1.0 approval for
-this package as an explicit unknown-license exception under the policy's
-[exception process](../legal/dependency-policy.md#exception-process). The
-package is consumed unmodified as a separate library and its notice and license
-text must be retained.
+[PR #617](https://github.com/SkyCD/SkyCD/pull/617) record the IDPL 1.0 approval
+for this package. The package is consumed unmodified as a separate library and
+its notice and license text must be retained.
 
 That exception does **not** cover Firebird engine binaries, IPL 1.0, or GPL VVV
 source. The plugin therefore does not ship an engine. A user-supplied engine is

@@ -112,5 +112,5 @@ option makes earlier cached results stale and a rescan re-extracts with the new 
 
 `SkiaSharp` is already a direct dependency of `SkyCD.Plugin.Metadata.Image`, `SkyCD.Plugin.Metadata.Rtf`, `SkyCD.Plugin.Metadata.Pdf`
 and `SkyCD.Plugin.Metadata.EComic`, and Avalonia is the application UI framework. No new transitive dependency is
-introduced, and every package complies with `docs/legal/dependency-license-policy.json` (MIT is on the
-allow list; no blocked or unknown licenses).
+introduced, and every package passes the Trivy license gate in `docs/legal/dependency-policy.md`
+(MIT is classified LOW; no rejected or unknown licenses).

@@ -107,7 +107,7 @@ reason.
 | `SkiaSharp` + native assets | 3.119.4 | MIT | Encode the bounded text layout to PNG |
 
 The parser is the repository's own `SkyCD.Formatting.Rtf`, so no RTF library was added. SkiaSharp and its
-native assets are on the allow-list in `docs/legal/dependency-license-policy.json`, already used by the
+native assets pass the Trivy license gate in `docs/legal/dependency-policy.md`, already used by the
 image and PDF plugins.
 
 ## Limitations

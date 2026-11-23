@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "OfficeIMO.IWork": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "L4jZUwzJpej/7ofT4VvAm3jeDSzoXG08PjNHmMJw/o1oSeee7Gn6unWygg56DZ59g3GFz0cVuJxcYDza//9zsA==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
+      },
+      "skycd.plugin.abstractions": {
+        "type": "Project"
+      }
+    }
+  }
+}

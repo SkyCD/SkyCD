@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "CommandDotNet": {
+        "type": "Direct",
+        "requested": "[8.1.1, )",
+        "resolved": "8.1.1",
+        "contentHash": "9zdaVX7yKK6yFCP/9/hLBPv0KYuI4wy2wcFLtSAmBJNnqae8Pg5qWSm1XXtHp8Y/2+omC7OqDlZc26Jnntam4g==",
+        "dependencies": {
+          "JetBrains.Annotations": "2024.3.0"
+        }
+      },
+      "JetBrains.Annotations": {
+        "type": "Transitive",
+        "resolved": "2024.3.0",
+        "contentHash": "ox5pkeLQXjvJdyAB4b2sBYAlqZGLh3PjSnP1bQNVx72ONuTJ9+34/+Rq91Fc0dG29XG9RgZur9+NcP4riihTug=="
+      },
+      "skycd.plugin.abstractions": {
+        "type": "Project"
+      }
+    }
+  }
+}

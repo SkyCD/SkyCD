@@ -107,7 +107,7 @@ after parsing and before the excerpt is assembled.
 | `Markdig` | 1.6.0 | BSD-2-Clause | CommonMark/GFM parsing, syntax tree and plain-text rendering |
 | `YamlDotNet` | 18.1.0 | MIT | Safe representation-model reading of the front matter block |
 
-Both are on the allow-list in `docs/legal/dependency-license-policy.json`. YamlDotNet 18.1.0 is already
+Both pass the Trivy license gate in `docs/legal/dependency-policy.md`. YamlDotNet 18.1.0 is already
 used by the YAML plugin and the UI; Markdig is new, has no dependencies on `net10.0`, and is actively
 maintained.
 
