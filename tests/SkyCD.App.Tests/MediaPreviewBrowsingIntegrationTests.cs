@@ -321,6 +321,98 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void TextAndImageArtifacts_ResolveTheExcerptForThePane_AndTheImageForTheList()
+    {
+        var entry = NotesEntry();
+        using var database = OpenDatabase();
+        using var store = MediaCacheStore.Create(database);
+        var body = Encoding.UTF8.GetBytes("readable excerpt");
+        var png = SmallPngBytes();
+        SaveArtifactRecord(store, entry.Id, MediaCacheRecordState.Captured, "plugin.text", "1.0.0",
+        [
+            new MediaPreviewArtifact("text/plain", body),
+            new MediaPreviewArtifact("image/png", png)
+        ]);
+
+        var resolver = new MediaPreviewResolver(store);
+
+        // The pane keeps the readable excerpt even though the capture also published a page image.
+        var paneSnapshot = resolver.Resolve(entry);
+        Assert.Equal(PreviewPayloadKind.Text, paneSnapshot.PayloadKind);
+        Assert.Equal("readable excerpt", paneSnapshot.TextPreview);
+        Assert.Equal("text/plain", paneSnapshot.Artifact!.ContentType);
+
+        // The list thumbnail comes from the image artifact of the same capture.
+        var thumbnail = resolver.ResolveThumbnail(entry);
+        Assert.NotNull(thumbnail);
+        Assert.Equal(PreviewPayloadKind.Image, thumbnail!.PayloadKind);
+        Assert.Equal("image/png", thumbnail.Artifact!.ContentType);
+        Assert.True(resolver.TryReadPayload(thumbnail, out var thumbnailBytes));
+        Assert.Equal(png, thumbnailBytes);
+    }
+
+    [Fact]
+    public void ImageOnlyRecord_ResolvesTheSameArtifactForThePaneAndTheList()
+    {
+        var entry = AudioEntry();
+        using var database = OpenDatabase();
+        using var store = MediaCacheStore.Create(database);
+        SaveArtifactRecord(store, entry.Id, MediaCacheRecordState.Captured, "plugin.preview", "1.0.0");
+
+        var resolver = new MediaPreviewResolver(store);
+        var paneSnapshot = resolver.Resolve(entry);
+        var thumbnail = resolver.ResolveThumbnail(entry);
+
+        Assert.Equal(PreviewPayloadKind.Image, paneSnapshot.PayloadKind);
+        Assert.NotNull(thumbnail);
+        Assert.Equal(PreviewPayloadKind.Image, thumbnail!.PayloadKind);
+        Assert.Equal(paneSnapshot.RecordId, thumbnail.RecordId);
+        Assert.Equal(paneSnapshot.Artifact!.Key, thumbnail.Artifact!.Key);
+    }
+
+    [Fact]
+    public void MetadataOnlyEntry_HasNoListThumbnail()
+    {
+        var entry = AudioEntry();
+        using var database = OpenDatabase();
+        using var store = MediaCacheStore.Create(database);
+        var fingerprint = MediaSourceFingerprint.ForCatalogEntry(entry, [MediaRoot(), entry]);
+        store.Save(new MediaCachePayload(new MediaCacheRecord
+        {
+            Id = MediaCacheRecord.CreateId(fingerprint, "plugin.audio", "1.0.0", "Metadata", "fake.audio", 1),
+            EntryId = entry.Id,
+            Fingerprint = fingerprint,
+            PluginId = "plugin.audio",
+            PluginVersion = "1.0.0",
+            Capability = "Metadata",
+            SchemaId = "fake.audio",
+            SchemaVersion = 1,
+            State = MediaCacheRecordState.Captured,
+            CapturedAtUtc = DateTimeOffset.UtcNow,
+            LastUsedAtUtc = DateTimeOffset.UtcNow,
+            Metadata = [new MediaMetadataValueRecord { Key = "Comments", Type = MediaMetadataType.Text, Text = "note" }],
+            SchemaFields = [new MediaMetadataFieldRecord { Key = "Comments", Type = MediaMetadataType.Text }]
+        }.WithRecalculatedSizes()));
+
+        var resolver = new MediaPreviewResolver(store);
+
+        Assert.Equal(MediaPreviewState.Ready, resolver.Resolve(entry).State);
+        Assert.Null(resolver.ResolveThumbnail(entry));
+        Assert.Null(resolver.ResolveThumbnail(null));
+    }
+
+    [Fact]
+    public void MissingArtifact_IsNotUsedAsTheListThumbnail()
+    {
+        var entry = AudioEntry();
+        using var database = OpenDatabase();
+        using var store = MediaCacheStore.Create(database);
+        SaveArtifactRecord(store, entry.Id, MediaCacheRecordState.Missing, "plugin.preview", "1.0.0");
+
+        Assert.Null(new MediaPreviewResolver(store).ResolveThumbnail(entry));
+    }
+
+    [Fact]
     public async Task RapidSelection_KeepsOnlyTheLastEntry()
     {
         var entries = Enumerable.Range(0, 25)
@@ -430,6 +522,25 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
         Assert.Equal(PreviewPayloadKind.Image, snapshot.PayloadKind);
     }
 
+    private static byte[] SmallPngBytes() =>
+        File.ReadAllBytes(Path.Combine(FindRepoRoot(), "src", "SkyCD.App", "Assets", "new.png"));
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "SkyCD.slnx")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate repository root.");
+    }
+
     private static async Task CaptureAsync(
         IMediaCacheStore store,
         CatalogDocument entry,
@@ -532,6 +643,34 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
         byte[]? bytes = null)
     {
         var payloadBytes = bytes ?? PreviewBytes;
+        SaveArtifactRecord(
+            store, entryId, state, pluginId, pluginVersion, [new MediaPreviewArtifact(contentType, payloadBytes)]);
+    }
+
+    private static void SaveArtifactRecord(
+        IMediaCacheStore store,
+        string entryId,
+        MediaCacheRecordState state,
+        string pluginId,
+        string pluginVersion,
+        IReadOnlyList<MediaPreviewArtifact> artifacts)
+    {
+        var payloads = new Dictionary<string, byte[]>();
+        var references = new List<MediaArtifactReference>();
+        for (var index = 0; index < artifacts.Count; index++)
+        {
+            var key = $"preview:{index}";
+            var data = artifacts[index].Data.ToArray();
+            payloads[key] = data;
+            references.Add(new MediaArtifactReference
+            {
+                Key = key,
+                ContentType = artifacts[index].ContentType,
+                Length = data.Length,
+                Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(data)).ToLowerInvariant()
+            });
+        }
+
         var fingerprint = $"fingerprint-{entryId}";
         var record = new MediaCacheRecord
         {
@@ -546,21 +685,11 @@ public sealed class MediaPreviewBrowsingIntegrationTests : IDisposable
             State = state,
             CapturedAtUtc = DateTimeOffset.UtcNow,
             LastUsedAtUtc = DateTimeOffset.UtcNow,
-            SourceLength = payloadBytes.Length,
-            Artifacts =
-            [
-                new MediaArtifactReference
-                {
-                    Key = "preview:0",
-                    ContentType = contentType,
-                    Length = payloadBytes.Length,
-                    Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(payloadBytes))
-                        .ToLowerInvariant()
-                }
-            ]
+            SourceLength = payloads.Values.Sum(data => data.Length),
+            Artifacts = references
         }.WithRecalculatedSizes();
 
-        store.Save(new MediaCachePayload(record, new Dictionary<string, byte[]> { ["preview:0"] = payloadBytes }));
+        store.Save(new MediaCachePayload(record, payloads));
     }
 
     private sealed class FakeAudioMetadataCapability : IMediaMetadataCapability

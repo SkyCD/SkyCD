@@ -79,8 +79,10 @@ public sealed class TextPluginIntegrationTests : IDisposable
         Assert.Equal("skycd.text.metadata", metadata.Schema!.Id);
         Assert.Equal("markdown", metadata.Metadata!.Values.Single(value => value.Key == TextSchema.TextKind).Text);
 
-        var artifact = Assert.Single(preview.Preview!.Artifacts);
-        Assert.Equal("text/plain", artifact.ContentType);
+        var artifacts = preview.Preview!.Artifacts;
+        Assert.Equal(2, artifacts.Count);
+        Assert.Equal("text/plain", artifacts[0].ContentType);
+        Assert.Equal("image/png", artifacts[1].ContentType);
     }
 
     [Fact]
@@ -159,6 +161,13 @@ public sealed class TextPluginIntegrationTests : IDisposable
             Assert.Equal(PluginId, snapshot.ProviderId);
             Assert.Contains("needle in the haystack", snapshot.TextPreview, StringComparison.Ordinal);
             Assert.Equal("text/plain", snapshot.Artifact!.ContentType);
+
+            // The list thumbnail resolves the rendered page separately, so the text pane and the browser
+            // thumbnail coexist without either displacing the other.
+            var thumbnail = resolver.ResolveThumbnail(entry);
+            Assert.NotNull(thumbnail);
+            Assert.Equal(PreviewPayloadKind.Image, thumbnail!.PayloadKind);
+            Assert.Equal("image/png", thumbnail.Artifact!.ContentType);
 
             Assert.Equal("utf-8", FieldText(snapshot, TextSchema.Encoding));
             Assert.Equal(2L, FieldInteger(snapshot, TextSchema.LineCount));

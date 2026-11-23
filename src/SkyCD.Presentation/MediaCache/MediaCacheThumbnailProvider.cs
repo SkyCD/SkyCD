@@ -38,8 +38,9 @@ public sealed class MediaCacheThumbnailProvider : IPreviewThumbnailProvider
         }
 
         // Realizing a row while scrolling is not the user opening the item, so it must not disturb LRU order.
-        var snapshot = resolver.Resolve(entry, markServed: false);
-        if (snapshot.PayloadKind != PreviewPayloadKind.Image)
+        // The list takes the entry's image artifact even when the pane prefers its text excerpt.
+        var snapshot = resolver.ResolveThumbnail(entry);
+        if (snapshot is null)
         {
             return Task.FromResult<IImage?>(null);
         }

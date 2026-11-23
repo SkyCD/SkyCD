@@ -12,7 +12,7 @@ Two independently discovered capabilities in one assembly:
 | Capability | Type | Schema |
 |---|---|---|
 | Typed encoding facts and a bounded excerpt | `TextMetadataPlugin : IMediaMetadataCapability` | `skycd.text.metadata` v1 |
-| Plain-text preview artifact | `TextPreviewPlugin : IMediaPreviewCapability` | `skycd.text.preview` v1 |
+| Plain-text preview artifact and rendered page image | `TextPreviewPlugin : IMediaPreviewCapability` | `skycd.text.preview` v1 |
 
 Discovery uses assembly metadata and implemented capability types only. There is no `plugin.json`, and a
 test asserts none exists.
@@ -88,6 +88,21 @@ against. The plugin performs no network or filesystem access of any kind.
 Re-encoding to UTF-8 also normalizes the artifact, so a consumer never has to know the source encoding to
 display it; the original encoding stays recorded in the metadata schema.
 
+## Rendered page thumbnail
+
+The excerpt is also drawn on a white page by `SkiaTextThumbnailRenderer` (SkiaSharp 3.119.4, MIT) and
+published as a second, `image/png` artifact. The page has an A-series aspect ratio and its width equals
+`MaxThumbnailDimension` (768 by default), so the browser list has a bounded thumbnail to show.
+
+- The text stays bounded by `MaxExcerptCharacters`: only the excerpt is ever drawn, and wrapping stops at the
+  page's bottom margin.
+- `text/plain` remains the **first** artifact, so the preview pane keeps showing the readable excerpt.
+- The host resolves the image separately for the list thumbnail
+  (`MediaPreviewResolver.ResolveThumbnail`), which looks for the first image artifact of the entry's records
+  whatever the pane prefers.
+- A missing rasterizer, an unavailable font or a page that cannot be allocated degrades to a text-only
+  preview. An empty file still produces no artifact at all.
+
 ## Bounds, and what truncation means for search
 
 Three independent bounds:
@@ -123,8 +138,10 @@ rather than an error: zero lines, zero characters, no excerpt, and no preview ar
 
 ## Dependencies
 
-None. Encoding detection, decoding, line analysis and binary rejection are all implemented in the plugin, so
-there is no transitive dependency whose license the policy gate has to judge.
+Encoding detection, decoding, line analysis and binary rejection are all implemented in the plugin.
+Rendering the page thumbnail uses SkiaSharp with its Linux, macOS and Win32 native assets (MIT) — the same
+package set the RTF and WordPerfect preview plugins use — so the dependency set stays within the license
+policy gate.
 
 ## Limitations
 
@@ -152,4 +169,9 @@ inert text with markup verbatim; empty files; binary rejection; oversized reject
 zero bytes charged; source bytes unchanged; option validation; artifacts always UTF-8 without a BOM;
 assembly discovery without a manifest; and offline retrieval through the real scheduler and Couchbase Lite
 store — reopened with no plugin and no source — asserting the excerpt is browsable as a `text/plain` payload
-and searchable through `MediaCacheSearchFieldProvider`, plus the truncation case above.
+and searchable through `MediaCacheSearchFieldProvider`, plus the truncation case above; and the text pane and
+the list thumbnail resolving from the same capture without displacing each other.
+
+The thumbnail coverage asserts the rendered image is published after the text artifact, the text artifact
+survives a missing or unproductive renderer, the renderer receives the excerpt and the configured page bound,
+and a real SkiaSharp render decodes back to a page bounded by `MaxThumbnailDimension`.
