@@ -13,6 +13,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using SkyCD.UI.Controls.Preview;
 
 namespace SkyCD.UI.Controls.Lists;
@@ -49,6 +50,23 @@ public partial class BrowserItemsView : UserControl
     /// <summary>Menu shown when the details header is right-clicked.</summary>
     public static readonly StyledProperty<ContextMenu?> HeaderContextMenuProperty =
         AvaloniaProperty.Register<BrowserItemsView, ContextMenu?>(nameof(HeaderContextMenu));
+
+    /// <summary>Id of the item whose name is being edited inline, or null when no edit is active.</summary>
+    public static readonly StyledProperty<string?> EditingItemIdProperty =
+        AvaloniaProperty.Register<BrowserItemsView, string?>(nameof(EditingItemId));
+
+    /// <summary>Text shown in the active inline rename editor.</summary>
+    public static readonly StyledProperty<string> RenameTextProperty =
+        AvaloniaProperty.Register<BrowserItemsView, string>(nameof(RenameText),
+            defaultBindingMode: BindingMode.TwoWay);
+
+    /// <summary>Validation message shown under/behind the active inline rename editor.</summary>
+    public static readonly StyledProperty<string?> RenameErrorProperty =
+        AvaloniaProperty.Register<BrowserItemsView, string?>(nameof(RenameError));
+
+    /// <summary>Whether the active inline rename editor is showing a validation error.</summary>
+    public static readonly StyledProperty<bool> HasRenameErrorProperty =
+        AvaloniaProperty.Register<BrowserItemsView, bool>(nameof(HasRenameError));
 
     public static readonly StyledProperty<double> ListMinWidthProperty =
         AvaloniaProperty.Register<BrowserItemsView, double>(nameof(ListMinWidth), 240);
@@ -98,6 +116,15 @@ public partial class BrowserItemsView : UserControl
 
     /// <summary>Raised when a details header splitter drag finishes with a new width.</summary>
     public event EventHandler<DetailsColumnResizedEventArgs>? DetailsColumnResized;
+
+    /// <summary>Raised when Enter confirms the active inline rename edit.</summary>
+    public event EventHandler? RenameCommitted;
+
+    /// <summary>Raised when Escape ends the active inline rename edit.</summary>
+    public event EventHandler? RenameCancelled;
+
+    /// <summary>Raised when focus leaving the editor ends the active inline rename edit.</summary>
+    public event EventHandler? RenameAbandoned;
 
     public BrowserItemsView()
     {
@@ -223,6 +250,30 @@ public partial class BrowserItemsView : UserControl
     {
         get => GetValue(DetailsColumnsProperty);
         set => SetValue(DetailsColumnsProperty, value);
+    }
+
+    public string? EditingItemId
+    {
+        get => GetValue(EditingItemIdProperty);
+        set => SetValue(EditingItemIdProperty, value);
+    }
+
+    public string RenameText
+    {
+        get => GetValue(RenameTextProperty);
+        set => SetValue(RenameTextProperty, value);
+    }
+
+    public string? RenameError
+    {
+        get => GetValue(RenameErrorProperty);
+        set => SetValue(RenameErrorProperty, value);
+    }
+
+    public bool HasRenameError
+    {
+        get => GetValue(HasRenameErrorProperty);
+        set => SetValue(HasRenameErrorProperty, value);
     }
 
     public ContextMenu? ListContextMenu
@@ -526,7 +577,9 @@ public partial class BrowserItemsView : UserControl
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
+            name.Bind(IsVisibleProperty, CreateLabelVisibilityBinding());
             panel.Children.Add(name);
+            panel.Children.Add(BuildRenameEditor(HorizontalAlignment.Left));
 
             return panel;
         });
@@ -572,7 +625,9 @@ public partial class BrowserItemsView : UserControl
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
+            name.Bind(IsVisibleProperty, CreateLabelVisibilityBinding());
             panel.Children.Add(name);
+            panel.Children.Add(BuildRenameEditor(HorizontalAlignment.Left));
 
             return panel;
         });
@@ -603,7 +658,9 @@ public partial class BrowserItemsView : UserControl
                 HorizontalAlignment = HorizontalAlignment.Center
             };
             name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
+            name.Bind(IsVisibleProperty, CreateLabelVisibilityBinding());
             panel.Children.Add(name);
+            panel.Children.Add(BuildRenameEditor(HorizontalAlignment.Center));
 
             return panel;
         });
@@ -638,7 +695,9 @@ public partial class BrowserItemsView : UserControl
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             name.Bind(TextBlock.TextProperty, new Binding("DisplayName"));
+            name.Bind(IsVisibleProperty, CreateLabelVisibilityBinding());
             details.Children.Add(name);
+            details.Children.Add(BuildRenameEditor(HorizontalAlignment.Left));
 
             var type = new TextBlock
             {
@@ -1017,7 +1076,14 @@ public partial class BrowserItemsView : UserControl
         var iconWithIndicator = BuildIconWithStatusIndicator(16, 16);
         DockPanel.SetDock(iconWithIndicator, Dock.Left);
         iconPanel.Children.Add(iconWithIndicator);
-        iconPanel.Children.Add(BuildDetailsValueCell(item, column, new Thickness(4, 0, 0, 0)));
+
+        var label = BuildDetailsValueCell(item, column, new Thickness(4, 0, 0, 0));
+        label.Bind(IsVisibleProperty, CreateLabelVisibilityBinding());
+
+        var nameCell = new Grid();
+        nameCell.Children.Add(label);
+        nameCell.Children.Add(BuildRenameEditor(HorizontalAlignment.Stretch));
+        iconPanel.Children.Add(nameCell);
         return iconPanel;
     }
 
@@ -1047,6 +1113,167 @@ public partial class BrowserItemsView : UserControl
 
         return valueCell;
     }
+
+    /// <summary>
+    /// Puts focus on the inline rename editor of the item named by <see cref="EditingItemId"/>. The row
+    /// is scrolled into view first so a virtualized list realizes its container.
+    /// </summary>
+    public bool FocusRenameEditor()
+    {
+        var active = GetActiveControl();
+        if (active is null || EditingItemId is not { Length: > 0 } editingId)
+        {
+            return false;
+        }
+
+        var item = FindItem(active, editingId);
+        if (item is null)
+        {
+            return false;
+        }
+
+        RevealSelectedItem(active, item);
+        var container = GetItemContainer(active, item);
+        var editor = container?.GetVisualDescendants()
+            .OfType<TextBox>()
+            .FirstOrDefault(static textBox => textBox.IsVisible && textBox.Classes.Contains("rename-editor"));
+        if (editor is null)
+        {
+            return false;
+        }
+
+        editor.Focus();
+        editor.SelectAll();
+        return true;
+    }
+
+    private TextBox BuildRenameEditor(HorizontalAlignment horizontalAlignment)
+    {
+        var editor = new TextBox
+        {
+            MinWidth = 90,
+            MinHeight = 20,
+            Padding = new Thickness(2, 0),
+            VerticalContentAlignment = VerticalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = horizontalAlignment
+        };
+
+        editor.Classes.Add("rename-editor");
+        editor.Bind(IsVisibleProperty, CreateEditingVisibilityBinding());
+        editor.Bind(TextBox.TextProperty, new Binding(nameof(RenameText)) { Source = this, Mode = BindingMode.TwoWay });
+        editor.Bind(ToolTip.TipProperty, new Binding(nameof(RenameError)) { Source = this });
+        BindInvalidClass(editor);
+        editor.KeyDown += OnRenameEditorKeyDown;
+        editor.LostFocus += OnRenameEditorLostFocus;
+        return editor;
+    }
+
+    private BindingBase CreateEditingVisibilityBinding()
+    {
+        var binding = new MultiBinding
+        {
+            Converter = new FuncMultiValueConverter<object?, bool>(
+                (IReadOnlyList<object?> values) =>
+                    IsEditingItem(At(values, 0), At(values, 1)))
+        };
+        binding.Bindings.Add(new Binding(nameof(EditingItemId)) { Source = this });
+        binding.Bindings.Add(new Binding("Id"));
+        return binding;
+    }
+
+    private BindingBase CreateLabelVisibilityBinding()
+    {
+        var binding = new MultiBinding
+        {
+            Converter = new FuncMultiValueConverter<object?, bool>(
+                (IReadOnlyList<object?> values) =>
+                    !IsEditingItem(At(values, 0), At(values, 1)))
+        };
+        binding.Bindings.Add(new Binding(nameof(EditingItemId)) { Source = this });
+        binding.Bindings.Add(new Binding("Id"));
+        return binding;
+    }
+
+    private static object? At(IReadOnlyList<object?> values, int index) =>
+        index < values.Count ? values[index] : null;
+
+    private static bool IsEditingItem(object? editingId, object? itemId) =>
+        editingId is string current && current.Length > 0 &&
+        string.Equals(current, itemId as string, StringComparison.Ordinal);
+
+    private void BindInvalidClass(Control editor)
+    {
+        void Apply() => editor.Classes.Set("invalid", HasRenameError);
+
+        Apply();
+        void OnSourcePropertyChanged(object? _, AvaloniaPropertyChangedEventArgs change)
+        {
+            if (change.Property == HasRenameErrorProperty)
+            {
+                Apply();
+            }
+        }
+
+        PropertyChanged += OnSourcePropertyChanged;
+        editor.DetachedFromVisualTree += (_, _) => PropertyChanged -= OnSourcePropertyChanged;
+    }
+
+    private void OnRenameEditorKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            RenameCommitted?.Invoke(this, EventArgs.Empty);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            RenameCancelled?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void OnRenameEditorLostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is TextBox { IsVisible: true })
+        {
+            RenameAbandoned?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private static object? FindItem(Control control, string itemId)
+    {
+        var items = control switch
+        {
+            DetailsListView details => details.ItemsSource,
+            ListBox listBox => listBox.ItemsSource,
+            _ => null
+        };
+        if (items is null)
+        {
+            return null;
+        }
+
+        foreach (var item in items)
+        {
+            if (string.Equals(GetItemId(item), itemId, StringComparison.Ordinal))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private static Control? GetItemContainer(Control control, object item) => control switch
+    {
+        DetailsListView details => details.FindControl<ListBox>("InnerListBox")?.ContainerFromItem(item) as Control,
+        ListBox listBox => listBox.ContainerFromItem(item) as Control,
+        _ => null
+    };
+
+    private static string? GetItemId(object? item) =>
+        item?.GetType().GetProperty("Id")?.GetValue(item) as string;
 
     private Control BuildIconWithStatusIndicator(
         double iconWidth,
