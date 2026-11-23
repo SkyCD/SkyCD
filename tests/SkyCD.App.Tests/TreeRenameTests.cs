@@ -149,10 +149,15 @@ public class TreeRenameTests
     }
 
     [Fact]
-    public void RenameItemCommand_IsUnavailableForTheBrowserPane()
+    public void RenameItemCommand_RequiresASingleBrowserItemForTheListPane()
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = FindNode(vm, "movies");
+        vm.SelectedBrowserItems = new System.Collections.Generic.List<SkyCD.Documents.CatalogDocument>
+        {
+            vm.BrowserItems[0],
+            vm.BrowserItems[1]
+        };
 
         Assert.False(vm.RenameItemCommand.CanExecute("list"));
         Assert.True(vm.RenameItemCommand.CanExecute("tree"));
