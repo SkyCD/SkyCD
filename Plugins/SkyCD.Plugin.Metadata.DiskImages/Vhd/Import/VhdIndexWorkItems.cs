@@ -9,6 +9,7 @@ using SkyCD.Plugin.Metadata.DiskImages.Vhd.Exceptions;
 using SkyCD.Plugin.Metadata.DiskImages.Vhd.Models;
 using SkyCD.Plugin.Metadata.DiskImages.Exceptions;
 using SkyCD.Plugin.Metadata.DiskImages.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.DiskImages.Vhd.Import;
 
@@ -19,8 +20,6 @@ namespace SkyCD.Plugin.Metadata.DiskImages.Vhd.Import;
 /// </summary>
 internal static class VhdIndexWorkItems
 {
-    private const int CopyBufferBytes = 81_920;
-
     public static async Task<IndexWorkItemSet> CreateAsync(
         IndexWorkItemRequest request,
         DiskImageIndexLimits limits,
@@ -29,8 +28,7 @@ internal static class VhdIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-vhd-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("vhd");
 
         VhdImage? image = null;
         var gate = new SemaphoreSlim(1, 1);
@@ -40,7 +38,7 @@ internal static class VhdIndexWorkItems
             image = await OpenImageAsync(request, cancellationToken).ConfigureAwait(false);
             if (!image.HasFileSystems)
             {
-                Cleanup(image, tempRoot);
+                Cleanup(image, workspace);
                 return IndexWorkItemSet.Empty;
             }
 
@@ -57,7 +55,7 @@ internal static class VhdIndexWorkItems
 
                 var captured = entry;
                 items.Add(new IndexWorkItem(captured.FullPath, captured.SizeBytes,
-                    token => ExtractAsync(openedImage, captured, tempRoot, gate, limits.MaxEntryBytes, token),
+                    token => ExtractAsync(openedImage, captured, workspace, gate, limits.MaxEntryBytes, token),
                     captured.ModifiedUtc));
             }
 
@@ -65,23 +63,23 @@ internal static class VhdIndexWorkItems
             return new IndexWorkItemSet(items, () =>
             {
                 openedImage.Dispose();
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            Cleanup(image, tempRoot);
+            Cleanup(image, workspace);
             throw;
         }
         catch (Exception exception) when (IsImageFailure(exception))
         {
-            Cleanup(image, tempRoot);
+            Cleanup(image, workspace);
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            Cleanup(image, tempRoot);
+            Cleanup(image, workspace);
             throw;
         }
     }
@@ -110,19 +108,20 @@ internal static class VhdIndexWorkItems
     private static async Task<Stream> ExtractAsync(
         VhdImage image,
         VhdFileEntry entry,
-        string tempRoot,
+        ArchiveExtractionWorkspace workspace,
         SemaphoreSlim gate,
         long maxEntryBytes,
         CancellationToken cancellationToken)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        var path = Path.Combine(tempRoot, $"entry-{Guid.NewGuid():N}.tmp");
+        var path = workspace.GetPath($"entry-{Guid.NewGuid():N}.tmp");
         FileStream? output = null;
 
         try
         {
             output = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None,
-                CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.DeleteOnClose);
+                NonSeekableSourceBuffer.CopyBufferBytes,
+                FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.DeleteOnClose);
             using var input = image.OpenEntry(entry);
             await CopyBoundedAsync(input, output, maxEntryBytes, cancellationToken).ConfigureAwait(false);
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -139,7 +138,6 @@ internal static class VhdIndexWorkItems
                 await output.DisposeAsync().ConfigureAwait(false);
             }
 
-            TryDeleteFile(path);
             throw;
         }
         finally
@@ -154,7 +152,7 @@ internal static class VhdIndexWorkItems
         long maxBytes,
         CancellationToken cancellationToken)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferBytes);
+        var buffer = ArrayPool<byte>.Shared.Rent(NonSeekableSourceBuffer.CopyBufferBytes);
         try
         {
             long written = 0;
@@ -186,57 +184,10 @@ internal static class VhdIndexWorkItems
             or UnauthorizedAccessException or NotImplementedException or InvalidOperationException
             or FormatException or OverflowException;
 
-    private static void Cleanup(VhdImage? image, string tempRoot)
+    private static void Cleanup(VhdImage? image, ArchiveExtractionWorkspace workspace)
     {
         image?.Dispose();
-        DeleteTemporaryDirectory(tempRoot);
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
+        workspace.Dispose();
     }
 
     private sealed class ExtractionBudget

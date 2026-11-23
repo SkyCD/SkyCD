@@ -1,14 +1,15 @@
-using System;
+using Hst.Compression.Lha;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
-using Hst.Compression.Lha;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Lha.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Lha.Import;
 
@@ -28,8 +29,7 @@ internal static class LhaIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-lha-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("lha");
 
         Stream? bufferedSource = null;
         try
@@ -38,47 +38,40 @@ internal static class LhaIndexWorkItems
             var archiveStream = source;
             if (!source.CanSeek)
             {
-                var bufferPath = Path.Combine(tempRoot, ".skycd-lha-source");
-                await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                                 FileShare.None, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                {
-                    await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-                }
-
-                bufferedSource = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                    CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
+                    workspace.GetPath(".skycd-lha-source"), cancellationToken).ConfigureAwait(false);
                 archiveStream = bufferedSource;
             }
 
             if (!LhaArchiveSignature.Matches(archiveStream))
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return IndexWorkItemSet.Empty;
             }
 
             using var archive = new LhaArchive(archiveStream, LhaOptions.Default, leaveOpen: true);
-            var items = await ExtractEntriesAsync(archive, tempRoot, limits, request.Progress, cancellationToken)
+            var items = await ExtractEntriesAsync(archive, workspace.Root, limits, request.Progress, cancellationToken)
                 .ConfigureAwait(false);
 
             return new IndexWorkItemSet(items, () =>
             {
-                DeleteTemporaryDirectory(tempRoot);
+                workspace.Dispose();
                 return ValueTask.CompletedTask;
             });
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         finally
@@ -160,21 +153,14 @@ internal static class LhaIndexWorkItems
             return new IndexWorkItem(normalized, length, token => OpenExtractedAsync(fullPath, token),
                 TryGetModified(entry));
         }
-        catch (OperationCanceledException)
-        {
-            TryDeleteFile(fullPath);
-            throw;
-        }
         catch (ArchiveEntryLimitExceededException)
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
             budget.Release(length);
-            TryDeleteFile(fullPath);
             return null;
         }
     }
@@ -243,53 +229,6 @@ internal static class LhaIndexWorkItems
     private static bool IsArchiveFailure(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException
             or InvalidOperationException;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 
     private sealed class ExtractionBudget
     {

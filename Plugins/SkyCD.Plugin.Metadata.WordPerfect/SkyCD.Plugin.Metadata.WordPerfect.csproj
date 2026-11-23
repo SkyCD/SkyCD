@@ -3,6 +3,12 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one page layout and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageRenderer.cs" Link="Shared\Preview\Export\SkiaPageRenderer.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageText.cs" Link="Shared\Preview\Export\SkiaPageText.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- MIT: renders the recovered body text to a bounded PNG thumbnail. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>

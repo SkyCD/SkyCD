@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Exceptions;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.DiskImages.Daa.Parsing;
 
@@ -99,7 +100,7 @@ internal sealed class DaaImageStream : Stream
 
         var ownedStreams = new List<Stream>();
         var segments = new List<DaaCompressedSource.Segment>();
-        string? temporaryDirectory = null;
+        ArchiveExtractionWorkspace? temporarySource = null;
 
         Stream first;
         if (!string.IsNullOrWhiteSpace(sourcePath) && File.Exists(sourcePath))
@@ -117,9 +118,9 @@ internal sealed class DaaImageStream : Stream
             first = source;
             if (!first.CanSeek)
             {
-                var buffered = await BufferToTemporaryFileAsync(first, cancellationToken).ConfigureAwait(false);
-                first = buffered.Stream;
-                temporaryDirectory = buffered.Directory;
+                temporarySource = new ArchiveExtractionWorkspace("daa");
+                first = await BufferToTemporaryFileAsync(first, temporarySource.GetPath("image.daa"), cancellationToken)
+                    .ConfigureAwait(false);
                 ownedStreams.Add(first);
             }
             else if (ownsSource)
@@ -203,7 +204,7 @@ internal sealed class DaaImageStream : Stream
                 throw new DaaDamagedImageException("chunk data is truncated");
             }
 
-            var compressedSource = new DaaCompressedSource(segments, ownedStreams, temporaryDirectory);
+            var compressedSource = new DaaCompressedSource(segments, ownedStreams, temporarySource);
             return new DaaImageStream(compressedSource, header, chunkLengths, cancellationToken);
         }
         catch (Exception)
@@ -220,7 +221,7 @@ internal sealed class DaaImageStream : Stream
                 }
             }
 
-            DeleteTemporaryDirectory(temporaryDirectory);
+            temporarySource?.Dispose();
             throw;
         }
     }
@@ -525,48 +526,39 @@ internal sealed class DaaImageStream : Stream
     private static Stream OpenVolume(string path) =>
         new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81_920, FileOptions.RandomAccess);
 
-    private static async Task<(Stream Stream, string Directory)> BufferToTemporaryFileAsync(
+    private static async Task<Stream> BufferToTemporaryFileAsync(
         Stream source,
+        string path,
         CancellationToken cancellationToken)
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"skycd-daa-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, "image.daa");
         try
         {
-            await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                             81_920, FileOptions.Asynchronous | FileOptions.SequentialScan))
-            {
-                await source.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
-            }
-
-            return (OpenVolume(path), directory);
+            return await NonSeekableSourceBuffer.BufferAsync(source, path, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(directory);
+            TryDeleteFile(path);
             throw;
         }
     }
 
-    private static void DeleteTemporaryDirectory(string? path)
+    private static void TryDeleteFile(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
         try
         {
-            Directory.Delete(path, recursive: true);
+            if (File.Exists(path))
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+            }
         }
         catch (IOException)
         {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
+            // Best-effort cleanup.
         }
         catch (UnauthorizedAccessException)
         {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
+            // Best-effort cleanup.
         }
     }
 }

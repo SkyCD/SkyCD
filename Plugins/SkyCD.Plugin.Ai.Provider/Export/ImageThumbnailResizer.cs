@@ -1,6 +1,7 @@
 using System;
 using SkiaSharp;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
+using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Ai.Provider.Export;
 
@@ -28,9 +29,7 @@ public static class ImageThumbnailResizer
             return (contentType, data);
         }
 
-        var scale = Math.Min((double)MaximumDimension / bitmap.Width, (double)MaximumDimension / bitmap.Height);
-        var width = Math.Max(1, (int)Math.Round(bitmap.Width * scale));
-        var height = Math.Max(1, (int)Math.Round(bitmap.Height * scale));
+        var (width, height) = CoverImageRenderer.ScaleTo(bitmap.Width, bitmap.Height, MaximumDimension);
         var targetInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var surface = SKSurface.Create(targetInfo)
                             ?? throw new AiProviderException("the resized image could not be allocated");
@@ -43,9 +42,9 @@ public static class ImageThumbnailResizer
             new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), paint);
 
         using var snapshot = surface.Snapshot();
-        using var encoded = snapshot.Encode(SKEncodedImageFormat.Png, 100)
-                            ?? throw new AiProviderException("the resized image could not be encoded");
-        return ("image/png", encoded.ToArray());
+        var encoded = PreviewArtifactEncoder.EncodePng(snapshot)
+                      ?? throw new AiProviderException("the resized image could not be encoded");
+        return ("image/png", encoded);
     }
 
     private static SKBitmap Decode(byte[] data)

@@ -4,6 +4,11 @@
         <PackageReference Include="Hst.Compression" Version="1.0.104"/>
         <PackageReference Include="SharpCompress" Version="0.50.8"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the disk image plugin: one extraction workspace and source buffer per index run. -->
+        <Compile Include="..\Shared\Storage\ArchiveExtractionWorkspace.cs" Link="Shared\Storage\ArchiveExtractionWorkspace.cs"/>
+        <Compile Include="..\Shared\Storage\NonSeekableSourceBuffer.cs" Link="Shared\Storage\NonSeekableSourceBuffer.cs"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>

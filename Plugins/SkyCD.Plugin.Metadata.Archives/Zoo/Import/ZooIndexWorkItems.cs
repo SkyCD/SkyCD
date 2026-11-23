@@ -1,14 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Metadata.Archives.Zoo.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Zoo.Models;
 using SkyCD.Plugin.Metadata.Archives.Zoo.Parsing;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.Metadata.Archives.Zoo.Import;
 
@@ -28,8 +29,7 @@ internal static class ZooIndexWorkItems
         ArgumentNullException.ThrowIfNull(request);
         limits.Validate();
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"skycd-zoo-index-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        var workspace = new ArchiveExtractionWorkspace("zoo");
 
         try
         {
@@ -40,15 +40,8 @@ internal static class ZooIndexWorkItems
                 var archiveStream = source;
                 if (!source.CanSeek)
                 {
-                    var bufferPath = Path.Combine(tempRoot, ".skycd-zoo-source");
-                    await using (var buffer = new FileStream(bufferPath, FileMode.CreateNew, FileAccess.Write,
-                                     FileShare.None, CopyBufferBytes, FileOptions.Asynchronous))
-                    {
-                        await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    buffered = new FileStream(bufferPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                        CopyBufferBytes, FileOptions.SequentialScan);
+                    buffered = await NonSeekableSourceBuffer.BufferAsync(source,
+                        workspace.GetPath(".skycd-zoo-source"), cancellationToken).ConfigureAwait(false);
                     archiveStream = buffered;
                 }
 
@@ -60,7 +53,7 @@ internal static class ZooIndexWorkItems
                 for (var index = 0; index < entries.Count; index++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var item = TryExtractEntry(archiveStream, entries[index], tempRoot, limits, budget,
+                    var item = TryExtractEntry(archiveStream, entries[index], workspace.Root, limits, budget,
                         cancellationToken);
                     if (item is not null)
                     {
@@ -73,7 +66,7 @@ internal static class ZooIndexWorkItems
                 request.Progress?.Report(100);
                 return new IndexWorkItemSet(items, () =>
                 {
-                    DeleteTemporaryDirectory(tempRoot);
+                    workspace.Dispose();
                     return ValueTask.CompletedTask;
                 });
             }
@@ -84,17 +77,17 @@ internal static class ZooIndexWorkItems
         }
         catch (OperationCanceledException)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             return IndexWorkItemSet.Empty;
         }
         catch (Exception)
         {
-            DeleteTemporaryDirectory(tempRoot);
+            workspace.Dispose();
             throw;
         }
     }
@@ -144,20 +137,17 @@ internal static class ZooIndexWorkItems
         catch (OperationCanceledException)
         {
             budget.Release(entry.OriginalBytes);
-            TryDeleteFile(fullPath);
             throw;
         }
         catch (Exception exception) when (exception is ArchiveEntryLimitExceededException
                                               or ZooUnsupportedMethodException or ZooDamagedArchiveException)
         {
             budget.Release(entry.OriginalBytes);
-            TryDeleteFile(fullPath);
             return null;
         }
         catch (IOException) when (!cancellationToken.IsCancellationRequested)
         {
             budget.Release(entry.OriginalBytes);
-            TryDeleteFile(fullPath);
             return null;
         }
     }
@@ -182,53 +172,6 @@ internal static class ZooIndexWorkItems
 
     private static bool IsArchiveFailure(Exception exception) =>
         exception is InvalidDataException or IOException or NotSupportedException or ArgumentException;
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup.
-        }
-    }
-
-    /// <summary>Deletes a temporary extraction directory. Cleanup is best-effort and never throws.</summary>
-    private static void DeleteTemporaryDirectory(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                TryDeleteFile(file);
-            }
-
-            Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort cleanup: leave the rest for OS temp cleanup.
-        }
-    }
 
     private sealed class ExtractionBudget
     {

@@ -14,6 +14,11 @@
         <PackageReference Include="DiscUtils.Vhdx" Version="0.16.13"/>
         <PackageReference Include="DiscUtils.Vmdk" Version="0.16.13"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the archives plugin: one extraction workspace and source buffer per index run. -->
+        <Compile Include="..\Shared\Storage\ArchiveExtractionWorkspace.cs" Link="Shared\Storage\ArchiveExtractionWorkspace.cs"/>
+        <Compile Include="..\Shared\Storage\NonSeekableSourceBuffer.cs" Link="Shared\Storage\NonSeekableSourceBuffer.cs"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>

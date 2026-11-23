@@ -9,6 +9,7 @@ using System.Threading;
 using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.FileFormat.CDCollect.Exceptions;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect.Parsing;
 
@@ -30,37 +31,26 @@ public static class CdCollectParser
         progress?.Report(5);
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
 
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"cdcollect_{Guid.NewGuid():N}.db");
+        using var database = TemporaryDatabase.CopyFrom(stream, ".db", cancellationToken: cancellationToken);
         try
         {
-            CopyStreamToFile(stream, tempFilePath, cancellationToken);
-            using (var headerStream = File.OpenRead(tempFilePath))
+            using (var headerStream = File.OpenRead(database.Path))
             {
                 ValidateSqliteHeader(headerStream);
             }
             progress?.Report(20);
             cancellationToken.ThrowIfCancellationRequested();
 
-            return ParseDatabaseFile(tempFilePath, progress, cancellationToken, sourcePath);
+            return ParseDatabaseFile(database.Path, progress, cancellationToken, sourcePath);
         }
         catch (SqliteException ex)
         {
             throw new CdCollectCorruptDatabaseException(ex.Message);
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(tempFilePath))
-                {
-                    File.Delete(tempFilePath);
-                }
-            }
-            catch
-            {
-                // Ignore cleanup errors on temp file
-            }
         }
     }
 
@@ -95,23 +85,6 @@ public static class CdCollectParser
             {
                 stream.Position = initialPos;
             }
-        }
-    }
-
-    private static void CopyStreamToFile(Stream source, string destinationPath, CancellationToken cancellationToken)
-    {
-        if (source.CanSeek)
-        {
-            source.Position = 0;
-        }
-
-        using var dest = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        var buffer = new byte[81920];
-        int read;
-        while ((read = source.Read(buffer, 0, buffer.Length)) != 0)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            dest.Write(buffer, 0, read);
         }
     }
 

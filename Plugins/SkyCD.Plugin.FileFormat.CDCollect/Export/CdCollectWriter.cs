@@ -10,6 +10,7 @@ using Microsoft.Data.Sqlite;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.CDCollect.Exceptions;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;
+using SkyCD.Plugin.Storage;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect.Export;
 
@@ -52,87 +53,81 @@ internal static class CdCollectWriter
         var children = rows.Where(r => Text(r, "ParentId").Length != 0)
             .ToLookup(r => Text(r, "ParentId"), StringComparer.Ordinal);
         var visited = new HashSet<string>(StringComparer.Ordinal);
-        var path = Path.Combine(Path.GetTempPath(), $"cdcollect_export_{Guid.NewGuid():N}.db");
-        try
+        using var database = TemporaryDatabase.CreateNew(".db");
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        { DataSource = database.Path, Pooling = false }.ConnectionString))
         {
-            using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            { DataSource = path, Pooling = false }.ConnectionString))
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            Execute(Schema);
+            var mediaId = 0;
+            foreach (var root in roots)
             {
-                connection.Open();
-                using var transaction = connection.BeginTransaction();
-                Execute(Schema);
-                var mediaId = 0;
-                foreach (var root in roots)
+                token.ThrowIfCancellationRequested();
+                if (!IsType(root, "Media"))
+                    throw new CdCollectInvalidFormatException("Export requires Media roots; place loose files and folders inside media first.");
+                mediaId++;
+                visited.Add(Text(root, "Id", "NodeId"));
+                var props = Get(root, "Properties");
+                DateTime.TryParse(Text(props, "Date", "DateAdded", "DateCreated"), CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var date);
+                Execute("INSERT INTO cds VALUES ($a,$b,$c,$d,$e,$f,$g)", mediaId, Text(root, "Name"),
+                    Text(props, "Keywords", "Comments"), date == default ? 0 : date.Year,
+                    date == default ? 0 : date.Month, date == default ? 0 : date.Day, Text(props, "Icon"));
+                var queue = new Queue<(JsonElement Node, string Path, string Location)>();
+                EnqueueChildren(root, "", "/");
+                while (queue.TryDequeue(out var item))
                 {
                     token.ThrowIfCancellationRequested();
-                    if (!IsType(root, "Media"))
-                        throw new CdCollectInvalidFormatException("Export requires Media roots; place loose files and folders inside media first.");
-                    mediaId++;
-                    visited.Add(Text(root, "Id", "NodeId"));
-                    var props = Get(root, "Properties");
-                    DateTime.TryParse(Text(props, "Date", "DateAdded", "DateCreated"), CultureInfo.InvariantCulture,
-                        DateTimeStyles.None, out var date);
-                    Execute("INSERT INTO cds VALUES ($a,$b,$c,$d,$e,$f,$g)", mediaId, Text(root, "Name"),
-                        Text(props, "Keywords", "Comments"), date == default ? 0 : date.Year,
-                        date == default ? 0 : date.Month, date == default ? 0 : date.Day, Text(props, "Icon"));
-                    var queue = new Queue<(JsonElement Node, string Path, string Location)>();
-                    EnqueueChildren(root, "", "/");
-                    while (queue.TryDequeue(out var item))
-                    {
-                        token.ThrowIfCancellationRequested();
-                        var node = item.Node;
-                        if (!visited.Add(Text(node, "Id", "NodeId")))
-                            throw new CdCollectInvalidFormatException("Catalog hierarchy contains a cycle.");
-                        if (IsType(node, "Media"))
-                            throw new CdCollectInvalidFormatException("Nested media cannot be represented in CDCollect.");
-                        var directory = IsType(node, "Folder") || IsType(node, "NetworkFolder") || IsType(node, "NetworkResource");
-                        var properties = Get(node, "Properties");
-                        if (!long.TryParse(Text(node, "Size", "SizeBytes"), CultureInfo.InvariantCulture, out var size)) size = 0;
-                        // CDCollect 0.6.x reads sizes as signed Int32. Fail rather than silently truncate.
-                        if (size < 0 || size > int.MaxValue)
-                            throw new CdCollectInvalidFormatException($"Entry '{Text(node, "Name")}' exceeds CDCollect's signed 32-bit size limit.");
-                        var packed = Text(properties, "IsPacked", "Packed");
-                        Execute("INSERT INTO files_v1 VALUES ($a,$b,$c,$d,$e,$f,$g,$h,$i)", mediaId, item.Path,
-                            Text(node, "Name"), Text(properties, "Info", "Comments", "Description"), size,
-                            Text(properties, "MimeType", "Mime"), Text(properties, "Location", "Path") is { Length: > 0 } location ? location : item.Location,
-                            directory ? 0 : 1, packed.Equals("true", StringComparison.OrdinalIgnoreCase) || packed == "1" ? 1 : 0);
-                        if (!directory && children[Text(node, "Id", "NodeId")].Any() && packed != "true" && packed != "1")
-                            throw new CdCollectInvalidFormatException("Only folders or packed archives may contain children.");
-                        EnqueueChildren(node, item.Path, item.Location.TrimEnd('/') + "/" + Text(node, "Name"));
-                    }
-
-                    void EnqueueChildren(JsonElement parent, string prefix, string location)
-                    {
-                        var index = 0;
-                        foreach (var child in children[Text(parent, "Id", "NodeId")])
-                        {
-                            var key = index++.ToString(CultureInfo.InvariantCulture);
-                            queue.Enqueue((child, prefix.Length == 0 ? key : prefix + ":" + key, location));
-                        }
-                    }
+                    var node = item.Node;
+                    if (!visited.Add(Text(node, "Id", "NodeId")))
+                        throw new CdCollectInvalidFormatException("Catalog hierarchy contains a cycle.");
+                    if (IsType(node, "Media"))
+                        throw new CdCollectInvalidFormatException("Nested media cannot be represented in CDCollect.");
+                    var directory = IsType(node, "Folder") || IsType(node, "NetworkFolder") || IsType(node, "NetworkResource");
+                    var properties = Get(node, "Properties");
+                    if (!long.TryParse(Text(node, "Size", "SizeBytes"), CultureInfo.InvariantCulture, out var size)) size = 0;
+                    // CDCollect 0.6.x reads sizes as signed Int32. Fail rather than silently truncate.
+                    if (size < 0 || size > int.MaxValue)
+                        throw new CdCollectInvalidFormatException($"Entry '{Text(node, "Name")}' exceeds CDCollect's signed 32-bit size limit.");
+                    var packed = Text(properties, "IsPacked", "Packed");
+                    Execute("INSERT INTO files_v1 VALUES ($a,$b,$c,$d,$e,$f,$g,$h,$i)", mediaId, item.Path,
+                        Text(node, "Name"), Text(properties, "Info", "Comments", "Description"), size,
+                        Text(properties, "MimeType", "Mime"), Text(properties, "Location", "Path") is { Length: > 0 } location ? location : item.Location,
+                        directory ? 0 : 1, packed.Equals("true", StringComparison.OrdinalIgnoreCase) || packed == "1" ? 1 : 0);
+                    if (!directory && children[Text(node, "Id", "NodeId")].Any() && packed != "true" && packed != "1")
+                        throw new CdCollectInvalidFormatException("Only folders or packed archives may contain children.");
+                    EnqueueChildren(node, item.Path, item.Location.TrimEnd('/') + "/" + Text(node, "Name"));
                 }
-                if (visited.Count != rows.Count)
-                    throw new CdCollectInvalidFormatException("Catalog contains an unreachable hierarchy or cycle.");
-                transaction.Commit();
 
-                void Execute(string sql, params object[] values)
+                void EnqueueChildren(JsonElement parent, string prefix, string location)
                 {
-                    using var command = connection.CreateCommand();
-                    command.Transaction = transaction;
-                    command.CommandText = sql;
-                    for (var i = 0; i < values.Length; i++) command.Parameters.AddWithValue("$" + (char)('a' + i), values[i]);
-                    command.ExecuteNonQuery();
+                    var index = 0;
+                    foreach (var child in children[Text(parent, "Id", "NodeId")])
+                    {
+                        var key = index++.ToString(CultureInfo.InvariantCulture);
+                        queue.Enqueue((child, prefix.Length == 0 ? key : prefix + ":" + key, location));
+                    }
                 }
             }
-            token.ThrowIfCancellationRequested();
-            using var source = File.OpenRead(path);
-            source.CopyTo(request.Target);
-            request.Progress?.Report(100);
+            if (visited.Count != rows.Count)
+                throw new CdCollectInvalidFormatException("Catalog contains an unreachable hierarchy or cycle.");
+            transaction.Commit();
+
+            void Execute(string sql, params object[] values)
+            {
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = sql;
+                for (var i = 0; i < values.Length; i++) command.Parameters.AddWithValue("$" + (char)('a' + i), values[i]);
+                command.ExecuteNonQuery();
+            }
         }
-        finally
-        {
-            File.Delete(path);
-        }
+
+        token.ThrowIfCancellationRequested();
+        using var source = File.OpenRead(database.Path);
+        source.CopyTo(request.Target);
+        request.Progress?.Report(100);
     }
 
     private static JsonElement Get(JsonElement node, string name)

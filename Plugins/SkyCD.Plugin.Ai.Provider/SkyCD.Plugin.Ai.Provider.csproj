@@ -10,6 +10,11 @@
         <ProjectReference Include="../../src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <!-- Shared with the other preview plugins: one bounded cover pipeline and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\CoverImageRenderer.cs" Link="Shared\Preview\Export\CoverImageRenderer.cs"/>
+    </ItemGroup>
+    <ItemGroup>
         <PackageReference Include="SkiaSharp" Version="3.119.4" />
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
         <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4" />
