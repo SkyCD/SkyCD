@@ -12,6 +12,7 @@ using SkyCD.Plugin.FileFormat.CDCollect.Exceptions;
 using Xunit;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;
 using SkyCD.Plugin.FileFormat.CDCollect.Parsing;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect.Tests;
 
@@ -92,7 +93,8 @@ public sealed class CdCollectRoundTripTests
     [InlineData("UPDATE files_v1 SET type=9", typeof(CdCollectCorruptDatabaseException))]
     public void Import_RejectsUnknownOrMalformedSchemaAndHierarchy(string sql, Type exceptionType)
     {
-        WithDatabase(sql, path =>
+        using var workspace = new TestWorkspace();
+        WithDatabase(workspace, sql, path =>
         {
             using var source = File.OpenRead(path);
             Assert.Throws(exceptionType, () => CdCollectParser.Parse(source));
@@ -102,7 +104,8 @@ public sealed class CdCollectRoundTripTests
     [Fact]
     public void Detection_RequiresSchemaEvenWithCdCollectExtension_AndPreservesPosition()
     {
-        WithDatabase("DROP TABLE files_v1", path =>
+        using var workspace = new TestWorkspace();
+        WithDatabase(workspace, "DROP TABLE files_v1", path =>
         {
             using var source = File.OpenRead(path);
             source.Position = 8;
@@ -114,8 +117,9 @@ public sealed class CdCollectRoundTripTests
     [Fact]
     public void Import_ExecutableConfigurationIsInert()
     {
-        var sentinel = Path.Combine(Path.GetTempPath(), "cdcollect_sentinel_" + Guid.NewGuid().ToString("N"));
-        WithDatabase("UPDATE infoplugins SET program='cmd.exe', arguments='/c echo executed > " + sentinel + "'", path =>
+        using var workspace = new TestWorkspace();
+        var sentinel = workspace.GetPath("sentinel.txt");
+        WithDatabase(workspace, "UPDATE infoplugins SET program='cmd.exe', arguments='/c echo executed > " + sentinel + "'", path =>
         {
             using var source = File.OpenRead(path);
             var report = CdCollectParser.Parse(source);
@@ -149,22 +153,18 @@ public sealed class CdCollectRoundTripTests
             new CancellationToken(true)));
     }
 
-    private static void WithDatabase(string sql, Action<string> test)
+    private static void WithDatabase(TestWorkspace workspace, string sql, Action<string> test)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"cdcollect_test_{Guid.NewGuid():N}.db");
+        var path = workspace.GetPath("modified-catalog.db");
         File.Copy(Fixture, path);
-        try
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        { DataSource = path, Pooling = false }.ConnectionString))
         {
-            using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-            { DataSource = path, Pooling = false }.ConnectionString))
-            {
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = sql;
-                command.ExecuteNonQuery();
-            }
-            test(path);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.ExecuteNonQuery();
         }
-        finally { File.Delete(path); }
+        test(path);
     }
 }

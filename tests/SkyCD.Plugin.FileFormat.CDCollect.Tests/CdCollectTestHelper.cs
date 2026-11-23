@@ -1,18 +1,15 @@
 using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.FileFormat.CDCollect.Tests;
 
 public static class CdCollectTestHelper
 {
-    public static void CreateSampleV4Database(string filePath)
+    public static string CreateSampleV4Database(TestWorkspace workspace, string fileName)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
+        var filePath = workspace.GetPath(fileName);
         using (var conn = new SqliteConnection($"Data Source={filePath};Pooling=False"))
         {
             conn.Open();
@@ -97,15 +94,12 @@ public static class CdCollectTestHelper
             cmd.ExecuteNonQuery();
         }
         SqliteConnection.ClearAllPools();
+        return filePath;
     }
 
-    public static void CreateLegacyV0Database(string filePath)
+    public static string CreateLegacyV0Database(TestWorkspace workspace, string fileName)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
+        var filePath = workspace.GetPath(fileName);
         using (var conn = new SqliteConnection($"Data Source={filePath};Pooling=False"))
         {
             conn.Open();
@@ -145,15 +139,12 @@ public static class CdCollectTestHelper
             cmd.ExecuteNonQuery();
         }
         SqliteConnection.ClearAllPools();
+        return filePath;
     }
 
-    public static void CreateUnicodeDatabase(string filePath)
+    public static string CreateUnicodeDatabase(TestWorkspace workspace, string fileName)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
+        var filePath = workspace.GetPath(fileName);
         using (var conn = new SqliteConnection($"Data Source={filePath};Pooling=False"))
         {
             conn.Open();
@@ -203,15 +194,12 @@ public static class CdCollectTestHelper
             cmd.ExecuteNonQuery();
         }
         SqliteConnection.ClearAllPools();
+        return filePath;
     }
 
-    public static void CreateEmptyDatabase(string filePath)
+    public static string CreateEmptyDatabase(TestWorkspace workspace, string fileName)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
+        var filePath = workspace.GetPath(fileName);
         using (var conn = new SqliteConnection($"Data Source={filePath};Pooling=False"))
         {
             conn.Open();
@@ -246,15 +234,12 @@ public static class CdCollectTestHelper
             cmd.ExecuteNonQuery();
         }
         SqliteConnection.ClearAllPools();
+        return filePath;
     }
 
-    public static void CreateNonCdCollectDatabase(string filePath)
+    public static string CreateNonCdCollectDatabase(TestWorkspace workspace, string fileName)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
+        var filePath = workspace.GetPath(fileName);
         using (var conn = new SqliteConnection($"Data Source={filePath};Pooling=False"))
         {
             conn.Open();
@@ -267,40 +252,30 @@ public static class CdCollectTestHelper
             cmd.ExecuteNonQuery();
         }
         SqliteConnection.ClearAllPools();
+        return filePath;
     }
 
-    public static void EnsureFixtureFilesExist(string fixtureDir)
+    public static string EnsureSampleV4DatabaseExists(TestWorkspace workspace) =>
+        EnsureDatabaseExists(workspace, "cdcollect-sample-v4.db", CreateSampleV4Database);
+
+    public static string EnsureLegacyV0DatabaseExists(TestWorkspace workspace) =>
+        EnsureDatabaseExists(workspace, "cdcollect-legacy-v0.db", CreateLegacyV0Database);
+
+    public static string EnsureUnicodeDatabaseExists(TestWorkspace workspace) =>
+        EnsureDatabaseExists(workspace, "cdcollect-unicode.db", CreateUnicodeDatabase);
+
+    public static string EnsureEmptyDatabaseExists(TestWorkspace workspace) =>
+        EnsureDatabaseExists(workspace, "cdcollect-empty.db", CreateEmptyDatabase);
+
+    public static string EnsureNonCdCollectDatabaseExists(TestWorkspace workspace) =>
+        EnsureDatabaseExists(workspace, "non-cdcollect.db", CreateNonCdCollectDatabase);
+
+    private static string EnsureDatabaseExists(
+        TestWorkspace workspace,
+        string fileName,
+        Func<TestWorkspace, string, string> create)
     {
-        Directory.CreateDirectory(fixtureDir);
-
-        var sampleV4Path = Path.Combine(fixtureDir, "cdcollect-sample-v4.db");
-        if (!File.Exists(sampleV4Path))
-        {
-            CreateSampleV4Database(sampleV4Path);
-        }
-
-        var legacyV0Path = Path.Combine(fixtureDir, "cdcollect-legacy-v0.db");
-        if (!File.Exists(legacyV0Path))
-        {
-            CreateLegacyV0Database(legacyV0Path);
-        }
-
-        var unicodePath = Path.Combine(fixtureDir, "cdcollect-unicode.db");
-        if (!File.Exists(unicodePath))
-        {
-            CreateUnicodeDatabase(unicodePath);
-        }
-
-        var emptyPath = Path.Combine(fixtureDir, "cdcollect-empty.db");
-        if (!File.Exists(emptyPath))
-        {
-            CreateEmptyDatabase(emptyPath);
-        }
-
-        var nonCdCollectPath = Path.Combine(fixtureDir, "non-cdcollect.db");
-        if (!File.Exists(nonCdCollectPath))
-        {
-            CreateNonCdCollectDatabase(nonCdCollectPath);
-        }
+        var path = workspace.GetPath(fileName);
+        return File.Exists(path) ? path : create(workspace, fileName);
     }
 }

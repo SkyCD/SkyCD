@@ -14,6 +14,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.Cathy.Models;
 
@@ -53,38 +54,28 @@ public class CathyPluginIntegrationTests
         var manager = new FileFormatManager([plugin]);
         var loadService = new CatalogLoadService(manager);
 
-        var tempCaf = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.caf");
-        try
+        using var workspace = new TestWorkspace();
+        var bytes = CathyTestHelper.CreateSampleCaf(version: 8, volumeName: "Archive Disk 1", comment: "Cathy Test");
+        var tempCaf = workspace.CreateFile("archive-disk-1.caf", bytes);
+
+        var count = await loadService.LoadAsync(tempCaf, (payload, _) =>
         {
-            var bytes = CathyTestHelper.CreateSampleCaf(version: 8, volumeName: "Archive Disk 1", comment: "Cathy Test");
-            await File.WriteAllBytesAsync(tempCaf, bytes);
+            var documents = Extract(payload!);
+            Assert.NotEmpty(documents);
 
-            var count = await loadService.LoadAsync(tempCaf, (payload, _) =>
+            Persist(workspace, documents, vm =>
             {
-                var documents = Extract(payload!);
-                Assert.NotEmpty(documents);
+                Assert.NotEmpty(vm.TreeNodes);
+                var libraryNode = vm.TreeNodes.First();
+                Assert.Equal("library", libraryNode.Key);
+                Assert.NotEmpty(libraryNode.Children);
+                Assert.Contains(libraryNode.Children, child => child.Title == "Archive Disk 1");
+            });
 
-                Persist(documents, vm =>
-                {
-                    Assert.NotEmpty(vm.TreeNodes);
-                    var libraryNode = vm.TreeNodes.First();
-                    Assert.Equal("library", libraryNode.Key);
-                    Assert.NotEmpty(libraryNode.Children);
-                    Assert.Contains(libraryNode.Children, child => child.Title == "Archive Disk 1");
-                });
+            return documents.Count;
+        }, new Progress<int>());
 
-                return documents.Count;
-            }, new Progress<int>());
-
-            Assert.True(count > 0);
-        }
-        finally
-        {
-            if (File.Exists(tempCaf))
-            {
-                File.Delete(tempCaf);
-            }
-        }
+        Assert.True(count > 0);
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
@@ -93,50 +84,41 @@ public class CathyPluginIntegrationTests
         return Assert.IsAssignableFrom<IReadOnlyList<CatalogDocument>>(method.Invoke(null, [payload]));
     }
 
-    private static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
+    private static void Persist(TestWorkspace workspace, IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-cathy-" + Guid.NewGuid().ToString("N"));
-        try
+        var directory = workspace.CreateDirectory("catalog");
+        using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var collection = database.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var collection = database.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var document = entry.ToMutableDocument(entry.Id);
-                collection.Save(document);
-            }
-
-            foreach (var entry in documents)
-            {
-                using var saved = collection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.Type, restored.Type);
-            }
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-
-            if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
-            {
-                Assert.NotEmpty(vm.TreeNodes);
-            }
-
-            verify?.Invoke(vm);
+            using var document = entry.ToMutableDocument(entry.Id);
+            collection.Save(document);
         }
-        finally
+
+        foreach (var entry in documents)
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            using var saved = collection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.Type, restored.Type);
         }
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+
+        if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
+        {
+            Assert.NotEmpty(vm.TreeNodes);
+        }
+
+        verify?.Invoke(vm);
+        database.Close();
     }
 }

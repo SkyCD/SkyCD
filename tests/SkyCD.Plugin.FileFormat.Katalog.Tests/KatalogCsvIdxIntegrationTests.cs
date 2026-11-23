@@ -15,6 +15,7 @@ using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.FileFormat.Katalog.CsvIdx;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.Katalog.Models;
 
@@ -45,6 +46,7 @@ public sealed class KatalogCsvIdxIntegrationTests
     [Fact]
     public async Task LoadAsync_WithCatalogLoadService_PersistsAndReopensAccurately()
     {
+        using var workspace = new TestWorkspace();
         var fixtureDir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "KatalogCollection");
         var manager = new FileFormatManager([new KatalogCsvIdxPlugin()]);
         var loadService = new CatalogLoadService(manager);
@@ -54,7 +56,7 @@ public sealed class KatalogCsvIdxIntegrationTests
             var documents = Extract(payload!);
             Assert.NotEmpty(documents);
 
-            Persist(documents, vm =>
+            Persist(workspace, documents, vm =>
             {
                 // Verify tree roots
                 var rootKeys = vm.TreeNodes.Select(node => node.Key).ToList();
@@ -83,27 +85,20 @@ public sealed class KatalogCsvIdxIntegrationTests
     [Fact]
     public async Task ReadAsync_DetectsPathTraversal_AndFailsGracefully()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "katalog-attack-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
-        try
-        {
-            var attackIdx = Path.Combine(AppContext.BaseDirectory, "Fixtures", "traversal-attack.idx");
-            File.Copy(attackIdx, Path.Combine(tempDir, "attack.idx"));
+        using var workspace = new TestWorkspace();
+        var attackIdx = Path.Combine(AppContext.BaseDirectory, "Fixtures", "traversal-attack.idx");
+        var tempDir = workspace.CreateDirectory("attack");
+        File.Copy(attackIdx, Path.Combine(tempDir, "attack.idx"));
 
-            var plugin = new KatalogCsvIdxPlugin();
-            var result = await plugin.ReadAsync(new Abstractions.Capabilities.FileFormats.FileFormatReadRequest
-            {
-                FormatId = "katalog-csv-idx",
-                SourcePath = tempDir
-            });
-
-            Assert.False(result.Success);
-            Assert.Contains("traverse outside", result.Error);
-        }
-        finally
+        var plugin = new KatalogCsvIdxPlugin();
+        var result = await plugin.ReadAsync(new Abstractions.Capabilities.FileFormats.FileFormatReadRequest
         {
-            Directory.Delete(tempDir, true);
-        }
+            FormatId = "katalog-csv-idx",
+            SourcePath = tempDir
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("traverse outside", result.Error);
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
@@ -112,45 +107,36 @@ public sealed class KatalogCsvIdxIntegrationTests
         return Assert.IsAssignableFrom<IReadOnlyList<CatalogDocument>>(method.Invoke(null, [payload]));
     }
 
-    private static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
+    private static void Persist(TestWorkspace workspace, IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-katalog-" + Guid.NewGuid().ToString("N"));
-        try
+        var directory = workspace.CreateDirectory("catalog");
+        using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var collection = database.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var collection = database.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var document = entry.ToMutableDocument(entry.Id);
-                collection.Save(document);
-            }
-
-            foreach (var entry in documents)
-            {
-                using var saved = collection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.Type, restored.Type);
-            }
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-
-            verify?.Invoke(vm);
+            using var document = entry.ToMutableDocument(entry.Id);
+            collection.Save(document);
         }
-        finally
+
+        foreach (var entry in documents)
         {
-            if (Directory.Exists(directory))
-            {
-                try { Directory.Delete(directory, true); } catch { /* ignore */ }
-            }
+            using var saved = collection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.Type, restored.Type);
         }
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+
+        verify?.Invoke(vm);
+        database.Close();
     }
 }

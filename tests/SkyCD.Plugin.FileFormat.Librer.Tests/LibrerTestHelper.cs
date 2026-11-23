@@ -3,24 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using MessagePack;
+using SkyCD.TestSupport;
 using ZstdSharp;
 
 namespace SkyCD.Plugin.FileFormat.Librer.Tests;
 
 public static class LibrerTestHelper
 {
-    public static void CreateSampleLibrerCatalog(string filePath)
+    public static string CreateSampleLibrerCatalog(TestWorkspace workspace, string relativePath)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
-
-        var dir = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-        {
-            Directory.CreateDirectory(dir);
-        }
+        var filePath = workspace.GetPath(relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
 
         using var zipStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
         using var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create);
@@ -128,14 +121,14 @@ public static class LibrerTestHelper
         {
             entryStream.Write(compressedFilestructure);
         }
+
+        return filePath;
     }
 
-    public static void CreateEmptyFilestructureCatalog(string filePath)
+    public static string CreateEmptyFilestructureCatalog(TestWorkspace workspace, string relativePath)
     {
-        if (File.Exists(filePath))
-        {
-            File.Delete(filePath);
-        }
+        var filePath = workspace.GetPath(relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
 
         using var zipStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
         using var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create);
@@ -165,19 +158,13 @@ public static class LibrerTestHelper
         {
             entryStream.Write(Array.Empty<byte>());
         }
+
+        return filePath;
     }
 
-    public static void EnsureFixtureFilesExist(string targetDirectory)
+    public static string EnsureSampleCatalogExists(TestWorkspace workspace)
     {
-        if (!Directory.Exists(targetDirectory))
-        {
-            Directory.CreateDirectory(targetDirectory);
-        }
-
-        var samplePath = Path.Combine(targetDirectory, "sample.librer_data");
-        if (!File.Exists(samplePath))
-        {
-            CreateSampleLibrerCatalog(samplePath);
-        }
+        var samplePath = workspace.GetPath("sample.librer_data");
+        return File.Exists(samplePath) ? samplePath : CreateSampleLibrerCatalog(workspace, "sample.librer_data");
     }
 }
