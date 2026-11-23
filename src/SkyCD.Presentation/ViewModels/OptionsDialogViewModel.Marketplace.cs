@@ -24,6 +24,7 @@ public partial class OptionsDialogViewModel
     private CancellationTokenSource? marketplaceLifetime;
     private IReadOnlyList<MarketplacePluginItem> allMarketplaceItems = [];
     private bool marketplaceLoaded;
+    private bool marketplaceCatalogIsEmpty;
 
     public ObservableCollection<MarketplacePluginItem> FilteredMarketplacePlugins { get; } = [];
 
@@ -155,6 +156,7 @@ public partial class OptionsDialogViewModel
 
         IsMarketplaceLoading = true;
         MarketplaceStatusMessage = string.Empty;
+        marketplaceCatalogIsEmpty = false;
         try
         {
             var token = marketplaceLifetime is null
@@ -197,6 +199,8 @@ public partial class OptionsDialogViewModel
             .ToArray();
 
         allMarketplaceItems = items;
+        marketplaceCatalogIsEmpty = items.Length == 0 &&
+            !snapshot.IsOffline && !snapshot.HasTotalFailure && !snapshot.HasPartialFailure;
         RefreshFilteredMarketplacePlugins(keepSelection: true);
         OnPropertyChanged(nameof(HasAvailableMarketplaceUpdates));
         UpdateAllPluginsCommand.NotifyCanExecuteChanged();
@@ -232,7 +236,7 @@ public partial class OptionsDialogViewModel
             return LocalizationService.Current.Get(TextKeys.PluginCatalogPartialFailure);
         }
 
-        return snapshot.IsEmpty ? LocalizationService.Current.Get(TextKeys.PluginCatalogEmpty) : string.Empty;
+        return string.Empty;
     }
 
     private void RefreshFilteredMarketplacePlugins(bool keepSelection = false)
@@ -255,6 +259,8 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(MarketplacePluginsHeader));
         OnPropertyChanged(nameof(MarketplacePluginsCount));
         OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
     }
 
     partial void OnMarketplaceFilterTextChanged(string value) => RefreshFilteredMarketplacePlugins();
@@ -269,8 +275,17 @@ public partial class OptionsDialogViewModel
 
     partial void OnIsMarketplaceBrowseSelectedChanged(bool value) => NotifyMarketplaceVisibilityChanged();
 
+    partial void OnIsMarketplaceLoadingChanged(bool value) => NotifyMarketplacePaneStateChanged();
+
     partial void OnMarketplaceStatusMessageChanged(string value) =>
         OnPropertyChanged(nameof(ShowMarketplaceStatusMessage));
+
+    private void NotifyMarketplacePaneStateChanged()
+    {
+        OnPropertyChanged(nameof(ShowMarketplacePaneEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
+    }
 
     private void NotifyMarketplaceVisibilityChanged()
     {
@@ -280,6 +295,8 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(ShowInstalledPluginInfoSection));
         OnPropertyChanged(nameof(ShowMarketplaceSection));
         OnPropertyChanged(nameof(ShowMarketplaceEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneFilterEmptyState));
+        OnPropertyChanged(nameof(ShowMarketplacePaneList));
     }
 
     private void DisposeMarketplace()

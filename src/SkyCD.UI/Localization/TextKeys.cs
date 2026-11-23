@@ -276,4 +276,6 @@ public static class TextKeys
     public const string PluginCatalogFailure = "core.text.PluginCatalogFailure";
     public const string PluginCatalogPartialFailure = "core.text.PluginCatalogPartialFailure";
     public const string PluginCatalogEmpty = "core.text.PluginCatalogEmpty";
+    public const string PluginFilterNoMatches = "core.text.PluginFilterNoMatches";
+    public const string PluginMarketplaceFilterNoMatches = "core.text.PluginMarketplaceFilterNoMatches";
 }
