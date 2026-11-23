@@ -5,7 +5,7 @@
   "licenseIdsByUrl": {
     "https://creativecommons.org/licenses/by/4.0/": "CC-BY-4.0",
     "https://creativecommons.org/licenses/by/4.0/legalcode": "CC-BY-4.0",
-    "https://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html": "BSD-3-Clause"
+    "https://www.adobe.com/devnet/xmp/library/eula-xmp-library-java.html": "BSD-3-Clause",
     "https://github.com/bolorundurowb/vCardLib/blob/master/LICENSE": "MIT"
   },
   "blockedLicenseIds": [
