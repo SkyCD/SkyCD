@@ -110,11 +110,17 @@ public sealed class MediaThumbnailProgressTests : IDisposable
         Assert.True(service.CanCollect);
 
         var reported = new List<MediaThumbnail>();
+        var firstReport = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var outcome = await service.CollectAsync(entry, Catalog,
-            thumbnailProgress: new SyncProgress<MediaThumbnail>(reported.Add));
+            thumbnailProgress: new SyncProgress<MediaThumbnail>(thumbnail =>
+            {
+                reported.Add(thumbnail);
+                firstReport.TrySetResult();
+            }));
 
         Assert.True(outcome.Stored);
+        await firstReport.Task.WaitAsync(TimeSpan.FromSeconds(10));
         var thumbnail = Assert.Single(reported);
         Assert.Equal("poster.mp4", thumbnail.Name);
         Assert.Equal(ThumbnailBytes, thumbnail.Data);
