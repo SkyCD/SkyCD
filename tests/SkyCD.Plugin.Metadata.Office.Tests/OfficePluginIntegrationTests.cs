@@ -80,6 +80,64 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Host_RunsThePreviewCapabilityForAnOfficeSource()
+    {
+        var document = OfficeFixtures.DocxWithThumbnail();
+        var results = await CreateManager(ProvidersWithPreview()).ProcessAsync(
+            OfficeMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = Assert.Single(results, result => result.Metadata is not null);
+        Assert.False(metadata.Failed);
+        Assert.Equal("Quarterly Report",
+            metadata.Metadata!.Values.Single(value => value.Key == OfficeSchema.Title).Text);
+
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        var artifact = Assert.Single(preview.Preview!.Artifacts);
+        Assert.Equal("image/jpeg", artifact.ContentType);
+    }
+
+    [Fact]
+    public async Task UnusableThumbnail_KeepsTheMetadataAndYieldsNoPreview()
+    {
+        var document = OfficeFixtures.WithBinaryEntry(
+            Document(),
+            "docProps/thumbnail.jpeg",
+            [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00]);
+
+        var results = await CreateManager(ProvidersWithPreview()).ProcessAsync(
+            OfficeMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = Assert.Single(results, result => result.Metadata is not null);
+        Assert.False(metadata.Failed);
+        Assert.Equal("Quarterly Report",
+            metadata.Metadata!.Values.Single(value => value.Key == OfficeSchema.Title).Text);
+
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+    }
+
+    [Fact]
+    public async Task EncryptedPackage_StaysMetadataOnly()
+    {
+        var document = OfficeFixtures.EncryptedPackage();
+        var results = await CreateManager(ProvidersWithPreview()).ProcessAsync(
+            OfficeMetadataPluginTests.Item(document),
+            _ => Task.FromResult<Stream>(new MemoryStream(document)));
+
+        var metadata = Assert.Single(results, result => result.Metadata is not null);
+        Assert.False(metadata.Failed);
+        Assert.True(metadata.Metadata!.Values.Single(value => value.Key == OfficeSchema.IsEncrypted).Boolean);
+
+        var preview = Assert.Single(results, result => result.Preview is not null);
+        Assert.False(preview.Failed);
+        Assert.Empty(preview.Preview!.Artifacts);
+    }
+
+    [Fact]
     public void Host_ClaimsOnlyOfficeSources()
     {
         var manager = CreateManager();
@@ -110,7 +168,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     public async Task HostSourceBudget_RejectsADocumentLargerThanTheBudget()
     {
         var document = Document();
-        var manager = CreateManager(new MediaExecutionLimits(SourceBytes: 16));
+        var manager = CreateManager(limits: new MediaExecutionLimits(SourceBytes: 16));
 
         var results = await manager.ProcessAsync(
             OfficeMetadataPluginTests.Item(document),
@@ -160,6 +218,45 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task CapturedThumbnail_SurvivesReopen_WithoutThePluginOrTheSource()
+    {
+        var document = OfficeFixtures.DocxWithThumbnail();
+
+        using (var database = OpenDatabase())
+        {
+            var catalog = CreateCatalogRepository(database);
+            var entry = SeedCatalog(catalog, document.Length);
+            using var store = MediaCacheStore.Create(database);
+
+            var outcome = await new MediaExtractionScheduler(
+                    new MediaExtensionManager(ProvidersWithPreview()), store)
+                .ProcessAsync(MediaExtractionRequest.ForCatalogEntry(
+                    entry, _ => Task.FromResult<Stream>(new MemoryStream(document)), catalog.GetAll()));
+
+            Assert.True(outcome.Published);
+        }
+
+        // Reopened with no plugin registered and no source reachable: only the stored bytes remain.
+        using (var database = OpenDatabase())
+        {
+            var catalog = CreateCatalogRepository(database);
+            using var store = MediaCacheStore.Create(database);
+            var entry = catalog.GetAll().Single(documentEntry => documentEntry.Id == DocumentEntryId);
+
+            var resolver = new MediaPreviewResolver(store);
+            var snapshot = resolver.Resolve(entry);
+
+            Assert.Equal(MediaPreviewState.Ready, snapshot.State);
+            Assert.Equal(PreviewPayloadKind.Image, snapshot.PayloadKind);
+            Assert.Equal(PluginId, snapshot.ProviderId);
+            Assert.Equal("image/jpeg", snapshot.Artifact!.ContentType);
+            Assert.True(resolver.TryReadPayload(snapshot, out var bytes));
+            Assert.Equal(0xFF, bytes[0]);
+            Assert.Equal(0xD8, bytes[1]);
+        }
+    }
+
+    [Fact]
     public async Task CancelledExtraction_PublishesNothing()
     {
         var document = Document();
@@ -181,14 +278,15 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsTheCapability_FromMetadataOnly()
+    public void AssemblyDiscovery_FindsTheCapabilities_FromMetadataOnly()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(OfficeMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
         Assert.Equal("Microsoft Office Document Metadata", plugin.Name);
-        var capability = Assert.Single(plugin.Capabilities);
-        Assert.IsAssignableFrom<IMediaMetadataCapability>(capability);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
+        Assert.Equal(2, plugin.Capabilities.Count);
     }
 
     [Fact]
@@ -218,8 +316,15 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     private static MediaProvider[] CreateProviders() =>
         [new MediaProvider(PluginId, "1.0.0", new OfficeMetadataPlugin())];
 
-    private static MediaExtensionManager CreateManager(MediaExecutionLimits? limits = null) =>
-        new(CreateProviders(), limits);
+    private static MediaProvider[] ProvidersWithPreview() =>
+    [
+        new MediaProvider(PluginId, "1.0.0", new OfficeMetadataPlugin()),
+        new MediaProvider(PluginId, "1.0.0", new OfficePreviewPlugin())
+    ];
+
+    private static MediaExtensionManager CreateManager(MediaProvider[]? providers = null,
+        MediaExecutionLimits? limits = null) =>
+        new(providers ?? CreateProviders(), limits);
 
     private Database OpenDatabase() =>
         new("office-plugin-tests", new DatabaseConfiguration { Directory = databaseDirectory });
