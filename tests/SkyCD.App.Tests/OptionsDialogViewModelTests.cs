@@ -172,7 +172,8 @@ public class OptionsDialogViewModelTests
 
         vm.SettingsSearchText = "mcp";
 
-        Assert.Equal(["MCP"], vm.FilteredSettingCategories.Select(category => category.Title));
+        // The MCP tool exposure page shares the server keywords, so both MCP pages match.
+        Assert.Equal(["MCP", "MCP Tools"], vm.FilteredSettingCategories.Select(category => category.Title));
         Assert.Equal("MCP", vm.SelectedSettingCategory?.Title);
         Assert.Equal(2, vm.SelectedTabIndex);
         Assert.True(vm.ShowMcpSection);

@@ -1587,6 +1587,84 @@
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowMcpToolsSection}"
+                          RowDefinitions="Auto,Auto,Auto,*"
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.McpTools}}"
+                                       FontSize="{DynamicResource SkyFontBody}"
+                                       FontWeight="SemiBold" />
+                            <Border Grid.Column="1"
+                                    Height="1"
+                                    Background="{DynamicResource ThemeBorderLowBrush}"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+
+                        <TextBox Grid.Row="1"
+                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
+                                 Text="{Binding McpToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{Binding McpExposedSummary}"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.SelectAll}}"
+                                    Command="{Binding SelectAllMcpToolsCommand}" />
+                            <Button Grid.Column="2"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.ClearAll}}"
+                                    Command="{Binding ClearMcpToolsCommand}" />
+                        </Grid>
+
+                        <Grid Grid.Row="3" RowDefinitions="*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
+                            <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource SkyCornerRadius}"
+                                    Background="{DynamicResource ThemeControlLowBrush}">
+                                <ListBox ItemsSource="{Binding FilteredMcpTools}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.Styles>
+                                        <Style Selector="ListBoxItem">
+                                            <Setter Property="Padding" Value="{DynamicResource SkyInsetXs}" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        </Style>
+                                    </ListBox.Styles>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:McpToolItemViewModel">
+                                            <Grid ColumnDefinitions="Auto,*"
+                                                  ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                <CheckBox IsChecked="{Binding IsExposed}"
+                                                          VerticalAlignment="Center"
+                                                          ToolTip.Tip="{Binding Name}" />
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="{DynamicResource SkySpaceXxs}"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding Name}" />
+                                                    <TextBlock Text="{Binding CommandPath}"
+                                                               FontSize="{DynamicResource SkyFontSecondary}"
+                                                               Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding CommandPath}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                            <TextBlock Grid.Row="1"
+                                       IsVisible="{Binding ShowNoMatchingMcpTools}"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.NoMatchingTools}}"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                       TextWrapping="Wrap" />
+                        </Grid>
+                    </Grid>
                     <Border Grid.Row="4"
                             IsVisible="{Binding ShowNoSearchResults}"
                             BorderBrush="#6A5C2D"

@@ -34,6 +34,9 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
     private string? baseUrl;
     private bool desiredEnabled;
     private int desiredPort = 8090;
+    private IReadOnlySet<string>? desiredExposedTools;
+    // Immutable snapshot of the set the running server was started with; null means every discovered tool.
+    private IReadOnlySet<string>? appliedExposedTools;
     private bool disposed;
 
     public McpServerHost(ILogger<McpServerHost>? logger = null)
@@ -65,15 +68,32 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
 
     /// <summary>
     /// Records the desired configuration; <see cref="ApplyConfigurationAsync"/> or
-    /// <see cref="StartAsync"/> applies it.
+    /// <see cref="StartAsync"/> applies it. <paramref name="exposedToolNames"/> <c>null</c> exposes every
+    /// discovered tool; an empty collection exposes none.
     /// </summary>
-    public void UpdateConfiguration(bool enabled, int port)
+    public void UpdateConfiguration(bool enabled, int port, IReadOnlyCollection<string>? exposedToolNames = null)
     {
+        var exposed = exposedToolNames is null
+            ? null
+            : new HashSet<string>(exposedToolNames, StringComparer.OrdinalIgnoreCase);
         lock (sync)
         {
             desiredEnabled = enabled;
             desiredPort = Math.Clamp(port, 1, 65535);
+            desiredExposedTools = exposed;
         }
+    }
+
+    /// <summary>Lists the tools the bridge discovers, independent of the exposure selection.</summary>
+    public Task<IReadOnlyList<CliMcpToolDescriptor>> ListToolsAsync(CancellationToken cancellationToken = default)
+    {
+        int port;
+        lock (sync)
+        {
+            port = desiredPort;
+        }
+
+        return new CliMcpBridge($"http://127.0.0.1:{port}/mcp").ListToolsAsync(cancellationToken);
     }
 
     public async Task ApplyConfigurationAsync(CancellationToken cancellationToken = default)
@@ -88,10 +108,12 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
 
             bool enabled;
             int port;
+            IReadOnlySet<string>? exposed;
             lock (sync)
             {
                 enabled = desiredEnabled;
                 port = desiredPort;
+                exposed = desiredExposedTools;
             }
 
             var desiredBaseUrl = $"http://127.0.0.1:{port}/mcp";
@@ -103,7 +125,10 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
 
             lock (sync)
             {
-                if (webAppTask is { IsCompleted: false } && string.Equals(baseUrl, desiredBaseUrl, StringComparison.Ordinal))
+                // The MCP tool list is fixed at startup, so a changed exposure selection needs a restart.
+                if (webAppTask is { IsCompleted: false } &&
+                    string.Equals(baseUrl, desiredBaseUrl, StringComparison.Ordinal) &&
+                    SetsEqual(exposed, appliedExposedTools))
                 {
                     return;
                 }
@@ -112,7 +137,7 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
             await StopInternalAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await StartInternalAsync(port, desiredBaseUrl, cancellationToken).ConfigureAwait(false);
+                await StartInternalAsync(port, desiredBaseUrl, exposed, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
@@ -160,7 +185,8 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
         }
     }
 
-    private async Task StartInternalAsync(int port, string desiredBaseUrl, CancellationToken cancellationToken)
+    private async Task StartInternalAsync(int port, string desiredBaseUrl, IReadOnlySet<string>? exposed,
+        CancellationToken cancellationToken)
     {
         var rootUrl = $"http://127.0.0.1:{port}";
         var builder = WebApplication.CreateSlimBuilder();
@@ -168,7 +194,9 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
 
         var bridge = new CliMcpBridge(desiredBaseUrl);
         var descriptors = await bridge.ListToolsAsync(cancellationToken).ConfigureAwait(false);
-        var serverTools = descriptors.Select(descriptor => CreateTool(bridge, descriptor))
+        // Disabled tools must be neither advertised nor invokable, so the legacy endpoints share this list.
+        var exposedDescriptors = FilterExposedTools(descriptors, exposed);
+        var serverTools = exposedDescriptors.Select(descriptor => CreateTool(bridge, descriptor))
             .ToArray();
 
         builder.Services.AddMcpServer()
@@ -187,17 +215,20 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
             app.MapMcp("/mcp");
 
             // Keep legacy helper endpoints for manual diagnostics and backwards compatibility.
-            app.MapGet("/mcp/tools", async (CancellationToken toolCancellationToken) =>
-            {
-                var tools = await bridge.ListToolsAsync(toolCancellationToken);
-                return Results.Json(new { tools }, JsonOptions);
-            });
+            app.MapGet("/mcp/tools", () => Results.Json(new { tools = exposedDescriptors }, JsonOptions));
             app.MapMethods("/mcp/tools/{**toolPath}", ["GET", "POST"], async (HttpContext context,
-                string toolPath, CancellationToken toolCancellationToken) =>
+                string? toolPath, CancellationToken toolCancellationToken) =>
             {
                 if (string.IsNullOrWhiteSpace(toolPath))
                 {
                     return Results.BadRequest(new { error = "Tool path is required." });
+                }
+
+                var toolName = $"skycd.{toolPath.Replace('/', '.')}";
+                if (exposed is not null && !exposed.Contains(toolName))
+                {
+                    return Results.Json(new { error = $"Tool '{toolName}' is not exposed." },
+                        statusCode: StatusCodes.Status403Forbidden);
                 }
 
                 JsonObject? payload = null;
@@ -219,7 +250,7 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
                     input = map;
                 }
 
-                var result = await bridge.InvokeToolAsync($"skycd.{toolPath.Replace('/', '.')}", input, toolCancellationToken);
+                var result = await bridge.InvokeToolAsync(toolName, input, toolCancellationToken);
                 return result.Success
                     ? Results.Json(result, JsonOptions)
                     : Results.BadRequest(result);
@@ -237,8 +268,26 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
         {
             webApp = app;
             baseUrl = desiredBaseUrl;
+            appliedExposedTools = exposed;
             webAppTask = WaitForShutdownAsync(app, desiredBaseUrl);
         }
+    }
+
+    /// <summary>Keeps only the descriptors the exposure selection allows; a <c>null</c> selection exposes all.</summary>
+    internal static IReadOnlyList<CliMcpToolDescriptor> FilterExposedTools(IEnumerable<CliMcpToolDescriptor> descriptors,
+        IReadOnlySet<string>? exposed)
+    {
+        return descriptors.Where(descriptor => exposed is null || exposed.Contains(descriptor.Name)).ToArray();
+    }
+
+    private static bool SetsEqual(IReadOnlySet<string>? first, IReadOnlySet<string>? second)
+    {
+        if (first is null || second is null)
+        {
+            return first is null && second is null;
+        }
+
+        return first.SetEquals(second);
     }
 
     private async Task StopInternalAsync(CancellationToken cancellationToken)
@@ -252,6 +301,7 @@ public sealed class McpServerHost : IAppBackgroundService, IDisposable
             webApp = null;
             webAppTask = null;
             baseUrl = null;
+            appliedExposedTools = null;
         }
 
         if (app is null)

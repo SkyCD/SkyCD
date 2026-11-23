@@ -170,6 +170,12 @@ public static class UiKeys
     public const string ApplicationSettings = "core.ui.ApplicationSettings";
     public const string Language = "core.ui.Language";
     public const string McpServer = "core.ui.McpServer";
+    public const string McpTools = "core.ui.McpTools";
+    public const string SearchMcpTools = "core.ui.SearchMcpTools";
+    public const string SelectAll = "core.ui.SelectAll";
+    public const string ClearAll = "core.ui.ClearAll";
+    public const string McpExposedCount = "core.ui.McpExposedCount";
+    public const string NoMatchingTools = "core.ui.NoMatchingTools";
     public const string Enabled = "core.ui.Enabled";
     public const string ShowStatusIcon = "core.ui.ShowStatusIcon";
     public const string Port = "core.ui.Port";

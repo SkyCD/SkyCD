@@ -1468,6 +1468,17 @@ public partial class MainWindow : Window
             options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
+        // Discovery must never block opening Options; an unreachable bridge keeps the stored selection intact.
+        e.Dialog.InitializeMcpTools(options.ExposedMcpTools);
+        try
+        {
+            var mcpTools = Application.Current is App app ? await app.GetMcpToolsAsync() : [];
+            e.Dialog.SetMcpTools(mcpTools.Select(tool => (tool.Name, tool.CommandPath)), options.ExposedMcpTools);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Leave the page empty; saving preserves the existing selection.
+        }
         if (DataContext is MainWindowViewModel toolbarViewModel)
         {
             e.Dialog.SetToolbarCustomization(toolbarViewModel.ToolbarCommands(), toolbarViewModel.ToolbarEntries);
@@ -1519,6 +1530,7 @@ public partial class MainWindow : Window
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
+            options.ExposedMcpTools = e.Dialog.GetExposedMcpTools()?.ToList();
             options.Language = e.Dialog.SelectedLanguage.CultureCode;
             options.OptionsTabIndex = Math.Max(0, e.Dialog.SelectedSettingCategory?.BuiltInIndex ?? 0);
             options.OptionsCategoryId = e.Dialog.SelectedSettingCategory?.Id;
