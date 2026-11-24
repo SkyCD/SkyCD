@@ -6,6 +6,8 @@
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>MyCatalogue</AssemblyTitle>
+        <Description>Read-only import of MyCatalogue (*.mdb) catalogs.</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />

@@ -8,6 +8,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Sample Menu</AssemblyTitle>
+        <Description>Demonstrates a Tools menu command that opens a notification dialog.</Description>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.1.6"/>

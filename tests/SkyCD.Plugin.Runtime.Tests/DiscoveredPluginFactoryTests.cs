@@ -37,4 +37,16 @@ public sealed class DiscoveredPluginFactoryTests
 
         Assert.Equal("test", plugin.PrimaryExtension);
     }
+
+    [Fact]
+    public void BuildFromAssembly_UsesAssemblyTitleInsteadOfAssemblyName()
+    {
+        var factory = new DiscoveredPluginFactory();
+
+        var plugin = factory.BuildFromAssembly(Assembly.GetExecutingAssembly());
+
+        Assert.Equal("Runtime Test Plugin", plugin.Name);
+        Assert.NotEqual(Assembly.GetExecutingAssembly().GetName().Name, plugin.Name);
+        Assert.False(string.IsNullOrWhiteSpace(plugin.Description));
+    }
 }

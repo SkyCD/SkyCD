@@ -11,5 +11,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Accounts</AssemblyTitle>
+        <Description>Contributes the list licenses and list subscriptions CLI commands shared by the account sync plugins.</Description>
     </PropertyGroup>
 </Project>

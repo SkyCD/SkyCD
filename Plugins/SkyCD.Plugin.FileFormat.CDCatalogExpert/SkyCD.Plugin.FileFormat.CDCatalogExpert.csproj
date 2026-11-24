@@ -11,5 +11,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>CD Catalog Expert</AssemblyTitle>
+        <Description>Reads and writes CD Catalog Expert 9.x catalogs (.zdc).</Description>
     </PropertyGroup>
 </Project>

@@ -8,6 +8,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Sample Modal</AssemblyTitle>
+        <Description>Demonstrates a blocking confirm-export modal with typed input and output contracts.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

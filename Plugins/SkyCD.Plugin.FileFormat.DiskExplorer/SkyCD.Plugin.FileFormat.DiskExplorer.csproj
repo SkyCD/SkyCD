@@ -17,5 +17,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Disk Explorer Professional</AssemblyTitle>
+        <Description>Reads and writes Disk Explorer Professional XML reports.</Description>
     </PropertyGroup>
 </Project>

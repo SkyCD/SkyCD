@@ -13,6 +13,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Plain Text List Export</AssemblyTitle>
+        <Description>Exports the current list or result set as aligned fixed-width or tab-delimited text.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

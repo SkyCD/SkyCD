@@ -15,5 +15,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Basenji Volume Database</AssemblyTitle>
+        <Description>Read-only import of Basenji .vdb volume database catalogs.</Description>
     </PropertyGroup>
 </Project>

@@ -16,5 +16,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Easy Disk Catalog Maker</AssemblyTitle>
+        <Description>Read-only import of Easy Disk Catalog Maker 1.7 (*.edcdb) catalogs.</Description>
     </PropertyGroup>
 </Project>
