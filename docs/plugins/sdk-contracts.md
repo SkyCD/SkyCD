@@ -2,6 +2,26 @@
 
 Project structure and role folders are described in [plugin-project-layout.md](plugin-project-layout.md).
 
+## The `SkyCD.SDK` package
+
+`SkyCD.SDK` is the single, versioned, dependency-free library a third-party author references to build a
+SkyCD plugin. It is produced by `src/SkyCD.SDK` (assembly and NuGet package id `SkyCD.SDK`; the namespaces
+remain `SkyCD.Plugin.Abstractions.*`, so source is portable across the rename). See
+[sdk-versioning-policy.md](sdk-versioning-policy.md) for the versioning rules.
+
+The package contains only the plugin-authoring surface:
+
+- lifecycle and identity: `IPlugin`, `IPluginCapability`, `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`;
+- the capability contracts under `Capabilities/**` and the host services plugins call back into
+  (`ICatalogApi`, `IHostCommandApi`, `IHostDialogApi`, `IPluginStorageApi` / `IPluginStorageConsumer`, `IOAuthService`, `ILocalizationService`);
+- the request/result/descriptor models exchanged across those contracts.
+
+The package deliberately contains **no third-party helper types**. SkiaSharp, XmpCore, Avalonia and
+host-internal packages must not appear in its dependency list, and no helper from `Plugins/Shared`
+(XMP/Skia readers, the temp database, encodings, export formatting, package-path rules) is part of the SDK
+public API. Preview rendering, media-metadata/XMP parsing and temp-workspace handling are reached through
+host service contracts implemented by the host, not by copied helper source.
+
 ## Base Lifecycle
 - `IPlugin`
   - `Descriptor` metadata (`Id`, `Version`, `MinHostVersion`)
@@ -135,6 +155,6 @@ the file.
 - Host executes CLI plugin handlers with timeout and exception isolation, including deterministic command collision checks.
 
 ## Sample Plugin
-- `Plugins/SkyCD.Plugin.FileFormat.Json` compiles against `SkyCD.Plugin.Abstractions` and demonstrates `IFileFormatPluginCapability`.
+- `Plugins/SkyCD.Plugin.FileFormat.Json` compiles against the `SkyCD.SDK` package and demonstrates `IFileFormatPluginCapability`.
 - `Plugins/SkyCD.Plugin.Sample.Modal` demonstrates modal registration and typed request/response payload contracts (`IModalPluginCapability`).
 - `Plugins/SkyCD.Plugin.Sample.Config` demonstrates embedded Options drafts (see above).

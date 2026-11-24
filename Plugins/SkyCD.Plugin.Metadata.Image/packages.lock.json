@@ -44,7 +44,7 @@
         "resolved": "6.1.10.1",
         "contentHash": "/Tp2/e39e7z8hLtS4TXt0FNNZHbf5yNFfHS0/59soXlgOzZlyRZivvzWpvujyaWkTWWgecp/1nHxkuc5vntn7A=="
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }

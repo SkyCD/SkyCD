@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\SkyCD.Core\SkyCD.Core.csproj"/>
         <ProjectReference Include="..\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
         <ProjectReference Include="..\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>

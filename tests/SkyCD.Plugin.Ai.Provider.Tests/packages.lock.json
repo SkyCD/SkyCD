@@ -117,9 +117,6 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "skycd.plugin.abstractions": {
-        "type": "Project"
-      },
       "skycd.plugin.ai.provider": {
         "type": "Project",
         "dependencies": {
@@ -127,14 +124,17 @@
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
           "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
       }
     }
   }

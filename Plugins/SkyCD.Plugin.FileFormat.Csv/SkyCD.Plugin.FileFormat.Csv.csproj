@@ -5,7 +5,7 @@
         <Compile Include="..\Shared\ExportFormatting\ExportValueFormatting.cs" Link="Shared\ExportFormatting\ExportValueFormatting.cs" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <!-- Apache-2.0: compliant per dependency-license-policy.json -->

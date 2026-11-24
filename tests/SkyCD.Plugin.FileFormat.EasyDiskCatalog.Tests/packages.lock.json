@@ -120,15 +120,15 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "skycd.plugin.abstractions": {
-        "type": "Project"
-      },
       "skycd.plugin.fileformat.easydiskcatalog": {
         "type": "Project",
         "dependencies": {
           "SQLite3MC.PCLRaw.bundle": "[2.7.1, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
       }
     }
   }

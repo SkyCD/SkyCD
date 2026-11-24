@@ -1,6 +1,6 @@
 # Volume serial number plugin
 
-Implements #642 on the volume-aware capability contracts (`src/SkyCD.Plugin.Abstractions/Capabilities/Volume/`).
+Implements #642 on the volume-aware capability contracts (`src/SkyCD.SDK/Capabilities/Volume/`).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.Volume/` → plugin id `SkyCD.Plugin.VolumeSerial`.
 Tests: `tests/SkyCD.Plugin.Metadata.Volume.Tests/`.

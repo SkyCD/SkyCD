@@ -10,7 +10,7 @@
         <PackageReference Include="SmartFormat" Version="3.6.2"/>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj"/>
         <EmbeddedResource Include="Translations\*.yaml"/>
         <Content Include="Translations\en-*.yaml" Link="Data\i18n\en\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>

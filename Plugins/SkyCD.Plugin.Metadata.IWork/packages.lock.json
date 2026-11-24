@@ -16,7 +16,7 @@
         "resolved": "3.6.2",
         "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }

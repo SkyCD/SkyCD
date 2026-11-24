@@ -22,7 +22,7 @@
         "resolved": "1.0.104",
         "contentHash": "r1QAOi2QaoP7Gfus2QW3W7+Zub4kguBMLiHY9EOgEG0HqK/Zb43aDHRUcz5WDRuB2vhHRANOvQW2wAF1tcQLdQ=="
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }
