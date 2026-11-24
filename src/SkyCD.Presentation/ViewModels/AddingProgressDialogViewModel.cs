@@ -148,11 +148,20 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     public string StageCaptionText => string.IsNullOrEmpty(CurrentStageText) ? OperationText : CurrentStageText;
 
-    public double MediaSourceIconOpacity => SourceKind == AddingProgressSourceKind.Media ? 1 : 0.35;
+    /// <summary>Localized name of the active add-source, shown inline on the filtering line.</summary>
+    public string SourceLabel => SourceKind switch
+    {
+        AddingProgressSourceKind.Media => LocalizationService.Current.Get(UiKeys.FromMedia),
+        AddingProgressSourceKind.Folder => LocalizationService.Current.Get(UiKeys.FromFolder),
+        AddingProgressSourceKind.Internet => LocalizationService.Current.Get(UiKeys.FromInternet),
+        _ => string.Empty
+    };
 
-    public double FolderSourceIconOpacity => SourceKind == AddingProgressSourceKind.Folder ? 1 : 0.35;
+    public bool IsMediaSource => SourceKind == AddingProgressSourceKind.Media;
 
-    public double InternetSourceIconOpacity => SourceKind == AddingProgressSourceKind.Internet ? 1 : 0.35;
+    public bool IsFolderSource => SourceKind == AddingProgressSourceKind.Folder;
+
+    public bool IsInternetSource => SourceKind == AddingProgressSourceKind.Internet;
 
     public bool IsAnalysisRunning => analysisStartedAt.HasValue;
 
@@ -255,9 +264,10 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     partial void OnSourceKindChanged(AddingProgressSourceKind value)
     {
-        OnPropertyChanged(nameof(MediaSourceIconOpacity));
-        OnPropertyChanged(nameof(FolderSourceIconOpacity));
-        OnPropertyChanged(nameof(InternetSourceIconOpacity));
+        OnPropertyChanged(nameof(SourceLabel));
+        OnPropertyChanged(nameof(IsMediaSource));
+        OnPropertyChanged(nameof(IsFolderSource));
+        OnPropertyChanged(nameof(IsInternetSource));
     }
 
     /// <summary>

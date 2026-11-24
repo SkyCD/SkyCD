@@ -8,14 +8,12 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Archives;
-using SkyCD.Plugin.Metadata.Archives.Cab;
+using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Metadata.Archives.Cab.Tests;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
-using SkyCD.Plugin.Metadata.Archives.Cab.Models;
-using SkyCD.Plugin.Metadata.Archives.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 
@@ -169,6 +167,97 @@ public sealed class CabArchiveIndexTests
     }
 
     [Fact]
+    public async Task GetWorkItemsAsync_LegacyAttributePrefixes_KeepTheStoredFileName()
+    {
+        using var archive = CabTestArchiveBuilder.CreateStoredWithPrefixedNames(
+            new List<CabTestArchiveBuilder.Member> { new("legacy.txt", "old"u8.ToArray()) });
+
+        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive, "legacy.cab"));
+        try
+        {
+            var item = Assert.Single(set.Items);
+            Assert.Equal("legacy.txt", item.Name);
+            await using var stream = await item.OpenSource(CancellationToken.None);
+            using var reader = new StreamReader(stream);
+            Assert.Equal("old", await reader.ReadToEndAsync());
+        }
+        finally
+        {
+            await set.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_Utf8Names_ArePreserved()
+    {
+        using var archive = CabTestArchiveBuilder.CreateStoredWithUtf8Names(
+            new List<CabTestArchiveBuilder.Member> { new("donn\u00e9es.txt", "unicode"u8.ToArray()) });
+
+        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive, "utf8.cab"));
+        try
+        {
+            var item = Assert.Single(set.Items);
+            Assert.Equal("donn\u00e9es.txt", item.Name);
+            await using var stream = await item.OpenSource(CancellationToken.None);
+            using var reader = new StreamReader(stream);
+            Assert.Equal("unicode", await reader.ReadToEndAsync());
+        }
+        finally
+        {
+            await set.DisposeAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("mszip.cab", false)]
+    [InlineData("lzx.cab", true)]
+    public async Task GetWorkItemsAsync_RealCabinetFixtures_ExtractEveryEntry(string fixture, bool hasReport)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Cab", fixture);
+        using var stream = File.OpenRead(path);
+
+        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(stream, fixture));
+        try
+        {
+            var names = set.Items.Select(item => item.Name).Order().ToArray();
+            Assert.Equal(hasReport ? ["data.bin", "readme.txt", "report.txt"] : ["data.bin", "readme.txt"], names);
+
+            var readme = set.Items.Single(item => item.Name == "readme.txt");
+            await using (var content = await readme.OpenSource(CancellationToken.None))
+            using (var reader = new StreamReader(content))
+            {
+                Assert.Equal("hello cabinet", await reader.ReadToEndAsync());
+            }
+
+            var data = set.Items.Single(item => item.Name == "data.bin");
+            await using (var content = await data.OpenSource(CancellationToken.None))
+            using (var memory = new MemoryStream())
+            {
+                await content.CopyToAsync(memory);
+                Assert.Equal([1, 2, 3, 4, 5], memory.ToArray());
+            }
+
+            if (!hasReport)
+            {
+                return;
+            }
+
+            var report = set.Items.Single(item => item.Name == "report.txt");
+            Assert.Equal(218_890, report.SizeBytes);
+            await using var reportContent = await report.OpenSource(CancellationToken.None);
+            using var reportReader = new StreamReader(reportContent);
+            var text = await reportReader.ReadToEndAsync();
+            Assert.StartsWith("Catalog report line 0 ", text, StringComparison.Ordinal);
+            Assert.Contains("Catalog report line 3999 ", text, StringComparison.Ordinal);
+            Assert.Equal(218_890, text.Length);
+        }
+        finally
+        {
+            await set.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task GetWorkItemsAsync_DamagedArchive_ReturnsEmptySet()
     {
         using var broken = CabTestArchiveBuilder.CreateDamaged();
@@ -209,24 +298,18 @@ public sealed class CabArchiveIndexTests
             new CabTestArchiveBuilder.Member("other.bin", new byte[16])
         };
         using var archive = CabTestArchiveBuilder.Create(2, members);
+        var plugin = new ArchivesIndexPlugin();
 
-        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive, "quantum.cab"));
+        var set = await plugin.GetWorkItemsAsync(RequestFor(archive, "quantum.cab"));
         try
         {
             Assert.Empty(set.Items);
+            Assert.Contains(plugin.LastDiagnostics, diagnostic => diagnostic.StartsWith("CAB_UNSUPPORTED:", StringComparison.Ordinal));
         }
         finally
         {
             await set.DisposeAsync();
         }
-    }
-
-    [Fact]
-    public void UnsupportedEntryException_CarriesTypedDiagnostic()
-    {
-        var exception = new SkyCD.Plugin.Metadata.Archives.Cab.Exceptions.CabUnsupportedEntryException("packed.bin", 3);
-        Assert.Equal("packed.bin", exception.EntryName);
-        Assert.Equal(3, exception.CompressionType);
     }
 
     [Theory]
