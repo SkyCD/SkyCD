@@ -23,6 +23,8 @@ public class VideoPosterPluginTests
         Assert.Equal("skycd.video.preview", descriptor.Schema.Id);
         Assert.Equal(1, descriptor.Schema.Version);
         Assert.Empty(descriptor.Schema.Fields);
+        Assert.False(descriptor.IsOptIn);
+        Assert.True(descriptor.IndexTimePreview, "The add/index pass must collect the poster like other previews.");
     }
 
     [Fact]
