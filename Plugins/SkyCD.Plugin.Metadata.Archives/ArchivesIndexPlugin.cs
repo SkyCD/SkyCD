@@ -102,7 +102,14 @@ public sealed class ArchivesIndexPlugin : IIndexWorkItemProvider
 
         if (HasExtension(request.FileName, ".cab"))
         {
-            return await CabIndexWorkItems.CreateAsync(request, limits, cancellationToken).ConfigureAwait(false);
+            var result = await CabIndexWorkItems.CreateAsync(request, limits, cancellationToken)
+                .ConfigureAwait(false);
+            LastDiagnostics = result.Skipped
+                .Select(entry => string.IsNullOrEmpty(entry.Name)
+                    ? $"{entry.Code}: {entry.Reason}"
+                    : $"{entry.Code}: {entry.Name}: {entry.Reason}")
+                .ToList();
+            return result.WorkItems;
         }
 
         if (HasExtension(request.FileName, ".arj"))
