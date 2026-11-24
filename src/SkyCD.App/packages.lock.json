@@ -1113,6 +1113,15 @@
           "vCardLib.dll": "[6.3.2, )"
         }
       },
+      "skycd.plugin.feature.locations": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.6, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.UI": "[1.0.0, )"
+        }
+      },
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {

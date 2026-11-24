@@ -57,5 +57,6 @@
         <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
         <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Loans\SkyCD.Plugin.Feature.Loans.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Locations\SkyCD.Plugin.Feature.Locations.csproj" />
     </ItemGroup>
 </Project>

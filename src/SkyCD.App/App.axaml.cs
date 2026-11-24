@@ -198,6 +198,7 @@ public partial class App : Avalonia.Application
     internal void InitializePluginConsumers(PluginManager pluginManager)
     {
         var catalogApi = appServiceProvider!.Resolve<CatalogApiAdapter>();
+        var locationApi = appServiceProvider.Resolve<LocationApiAdapter>();
         var catalogProvider = (ICatalogRepositoryProvider)appServiceProvider.Resolve<OpenCatalogState>();
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
@@ -214,6 +215,12 @@ public partial class App : Avalonia.Application
             foreach (var consumer in plugin.Capabilities.OfType<ICatalogRepositoryConsumer>())
             {
                 try { consumer.InitializeCatalogRepository(catalogProvider); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<ILocationApiConsumer>())
+            {
+                try { consumer.InitializeLocationApi(locationApi); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
             }
 
@@ -266,6 +273,7 @@ public partial class App : Avalonia.Application
             registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<OpenCatalogState>(Reuse.Singleton);
             registrator.Register<CatalogApiAdapter>(Reuse.Singleton);
+            registrator.Register<LocationApiAdapter>(Reuse.Singleton);
             registrator.Register<PluginStorageApiFactory>(Reuse.Singleton);
             registrator.Register<PluginRuntimeSynchronizer>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);

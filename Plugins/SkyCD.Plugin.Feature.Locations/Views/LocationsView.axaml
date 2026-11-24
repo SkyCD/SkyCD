@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+             xmlns:models="clr-namespace:SkyCD.Plugin.Feature.Locations.Models"
+             xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Locations.Views"
+             x:Class="SkyCD.Plugin.Feature.Locations.Views.LocationsView"
+             x:DataType="vm:LocationsManagerViewModel">
+    <DockPanel Margin="{DynamicResource SkyInsetMd}">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceSm}" Margin="{DynamicResource SkyGapTopMd}">
+            <TextBlock Text="{Binding StatusText}" Foreground="Gray" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorText}" Foreground="Firebrick" TextWrapping="Wrap" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}"
+                    IsCancel="True" Click="CloseClicked" HorizontalAlignment="Right" />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{i18n:Translate {x:Static models:LocationsKeys.ManageHint}}"
+                   TextWrapping="Wrap"
+                   Margin="{DynamicResource SkyGapBottomMd}" />
+
+        <Grid ColumnDefinitions="*,180" ColumnSpacing="{DynamicResource SkySpaceMd}">
+            <DockPanel Grid.Column="0">
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                            Spacing="{DynamicResource SkySpaceSm}" Margin="{DynamicResource SkyGapTopSm}">
+                    <TextBox Text="{Binding NewLocationName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             MinWidth="180"
+                             PlaceholderText="{i18n:Translate {x:Static models:LocationsKeys.NewLocation}}"
+                             AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.NewLocation}}" />
+                    <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Create}}"
+                            Command="{Binding CreateLocationCommand}" />
+                    <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Delete}}"
+                            Command="{Binding DeleteLocationCommand}" />
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding Locations}"
+                         SelectedItem="{Binding SelectedLocation, Mode=TwoWay}"
+                         AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.Locations}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:LocationRow">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding UsageText}"
+                                           FontSize="{DynamicResource SkyFontCaption}"
+                                           Foreground="Gray" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceSm}">
+                <TextBlock Text="{i18n:Translate {x:Static models:LocationsKeys.LocationName}}" />
+                <TextBox Text="{Binding LocationName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.LocationName}}" />
+                <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Rename}}"
+                        Command="{Binding RenameLocationCommand}" />
+
+                <TextBlock Text="{i18n:Translate {x:Static models:LocationsKeys.MergeInto}}"
+                           Margin="{DynamicResource SkyGapTopSm}" />
+                <ComboBox ItemsSource="{Binding MergeTargets}"
+                          SelectedItem="{Binding MergeTarget, Mode=TwoWay}"
+                          AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.MergeInto}}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:LocationRow">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Merge}}"
+                        Command="{Binding MergeLocationsCommand}" />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

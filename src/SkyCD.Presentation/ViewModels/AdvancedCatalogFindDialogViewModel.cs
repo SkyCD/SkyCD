@@ -21,8 +21,7 @@ public enum AdvancedFindSortKey
     Name,
     Size,
     Type,
-    Status,
-    Location
+    Status
 }
 
 /// <summary>
@@ -178,7 +177,7 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
     public ObservableCollection<AdvancedCatalogFilterRowViewModel> Filters { get; } = [];
 
     public IReadOnlyList<AdvancedCatalogField> AvailableFields { get; } =
-        Enum.GetValues<AdvancedCatalogField>();
+        [.. Enum.GetValues<AdvancedCatalogField>().Where(static field => field != AdvancedCatalogField.Location)];
 
     public IReadOnlyList<AdvancedCatalogOperator> AvailableOperators { get; } =
         Enum.GetValues<AdvancedCatalogOperator>();
@@ -515,9 +514,6 @@ public sealed partial class AdvancedCatalogFindDialogViewModel(
             AdvancedFindSortKey.Status => matches
                 .OrderBy(static match => match.Document.Status is null, Comparer<bool>.Default)
                 .ThenBy(static match => match.Document.Status, StringComparer.OrdinalIgnoreCase),
-            AdvancedFindSortKey.Location => matches
-                .OrderBy(static match => !match.Document.HasLocation, Comparer<bool>.Default)
-                .ThenBy(static match => match.Document.Location, StringComparer.OrdinalIgnoreCase),
             _ => matches
                 .OrderBy(static match => match.FullPath, StringComparer.OrdinalIgnoreCase)
         };

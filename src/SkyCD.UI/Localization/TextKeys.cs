@@ -220,16 +220,6 @@ public static class TextKeys
     public const string TagDeleted = "core.text.TagDeleted";
     public const string TagFilterMatchCount = "core.text.TagFilterMatchCount";
     public const string TagNameRequired = "core.text.TagNameRequired";
-    public const string LocationCreated = "core.text.LocationCreated";
-    public const string LocationRenamed = "core.text.LocationRenamed";
-    public const string LocationMerged = "core.text.LocationMerged";
-    public const string MergeLocationSummary = "core.text.MergeLocationSummary";
-    public const string LocationDeleted = "core.text.LocationDeleted";
-    public const string LocationDeletedInUse = "core.text.LocationDeletedInUse";
-    public const string LocationNameRequired = "core.text.LocationNameRequired";
-    public const string LocationFilterMatchCount = "core.text.LocationFilterMatchCount";
-    public const string LocationFilterApplied = "core.text.LocationFilterApplied";
-    public const string LocationFilterCleared = "core.text.LocationFilterCleared";
     public const string Collections = "core.text.Collections";
     public const string CollectionCreated = "core.text.CollectionCreated";
     public const string CollectionRenamed = "core.text.CollectionRenamed";

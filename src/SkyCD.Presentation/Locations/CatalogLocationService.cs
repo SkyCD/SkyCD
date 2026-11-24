@@ -332,7 +332,11 @@ public sealed class CatalogLocationService(
         return normalized;
     }
 
-    private Dictionary<string, string> GetEffectiveLocationIds()
+    /// <summary>
+    /// Returns every entry whose effective location is set, keyed by entry id. One pass over the catalog,
+    /// used by host adapters that project usage counts and effective names.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> GetEffectiveLocationIds()
     {
         var lookup = BuildLookup();
         var effective = new Dictionary<string, string>(StringComparer.Ordinal);

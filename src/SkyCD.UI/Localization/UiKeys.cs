@@ -318,16 +318,7 @@ public static class UiKeys
     public const string DeleteTag = "core.ui.DeleteTag";
     public const string ShowItems = "core.ui.ShowItems";
     public const string AssignedItems = "core.ui.AssignedItems";
-    public const string Locations = "core.ui.Locations";
-    public const string ManageLocations = "core.ui.ManageLocations";
-    public const string NewLocation = "core.ui.NewLocation";
-    public const string LocationName = "core.ui.LocationName";
-    public const string RenameLocation = "core.ui.RenameLocation";
-    public const string MergeLocations = "core.ui.MergeLocations";
-    public const string DeleteLocation = "core.ui.DeleteLocation";
-    public const string LocationUnsaved = "core.ui.LocationUnsaved";
     public const string LocationNone = "core.ui.LocationNone";
-    public const string AllLocations = "core.ui.AllLocations";
     public const string Collections = "core.ui.Collections";
     public const string ManageCollections = "core.ui.ManageCollections";
     public const string NewCollection = "core.ui.NewCollection";

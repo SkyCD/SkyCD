@@ -15,7 +15,6 @@ public static class DetailsColumnsCatalog
     public const string SizeId = "size";
     public const string TypeId = "type";
     public const string StatusId = "status";
-    public const string LocationId = "location";
 
     public const double MinSavedColumnWidth = 30;
 
@@ -56,13 +55,6 @@ public static class DetailsColumnsCatalog
             ValuePath = nameof(CatalogDocument.Status),
             Width = new GridLength(120, GridUnitType.Pixel),
             IsVisibleByDefault = false
-        },
-        new()
-        {
-            Id = LocationId,
-            HeaderKey = UiKeys.Location,
-            ValuePath = nameof(CatalogDocument.Location),
-            Width = new GridLength(140, GridUnitType.Pixel)
         }
     ];
 

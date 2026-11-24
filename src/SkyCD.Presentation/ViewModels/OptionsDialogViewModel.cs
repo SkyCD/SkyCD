@@ -187,8 +187,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7,
                     Group: uiGroup),
                 new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex,
-                    Group: uiGroup),
-                new("locations", LocalizationService.Current.Get(UiKeys.Locations), LocationsCategoryIndex)
+                    Group: uiGroup)
             ];
 
             // Every AI surface shares one appended group. MCP and ACP agents keep their historical
@@ -292,7 +291,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
-        ShowDetailsColumnsSection || ShowLocationsSection || ShowToolbarSection ||
+        ShowDetailsColumnsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection || ShowPluginsSettingsSection;
 
@@ -365,11 +364,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task ConfirmAsync()
     {
-        if (!CommitPendingLocationRename())
-        {
-            return;
-        }
-
         if (CustomProperties.Any(property => string.IsNullOrWhiteSpace(property.Name)) ||
             CustomProperties.Select(property => property.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != CustomProperties.Count)
         {
@@ -812,8 +806,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
-        OnPropertyChanged(nameof(IsLocationsCategorySelected));
-        OnPropertyChanged(nameof(ShowLocationsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));
         OnPropertyChanged(nameof(ShowToolbarSection));
         OnPropertyChanged(nameof(ShowPluginListSection));
