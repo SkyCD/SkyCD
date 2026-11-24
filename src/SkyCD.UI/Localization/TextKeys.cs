@@ -161,7 +161,6 @@ public static class TextKeys
     public const string Unknown = "core.text.Unknown";
     public const string Find = "core.text.Find";
     public const string FindEmptyQuery = "core.text.FindEmptyQuery";
-    public const string QuickFindEmptyQuery = "core.text.QuickFindEmptyQuery";
     public const string FindSearching = "core.text.FindSearching";
     public const string FindNoMatches = "core.text.FindNoMatches";
     public const string FindMatchCount = "core.text.FindMatchCount";

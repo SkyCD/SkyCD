@@ -71,6 +71,7 @@
                       DockPanel.Dock="Bottom"
                       IsVisible="{Binding IsStatusBarShown}"
                       StatusText="{Binding StatusText}"
+                      SecondaryStatusText="{Binding QuickFindStatus}"
                       ProgressText="{Binding ProgressText}"
                       IsProgressVisible="{Binding IsProgressVisible}"
                       ProgressValue="{Binding ProgressValue}" />
@@ -131,19 +132,12 @@
             <DockPanel Grid.Column="2" LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top" Margin="{DynamicResource SkyInsetSm}" Spacing="{DynamicResource SkySpaceXs}"
                             IsVisible="{Binding IsQuickFilterOpen}">
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                         <TextBox x:Name="QuickFindBox" Text="{Binding QuickFindQuery, Mode=TwoWay}"
                                  PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.QuickFind}}"
                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.QuickFind}}" />
                         <CheckBox Grid.Column="1" IsChecked="{Binding SearchWholeCatalog}"
                                   Content="{i18n:Translate {x:Static i18n:UiKeys.WholeCatalog}}" />
-                        <Button Grid.Column="2" Command="{Binding CloseQuickFilterCommand}"
-                                Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" />
-                    </Grid>
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                        <TextBlock IsVisible="{Binding !SearchWholeCatalog}"
-                                   Text="{i18n:Translate {x:Static i18n:UiKeys.CurrentList}}" />
-                        <TextBlock Grid.Column="1" Text="{Binding QuickFindStatus}" TextWrapping="Wrap" />
                     </Grid>
                 </StackPanel>
                 <Panel DockPanel.Dock="Bottom" IsVisible="{Binding !IsQuickFilterOpen}">
