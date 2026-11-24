@@ -24,6 +24,12 @@
 
     <Window.Resources>
         <converters:InternetProtocolIconConverter x:Key="InternetProtocolIcon" />
+        <!-- Issue #1030: the dropdown rows share the closed field's inset. -->
+        <ControlTheme x:Key="SourceComboBoxItemTheme"
+                      TargetType="ComboBoxItem"
+                      BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+            <Setter Property="Padding" Value="{DynamicResource SkyComboBoxContentPadding}" />
+        </ControlTheme>
     </Window.Resources>
 
     <Window.Styles>
@@ -45,6 +51,10 @@
         </Style>
         <Style Selector="TextBox.source-field, ComboBox.source-field, Button.source-field">
             <Setter Property="Height" Value="26" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Padding" Value="{DynamicResource SkyComboBoxContentPadding}" />
+            <Setter Property="ItemContainerTheme" Value="{StaticResource SourceComboBoxItemTheme}" />
         </Style>
     </Window.Styles>
 
@@ -214,7 +224,9 @@
 
                         <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceInternet}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ComboBox ItemsSource="{Binding InternetProtocols}"
+                                <ComboBox x:Name="InternetProtocolComboBox"
+                                          Classes="source-field"
+                                          ItemsSource="{Binding InternetProtocols}"
                                           SelectedItem="{Binding InternetProtocol}"
                                           AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
                                           HorizontalAlignment="Stretch">

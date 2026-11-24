@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Media.TextFormatting;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using IconPacks.Avalonia;
 using SkyCD.App.Views;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
@@ -290,6 +291,66 @@ public sealed class AddToListWindowLayoutTests
             LocalizationService.Current.SetCulture(previousCulture);
         }
     }
+
+    [AvaloniaFact]
+    public void InternetProtocolDropdown_RowsShareTheFieldInsetAndAlignWithIt()
+    {
+        // Issue #1030: the popup rows inherited the theme's 2 px item padding while the closed field
+        // used the ComboBox padding, so the icon column jumped between the field and the open list.
+        using var fixture = ShowWindow(AddToListSourceMode.Internet);
+        var picker = fixture.Window.FindControl<ComboBox>("InternetProtocolComboBox")!;
+        picker.IsDropDownOpen = true;
+        fixture.Window.UpdateLayout();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(Application.Current!.TryGetResource("SkyComboBoxContentPadding", null, out var token));
+        var padding = Assert.IsType<Thickness>(token);
+        var rows = picker.GetRealizedContainers().OfType<ComboBoxItem>().ToList();
+        Assert.Equal(6, rows.Count);
+
+        var closedIcon = picker.GetVisualDescendants().OfType<PackIconControl>().Single();
+        var closedLabel = closedIcon.GetVisualParent()!.GetVisualChildren().OfType<TextBlock>().Single();
+        var fieldPresenter = closedIcon.FindAncestorOfType<ContentControl>()!;
+        var fieldColumnSpan = LabelInset(closedIcon, closedLabel, fieldPresenter);
+
+        // The closed field insets its content by the same token the rows use.
+        Assert.Equal(padding.Left, fieldPresenter.Bounds.X, 1);
+        Assert.Equal(padding.Top, fieldPresenter.Bounds.Y, 1);
+
+        double? firstLabelLeft = null;
+        foreach (var row in rows)
+        {
+            var icon = row.GetVisualDescendants().OfType<PackIconControl>().Single();
+            var label = row.GetVisualDescendants().OfType<TextBlock>().Single();
+            var labelLeft = label.TranslatePoint(default, row)!.Value.X;
+
+            // One item padding around the icon and label; no row hugs its content.
+            Assert.Equal(padding, row.Padding);
+            Assert.Equal(16 + padding.Top + padding.Bottom, row.Bounds.Height, 1);
+
+            // The icon column and the label column stay put inside every row, whichever glyph or
+            // label width a protocol has, and land where the closed field already draws them.
+            Assert.Equal(padding.Left, IconInset(icon, row), 1);
+            Assert.Equal(fieldColumnSpan, LabelInset(icon, label, row), 1);
+
+            firstLabelLeft ??= labelLeft;
+            Assert.Equal(firstLabelLeft.Value, labelLeft, 1);
+
+            // The glyph is vertically centred inside its padded row.
+            Assert.Equal((row.Bounds.Height - 16) / 2, icon.TranslatePoint(default, row)!.Value.Y, 1);
+
+            // The longest label still fits inside the row inset.
+            var labelRight = label.TranslatePoint(new Point(label.Bounds.Width, 0), row)!.Value.X;
+            Assert.True(labelRight <= row.Bounds.Width - padding.Right + 0.5,
+                $"{label.Text}: label ends at {labelRight} inside the {row.Bounds.Width} px row.");
+        }
+    }
+
+    private static double IconInset(PackIconControl icon, Control container) =>
+        icon.TranslatePoint(default, container)!.Value.X;
+
+    private static double LabelInset(PackIconControl icon, TextBlock label, Control container) =>
+        label.TranslatePoint(default, container)!.Value.X - IconInset(icon, container);
 
     [AvaloniaTheory]
     [InlineData(AddToListSourceMode.Media)]
