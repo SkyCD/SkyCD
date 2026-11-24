@@ -12,6 +12,12 @@ public sealed class DetailsColumnDefinition
 
     public required string HeaderKey { get; init; }
 
+    /// <summary>
+    /// Optional menu label including access-key markers. Falls back to <see cref="HeaderKey"/> so a column
+    /// whose header omits the mnemonic can still offer one in menus.
+    /// </summary>
+    public string? MenuHeaderKey { get; init; }
+
     public required string ValuePath { get; init; }
 
     /// <summary>Optional per-item value projection used by plugin-contributed columns.</summary>
@@ -34,6 +40,11 @@ public sealed class DetailsColumnDefinition
     /// Raw localized header including access-key markers; keep it for menu surfaces only.
     /// </summary>
     public string Header => LocalizationService.Current.Get(HeaderKey);
+
+    /// <summary>
+    /// Menu label including access-key markers, for the Arrange submenus.
+    /// </summary>
+    public string MenuHeader => LocalizationService.Current.Get(MenuHeaderKey ?? HeaderKey);
 
     /// <summary>
     /// Header without access-key markers for plain-text surfaces such as column headers.

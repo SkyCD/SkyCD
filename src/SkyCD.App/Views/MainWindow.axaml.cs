@@ -253,6 +253,14 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnDetailsColumnClicked(object? sender, DetailsColumnClickedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SortByColumnCommand.Execute(e.ColumnId);
+        }
+    }
+
     private void OnToolbarItemsChanged(object? sender, EventArgs e)
     {
         if (sender is MainWindowViewModel viewModel)
@@ -838,7 +846,8 @@ public partial class MainWindow : Window
         vm.ApplySessionState(
             options.Browser.ViewMode,
             options.Browser.SortMode,
-            options.IsStatusBarVisible);
+            options.IsStatusBarVisible,
+            options.Browser.SortDescending);
         vm.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
         vm.SetStatusVariants(statusVariantRepository.GetOrdered());
         ApplyLanguage(options.Language);
@@ -1342,7 +1351,7 @@ public partial class MainWindow : Window
                 ServiceProvider.Resolve<IndexWorkItemSequence>(),
                 ServiceProvider.Resolve<IAudioCdMetadataProvider>());
             newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
-            newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible);
+            newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible, vm.IsSortDescending);
             newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
         }
         catch (Exception ex)
@@ -1811,6 +1820,7 @@ public partial class MainWindow : Window
         options.IsStatusBarVisible = vm.IsStatusBarVisible;
         options.Browser.ViewMode = vm.CurrentViewMode;
         options.Browser.SortMode = vm.CurrentSortMode;
+        options.Browser.SortDescending = vm.IsSortDescending;
         options.Browser.DetailsColumns = vm.GetDetailsColumnSettings().ToList();
         if (!string.IsNullOrWhiteSpace(vm.CurrentCatalogPath))
         {
@@ -1870,7 +1880,8 @@ public partial class MainWindow : Window
                 ServiceProvider.Resolve<IndexWorkItemSequence>(),
                 ServiceProvider.Resolve<IAudioCdMetadataProvider>());
             var options = LoadAppOptions();
-            reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible);
+            reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible,
+                options.Browser.SortDescending);
             reloadedViewModel.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
             reloadedViewModel.CurrentCatalogPath = localPath;
             options.LastOpenedCatalogPath = localPath;

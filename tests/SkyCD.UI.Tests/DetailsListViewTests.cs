@@ -475,6 +475,120 @@ public class DetailsListViewTests
     }
 
     [AvaloniaFact]
+    public void HeaderClick_RaisesColumnClickedButPlainSplitterClickDoesNot()
+    {
+        var (window, view, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 200),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120));
+
+        try
+        {
+            var clicked = new List<DetailsColumnClickedEventArgs>();
+            view.DetailsColumnClicked += (_, e) => clicked.Add(e);
+
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            var sizePoint = sizeCell.TranslatePoint(new Point(30, 10), window);
+            Assert.NotNull(sizePoint);
+            window.MouseDown(sizePoint!.Value, MouseButton.Left);
+            window.MouseUp(sizePoint.Value, MouseButton.Left);
+
+            var click = Assert.Single(clicked);
+            Assert.Equal(DetailsColumnsCatalog.SizeId, click.ColumnId);
+
+            // The resize grip owns the press, so releasing it must not be read as a header click.
+            clicked.Clear();
+            var splitter = sizeCell.GetVisualChildren().OfType<Border>().Last(border => border.Cursor is not null);
+            var grip = splitter.TranslatePoint(new Point(4, 10), window);
+            Assert.NotNull(grip);
+            window.MouseDown(grip!.Value, MouseButton.Left);
+            window.MouseUp(grip.Value, MouseButton.Left);
+            Assert.Empty(clicked);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void HeaderDrag_DoesNotRaiseColumnClicked()
+    {
+        var (window, view, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
+            CreateCatalogColumn(DetailsColumnsCatalog.StatusId, required: false, width: 140));
+
+        try
+        {
+            var clicked = new List<DetailsColumnClickedEventArgs>();
+            var reordered = new List<DetailsColumnReorderedEventArgs>();
+            view.DetailsColumnClicked += (_, e) => clicked.Add(e);
+            view.DetailsColumnReordered += (_, e) => reordered.Add(e);
+
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            var statusCell = Assert.IsType<Grid>(headerGrid.Children[2]);
+            var start = sizeCell.TranslatePoint(new Point(30, 10), window);
+            var drop = statusCell.TranslatePoint(new Point(30, 10), window);
+            Assert.NotNull(start);
+            Assert.NotNull(drop);
+
+            window.MouseDown(start!.Value, MouseButton.Left);
+            window.MouseMove(start.Value + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(drop!.Value, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(drop.Value, MouseButton.Left);
+
+            Assert.Single(reordered);
+            Assert.Empty(clicked);
+
+            // A press that passes the drag threshold and returns to its origin is still a drag.
+            window.MouseDown(start.Value, MouseButton.Left);
+            window.MouseMove(start.Value + new Vector(20, 0), RawInputModifiers.LeftMouseButton);
+            window.MouseMove(start.Value, RawInputModifiers.LeftMouseButton);
+            window.MouseUp(start.Value, MouseButton.Left);
+
+            Assert.Empty(clicked);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void HeaderContent_MarksActiveSortColumnWithDirectionArrow()
+    {
+        var (window, view, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 200),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120));
+
+        try
+        {
+            var initialSizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+            Assert.DoesNotContain(initialSizeCell.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text is "▲" or "▼");
+
+            view.SortColumnId = DetailsColumnsCatalog.SizeId;
+            var detailsListView = view.FindControl<DetailsListView>("DetailsListView")!;
+
+            var ascendingHeader = Assert.IsType<Grid>(detailsListView.HeaderContent);
+            var ascendingSizeCell = Assert.IsType<Grid>(ascendingHeader.Children[1]);
+            Assert.Contains(ascendingSizeCell.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "▲");
+            var nameCell = Assert.IsType<Grid>(ascendingHeader.Children[0]);
+            Assert.DoesNotContain(nameCell.GetVisualDescendants().OfType<TextBlock>(), text => text.Text is "▲" or "▼");
+
+            view.IsSortDescending = true;
+            var descendingHeader = Assert.IsType<Grid>(detailsListView.HeaderContent);
+            var descendingSizeCell = Assert.IsType<Grid>(descendingHeader.Children[1]);
+            Assert.Contains(descendingSizeCell.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "▼");
+            Assert.DoesNotContain(descendingSizeCell.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "▲");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void HeaderDrag_ShowsDropMarkerAndGhost_AndClearsOnRelease()
     {
         var (window, view, headerGrid) = ShowDetailsColumns(
