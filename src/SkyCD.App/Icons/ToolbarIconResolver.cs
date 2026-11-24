@@ -12,13 +12,15 @@ namespace SkyCD.App.Icons;
 
 /// <summary>
 /// Resolves a <c>ToolbarCommandDescriptor.IconPath</c> to the image a toolbar button or an Options list row
-/// shows (issue #933). A key defined in the project-owned glyph dictionary
-/// <c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c> renders as a vector glyph; any other value is an
-/// application asset path such as <c>/Assets/new.png</c> and is loaded as a bitmap.
+/// shows (issue #933). A key of the form <c>ToolbarIcon.*</c> is colored Twemoji artwork (issue #1022); a key
+/// no longer covered falls back to the project-owned glyph dictionary
+/// <c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c>, and any other value is an application asset path such
+/// as <c>/Assets/new.png</c> and is loaded as a bitmap.
 /// </summary>
 /// <remarks>
-/// A glyph is a <see cref="DrawingImage"/>, so it rerenders at any scaling instead of being resampled. The
-/// glyph brush follows the theme foreground brush, so the icon stays legible on the dark and light themes.
+/// An icon is a <see cref="DrawingImage"/>, so it rerenders at any scaling instead of being resampled. The
+/// Twemoji artwork paints with the colors of the emoji itself; only a fallback glyph follows the theme
+/// foreground brush, which keeps it legible on the dark and light themes.
 /// </remarks>
 public static class ToolbarIconResolver
 {
@@ -39,7 +41,12 @@ public static class ToolbarIconResolver
     private static readonly ConcurrentDictionary<string, IImage> Assets = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Seam for tests: return the image for a known glyph, or null when the reference is not a glyph at all
+    /// Seam for tests: return the colored image for a key, or null to take the monochrome glyph branch.
+    /// </summary>
+    internal static Func<string, IImage?>? ArtworkLoaderOverride { get; set; }
+
+    /// <summary>
+    /// Seam for tests: return the fallback glyph for a key, or null when the reference is not a glyph at all
     /// (a plain asset path), so the test exercises the real asset branch.
     /// </summary>
     internal static Func<string, IImage?>? GlyphLoaderOverride { get; set; }
@@ -65,10 +72,10 @@ public static class ToolbarIconResolver
         var reference = iconPath.Trim();
         if (reference.StartsWith(GlyphKeyPrefix, StringComparison.Ordinal))
         {
-            var glyph = GlyphLoaderOverride is { } glyphLoader
-                ? glyphLoader(reference)
-                : ResolveGlyph(reference);
-            return glyph ?? throw MissingGlyph(reference);
+            // Colored Twemoji artwork first; a key it does not cover keeps its monochrome glyph.
+            return (ArtworkLoaderOverride is { } artworkLoader ? artworkLoader(reference) : TwemojiToolbarIcons.Load(reference))
+                ?? ResolveFallbackGlyph(reference)
+                ?? throw MissingGlyph(reference);
         }
 
         if (Assets.TryGetValue(reference, out var cached))
@@ -92,6 +99,11 @@ public static class ToolbarIconResolver
         Assets[reference] = image;
         return image;
     }
+
+    private static IImage? ResolveFallbackGlyph(string reference) =>
+        GlyphLoaderOverride is { } glyphLoader
+            ? glyphLoader(reference)
+            : ResolveGlyph(reference);
 
     private static IImage? ResolveGlyph(string reference)
     {
@@ -158,5 +170,5 @@ public static class ToolbarIconResolver
     }
 
     private static InvalidOperationException MissingGlyph(string reference) =>
-        new($"Toolbar icon '{reference}' is neither a glyph of {GlyphDictionaryPath} nor an application asset path.");
+        new($"Toolbar icon '{reference}' is neither colored Twemoji artwork, a glyph of {GlyphDictionaryPath} nor an application asset path.");
 }

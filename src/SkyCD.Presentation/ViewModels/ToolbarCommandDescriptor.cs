@@ -15,8 +15,8 @@ public sealed class ToolbarCommandDescriptor
     public required string Label { get; init; }
 
     /// <summary>
-    /// Icon reference: a key of the project-owned glyph dictionary
-    /// (<c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c>, for example <c>ToolbarIcon.Undo</c>) or a plain
+    /// Icon reference: a key of the toolbar artwork (<c>ToolbarIcon.Undo</c>, colored Twemoji first and the
+    /// glyph dictionary <c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c> as fallback) or a plain
     /// application asset path such as <c>/Assets/new.png</c>. Every toolbar command carries one; null only
     /// means a text-only button, which no shipped command uses.
     /// </summary>
