@@ -4191,6 +4191,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return toolsMenuItems;
     }
 
+    // Plugin commands that wait on a dialog or on external work run uncancellable by timeout; they own their
+    // progress reporting and cancel affordance, so the ordinary plugin budget would abort them mid-interaction.
+    private static readonly HashSet<string> InteractivePluginCommands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "motion-detector.capture",
+        "skycd.split"
+    };
+
     private async void ExecutePluginMenuCommand(string commandId)
     {
         if (pluginCommandCancellation is not null) { pluginCommandCancellation.Cancel(); return; }
@@ -4213,7 +4221,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             };
 
             var result = await menuExtensionManager.ExecuteAsync(commandId, context,
-                commandId == "motion-detector.capture" ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), cancellation.Token);
+                InteractivePluginCommands.Contains(commandId)
+                    ? Timeout.InfiniteTimeSpan
+                    : TimeSpan.FromSeconds(30), cancellation.Token);
 
             if (result.TimedOut)
             {

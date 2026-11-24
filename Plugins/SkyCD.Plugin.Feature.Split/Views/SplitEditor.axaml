@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Split.Views"
+             x:Class="SkyCD.Plugin.Feature.Split.Views.SplitEditor"
+             x:DataType="vm:SplitDialogViewModel"
+             MinWidth="560">
+    <DockPanel Margin="{DynamicResource SkyInsetMd}">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceXs}"
+                    Margin="{DynamicResource SkyGapTopMd}">
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" />
+            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+            <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" Foreground="Firebrick" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                        Spacing="{DynamicResource SkySpaceSm}">
+                <Button Content="Split" Command="{Binding SplitCommand}" MinWidth="90" IsDefault="True" />
+                <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90"
+                        IsEnabled="{Binding IsBusy}" />
+                <Button Content="Close" MinWidth="90" IsCancel="True" Click="CloseClicked" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="{DynamicResource SkySpaceSm}" IsEnabled="{Binding !IsBusy}">
+            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="Source catalog" />
+                <TextBlock Text="{Binding SourcePath}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding EntrySummary}" FontSize="{DynamicResource SkyFontCaption}"
+                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+            </StackPanel>
+
+            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="Output folder" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
+                    <TextBox Text="{Binding OutputFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Output folder" />
+                    <Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" />
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="Part file name" />
+                <TextBox Text="{Binding FileNamePattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="part #N.scd" AutomationProperties.Name="Part file name pattern" />
+                <TextBlock Text="Tokens: #N or {n} is the part number, {total} the part count, {source} the catalog name."
+                           FontSize="{DynamicResource SkyFontCaption}"
+                           Foreground="{DynamicResource ThemeForegroundLowBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceMd}">
+                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                    <TextBlock Text="Maximum entries per part" />
+                    <TextBox Text="{Binding EntriesPerPart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             PlaceholderText="1000" AutomationProperties.Name="Maximum entries per part" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
+                    <TextBlock Text="Maximum part size" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
+                        <TextBox Text="{Binding PartSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 PlaceholderText="empty = no limit" AutomationProperties.Name="Maximum part size" />
+                        <ComboBox Grid.Column="1" MinWidth="88"
+                                  ItemsSource="{Binding SizeUnits}"
+                                  SelectedItem="{Binding PartSizeUnit, Mode=TwoWay}"
+                                  AutomationProperties.Name="Part size unit" />
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </DockPanel>
+</UserControl>
