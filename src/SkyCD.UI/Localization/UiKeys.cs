@@ -340,6 +340,8 @@ public static class UiKeys
     public const string MatchMode = "core.ui.MatchMode";
     public const string SortBy = "core.ui.SortBy";
     public const string SortDescending = "core.ui.SortDescending";
+    public const string SortAscendingAction = "core.ui.SortAscendingAction";
+    public const string SortDescendingAction = "core.ui.SortDescendingAction";
     public const string PreviousPage = "core.ui.PreviousPage";
     public const string NextPage = "core.ui.NextPage";
     public const string SearchScopeAll = "core.ui.SearchScopeAll";
