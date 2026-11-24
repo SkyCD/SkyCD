@@ -26,7 +26,8 @@ public sealed class OptionsAiMimeListLayoutTests : IDisposable
     {
         var viewModel = new OptionsDialogViewModel(["English"]);
         viewModel.SetAiDescriptionAvailable(true);
-        viewModel.SelectedTabIndex = 10;
+        viewModel.SelectedTabIndex = viewModel.SettingCategories.ToList()
+            .FindIndex(category => category.Id == "ai-description");
         Dispatcher.UIThread.RunJobs();
         Assert.True(viewModel.ShowAiDescriptionSection);
 

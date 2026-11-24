@@ -15,12 +15,15 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel
 {
+    private const string AcpCategoryId = "acp";
+    private const int AcpCategoryIndex = 5;
+
     private IAcpAgentSettingsCapability? acpSettingsCapability;
     private AcpAgentSettings? initialAcpSettings;
     private bool explicitlySelectedAcpAgent;
 
     public ObservableCollection<AcpAgentChoice> AcpAgents { get; } = [];
-    public bool ShowAcpSection => SelectedBuiltInIndex == 5 && IsCurrentCategoryVisibleInSearch;
+    public bool ShowAcpSection => SelectedBuiltInIndex == AcpCategoryIndex && IsCurrentCategoryVisibleInSearch;
     public bool CanChooseAcpAgent => initialAcpSettings is not null && !IsAcpLoading;
     public IReadOnlyList<AcpAgentChoice> InstalledAcpAgents { get; private set; } = [];
     public IReadOnlyList<AcpAgentChoice> AvailableAcpAgents { get; private set; } = [];
@@ -238,7 +241,7 @@ public partial class OptionsDialogViewModel
         if (!selected.IsInstalled)
         {
             SettingsSearchText = string.Empty;
-            SelectedTabIndex = 5;
+            SelectedSettingCategory = SettingCategories.First(category => category.Id == AcpCategoryId);
             AcpAlertMessage = LocalizationService.Current.Get(UiKeys.ChooseInstalledAcpAgent);
             return false;
         }
@@ -251,7 +254,7 @@ public partial class OptionsDialogViewModel
         catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or JsonException)
         {
             SettingsSearchText = string.Empty;
-            SelectedTabIndex = 5;
+            SelectedSettingCategory = SettingCategories.First(category => category.Id == AcpCategoryId);
             AcpAlertMessage = LocalizationService.Current.Format(UiKeys.AcpSettingsSaveError, exception.Message);
             return false;
         }

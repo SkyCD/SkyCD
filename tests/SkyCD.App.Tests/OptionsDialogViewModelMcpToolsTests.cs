@@ -157,6 +157,75 @@ public sealed class OptionsDialogViewModelMcpToolsTests
     }
 
     [Fact]
+    public void SettingCategories_ListMcpAndAcpUnderAiGroupWithStableIndexesAndOrder()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        var categories = vm.SettingCategories.Where(category => category.BuiltInIndex >= 0).ToList();
+        var mcp = categories.Single(category => category.Id == "mcp");
+        var acp = categories.Single(category => category.Id == "acp");
+
+        Assert.Equal(AiGroup, mcp.Group);
+        Assert.Equal(AiGroup, acp.Group);
+        Assert.Equal(2, mcp.BuiltInIndex);
+        Assert.Equal(5, acp.BuiltInIndex);
+        Assert.Equal(["mcp", "acp", "mcp-tools"], categories.TakeLast(3).Select(category => category.Id));
+    }
+
+    [Fact]
+    public void Sidebar_WithoutAiPlugins_ShowsMcpPagesUnderAiHeaderAfterToolbar()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        var headerIndex = vm.SidebarEntries.IndexOf(Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader));
+        Assert.Equal("toolbar", vm.SidebarEntries[headerIndex - 1].Category?.Id);
+        var children = vm.SidebarEntries.Skip(headerIndex + 1).ToList();
+        Assert.Equal(["mcp", "acp", "mcp-tools"], children.Select(entry => entry.Category?.Id));
+        Assert.All(children, child => Assert.Equal(1, child.Depth));
+    }
+
+    [Fact]
+    public void SelectingAiHeader_WithoutAiPlugins_SelectsMcpAndShowsFullPath()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+
+        vm.SelectedSidebarEntry = header;
+
+        Assert.Equal("mcp", vm.SelectedSettingCategory?.Id);
+        Assert.Equal("AI  >  MCP", vm.CurrentCategoryPath);
+        Assert.True(vm.ShowMcpSection);
+    }
+
+    [Fact]
+    public void SettingsSearch_Mcp_KeepsGroupHeaderAndBothMcpPages()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.SettingsSearchText = "MCP";
+
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Equal(AiGroup, header.Title);
+        Assert.Equal(["mcp", "mcp-tools"], vm.FilteredSettingCategories.Select(category => category.Id));
+        Assert.Equal("mcp", vm.SelectedSettingCategory?.Id);
+        Assert.True(vm.ShowMcpSection);
+    }
+
+    [Fact]
+    public void SettingsSearch_Acp_KeepsGroupHeaderAndAcpPage()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.SettingsSearchText = "ACP";
+
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.Equal(AiGroup, header.Title);
+        Assert.Equal(["acp"], vm.FilteredSettingCategories.Select(category => category.Id));
+        Assert.Equal("acp", vm.SelectedSettingCategory?.Id);
+        Assert.True(vm.ShowAcpSection);
+    }
+
+    [Fact]
     public void SettingsSearch_McpToolsKeywords_SelectsThePage()
     {
         var vm = new OptionsDialogViewModel(["English"]);
