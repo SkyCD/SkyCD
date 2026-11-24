@@ -927,11 +927,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool IsDetailsViewChecked => CurrentViewMode == BrowserViewMode.Details;
 
-    public bool IsSortByNameChecked => IsSortMode("Name");
+    public bool IsSortByNameChecked => IsSortMode(DetailsColumnsCatalog.NameId);
 
-    public bool IsSortByTypeChecked => IsSortMode("Type");
+    public bool IsSortByTypeChecked => IsSortMode(DetailsColumnsCatalog.TypeId);
 
-    public bool IsSortBySizeChecked => IsSortMode("Size");
+    public bool IsSortBySizeChecked => IsSortMode(DetailsColumnsCatalog.SizeId);
 
     public bool IsDetailsMode => CurrentViewMode == BrowserViewMode.Details;
 
@@ -1023,6 +1023,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsSortByTypeChecked))]
     [NotifyPropertyChangedFor(nameof(IsSortBySizeChecked))]
     private string currentSortMode = "Name";
+
+    /// <summary>Whether the active browser sort runs from highest to lowest.</summary>
+    [ObservableProperty]
+    private bool isSortDescending;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStatusBarShown))]
@@ -3066,9 +3070,38 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void SetSortMode(string sortKey)
     {
-        CurrentSortMode = NormalizeSortMode(sortKey);
+        var mode = NormalizeSortMode(sortKey);
+        var columnChanged = !IsSortMode(mode);
+        CurrentSortMode = mode;
+        if (columnChanged)
+        {
+            IsSortDescending = false;
+        }
+
         RefreshBrowserItemsForSelection();
-        StatusText = LocalizationService.Current.Format(TextKeys.ArrangeIconsBy, LocalizationService.Current.Get(CurrentSortMode switch { "Type" => TextKeys.Type, "Size" => TextKeys.Size, _ => TextKeys.Name2 }));
+        StatusText = LocalizationService.Current.Format(TextKeys.ArrangeIconsBy, GetSortColumnLabel(mode));
+    }
+
+    /// <summary>
+    /// Sorts by the clicked details column: a click on the active column flips the direction, while a
+    /// different column starts ascending.
+    /// </summary>
+    [RelayCommand]
+    private void SortByColumn(string? columnId)
+    {
+        var mode = NormalizeSortMode(columnId);
+        if (IsSortMode(mode))
+        {
+            IsSortDescending = !IsSortDescending;
+        }
+        else
+        {
+            CurrentSortMode = mode;
+            IsSortDescending = false;
+        }
+
+        RefreshBrowserItemsForSelection();
+        StatusText = LocalizationService.Current.Format(TextKeys.ArrangeIconsBy, GetSortColumnLabel(mode));
     }
 
     [RelayCommand]
@@ -3378,9 +3411,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         NavigateToFindResult(new CatalogFindResult(document, string.Empty, string.Empty));
     }
 
-    public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible)
+    public void ApplySessionState(BrowserViewMode viewMode, string? sortMode, bool isStatusBarVisible, bool isSortDescending = false)
     {
         CurrentViewMode = viewMode;
+        IsSortDescending = isSortDescending;
         CurrentSortMode = NormalizeSortMode(sortMode);
         IsStatusBarVisible = isStatusBarVisible;
         RefreshBrowserItemsForSelection();
@@ -3665,16 +3699,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var refreshedItems = NormalizeSortMode(CurrentSortMode) switch
-        {
-            "Type" => items.OrderBy(static item => item.DisplayType)
-                .ThenBy(static item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .ToArray(),
-            "Size" => items.OrderBy(static item => item.Size)
-                .ThenBy(static item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .ToArray(),
-            _ => items.OrderBy(static item => item.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray()
-        };
+        var refreshedItems = BrowserItemSorting.Sort(items, CurrentSortMode, IsSortDescending);
 
         BrowserItems.Clear();
         foreach (var item in refreshedItems) BrowserItems.Add(item);
@@ -3979,19 +4004,39 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTopMenuState();
     }
 
-    private bool IsSortMode(string expected)
+    private bool IsSortMode(string? expected)
     {
-        return string.Equals(CurrentSortMode, expected, StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrWhiteSpace(expected)
+               && string.Equals(
+                   NormalizeSortMode(CurrentSortMode),
+                   NormalizeSortMode(expected),
+                   StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Maps a saved or clicked sort value onto a catalog column. Unknown values fall back to Name.
+    /// </summary>
     private static string NormalizeSortMode(string? sortMode)
     {
-        return sortMode?.Trim().ToLowerInvariant() switch
+        var definition = DetailsColumnsCatalog.Find(sortMode?.Trim());
+        if (definition is null)
         {
-            "type" => "Type",
-            "size" => "Size",
-            _ => "Name"
+            return "Name";
+        }
+
+        return definition.Id.ToLowerInvariant() switch
+        {
+            DetailsColumnsCatalog.NameId => "Name",
+            DetailsColumnsCatalog.TypeId => "Type",
+            DetailsColumnsCatalog.SizeId => "Size",
+            _ => definition.Id
         };
+    }
+
+    private static string GetSortColumnLabel(string sortMode)
+    {
+        return DetailsColumnsCatalog.Find(sortMode)?.DisplayHeader
+               ?? DetailsColumnsCatalog.Find(DetailsColumnsCatalog.NameId)!.DisplayHeader;
     }
 
     partial void OnIsDirtyDocumentChanged(bool value)
@@ -4126,12 +4171,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     new MainMenuItemViewModel
                     {
                         Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
-                        Items =
-                        [
-                            CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
-                            CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type"),
-                            CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
-                        ]
+                        Items = BuildArrangeByMenuItems()
                     },
                     new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), HotKey = "F5", InputGesture = "F5", Command = RefreshCommand }
                 ]
@@ -4354,9 +4394,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuChecked(byKey, "view_large", IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu));
         SetMenuChecked(byKey, "view_list", IsListViewChecked, LocalizationService.Current.Get(TextKeys.List));
         SetMenuChecked(byKey, "view_details", IsDetailsViewChecked, LocalizationService.Current.Get(TextKeys.Details));
-        SetMenuChecked(byKey, "sort_name", IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name));
-        SetMenuChecked(byKey, "sort_type", IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2));
-        SetMenuChecked(byKey, "sort_size", IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2));
+        foreach (var definition in DetailsColumnsCatalog.All)
+        {
+            SetMenuChecked(byKey, "sort_" + definition.Id, IsSortMode(definition.Id), definition.MenuHeader);
+        }
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuEnabled(byKey, "file_open", IsOpenEnabled);
         SetMenuEnabled(byKey, "file_save_as", IsSaveAsEnabled);
@@ -4432,6 +4473,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         };
     }
 
+    /// <summary>
+    /// Builds the Arrange submenu from the catalog so every sortable column, including contributed ones,
+    /// is offered and its checkmark follows the active details sort.
+    /// </summary>
+    private IReadOnlyList<MainMenuItemViewModel> BuildArrangeByMenuItems()
+    {
+        return DetailsColumnsCatalog.All
+            .Select(definition => CheckedMenuItem(
+                IsSortMode(definition.Id),
+                definition.MenuHeader,
+                SetSortModeCommand,
+                definition.Id,
+                "sort_" + definition.Id))
+            .ToList();
+    }
+
     private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
     {
         return
@@ -4480,11 +4537,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel
             {
                 Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
-                Items =
-                [
-                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
-                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type")
-                ]
+                Items = BuildArrangeByMenuItems()
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
@@ -4631,12 +4684,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel
             {
                 Header = LocalizationService.Current.Get(TextKeys.ArrangeIconsBy2),
-                Items =
-                [
-                    CheckedMenuItem(IsSortByNameChecked, LocalizationService.Current.Get(TextKeys.Name), SetSortModeCommand, "Name", "sort_name"),
-                    CheckedMenuItem(IsSortByTypeChecked, LocalizationService.Current.Get(TextKeys.Type2), SetSortModeCommand, "Type", "sort_type"),
-                    CheckedMenuItem(IsSortBySizeChecked, LocalizationService.Current.Get(TextKeys.Size2), SetSortModeCommand, "Size", "sort_size")
-                ]
+                Items = BuildArrangeByMenuItems()
             },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Refresh), Command = RefreshCommand },
             Separator(),
