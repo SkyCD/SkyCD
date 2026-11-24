@@ -105,6 +105,16 @@ public sealed class TwemojiToolbarIconTests : IDisposable
         Assert.Equal(names.Length, names.Distinct(StringComparer.Ordinal).Count());
     }
 
+    /// <summary>
+    /// Issue #1059: New paints a document like Open, Save and Find paint their objects; the colored
+    /// "NEW" word badge read as a stray bitmap among the toolbar's object metaphors.
+    /// </summary>
+    [Fact]
+    public void NewCatalog_UsesTheDocumentArtworkInsteadOfTheNewWordBadge()
+    {
+        Assert.Equal("page-facing-up", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.NewCatalog));
+    }
+
     [Fact]
     public void Artwork_ReadsCircleAndEllipseAsFilledLayers()
     {
