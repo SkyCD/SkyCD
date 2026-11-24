@@ -329,7 +329,6 @@ ui.Start: "Start"
 ui.DescriptionResults: "Results"
 
 ui.QuickFind: "Filter by name or catalog path"
-ui.CurrentList: "Current list"
 ui.WholeCatalog: "Search entire catalog"
 ui.SearchSubtree: "Search selected folder only"
 ui.IncludeDescendants: "Include descendants"

@@ -302,7 +302,6 @@ public static class UiKeys
     public const string FindCatalogHint = "core.ui.FindCatalogHint";
     public const string Find = "core.ui.Find";
     public const string QuickFind = "core.ui.QuickFind";
-    public const string CurrentList = "core.ui.CurrentList";
     public const string WholeCatalog = "core.ui.WholeCatalog";
     public const string SearchSubtree = "core.ui.SearchSubtree";
     public const string IncludeDescendants = "core.ui.IncludeDescendants";

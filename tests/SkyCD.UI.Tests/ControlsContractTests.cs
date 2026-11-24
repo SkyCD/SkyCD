@@ -525,6 +525,7 @@ public class ControlsContractTests
         var statusBar = new StatusBar
         {
             StatusText = "Ready",
+            SecondaryStatusText = "3 matching entries",
             ProgressText = "50%",
             IsProgressVisible = true,
             ProgressValue = 50,
@@ -533,6 +534,7 @@ public class ControlsContractTests
         };
 
         Assert.Equal("Ready", statusBar.StatusText);
+        Assert.Equal("3 matching entries", statusBar.SecondaryStatusText);
         Assert.Equal("50%", statusBar.ProgressText);
         Assert.True(statusBar.IsProgressVisible);
         Assert.Equal(50, statusBar.ProgressValue);
@@ -561,13 +563,14 @@ public class ControlsContractTests
             Assert.Equal(22, border.Height);
 
             var grid = Assert.IsType<Grid>(border.Child);
-            Assert.Equal(4, grid.ColumnDefinitions.Count);
+            Assert.Equal(5, grid.ColumnDefinitions.Count);
             Assert.Equal(GridUnitType.Star, grid.ColumnDefinitions[0].Width.GridUnitType);
             Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[1].Width.GridUnitType);
             Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[2].Width.GridUnitType);
             Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[3].Width.GridUnitType);
+            Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[4].Width.GridUnitType);
 
-            var progressBar = Assert.IsType<ProgressBar>(grid.Children[2]);
+            var progressBar = Assert.IsType<ProgressBar>(grid.Children[3]);
             Assert.Equal(100, progressBar.Width);
             Assert.Equal(14, progressBar.Height);
             var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(progressBar.Foreground);

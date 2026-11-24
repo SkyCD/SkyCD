@@ -204,7 +204,6 @@ text.AiDescriptionBatchSummary: "Sugeneruota {0}, praleista {1}, nepavyko {2}, a
 text.AiDescriptionBatchCancelled: "AI aprašymų paketas atšauktas."
 text.AiDescriptionBatchFailed: "AI aprašymų paketas nepavyko: {0}"
 
-text.QuickFindEmptyQuery: "Įveskite tekstą sąrašui filtruoti arba pasirinkite visą katalogą."
 text.Scan: "Nuskaitymo išimtys"
 text.AllRulesNeedPattern: "Kiekvienai nuskaitymo išimčių taisyklei reikia šablono."
 text.AllMimeTypesNeedValue: "Kiekvienam neįtraukiamam MIME tipui reikia reikšmės."
