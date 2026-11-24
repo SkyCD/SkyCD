@@ -171,6 +171,33 @@ public sealed class OptionsPluginsPageLayoutTests
     }
 
     [Fact]
+    public void PluginsPage_ReservesTheSameIconSlotOnEveryRowAndDetailHeader()
+    {
+        var page = GetPluginsPage();
+
+        var slots = page.Descendants().OfType<XElement>()
+            .Where(element => element.Name.LocalName == "Panel" &&
+                              (string?)element.Attribute("Width") == "24" &&
+                              (string?)element.Attribute("Height") == "24")
+            .ToList();
+        Assert.Equal(4, slots.Count);
+
+        foreach (var slot in slots)
+        {
+            var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
+                element => element.Name.LocalName == "Image");
+            Assert.Contains("IconKey", (string?)bitmap.Attribute("Source"));
+            Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+
+            var glyph = Assert.Single(slot.Descendants().OfType<XElement>(),
+                element => element.Name.LocalName == "PackIconControl");
+            Assert.Contains("PluginGlyphConverter", (string?)glyph.Attribute("Kind"));
+            Assert.Contains("IconKey", (string?)glyph.Attribute("Kind"));
+            Assert.Contains("HasGlyphIcon", (string?)glyph.Attribute("IsVisible"));
+        }
+    }
+
+    [Fact]
     public void PluginsPage_KeepsLiteralTypographyAndSpacingOutOfTheSplice()
     {
         var markup = GetPluginsPage().ToString();

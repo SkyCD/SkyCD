@@ -11,7 +11,7 @@ remain `SkyCD.Plugin.Abstractions.*`, so source is portable across the rename). 
 
 The package contains only the plugin-authoring surface:
 
-- lifecycle and identity: `IPlugin`, `IPluginCapability`, `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`;
+- lifecycle and identity: `IPlugin`, `IPluginCapability`, `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`, `PluginIconAttribute`;
 - the capability contracts under `Capabilities/**` and the host services plugins call back into
   (`ICatalogApi`, `IHostCommandApi`, `IHostDialogApi`, `IPluginStorageApi` / `IPluginStorageConsumer`, `IOAuthService`, `ILocalizationService`);
 - the request/result/descriptor models exchanged across those contracts.
@@ -134,6 +134,29 @@ the file.
   "No, Do Not Save" (Esc closes without writing).
 - `FileFormatWriteRequest.CatalogScopeItems` carries the same scope snapshot to writers. Formats that
   preserve scope (currently the native JSON catalog) serialize it; see [json-catalog.md](json-catalog.md).
+
+## Plugin icon (SDK 3.0)
+
+Options → Plugins shows one 24 px icon slot in the installed list, the plugin details header and the
+marketplace row. A plugin can declare its icon at assembly level:
+
+```csharp
+[assembly: PluginIcon("Lucide:Archive")]
+```
+
+| Declared value | Rendering |
+| --- | --- |
+| `Lucide:<Name>` | Lucide glyph from the icon pack, for example `Lucide:Archive` or `Lucide:FileText`. |
+| `ext:<extension>` | The operating system or portable icon for that extension. |
+| `avares://…`, `data:image/…`, `base64:…` | The referenced embedded image. |
+| A path relative to the plugin assembly | A packaged image; the path is resolved beside the assembly. |
+
+When `PluginIconAttribute` is absent, an `icon.png` beside the plugin assembly is used before the
+fallback. Without either, the icon is chosen by the plugin's primary capability kind, so plugins of
+different functions never share the same generic icon: file format → extension icon (or a document
+icon when it has no extension), metadata → tag, preview → eye, accounts → user, AI → sparkles, and
+feature/menu/modal → puzzle. First-party assemblies additionally use their
+`SkyCD.Plugin.<Kind>.<Subject>` name, which classifies surfaces such as an accounts CLI plugin.
 
 ## Runtime Discovery
 - Runtime scans assemblies for concrete capability classes with public parameterless constructors.

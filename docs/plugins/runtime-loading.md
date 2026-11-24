@@ -6,8 +6,8 @@
 1. Enumerate configured plugin directories and scan DLLs recursively.
 2. Skip SDK contract assemblies, intermediate (`obj`), and reference outputs.
 3. Load each assembly once, reusing an already loaded assembly when available.
-4. Resolve identity and version constraints from assembly metadata, including
-   `PluginIdAttribute`, `MinHostVersionAttribute`, and `MaxHostVersionAttribute`.
+4. Resolve identity, version constraints and the optional icon from assembly metadata, including
+   `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`, and `PluginIconAttribute`.
 5. Instantiate concrete `IPluginCapability` implementations with public parameterless constructors.
 6. Check host compatibility against minimum and optional maximum host versions.
 7. Persist discovered descriptors and expose capabilities from enabled, available plugins.

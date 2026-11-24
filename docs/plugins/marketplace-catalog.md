@@ -46,6 +46,7 @@ Handling rules:
       "summary": "Reads Foo images.",
       "license": "MIT",
       "projectUrl": "https://example.org/skycd/foo",
+      "icon": "Lucide:Archive",
       "releases": [
         { "version": "1.2.0", "minHostVersion": "3.0.0" },
         { "version": "2.0.0", "minHostVersion": "3.0.0", "maxHostVersion": "3.9.99",
@@ -64,6 +65,7 @@ Handling rules:
 | `projectUrl` | no | Absolute HTTPS URL of the publisher's site. |
 | `packages[].id` | yes | NuGet package ID, published exactly as written here. |
 | `packages[].displayName` / `summary` / `license` / `projectUrl` | no | Display metadata; `license` is an SPDX expression or name. |
+| `packages[].icon` | no | Icon key shown in the browse row: `Lucide:<Name>` or `ext:<extension>`. Other values fall back to the neutral puzzle glyph; the client never treats this field as a local path. |
 | `packages[].releases[].version` | yes | NuGet package version (`MAJOR.MINOR.PATCH[-prerelease][+metadata]`). |
 | `packages[].releases[].minHostVersion` | yes | Lowest SkyCD host version that can load the plugin. |
 | `packages[].releases[].maxHostVersion` | no | Highest supported host version; must not be below the minimum. |

@@ -391,7 +391,8 @@ internal sealed class PluginCatalogResolver
                 package.License,
                 package.ProjectUrl,
                 feed?.AbsoluteUri ?? string.Empty,
-                new CachedManifestReleaseCompatibility(report.Status, report.Reason, report.Message)));
+                new CachedManifestReleaseCompatibility(report.Status, report.Reason, report.Message),
+                package.Icon));
 
             releases.Add(new MarketplaceRelease
             {
@@ -419,6 +420,7 @@ internal sealed class PluginCatalogResolver
             Summary = package.Summary,
             License = package.License,
             ProjectUrl = projectUrl,
+            Icon = package.Icon,
             FeedUri = feed,
             Releases = ordered,
             BestRelease = ordered.FirstOrDefault(static release => release.IsEligible)
@@ -549,6 +551,7 @@ internal sealed class PluginCatalogResolver
             DisplayName = first.DisplayName,
             Summary = first.Summary,
             License = first.License,
+            Icon = first.Icon,
             FeedUri = feed,
             Releases = ordered,
             BestRelease = null

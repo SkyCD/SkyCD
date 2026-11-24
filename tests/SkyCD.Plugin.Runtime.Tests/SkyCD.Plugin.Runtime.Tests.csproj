@@ -29,6 +29,9 @@
         <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MaxHostVersionAttribute">
             <_Parameter1>3.0.0</_Parameter1>
         </AssemblyAttribute>
+        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIconAttribute">
+            <_Parameter1>Lucide:Archive</_Parameter1>
+        </AssemblyAttribute>
     </ItemGroup>
     <ItemGroup>
         <!-- Slice plugin assemblies packaged by staged-install fixtures and copied next to the tests. -->

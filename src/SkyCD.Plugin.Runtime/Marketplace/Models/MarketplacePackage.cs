@@ -22,6 +22,9 @@ public sealed record MarketplacePackage
 
     public string? Publisher { get; init; }
 
+    /// <summary>Icon key declared by the publisher manifest, or <see langword="null"/> when none is given.</summary>
+    public string? Icon { get; init; }
+
     /// <summary>Feed declared by the manifest, or <see langword="null"/> when the feed could not be used.</summary>
     public Uri? FeedUri { get; init; }
 

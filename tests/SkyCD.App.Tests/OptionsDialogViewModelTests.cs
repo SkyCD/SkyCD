@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Documents;
+using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -48,23 +49,53 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
-    public void OptionsPluginItem_BuildsIconKeyFromPrimaryExtension()
+    public void OptionsPluginItem_BuildsIconKeyFromPrimaryExtensionForFileFormats()
     {
-        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json");
+        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json",
+            iconKind: PluginIconKind.FileFormat);
 
         Assert.Equal("json", plugin.PrimaryExtension);
         Assert.Equal("ext:json", plugin.IconKey);
-        Assert.True(plugin.HasIcon);
+        Assert.True(plugin.HasBitmapIcon);
+        Assert.False(plugin.HasGlyphIcon);
     }
 
     [Fact]
-    public void OptionsPluginItem_UsesNoIconKeyWithoutPrimaryExtension()
+    public void OptionsPluginItem_PrefersDeclaredIconOverTheExtension()
     {
-        var plugin = new OptionsPluginItem("Accounts", "SkyCD", "accounts v2.0.0");
+        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json",
+            iconKind: PluginIconKind.FileFormat, icon: "Lucide:FileText");
 
-        Assert.Null(plugin.PrimaryExtension);
-        Assert.Null(plugin.IconKey);
-        Assert.False(plugin.HasIcon);
+        Assert.Equal("Lucide:FileText", plugin.IconKey);
+        Assert.True(plugin.HasGlyphIcon);
+        Assert.False(plugin.HasBitmapIcon);
+    }
+
+    [Theory]
+    [InlineData(PluginIconKind.Metadata, "lucide:Tag")]
+    [InlineData(PluginIconKind.Preview, "lucide:Eye")]
+    [InlineData(PluginIconKind.Accounts, "lucide:User")]
+    [InlineData(PluginIconKind.Ai, "lucide:Sparkles")]
+    [InlineData(PluginIconKind.Feature, "lucide:Puzzle")]
+    public void OptionsPluginItem_UsesTheCapabilityKindFallback(
+        PluginIconKind kind, string expected)
+    {
+        var plugin = new OptionsPluginItem("Plugin", "SkyCD", "plugin v2.0.0", iconKind: kind);
+
+        Assert.Equal(expected, plugin.IconKey);
+        Assert.True(plugin.HasGlyphIcon);
+        Assert.False(plugin.HasBitmapIcon);
+    }
+
+    [Fact]
+    public void OptionsPluginItem_UsesADocumentIconForFileFormatsWithoutAnExtension()
+    {
+        var plugin = new OptionsPluginItem("Catalog", "SkyCD", "catalog v2.0.0",
+            iconKind: PluginIconKind.FileFormat);
+
+        Assert.Equal("file", plugin.IconKey);
+        Assert.True(plugin.HasBitmapIcon);
+        Assert.False(plugin.HasGlyphIcon);
     }
 
     [Fact]
