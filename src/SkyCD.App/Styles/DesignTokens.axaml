@@ -60,8 +60,6 @@
     <!-- Composed insets: each replaces the second wrapper element a per-side inset would need. -->
     <Thickness x:Key="SkyRowPadding">8,6</Thickness>
     <Thickness x:Key="SkyControlPaddingTight">4,2</Thickness>
-    <!-- The control padding once a pointerover or selected border is added, so the label does not shift. -->
-    <Thickness x:Key="SkyControlPaddingBordered">7,3</Thickness>
     <!--
         The card tab header keeps the horizontal inset of SkyInsetMd, the content inset of the same
         card, so the header text and the tab body share one left edge (issue #997). The 5/6 split
@@ -83,12 +81,10 @@
 
     <!--
         Values that used to be hand-tuned pixels and are now declared once, with their coupling.
-        The editor cancels SkyControlPadding; the hint aligns under the label of the checkbox above
-        it; the tab strip of the Add To List dialog leaves room for the buttons beside its headers (#639).
+        The editor cancels SkyControlPadding; the hint aligns under the label of the checkbox above it.
     -->
     <Thickness x:Key="SkyControlPaddingInverse">-8,-4</Thickness>
     <Thickness x:Key="SkyCheckboxHintIndent">28,0,0,0</Thickness>
-    <Thickness x:Key="SkyTabStripActionsReserve">0,0,154,0</Thickness>
 
     <!-- Icon slot: the 16px toolbar button image and the matching glyphs in the Options toolbar lists (issue #933). -->
     <x:Double x:Key="SkyIconSize">16</x:Double>

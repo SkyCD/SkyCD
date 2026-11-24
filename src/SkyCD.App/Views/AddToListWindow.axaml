@@ -24,33 +24,6 @@
 
     <Window.Resources>
         <converters:InternetProtocolIconConverter x:Key="InternetProtocolIcon" />
-        <ControlTheme x:Key="AddToListTabItemTheme" TargetType="TabItem">
-            <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
-            <Setter Property="Padding" Value="{DynamicResource SkyControlPadding}" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <ContentPresenter Name="PART_ContentPresenter"
-                                      Background="{TemplateBinding Background}"
-                                      BorderBrush="#B0B0B0"
-                                      BorderThickness="{TemplateBinding BorderThickness}"
-                                      Content="{TemplateBinding Header}"
-                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      RecognizesAccessKey="True" />
-                </ControlTemplate>
-            </Setter>
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Style Selector="^:pointerover, ^:focus-visible">
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Padding" Value="{DynamicResource SkyControlPaddingBordered}" />
-            </Style>
-            <Style Selector="^:selected">
-                <Setter Property="Background" Value="#207A7A7A" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Padding" Value="{DynamicResource SkyControlPaddingBordered}" />
-            </Style>
-        </ControlTheme>
     </Window.Resources>
 
     <Window.Styles>
@@ -276,44 +249,28 @@
 
             </Grid>
 
-            <!-- The tab strip and its actions stay anchored to the bottom of the content column (#823). -->
-            <Grid x:Name="SourceTabHost" Grid.Row="2">
-                <TabControl TabStripPlacement="Bottom">
-                    <TabControl.Template>
-                        <ControlTemplate>
-                            <Grid RowDefinitions="80,28">
-                                <Border BorderBrush="#B0B0B0" BorderThickness="1">
-                                    <ContentPresenter Name="PART_SelectedContentHost"
-                                                      HorizontalContentAlignment="Stretch"
-                                                      VerticalContentAlignment="Top" />
-                                </Border>
-                                <!-- Leave room for the dialog actions beside the tab headers. -->
-                                <ItemsPresenter Name="PART_ItemsPresenter"
-                                                Grid.Row="1"
-                                                Margin="{DynamicResource SkyTabStripActionsReserve}"
-                                                VerticalAlignment="Center"
-                                                ItemsPanel="{TemplateBinding ItemsPanel}" />
-                            </Grid>
-                        </ControlTemplate>
-                    </TabControl.Template>
-                    <TabItem Theme="{StaticResource AddToListTabItemTheme}"
-                             Header="{i18n:Translate {x:Static i18n:UiKeys.AddContents}}">
-                        <StackPanel Margin="{DynamicResource SkyInsetMd}" Spacing="{DynamicResource SkySpaceSm}">
-                            <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.AsNewMedia}}"
-                                         IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
-                                         Command="{Binding SelectTargetCommand}"
-                                         CommandParameter="NewMedia" />
-                            <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
-                                         IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
-                                         Command="{Binding SelectTargetCommand}"
-                                         CommandParameter="SelectedFolder" />
-                        </StackPanel>
-                    </TabItem>
-                </TabControl>
+            <!--
+                The destination radios render directly in the content column. The radios and the
+                actions share the bottom row so OK/Cancel stay pinned to the window edge (#823, #1031).
+            -->
+            <Grid x:Name="DestinationSection" Grid.Row="2" RowDefinitions="Auto,Auto">
+                <StackPanel x:Name="TargetPlacementGroup"
+                            Spacing="{DynamicResource SkySpaceSm}"
+                            Margin="{DynamicResource SkyGapTopXs}">
+                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.AsNewMedia}}"
+                                 IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
+                                 Command="{Binding SelectTargetCommand}"
+                                 CommandParameter="NewMedia" />
+                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
+                                 IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
+                                 Command="{Binding SelectTargetCommand}"
+                                 CommandParameter="SelectedFolder" />
+                </StackPanel>
 
-                <StackPanel Orientation="Horizontal"
+                <StackPanel x:Name="DialogActions"
+                            Grid.Row="1"
+                            Orientation="Horizontal"
                             HorizontalAlignment="Right"
-                            VerticalAlignment="Bottom"
                             Margin="{DynamicResource SkyGapBottomXxs}"
                             Spacing="{DynamicResource SkySpaceSm}">
                     <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
