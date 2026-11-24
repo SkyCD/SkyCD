@@ -105,6 +105,11 @@
 
     <Style Selector="TabControl[TabStripPlacement=Top]">
         <Setter Property="Theme" Value="{StaticResource CardTabControlTheme}" />
+        <Setter Property="ItemsPanel">
+            <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" ItemSpacing="{DynamicResource SkySpaceXs}" />
+            </ItemsPanelTemplate>
+        </Setter>
     </Style>
     <Style Selector="TabControl[TabStripPlacement=Top] > TabItem">
         <Setter Property="Theme" Value="{StaticResource CardTabItemTheme}" />

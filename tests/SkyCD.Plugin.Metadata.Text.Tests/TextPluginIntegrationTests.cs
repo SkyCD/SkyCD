@@ -181,7 +181,7 @@ public sealed class TextPluginIntegrationTests : IDisposable
 
             var hit = Assert.Single(CatalogFindService.Search(documents, "haystack", provider));
             Assert.Equal(ReadmeEntryId, hit.Document.Id);
-            Assert.Equal(TextSchema.TextExcerpt, hit.MatchedField);
+            Assert.Equal(MediaMetadataValueFormatter.HumanizeKey(TextSchema.TextExcerpt), hit.MatchedField);
 
             Assert.Empty(CatalogFindService.Search(documents, "haystack"));
         }

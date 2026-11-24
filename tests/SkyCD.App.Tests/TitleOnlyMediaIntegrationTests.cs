@@ -12,6 +12,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Json;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.TestSupport;
 using Xunit;
@@ -90,7 +91,8 @@ public sealed class TitleOnlyMediaIntegrationTests : IDisposable
         viewModel.OpenPropertiesCommand.Execute(null);
         Assert.NotNull(propertiesDialog);
         Assert.Equal("Shelf Copy", propertiesDialog.Name);
-        Assert.Equal("Not scanned", propertiesDialog.InfoProperties[TitleOnlyMedia.ContentsStatePropertyKey]?.ToString());
+        var contentsStateLabel = MediaMetadataValueFormatter.HumanizeKey(TitleOnlyMedia.ContentsStatePropertyKey);
+        Assert.Equal("Not scanned", propertiesDialog.InfoProperties[contentsStateLabel]?.ToString());
 
         viewModel.SelectedTreeNode = viewModel.TreeNodes.Single(node => node.Key == "library");
         var browserItem = viewModel.BrowserItems.Single(item => item.Id == added.Id);
