@@ -27,7 +27,8 @@ public class OptionsIconPickerTests
         };
         var viewModel = new OptionsDialogViewModel(["English"]);
         viewModel.SetStatusVariants(original);
-        viewModel.SelectedTabIndex = 3;
+        viewModel.SelectedTabIndex = viewModel.SettingCategories.ToList()
+            .FindIndex(category => category.Id == "statuses");
         var window = new OptionsWindow { DataContext = viewModel };
         window.Show();
         Dispatcher.UIThread.RunJobs();

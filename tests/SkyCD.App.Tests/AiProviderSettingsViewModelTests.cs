@@ -101,7 +101,7 @@ public class AiProviderSettingsViewModelTests
         vm.SetAiDescriptionAvailable(false);
 
         Assert.DoesNotContain(vm.SettingCategories, category => category.Id == "ai-provider");
-        Assert.Equal(9, vm.SelectedTabIndex);
+        Assert.Equal(7, vm.SelectedTabIndex);
         Assert.True(vm.IsToolbarCategorySelected);
         Assert.False(vm.ShowAiProviderSection);
     }
@@ -132,8 +132,9 @@ public class AiProviderSettingsViewModelTests
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)
             .ToList();
-        Assert.Equal(["Description", "Provider", "MCP Tools"], children.Select(child => child.Title));
-        Assert.Equal(["ai-description", "ai-provider", "mcp-tools"], children.Select(child => child.Category?.Id));
+        Assert.Equal(["Description", "Provider", "MCP", "ACP agents", "MCP Tools"], children.Select(child => child.Title));
+        Assert.Equal(["ai-description", "ai-provider", "mcp", "acp", "mcp-tools"],
+            children.Select(child => child.Category?.Id));
         Assert.All(children, child => Assert.Equal(1, child.Depth));
     }
 
@@ -173,7 +174,7 @@ public class AiProviderSettingsViewModelTests
     }
 
     [Fact]
-    public void UnavailableAi_RemovesAiPagesAndKeepsMcpToolsGroup()
+    public void UnavailableAi_RemovesAiPagesAndKeepsMcpPagesUnderGroup()
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetAiDescriptionAvailable(true);
@@ -186,8 +187,7 @@ public class AiProviderSettingsViewModelTests
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)
             .ToList();
-        var child = Assert.Single(children);
-        Assert.Equal("mcp-tools", child.Category?.Id);
+        Assert.Equal(["mcp", "acp", "mcp-tools"], children.Select(child => child.Category?.Id));
         Assert.DoesNotContain(vm.SettingCategories, category => category.Id.StartsWith("ai-", StringComparison.Ordinal));
         Assert.Equal("toolbar", vm.SelectedSettingCategory?.Id);
     }

@@ -59,7 +59,6 @@ public static class UiKeys
     public const string AddFiles = "core.ui.AddFiles";
     public const string SelectedRootAlwaysAdded = "core.ui.SelectedRootAlwaysAdded";
     public const string EnterInternetAddress = "core.ui.EnterInternetAddress";
-    public const string AddContents = "core.ui.AddContents";
     public const string AsNewMedia = "core.ui.AsNewMedia";
     public const string ToSelectedMediaFolder = "core.ui.ToSelectedMediaFolder";
     public const string Misc = "core.ui.Misc";

@@ -29,7 +29,8 @@ public sealed class OptionsScanExclusionsLayoutTests : IDisposable
             new ScanExclusionRuleDocument { Id = "rule-1", Pattern = "*.tmp" },
             new ScanExclusionRuleDocument { Id = "rule-2", Pattern = "bin", EntryType = "Folder" }
         ]);
-        viewModel.SelectedTabIndex = ScanCategoryIndex;
+        viewModel.SelectedTabIndex = viewModel.SettingCategories.ToList()
+            .FindIndex(category => category.Id == "scan");
         Dispatcher.UIThread.RunJobs();
         Assert.True(viewModel.ShowScanSection);
 
@@ -92,8 +93,6 @@ public sealed class OptionsScanExclusionsLayoutTests : IDisposable
             window.Close();
         }
     }
-
-    private const int ScanCategoryIndex = 6;
 
     private static double TranslateBottom(Visual visual, Visual relativeTo) =>
         visual.TranslatePoint(new Point(0, visual.Bounds.Height), relativeTo)!.Value.Y;
