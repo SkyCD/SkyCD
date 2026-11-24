@@ -100,7 +100,7 @@ public partial class MainWindowViewModel
 
         if (query.Length == 0)
         {
-            QuickFindStatus = LocalizationService.Current.Get(SearchWholeCatalog ? TextKeys.FindEmptyQuery : TextKeys.QuickFindEmptyQuery);
+            QuickFindStatus = string.Empty;
             return;
         }
 
