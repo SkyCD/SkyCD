@@ -64,8 +64,10 @@ public static class ToolbarCommandIds
 }
 
 /// <summary>
-/// Keys of the project-owned toolbar glyphs, defined once in <c>src/SkyCD.App/Styles/ToolbarIcons.axaml</c>.
-/// The view resolves a descriptor's <see cref="ToolbarCommandDescriptor.IconPath"/> through the same key.
+/// Keys of the toolbar artwork: each one names the colored Twemoji icon mapped in
+/// <c>src/SkyCD.App/Icons/TwemojiToolbarIcons.cs</c>, falling back to the glyph of the same name defined in
+/// <c>src/SkyCD.App/Styles/ToolbarIcons.axaml</c>. The view resolves a descriptor's
+/// <see cref="ToolbarCommandDescriptor.IconPath"/> through the same key.
 /// </summary>
 public static class ToolbarIconKeys
 {

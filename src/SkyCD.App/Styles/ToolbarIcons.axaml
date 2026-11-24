@@ -1,6 +1,10 @@
 <!--
-    Project-owned toolbar glyphs (issue #933). Each key is the IconPath a ToolbarCommandDescriptor exposes,
-    so the toolbar buttons and the Options toolbar lists render the same artwork from one source.
+    Project-owned toolbar artwork fallback (issues #933, #1022). Each key is the IconPath a
+    ToolbarCommandDescriptor exposes, so the toolbar buttons and the Options toolbar lists read one source.
+
+    A key is normally painted with colored Twemoji artwork mapped in Icons/TwemojiToolbarIcons.cs, which
+    carries its own palette. This dictionary is what a key without an emoji equivalent falls back to, so a
+    plugin command or a future key still gets an icon.
 
     Glyphs are original 16x16 outline drawings on an integer pixel grid: every outline is a 1px rectangle on a
     half-pixel offset, so the geometry stays crisp at 100% and 150% scaling. They carry no theme brush of their

@@ -14,8 +14,9 @@ using Xunit;
 namespace SkyCD.App.Tests;
 
 /// <summary>
-/// Issue #933: every toolbar command carries a project-owned vector glyph, the toolbar and the Options
-/// lists resolve it through one source, and no command silently falls back to a text-only button.
+/// Issue #933: every toolbar command carries a vector icon, the toolbar and the Options lists resolve it
+/// through one source, and no command silently falls back to a text-only button. Issue #1022 keeps that
+/// contract while the artwork itself became colored Twemoji, so the glyph dictionary is the fallback.
 /// </summary>
 public sealed class ToolbarIconsTests : IDisposable
 {
@@ -24,12 +25,14 @@ public sealed class ToolbarIconsTests : IDisposable
 
     public ToolbarIconsTests()
     {
+        ToolbarIconResolver.ArtworkLoaderOverride = null;
         ToolbarIconResolver.GlyphLoaderOverride = null;
         ToolbarIconResolver.AssetLoaderOverride = null;
     }
 
     public void Dispose()
     {
+        ToolbarIconResolver.ArtworkLoaderOverride = null;
         ToolbarIconResolver.GlyphLoaderOverride = null;
         ToolbarIconResolver.AssetLoaderOverride = null;
     }
@@ -103,7 +106,7 @@ public sealed class ToolbarIconsTests : IDisposable
     {
         var converter = new ToolbarIconConverter();
         var requested = new System.Collections.Generic.List<string>();
-        ToolbarIconResolver.GlyphLoaderOverride = key =>
+        ToolbarIconResolver.ArtworkLoaderOverride = key =>
         {
             requested.Add(key);
             return CreateGlyphImage();
@@ -140,8 +143,7 @@ public sealed class ToolbarIconsTests : IDisposable
     [Fact]
     public void Resolver_FailsLoudlyForAnUnknownIcon()
     {
-        ToolbarIconResolver.GlyphLoaderOverride = key =>
-            key == "ToolbarIcon.Undo" ? CreateGlyphImage() : null;
+        ToolbarIconResolver.GlyphLoaderOverride = _ => null;
 
         var exception = Assert.Throws<InvalidOperationException>(() => ToolbarIconResolver.Resolve("ToolbarIcon.Missing"));
 

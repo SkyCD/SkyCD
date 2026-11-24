@@ -1,18 +1,21 @@
 using System;
 using System.Globalization;
-using System.Xml.Linq;
-using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using IconifyBundle;
+using SkyCD.App.Icons;
 
 namespace SkyCD.App.Converters;
 
+/// <summary>
+/// Paints the language flags of the UI as colored Twemoji artwork, the same solid-fill pipeline the toolbar
+/// icons use (issue #1022).
+/// </summary>
 public sealed class LanguageFlagImageConverter : IValueConverter
 {
-    private static readonly Lazy<DrawingImage> EnglishFlag = new(() => Load(Twemoji.FlagUnitedKingdom));
-    private static readonly Lazy<DrawingImage> LithuanianFlag = new(() => Load(Twemoji.FlagLithuania));
-    private static readonly Lazy<DrawingImage> Globe = new(() => Load(Twemoji.GlobeWithMeridians));
+    private static readonly Lazy<DrawingImage> EnglishFlag = new(() => TwemojiArtwork.Create(Twemoji.FlagUnitedKingdom));
+    private static readonly Lazy<DrawingImage> LithuanianFlag = new(() => TwemojiArtwork.Create(Twemoji.FlagLithuania));
+    private static readonly Lazy<DrawingImage> Globe = new(() => TwemojiArtwork.Create(Twemoji.GlobeWithMeridians));
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => ResolveAssetName(value) switch
@@ -31,33 +34,4 @@ public sealed class LanguageFlagImageConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
-
-    private static DrawingImage Load(Icon icon)
-    {
-        var drawing = new DrawingGroup();
-        drawing.Children.Add(new GeometryDrawing
-        {
-            Brush = Brushes.Transparent,
-            Geometry = new RectangleGeometry(new Rect(0, 0, icon.Width, icon.Height))
-        });
-
-        // These pinned Twemoji assets consist entirely of paths with solid fills.
-        foreach (var path in XElement.Parse(icon.Svg).Elements())
-        {
-            if (path.Name.LocalName != "path" ||
-                path.Attribute("d") is not { Value: var data } ||
-                path.Attribute("fill") is not { Value: var fill })
-            {
-                throw new FormatException($"Twemoji icon '{icon.Name}' must contain only solid-filled paths.");
-            }
-
-            drawing.Children.Add(new GeometryDrawing
-            {
-                Brush = new SolidColorBrush(Color.Parse(fill)),
-                Geometry = StreamGeometry.Parse("F1 " + data)
-            });
-        }
-
-        return new DrawingImage { Drawing = drawing };
-    }
 }
