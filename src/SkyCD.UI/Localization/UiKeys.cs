@@ -72,6 +72,17 @@ public static class UiKeys
     public const string OpenToolbar = "core.ui.OpenToolbar";
     public const string SaveToolbar = "core.ui.SaveToolbar";
     public const string AboutSkyCd = "core.ui.AboutSkyCd";
+    public const string AboutStory = "core.ui.AboutStory";
+    public const string AboutStoryWhat = "core.ui.AboutStoryWhat";
+    public const string AboutStoryOrigin = "core.ui.AboutStoryOrigin";
+    public const string AboutStoryRewrite = "core.ui.AboutStoryRewrite";
+    public const string AboutStoryVersion = "core.ui.AboutStoryVersion";
+    public const string AboutStoryReferences = "core.ui.AboutStoryReferences";
+    public const string AboutStoryRepository = "core.ui.AboutStoryRepository";
+    public const string AboutStorySourceForge = "core.ui.AboutStorySourceForge";
+    public const string AboutStorySite = "core.ui.AboutStorySite";
+    public const string AboutStoryOriginalSite = "core.ui.AboutStoryOriginalSite";
+    public const string AboutStoryLicense = "core.ui.AboutStoryLicense";
     public const string SystemInfo = "core.ui.SystemInfo";
     public const string Cpu = "core.ui.Cpu";
     public const string Memory = "core.ui.Memory";

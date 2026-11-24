@@ -81,7 +81,7 @@ public partial class AboutWindow : Window
             return;
         }
 
-        var url = textBlock.Text;
+        var url = textBlock.Tag as string ?? textBlock.Text;
         if (string.IsNullOrWhiteSpace(url))
         {
             return;
