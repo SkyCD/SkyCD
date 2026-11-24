@@ -103,7 +103,7 @@
           "Humanizer.Core": "[3.0.10, )"
         }
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       },
       "skycd.ui": {
@@ -111,7 +111,7 @@
         "dependencies": {
           "Avalonia": "[12.1.6, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

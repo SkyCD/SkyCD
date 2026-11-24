@@ -83,7 +83,8 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
     private static bool IsCandidatePluginAssemblyPath(string fullPath)
     {
         var fileName = Path.GetFileName(fullPath);
-        if (string.Equals(fileName, "SkyCD.Plugin.Abstractions.dll", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fileName, "SkyCD.Plugin.Abstractions.dll", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

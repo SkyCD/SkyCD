@@ -14,7 +14,7 @@
         "resolved": "4.13.0.20261107",
         "contentHash": "suj3kBH9QX9x/zLvgHgmdudU7/wPbJQInyt2UmnIChgsJQ3x8xyjbFsVKi2hCYyV4J3ENvydgV5jGAcC+oZPVg=="
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }

@@ -62,7 +62,7 @@
           "SQLitePCLRaw.core": "3.0.5"
         }
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }

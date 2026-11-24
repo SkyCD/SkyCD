@@ -27,7 +27,7 @@ Use a **parallel rewrite** with a controlled compatibility bridge for legacy fil
 |   |-- SkyCD.Application/                 # Use-cases/orchestration, service contracts
 |   |-- SkyCD.Domain/                      # Core entities/value objects/rules
 |   |-- SkyCD.Infrastructure/              # SQLite, filesystem, logging, settings
-|   |-- SkyCD.Plugin.Abstractions/         # Public plugin SDK contracts
+|   |-- SkyCD.SDK/         # Public plugin SDK contracts
 |   |-- SkyCD.Plugin.Runtime/              # Discovery/loading/compat checks/isolation
 |   |-- SkyCD.Plugin.Host/                 # Host-facing extension services for plugins
 |   |-- SkyCD.Format.Builtin.LegacySCD/    # Built-in plugin: *.scd
@@ -87,7 +87,7 @@ Use a **parallel rewrite** with a controlled compatibility bridge for legacy fil
 - Implements interfaces from application/domain.
 
 ### Plugin Runtime + SDK
-- `SkyCD.Plugin.Abstractions`, `SkyCD.Plugin.Runtime`, `SkyCD.Plugin.Host`
+- `SkyCD.SDK`, `SkyCD.Plugin.Runtime`, `SkyCD.Plugin.Host`
 - Responsibilities:
   - Define capabilities/contracts (file formats, menu contributions, modal contributions)
   - Discover and load plugin assemblies/manifests
@@ -103,26 +103,26 @@ SkyCD.App
 SkyCD.Presentation
   -> SkyCD.Application
   -> SkyCD.Domain
-  -> SkyCD.Plugin.Abstractions
+  -> SkyCD.SDK
 
 SkyCD.Application
   -> SkyCD.Domain
-  -> SkyCD.Plugin.Abstractions
+  -> SkyCD.SDK
 
 SkyCD.Infrastructure
   -> SkyCD.Application
   -> SkyCD.Domain
 
 SkyCD.Plugin.Runtime
-  -> SkyCD.Plugin.Abstractions
+  -> SkyCD.SDK
 
 SkyCD.Plugin.Host
-  -> SkyCD.Plugin.Abstractions
+  -> SkyCD.SDK
   -> SkyCD.Plugin.Runtime
   -> SkyCD.Application
 
 Built-in Format Plugins
-  -> SkyCD.Plugin.Abstractions
+  -> SkyCD.SDK
   -> SkyCD.Domain
 
 Tests

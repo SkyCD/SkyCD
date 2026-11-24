@@ -41,7 +41,7 @@
           "Humanizer.Core": "[3.0.10, )"
         }
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }

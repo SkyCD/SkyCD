@@ -11,7 +11,7 @@ keeps the `SkyCD.Plugin.Legacy.Scd` id and exposes the four legacy format ids fr
 
 ## Binary Compatibility
 - v2 `.NET Framework` plugin binaries are **not** loaded in v3 runtime.
-- Migration path: port plugin to `SkyCD.Plugin.Abstractions` and provide `plugin.json` manifest.
+- Migration path: port plugin to the `SkyCD.SDK` package and provide `plugin.json` manifest.
 
 ## Known Compatibility Limits
 - `.scd` output normalizes size formatting (`KB/MB/GB`) and skips comment/empty lines.

@@ -471,13 +471,10 @@
           "Microsoft.Extensions.Logging.EventLog": "[11.0.0, )"
         }
       },
-      "skycd.plugin.abstractions": {
-        "type": "Project"
-      },
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.metadata.abiword": {
@@ -487,7 +484,7 @@
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
           "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.runtime": {
@@ -504,8 +501,8 @@
           "SkyCD.Couchbase": "[1.0.0, )",
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
-          "SkyCD.Plugin.Host": "[1.0.0, )"
+          "SkyCD.Plugin.Host": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.presentation": {
@@ -520,19 +517,22 @@
           "SkyCD.Couchbase": "[1.0.0, )",
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.Plugin.Runtime": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
           "SkyCD.UI": "[1.0.0, )",
           "WebDav.Client": "[2.9.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
       },
       "skycd.ui": {
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.6, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

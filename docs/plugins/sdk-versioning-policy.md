@@ -1,7 +1,8 @@
 # Plugin SDK Versioning and Compatibility Policy
 
 ## Scope
-Applies to `SkyCD.Plugin.Abstractions` and runtime discovery behavior.
+Applies to the `SkyCD.SDK` package (assembly `SkyCD.SDK`, source project `src/SkyCD.SDK`, namespaces
+`SkyCD.Plugin.Abstractions.*`) and runtime discovery behavior.
 
 ## Semantic Versioning Rules
 - SDK uses SemVer: `MAJOR.MINOR.PATCH`.

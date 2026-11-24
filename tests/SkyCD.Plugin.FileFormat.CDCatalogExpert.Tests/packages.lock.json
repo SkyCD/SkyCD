@@ -93,14 +93,14 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "skycd.plugin.abstractions": {
-        "type": "Project"
-      },
       "skycd.plugin.fileformat.cdcatalogexpert": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
       }
     }
   }

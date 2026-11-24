@@ -34,7 +34,7 @@ internal sealed class PluginPackageFixtures
     {
         var payload = ReadAssembly(fixture.AssemblyFile);
         // A real, discovery-excluded assembly proves bundled private dependencies travel with the entry.
-        var privateDependency = ReadAssembly("SkyCD.Plugin.Abstractions.dll");
+        var privateDependency = ReadAssembly("SkyCD.SDK.dll");
         var entryName = entryAssembly ?? fixture.EntryAssemblyFileName;
         var nuspec = BuildNuspec(nuspecId ?? fixture.PackageId, nuspecVersion ?? fixture.Version, entryName);
         var privateName = "SkyCD.Plugin.SlipSlice.Private.dll";

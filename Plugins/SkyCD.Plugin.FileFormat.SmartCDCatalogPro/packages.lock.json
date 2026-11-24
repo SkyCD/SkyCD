@@ -36,7 +36,7 @@
           "System.Interactive.Async": "7.0.1"
         }
       },
-      "skycd.plugin.abstractions": {
+      "skycd.sdk": {
         "type": "Project"
       }
     }

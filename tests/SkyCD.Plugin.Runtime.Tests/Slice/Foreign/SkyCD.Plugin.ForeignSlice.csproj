@@ -10,7 +10,7 @@
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="..\PluginSlice.cs" Link="PluginSlice.cs"/>
-        <ProjectReference Include="..\..\..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIdAttribute">

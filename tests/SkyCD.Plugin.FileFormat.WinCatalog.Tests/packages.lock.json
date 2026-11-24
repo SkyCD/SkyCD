@@ -1218,9 +1218,9 @@
           "Microsoft.Extensions.Logging": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Console": "[11.0.0, )",
           "SkyCD.Core": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
-          "SkyCD.Plugin.Runtime": "[1.0.0, )"
+          "SkyCD.Plugin.Runtime": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.core": {
@@ -1268,9 +1268,6 @@
           "Microsoft.Extensions.Logging.EventLog": "[11.0.0, )"
         }
       },
-      "skycd.plugin.abstractions": {
-        "type": "Project"
-      },
       "skycd.plugin.feature.loans": {
         "type": "Project",
         "dependencies": {
@@ -1280,8 +1277,8 @@
           "Couchbase.Lite": "[4.1.3, )",
           "SkyCD.Couchbase": "[1.0.0, )",
           "SkyCD.Documents": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
           "SkyCD.Presentation": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
           "SkyCD.UI": "[1.0.0, )",
           "vCardLib.dll": "[6.3.2, )"
         }
@@ -1290,7 +1287,7 @@
         "type": "Project",
         "dependencies": {
           "CsvHelper": "[34.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.fileformat.wincatalog": {
@@ -1298,20 +1295,20 @@
         "dependencies": {
           "Microsoft.Data.Sqlite": "[11.0.0, )",
           "SQLitePCLRaw.lib.e_sqlite3": "[2.1.14, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
-          "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )"
+          "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.fileformat.xml": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.plugin.runtime": {
@@ -1328,8 +1325,8 @@
           "SkyCD.Couchbase": "[1.0.0, )",
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
-          "SkyCD.Plugin.Host": "[1.0.0, )"
+          "SkyCD.Plugin.Host": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )"
         }
       },
       "skycd.presentation": {
@@ -1344,19 +1341,22 @@
           "SkyCD.Couchbase": "[1.0.0, )",
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.Plugin.Runtime": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
           "SkyCD.UI": "[1.0.0, )",
           "WebDav.Client": "[2.9.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
       },
       "skycd.ui": {
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.6, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

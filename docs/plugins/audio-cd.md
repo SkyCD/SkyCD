@@ -131,7 +131,7 @@ The plugin never writes the catalog. Records are staged into the media cache bat
 already manages, and published atomically with the file records:
 
 - `IAudioCdMetadataCapability` / `AudioCdDiscRequest` / `AudioCdCapture` — the plugin seam in
-  `SkyCD.Plugin.Abstractions/Capabilities/Media/AudioCdContracts.cs`;
+  `src/SkyCD.SDK/Capabilities/Media/AudioCdContracts.cs`;
 - `AudioCdExtensionManager` (`src/SkyCD.Plugin.Host/AudioCd/`) — generic host manager: priority order,
   per-plugin settings resolution, failure isolation through `PluginFailure.Publish`, cancellation passthrough,
   registered as `IAudioCdMetadataProvider`;

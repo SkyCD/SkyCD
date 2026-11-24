@@ -67,15 +67,15 @@
           "SQLitePCLRaw.core": "3.0.5"
         }
       },
-      "skycd.plugin.abstractions": {
-        "type": "Project"
-      },
       "skycd.plugin.fileformat.csv": {
         "type": "Project",
         "dependencies": {
           "CsvHelper": "[34.0.0, )",
-          "SkyCD.Plugin.Abstractions": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
       }
     }
   }

@@ -8,7 +8,7 @@
         <Authors>SkyCD</Authors>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj" />
+        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
         <PackageReference Include="JustyBase.UCanAccess.File" Version="1.1.0" />
     </ItemGroup>
     <ItemGroup>

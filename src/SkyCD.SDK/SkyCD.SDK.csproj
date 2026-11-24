@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <Version>3.0.0</Version>
+        <!-- The single, versioned plugin-authoring surface third-party authors reference (#1014). -->
+        <IsPackable>true</IsPackable>
+        <PackageId>SkyCD.SDK</PackageId>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <Product>SkyCD SDK</Product>
+        <RepositoryUrl>https://github.com/SkyCD/SkyCD</RepositoryUrl>
+        <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+        <PackageTags>skycd;plugin;sdk;extensibility</PackageTags>
+        <Description>The strict plugin-authoring contract surface for SkyCD: capability, lifecycle, host-service and request/result contracts. Contains no third-party helper types; SkiaSharp, XmpCore and other implementation dependencies stay behind host services.</Description>
+    </PropertyGroup>
+</Project>

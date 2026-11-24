@@ -6,5 +6,5 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
     </PropertyGroup>
-    <ItemGroup><ProjectReference Include="../../src/SkyCD.Plugin.Abstractions/SkyCD.Plugin.Abstractions.csproj" /></ItemGroup>
+    <ItemGroup><ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" /></ItemGroup>
 </Project>

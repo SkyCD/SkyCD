@@ -16,7 +16,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Cli\SkyCD.Cli.csproj"/>
-        <ProjectReference Include="..\..\src\SkyCD.Plugin.Abstractions\SkyCD.Plugin.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
     </ItemGroup>
 </Project>
