@@ -1541,6 +1541,7 @@ public partial class MainWindow : Window
         var pluginPath = options.PluginPath;
 
         e.Dialog.PluginPath = pluginPath;
+        e.Dialog.SetPluginRepositories(options.PluginRepositorySources);
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
         e.Dialog.IsMcpStatusIconVisible = options.IsMcpStatusIconVisible;
@@ -1610,9 +1611,11 @@ public partial class MainWindow : Window
             var pluginStates = e.Dialog.Plugins
                 .Select(static plugin => (plugin.Id, plugin.IsEnabled))
                 .ToArray();
+            var repositorySources = e.Dialog.GetPluginRepositories();
 
             options.CustomProperties = e.Dialog.GetCustomProperties();
             options.PluginPath = e.Dialog.PluginPath;
+            options.PluginRepositorySources = repositorySources.Count == 0 ? null : repositorySources.ToList();
             options.IsMcpServerEnabled = e.Dialog.IsMcpServerEnabled;
             options.McpPort = e.Dialog.McpPort;
             options.IsMcpStatusIconVisible = e.Dialog.IsMcpStatusIconVisible;
@@ -1631,6 +1634,7 @@ public partial class MainWindow : Window
 
             SaveScanOptionsFromDialog(e.Dialog, options);
             SaveAppOptions(options);
+            await ApplyPluginRepositorySourcesAsync(repositorySources);
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             scanExclusionRuleRepository.ReplaceAll(e.Dialog.GetScanExclusionRules());
             aiScanExclusionRepository.ReplaceAll(e.Dialog.GetAiScanExclusions());
@@ -1672,6 +1676,21 @@ public partial class MainWindow : Window
         e.Dialog.ToolbarLayoutApplied -= OnOptionsToolbarLayoutApplied;
 
         e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
+    }
+
+    private async Task ApplyPluginRepositorySourcesAsync(IReadOnlyList<string> sources)
+    {
+        try
+        {
+            await pluginMarketplaceService.ApplyRepositorySourcesAsync(sources
+                .Select(static url => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri : null)
+                .OfType<Uri>()
+                .ToArray());
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(exception, "Failed to apply plugin repository sources.");
+        }
     }
 
     private void OnOptionsToolbarLayoutApplied(object? sender, ToolbarLayoutAppliedEventArgs e)

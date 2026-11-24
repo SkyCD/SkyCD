@@ -164,6 +164,14 @@ public static class UiKeys
     public const string PluginFilterMarketplace = "core.ui.PluginFilterMarketplace";
     public const string PluginUpdateAll = "core.ui.PluginUpdateAll";
     public const string PluginSettings = "core.ui.PluginSettings";
+    public const string PluginRepositories = "core.ui.PluginRepositories";
+    public const string PluginRepositoryHint = "core.ui.PluginRepositoryHint";
+    public const string PluginRepositoryBuiltIn = "core.ui.PluginRepositoryBuiltIn";
+    public const string PluginRepositoryInvalidUrl = "core.ui.PluginRepositoryInvalidUrl";
+    public const string PluginRepositoryStateOk = "core.ui.PluginRepositoryStateOk";
+    public const string PluginRepositoryStateOffline = "core.ui.PluginRepositoryStateOffline";
+    public const string PluginRepositoryStateRejected = "core.ui.PluginRepositoryStateRejected";
+    public const string PluginRepositoryStateUnknown = "core.ui.PluginRepositoryStateUnknown";
     public const string PluginTabOverview = "core.ui.PluginTabOverview";
     public const string PluginTabConfiguration = "core.ui.PluginTabConfiguration";
     public const string PluginTabAdditionalInfo = "core.ui.PluginTabAdditionalInfo";

@@ -24,6 +24,9 @@ public sealed class AppOptionsDocument
 
     public string PluginPath { get; set; } = string.Empty;
 
+    /// <summary>Repository manifests the user added beside the built-in catalog; <c>null</c> means none.</summary>
+    public System.Collections.Generic.List<string>? PluginRepositorySources { get; set; }
+
     public string Language { get; set; } = "English";
 
     public int OptionsTabIndex { get; set; }

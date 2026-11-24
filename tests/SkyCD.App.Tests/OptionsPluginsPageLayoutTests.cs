@@ -14,7 +14,7 @@ namespace SkyCD.App.Tests;
 public sealed class OptionsPluginsPageLayoutTests
 {
     [Fact]
-    public void PluginsPage_HasSearchBarWithUpdateAllAndSettingsFlyouts()
+    public void PluginsPage_HasSearchBarWithUpdateAllAndFilterFlyout()
     {
         var page = GetPluginsPage();
         var markup = page.ToString();
@@ -23,17 +23,11 @@ public sealed class OptionsPluginsPageLayoutTests
         Assert.Contains("<TextBox.InnerLeftContent>", markup);
         Assert.Contains("Command=\"{Binding UpdateAllPluginsCommand}\"", markup);
 
-        var flyouts = page.Descendants().OfType<XElement>()
-            .Where(element => element.Name.LocalName == "Flyout")
-            .ToList();
-        Assert.Equal(2, flyouts.Count);
-        var settingsFlyout = Assert.Single(flyouts, flyout => flyout.Descendants()
-            .Any(element => (string?)element.Attribute("Text") == "{Binding PluginPath}"));
-        Assert.Contains(settingsFlyout.Descendants(),
-            element => (string?)element.Attribute("Command") == "{Binding BrowsePluginPathCommand}");
-
-        var filterFlyout = Assert.Single(flyouts, flyout => flyout.Descendants()
-            .Any(element => (string?)element.Attribute("Command") == "{Binding ShowAllPluginSectionsCommand}"));
+        // The settings flyout is gone; the path and repositories live on the Plugins settings page.
+        var filterFlyout = Assert.Single(page.Descendants().OfType<XElement>(),
+            element => element.Name.LocalName == "Flyout" &&
+                       element.Descendants().Any(child =>
+                           (string?)child.Attribute("Command") == "{Binding ShowAllPluginSectionsCommand}"));
         foreach (var command in new[]
                  {
                      "ShowInstalledPluginsOnlyCommand", "ShowMarketplacePluginsOnlyCommand"

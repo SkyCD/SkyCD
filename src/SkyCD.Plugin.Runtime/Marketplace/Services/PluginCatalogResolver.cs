@@ -14,14 +14,16 @@ internal sealed class PluginCatalogResolver
 {
     private readonly PluginCatalogOptions options;
     private readonly IPluginCatalogCache cache;
+    private readonly PluginRepositorySourceStore repositorySources;
     private readonly TimeProvider clock;
 
     public PluginCatalogResolver(PluginCatalogOptions options, IPluginCatalogCache cache, IPluginSourceFetcher fetcher,
-        TimeProvider clock)
+        TimeProvider clock, PluginRepositorySourceStore? repositorySources = null)
     {
         this.options = options;
         this.cache = cache;
         this.clock = clock;
+        this.repositorySources = repositorySources ?? new PluginRepositorySourceStore();
         Fetcher = fetcher;
     }
 
@@ -40,8 +42,8 @@ internal sealed class PluginCatalogResolver
     public async Task<PluginCatalogResult> BootstrapAsync(CancellationToken cancellationToken)
     {
         var diagnostics = new List<string>();
-        var catalog = await ResolveCatalogAsync(fallbackAllowed: false, diagnostics, cancellationToken)
-            .ConfigureAwait(false);
+        var catalog = AppendRepositorySources(await ResolveCatalogAsync(fallbackAllowed: false, diagnostics,
+            cancellationToken).ConfigureAwait(false));
         var manifests = await ResolveManifestsAsync(catalog.Sources, fallbackAllowed: false, diagnostics,
             cancellationToken).ConfigureAwait(false);
         return Complete(catalog, manifests, diagnostics);
@@ -54,8 +56,8 @@ internal sealed class PluginCatalogResolver
     public async Task<PluginCatalogResult> ResolveAsync(CancellationToken cancellationToken)
     {
         var diagnostics = new List<string>();
-        var catalog = await ResolveCatalogAsync(fallbackAllowed: true, diagnostics, cancellationToken)
-            .ConfigureAwait(false);
+        var catalog = AppendRepositorySources(await ResolveCatalogAsync(fallbackAllowed: true, diagnostics,
+            cancellationToken).ConfigureAwait(false));
         var manifests = await ResolveManifestsAsync(catalog.Sources, fallbackAllowed: true, diagnostics,
             cancellationToken).ConfigureAwait(false);
         return Complete(catalog, manifests, diagnostics);
@@ -90,6 +92,39 @@ internal sealed class PluginCatalogResolver
             Diagnostics = diagnostics.Distinct(StringComparer.Ordinal).ToArray(),
             SourceUrls = catalog.Sources.Select(static source => source.ManifestUri.AbsoluteUri).ToArray()
         };
+    }
+
+    /// <summary>
+    /// Merges the user's repository manifests into the catalog sources. A URL the catalog already lists keeps
+    /// its catalog entry, so one repository never contributes its packages twice.
+    /// </summary>
+    private CatalogResolution AppendRepositorySources(CatalogResolution catalog)
+    {
+        var configured = repositorySources.Sources;
+        if (configured.Count == 0)
+        {
+            return catalog;
+        }
+
+        var known = new HashSet<string>(catalog.Sources.Select(static source => source.ManifestUri.AbsoluteUri),
+            StringComparer.Ordinal);
+        var sources = catalog.Sources.ToList();
+        foreach (var uri in configured)
+        {
+            if (!known.Add(uri.AbsoluteUri))
+            {
+                continue;
+            }
+
+            sources.Add(new PluginSourceSnapshot
+            {
+                ManifestUri = uri,
+                Status = PluginSourceStatus.Loaded,
+                Detail = PluginSourceStatusDetail.Create(PluginSourceStatus.Loaded, 0)
+            });
+        }
+
+        return sources.Count == catalog.Sources.Count ? catalog : catalog with { Sources = sources };
     }
 
     private async Task<CatalogResolution> ResolveCatalogAsync(bool fallbackAllowed, List<string> diagnostics,
