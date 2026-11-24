@@ -26,7 +26,7 @@ internal static class TwemojiToolbarIcons
     private static readonly IReadOnlyDictionary<string, (string Name, Func<Icon> Icon)> Artwork =
         new Dictionary<string, (string Name, Func<Icon> Icon)>(StringComparer.Ordinal)
         {
-            [ToolbarIconKeys.NewCatalog] = ("new-button", () => Twemoji.NewButton),
+            [ToolbarIconKeys.NewCatalog] = ("page-facing-up", () => Twemoji.PageFacingUp),
             [ToolbarIconKeys.OpenCatalog] = ("open-file-folder", () => Twemoji.OpenFileFolder),
             [ToolbarIconKeys.SaveCatalog] = ("floppy-disk", () => Twemoji.FloppyDisk),
             [ToolbarIconKeys.SaveCatalogAs] = ("memo", () => Twemoji.Memo),
