@@ -28,7 +28,7 @@ public class PluginManagerTests
         Assert.Contains(target.Capabilities, capability => capability is IFileFormatPluginCapability);
         Assert.Contains(target.Capabilities, capability => capability is StandaloneFileFormatCapability);
 
-        Assert.Equal("SkyCD.Plugin.Runtime.Tests", target.Name);
+        Assert.Equal("Runtime Test Plugin", target.Name);
         Assert.Equal(new Version(3, 0, 0), target.MinHostVersion);
     }
 
@@ -68,7 +68,7 @@ public class PluginManagerTests
 
         var target = factory.BuildFromAssembly(Assembly.GetExecutingAssembly());
         Assert.Equal("tests.runtime.assembly-plugin", target.Id);
-        Assert.Equal("SkyCD.Plugin.Runtime.Tests", target.Name);
+        Assert.Equal("Runtime Test Plugin", target.Name);
         Assert.Equal(Assembly.GetExecutingAssembly().GetName().Version, target.Version);
     }
 

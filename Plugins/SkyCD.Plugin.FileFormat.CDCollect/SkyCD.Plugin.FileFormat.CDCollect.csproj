@@ -16,5 +16,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>CDcollect Database</AssemblyTitle>
+        <Description>Reads and writes CDcollect SQLite database catalogs.</Description>
     </PropertyGroup>
 </Project>

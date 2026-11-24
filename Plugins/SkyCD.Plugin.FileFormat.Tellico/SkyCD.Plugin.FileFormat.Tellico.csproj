@@ -8,5 +8,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Tellico Collections</AssemblyTitle>
+        <Description>Read-only import of Tellico native .tc archives and XML exports.</Description>
     </PropertyGroup>
 </Project>

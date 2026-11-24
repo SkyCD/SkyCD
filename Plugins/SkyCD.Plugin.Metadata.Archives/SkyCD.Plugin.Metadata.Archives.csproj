@@ -17,6 +17,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Archive Contents</AssemblyTitle>
+        <Description>Contributes the entries of supported archives as scan work items so metadata providers can inspect them.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

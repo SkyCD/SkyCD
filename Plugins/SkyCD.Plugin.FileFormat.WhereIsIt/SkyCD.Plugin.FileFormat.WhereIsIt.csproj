@@ -8,5 +8,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Where Is It? XML Report</AssemblyTitle>
+        <Description>Read-only import of Where Is It? XML reports.</Description>
     </PropertyGroup>
 </Project>

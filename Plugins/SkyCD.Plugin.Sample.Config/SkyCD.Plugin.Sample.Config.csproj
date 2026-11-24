@@ -8,6 +8,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Sample Configuration</AssemblyTitle>
+        <Description>Demonstrates an embedded, session-local Options draft page without a UI dependency.</Description>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.1.6"/>

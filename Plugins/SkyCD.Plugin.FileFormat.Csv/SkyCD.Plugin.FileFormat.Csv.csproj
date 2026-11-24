@@ -17,6 +17,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>SkyCD CSV</AssemblyTitle>
+        <Description>Reads and writes SkyCD CSV catalogs and exports the current list as CSV.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

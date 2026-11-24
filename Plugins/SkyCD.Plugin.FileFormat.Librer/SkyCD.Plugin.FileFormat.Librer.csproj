@@ -12,5 +12,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Librer Disk Database</AssemblyTitle>
+        <Description>Read-only import of Librer disk database files.</Description>
     </PropertyGroup>
 </Project>

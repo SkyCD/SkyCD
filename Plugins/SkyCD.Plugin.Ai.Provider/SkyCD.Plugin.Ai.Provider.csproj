@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>OpenAI-Compatible Description Provider</AssemblyTitle>
+        <Description>Generates entry descriptions by calling a user-selected OpenAI-compatible provider.</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />

@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Agent Description Generation</AssemblyTitle>
+        <Description>Generates entry descriptions through a locally installed agent client using the Agent Client Protocol.</Description>
     </PropertyGroup>
     <ItemGroup><ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" /></ItemGroup>
 </Project>

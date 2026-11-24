@@ -25,6 +25,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <Description>Contributes the files inside supported disk images as scan work items so metadata providers can inspect them.</Description>
         <AssemblyTitle>Disk Images</AssemblyTitle>
     </PropertyGroup>
     <ItemGroup>
