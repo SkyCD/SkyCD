@@ -86,6 +86,7 @@ public partial class MainWindow : Window
     private bool isSessionStateLoaded;
     private bool isWindowPlacementDeferred;
     private Task? catalogLoadTask;
+    private IReadOnlyList<MediaDriveInfo>? dragDrives;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private readonly Dictionary<string, IImage> toolbarIcons = new(StringComparer.Ordinal);
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
@@ -912,12 +913,67 @@ public partial class MainWindow : Window
 
     private async void OnAddToListRequested(object? sender, EventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm)
+        if (DataContext is MainWindowViewModel vm)
         {
+            await ShowAddToListDialogAsync(vm);
+        }
+    }
+
+    private void OnWindowDragOver(object? sender, DragEventArgs e)
+    {
+        var supported = TryResolveDrop(e, out _);
+        e.DragEffects = supported ? DragDropEffects.Copy : DragDropEffects.None;
+        DropOverlay.IsVisible = supported;
+        e.Handled = true;
+    }
+
+    private void OnWindowDragLeave(object? sender, DragEventArgs e)
+    {
+        DropOverlay.IsVisible = false;
+        dragDrives = null;
+        e.Handled = true;
+    }
+
+    private async void OnWindowDrop(object? sender, DragEventArgs e)
+    {
+        DropOverlay.IsVisible = false;
+        e.Handled = true;
+        if (!TryResolveDrop(e, out var sources) || DataContext is not MainWindowViewModel vm)
+        {
+            dragDrives = null;
             return;
         }
 
+        dragDrives = null;
+        await ShowAddToListDialogAsync(vm, sources);
+    }
+
+    private bool TryResolveDrop(DragEventArgs e, out IReadOnlyList<DroppedSource> sources)
+    {
+        sources = [];
+        if (DataContext is not MainWindowViewModel { IsCatalogInteractionEnabled: true })
+        {
+            return false;
+        }
+
+        var droppedPaths = (e.DataTransfer.TryGetFiles() ?? [])
+            .Select(item => new DroppedPath(item.TryGetLocalPath() ?? string.Empty, item is IStorageFolder))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Path));
+        dragDrives ??= mediaDriveProvider.GetSupportedDrives();
+        sources = DropSourceResolver.Resolve(droppedPaths, e.DataTransfer.TryGetText(), dragDrives);
+        return sources.Count > 0;
+    }
+
+    private async Task ShowAddToListDialogAsync(
+        MainWindowViewModel vm,
+        IReadOnlyList<DroppedSource>? droppedSources = null)
+    {
         var dialogVm = new AddToListDialogViewModel(mediaDriveProvider, locationOptions: vm.GetLocationChoices());
+        if (droppedSources is { Count: > 0 })
+        {
+            dialogVm.ApplyDroppedSources(droppedSources);
+        }
+
         var dialog = new AddToListWindow
         {
             DataContext = dialogVm

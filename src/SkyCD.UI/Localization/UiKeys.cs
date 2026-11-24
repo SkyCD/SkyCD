@@ -29,6 +29,8 @@ public static class UiKeys
     public const string Yes = "core.ui.Yes";
     public const string No = "core.ui.No";
     public const string AddToList = "core.ui.AddToList";
+    public const string DropToAdd = "core.ui.DropToAdd";
+    public const string DroppedRoots = "core.ui.DroppedRoots";
     public const string FromMedia = "core.ui.FromMedia";
     public const string FromFolder = "core.ui.FromFolder";
     public const string InternetProtocol = "core.ui.InternetProtocol";
