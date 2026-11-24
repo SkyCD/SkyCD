@@ -4,6 +4,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -306,13 +307,25 @@ public class AddingProgressDialogViewModelTests
     }
 
     [Fact]
-    public void SourceKind_HighlightsMatchingIcon()
+    public void SourceKind_ReportsTheActiveSourceForTheInlineBadge()
     {
         var vm = new AddingProgressDialogViewModel { SourceKind = AddingProgressSourceKind.Internet };
 
-        Assert.Equal(1, vm.InternetSourceIconOpacity);
-        Assert.Equal(0.35, vm.MediaSourceIconOpacity);
-        Assert.Equal(0.35, vm.FolderSourceIconOpacity);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.FromInternet), vm.SourceLabel);
+        Assert.True(vm.IsInternetSource);
+        Assert.False(vm.IsMediaSource);
+        Assert.False(vm.IsFolderSource);
+    }
+
+    [Fact]
+    public void GenericSourceKind_ShowsNoSourceBadge()
+    {
+        var vm = new AddingProgressDialogViewModel();
+
+        Assert.Equal(string.Empty, vm.SourceLabel);
+        Assert.False(vm.IsMediaSource);
+        Assert.False(vm.IsFolderSource);
+        Assert.False(vm.IsInternetSource);
     }
 
     private sealed class ManualTimeProvider : TimeProvider
