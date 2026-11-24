@@ -114,7 +114,6 @@
                                      KeyDown="OnRenameEditorKeyDown"
                                      LostFocus="OnRenameEditorLostFocus" />
                             <TextBlock Text="{Binding DecorationIndicator}" FontSize="{DynamicResource SkyFontCaption}" Opacity="0.8" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding LocationIndicator}" FontSize="{DynamicResource SkyFontCaption}" Opacity="0.8" VerticalAlignment="Center" />
                         </StackPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>

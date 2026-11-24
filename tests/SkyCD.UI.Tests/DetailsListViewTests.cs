@@ -333,8 +333,7 @@ public class DetailsListViewTests
             new() { Id = DetailsColumnsCatalog.NameId, IsVisible = true, Width = 640 },
             new() { Id = DetailsColumnsCatalog.SizeId, IsVisible = true, Width = 175 },
             new() { Id = DetailsColumnsCatalog.TypeId, IsVisible = false },
-            new() { Id = DetailsColumnsCatalog.StatusId, IsVisible = false },
-            new() { Id = DetailsColumnsCatalog.LocationId, IsVisible = true }
+            new() { Id = DetailsColumnsCatalog.StatusId, IsVisible = true, Width = 140 }
         };
 
         var columns = DetailsColumnsCatalog.CreateVisibleColumns(settings);
@@ -343,7 +342,7 @@ public class DetailsListViewTests
         [
             DetailsColumnsCatalog.NameId,
             DetailsColumnsCatalog.SizeId,
-            DetailsColumnsCatalog.LocationId
+            DetailsColumnsCatalog.StatusId
         ], columns.Select(column => column.Id));
         Assert.True(columns[0].IsRequired);
         Assert.False(columns[1].IsRequired);
@@ -406,18 +405,18 @@ public class DetailsListViewTests
             CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
             CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
             CreateCatalogColumn(DetailsColumnsCatalog.TypeId, required: false, width: 100),
-            CreateCatalogColumn(DetailsColumnsCatalog.LocationId, required: false, width: 140));
+            CreateCatalogColumn(DetailsColumnsCatalog.StatusId, required: false, width: 140));
 
         try
         {
             var reordered = new List<DetailsColumnReorderedEventArgs>();
             view.DetailsColumnReordered += (_, e) => reordered.Add(e);
 
-            // Drag the Size header onto the Location header.
+            // Drag the Size header onto the Status header.
             var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
-            var locationCell = Assert.IsType<Grid>(headerGrid.Children[3]);
+            var statusCell = Assert.IsType<Grid>(headerGrid.Children[3]);
             var start = sizeCell.TranslatePoint(new Point(30, 10), window);
-            var drop = locationCell.TranslatePoint(new Point(30, 10), window);
+            var drop = statusCell.TranslatePoint(new Point(30, 10), window);
             Assert.NotNull(start);
             Assert.NotNull(drop);
 
@@ -482,7 +481,7 @@ public class DetailsListViewTests
             CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
             CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120),
             CreateCatalogColumn(DetailsColumnsCatalog.TypeId, required: false, width: 100),
-            CreateCatalogColumn(DetailsColumnsCatalog.LocationId, required: false, width: 140));
+            CreateCatalogColumn(DetailsColumnsCatalog.StatusId, required: false, width: 140));
 
         try
         {
@@ -491,7 +490,7 @@ public class DetailsListViewTests
             var nameCell = Assert.IsType<Grid>(headerGrid.Children[0]);
             var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
             var typeCell = Assert.IsType<Grid>(headerGrid.Children[2]);
-            var locationCell = Assert.IsType<Grid>(headerGrid.Children[3]);
+            var statusCell = Assert.IsType<Grid>(headerGrid.Children[3]);
 
             Assert.False(marker.IsVisible);
             Assert.False(ghost.IsVisible);
@@ -525,11 +524,11 @@ public class DetailsListViewTests
             Assert.Equal(nameCell.Bounds.Left, Canvas.GetLeft(marker), 3);
 
             // The marker tracks the pointer to the far column.
-            var locationPoint = locationCell.TranslatePoint(new Point(30, 10), window)!.Value;
-            window.MouseMove(locationPoint, RawInputModifiers.LeftMouseButton);
-            Assert.Equal(locationCell.Bounds.Left, Canvas.GetLeft(marker), 3);
+            var statusPoint = statusCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            window.MouseMove(statusPoint, RawInputModifiers.LeftMouseButton);
+            Assert.Equal(statusCell.Bounds.Left, Canvas.GetLeft(marker), 3);
 
-            window.MouseUp(locationPoint, MouseButton.Left);
+            window.MouseUp(statusPoint, MouseButton.Left);
             Assert.False(marker.IsVisible);
             Assert.False(ghost.IsVisible);
 

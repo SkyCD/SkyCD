@@ -44,7 +44,6 @@ public partial class OptionsWindow : Window
             if (DataContext is OptionsDialogViewModel vm)
             {
                 vm.PropertyChanged -= OnViewModelPropertyChanged;
-                vm.MergeLocationsRequested -= OnMergeLocationsRequested;
                 vm.Dispose();
             }
         };
@@ -61,8 +60,6 @@ public partial class OptionsWindow : Window
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
-            vm.MergeLocationsRequested -= OnMergeLocationsRequested;
-            vm.MergeLocationsRequested += OnMergeLocationsRequested;
         }
     }
 
@@ -94,98 +91,6 @@ public partial class OptionsWindow : Window
         Close(false);
     }
 
-    private void OnNewLocationClicked(object? sender, RoutedEventArgs e) => FocusSelectedLocationEditor();
-
-    private void OnRenameLocationClicked(object? sender, RoutedEventArgs e) => FocusSelectedLocationEditor();
-
-    private void OnLocationsListDoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (DataContext is not OptionsDialogViewModel vm ||
-            FindLocationRow(e.Source as Visual) is not { } row)
-        {
-            return;
-        }
-
-        vm.SelectedLocation = row;
-        vm.BeginLocationEdit(row);
-        FocusLocationEditor(row);
-        e.Handled = true;
-    }
-
-    private void OnLocationsListKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (DataContext is not OptionsDialogViewModel vm || e.KeyModifiers != KeyModifiers.None)
-        {
-            return;
-        }
-
-        switch (e.Key)
-        {
-            case Key.F2 or Key.Enter when vm.SelectedLocation is { IsEditing: false } row:
-                vm.BeginLocationEdit(row);
-                FocusLocationEditor(row);
-                e.Handled = true;
-                break;
-            case Key.Escape when vm.Locations.FirstOrDefault(location => location.IsEditing) is { } editing:
-                vm.CancelLocationRename(editing);
-                e.Handled = true;
-                break;
-        }
-    }
-
-    private void OnLocationNameEditorKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (DataContext is not OptionsDialogViewModel vm ||
-            sender is not TextBox { DataContext: LocationItemViewModel row })
-        {
-            return;
-        }
-
-        switch (e.Key)
-        {
-            case Key.Enter when e.KeyModifiers == KeyModifiers.None:
-                e.Handled = true;
-                if (vm.CommitLocationRename(row))
-                {
-                    FocusLocationsList();
-                }
-
-                break;
-            case Key.Escape when e.KeyModifiers == KeyModifiers.None:
-                e.Handled = true;
-                vm.CancelLocationRename(row);
-                FocusLocationsList();
-                break;
-            case Key.Tab when e.KeyModifiers is KeyModifiers.None or KeyModifiers.Shift:
-                // Leaving the editor commits; an invalid name keeps focus in the still-open editor.
-                if (!vm.CommitLocationRename(row))
-                {
-                    e.Handled = true;
-                }
-
-                break;
-        }
-    }
-
-    private void OnLocationsSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is not OptionsDialogViewModel vm)
-        {
-            return;
-        }
-
-        var selected = vm.SelectedLocation;
-        foreach (var row in vm.Locations
-                     .Where(location => location.IsEditing && !ReferenceEquals(location, selected))
-                     .ToArray())
-        {
-            if (!vm.CommitLocationRename(row))
-            {
-                break;
-            }
-        }
-    }
-
     private void OnInstalledPluginsSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is OptionsDialogViewModel { SelectedPlugin: not null } vm)
@@ -200,82 +105,6 @@ public partial class OptionsWindow : Window
         {
             vm.ShowMarketplacePluginsCommand.Execute(null);
         }
-    }
-
-    private async void OnMergeLocationsRequested(object? sender, EventArgs e)
-    {
-        if (DataContext is not OptionsDialogViewModel { SelectedLocation: { } source } vm)
-        {
-            return;
-        }
-
-        // Settle open editors first so the dialog starts from committed names.
-        foreach (var row in vm.Locations.Where(location => location.IsEditing).ToArray())
-        {
-            if (!vm.CommitLocationRename(row))
-            {
-                return;
-            }
-        }
-
-        var destinations = vm.GetMergeDestinations(source);
-        if (destinations.Count == 0)
-        {
-            return;
-        }
-
-        var dialog = new MergeLocationsWindow(new MergeLocationsDialogViewModel(source, destinations));
-        if (await dialog.ShowDialog<LocationItemViewModel?>(this) is { } target)
-        {
-            vm.ConfirmMergeLocations(source, target);
-        }
-
-        FocusLocationsList();
-    }
-
-    private void FocusSelectedLocationEditor()
-    {
-        if (DataContext is OptionsDialogViewModel { SelectedLocation: { } row })
-        {
-            FocusLocationEditor(row);
-        }
-    }
-
-    private void FocusLocationEditor(LocationItemViewModel row)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (LocationsList.ContainerFromItem(row) is not Control container)
-            {
-                return;
-            }
-
-            var editor = container.GetVisualDescendants().OfType<TextBox>()
-                .FirstOrDefault(static textBox => textBox.IsVisible);
-            if (editor is null)
-            {
-                return;
-            }
-
-            editor.Focus();
-            editor.SelectAll();
-        }, DispatcherPriority.Loaded);
-    }
-
-    private void FocusLocationsList() =>
-        Dispatcher.UIThread.Post(() => LocationsList.Focus(), DispatcherPriority.Input);
-
-    private static LocationItemViewModel? FindLocationRow(Visual? source)
-    {
-        for (var visual = source; visual is not null; visual = visual.GetVisualParent())
-        {
-            if (visual.DataContext is LocationItemViewModel row)
-            {
-                return row;
-            }
-        }
-
-        return null;
     }
 
     private void OnToolbarCommandDoubleTapped(object? sender, TappedEventArgs e)

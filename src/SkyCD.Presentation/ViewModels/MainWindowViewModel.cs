@@ -3373,12 +3373,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         TagsRequested?.Invoke(this, new TagsDialogRequestedEventArgs { Dialog = dialog });
     }
 
-    [RelayCommand]
-    private void OpenLocationsDialog()
-    {
-        ShowOptions(LocalizationService.Current.Get(UiKeys.Locations));
-    }
-
     private void NavigateToDocument(CatalogDocument document)
     {
         NavigateToFindResult(new CatalogFindResult(document, string.Empty, string.Empty));
@@ -3658,7 +3652,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 .ToArray();
         }
 
-        items = ProjectLocations(ApplyCatalogDecorations(items)).Where(MatchesLocationFilter).ToArray();
+        items = ApplyCatalogDecorations(items).ToArray();
         ApplyPreferredNames(items);
 
         if (items.Length == 0)
@@ -4498,7 +4492,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Rename), Command = RenameItemCommand, CommandParameter = "list" },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
-            BuildLocationsMenu(),
             ..BuildFeatureMenuGroups(),
             ..BuildFeatureEntryCommandItems(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
@@ -4655,7 +4648,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Paste), HotKey = "Ctrl+V", InputGesture = "Ctrl+V", Command = PasteCommand },
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
-            BuildLocationsMenu(),
             ..BuildFeatureMenuGroups(),
             ..BuildFeatureEntryCommandItems(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
@@ -4680,7 +4672,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var source = catalogRepository is not null
             ? catalogRepository.GetAll()
             : inMemoryCatalogEntries ?? [];
-        return BuildTreeNodesFromEntries(ProjectLocations(ApplyCatalogDecorations(source)));
+        return BuildTreeNodesFromEntries(ApplyCatalogDecorations(source));
     }
 
     private IReadOnlyList<CatalogDocument> GetBrowserItems(string nodeKey)
@@ -4832,25 +4824,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var needsContentsState = document.ContentsState == CatalogContentsState.NotScanned &&
             !document.Properties.ContainsKey(TitleOnlyMedia.ContentsStatePropertyKey);
-        // The effective location name is stored data resolved from the repository only, so it is
-        // available offline without touching the media.
-        var locationName = locationService is null ? string.Empty : locationService.GetEffectiveLocationName(document);
-        if (!needsContentsState && locationName.Length == 0)
+        if (!needsContentsState)
         {
             return document.Properties;
         }
 
         var copy = new PropertiesCollection(document.Properties);
-        if (needsContentsState)
-        {
-            copy[TitleOnlyMedia.ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString();
-        }
-
-        if (locationName.Length > 0)
-        {
-            copy["Location"] = locationName;
-        }
-
+        copy[TitleOnlyMedia.ContentsStatePropertyKey] = CatalogContentsState.NotScanned.ToString();
         return copy;
     }
 
@@ -4872,8 +4852,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             children,
             isExpanded)
         {
-            DecorationIndicator = entry.BadgeText,
-            LocationIndicator = entry.HasLocation ? entry.Location : null
+            DecorationIndicator = entry.BadgeText
         };
     }
 

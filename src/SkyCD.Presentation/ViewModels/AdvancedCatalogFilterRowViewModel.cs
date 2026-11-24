@@ -34,7 +34,8 @@ public sealed partial class AdvancedCatalogFilterRowViewModel : ObservableObject
     }
 
     public IReadOnlyList<AdvancedCatalogField> Fields => [.. AllFields.Where(candidate =>
-        candidate != AdvancedCatalogField.Contributed || contributedFields.Count > 0)];
+        candidate != AdvancedCatalogField.Contributed || contributedFields.Count > 0)
+        .Where(static candidate => candidate != AdvancedCatalogField.Location)];
 
     private static readonly AdvancedCatalogOperator[] AllOperators = Enum.GetValues<AdvancedCatalogOperator>();
     private static readonly AdvancedCatalogOperator[] PresenceOperators =
