@@ -14,6 +14,7 @@ namespace SkyCD.App.Tests;
 public class AddToListWindowLayoutTests
 {
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
+    private static readonly XNamespace IconPacks = "https://github.com/MahApps/IconPacks.Avalonia";
     private static readonly XNamespace Xaml2006 = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
@@ -130,6 +131,30 @@ public class AddToListWindowLayoutTests
         var contentIndex = root.Elements().ToList().IndexOf(contentColumn);
         Assert.True(contentIndex >= 0 && contentIndex < messageIndex,
             "the validation line must come after the content so the Auto row below it is never clipped.");
+    }
+
+    [Fact]
+    public void SourceSelector_UsesDistinctSharedLineIcons()
+    {
+        // Issue #1061: every source mode shows its own glyph from the shared line-icon family,
+        // not a one-off 40x40 bitmap (Title only used to reuse the media artwork).
+        var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "AddToListWindow.axaml"));
+        var buttons = document.Descendants(Avalonia + "Button")
+            .Where(button => ((string?)button.Attribute("Classes") ?? string.Empty)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("source"))
+            .ToList();
+
+        Assert.Equal(4, buttons.Count);
+        Assert.DoesNotContain(document.Descendants(Avalonia + "Image"), _ => true);
+
+        var kinds = buttons
+            .Select(button => Assert.Single(button.Descendants(IconPacks + "PackIconControl")))
+            .Select(icon => (string?)icon.Attribute("Kind"))
+            .ToList();
+
+        Assert.All(kinds, kind => Assert.StartsWith("{x:Static lucide:PackIconLucideKind.", kind, StringComparison.Ordinal));
+        Assert.Equal(4, kinds.Distinct().Count());
     }
 
     [Fact]

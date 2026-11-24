@@ -184,7 +184,7 @@ public class ControlsContractTests
             Assert.True(tab.IsVisible);
             Assert.Collection(list.PropertiesRows,
                 row => { Assert.Equal("Comments", row.Key); Assert.Equal("imported note", row.Value); },
-                row => { Assert.Equal("FullName", row.Key); Assert.Equal("/item", row.Value); });
+                row => { Assert.Equal("Full name", row.Key); Assert.Equal("/item", row.Value); });
 
             tab.DataContext = new PropertiesDialogViewModel("key", "item", "icon", "note", new PropertiesCollection
             {
@@ -213,7 +213,7 @@ public class ControlsContractTests
             var list = new PropertiesList { PropertiesData = vm.InfoProperties };
 
             Assert.Contains(list.PropertiesRows, row => row.Key == "Size" && row.Value == "1.5 KB (1,536 bytes)");
-            Assert.Contains(list.PropertiesRows, row => row.Key == "FileSize" && row.Value == "1.5 MB");
+            Assert.Contains(list.PropertiesRows, row => row.Key == "File size" && row.Value == "1.5 MB");
             Assert.Contains(list.PropertiesRows, row => row.Key == "Attributes" && row.Value == "Archive");
             Assert.Equal("1536", vm.GetProperties()["Size"]);
             Assert.Equal("32", vm.GetProperties()["Attributes"]);

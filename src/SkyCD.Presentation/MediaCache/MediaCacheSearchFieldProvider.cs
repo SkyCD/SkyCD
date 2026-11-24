@@ -41,7 +41,7 @@ public sealed class MediaCacheSearchFieldProvider : ICatalogSearchFieldProvider
 
             return MediaEntryMetadataProjection.Project(document, records)
                 .Select(field => new CatalogSearchField(
-                    MediaMetadataValueFormatter.ResolveLabel(field.Key),
+                    MediaMetadataValueFormatter.ResolveLabel(field.Key, field.PluginId),
                     MediaMetadataValueFormatter.Format(field.Value, field.Type, field.Unit)))
                 .Where(field => !string.IsNullOrWhiteSpace(field.Value));
         };

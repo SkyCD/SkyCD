@@ -85,6 +85,13 @@ keys no longer supplied. Unregistering removes only that namespace. Distinct
 plugin namespaces keep identical local keys isolated. Use the host's plugin
 lifecycle to register and unregister capabilities; no `plugin.json` is needed.
 
+Metadata field labels are looked up per field. The host first consults the
+plugin that captured a value, using a `metadata.<Key>` entry in that plugin's
+catalog (full key `plugins.{PluginId}.metadata.<Key>`), then the core
+`metadata.<Key>` catalog, and finally derives a label from the key itself
+(`FullName` becomes "Full name"). Only the display label is derived; stored
+property keys and captured values are never rewritten.
+
 ## Verification
 
 `LocalizationTests` exercises regional and English fallback, culture change

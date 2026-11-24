@@ -50,7 +50,15 @@ internal sealed class DatabaseCollection : IDictionary<string, Database>
 
     public bool Remove(string key)
     {
-        return inner.TryRemove(key, out _);
+        // Removing the entry is the only signal that the collection stops owning the native database, so the
+        // handle has to be released here; leaving it to the finalizer can outlive a deleted database directory.
+        if (!inner.TryRemove(key, out var database))
+        {
+            return false;
+        }
+
+        database.Dispose();
+        return true;
     }
 
     public bool TryGetValue(string key, out Database value)
