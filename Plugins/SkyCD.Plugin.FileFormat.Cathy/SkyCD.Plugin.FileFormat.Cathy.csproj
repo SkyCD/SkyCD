@@ -8,5 +8,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Cathy Disk Catalog</AssemblyTitle>
+        <Description>Read-only import of Cathy disk catalog files (.caf).</Description>
     </PropertyGroup>
 </Project>

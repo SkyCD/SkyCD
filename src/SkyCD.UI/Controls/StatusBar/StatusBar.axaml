@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:Avalonia.Data.Converters"
              x:Class="SkyCD.UI.Controls.StatusBar.StatusBar"
              x:Name="Root"
              Height="22"
@@ -8,16 +9,22 @@
             BorderThickness="0,1,0,0"
             Padding="{DynamicResource SkyGapXXs}"
             Height="22">
-        <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
             <TextBlock Text="{Binding StatusText, ElementName=Root}"
                        VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis" />
             <TextBlock Grid.Column="1"
+                       Text="{Binding SecondaryStatusText, ElementName=Root}"
+                       VerticalAlignment="Center"
+                       Margin="{DynamicResource SkyGapXXs}"
+                       IsVisible="{Binding SecondaryStatusText, ElementName=Root,
+                                   Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Grid.Column="2"
                        Text="{Binding ProgressText, ElementName=Root}"
                        VerticalAlignment="Center"
                        Margin="{DynamicResource SkyGapXXs}"
                        IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
-            <ProgressBar Grid.Column="2"
+            <ProgressBar Grid.Column="3"
                          Width="100"
                          Height="14"
                          Minimum="{Binding ProgressMin, ElementName=Root}"
@@ -39,7 +46,7 @@
                     </DrawingBrush>
                 </ProgressBar.Foreground>
             </ProgressBar>
-            <TextBlock Grid.Column="3"
+            <TextBlock Grid.Column="4"
                        Margin="{DynamicResource SkyGapXXs}"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Right"

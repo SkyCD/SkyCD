@@ -12,5 +12,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Smart CD Catalog PRO</AssemblyTitle>
+        <Description>Read-only import of Smart CD Catalog PRO (.scdc) catalogs.</Description>
     </PropertyGroup>
 </Project>

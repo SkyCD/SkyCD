@@ -8,5 +8,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>CdCat Hyper Catalog</AssemblyTitle>
+        <Description>Read-only import of CdCat .hcf hyper catalog files.</Description>
     </PropertyGroup>
 </Project>

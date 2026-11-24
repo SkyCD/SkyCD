@@ -75,12 +75,14 @@ public sealed class CatalogFindTests
 
         catalog.QuickFindQuery = string.Empty;
         Assert.Same(catalog.BrowserItems, catalog.VisibleBrowserItems);
+        Assert.Equal(string.Empty, catalog.QuickFindStatus);
 
         catalog.QuickFindQuery = "missing";
         catalog.CloseQuickFilterCommand.Execute(null);
         Assert.False(catalog.IsQuickFilterOpen);
         Assert.Same(catalog.BrowserItems, catalog.VisibleBrowserItems);
         Assert.Same(folder, catalog.SelectedTreeNode);
+        Assert.Equal(string.Empty, catalog.QuickFindStatus);
         Assert.False(catalog.IsDirtyDocument);
     }
 

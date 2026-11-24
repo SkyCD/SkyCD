@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>GenDesc Templates</AssemblyTitle>
+        <Description>Builds media descriptions from web sources such as Wikipedia, IMDb and AniDB and renders them through user-editable templates.</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />

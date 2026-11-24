@@ -15,5 +15,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Virtual Volumes View</AssemblyTitle>
+        <Description>Read-only import of VVV CSV/TSV exports and logical .vvvbk backups.</Description>
     </PropertyGroup>
 </Project>
