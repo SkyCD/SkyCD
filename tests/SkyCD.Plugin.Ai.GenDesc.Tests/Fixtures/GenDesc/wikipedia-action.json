@@ -1,0 +1,17 @@
+{
+  "query": {
+    "pages": {
+      "5870872": {
+        "pageid": 5870872,
+        "ns": 0,
+        "title": "Example Film",
+        "extract": "Example Film is a 1999 example feature directed by Jane Doe. It follows a archivist who discovers a lost catalogue.",
+        "thumbnail": {
+          "source": "https://upload.wikimedia.org/wikipedia/en/example.png",
+          "width": 300,
+          "height": 450
+        }
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Accounts.JetBrains/SkyCD.Plugin.Accounts.JetBrains.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Accounts.Microsoft365/SkyCD.Plugin.Accounts.Microsoft365.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Ai.Description/SkyCD.Plugin.Ai.Description.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Ai.GenDesc/SkyCD.Plugin.Ai.GenDesc.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Ai.Provider/SkyCD.Plugin.Ai.Provider.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.Loans/SkyCD.Plugin.Feature.Loans.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.MotionDetector/SkyCD.Plugin.Feature.MotionDetector.csproj"/>
@@ -93,6 +94,7 @@
         <Project Path="tests/SkyCD.Formatting.Tests/SkyCD.Formatting.Tests.csproj"/>
         <Project Path="tests/SkyCD.Logging.Tests/SkyCD.Logging.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Accounts.Core.Tests/SkyCD.Plugin.Accounts.Core.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Ai.GenDesc.Tests/SkyCD.Plugin.Ai.GenDesc.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Ai.Provider.Tests/SkyCD.Plugin.Ai.Provider.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.Loans.Tests/SkyCD.Plugin.Feature.Loans.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.MotionDetector.Tests/SkyCD.Plugin.Feature.MotionDetector.Tests.csproj"/>
