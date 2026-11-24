@@ -16,6 +16,9 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 {
+    private const string McpCategoryId = "mcp";
+    private const int McpCategoryIndex = 2;
+
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, bool> pendingPluginStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILocalizationService? localizationService;
@@ -172,27 +175,33 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
             [
                 new("plugins", LocalizationService.Current.Get(TextKeys.Plugins), 0),
                 new("language", LocalizationService.Current.Get(TextKeys.Language), 1),
-                new("mcp", LocalizationService.Current.Get(TextKeys.MCP), 2),
                 new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
                 new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4),
-                new("acp", LocalizationService.Current.Get(UiKeys.AcpAgents), 5),
                 new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7),
-                new("locations", LocalizationService.Current.Get(UiKeys.Locations), 8),
+                new("locations", LocalizationService.Current.Get(UiKeys.Locations), LocationsCategoryIndex),
                 new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex)
             ];
+
+            // Every AI surface shares one appended group. MCP and ACP agents keep their historical
+            // built-in indexes but are appended here so the group stays below the always-present pages.
+            var aiGroup = LocalizationService.Current.Get(UiKeys.AiGroup);
             if (IsAiDescriptionAvailable)
             {
-                var aiGroup = LocalizationService.Current.Get(UiKeys.AiGroup);
                 categories.Add(new("ai-description", LocalizationService.Current.Get(UiKeys.AiDescriptionShort),
                     AiDescriptionCategoryIndex, Group: aiGroup));
                 categories.Add(new("ai-provider", LocalizationService.Current.Get(UiKeys.AiProvider),
                     AiProviderCategoryIndex, Group: aiGroup));
             }
 
+            categories.Add(new(McpCategoryId, LocalizationService.Current.Get(TextKeys.MCP), McpCategoryIndex,
+                Group: aiGroup));
+            categories.Add(new(AcpCategoryId, LocalizationService.Current.Get(UiKeys.AcpAgents), AcpCategoryIndex,
+                Group: aiGroup));
+
             // Tool exposure applies to the MCP server itself, so the page stays available without AI plugins.
             categories.Add(new(McpToolsCategoryId, LocalizationService.Current.Get(UiKeys.McpTools),
-                McpToolsCategoryIndex, Group: LocalizationService.Current.Get(UiKeys.AiGroup)));
+                McpToolsCategoryIndex, Group: aiGroup));
 
             categories.AddRange(pluginPages.Values
                 .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
@@ -252,7 +261,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         IsLanguageCategorySelected &&
         IsCurrentCategoryVisibleInSearch;
 
-    public bool IsMcpCategorySelected => SelectedBuiltInIndex == 2;
+    public bool IsMcpCategorySelected => SelectedBuiltInIndex == McpCategoryIndex;
     public bool IsStatusesCategorySelected => SelectedBuiltInIndex == 3;
 
     public bool ShowMcpSection =>

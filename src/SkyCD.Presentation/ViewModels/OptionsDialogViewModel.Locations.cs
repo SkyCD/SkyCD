@@ -178,7 +178,7 @@ public partial class OptionsDialogViewModel
             if (!CommitLocationRename(row))
             {
                 SettingsSearchText = string.Empty;
-                SelectedTabIndex = LocationsCategoryIndex;
+                SelectedSettingCategory = SettingCategories.First(category => category.BuiltInIndex == LocationsCategoryIndex);
                 return false;
             }
         }
