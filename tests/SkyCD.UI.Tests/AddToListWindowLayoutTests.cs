@@ -306,7 +306,9 @@ public sealed class AddToListWindowLayoutTests
         Assert.True(Application.Current!.TryGetResource("SkyComboBoxContentPadding", null, out var token));
         var padding = Assert.IsType<Thickness>(token);
         var rows = picker.GetRealizedContainers().OfType<ComboBoxItem>().ToList();
-        Assert.Equal(6, rows.Count);
+        // SMB is offered on Windows only, so the list holds five protocols elsewhere; every
+        // available protocol has to be realized for the row checks below to cover all of them.
+        Assert.Equal(picker.ItemCount, rows.Count);
 
         var closedIcon = picker.GetVisualDescendants().OfType<PackIconControl>().Single();
         var closedLabel = closedIcon.GetVisualParent()!.GetVisualChildren().OfType<TextBlock>().Single();
