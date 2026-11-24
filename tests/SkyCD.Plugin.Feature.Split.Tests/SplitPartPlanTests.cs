@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using SkyCD.Plugin.Feature.Split.Export;
 using SkyCD.Plugin.Feature.Split.Exceptions;
@@ -116,8 +117,8 @@ public class SplitPartPlanTests
 
     private static SplitRequest Request(int maxEntries = 0, long maxBytes = 0, string pattern = "part #N.scd") => new()
     {
-        SourcePath = @"C:\catalogs\gamez.scd",
-        OutputFolder = @"C:\out",
+        SourcePath = Path.Combine("catalogs", "gamez.scd"),
+        OutputFolder = "out",
         FileNamePattern = pattern,
         MaxEntriesPerPart = maxEntries,
         MaxPartSizeBytes = maxBytes
