@@ -171,6 +171,8 @@
                                          RenameAbandoned="OnBrowserRenameAbandoned"
                                          ViewMode="{Binding CurrentViewMode}"
                                          DetailsColumns="{Binding BrowserDetailsColumns}"
+                                         SortColumnId="{Binding CurrentSortMode}"
+                                         IsSortDescending="{Binding IsSortDescending}"
                                          BrowserGridItemWidth="{Binding BrowserGridItemWidth}"
                                          BrowserGridItemHeight="{Binding BrowserGridItemHeight}"
                                          IconConverter="{StaticResource IconConverter}"
@@ -182,6 +184,7 @@
                                          DoubleTapped="OnBrowserListDoubleTapped"
                                          DetailsColumnReordered="OnDetailsColumnReordered"
                                          DetailsColumnResized="OnDetailsColumnResized"
+                                         DetailsColumnClicked="OnDetailsColumnClicked"
                                          GotFocus="OnBrowserGotFocus"
                                          PointerPressed="OnBrowserPointerPressed">
                     </cl:BrowserItemsView>
