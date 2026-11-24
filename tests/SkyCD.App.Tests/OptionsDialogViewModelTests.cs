@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
@@ -599,5 +600,59 @@ public class OptionsDialogViewModelTests
 
         Assert.DoesNotContain("Reads", vm.InfoMessage, StringComparison.Ordinal);
         Assert.Equal("Reads JSON catalogs", vm.SelectedPluginDescription);
+    }
+
+    [Fact]
+    public void HasPluginDescription_TrueForAPluginWithADescription()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: "Reads JSON catalogs")
+        ]);
+
+        Assert.True(vm.HasPluginDescription);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void HasPluginDescription_FalseForAPluginWithoutADescription(string description)
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: description)
+        ]);
+
+        Assert.False(vm.HasPluginDescription);
+    }
+
+    [Fact]
+    public void HasPluginDescription_FalseWhenNothingIsSelected()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins([]);
+
+        Assert.False(vm.HasPluginDescription);
+    }
+
+    [Fact]
+    public void HasPluginDescription_NotifiesAndTracksTheSelectedPlugin()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPlugins(
+        [
+            new OptionsPluginItem("JSON", "IFileFormatPluginCapability", "json v2.0.0", id: "plugin.json", description: "Reads JSON catalogs"),
+            new OptionsPluginItem("XML", "IFileFormatPluginCapability", "xml v2.0.0", id: "plugin.xml")
+        ]);
+        var raised = new List<string>();
+        vm.PropertyChanged += (_, args) => raised.Add(args.PropertyName ?? string.Empty);
+        Assert.True(vm.HasPluginDescription);
+
+        vm.SelectedPlugin = vm.Plugins.Single(plugin => plugin.Name == "XML");
+
+        Assert.False(vm.HasPluginDescription);
+        Assert.Contains(nameof(OptionsDialogViewModel.HasPluginDescription), raised);
     }
 }

@@ -445,7 +445,8 @@
                               RowDefinitions="Auto,Auto,*"
                               RowSpacing="{DynamicResource SkySpaceSm}">
                             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                <TextBlock Text="{Binding SelectedPlugin.Name}"
+                                <TextBlock x:Name="SelectedPluginTitle"
+                                           Text="{Binding SelectedPlugin.Name}"
                                            Classes="h2"
                                            TextWrapping="Wrap" />
                                 <Button Content="{Binding SelectedPlugin.Type}"
@@ -499,9 +500,17 @@
                             <TabControl Grid.Row="2">
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabOverview}}">
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                        <TextBlock Text="{Binding SelectedPluginDescription}"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource ThemeForegroundBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedPluginDescription}"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource ThemeForegroundBrush}"
+                                                       IsVisible="{Binding HasPluginDescription}" />
+                                            <TextBlock Text="{Binding SelectedPluginDescription}"
+                                                       Classes="caption"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                       IsVisible="{Binding !HasPluginDescription}" />
+                                        </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabConfiguration}}"
@@ -618,7 +627,8 @@
                               RowDefinitions="Auto,Auto,*"
                               RowSpacing="{DynamicResource SkySpaceSm}">
                             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                <TextBlock Text="{Binding SelectedMarketplacePlugin.Title}"
+                                <TextBlock x:Name="SelectedMarketplacePluginTitle"
+                                           Text="{Binding SelectedMarketplacePlugin.Title}"
                                            Classes="h2"
                                            TextWrapping="Wrap" />
                                 <TextBlock Text="{Binding SelectedMarketplacePlugin.Publisher}"
@@ -700,9 +710,16 @@
                             <TabControl Grid.Row="2">
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabOverview}}">
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                        <TextBlock Text="{Binding SelectedMarketplacePlugin.Summary}"
-                                                   TextWrapping="Wrap"
-                                                   IsVisible="{Binding SelectedMarketplacePlugin.HasSummary}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedMarketplacePlugin.Summary}"
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding SelectedMarketplacePlugin.HasSummary}" />
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NoPluginDescription}}"
+                                                       Classes="caption"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                       IsVisible="{Binding ShowMarketplacePluginSummaryEmptyState}" />
+                                        </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>
                                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.PluginTabAdditionalInfo}}">
