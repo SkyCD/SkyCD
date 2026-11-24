@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -18,6 +19,7 @@ using SkyCD.Presentation.Tags;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.TestSupport;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.UI.Tests;
@@ -25,14 +27,37 @@ namespace SkyCD.UI.Tests;
 public sealed class TagManagementViewTests : IDisposable
 {
     private readonly AppDataSandbox sandbox = new();
+    private readonly List<MainWindowViewModel> viewModels = [];
     private DryIoc.Container? container;
+    private bool disposed;
 
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+
+        // A view model stays subscribed to the process-wide localization service until it is disposed. The
+        // container below closes the database, so an undiscarded view model would later answer a culture
+        // change by querying the closed native handle.
+        DisposeViewModels();
         container?.Dispose();
 
         // The sandbox deletes its directory, so the container above is released first.
         sandbox.Dispose();
+    }
+
+    private void DisposeViewModels()
+    {
+        foreach (var viewModel in viewModels)
+        {
+            viewModel.Dispose();
+        }
+
+        viewModels.Clear();
     }
 
     private sealed record Fixture(
@@ -46,6 +71,7 @@ public sealed class TagManagementViewTests : IDisposable
 
     private Fixture CreateFixture()
     {
+        DisposeViewModels();
         var created = new DryIoc.Container();
         container?.Dispose();
         container = created;
@@ -68,12 +94,33 @@ public sealed class TagManagementViewTests : IDisposable
         service.AssignTags(["drama"], [drama.Id]);
 
         var viewModel = new MainWindowViewModel(repositories);
+        viewModels.Add(viewModel);
         return new Fixture(repositories, catalog, tags, service, viewModel, sciFi.Id, drama.Id);
     }
 
     private static void Save(CatalogDocumentRepository catalog, CatalogDocument document)
     {
         catalog.Save(document.Id, document);
+    }
+
+    [AvaloniaFact]
+    public void FixtureTeardown_UnsubscribesTheViewModelBeforeTheDatabaseCloses()
+    {
+        var previousCulture = LocalizationService.Current.CurrentCulture;
+        var fixture = CreateFixture();
+        try
+        {
+            Dispose();
+
+            // Localization is process-wide, so it reaches every live view model; a view model that outlived
+            // its closed database would fail this call inside the native query.
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("lt"));
+            GC.KeepAlive(fixture);
+        }
+        finally
+        {
+            LocalizationService.Current.SetCulture(previousCulture);
+        }
     }
 
     private static BrowserTreeNode FindNode(MainWindowViewModel viewModel, string key) =>

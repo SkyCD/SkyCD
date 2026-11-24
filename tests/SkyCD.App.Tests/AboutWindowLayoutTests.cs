@@ -66,7 +66,7 @@ public sealed class AboutWindowLayoutTests
         var document = XDocument.Parse(ReadAboutWindow());
         XNamespace avalonia = "https://github.com/avaloniaui";
         var systemInfo = document.Descendants(avalonia + "TabItem")
-            .First()
+            .Single(tab => ((string?)tab.Attribute("Header"))?.Contains("UiKeys.SystemInfo", StringComparison.Ordinal) == true)
             .Elements().First();
 
         Assert.Equal("StackPanel", systemInfo.Name.LocalName);

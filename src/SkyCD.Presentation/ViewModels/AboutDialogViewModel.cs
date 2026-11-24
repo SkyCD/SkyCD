@@ -19,14 +19,14 @@ public partial class AboutDialogViewModel : ObservableObject
     public const string LoadedAssembliesTabKey = "loaded-assemblies";
     public const string ProjectLicenseTabKey = "project-license";
     public const string AboutStoryTabKey = "about-story";
-    public const string DefaultTabKey = ProjectLicenseTabKey;
+    public const string DefaultTabKey = AboutStoryTabKey;
 
     private static readonly string[] TabKeys =
     [
+        AboutStoryTabKey,
         SystemInfoTabKey,
         LoadedAssembliesTabKey,
-        ProjectLicenseTabKey,
-        AboutStoryTabKey
+        ProjectLicenseTabKey
     ];
 
     private const string FallbackProductName = "SkyCD";

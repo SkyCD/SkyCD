@@ -1247,7 +1247,7 @@ public class MainWindowViewModelTests
         Assert.NotNull(request);
         Assert.Equal("Item", request.Dialog.Name);
         Assert.Equal("Imported comment", request.Dialog.Comments);
-        Assert.Equal(["Comments", "FullName", "Size"], request.Dialog.InfoProperties.Keys);
+        Assert.Equal(["Comments", "Full name", "Size"], request.Dialog.InfoProperties.Keys);
         Assert.Equal("Stored name", request.Dialog.GetProperties()["Name"]);
         Assert.Equal("Stored directory", request.Dialog.GetProperties()["RealDirectoryName"]);
         request.Complete(false, "Canceled comment");

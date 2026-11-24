@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using Microsoft.Extensions.Localization;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.UI.Localization;
@@ -14,19 +16,131 @@ namespace SkyCD.Presentation.MediaCache;
 public static class MediaMetadataValueFormatter
 {
     /// <summary>
-    /// Localizes a schema field key through the optional <c>core.metadata.</c> catalog and falls back to the
-    /// key itself, which lets a plugin ship its own translations without any host-side field list.
+    /// Localizes a schema field key. A plugin-supplied key first consults that plugin's own
+    /// <c>metadata.&lt;key&gt;</c> translation, then the core <c>core.metadata.</c> catalog; a key with no
+    /// translation is humanized so raw identifiers never reach the UI.
     /// </summary>
-    public static string ResolveLabel(string key)
+    public static string ResolveLabel(string key, string? pluginId = null)
     {
         if (string.IsNullOrWhiteSpace(key))
         {
             return string.Empty;
         }
 
+        if (!string.IsNullOrWhiteSpace(pluginId))
+        {
+            var pluginKey = "plugins." + pluginId + ".metadata." + key;
+            var pluginLabel = LocalizationService.Current.Get(pluginKey);
+            if (!string.Equals(pluginLabel, pluginKey, StringComparison.Ordinal))
+            {
+                return pluginLabel;
+            }
+        }
+
         var translationKey = PreviewKeys.FieldPrefix + key;
         var translated = LocalizationService.Current.Get(translationKey);
-        return string.Equals(translated, translationKey, StringComparison.Ordinal) ? key : translated;
+        return string.Equals(translated, translationKey, StringComparison.Ordinal) ? HumanizeKey(key) : translated;
+    }
+
+    /// <summary>
+    /// Turns an untranslated identifier into a label: <c>FullName</c> becomes "Full name" and
+    /// <c>LastWriteTime</c> becomes "Last write time". Acronyms such as <c>SHA256</c> keep their casing.
+    /// </summary>
+    public static string HumanizeKey(string key)
+    {
+        var words = SplitWords(key);
+        if (words.Count == 0)
+        {
+            return key;
+        }
+
+        var label = new StringBuilder(key.Length + words.Count);
+        for (var index = 0; index < words.Count; index++)
+        {
+            if (index > 0)
+            {
+                label.Append(' ');
+            }
+
+            var word = words[index];
+            if (IsAcronym(word))
+            {
+                label.Append(word);
+            }
+            else if (index == 0)
+            {
+                label.Append(char.ToUpperInvariant(word[0]));
+                label.Append(word.AsSpan(1).ToString().ToLowerInvariant());
+            }
+            else
+            {
+                label.Append(word.ToLowerInvariant());
+            }
+        }
+
+        return label.ToString();
+    }
+
+    private static List<string> SplitWords(string key)
+    {
+        var words = new List<string>();
+        var current = new StringBuilder();
+        for (var index = 0; index < key.Length; index++)
+        {
+            var character = key[index];
+            if (character is '_' or '-' or ' ')
+            {
+                Flush();
+                continue;
+            }
+
+            if (char.IsUpper(character) && current.Length > 0)
+            {
+                var previous = current[^1];
+                var nextIsLower = index + 1 < key.Length && char.IsLower(key[index + 1]);
+                if (char.IsLower(previous) || char.IsDigit(previous) || (char.IsUpper(previous) && nextIsLower))
+                {
+                    Flush();
+                }
+            }
+
+            current.Append(character);
+        }
+
+        Flush();
+        return words;
+
+        void Flush()
+        {
+            if (current.Length > 0)
+            {
+                words.Add(current.ToString());
+                current.Clear();
+            }
+        }
+    }
+
+    private static bool IsAcronym(string word)
+    {
+        var hasLetter = false;
+        foreach (var character in word)
+        {
+            if (char.IsLetter(character))
+            {
+                if (!char.IsUpper(character))
+                {
+                    return false;
+                }
+
+                hasLetter = true;
+            }
+            else if (!char.IsDigit(character))
+            {
+                return false;
+            }
+        }
+
+        return hasLetter && word.Length > 1;
     }
 
     /// <summary>Formats one value with its unit, using the supplied localizer for boolean and empty states.</summary>

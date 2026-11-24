@@ -229,7 +229,7 @@ public partial class EntryPreviewViewModel : ObservableObject, IDisposable
             if (view.IsFailed)
             {
                 rows.Add(new MediaPreviewFieldRow(
-                    MediaMetadataValueFormatter.ResolveLabel(view.Key),
+                    MediaMetadataValueFormatter.ResolveLabel(view.Key, view.PluginId),
                     LocalizationService.Current.Get(PreviewKeys.ValueNotAvailable),
                     LocalizationService.Current.Get(PreviewKeys.FailedValueHint),
                     IsStale: false,
@@ -240,7 +240,7 @@ public partial class EntryPreviewViewModel : ObservableObject, IDisposable
             }
 
             rows.Add(new MediaPreviewFieldRow(
-                MediaMetadataValueFormatter.ResolveLabel(view.Key),
+                MediaMetadataValueFormatter.ResolveLabel(view.Key, view.PluginId),
                 MediaMetadataValueFormatter.Format(view.Value, view.Type, view.Unit, valueLocalizer),
                 ResolveHint(view),
                 view.IsFromStaleRecord,
