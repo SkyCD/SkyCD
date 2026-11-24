@@ -200,9 +200,21 @@ public partial class OptionsDialogViewModel
         }
     }
 
+    /// <summary>Loads the published snapshot once so the settings page can show repository states.</summary>
+    private void EnsureMarketplaceSnapshot()
+    {
+        if (!ShowPluginsSettingsSection || marketplaceLoaded || IsMarketplaceLoading || marketplaceService is null)
+        {
+            return;
+        }
+
+        _ = LoadMarketplaceAsync(forceRefresh: false);
+    }
+
     private void ApplyCatalogSnapshot(PluginCatalogSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        ApplyPluginRepositoryStates(snapshot);
         MarketplaceStatusMessage = DescribeCatalog(snapshot);
         OnPropertyChanged(nameof(ShowMarketplaceStatusMessage));
 

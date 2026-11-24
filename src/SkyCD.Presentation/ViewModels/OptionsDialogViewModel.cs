@@ -16,6 +16,8 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 {
+    private const string PluginsSettingsCategoryId = "plugins-settings";
+
     private readonly HashSet<string> disabledPluginIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, bool> pendingPluginStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILocalizationService? localizationService;
@@ -168,9 +170,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     {
         get
         {
+            var pluginsGroup = LocalizationService.Current.Get(TextKeys.Plugins);
             List<OptionsSettingCategory> categories =
             [
-                new("plugins", LocalizationService.Current.Get(TextKeys.Plugins), 0),
+                new("plugins", LocalizationService.Current.Get(UiKeys.Installed), 0,
+                    Group: pluginsGroup),
                 new("language", LocalizationService.Current.Get(TextKeys.Language), 1),
                 new("mcp", LocalizationService.Current.Get(TextKeys.MCP), 2),
                 new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
@@ -203,6 +207,10 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     page.Registration.Descriptor.Title,
                     PluginPage: page,
                     Group: NormalizeGroup(page.Registration.Descriptor.Group))));
+
+            // The settings page lives in the Plugins group; keeping it last keeps the legacy index mapping intact.
+            categories.Add(new(PluginsSettingsCategoryId, LocalizationService.Current.Get(UiKeys.Settings),
+                Group: pluginsGroup));
             return categories;
         }
     }
@@ -273,7 +281,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
         ShowDetailsColumnsSection || ShowLocationsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
-        ShowPluginSettingsSection;
+        ShowPluginSettingsSection || ShowPluginsSettingsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -377,6 +385,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         }
 
         AiDescriptionAlertMessage = string.Empty;
+        if (!TryCommitPluginRepositories()) return;
         var pluginSettings = await PreparePluginSettingsAsync();
         if (pluginSettings is null || disposed) return;
         if (!TrySaveAiProviderSettings()) return;
@@ -613,6 +622,15 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
             return true;
         }
 
+        if (category.Id == "plugins")
+        {
+            return MatchesSearch(
+                LocalizationService.Current.Get(TextKeys.Plugins),
+                LocalizationService.Current.Get(UiKeys.Installed),
+                "plugin",
+                "installed");
+        }
+
         if (category.Id == ToolbarCategoryId)
         {
             return MatchesSearch(
@@ -641,6 +659,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         if (index >= 0) SelectedTabIndex = index;
         SynchronizeSidebarSelection(value);
         NotifySettingsVisibilityChanged();
+        EnsureMarketplaceSnapshot();
     }
 
     partial void OnSelectedSidebarEntryChanged(OptionsSidebarEntry? value)
@@ -686,6 +705,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         RefreshCategoriesPreservingSelection();
         NotifySelectedPluginDetailsChanged();
         NotifyMcpToolsLocalizationChanged();
+        RefreshPluginRepositoryLocalization();
         NotifySettingsVisibilityChanged();
     }
 
@@ -803,6 +823,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(IsMcpToolsCategorySelected));
         OnPropertyChanged(nameof(ShowMcpToolsSection));
+        OnPropertyChanged(nameof(IsPluginsSettingsCategorySelected));
+        OnPropertyChanged(nameof(ShowPluginsSettingsSection));
         OnPropertyChanged(nameof(ShowNoSearchResults));
     }
 

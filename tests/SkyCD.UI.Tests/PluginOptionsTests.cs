@@ -79,7 +79,7 @@ public sealed class PluginOptionsTests : IDisposable
         using var vm = CreateViewModel();
         var category = TestCategory(vm);
         Assert.Equal("Plugins", category.Title);
-        Assert.Equal(2, vm.SettingCategories.Count(c => c.Title == "Plugins"));
+        Assert.Equal(1, vm.SettingCategories.Count(c => c.Title == "Plugins"));
         Assert.All(vm.SettingCategories.Take(10), c => Assert.Null(c.PluginPage));
         Assert.Equal("locations", vm.SettingCategories[8].Id);
         Assert.Equal("toolbar", vm.SettingCategories[9].Id);
@@ -123,7 +123,7 @@ public sealed class PluginOptionsTests : IDisposable
         Assert.Equal((10, "ai-description"), (categories[10].BuiltInIndex, categories[10].Id));
         Assert.Equal((11, "ai-provider"), (categories[11].BuiltInIndex, categories[11].Id));
         Assert.Equal((12, "mcp-tools"), (categories[12].BuiltInIndex, categories[12].Id));
-        Assert.All(categories.Skip(13), category =>
+        Assert.All(categories.Skip(13).Where(category => category.Id != "plugins-settings"), category =>
         {
             Assert.Equal(-1, category.BuiltInIndex);
             Assert.NotNull(category.PluginPage);

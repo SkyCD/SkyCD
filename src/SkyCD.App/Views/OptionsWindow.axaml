@@ -225,30 +225,6 @@
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdateAll}}"
                                     Command="{Binding UpdateAllPluginsCommand}"
                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdateAll}}" />
-                            <Button AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}"
-                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}">
-                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Settings}"
-                                                           Width="14"
-                                                           Height="14" />
-                                <Button.Flyout>
-                                    <Flyout Placement="BottomEdgeAlignedRight">
-                                        <StackPanel Width="320" Spacing="{DynamicResource SkySpaceSm}">
-                                            <TextBlock Classes="caption"
-                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}" />
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
-                                                <TextBox Text="{Binding PluginPath}"
-                                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" />
-                                                <Button Grid.Column="1"
-                                                        Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
-                                                        Command="{Binding BrowsePluginPathCommand}" />
-                                            </Grid>
-                                            <TextBlock Classes="caption"
-                                                       Text="{Binding InfoMessage}"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Flyout>
-                                </Button.Flyout>
-                            </Button>
                             <Button AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginFilterAll}}"
                                     ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.PluginManageHint}}">
                                 <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Funnel}"
@@ -881,6 +857,79 @@
                                        TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
+
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowPluginsSettingsSection}"
+                          RowDefinitions="Auto,Auto,*"
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginSettings}}"
+                                       FontSize="{DynamicResource SkyFontBody}" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+                        <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXs}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
+                                <TextBox Text="{Binding PluginPath}"
+                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" />
+                                <Button Grid.Column="1"
+                                        Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
+                                        Command="{Binding BrowsePluginPathCommand}" />
+                            </Grid>
+                            <TextBlock Classes="caption"
+                                       Text="{Binding InfoMessage}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositories}}"
+                                               FontSize="{DynamicResource SkyFontBody}" />
+                                    <Border Grid.Column="1" Height="1" Background="#2E2E2E"
+                                            VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Classes="caption"
+                                           Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryHint}}"
+                                           TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                    <Button Content="{i18n:Translate {x:Static i18n:TextKeys.Add}}"
+                                            Command="{Binding AddPluginRepositoryCommand}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:TextKeys.Delete}}"
+                                            Command="{Binding RemovePluginRepositoryCommand}" />
+                                </StackPanel>
+                                <ListBox ItemsSource="{Binding PluginRepositories}"
+                                         SelectedItem="{Binding SelectedPluginRepository}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PluginRepositoryItemViewModel">
+                                            <Grid RowDefinitions="Auto,Auto"
+                                                  ColumnDefinitions="*,Auto"
+                                                  ColumnSpacing="{DynamicResource SkySpaceSm}"
+                                                  RowSpacing="{DynamicResource SkySpaceXxs}">
+                                                <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
+                                                         IsReadOnly="{Binding IsBuiltIn}" />
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="{DynamicResource SkySpaceXs}">
+                                                    <TextBlock Classes="caption"
+                                                               Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                               IsVisible="{Binding IsBuiltIn}"
+                                                               Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryBuiltIn}}" />
+                                                    <TextBlock Classes="caption" Text="{Binding StateLabel}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Row="1"
+                                                           Grid.ColumnSpan="2"
+                                                           Foreground="#DC2626"
+                                                           IsVisible="{Binding HasError}"
+                                                           Text="{Binding Error}"
+                                                           TextWrapping="Wrap" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
 
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowStatusesSection}"

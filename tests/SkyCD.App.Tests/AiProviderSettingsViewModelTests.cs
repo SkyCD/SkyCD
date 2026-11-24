@@ -127,8 +127,7 @@ public class AiProviderSettingsViewModelTests
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetAiDescriptionAvailable(true);
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
-        Assert.Equal("AI", header.Title);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)
@@ -143,7 +142,7 @@ public class AiProviderSettingsViewModelTests
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetAiDescriptionAvailable(true);
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
 
         vm.SelectedSidebarEntry = header;
 
@@ -182,8 +181,7 @@ public class AiProviderSettingsViewModelTests
 
         vm.SetAiDescriptionAvailable(false);
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
-        Assert.Equal("AI", header.Title);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Runtime.Marketplace.Models;
@@ -30,6 +31,7 @@ namespace SkyCD.Plugin.Runtime.Marketplace.Services;
 public sealed class PluginCatalog : IDisposable
 {
     private readonly PluginCatalogResolver resolver;
+    private readonly PluginRepositorySourceStore repositorySources;
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly TimeProvider clock;
     private readonly object stateGate = new();
@@ -49,18 +51,51 @@ public sealed class PluginCatalog : IDisposable
     {
     }
 
+    /// <summary>Creates a catalog that also reads the user's repository manifests from <paramref name="repositorySources"/>.</summary>
+    public PluginCatalog(PluginCatalogOptions options, PluginRepositorySourceStore repositorySources)
+        : this(options, new InMemoryPluginCatalogCache(),
+            HttpsPluginSourceFetcher.CreateDefault(options ?? throw new ArgumentNullException(nameof(options))),
+            null, repositorySources)
+    {
+    }
+
     /// <summary>Creates a catalog with explicit boundaries; <paramref name="fetcher"/> is disposed with the service.</summary>
     public PluginCatalog(PluginCatalogOptions options, IPluginCatalogCache cache, IPluginSourceFetcher fetcher,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null, PluginRepositorySourceStore? repositorySources = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(fetcher);
         this.clock = clock ?? TimeProvider.System;
-        resolver = new PluginCatalogResolver(Options, cache, fetcher, this.clock);
+        this.repositorySources = repositorySources ?? new PluginRepositorySourceStore();
+        resolver = new PluginCatalogResolver(Options, cache, fetcher, this.clock, this.repositorySources);
     }
 
     public PluginCatalogOptions Options { get; }
+
+    /// <summary>Repository URLs the user added beside the catalog; the next resolution reads them.</summary>
+    public IReadOnlyList<Uri> RepositorySources => repositorySources.Sources;
+
+    /// <summary>Replaces the user's repository URLs without invalidating the published snapshot.</summary>
+    public void SetRepositorySources(IEnumerable<Uri>? sources)
+    {
+        repositorySources.SetSources(sources);
+    }
+
+    /// <summary>
+    /// Replaces the user's repository URLs and forgets the published snapshot and last known good results, so
+    /// the next read resolves against the new list instead of serving the previous one from cache.
+    /// </summary>
+    public async Task UpdateRepositorySourcesAsync(IEnumerable<Uri>? sources,
+        CancellationToken cancellationToken = default)
+    {
+        if (!repositorySources.SetSources(sources))
+        {
+            return;
+        }
+
+        await ResetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     /// <summary>The most recent published snapshot, or <see langword="null"/> before the first resolution.</summary>
     public PluginCatalogSnapshot? CurrentSnapshot
