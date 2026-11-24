@@ -83,35 +83,41 @@ public sealed class PluginIconResolutionTests
 
     // The fakes take a constructor argument so the capability scan, which only instantiates parameterless
     // types, cannot pick them up when the whole test assembly is treated as a plugin.
-    private sealed class PlainCapability(int _) : IPluginCapability;
+    private abstract class ScanExcludedCapability(int ordinal)
+    {
+        protected int Ordinal => ordinal;
+    }
 
-    private abstract class MediaCapability : IPluginCapability
+    private sealed class PlainCapability(int ordinal) : ScanExcludedCapability(ordinal), IPluginCapability;
+
+    private abstract class MediaCapability(int ordinal) : ScanExcludedCapability(ordinal), IPluginCapability
     {
         public MediaDescriptor Descriptor { get; } = new([".bin"], ["application/octet-stream"],
             new MediaMetadataSchema("test", 1, []));
     }
 
-    private sealed class MetadataCapability(int _) : MediaCapability, IMediaMetadataCapability
+    private sealed class MetadataCapability(int ordinal) : MediaCapability(ordinal), IMediaMetadataCapability
     {
         public Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
             IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
             Task.FromResult(new MediaExtractionResult([]));
     }
 
-    private sealed class PreviewCapability(int _) : MediaCapability, IMediaPreviewCapability
+    private sealed class PreviewCapability(int ordinal) : MediaCapability(ordinal), IMediaPreviewCapability
     {
         public Task<MediaPreviewResult> GeneratePreviewAsync(MediaItem item, IMediaSource source,
             IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
             Task.FromResult(new MediaPreviewResult([]));
     }
 
-    private sealed class AccountConnectorCapability(int _) : IAccountConnector
+    private sealed class AccountConnectorCapability(int ordinal) : ScanExcludedCapability(ordinal), IAccountConnector
     {
         public Task<AccountConnectionResult> ConnectAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 
-    private sealed class GeneratedDescriptionCapability(int _) : IGeneratedDescriptionCapability
+    private sealed class GeneratedDescriptionCapability(int ordinal)
+        : ScanExcludedCapability(ordinal), IGeneratedDescriptionCapability
     {
         public MediaMetadataSchema Schema { get; } = new("test", 1, []);
 
