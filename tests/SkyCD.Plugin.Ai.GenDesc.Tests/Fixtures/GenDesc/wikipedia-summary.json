@@ -1,0 +1,9 @@
+{
+  "type": "standard",
+  "title": "Example Film",
+  "description": "1999 film",
+  "extract": "Example Film is a 1999 feature directed by Jane Doe.",
+  "thumbnail": {
+    "source": "https://upload.wikimedia.org/wikipedia/en/example.png"
+  }
+}

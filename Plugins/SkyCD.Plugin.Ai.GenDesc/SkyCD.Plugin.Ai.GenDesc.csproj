@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <!-- HTML parsing for the web source importers; the same MIT parser the DiskExplorer plugin uses. -->
+        <PackageReference Include="AngleSharp" Version="1.10.4" />
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Ai.GenDesc.Tests" />
+    </ItemGroup>
+</Project>
