@@ -73,6 +73,24 @@ public sealed class OptionsPluginsPageLayoutTests
     }
 
     [Fact]
+    public void PluginsPage_BothListsDisableHorizontalScrollingSoRowsFitThePane()
+    {
+        var page = GetPluginsPage();
+
+        var lists = page.Descendants().OfType<XElement>()
+            .Where(element => element.Name.LocalName == "ListBox")
+            .ToList();
+        Assert.Equal(2, lists.Count);
+        Assert.All(lists, list =>
+            Assert.Equal("Disabled", (string?)list.Attribute("ScrollViewer.HorizontalScrollBarVisibility")));
+
+        var outerScroll = Assert.Single(page.Descendants().OfType<XElement>(),
+            element => element.Name.LocalName == "ScrollViewer" &&
+                       (string?)element.Attribute("VerticalScrollBarVisibility") == "Auto");
+        Assert.Equal("Disabled", (string?)outerScroll.Attribute("HorizontalScrollBarVisibility"));
+    }
+
+    [Fact]
     public void PluginsPage_EmptyStatesAreNonSelectableAndReplaceEmptyLists()
     {
         var page = GetPluginsPage();
