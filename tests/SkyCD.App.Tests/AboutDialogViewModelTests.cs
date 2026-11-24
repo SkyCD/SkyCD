@@ -132,19 +132,19 @@ public class AboutDialogViewModelTests
     }
 
     [Fact]
-    public void SelectedTabKey_DefaultsToProjectLicense()
+    public void SelectedTabKey_DefaultsToTheOverviewTab()
     {
         var vm = new AboutDialogViewModel();
 
-        Assert.Equal(AboutDialogViewModel.ProjectLicenseTabKey, vm.SelectedTabKey);
-        Assert.Equal(2, vm.SelectedTabIndex);
+        Assert.Equal(AboutDialogViewModel.AboutStoryTabKey, vm.SelectedTabKey);
+        Assert.Equal(0, vm.SelectedTabIndex);
     }
 
     [Theory]
-    [InlineData(AboutDialogViewModel.SystemInfoTabKey, 0)]
-    [InlineData(AboutDialogViewModel.LoadedAssembliesTabKey, 1)]
-    [InlineData(AboutDialogViewModel.ProjectLicenseTabKey, 2)]
-    [InlineData(AboutDialogViewModel.AboutStoryTabKey, 3)]
+    [InlineData(AboutDialogViewModel.AboutStoryTabKey, 0)]
+    [InlineData(AboutDialogViewModel.SystemInfoTabKey, 1)]
+    [InlineData(AboutDialogViewModel.LoadedAssembliesTabKey, 2)]
+    [InlineData(AboutDialogViewModel.ProjectLicenseTabKey, 3)]
     public void RestoreSelectedTab_RestoresStoredKey(string tabKey, int expectedIndex)
     {
         var vm = new AboutDialogViewModel();
@@ -165,7 +165,7 @@ public class AboutDialogViewModelTests
 
         vm.RestoreSelectedTab(tabKey);
 
-        Assert.Equal(AboutDialogViewModel.ProjectLicenseTabKey, vm.SelectedTabKey);
+        Assert.Equal(AboutDialogViewModel.AboutStoryTabKey, vm.SelectedTabKey);
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public class AboutDialogViewModelTests
 
         vm.SelectedTabIndex = 1;
 
-        Assert.Equal(AboutDialogViewModel.LoadedAssembliesTabKey, vm.SelectedTabKey);
+        Assert.Equal(AboutDialogViewModel.SystemInfoTabKey, vm.SelectedTabKey);
     }
 
     [Theory]
