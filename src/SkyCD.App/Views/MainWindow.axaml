@@ -13,6 +13,11 @@
         x:Class="SkyCD.App.Views.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainWindowViewModel"
+        DragDrop.AllowDrop="True"
+        DragDrop.DragEnter="OnWindowDragOver"
+        DragDrop.DragOver="OnWindowDragOver"
+        DragDrop.DragLeave="OnWindowDragLeave"
+        DragDrop.Drop="OnWindowDrop"
         Icon="/Assets/skycd.ico"
         Width="503"
         Height="273"
@@ -220,6 +225,24 @@
                                Opacity="0.8" />
                 </Grid>
             </DockPanel>
+
+            <Border x:Name="DropOverlay"
+                    Grid.ColumnSpan="3"
+                    Margin="{DynamicResource SkyInsetSm}"
+                    Padding="{DynamicResource SkyInsetLg}"
+                    IsVisible="False"
+                    IsHitTestVisible="False"
+                    Background="{DynamicResource ThemeBackgroundBrush}"
+                    BorderBrush="{DynamicResource ThemeAccentBrush}"
+                    BorderThickness="2"
+                    CornerRadius="{DynamicResource SkyCornerRadiusLarge}">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DropToAdd}}"
+                           FontSize="{DynamicResource SkyFontTitle}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center" />
+            </Border>
         </Grid>
     </DockPanel>
 
