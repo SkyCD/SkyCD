@@ -73,8 +73,8 @@ public static class UiKeys
     public const string NewToolbar = "core.ui.NewToolbar";
     public const string OpenToolbar = "core.ui.OpenToolbar";
     public const string SaveToolbar = "core.ui.SaveToolbar";
+    public const string AboutOverview = "core.ui.AboutOverview";
     public const string AboutSkyCd = "core.ui.AboutSkyCd";
-    public const string AboutStory = "core.ui.AboutStory";
     public const string AboutStoryWhat = "core.ui.AboutStoryWhat";
     public const string AboutStoryOrigin = "core.ui.AboutStoryOrigin";
     public const string AboutStoryRewrite = "core.ui.AboutStoryRewrite";
