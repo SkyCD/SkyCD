@@ -179,7 +179,7 @@ public sealed class OptionsDialogViewModelMcpToolsTests
 
         var headerIndex = vm.SidebarEntries.IndexOf(
             Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup));
-        Assert.Equal("locations", vm.SidebarEntries[headerIndex - 1].Category?.Id);
+        Assert.Equal("toolbar", vm.SidebarEntries[headerIndex - 1].Category?.Id);
         var children = vm.SidebarEntries.Skip(headerIndex + 1).ToList();
         Assert.Equal(["mcp", "acp", "mcp-tools"], children.Select(entry => entry.Category?.Id));
         Assert.All(children, child => Assert.Equal(1, child.Depth));

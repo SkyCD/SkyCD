@@ -1572,10 +1572,6 @@ public partial class MainWindow : Window
         {
             e.Dialog.SetToolbarCustomization(toolbarViewModel.ToolbarCommands(), toolbarViewModel.ToolbarEntries);
         }
-        if (DataContext is MainWindowViewModel locationsViewModel)
-        {
-            e.Dialog.SetLocations(locationsViewModel.GetLocationSnapshots());
-        }
         e.Dialog.SetPluginMarketplace(pluginMarketplaceService);
         e.Dialog.SetPluginUninstaller(pluginUninstaller);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
@@ -1662,7 +1658,6 @@ public partial class MainWindow : Window
             {
                 vm.SetStatusVariants(statusVariantRepository.GetOrdered());
                 vm.ApplyDetailsColumnSettings(options.Browser.DetailsColumns);
-                vm.ApplyLocationChanges(e.Dialog.BuildLocationChangeSet());
             }
 
             // Trigger UI refresh to apply new language
