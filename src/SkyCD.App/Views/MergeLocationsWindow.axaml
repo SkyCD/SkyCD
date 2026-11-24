@@ -14,7 +14,7 @@
         Title="{i18n:Translate {x:Static i18n:UiKeys.MergeLocations}}">
 
     <Grid RowDefinitions="Auto,Auto,Auto,Auto"
-          Margin="16"
+          Margin="{DynamicResource SkyInsetLg}"
           RowSpacing="{DynamicResource SkySpaceSm}">
         <TextBlock Text="{Binding Summary}"
                    TextWrapping="Wrap" />
@@ -37,7 +37,7 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="{DynamicResource SkySpaceSm}"
-                    Margin="0,14,0,0">
+                    Margin="{DynamicResource SkyGapTopLg}">
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.MergeLocations}}"
                     MinWidth="90"
                     IsDefault="True"

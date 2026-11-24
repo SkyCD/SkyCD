@@ -11,13 +11,13 @@
         Title="{i18n:Translate {x:Static ui:UiKeys.ManageTags}}"
         Width="560" Height="480"
         WindowStartupLocation="CenterOwner">
-    <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{DynamicResource SkySpaceSm}" Margin="0,12,0,0">
+    <DockPanel Margin="{DynamicResource SkyInsetMd}">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{DynamicResource SkySpaceSm}" Margin="{DynamicResource SkyGapTopMd}">
             <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="Gray" />
             <Button Content="{i18n:Translate {x:Static ui:UiKeys.Close}}" Command="{Binding ConfirmCommand}" IsDefault="True" MinWidth="90" />
         </StackPanel>
         <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,*,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="{i18n:Translate {x:Static ui:UiKeys.Tags}}" FontWeight="Bold" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{i18n:Translate {x:Static ui:UiKeys.Tags}}" FontWeight="Bold" Margin="{DynamicResource SkyGapBottomXs}" />
             <ListBox x:Name="PART_TagList" Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag, Mode=TwoWay}" MinHeight="180"
                      AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.Tags}}">
                 <ListBox.ItemTemplate>
@@ -33,11 +33,11 @@
                 <TextBlock Text="{i18n:Translate {x:Static ui:UiKeys.NewTag}}" />
                 <TextBox Text="{Binding NewTagName, Mode=TwoWay}" AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.TagName}}" />
                 <Button x:Name="PART_CreateButton" Content="{i18n:Translate {x:Static ui:UiKeys.NewTag}}" Command="{Binding CreateTagCommand}" />
-                <Separator Margin="0,6,0,6" />
+                <Separator Margin="{DynamicResource SkyGapYSm}" />
                 <TextBlock Text="{i18n:Translate {x:Static ui:UiKeys.RenameTag}}" />
                 <TextBox Text="{Binding RenameTo, Mode=TwoWay}" AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.RenameTag}}" />
                 <Button Content="{i18n:Translate {x:Static ui:UiKeys.RenameTag}}" Command="{Binding RenameTagCommand}" />
-                <Separator Margin="0,6,0,6" />
+                <Separator Margin="{DynamicResource SkyGapYSm}" />
                 <TextBlock Text="{i18n:Translate {x:Static ui:UiKeys.MergeInto}}" />
                 <ComboBox ItemsSource="{Binding Tags}" SelectedItem="{Binding MergeTarget, Mode=TwoWay}" HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate>
@@ -47,10 +47,10 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Button Content="{i18n:Translate {x:Static ui:UiKeys.MergeTags}}" Command="{Binding MergeTagsCommand}" />
-                <Separator Margin="0,6,0,6" />
+                <Separator Margin="{DynamicResource SkyGapYSm}" />
                 <Button Content="{i18n:Translate {x:Static ui:UiKeys.DeleteTag}}" Command="{Binding DeleteTagCommand}" />
             </StackPanel>
-            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,8,0,0" Spacing="{DynamicResource SkySpaceSm}">
+            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="{DynamicResource SkyGapTopSm}" Spacing="{DynamicResource SkySpaceSm}">
                 <Button Content="{i18n:Translate {x:Static ui:UiKeys.ShowItems}}" Command="{Binding ShowItemsCommand}" HorizontalAlignment="Left" />
                 <ListBox ItemsSource="{Binding FilterResults}" SelectedItem="{Binding SelectedResult, Mode=TwoWay}" MaxHeight="120"
                          AutomationProperties.Name="{i18n:Translate {x:Static ui:UiKeys.AssignedItems}}">

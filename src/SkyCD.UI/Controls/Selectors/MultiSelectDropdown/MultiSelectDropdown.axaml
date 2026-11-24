@@ -6,7 +6,7 @@
         <Border BorderBrush="#3F3F46"
                 BorderThickness="1"
                 CornerRadius="4"
-                Padding="8,6"
+                Padding="{DynamicResource SkyRowPadding}"
                 Height="32">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                 <TextBox x:Name="InlineSearchTextBox"
@@ -45,7 +45,7 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     MinWidth="{Binding Bounds.Width, ElementName=Root}"
-                    Padding="8">
+                    Padding="{DynamicResource SkyInsetSm}">
                 <Grid>
                     <ListBox x:Name="ItemsListBox"
                              IsVisible="{Binding !IsIconPicker, ElementName=Root}"
@@ -69,7 +69,7 @@
                         </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="8,4"
+                                <Border Padding="{DynamicResource SkyControlPadding}"
                                         CornerRadius="2">
                                     <Border.Styles>
                                         <Style Selector="Border:pointerover">
@@ -116,7 +116,7 @@
                         </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="8,4"
+                                <Border Padding="{DynamicResource SkyControlPadding}"
                                         CornerRadius="2">
                                     <Border.Styles>
                                         <Style Selector="Border:pointerover">

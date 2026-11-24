@@ -38,7 +38,7 @@
         </Style>
     </Window.Styles>
 
-    <Grid Margin="10"
+    <Grid Margin="{DynamicResource SkyInsetMd}"
           ColumnDefinitions="Auto,*"
           ColumnSpacing="{DynamicResource SkySpaceSm}">
         <!-- Left icon strip: the source currently being analysed -->
@@ -73,7 +73,7 @@
             <Grid Grid.Row="1" ColumnDefinitions="*,12,*">
                 <StackPanel Grid.Column="0" Spacing="{DynamicResource SkySpaceXxs}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.VolumeStatistics}}" FontWeight="SemiBold" />
-                    <Border Height="1" Margin="0,0,0,2" Background="{DynamicResource ThemeBorderLowBrush}" />
+                    <Border Height="1" Margin="{DynamicResource SkyGapBottomXxs}" Background="{DynamicResource ThemeBorderLowBrush}" />
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Processed}}" />
                         <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ProcessedCount}" />
@@ -98,7 +98,7 @@
 
                 <StackPanel Grid.Column="2" Spacing="{DynamicResource SkySpaceXxs}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ScanStatistics}}" FontWeight="SemiBold" />
-                    <Border Height="1" Margin="0,0,0,2" Background="{DynamicResource ThemeBorderLowBrush}" />
+                    <Border Height="1" Margin="{DynamicResource SkyGapBottomXxs}" Background="{DynamicResource ThemeBorderLowBrush}" />
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Classes="stat-label" Text="{i18n:Translate {x:Static i18n:UiKeys.Discovered}}" />
                         <TextBlock Grid.Column="1" Classes="stat-value" Text="{Binding ScanDiscoveredCount}" />
@@ -156,11 +156,11 @@
                     <Button Grid.Column="1"
                             Content="{i18n:Translate {x:Static i18n:UiKeys.CopyLog}}"
                             Click="OnCopyLogClicked"
-                            Padding="8,2" />
+                            Padding="{DynamicResource SkyControlPadding}" />
                     <Button Grid.Column="2"
                             Content="{i18n:Translate {x:Static i18n:UiKeys.ClearLog}}"
                             Command="{Binding ClearLogCommand}"
-                            Padding="8,2" />
+                            Padding="{DynamicResource SkyControlPadding}" />
                 </Grid>
                 <Border Grid.Row="1"
                         MinHeight="90"
@@ -177,7 +177,7 @@
                                     <TextBlock Text="{Binding DisplayText}"
                                                FontFamily="Cascadia Code,Consolas,Courier New,monospace"
                                                FontSize="{DynamicResource SkyFontSecondary}"
-                                               Margin="6,2"
+                                               Margin="{DynamicResource SkyControlPaddingTight}"
                                                TextWrapping="NoWrap" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

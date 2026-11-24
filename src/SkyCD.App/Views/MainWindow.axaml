@@ -24,7 +24,7 @@
         <Style Selector="TextBox.rename-editor">
             <Setter Property="MinWidth" Value="90" />
             <Setter Property="MinHeight" Value="20" />
-            <Setter Property="Padding" Value="2,0" />
+            <Setter Property="Padding" Value="{DynamicResource SkyGapXXxs}" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="TextBox.rename-editor.invalid">
@@ -125,7 +125,7 @@
                           ShowsPreview="True" />
 
             <DockPanel Grid.Column="2" LastChildFill="True">
-                <StackPanel DockPanel.Dock="Top" Margin="6" Spacing="{DynamicResource SkySpaceXs}"
+                <StackPanel DockPanel.Dock="Top" Margin="{DynamicResource SkyInsetSm}" Spacing="{DynamicResource SkySpaceXs}"
                             IsVisible="{Binding IsQuickFilterOpen}">
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                         <TextBox x:Name="QuickFindBox" Text="{Binding QuickFindQuery, Mode=TwoWay}"
@@ -188,7 +188,7 @@
                                          PointerPressed="OnBrowserPointerPressed">
                     </cl:BrowserItemsView>
                     <DockPanel IsVisible="{Binding ShowQuickFindResults}">
-                        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="6"
+                        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="{DynamicResource SkyInsetSm}"
                                 Command="{Binding OpenQuickFindResultCommand}"
                                 Content="{i18n:Translate {x:Static i18n:UiKeys.OpenResult}}" />
                         <ListBox x:Name="QuickFindResultList" ItemsSource="{Binding QuickFindResults}"
@@ -214,7 +214,7 @@
                                IsHitTestVisible="False"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
-                               Margin="16"
+                               Margin="{DynamicResource SkyInsetLg}"
                                TextWrapping="Wrap"
                                TextAlignment="Center"
                                Opacity="0.8" />

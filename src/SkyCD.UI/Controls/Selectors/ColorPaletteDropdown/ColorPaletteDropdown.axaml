@@ -15,7 +15,7 @@
                     BorderThickness="1"
                     Background="{DynamicResource ThemeBackgroundBrush}"
                     CornerRadius="4"
-                    Padding="8,6">
+                    Padding="{DynamicResource SkyRowPadding}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                     <Border Width="16"
                             Height="16"
@@ -44,7 +44,7 @@
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="1"
                     CornerRadius="4"
-                    Padding="10">
+                    Padding="{DynamicResource SkyInsetMd}">
                 <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Color}}"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
@@ -75,7 +75,7 @@
                     </Border>
 
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Hue}}"
-                               Margin="0,2,0,0"
+                               Margin="{DynamicResource SkyGapTopXxs}"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                FontSize="{DynamicResource SkyFontSecondary}"
                                FontWeight="SemiBold" />
@@ -103,7 +103,7 @@
                     </Border>
 
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Hex}}"
-                               Margin="0,2,0,0"
+                               Margin="{DynamicResource SkyGapTopXxs}"
                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                FontSize="{DynamicResource SkyFontSecondary}"
                                FontWeight="SemiBold" />

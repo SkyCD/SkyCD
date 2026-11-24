@@ -31,8 +31,8 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="2" />
             <!-- Cancel the cell padding so the text sits exactly where the row shows it; the ring covers the cell. -->
-            <Setter Property="Padding" Value="7,1" />
-            <Setter Property="Margin" Value="-8,-4" />
+            <Setter Property="Padding" Value="{DynamicResource SkyPropertyEditorPadding}" />
+            <Setter Property="Margin" Value="{DynamicResource SkyControlPaddingInverse}" />
             <Setter Property="MinHeight" Value="0" />
             <Setter Property="VerticalContentAlignment" Value="Top" />
         </Style>
@@ -52,10 +52,10 @@
     </Window.Styles>
 
     <Grid RowDefinitions="*,Auto" Margin="0">
-        <TabControl x:Name="Tabs" Margin="8,8,8,0" SelectedIndex="0" TabStripPlacement="Top">
+        <TabControl x:Name="Tabs" Margin="{DynamicResource SkyTabCardMargin}" SelectedIndex="0" TabStripPlacement="Top">
             <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.General}}">
                 <Grid RowDefinitions="Auto,*">
-                    <Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto,Auto" Margin="{DynamicResource SkyGapBottomSm}">
                         <Border Grid.RowSpan="2"
                                 Width="{Binding #NameFields.Bounds.Height}"
                                 Height="{Binding #NameFields.Bounds.Height}"
@@ -81,7 +81,7 @@
                               Grid.Row="2"
                               Grid.Column="2"
                               ColumnDefinitions="Auto,*"
-                              Margin="0,10,0,0">
+                              Margin="{DynamicResource SkyGapTopMd}">
                             <TextBlock x:Name="RatingLabel"
                                        Text="{i18n:Translate {x:Static i18n:UiKeys.RatingName}}"
                                        VerticalAlignment="Center" />
@@ -100,7 +100,7 @@
                     <Grid Grid.Row="1" RowDefinitions="Auto,*">
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CommentsLabel}}" VerticalAlignment="Top" />
                         <rt:RichTextEditor Grid.Row="1"
-                                           Margin="0,4,0,0"
+                                           Margin="{DynamicResource SkyGapTopXs}"
                                            RtfText="{Binding Comments, Mode=TwoWay}" />
                     </Grid>
                 </Grid>
@@ -137,16 +137,16 @@
                                                 Command="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.GenerateCommand}"
                                                 IsVisible="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.CanShowGenerate}"
                                                 IsEnabled="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.CanGenerate}"
-                                                Padding="6,2" />
+                                                Padding="{DynamicResource SkyControlPaddingTight}" />
                                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CopyDescription}}"
                                                 Command="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.CopyCommand}"
                                                 IsEnabled="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.CanCopy}"
-                                                Padding="6,2" />
+                                                Padding="{DynamicResource SkyControlPaddingTight}" />
                                         <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Clear}}"
                                                 Command="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.ClearCommand}"
                                                 IsVisible="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.CanShowClear}"
                                                 IsEnabled="{Binding $parent[Window].((vm:PropertiesDialogViewModel)DataContext).Description.CanClear}"
-                                                Padding="6,2" />
+                                                Padding="{DynamicResource SkyControlPaddingTight}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Panel>
@@ -159,7 +159,7 @@
                     <ItemsControl ItemsSource="{Binding TagAssignments}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TagAssignmentViewModel">
-                                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsAssigned, Mode=TwoWay}" Margin="0,2,0,2" />
+                                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsAssigned, Mode=TwoWay}" Margin="{DynamicResource SkyGapYXxs}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -206,19 +206,19 @@
 
         <Grid Grid.Row="1"
               HorizontalAlignment="Right"
-              Margin="0,10,12,10"
+              Margin="{DynamicResource SkyInsetMd}"
               ColumnDefinitions="Auto,Auto"
               ColumnSpacing="{DynamicResource SkySpaceSm}">
             <Button Grid.Column="0"
                     Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
                     MinWidth="74"
-                    Padding="10,4"
+                    Padding="{DynamicResource SkyControlPadding}"
                     IsDefault="True"
                     Command="{Binding ConfirmCommand}" />
             <Button Grid.Column="1"
                     Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
                     MinWidth="74"
-                    Padding="10,4"
+                    Padding="{DynamicResource SkyControlPadding}"
                     IsCancel="True"
                     Click="OnCancelClicked" />
         </Grid>

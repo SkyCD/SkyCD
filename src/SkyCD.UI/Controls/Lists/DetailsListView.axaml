@@ -9,7 +9,7 @@
         </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Margin" Value="{DynamicResource SkyGapYXxs}" />
             <Setter Property="MinHeight" Value="22" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="BorderBrush" Value="Transparent" />

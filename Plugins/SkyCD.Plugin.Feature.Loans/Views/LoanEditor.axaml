@@ -6,7 +6,7 @@
              x:Class="SkyCD.Plugin.Feature.Loans.Views.LoanEditor"
              x:DataType="vm:LoanDialogViewModel">
     <ScrollViewer>
-        <StackPanel Margin="8" Spacing="{DynamicResource SkySpaceXs}">
+        <StackPanel Margin="{DynamicResource SkyInsetSm}" Spacing="{DynamicResource SkySpaceXs}">
             <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.Borrower}}" />
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding Borrowers}" SelectedItem="{Binding SelectedBorrower}"

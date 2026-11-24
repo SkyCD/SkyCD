@@ -35,19 +35,19 @@
     <Style Selector="TreeView">
         <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}" />
-        <Setter Property="Padding" Value="2,4" />
+        <Setter Property="Padding" Value="{DynamicResource SkyInsetXs}" />
     </Style>
 
     <!-- TreeViewItem row height and spacing matching modern IDE tree -->
     <Style Selector="TreeViewItem">
         <Setter Property="MinHeight" Value="24" />
-        <Setter Property="Padding" Value="4,2" />
+        <Setter Property="Padding" Value="{DynamicResource SkyControlPaddingTight}" />
         <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
     </Style>
 
     <Style Selector="TreeViewItem /template/ Border#SelectionBorder">
         <Setter Property="CornerRadius" Value="4" />
-        <Setter Property="Margin" Value="4,1" />
+        <Setter Property="Margin" Value="{DynamicResource SkyControlPaddingTight}" />
     </Style>
 
     <!-- Base selected state -->

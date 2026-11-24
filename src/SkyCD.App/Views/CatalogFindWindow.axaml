@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static i18n:UiKeys.FindCatalog}}">
-    <Grid Margin="12" RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
+    <Grid Margin="{DynamicResource SkyInsetMd}" RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
             <TextBox Name="QueryTextBox"
                      PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FindCatalogHint}}"
@@ -22,7 +22,7 @@
                  DoubleTapped="OnResultsDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:CatalogFindResult">
-                    <Grid Margin="4,3" ColumnDefinitions="2*,4*,Auto" ColumnSpacing="{DynamicResource SkySpaceMd}">
+                    <Grid Margin="{DynamicResource SkyInsetXs}" ColumnDefinitions="2*,4*,Auto" ColumnSpacing="{DynamicResource SkySpaceMd}">
                         <TextBlock Text="{Binding Document.Name}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Grid.Column="1" Text="{Binding FullPath}" TextTrimming="CharacterEllipsis"
                                    Foreground="{DynamicResource ThemeForegroundLowBrush}" />

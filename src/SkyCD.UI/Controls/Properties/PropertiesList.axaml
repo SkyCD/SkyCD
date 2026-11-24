@@ -30,10 +30,10 @@
                         <ColumnDefinition Width="{StaticResource PropertyColumnWidth}" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}" BorderThickness="0,0,1,0" Padding="8,5">
+                    <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}" BorderThickness="0,0,1,0" Padding="{DynamicResource SkyControlPadding}">
                         <TextBlock Text="{Binding PropertyHeader, ElementName=Root}" FontWeight="SemiBold" />
                     </Border>
-                    <Border Grid.Column="1" Padding="8,5">
+                    <Border Grid.Column="1" Padding="{DynamicResource SkyControlPadding}">
                         <TextBlock Text="{Binding ValueHeader, ElementName=Root}" FontWeight="SemiBold" />
                     </Border>
                 </Grid>
@@ -66,7 +66,7 @@
                             </Grid.ColumnDefinitions>
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="0,0,1,1"
-                                    Padding="8,4">
+                                    Padding="{DynamicResource SkyControlPadding}">
                                 <ContentPresenter Content="{Binding}"
                                                   ContentTemplate="{Binding PropertyCellTemplate, ElementName=Root}" />
                             </Border>
@@ -75,7 +75,7 @@
                                     Classes="value-cell"
                                     BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="0,0,0,1"
-                                    Padding="8,4">
+                                    Padding="{DynamicResource SkyControlPadding}">
                                 <ContentPresenter Content="{Binding}"
                                                   ContentTemplate="{Binding ValueCellTemplate, ElementName=Root}" />
                             </Border>

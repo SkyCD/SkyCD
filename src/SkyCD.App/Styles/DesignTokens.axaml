@@ -30,6 +30,66 @@
     <Thickness x:Key="SkyInsetMd">12</Thickness>
     <Thickness x:Key="SkyInsetLg">16</Thickness>
 
+    <!--
+        The inset vocabulary (issue #999). Margin and Padding take one of these keys, or a plain 0
+        when a surface inherits an inset it does not want; never a number. SkyInset* dresses all four
+        sides. SkyGap* keeps the same ramp but zeroes the sides that must not move, because XAML
+        cannot assemble a Thickness from the scalar spacing ramp. A gap is named after the ramp step
+        it uses; a value that differs per side is named after the surface it shapes.
+    -->
+    <!-- One side: separates a block from the neighbour above or below it. -->
+    <Thickness x:Key="SkyGapTopXxs">0,2,0,0</Thickness>
+    <Thickness x:Key="SkyGapTopXs">0,4,0,0</Thickness>
+    <Thickness x:Key="SkyGapTopSm">0,8,0,0</Thickness>
+    <Thickness x:Key="SkyGapTopMd">0,12,0,0</Thickness>
+    <Thickness x:Key="SkyGapTopLg">0,16,0,0</Thickness>
+    <Thickness x:Key="SkyGapBottomXxs">0,0,0,2</Thickness>
+    <Thickness x:Key="SkyGapBottomXs">0,0,0,4</Thickness>
+    <Thickness x:Key="SkyGapBottomSm">0,0,0,8</Thickness>
+    <Thickness x:Key="SkyGapBottomMd">0,0,0,12</Thickness>
+    <Thickness x:Key="SkyGapLeftSm">8,0,0,0</Thickness>
+
+    <!-- One axis: separates rows or columns inside a stack. -->
+    <Thickness x:Key="SkyGapYXxs">0,2,0,2</Thickness>
+    <Thickness x:Key="SkyGapYXs">0,4,0,4</Thickness>
+    <Thickness x:Key="SkyGapYSm">0,8,0,8</Thickness>
+    <Thickness x:Key="SkyGapYMd">0,12,0,12</Thickness>
+    <Thickness x:Key="SkyGapXXxs">2,0,2,0</Thickness>
+    <Thickness x:Key="SkyGapXXs">4,0,4,0</Thickness>
+
+    <!-- Composed insets: each replaces the second wrapper element a per-side inset would need. -->
+    <Thickness x:Key="SkyRowPadding">8,6</Thickness>
+    <Thickness x:Key="SkyControlPaddingTight">4,2</Thickness>
+    <!-- The control padding once a pointerover or selected border is added, so the label does not shift. -->
+    <Thickness x:Key="SkyControlPaddingBordered">7,3</Thickness>
+    <!--
+        The card tab header keeps the horizontal inset of SkyInsetMd, the content inset of the same
+        card, so the header text and the tab body share one left edge (issue #997). The 5/6 split
+        centers the label above the 1px card border the selected header overlaps.
+    -->
+    <Thickness x:Key="SkyTabHeaderPadding">12,5,12,6</Thickness>
+    <!-- The 25px toolbar holds 22px buttons, so only 1px is inset above and below them (issue #412). -->
+    <Thickness x:Key="SkyToolbarPadding">2,1</Thickness>
+    <!-- Text inset of the inline property editor, so it opens exactly on the cell text it replaces. -->
+    <Thickness x:Key="SkyPropertyEditorPadding">7,1</Thickness>
+
+    <!--
+        Tab card geometry: the card is inset on three sides but stays flush with the footer it sits
+        above, and its 1px border is only ever overlapped by a 1px shift, never by a ramp step.
+    -->
+    <Thickness x:Key="SkyTabCardMargin">8,8,8,0</Thickness>
+    <Thickness x:Key="SkyTabCardBorderOverlap">0,-1,0,0</Thickness>
+    <Thickness x:Key="SkyTabCardHeaderHoverInset">0,0,0,1</Thickness>
+
+    <!--
+        Values that used to be hand-tuned pixels and are now declared once, with their coupling.
+        The editor cancels SkyControlPadding; the hint aligns under the label of the checkbox above
+        it; the tab strip of the Add To List dialog leaves room for the buttons beside its headers (#639).
+    -->
+    <Thickness x:Key="SkyControlPaddingInverse">-8,-4</Thickness>
+    <Thickness x:Key="SkyCheckboxHintIndent">28,0,0,0</Thickness>
+    <Thickness x:Key="SkyTabStripActionsReserve">0,0,154,0</Thickness>
+
     <!-- Icon slot: the 16px toolbar button image and the matching glyphs in the Options toolbar lists (issue #933). -->
     <x:Double x:Key="SkyIconSize">16</x:Double>
 

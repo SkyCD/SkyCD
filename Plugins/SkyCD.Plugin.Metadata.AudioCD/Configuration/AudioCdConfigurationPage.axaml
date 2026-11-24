@@ -9,7 +9,7 @@
             <CheckBox x:Name="OfflineCheckBox" Content="Work offline (never contact the sources)" />
         </StackPanel>
 
-        <TextBlock Grid.Row="2" Text="Disc record" FontWeight="SemiBold" Margin="0,8,0,0" />
+        <TextBlock Grid.Row="2" Text="Disc record" FontWeight="SemiBold" Margin="{DynamicResource SkyGapTopSm}" />
         <StackPanel Grid.Row="3" Spacing="{DynamicResource SkySpaceXs}">
             <CheckBox x:Name="DiscArtistTagsCheckBox" Content="Write the artist name as a tag" />
             <CheckBox x:Name="DiscCoversCheckBox" Content="Download the cover image" />
@@ -19,7 +19,7 @@
             </StackPanel>
         </StackPanel>
 
-        <TextBlock Grid.Row="4" Text="Track records" FontWeight="SemiBold" Margin="0,8,0,0" />
+        <TextBlock Grid.Row="4" Text="Track records" FontWeight="SemiBold" Margin="{DynamicResource SkyGapTopSm}" />
         <StackPanel Grid.Row="5" Spacing="{DynamicResource SkySpaceXs}">
             <CheckBox x:Name="TrackArtistTagsCheckBox" Content="Write the artist name as a tag" />
             <CheckBox x:Name="TrackCoversCheckBox" Content="Download the cover image" />
@@ -29,7 +29,7 @@
             </StackPanel>
         </StackPanel>
 
-        <TextBlock Grid.Row="6" Text="Network" FontWeight="SemiBold" Margin="0,8,0,0" />
+        <TextBlock Grid.Row="6" Text="Network" FontWeight="SemiBold" Margin="{DynamicResource SkyGapTopSm}" />
         <StackPanel Grid.Row="7" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
             <TextBlock Text="Request timeout (seconds):" VerticalAlignment="Center" />
             <NumericUpDown x:Name="RequestTimeoutInput" Minimum="1" Maximum="30" Increment="1" Width="140" />

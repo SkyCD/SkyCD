@@ -76,7 +76,7 @@ public class OptionsWindowLayoutTests
         var textBoxes = template.Descendants(Avalonia + "TextBox").ToArray();
 
         Assert.Equal("0,0,0,1", (string?)row.Attribute("BorderThickness"));
-        Assert.Equal("8,6", (string?)row.Attribute("Padding"));
+        Assert.Equal("{DynamicResource SkyRowPadding}", (string?)row.Attribute("Padding"));
         Assert.Equal(2, textBoxes.Length);
         Assert.Contains("Binding Name", textBoxes[0].ToString(), StringComparison.Ordinal);
         Assert.Contains("Binding DefaultValue", textBoxes[1].ToString(), StringComparison.Ordinal);

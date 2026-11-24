@@ -543,52 +543,74 @@ public class ControlsContractTests
     [AvaloniaFact]
     public void StatusBar_LayoutStructure_MatchesCompactLegacy22pxSpecification()
     {
+        // The inset is a design token, and a control resolves the application dictionary only once it
+        // has a resource scope, so the structure is read from a hosted instance.
         var statusBar = new StatusBar();
+        var window = new Window { Content = statusBar };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(22, statusBar.Height);
-        Assert.Equal(22, statusBar.MinHeight);
+        try
+        {
+            Assert.Equal(22, statusBar.Height);
+            Assert.Equal(22, statusBar.MinHeight);
 
-        var border = Assert.IsType<Border>(statusBar.Content);
-        Assert.Equal(new Avalonia.Thickness(0, 1, 0, 0), border.BorderThickness);
-        Assert.Equal(new Avalonia.Thickness(4, 0), border.Padding);
-        Assert.Equal(22, border.Height);
+            var border = Assert.IsType<Border>(statusBar.Content);
+            Assert.Equal(new Avalonia.Thickness(0, 1, 0, 0), border.BorderThickness);
+            Assert.Equal(new Avalonia.Thickness(4, 0), border.Padding);
+            Assert.Equal(22, border.Height);
 
-        var grid = Assert.IsType<Grid>(border.Child);
-        Assert.Equal(4, grid.ColumnDefinitions.Count);
-        Assert.Equal(GridUnitType.Star, grid.ColumnDefinitions[0].Width.GridUnitType);
-        Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[1].Width.GridUnitType);
-        Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[2].Width.GridUnitType);
-        Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[3].Width.GridUnitType);
+            var grid = Assert.IsType<Grid>(border.Child);
+            Assert.Equal(4, grid.ColumnDefinitions.Count);
+            Assert.Equal(GridUnitType.Star, grid.ColumnDefinitions[0].Width.GridUnitType);
+            Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[1].Width.GridUnitType);
+            Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[2].Width.GridUnitType);
+            Assert.Equal(GridUnitType.Auto, grid.ColumnDefinitions[3].Width.GridUnitType);
 
-        var progressBar = Assert.IsType<ProgressBar>(grid.Children[2]);
-        Assert.Equal(100, progressBar.Width);
-        Assert.Equal(14, progressBar.Height);
-        var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(progressBar.Foreground);
-        Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
+            var progressBar = Assert.IsType<ProgressBar>(grid.Children[2]);
+            Assert.Equal(100, progressBar.Width);
+            Assert.Equal(14, progressBar.Height);
+            var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(progressBar.Foreground);
+            Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [AvaloniaFact]
     public void ClassicToolbar_LayoutStructure_MatchesCompactLegacy25pxSpecification()
     {
         var toolbar = new ClassicToolbar();
+        var window = new Window { Content = toolbar };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(25, toolbar.Height);
-        Assert.Equal(25, toolbar.MinHeight);
+        try
+        {
+            Assert.Equal(25, toolbar.Height);
+            Assert.Equal(25, toolbar.MinHeight);
 
-        var border = Assert.IsType<Border>(toolbar.Content);
-        Assert.Equal(new Avalonia.Thickness(0, 0, 0, 1), border.BorderThickness);
-        Assert.Equal(new Avalonia.Thickness(2, 1), border.Padding);
-        Assert.Equal(25, border.Height);
+            var border = Assert.IsType<Border>(toolbar.Content);
+            Assert.Equal(new Avalonia.Thickness(0, 0, 0, 1), border.BorderThickness);
+            Assert.Equal(new Avalonia.Thickness(2, 1), border.Padding);
+            Assert.Equal(25, border.Height);
 
-        var dockPanel = Assert.IsType<DockPanel>(border.Child);
-        var grip = Assert.IsType<Avalonia.Controls.Shapes.Rectangle>(dockPanel.Children[0]);
-        Assert.Equal(3, grip.Width);
-        Assert.Equal(14, grip.Height);
-        var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(grip.Fill);
-        Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
+            var dockPanel = Assert.IsType<DockPanel>(border.Child);
+            var grip = Assert.IsType<Avalonia.Controls.Shapes.Rectangle>(dockPanel.Children[0]);
+            Assert.Equal(3, grip.Width);
+            Assert.Equal(14, grip.Height);
+            var drawingBrush = Assert.IsType<Avalonia.Media.DrawingBrush>(grip.Fill);
+            Assert.Equal(Avalonia.Media.TileMode.Tile, drawingBrush.TileMode);
 
-        var itemsControl = Assert.IsType<ItemsControl>(dockPanel.Children[1]);
-        Assert.Same(toolbar.Items, itemsControl.ItemsSource);
+            var itemsControl = Assert.IsType<ItemsControl>(dockPanel.Children[1]);
+            Assert.Same(toolbar.Items, itemsControl.ItemsSource);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [Theory]

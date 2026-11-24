@@ -12,7 +12,7 @@
                     Background="{DynamicResource ThemeControlMidBrush}"
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="0,0,0,1"
-                    Padding="8,4">
+                    Padding="{DynamicResource SkyControlPadding}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                     <TextBlock x:Name="EntryNameText"
                                FontWeight="SemiBold"
@@ -32,14 +32,14 @@
 
             <Grid Grid.Row="1" ClipToBounds="True">
                 <Image x:Name="PreviewImageControl"
-                       Margin="6"
+                       Margin="{DynamicResource SkyInsetSm}"
                        Stretch="Uniform"
                        Source="{Binding PreviewImage, ElementName=Root}"
                        AutomationProperties.Name="{Binding PreviewAutomationName, ElementName=Root}" />
 
                 <TextBox x:Name="PreviewTextControl"
-                         Margin="4"
-                         Padding="4"
+                         Margin="{DynamicResource SkyInsetXs}"
+                         Padding="{DynamicResource SkyInsetXs}"
                          IsReadOnly="True"
                          BorderThickness="0"
                          Background="Transparent"
@@ -58,7 +58,7 @@
                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:PreviewKeys.StateLoading}}" />
 
                 <TextBlock x:Name="StateMessageText"
-                           Margin="16"
+                           Margin="{DynamicResource SkyInsetLg}"
                            Opacity="0.75"
                            TextWrapping="Wrap"
                            TextAlignment="Center"
@@ -72,7 +72,7 @@
                 <Border Background="{DynamicResource ThemeControlMidBrush}"
                         BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                         BorderThickness="0,1,0,0"
-                        Padding="8,3">
+                        Padding="{DynamicResource SkyControlPadding}">
                     <TextBlock FontSize="{DynamicResource SkyFontCaption}"
                                FontWeight="SemiBold"
                                Text="{i18n:Translate {x:Static i18n:PreviewKeys.FieldsHeader}}" />
@@ -104,7 +104,7 @@
                             <Grid ColumnDefinitions="140,*" Margin="0">
                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                         BorderThickness="0,0,1,1"
-                                        Padding="8,3">
+                                        Padding="{DynamicResource SkyControlPadding}">
                                     <TextBlock FontSize="{DynamicResource SkyFontCaption}"
                                                Text="{Binding Label}"
                                                TextTrimming="CharacterEllipsis"
@@ -113,7 +113,7 @@
                                 <Border Grid.Column="1"
                                         BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                         BorderThickness="0,0,0,1"
-                                        Padding="8,3">
+                                        Padding="{DynamicResource SkyControlPadding}">
                                     <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                             <SelectableTextBlock FontSize="{DynamicResource SkyFontCaption}"
@@ -121,7 +121,7 @@
                                                                  TextWrapping="Wrap" />
                                             <Button Grid.Column="1"
                                                     FontSize="{DynamicResource SkyFontCaption}"
-                                                    Padding="4,0"
+                                                    Padding="{DynamicResource SkyGapXXs}"
                                                     VerticalAlignment="Center"
                                                     Background="Transparent"
                                                     BorderThickness="0"
