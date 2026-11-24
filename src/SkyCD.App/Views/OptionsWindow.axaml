@@ -889,46 +889,83 @@
                                     <Border Grid.Column="1" Height="1" Background="#2E2E2E"
                                             VerticalAlignment="Center" />
                                 </Grid>
-                                <TextBlock Classes="caption"
-                                           Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                                           Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryHint}}"
-                                           TextWrapping="Wrap" />
-                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                    <Button Content="{i18n:Translate {x:Static i18n:TextKeys.Add}}"
-                                            Command="{Binding AddPluginRepositoryCommand}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:TextKeys.Delete}}"
-                                            Command="{Binding RemovePluginRepositoryCommand}" />
-                                </StackPanel>
-                                <ListBox ItemsSource="{Binding PluginRepositories}"
-                                         SelectedItem="{Binding SelectedPluginRepository}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:PluginRepositoryItemViewModel">
-                                            <Grid RowDefinitions="Auto,Auto"
-                                                  ColumnDefinitions="*,Auto"
-                                                  ColumnSpacing="{DynamicResource SkySpaceSm}"
-                                                  RowSpacing="{DynamicResource SkySpaceXxs}">
-                                                <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
-                                                         IsReadOnly="{Binding IsBuiltIn}" />
-                                                <StackPanel Grid.Column="1"
-                                                            Orientation="Horizontal"
-                                                            VerticalAlignment="Center"
-                                                            Spacing="{DynamicResource SkySpaceXs}">
-                                                    <TextBlock Classes="caption"
-                                                               Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                                                               IsVisible="{Binding IsBuiltIn}"
-                                                               Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryBuiltIn}}" />
-                                                    <TextBlock Classes="caption" Text="{Binding StateLabel}" />
-                                                </StackPanel>
-                                                <TextBlock Grid.Row="1"
-                                                           Grid.ColumnSpan="2"
-                                                           Foreground="#DC2626"
-                                                           IsVisible="{Binding HasError}"
-                                                           Text="{Binding Error}"
-                                                           TextWrapping="Wrap" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock Classes="caption"
+                                               Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryHint}}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right"
+                                                Spacing="{DynamicResource SkySpaceSm}">
+                                        <Button Content="+"
+                                                FontSize="{DynamicResource SkyFontSubtitle}"
+                                                Width="34"
+                                                Height="28"
+                                                ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddPluginRepositoryTooltip}}"
+                                                Command="{Binding AddPluginRepositoryCommand}" />
+                                        <Button Content="-"
+                                                FontSize="{DynamicResource SkyFontSubtitle}"
+                                                Width="34"
+                                                Height="28"
+                                                ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemovePluginRepositoryTooltip}}"
+                                                Command="{Binding RemovePluginRepositoryCommand}" />
+                                    </StackPanel>
+                                </Grid>
+                                <Border BorderBrush="#2E2E2E" BorderThickness="1">
+                                    <Grid RowDefinitions="Auto,*">
+                                        <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
+                                            <Grid ColumnDefinitions="*,180" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryColumn}}"
+                                                           FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{i18n:Translate {x:Static i18n:UiKeys.Status}}"
+                                                           FontWeight="SemiBold" />
                                             </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                                        </Border>
+                                        <ListBox Grid.Row="1"
+                                                 ItemsSource="{Binding PluginRepositories}"
+                                                 SelectedItem="{Binding SelectedPluginRepository}"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:PluginRepositoryItemViewModel">
+                                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
+                                                        <Grid RowDefinitions="Auto,Auto"
+                                                              ColumnDefinitions="*,180"
+                                                              ColumnSpacing="{DynamicResource SkySpaceSm}"
+                                                              RowSpacing="{DynamicResource SkySpaceXxs}">
+                                                            <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
+                                                                     IsReadOnly="{Binding IsBuiltIn}" />
+                                                            <StackPanel Grid.Column="1"
+                                                                        Orientation="Horizontal"
+                                                                        VerticalAlignment="Center"
+                                                                        Spacing="{DynamicResource SkySpaceXs}">
+                                                                <Border IsVisible="{Binding IsBuiltIn}"
+                                                                        Background="{DynamicResource ThemeControlLowBrush}"
+                                                                        CornerRadius="{DynamicResource SkyCornerRadius}"
+                                                                        Padding="{DynamicResource SkyInsetXxs}">
+                                                                    <TextBlock Classes="caption"
+                                                                               Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryBuiltIn}}" />
+                                                                </Border>
+                                                                <TextBlock Classes="caption"
+                                                                           Text="{Binding StateLabel}"
+                                                                           VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Row="1"
+                                                                       Grid.ColumnSpan="2"
+                                                                       Foreground="#DC2626"
+                                                                       IsVisible="{Binding HasError}"
+                                                                       Text="{Binding Error}"
+                                                                       TextWrapping="Wrap" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>

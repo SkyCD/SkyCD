@@ -165,8 +165,11 @@ public static class UiKeys
     public const string PluginUpdateAll = "core.ui.PluginUpdateAll";
     public const string PluginSettings = "core.ui.PluginSettings";
     public const string PluginRepositories = "core.ui.PluginRepositories";
+    public const string PluginRepositoryColumn = "core.ui.PluginRepositoryColumn";
     public const string PluginRepositoryHint = "core.ui.PluginRepositoryHint";
     public const string PluginRepositoryBuiltIn = "core.ui.PluginRepositoryBuiltIn";
+    public const string AddPluginRepositoryTooltip = "core.ui.AddPluginRepositoryTooltip";
+    public const string RemovePluginRepositoryTooltip = "core.ui.RemovePluginRepositoryTooltip";
     public const string PluginRepositoryInvalidUrl = "core.ui.PluginRepositoryInvalidUrl";
     public const string PluginRepositoryStateOk = "core.ui.PluginRepositoryStateOk";
     public const string PluginRepositoryStateOffline = "core.ui.PluginRepositoryStateOffline";
