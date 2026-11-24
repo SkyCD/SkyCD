@@ -2313,6 +2313,7 @@ public partial class MainWindow : Window
             }
             progress?.Report(++processed * 90 / total);
         }
+        catalogRepository.InvalidateSnapshot();
 
         foreach (var entry in entries)
         {
