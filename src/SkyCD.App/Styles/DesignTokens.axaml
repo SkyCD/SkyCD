@@ -31,6 +31,13 @@
     <Thickness x:Key="SkyInsetLg">16</Thickness>
 
     <!--
+        Source picker rows (issue #1030). The closed ComboBox field and its dropdown rows share one
+        inset, so the icon column and the label column line up between the field and the open list;
+        the 16 px icon plus the vertical inset sets the row height.
+    -->
+    <Thickness x:Key="SkyComboBoxContentPadding">8,4</Thickness>
+
+    <!--
         The inset vocabulary (issue #999). Margin and Padding take one of these keys, or a plain 0
         when a surface inherits an inset it does not want; never a number. SkyInset* dresses all four
         sides. SkyGap* keeps the same ramp but zeroes the sides that must not move, because XAML
