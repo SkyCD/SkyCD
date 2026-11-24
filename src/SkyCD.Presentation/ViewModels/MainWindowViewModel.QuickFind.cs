@@ -46,12 +46,31 @@ public partial class MainWindowViewModel
     partial void OnShowContentsNotScannedNoticeChanged(bool value) =>
         OnPropertyChanged(nameof(ShowBrowserContentsNotice));
 
+    partial void OnIsQuickFilterOpenChanged(bool value)
+    {
+        RaiseToolbarStateChanged();
+        RefreshTopMenuState();
+    }
+
     [RelayCommand]
     private void CloseQuickFilter()
     {
         IsQuickFilterOpen = false;
         QuickFindQuery = string.Empty;
         SearchWholeCatalog = false;
+    }
+
+    /// <summary>Toolbar Find: closes an open quick-find bar, otherwise opens it like <c>Ctrl+F</c>.</summary>
+    [RelayCommand]
+    private void ToggleQuickFilter()
+    {
+        if (IsQuickFilterOpen)
+        {
+            CloseQuickFilter();
+            return;
+        }
+
+        FindCatalog();
     }
 
     private bool CanOpenQuickFindResult() => SelectedQuickFindResult is not null;

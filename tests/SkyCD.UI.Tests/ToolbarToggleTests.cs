@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
@@ -7,6 +8,9 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Threading;
+using SkyCD.Documents;
+using SkyCD.Documents.Enum;
+using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Toolbars;
 using Xunit;
 
@@ -85,6 +89,42 @@ public class ToolbarToggleTests
         Assert.True(statusBar.IsChecked);
         Assert.Contains(":checked", statusBar.Classes);
         Assert.True(details.IsChecked);
+    }
+
+    [AvaloniaFact]
+    public void FindToolbarButton_GetsCheckedStateWhileQuickFindIsOpen()
+    {
+        CatalogDocument[] entries = [new() { Id = "disc", Name = "Disc", Type = CatalogDocumentType.Media }];
+        using var viewModel = MainWindowViewModel.CreateForInMemoryCatalog(entries);
+
+        var findDescriptor = Assert.Single(viewModel.ToolbarCommands(), command => command.Id == ToolbarCommandIds.Find);
+        var toolbar = new ClassicToolbar();
+        var button = new ClassicToolbarButton
+        {
+            CommandId = findDescriptor.Id,
+            Command = findDescriptor.Command,
+            IsToggle = findDescriptor.IsToggle,
+            IsChecked = findDescriptor.IsChecked
+        };
+        toolbar.Items.Add(button);
+        viewModel.ToolbarStateChanged += (_, _) =>
+        {
+            foreach (var command in viewModel.ToolbarCommands())
+            {
+                if (command.IsToggle) toolbar.SetCheckedState(command.Id, command.IsChecked);
+            }
+        };
+
+        Assert.False(button.IsChecked);
+
+        viewModel.FindCatalogCommand.Execute(null);
+        Assert.True(button.IsChecked);
+        Assert.Contains(":checked", button.Classes);
+
+        button.Command!.Execute(button.CommandParameter);
+        Assert.False(viewModel.IsQuickFilterOpen);
+        Assert.False(button.IsChecked);
+        Assert.DoesNotContain(":checked", button.Classes);
     }
 
     [AvaloniaFact]

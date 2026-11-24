@@ -4100,7 +4100,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     },
                     Separator(),
                     new MainMenuItemViewModel
-                        { Header = LocalizationService.Current.Get(TextKeys.Find), HotKey = "Ctrl+F", InputGesture = "Ctrl+F", Command = FindCatalogCommand },
+                    {
+                        Key = "edit_find",
+                        Header = LocalizationService.Current.Get(TextKeys.Find),
+                        HotKey = "Ctrl+F",
+                        InputGesture = "Ctrl+F",
+                        Icon = CheckedIcon(IsQuickFilterOpen),
+                        Command = FindCatalogCommand
+                    },
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.AdvancedFind), Command = AdvancedFindCatalogCommand }
                 ]
@@ -4347,6 +4354,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         SetMenuChecked(byKey, "statusbar", IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar));
         SetMenuChecked(byKey, "previewpane", IsPreviewPaneVisible, LocalizationService.Current.Get(PreviewKeys.PreviewPane));
+        SetMenuChecked(byKey, "edit_find", IsQuickFilterOpen, LocalizationService.Current.Get(TextKeys.Find));
         SetMenuChecked(byKey, "view_tiles", IsTilesViewChecked, LocalizationService.Current.Get(TextKeys.Tiles));
         SetMenuChecked(byKey, "view_small", IsSmallIconsViewChecked, LocalizationService.Current.Get(TextKeys.SmallIcons2));
         SetMenuChecked(byKey, "view_large", IsLargeIconsViewChecked, LocalizationService.Current.Get(TextKeys.LargeIconsMenu));

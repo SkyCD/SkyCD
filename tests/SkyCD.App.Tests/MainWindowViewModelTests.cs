@@ -141,6 +141,22 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void EditMenu_FindItemTracksTheQuickFindBarState()
+    {
+        var vm = CreateViewModel();
+        var findItem = Assert.Single(vm.EditMenuItems, item => item.Key == "edit_find");
+
+        Assert.Equal("\u00A0", findItem.Icon);
+
+        vm.FindCatalogCommand.Execute(null);
+        Assert.True(vm.IsQuickFilterOpen);
+        Assert.Equal("✓", findItem.Icon);
+
+        vm.CloseQuickFilterCommand.Execute(null);
+        Assert.Equal("\u00A0", findItem.Icon);
+    }
+
+    [Fact]
     public void SetSortModeCommand_AppliesRequestedSortMode()
     {
         var vm = CreateViewModel();
