@@ -1708,13 +1708,18 @@ public partial class MainWindow : Window
 
     private async void OnAboutRequested(object? sender, EventArgs e)
     {
+        var options = LoadAppOptions();
         var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(typeof(App).Assembly);
+        dialogVm.RestoreSelectedTab(options.AboutTabKey);
         var dialog = new AboutWindow
         {
             DataContext = dialogVm
         };
 
         await dialog.ShowDialog<bool?>(this);
+
+        options.AboutTabKey = dialogVm.SelectedTabKey;
+        SaveAppOptions(options);
     }
 
     private async Task ShowAddProgressAsync(AddToListDialogViewModel addDialog)

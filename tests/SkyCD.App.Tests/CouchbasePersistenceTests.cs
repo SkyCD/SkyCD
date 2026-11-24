@@ -50,6 +50,23 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
+    public void AboutTabKey_PersistsAcrossRepositoryInstances()
+    {
+        using var provider = new Container();
+        new CouchbaseServiceRegistrator().RegisterServices(provider);
+        var repositories = provider.Resolve<RepositoryManager>();
+        var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
+        var options = optionsRepository.GetOrCreateAppOptions();
+        Assert.Null(options.AboutTabKey);
+        options.AboutTabKey = AboutDialogViewModel.LoadedAssembliesTabKey;
+        optionsRepository.Save(AppOptionsDocument.DocumentId, options);
+
+        var restored = optionsRepository.GetOrCreateAppOptions();
+
+        Assert.Equal(AboutDialogViewModel.LoadedAssembliesTabKey, restored.AboutTabKey);
+    }
+
+    [Fact]
     public void CustomProperties_PersistSettingsAndAcceptedEditsAcrossRepositoryInstances()
     {
         using var provider = new Container();

@@ -31,7 +31,7 @@
         </StackPanel>
 
         <Grid RowDefinitions="*,Auto" RowSpacing="{DynamicResource SkySpaceMd}">
-            <TabControl Name="MainTabs">
+            <TabControl Name="MainTabs" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.SystemInfo}}">
                     <StackPanel Spacing="{DynamicResource SkySpaceMd}">
                         <StackPanel Spacing="{DynamicResource SkySpaceXs}">
@@ -141,7 +141,7 @@
                         </ListBox>
                     </Grid>
                 </TabItem>
-                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}" IsSelected="True">
+                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}">
                     <Grid>
                         <Border x:Name="LicenseBox"
                                 BorderBrush="{DynamicResource ThemeBorderLowBrush}"
