@@ -20,8 +20,8 @@ namespace SkyCD.UI.Tests;
 
 /// <summary>
 /// Issues #823 and #826: the Add To List dialog keeps one fixed size while the source type is
-/// switched. The source content flexes; the tab strip, OK/Cancel row, and validation row stay
-/// anchored, and the bordered source column stretches to the bottom of the content area.
+/// switched. The source content flexes; the OK/Cancel row and the validation row stay anchored,
+/// and the bordered source column stretches to the bottom of the content area.
 /// </summary>
 public sealed class AddToListWindowLayoutTests
 {
@@ -106,7 +106,7 @@ public sealed class AddToListWindowLayoutTests
 
         var sourceHost = fixture.Window.FindControl<Grid>("SourceDetailsPanel")!;
         var sourceViewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
-        var tabStrip = fixture.Root.GetVisualDescendants().OfType<TabControl>().Single();
+        var contentColumn = fixture.Window.FindControl<Grid>("ContentColumn")!;
         var ok = FindButton(fixture.Root, UiKeys.Ok);
         var cancel = FindButton(fixture.Root, UiKeys.Cancel);
         var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
@@ -122,7 +122,7 @@ public sealed class AddToListWindowLayoutTests
             // Issue #942: the source fields scroll inside their viewport, so the viewport is what has
             // to stay between the name block and the actions.
             var sourceBounds = BoundsRelativeTo(sourceViewer, fixture.Root);
-            var tabBounds = BoundsRelativeTo(tabStrip, fixture.Root);
+            var columnBounds = BoundsRelativeTo(contentColumn, fixture.Root);
 
             // Switching only swaps content: the window neither moves nor resizes, and the content fits.
             Assert.Equal(initialBounds, window.Bounds);
@@ -142,9 +142,9 @@ public sealed class AddToListWindowLayoutTests
             Assert.True(message.Bounds.Height >= 14, $"{mode}: validation row collapsed to {message.Bounds.Height}.");
             Assert.True(messageBounds.Top >= okBounds.Bottom, $"{mode}: validation row overlaps the actions.");
             Assert.Equal(fixture.Root.Bounds.Height, messageBounds.Bottom, 1);
-            Assert.Equal(tabBounds.Bottom - 2, okBounds.Bottom, 1);
-            Assert.Equal(tabBounds.Bottom - 2, cancelBounds.Bottom, 1);
-            Assert.Equal(tabBounds.Bottom, messageBounds.Top, 1);
+            Assert.Equal(columnBounds.Bottom - 2, okBounds.Bottom, 1);
+            Assert.Equal(columnBounds.Bottom - 2, cancelBounds.Bottom, 1);
+            Assert.Equal(columnBounds.Bottom, messageBounds.Top, 1);
         }
     }
 
@@ -159,13 +159,13 @@ public sealed class AddToListWindowLayoutTests
             LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo(cultureName));
             using var fixture = ShowWindow(AddToListSourceMode.Media);
             var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
-            var tabStrip = fixture.Root.GetVisualDescendants().OfType<TabControl>().Single();
+            var contentColumn = fixture.Window.FindControl<Grid>("ContentColumn")!;
 
             var panelBounds = BoundsRelativeTo(panel, fixture.Root);
-            var tabBounds = BoundsRelativeTo(tabStrip, fixture.Root);
+            var columnBounds = BoundsRelativeTo(contentColumn, fixture.Root);
 
             Assert.Equal(0, panelBounds.Top, 1);
-            Assert.Equal(tabBounds.Bottom, panelBounds.Bottom, 1);
+            Assert.Equal(columnBounds.Bottom, panelBounds.Bottom, 1);
             Assert.True(panelBounds.Height > 4 * 68,
                 $"{cultureName}: source panel height {panelBounds.Height} does not extend past its buttons.");
         }
@@ -218,7 +218,7 @@ public sealed class AddToListWindowLayoutTests
         Assert.Null(viewModel.ValidationMessage);
 
         var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
-        var tabStrip = fixture.Root.GetVisualDescendants().OfType<TabControl>().Single();
+        var contentColumn = fixture.Window.FindControl<Grid>("ContentColumn")!;
         var initialBounds = BoundsRelativeTo(panel, fixture.Root);
 
         foreach (var mode in SourceModes)
@@ -227,14 +227,14 @@ public sealed class AddToListWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
 
             var panelBounds = BoundsRelativeTo(panel, fixture.Root);
-            var tabBounds = BoundsRelativeTo(tabStrip, fixture.Root);
+            var columnBounds = BoundsRelativeTo(contentColumn, fixture.Root);
 
             Assert.True(Math.Abs(initialBounds.Top - panelBounds.Top) <= 1,
                 $"{mode}: panel top moved from {initialBounds.Top} to {panelBounds.Top}.");
             Assert.True(Math.Abs(initialBounds.Height - panelBounds.Height) <= 1,
                 $"{mode}: panel height changed from {initialBounds.Height} to {panelBounds.Height}.");
-            Assert.True(Math.Abs(tabBounds.Bottom - panelBounds.Bottom) <= 1,
-                $"{mode}: panel bottom {panelBounds.Bottom} does not match the tab strip bottom {tabBounds.Bottom}.");
+            Assert.True(Math.Abs(columnBounds.Bottom - panelBounds.Bottom) <= 1,
+                $"{mode}: panel bottom {panelBounds.Bottom} does not match the content bottom {columnBounds.Bottom}.");
         }
     }
 

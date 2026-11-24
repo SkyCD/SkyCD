@@ -37,32 +37,46 @@ public class AddToListWindowLayoutTests
         var nameBlock = GetNameBlock(form);
         var sourceRegion = GetSourceRegion(form);
         var column = GetContentColumn();
-        var tabHost = Assert.Single(column.Elements(Avalonia + "Grid"),
-            grid => (string?)grid.Attribute(Xaml2006 + "Name") == "SourceTabHost");
+        var destinationSection = GetDestinationSection(column);
 
-        // The name/Location block, the source panel and the tab strip each own a row.
+        // The name/Location block, the source panel and the destination choices each own a row.
         Assert.Equal("0", GridRowOf(nameBlock));
         Assert.Equal("1", GridRowOf(sourceRegion));
-        Assert.Equal("2", (string?)tabHost.Attribute("Grid.Row"));
+        Assert.Equal("2", (string?)destinationSection.Attribute("Grid.Row"));
         Assert.Contains("UiKeys.SelectMediaName", nameBlock.ToString(), StringComparison.Ordinal);
         Assert.Contains("UiKeys.Location", nameBlock.ToString(), StringComparison.Ordinal);
-        Assert.Contains(tabHost.Descendants(Avalonia + "Button"),
+        Assert.Contains(destinationSection.Descendants(Avalonia + "Button"),
             button => (string?)button.Attribute("Command") == "{Binding ConfirmCommand}");
     }
 
     [Fact]
-    public void ContentColumn_KeepsTheTabStripAnchoredToTheBottom()
+    public void ContentColumn_KeepsTheActionsAnchoredToTheBottom()
     {
         var column = GetContentColumn();
 
-        // The star row between the fields and the tab strip absorbs the fixed window height, so the
+        // The star row between the fields and the action row absorbs the fixed window height, so the
         // actions stay pinned to the bottom exactly as #823/#826 established.
         Assert.Equal("Auto,*,Auto", (string?)column.Attribute("RowDefinitions"));
-        var tabHost = Assert.Single(column.Elements(Avalonia + "Grid"),
-            grid => (string?)grid.Attribute(Xaml2006 + "Name") == "SourceTabHost");
-        Assert.Equal("2", (string?)tabHost.Attribute("Grid.Row"));
+        Assert.Equal("2", (string?)GetDestinationSection(column).Attribute("Grid.Row"));
         Assert.Single(column.Elements(Avalonia + "Grid"),
             grid => (string?)grid.Attribute(Xaml2006 + "Name") == "FormFieldsGrid");
+    }
+
+    [Fact]
+    public void DestinationRadios_RenderDirectlyWithoutATabStrip()
+    {
+        var column = GetContentColumn();
+        var destinationSection = GetDestinationSection(column);
+
+        Assert.DoesNotContain(column.Descendants(Avalonia + "TabControl"), _ => true);
+        Assert.DoesNotContain(column.Descendants(Avalonia + "TabItem"), _ => true);
+        Assert.DoesNotContain(column.Elements(Avalonia + "Grid"),
+            grid => (string?)grid.Attribute(Xaml2006 + "Name") == "SourceTabHost");
+
+        var radios = destinationSection.Descendants(Avalonia + "RadioButton").ToList();
+        Assert.Equal(2, radios.Count);
+        Assert.Contains(radios, radio => (string?)radio.Attribute("CommandParameter") == "NewMedia");
+        Assert.Contains(radios, radio => (string?)radio.Attribute("CommandParameter") == "SelectedFolder");
     }
 
     [Fact]
@@ -140,6 +154,10 @@ public class AddToListWindowLayoutTests
 
     private static XElement GetContentColumn() => Assert.Single(GetRootGrid().Elements(Avalonia + "Grid"),
         grid => (string?)grid.Attribute(Xaml2006 + "Name") == "ContentColumn");
+
+    private static XElement GetDestinationSection(XElement column) =>
+        Assert.Single(column.Elements(Avalonia + "Grid"),
+            grid => (string?)grid.Attribute(Xaml2006 + "Name") == "DestinationSection");
 
     private static XElement GetNameBlock(XElement form) =>
         Assert.Single(form.Elements(Avalonia + "StackPanel"));
