@@ -27,6 +27,7 @@ internal static class CabTestArchiveBuilder
         public bool OmitCkSignature { get; init; }
         public bool PrefixedNames { get; init; }
         public int PrefixLength { get; init; }
+        public bool Utf8Names { get; init; }
         public int VersionMinor { get; init; } = 3;
     }
 
@@ -93,6 +94,10 @@ internal static class CabTestArchiveBuilder
     public static MemoryStream CreateStoredWithPrefixedNames(IReadOnlyList<Member> members) =>
         CreateStored(members, new Options { PrefixedNames = true, PrefixLength = 2, VersionMinor = 1 });
 
+    /// <summary>Creates a stored cabinet whose names are marked as UTF-8 in the file attributes.</summary>
+    public static MemoryStream CreateStoredWithUtf8Names(IReadOnlyList<Member> members) =>
+        CreateStored(members, new Options { Utf8Names = true });
+
 
     private static MemoryStream Build(int compressionType, List<List<Member>> folderMembers, Options options)
     {
@@ -129,7 +134,26 @@ internal static class CabTestArchiveBuilder
 
         var fileCount = folderMembers.Sum(folder => folder.Count);
         var folderCount = plans.Count;
-        var coffFiles = 36 + folderCount * 8;
+
+        // The adjacent cabinet names sit directly after the fixed header, as the format and its readers expect.
+        uint prevOffset = 0;
+        uint nextOffset = 0;
+        var headerExtra = new MemoryStream();
+        if (options.PrevCabinet is not null)
+        {
+            prevOffset = 36;
+            WriteZString(headerExtra, options.PrevCabinet);
+            WriteZString(headerExtra, string.Empty);
+        }
+
+        if (options.NextCabinet is not null)
+        {
+            nextOffset = (uint)(36 + headerExtra.Length);
+            WriteZString(headerExtra, options.NextCabinet);
+            WriteZString(headerExtra, string.Empty);
+        }
+
+        var headerExtraBytes = headerExtra.ToArray();
         var nameBytes = new List<(string Name, byte[] Bytes)>(fileCount);
         foreach (var plan in plans)
         {
@@ -140,6 +164,7 @@ internal static class CabTestArchiveBuilder
         }
 
         var fileRecordsSize = nameBytes.Sum(entry => 16 + entry.Bytes.Length + 1);
+        var coffFiles = 36 + headerExtraBytes.Length + folderCount * 8;
         var coffCabStart = coffFiles + fileRecordsSize;
 
         var payload = new MemoryStream();
@@ -154,41 +179,31 @@ internal static class CabTestArchiveBuilder
         var cbCabinet = coffCabStart + payloadBytes.Length;
         var prefixBytes = new byte[36];
         WriteAscii(prefixBytes, 0, "MSCF");
+        WriteUInt32(prefixBytes, 4, prevOffset);
         WriteUInt32(prefixBytes, 8, (uint)cbCabinet);
+        WriteUInt32(prefixBytes, 12, nextOffset);
         WriteUInt32(prefixBytes, 16, (uint)coffFiles);
         WriteUInt32(prefixBytes, 20, (uint)coffCabStart);
         prefixBytes[24] = (byte)options.VersionMinor;
         prefixBytes[25] = 1;
         WriteUInt16(prefixBytes, 26, (ushort)folderCount);
         WriteUInt16(prefixBytes, 28, (ushort)fileCount);
-        WriteUInt16(prefixBytes, 30, 0);
+        WriteUInt16(prefixBytes, 30,
+            (ushort)((options.PrevCabinet is null ? 0 : 1) | (options.NextCabinet is null ? 0 : 2)));
         WriteUInt16(prefixBytes, 32, 0x1234);
         WriteUInt16(prefixBytes, 34, 0);
 
-        var trailing = new MemoryStream();
-        if (options.PrevCabinet is not null)
-        {
-            WriteUInt32(prefixBytes, 4, (uint)(cbCabinet + trailing.Length));
-            trailing.Write(Encoding.Latin1.GetBytes(options.PrevCabinet));
-            trailing.WriteByte(0);
-        }
-
-        if (options.NextCabinet is not null)
-        {
-            WriteUInt32(prefixBytes, 12, (uint)(cbCabinet + trailing.Length));
-            trailing.Write(Encoding.Latin1.GetBytes(options.NextCabinet));
-            trailing.WriteByte(0);
-        }
-
         var cabinet = new MemoryStream();
         cabinet.Write(prefixBytes);
-        foreach (var plan in plans)
+        cabinet.Write(headerExtraBytes);
+        for (var folderIndex = 0; folderIndex < plans.Count; folderIndex++)
         {
             var record = new byte[8];
-            WriteUInt16(record, 0, (ushort)(options.CompressionTypeOverride >= 0
+            WriteUInt32(record, 0, (uint)(coffCabStart + folderOffsets[folderIndex]));
+            WriteUInt16(record, 4, (ushort)CountFrames(plans[folderIndex].Data));
+            WriteUInt16(record, 6, (ushort)(options.CompressionTypeOverride >= 0
                 ? options.CompressionTypeOverride
                 : compressionType));
-            WriteUInt16(record, 2, (ushort)CountFrames(plan.Data));
             cabinet.Write(record);
         }
 
@@ -205,6 +220,7 @@ internal static class CabTestArchiveBuilder
                 WriteUInt16(record, 8, (ushort)folderIndex);
                 WriteUInt16(record, 10, (ushort)((46 << 9) | (3 << 5) | 21));
                 WriteUInt16(record, 12, (ushort)((12 << 11) | (34 << 5) | 5));
+                WriteUInt16(record, 14, (ushort)(options.Utf8Names ? 0x80 : 0));
                 cabinet.Write(record);
                 cabinet.Write(nameBytes[nameIndex].Bytes);
                 cabinet.WriteByte(0);
@@ -214,7 +230,6 @@ internal static class CabTestArchiveBuilder
         }
 
         cabinet.Write(payloadBytes);
-        cabinet.Write(trailing.ToArray());
         cabinet.Position = 0;
         return cabinet;
     }
@@ -226,12 +241,12 @@ internal static class CabTestArchiveBuilder
         while (position + 8 <= data.Length && count < 65_535)
         {
             var cbData = data[position + 4] | (data[position + 5] << 8);
-            if (cbData < 8)
+            if (cbData <= 0)
             {
                 break;
             }
 
-            position += cbData;
+            position += 8 + cbData;
             count++;
         }
 
@@ -273,35 +288,51 @@ internal static class CabTestArchiveBuilder
 
     private static void WriteFrame(MemoryStream target, byte[] data, int uncompressedSize, bool checksum)
     {
-        var cbData = 8 + data.Length;
-        if (cbData > 0xFFFF)
+        var cbData = data.Length;
+        if (cbData > 0xFFFF - 8)
         {
             throw new InvalidOperationException("Test block exceeds the CFDATA limit.");
         }
 
         var header = new byte[8];
-        if (checksum)
-        {
-            WriteUInt32(header, 0, Checksum(data));
-        }
-
         WriteUInt16(header, 4, (ushort)cbData);
         WriteUInt16(header, 6, (ushort)Math.Min(uncompressedSize, 0xFFFF));
+        if (checksum)
+        {
+            // The checksum covers cbData and cbUncomp followed by the block data.
+            WriteUInt32(header, 0, Checksum(header.AsSpan(4, 4)) ^ Checksum(data));
+        }
         target.Write(header);
         target.Write(data);
     }
 
     /// <summary>Computes the CFDATA checksum used by cabinets that store one.</summary>
-    public static uint Checksum(byte[] data)
+    public static uint Checksum(byte[] data) => Checksum(data.AsSpan());
+
+    private static uint Checksum(ReadOnlySpan<byte> data)
     {
         uint csum = 0;
-        for (var index = 0; index < data.Length; index += 4)
+        var index = 0;
+        for (; index + 4 <= data.Length; index += 4)
         {
-            var value = (uint)(data[index]
-                               | (index + 1 < data.Length ? data[index + 1] << 8 : 0)
-                               | (index + 2 < data.Length ? data[index + 2] << 16 : 0)
-                               | (index + 3 < data.Length ? data[index + 3] << 24 : 0));
-            csum ^= value;
+            csum ^= (uint)(data[index]
+                           | (data[index + 1] << 8)
+                           | (data[index + 2] << 16)
+                           | (data[index + 3] << 24));
+        }
+
+        // [MS-CAB] 3.1: the last partial word is read backwards.
+        switch (data.Length - index)
+        {
+            case 3:
+                csum ^= (uint)((data[index] << 16) | (data[index + 1] << 8) | data[index + 2]);
+                break;
+            case 2:
+                csum ^= (uint)((data[index] << 8) | data[index + 1]);
+                break;
+            case 1:
+                csum ^= data[index];
+                break;
         }
 
         return csum;
@@ -321,6 +352,12 @@ internal static class CabTestArchiveBuilder
         prefix[0] = 0x21;
         prefix[1] = 0x00;
         return [.. prefix, .. bytes];
+    }
+
+    private static void WriteZString(MemoryStream target, string value)
+    {
+        target.Write(Encoding.Latin1.GetBytes(value));
+        target.WriteByte(0);
     }
 
     private static void WriteAscii(byte[] buffer, int offset, string text)

@@ -45,6 +45,17 @@ public sealed class AddingProgressWindowLayoutTests
             Assert.Contains(LocalizationService.Current.Get(UiKeys.AnalysisTime), texts);
             Assert.Contains("Reading source file...", texts);
 
+            // The active source is shown inline on the filtering line, not in a dedicated left column.
+            Assert.Contains(LocalizationService.Current.Get(UiKeys.FromFolder), texts);
+            var root = Assert.IsType<Grid>(window.Content);
+            Assert.Empty(root.ColumnDefinitions);
+
+            var sourceIcons = window.GetVisualDescendants().OfType<Image>()
+                .Where(image => image.Classes.Contains("source-icon"))
+                .ToList();
+            Assert.Equal(3, sourceIcons.Count);
+            Assert.Single(sourceIcons, image => image.IsVisible);
+
             var statValues = window.GetVisualDescendants().OfType<TextBlock>()
                 .Where(text => text.Classes.Contains("stat-value"))
                 .ToList();

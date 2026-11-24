@@ -33,7 +33,7 @@ extension-based and case-insensitive; the first match wins in this order:
 | 7 | 7-Zip | `.7z` | `SharpCompress` reader. |
 | 8 | RAR | `.rar` | `SharpCompress` reader with explicit multi-volume detection. |
 | 9 | LHA | `.lha`, `.lzh` | `Hst.Compression` decoder. |
-| 10 | CAB | `.cab` | Custom header parser and stored/MSZIP decoder. |
+| 10 | CAB | `.cab` | `RecursiveAI.OneArchive` reader for stored, MSZIP and LZX folders. |
 | 11 | ARJ | `.arj` | `SharpCompress` reader. |
 | 12 | ARC | `.arc` | Custom SEA ARC parser for stored and squashed entries. |
 | 13 | ACE | `.ace` | Custom header parser; stored entries only. |
@@ -104,9 +104,11 @@ so each file is listed exactly once.
 ### LHA and CAB
 
 LHA supports header levels 0, 1 and 2 with `-lh0-` and `-lh1-`/`-lh4-` through `-lh7-` methods; entries
-whose method has no decoder are listed but not extracted. CAB supports stored and MSZIP folders,
-including version 1.1 attribute prefixes and UTF-8 names; folded and LZX folders are listed but not
-extracted, and multi-volume cabinets return an empty set.
+whose method has no decoder are listed but not extracted. CAB uses the `RecursiveAI.OneArchive` reader,
+which decodes stored, MSZIP and LZX folders, including version 1.1 attribute prefixes and UTF-8 names.
+Quantum folders and entries that continue into another cabinet are listed but reported as
+`CAB_UNSUPPORTED`, and multi-volume cabinets return an empty set because their companion volumes are
+not available during a scan.
 
 ### ARJ and ARC
 
@@ -132,11 +134,13 @@ member size.
 
 - `SharpCompress` 0.50.8 (MIT) decodes 7-Zip, RAR, ARJ, bzip2, XZ and Zstandard.
 - `Hst.Compression` 1.0.104 (MIT) and its transitive `Hst.Core` 1.0.104 (MIT) decode LHA.
+- `RecursiveAI.OneArchive` 1.2.0 (MIT OR Apache-2.0) and its dependency-free transitive
+  `RecursiveAI.OneCompress` 1.2.0 (MIT OR Apache-2.0) decode CAB stored, MSZIP and LZX folders.
 - TAR, gzip, ZIP and ARC stored/squashed handling use the .NET 10 runtime and plugin code.
-- CAB, ACE, ZOO and the 7-Zip/ARJ/RAR header checks are implemented in the plugin.
+- ACE, ZOO and the 7-Zip/ARJ/RAR header checks are implemented in the plugin.
 
-All packages expose `PackageLicenseExpression` `MIT`, target `net10.0`, and pass the Trivy license
-gate in `docs/legal/dependency-policy.md`. `unace` and its .NET ports are GPL-licensed and therefore
+All packages expose a permissive `PackageLicenseExpression` (`MIT` or `MIT OR Apache-2.0`), target
+`net10.0`, and pass the Trivy license gate in `docs/legal/dependency-policy.md`. `unace` and its .NET ports are GPL-licensed and therefore
 rejected, which is why ACE ships a header parser without a decompressor, and no compliant maintained
 ZOO package exists, which is why the ZOO reader is a small custom implementation written from the
 public-domain format description.
