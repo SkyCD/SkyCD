@@ -13,6 +13,7 @@ using SkyCD.App.Views;
 using SkyCD.App.Marketplace;
 using SkyCD.App.Mcp;
 using SkyCD.App.PluginHost;
+using SkyCD.App.Plugins;
 using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
@@ -256,6 +257,7 @@ public partial class App : Avalonia.Application
             registrator.Register<OpenCatalogState>(Reuse.Singleton);
             registrator.Register<CatalogApiAdapter>(Reuse.Singleton);
             registrator.Register<PluginStorageApiFactory>(Reuse.Singleton);
+            registrator.Register<PluginRuntimeSynchronizer>(Reuse.Singleton);
             registrator.Register<MainWindowViewModel>(Reuse.Singleton);
             registrator.Register<MainWindow>(Reuse.Singleton);
         });

@@ -24,6 +24,7 @@ using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.App.Icons;
 using SkyCD.App.Marketplace;
+using SkyCD.App.Plugins;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
@@ -71,6 +72,7 @@ public partial class MainWindow : Window
     private readonly VirtualCollectionDocumentRepository virtualCollectionRepository;
     private readonly PluginManager pluginManager;
     private readonly HostVersionProvider hostVersionProvider;
+    private readonly PluginRuntimeSynchronizer pluginRuntimeSynchronizer;
     private readonly ILogger<MainWindow> logger = ServiceProvider.Resolve<ILogger<MainWindow>>();
     private readonly OpenCatalogState openCatalogState;
     private readonly IMediaDriveProvider mediaDriveProvider;
@@ -91,7 +93,7 @@ public partial class MainWindow : Window
     public MainWindow(
         RepositoryManager repositoryManager,
         PluginManager pluginManager,
-        FileFormatManager fileFormatManager,
+        PluginRuntimeSynchronizer pluginRuntimeSynchronizer,
         PluginMarketplaceService pluginMarketplaceService,
         IPluginPackageUninstaller pluginUninstaller,
         OpenCatalogState openCatalogState,
@@ -112,8 +114,11 @@ public partial class MainWindow : Window
         virtualCollectionRepository =
             (VirtualCollectionDocumentRepository)repositoryManager.For<VirtualCollectionDocument>();
         this.pluginManager = pluginManager;
+        this.pluginRuntimeSynchronizer = pluginRuntimeSynchronizer;
         hostVersionProvider = ServiceProvider.Resolve<HostVersionProvider>();
-        this.fileFormatManager = fileFormatManager;
+        // File-format capabilities live in the plugin runtime container, never in the host container this
+        // window is resolved from; a constructor-injected facade would stay empty for the whole session.
+        fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
         scanCompletionService = new ScanCompletionService(
             mediaEjector,
             new DesktopMainWindowLocator(),
@@ -1577,6 +1582,18 @@ public partial class MainWindow : Window
             statusVariantRepository.ReplaceAll(e.Dialog.GetStatusVariants());
             scanExclusionRuleRepository.ReplaceAll(e.Dialog.GetScanExclusionRules());
             aiScanExclusionRepository.ReplaceAll(e.Dialog.GetAiScanExclusions());
+            // A marketplace install staged in this dialog is invisible to discovery until it is applied, so
+            // the availability refresh below would otherwise miss a plugin installed without a restart.
+            try
+            {
+                await pluginRuntimeSynchronizer.ApplyPendingInstallsAsync();
+            }
+            catch (Exception exception)
+            {
+                // A broken package must not crash the app from this async void handler; the remaining
+                // settings still apply and the failed install keeps its state for the plugin list.
+                logger.LogWarning(exception, "Applying staged plugin installs failed; the active plugin set is unchanged.");
+            }
             pluginManager.SavePluginEnabledStates(pluginStates);
             SyncPluginRuntimeState();
             ApplyLanguage(options.Language);
@@ -2108,18 +2125,11 @@ public partial class MainWindow : Window
     private void SyncPluginRuntimeState()
     {
         var options = appOptionsRepository.GetOrCreateAppOptions();
-        var resolvedPluginPath = ResolvePluginDiscoveryPath(options.PluginPath);
+        var resolvedPluginPath = PluginRuntimeSynchronizer.ResolveDiscoveryPath(options.PluginPath);
         options.PluginPath = resolvedPluginPath;
         SaveAppOptions(options);
 
-        pluginManager.Discover(resolvedPluginPath, hostVersionProvider.Current);
-
-        ServiceProvider.ReregisterPluginsService();
-        // Re-discovery builds fresh capability instances; without re-injection they would resolve from the
-        // new container without the host APIs (catalog repository, dialogs, storage) they depend on.
-        (Application.Current as App)?.InitializePluginConsumers(pluginManager);
-        ServiceProvider.Resolve<PluginConfigurationManager>().RefreshConsumers();
-        fileFormatManager = ServiceProvider.Resolve<FileFormatManager>();
+        fileFormatManager = pluginRuntimeSynchronizer.Synchronize(resolvedPluginPath);
         var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
         descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
 
@@ -2132,8 +2142,9 @@ public partial class MainWindow : Window
                 ServiceProvider.Resolve<IndexWorkItemSequence>(),
                 ServiceProvider.Resolve<IAudioCdMetadataProvider>());
             viewModel.RefreshDescriptionServices(descriptionManager);
-            PushFileFormatAvailability();
         }
+
+        PushFileFormatAvailability();
     }
 
     private void EnsureFileFormatProvidersLoaded()
@@ -2160,35 +2171,7 @@ public partial class MainWindow : Window
 
     private void PushFileFormatAvailability()
     {
-        if (DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.SetFileFormatAvailability(
-                fileFormatManager.GetOpenFormats().Count > 0,
-                fileFormatManager.GetSaveFormats().Count > 0);
-        }
-    }
-
-    private static string ResolvePluginDiscoveryPath(string? configuredPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configuredPath) && Directory.Exists(configuredPath))
-        {
-            return configuredPath;
-        }
-
-        var baseDirPlugins = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Plugins"));
-        if (Directory.Exists(baseDirPlugins))
-        {
-            return baseDirPlugins;
-        }
-
-        var current = Directory.GetCurrentDirectory();
-        var repoPlugins = Path.GetFullPath(Path.Combine(current, "Plugins"));
-        if (Directory.Exists(repoPlugins))
-        {
-            return repoPlugins;
-        }
-
-        return configuredPath ?? string.Empty;
+        PluginRuntimeSynchronizer.PushAvailability(DataContext as MainWindowViewModel, fileFormatManager);
     }
 
     private static string? ResolveImportedName(AddToListDialogViewModel dialogVm)
