@@ -204,6 +204,148 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SortByColumnCommand_TogglesDirectionForActiveColumnAndStartsAscending()
+    {
+        var vm = CreateViewModel();
+
+        Assert.Equal("Name", vm.CurrentSortMode);
+        Assert.False(vm.IsSortDescending);
+
+        vm.SortByColumnCommand.Execute(DetailsColumnsCatalog.NameId);
+        Assert.Equal("Name", vm.CurrentSortMode);
+        Assert.True(vm.IsSortDescending);
+
+        vm.SortByColumnCommand.Execute(DetailsColumnsCatalog.SizeId);
+        Assert.Equal("Size", vm.CurrentSortMode);
+        Assert.False(vm.IsSortDescending);
+        Assert.True(vm.IsSortBySizeChecked);
+        Assert.False(vm.IsSortByNameChecked);
+    }
+
+    [Fact]
+    public void SortByColumnCommand_MovesArrangeCheckmarkInCachedMenus()
+    {
+        var vm = CreateViewModel();
+
+        vm.SortByColumnCommand.Execute(DetailsColumnsCatalog.TypeId);
+
+        Assert.Equal("✓", SingleByKey(vm.ViewMenuItems, "sort_type").Icon);
+        Assert.Equal("\u00A0", SingleByKey(vm.ViewMenuItems, "sort_name").Icon);
+        Assert.Equal("✓", SingleByKey(vm.BrowserContextMenuItems, "sort_type").Icon);
+        Assert.Equal("✓", SingleByKey(vm.TreeContextMenuItems, "sort_type").Icon);
+    }
+
+    [Fact]
+    public void ArrangeMenus_OfferEverySortableColumn()
+    {
+        var vm = CreateViewModel();
+
+        var expectedKeys = DetailsColumnsCatalog.All.Select(definition => "sort_" + definition.Id).ToList();
+        var actualKeys = FlattenMenuItems(vm.TreeContextMenuItems)
+            .Select(item => item.Key)
+            .OfType<string>()
+            .Where(key => key.StartsWith("sort_", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(expectedKeys, actualKeys);
+    }
+
+    [Fact]
+    public void SortByColumnCommand_OrdersBySizeInBothDirections()
+    {
+        var vm = CreateTwoFileCatalog();
+
+        vm.SortByColumnCommand.Execute(DetailsColumnsCatalog.SizeId);
+        Assert.False(vm.IsSortDescending);
+        Assert.Equal(new[] { "Small.dat", "Big.dat" }, vm.BrowserItems.Select(item => item.Name));
+
+        vm.SortByColumnCommand.Execute(DetailsColumnsCatalog.SizeId);
+        Assert.True(vm.IsSortDescending);
+        Assert.Equal(new[] { "Big.dat", "Small.dat" }, vm.BrowserItems.Select(item => item.Name));
+    }
+
+    [Fact]
+    public void BrowserItems_UseNaturalNameOrderWithFoldersFirst()
+    {
+        var vm = MainWindowViewModel.CreateForInMemoryCatalog(
+        [
+            new CatalogDocument
+            {
+                Id = "root", Name = "Root", Type = CatalogDocumentType.Folder, ChildrenCount = 4
+            },
+            new CatalogDocument
+            {
+                Id = "zeta-folder", Name = "Zeta", ParentId = "root", Type = CatalogDocumentType.Folder, ChildrenCount = 0
+            },
+            new CatalogDocument
+            {
+                Id = "alpha", Name = "Alpha.txt", ParentId = "root", Type = CatalogDocumentType.File, Size = 1
+            },
+            new CatalogDocument
+            {
+                Id = "track2", Name = "Track 2.txt", ParentId = "root", Type = CatalogDocumentType.File, Size = 1
+            },
+            new CatalogDocument
+            {
+                Id = "track10", Name = "Track 10.txt", ParentId = "root", Type = CatalogDocumentType.File, Size = 1
+            }
+        ]);
+
+        Assert.Equal(new[] { "Zeta", "Alpha.txt", "Track 2.txt", "Track 10.txt" },
+            vm.BrowserItems.Select(item => item.Name));
+    }
+
+    [Fact]
+    public void SortDirection_SurvivesFolderNavigation()
+    {
+        var vm = CreateViewModel();
+        var moviesNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "movies");
+        var musicNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "music");
+
+        vm.SelectedTreeNode = moviesNode;
+        vm.SortByColumnCommand.Execute(DetailsColumnsCatalog.NameId);
+        Assert.True(vm.IsSortDescending);
+        Assert.Equal("Interstellar.mkv", vm.BrowserItems[0].Name);
+
+        vm.SelectedTreeNode = musicNode;
+        vm.SelectedTreeNode = moviesNode;
+
+        Assert.True(vm.IsSortDescending);
+        Assert.Equal("Interstellar.mkv", vm.BrowserItems[0].Name);
+    }
+
+    [Fact]
+    public void ApplySessionState_RestoresSortDirection()
+    {
+        var vm = CreateTwoFileCatalog();
+
+        vm.ApplySessionState(BrowserViewMode.Details, DetailsColumnsCatalog.SizeId, true, true);
+
+        Assert.Equal("Size", vm.CurrentSortMode);
+        Assert.True(vm.IsSortDescending);
+        Assert.Equal(new[] { "Big.dat", "Small.dat" }, vm.BrowserItems.Select(item => item.Name));
+    }
+
+    private static MainWindowViewModel CreateTwoFileCatalog()
+    {
+        return MainWindowViewModel.CreateForInMemoryCatalog(
+        [
+            new CatalogDocument
+            {
+                Id = "root", Name = "Root", Type = CatalogDocumentType.Folder, ChildrenCount = 2
+            },
+            new CatalogDocument
+            {
+                Id = "small", Name = "Small.dat", ParentId = "root", Type = CatalogDocumentType.File, Size = 100
+            },
+            new CatalogDocument
+            {
+                Id = "big", Name = "Big.dat", ParentId = "root", Type = CatalogDocumentType.File, Size = 900
+            }
+        ]);
+    }
+
+    [Fact]
     public void SetViewModeCommand_UpdatesDerivedLayoutFlags()
     {
         var vm = CreateViewModel();
