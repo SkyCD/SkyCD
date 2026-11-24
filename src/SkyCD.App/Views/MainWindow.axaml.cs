@@ -1457,21 +1457,23 @@ public partial class MainWindow : Window
         var targetPath = saveAs ? null : vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            var fileTypeChoices = fileFormatManager.GetSaveFilters()
-                .ToFilePickerTypes(
-                    allSupportedFilesLabel: null,
-                    allFilesLabel: saveAs ? PickerLocalizer["AllFiles"].Value : null);
-            var defaultExtension = fileFormatManager.GetSaveFormats().Any(format => format.FormatId == "skycd-json")
-                ? "json"
-                : fileFormatManager.GetPreferredSaveExtension();
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var options = CatalogSavePicker.Create(
+                ensureFileFormatManager: () =>
+                {
+                    EnsureFileFormatProvidersLoaded();
+                    return fileFormatManager;
+                },
+                saveAs,
+                LocalizationService.Current.Get(saveAs ? TextKeys.SaveCatalogAs : TextKeys.SaveCatalog),
+                saveAs ? PickerLocalizer["AllFiles"].Value : null);
+            if (options is null)
             {
-                Title = LocalizationService.Current.Get(saveAs ? TextKeys.SaveCatalogAs : TextKeys.SaveCatalog),
-                SuggestedFileName = $"catalog.{defaultExtension}",
-                DefaultExtension = defaultExtension,
-                FileTypeChoices = fileTypeChoices
-            });
+                vm.StatusText = LocalizationService.Current.Get(
+                    TextKeys.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings);
+                return false;
+            }
 
+            var file = await StorageProvider.SaveFilePickerAsync(options);
             targetPath = file?.TryGetLocalPath();
         }
 

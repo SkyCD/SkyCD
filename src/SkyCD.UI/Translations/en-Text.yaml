@@ -113,6 +113,7 @@ text.FailedToOpenCatalogPluginReadError: "Failed to open catalog: plugin read er
 text.FailedToOpenCatalog: "Failed to open catalog: {0}"
 text.SaveCatalog: "Save catalog"
 text.FailedToSaveCatalog: "Failed to save catalog: {0}"
+text.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings: "Failed to save catalog: no writable file format is available. Check plugin settings."
 text.SaveCatalogAs: "Save catalog as"
 text.ReadingDirectoryFromRemoteServer: "Reading directory from remote server..."
 text.RemoteSchemeNotSupported: "The remote protocol '{0}' is not supported."
