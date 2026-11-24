@@ -15,6 +15,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using SkyCD.UI.Controls.Preview;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.UI.Controls.Lists;
 
@@ -83,6 +84,14 @@ public partial class BrowserItemsView : UserControl
     public static readonly StyledProperty<IEnumerable<BrowserDetailsColumn>?> DetailsColumnsProperty =
         AvaloniaProperty.Register<BrowserItemsView, IEnumerable<BrowserDetailsColumn>?>(nameof(DetailsColumns));
 
+    /// <summary>Id of the details column the browser is currently sorted by, or null when none is active.</summary>
+    public static readonly StyledProperty<string?> SortColumnIdProperty =
+        AvaloniaProperty.Register<BrowserItemsView, string?>(nameof(SortColumnId));
+
+    /// <summary>Whether the active details sort runs from highest to lowest.</summary>
+    public static readonly StyledProperty<bool> IsSortDescendingProperty =
+        AvaloniaProperty.Register<BrowserItemsView, bool>(nameof(IsSortDescending));
+
     public static readonly StyledProperty<IValueConverter?> IconConverterProperty =
         AvaloniaProperty.Register<BrowserItemsView, IValueConverter?>(nameof(IconConverter));
 
@@ -116,6 +125,9 @@ public partial class BrowserItemsView : UserControl
 
     /// <summary>Raised when a details header splitter drag finishes with a new width.</summary>
     public event EventHandler<DetailsColumnResizedEventArgs>? DetailsColumnResized;
+
+    /// <summary>Raised when a details header is clicked without starting a reorder drag.</summary>
+    public event EventHandler<DetailsColumnClickedEventArgs>? DetailsColumnClicked;
 
     /// <summary>Raised when Enter confirms the active inline rename edit.</summary>
     public event EventHandler? RenameCommitted;
@@ -252,6 +264,18 @@ public partial class BrowserItemsView : UserControl
         set => SetValue(DetailsColumnsProperty, value);
     }
 
+    public string? SortColumnId
+    {
+        get => GetValue(SortColumnIdProperty);
+        set => SetValue(SortColumnIdProperty, value);
+    }
+
+    public bool IsSortDescending
+    {
+        get => GetValue(IsSortDescendingProperty);
+        set => SetValue(IsSortDescendingProperty, value);
+    }
+
     public string? EditingItemId
     {
         get => GetValue(EditingItemIdProperty);
@@ -371,6 +395,10 @@ public partial class BrowserItemsView : UserControl
             UpdateListTemplate();
             UpdateIconGridTemplate();
             UpdateDetailsTemplate();
+        }
+        else if (change.Property == SortColumnIdProperty || change.Property == IsSortDescendingProperty)
+        {
+            UpdateDetailsHeader();
         }
         else if (change.Property == BrowserGridItemWidthProperty || change.Property == BrowserGridItemHeightProperty)
         {
@@ -546,6 +574,16 @@ public partial class BrowserItemsView : UserControl
         var detailsColumns = (DetailsColumns ?? []).ToList();
         detailsListView.HeaderContent = BuildDetailsHeaderContent(detailsColumns);
         detailsListView.RowTemplate = BuildDetailsRowTemplate(detailsColumns);
+    }
+
+    private void UpdateDetailsHeader()
+    {
+        if (detailsListView is null)
+        {
+            return;
+        }
+
+        detailsListView.HeaderContent = BuildDetailsHeaderContent((DetailsColumns ?? []).ToList());
     }
 
     private void UpdateListTemplate()
@@ -740,6 +778,8 @@ public partial class BrowserItemsView : UserControl
         var headerBorders = new List<Border>(detailsColumns.Count);
         var pointerDrag = new DetailsHeaderPointerDrag();
         var headerCursor = new Cursor(StandardCursorType.SizeAll);
+        var sortColumnId = SortColumnId;
+        var isSortDescending = IsSortDescending;
 
         for (var i = 0; i < detailsColumns.Count; i++)
         {
@@ -769,7 +809,29 @@ public partial class BrowserItemsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
-            cellBorder.Child = headerText;
+
+            var isSortColumn = !string.IsNullOrEmpty(column.Id) &&
+                               string.Equals(column.Id, sortColumnId, StringComparison.OrdinalIgnoreCase);
+            var headerPanel = new DockPanel { LastChildFill = true };
+            if (isSortColumn)
+            {
+                var indicator = new TextBlock
+                {
+                    Text = isSortDescending ? "\u25BC" : "\u25B2",
+                    FontSize = 9,
+                    Margin = new Thickness(4, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                indicator.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("ThemeAccentBrush"));
+                DockPanel.SetDock(indicator, Dock.Right);
+                headerPanel.Children.Add(indicator);
+            }
+
+            headerPanel.Children.Add(headerText);
+            cellBorder.Child = headerPanel;
+            ToolTip.SetTip(cellBorder, LocalizationService.Current.Get(isSortColumn && !isSortDescending
+                ? UiKeys.SortDescendingAction
+                : UiKeys.SortAscendingAction));
             cellGrid.Children.Add(cellBorder);
 
             var splitter = new Border
@@ -984,6 +1046,11 @@ public partial class BrowserItemsView : UserControl
                     DetailsColumnReordered?.Invoke(this, new DetailsColumnReorderedEventArgs(columnId, targetIndex));
                 }
 
+                e.Handled = true;
+            }
+            else if (!string.IsNullOrEmpty(columnId))
+            {
+                DetailsColumnClicked?.Invoke(this, new DetailsColumnClickedEventArgs(columnId));
                 e.Handled = true;
             }
         };

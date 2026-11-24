@@ -9,5 +9,8 @@ public sealed class BrowserOptionsDocument
 
     public string SortMode { get; set; } = "Name";
 
+    /// <summary>Whether the saved browser sort runs from highest to lowest.</summary>
+    public bool SortDescending { get; set; }
+
     public List<DetailsColumnSettingDocument> DetailsColumns { get; set; } = [];
 }
