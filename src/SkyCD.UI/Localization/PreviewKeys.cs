@@ -43,4 +43,7 @@ public static class PreviewKeys
 
     /// <summary>Prefix for optional per-field labels; the raw key is shown when no translation exists.</summary>
     public const string FieldPrefix = "core.metadata.";
+
+    /// <summary>Localized unit word appended to exact byte counts.</summary>
+    public const string BytesUnit = FieldPrefix + "bytes";
 }
