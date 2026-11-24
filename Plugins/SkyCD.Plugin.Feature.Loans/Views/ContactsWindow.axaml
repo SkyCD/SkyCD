@@ -10,8 +10,8 @@
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}">
-    <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceSm}" Margin="0,10,0,0">
+    <DockPanel Margin="{DynamicResource SkyInsetMd}">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceSm}" Margin="{DynamicResource SkyGapTopMd}">
             <TextBlock Text="{Binding StatusText}" Foreground="Gray" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Error}" Foreground="Firebrick" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -33,7 +33,7 @@
         <Grid ColumnDefinitions="200,10,*">
             <DockPanel Grid.Column="0">
                 <TextBlock DockPanel.Dock="Top" Text="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}"
-                           FontWeight="Bold" Margin="0,0,0,4" />
+                           FontWeight="Bold" Margin="{DynamicResource SkyGapBottomXs}" />
                 <ListBox x:Name="PART_ContactList"
                          ItemsSource="{Binding Contacts}"
                          SelectedItem="{Binding SelectedContact, Mode=TwoWay}"
@@ -51,7 +51,7 @@
 
             <TabControl Grid.Column="2">
                 <TabItem Header="{i18n:Translate {x:Static loans:LoansKeys.ContactDetails}}">
-                    <ScrollViewer Margin="8">
+                    <ScrollViewer Margin="{DynamicResource SkyInsetSm}">
                         <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NameLabel}}" />
@@ -107,11 +107,11 @@
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static loans:LoansKeys.ContactLentItems}}">
-                    <Grid Margin="8" RowDefinitions="Auto,*">
+                    <Grid Margin="{DynamicResource SkyInsetSm}" RowDefinitions="Auto,*">
                         <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.NoLentItems}}"
                                    TextWrapping="Wrap"
                                    IsVisible="{Binding !HasLentItems}" />
-                        <ListBox Grid.Row="1" Margin="0,6,0,0"
+                        <ListBox Grid.Row="1" Margin="{DynamicResource SkyGapTopSm}"
                                  ItemsSource="{Binding LentItems}"
                                  IsVisible="{Binding HasLentItems}"
                                  AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.ContactLentItems}}">

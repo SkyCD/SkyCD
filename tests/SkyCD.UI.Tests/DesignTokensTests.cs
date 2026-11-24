@@ -54,6 +54,52 @@ public sealed class DesignTokensTests
     }
 
     [AvaloniaFact]
+    public void Insets_OnlyMoveTheSidesTheirNameNames()
+    {
+        Assert.Equal(new Thickness(0, 2, 0, 0), Token("SkyGapTopXxs"));
+        Assert.Equal(new Thickness(0, 4, 0, 0), Token("SkyGapTopXs"));
+        Assert.Equal(new Thickness(0, 8, 0, 0), Token("SkyGapTopSm"));
+        Assert.Equal(new Thickness(0, 12, 0, 0), Token("SkyGapTopMd"));
+        Assert.Equal(new Thickness(0, 16, 0, 0), Token("SkyGapTopLg"));
+        Assert.Equal(new Thickness(0, 0, 0, 2), Token("SkyGapBottomXxs"));
+        Assert.Equal(new Thickness(0, 0, 0, 4), Token("SkyGapBottomXs"));
+        Assert.Equal(new Thickness(0, 0, 0, 8), Token("SkyGapBottomSm"));
+        Assert.Equal(new Thickness(0, 0, 0, 12), Token("SkyGapBottomMd"));
+        Assert.Equal(new Thickness(8, 0, 0, 0), Token("SkyGapLeftSm"));
+        Assert.Equal(new Thickness(0, 2, 0, 2), Token("SkyGapYXxs"));
+        Assert.Equal(new Thickness(0, 4, 0, 4), Token("SkyGapYXs"));
+        Assert.Equal(new Thickness(0, 8, 0, 8), Token("SkyGapYSm"));
+        Assert.Equal(new Thickness(0, 12, 0, 12), Token("SkyGapYMd"));
+        Assert.Equal(new Thickness(2, 0, 2, 0), Token("SkyGapXXxs"));
+        Assert.Equal(new Thickness(4, 0, 4, 0), Token("SkyGapXXs"));
+    }
+
+    [AvaloniaFact]
+    public void Insets_KeepThePairsThatLineMarkupDependsOn()
+    {
+        // The inline property editor cancels the cell padding it sits in, and the selected tab card
+        // overlaps exactly the 1px border it meets, so both stay tied to these values.
+        Assert.Equal(new Thickness(-8, -4), Token("SkyControlPaddingInverse"));
+        Assert.Equal(new Thickness(8, 4), Token("SkyControlPadding"));
+        Assert.Equal(new Thickness(0, -1, 0, 0), Token("SkyTabCardBorderOverlap"));
+        Assert.Equal(new Thickness(0, 0, 0, 1), Token("SkyTabCardHeaderHoverInset"));
+    }
+
+    [AvaloniaFact]
+    public void Insets_KeepTheEdgesThatTwoSurfacesShare()
+    {
+        // The card tab header text and the card content are one left edge (issue #997), so the header
+        // inset follows the shared content inset rather than its own ramp step.
+        var cardInset = Assert.IsType<Thickness>(Token("SkyInsetMd"));
+        var headerPadding = Assert.IsType<Thickness>(Token("SkyTabHeaderPadding"));
+        Assert.Equal(cardInset.Left, headerPadding.Left);
+        Assert.Equal(cardInset.Right, headerPadding.Right);
+
+        // The 25px toolbar leaves exactly 1px above and below the 22px buttons it holds (issue #412).
+        Assert.Equal(new Thickness(2, 1), Token("SkyToolbarPadding"));
+    }
+
+    [AvaloniaFact]
     public void About_UsesWindowPaddingAndTypeScaleTokens()
     {
         using var fixture = ShowAbout(ThemeVariant.Light);

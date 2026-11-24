@@ -11,23 +11,23 @@
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static i18n:UiKeys.SaveDataLoss}}">
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="{DynamicResource SkyInsetLg}">
         <TextBlock x:Name="IntroText"
                    TextWrapping="Wrap" />
 
         <Border Grid.Row="1"
-                Margin="0,12"
+                Margin="{DynamicResource SkyGapYMd}"
                 BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                 BorderThickness="1"
                 CornerRadius="4"
-                Padding="8">
+                Padding="{DynamicResource SkyInsetSm}">
             <ScrollViewer>
                 <ItemsControl x:Name="LossList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding}"
                                        TextWrapping="Wrap"
-                                       Margin="0,2" />
+                                       Margin="{DynamicResource SkyGapYXxs}" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

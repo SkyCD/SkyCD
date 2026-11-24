@@ -31,7 +31,7 @@
                                             ZIndex="1" />
                             <!-- The selected header covers the top border where it meets the page. -->
                             <Border Grid.Row="1"
-                                    Margin="0,-1,0,0"
+                                    Margin="{DynamicResource SkyTabCardBorderOverlap}"
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}">
@@ -57,12 +57,12 @@
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="1,1,1,0" />
                 <Setter Property="Foreground" Value="{DynamicResource TabHeaderForegroundBrush}" />
-                <Setter Property="Padding" Value="14,5,14,6" />
+                <Setter Property="Padding" Value="{DynamicResource SkyTabHeaderPadding}" />
                 <Setter Property="Template">
                     <ControlTemplate>
                         <Grid>
                             <Border Name="HoverBackground"
-                                    Margin="0,0,0,1"
+                                    Margin="{DynamicResource SkyTabCardHeaderHoverInset}"
                                     Background="{DynamicResource TabHeaderHoverBrush}"
                                     IsHitTestVisible="False"
                                     IsVisible="False" />
@@ -77,7 +77,7 @@
                                               ContentTemplate="{TemplateBinding HeaderTemplate}"
                                               RecognizesAccessKey="True" />
                             <Border Name="FocusOutline"
-                                    Margin="3"
+                                    Margin="{DynamicResource SkyInsetXs}"
                                     BorderBrush="{DynamicResource ThemeForegroundBrush}"
                                     BorderThickness="1"
                                     IsHitTestVisible="False"

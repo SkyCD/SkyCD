@@ -10,7 +10,7 @@
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static loans:LoansKeys.Loans}}">
     <DockPanel>
-        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="8"
+        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="{DynamicResource SkyInsetSm}"
                 Content="{i18n:Translate {x:Static i18n:UiKeys.Close}}" IsCancel="True" Click="CloseClicked" />
         <local:LoanEditor />
     </DockPanel>

@@ -6,7 +6,7 @@
              MinHeight="22">
     <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
             BorderThickness="0,1,0,0"
-            Padding="4,0"
+            Padding="{DynamicResource SkyGapXXs}"
             Height="22">
         <Grid ColumnDefinitions="*,Auto,Auto,Auto">
             <TextBlock Text="{Binding StatusText, ElementName=Root}"
@@ -15,7 +15,7 @@
             <TextBlock Grid.Column="1"
                        Text="{Binding ProgressText, ElementName=Root}"
                        VerticalAlignment="Center"
-                       Margin="4,0"
+                       Margin="{DynamicResource SkyGapXXs}"
                        IsVisible="{Binding IsProgressVisible, ElementName=Root}" />
             <ProgressBar Grid.Column="2"
                          Width="100"
@@ -24,7 +24,7 @@
                          Maximum="{Binding ProgressMax, ElementName=Root}"
                          Value="{Binding ProgressValue, ElementName=Root}"
                          VerticalAlignment="Center"
-                         Margin="2,0,4,0"
+                         Margin="{DynamicResource SkyGapXXs}"
                          IsVisible="{Binding IsProgressVisible, ElementName=Root}">
                 <ProgressBar.Foreground>
                     <DrawingBrush TileMode="Tile"
@@ -40,7 +40,7 @@
                 </ProgressBar.Foreground>
             </ProgressBar>
             <TextBlock Grid.Column="3"
-                       Margin="4,0,2,0"
+                       Margin="{DynamicResource SkyGapXXs}"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Right"
                        Foreground="{Binding McpStatusColor, ElementName=Root}"

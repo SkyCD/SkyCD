@@ -1,11 +1,14 @@
 <#
 .SYNOPSIS
-    Enforces design-token usage for spacing and typography.
+    Enforces design-token usage for spacing, insets and typography.
 
 .DESCRIPTION
     Fails when:
       - an AXAML file under src/ or Plugins/ declares a literal numeric FontSize,
         Spacing, RowSpacing or ColumnSpacing outside DesignTokens.axaml;
+      - an AXAML file under src/ or Plugins/ declares a literal numeric Margin or Padding,
+        as an attribute or as a Setter value; plain zero resets stay allowed because they
+        cancel an inset inherited from a shared style;
       - the About reference dialog uses a hard-coded hex color instead of a theme brush;
       - a {DynamicResource Sky...} reference has no matching key in DesignTokens.axaml.
 #>
@@ -17,6 +20,8 @@ $ErrorActionPreference = "Stop"
 
 $tokenFile = Join-Path $RepositoryRoot "src/SkyCD.App/Styles/DesignTokens.axaml"
 $literalPattern = '(FontSize|Spacing|RowSpacing|ColumnSpacing)="[0-9.]+"'
+$insetPattern = '(?:(?:[A-Za-z]+)\.)?(?:Margin|Padding)="(?<inset>[^"]*)"'
+$insetSetterPattern = 'Property="(?:(?:[A-Za-z]+)\.)?(?:Margin|Padding)" Value="(?<inset>[^"]*)"'
 $colorPattern = '#[0-9A-Fa-f]{6,8}'
 $referencePattern = 'DynamicResource (Sky[A-Za-z]+)'
 $definitionPattern = 'x:Key="(Sky[A-Za-z]+)"'
@@ -29,6 +34,14 @@ function Add-Violation([string]$message) {
 
 function Get-RelativePath([string]$path) {
     [System.IO.Path]::GetRelativePath($RepositoryRoot, $path).Replace('\', '/')
+}
+
+function Test-LiteralInset([string]$value) {
+    if ($value -notmatch '^[-0-9.,\s]+$') {
+        return $false
+    }
+
+    return ($value -replace '[^0-9]', '') -match '[1-9]'
 }
 
 if (-not (Test-Path -LiteralPath $tokenFile)) {
@@ -55,6 +68,15 @@ foreach ($file in $files) {
     if ($file.FullName -ne (Resolve-Path -LiteralPath $tokenFile).Path) {
         foreach ($match in [regex]::Matches($text, $literalPattern)) {
             Add-Violation "$relative uses a literal value '$($match.Value)'; use a Sky token instead."
+        }
+
+        foreach ($pattern in @($insetPattern, $insetSetterPattern)) {
+            foreach ($match in [regex]::Matches($text, $pattern)) {
+                $inset = $match.Groups['inset'].Value
+                if (Test-LiteralInset $inset) {
+                    Add-Violation "$relative uses a literal inset value '$inset'; use a Sky inset or gap token instead."
+                }
+            }
         }
     }
 

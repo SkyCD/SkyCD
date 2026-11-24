@@ -63,6 +63,14 @@ Spacing, typography and control metrics come from
 - Reference `Sky*` keys from `src/SkyCD.App/Styles/DesignTokens.axaml` (spacing ramp, type scale,
   corner radius, font family) instead of literal `FontSize`, `Spacing`, `RowSpacing` or
   `ColumnSpacing` values; use the `h1`/`h2`/`caption`/`body` classes for headings.
+- `Margin`, `Padding` and control metrics follow the same rule: `SkySpaceXxs/Xs/Sm/Md/Lg/Xl/Xxl`
+  for gaps and `SkyInsetXxs/Xs/Sm/Md/Lg`, the `SkyGap*` family and the composed role tokens for
+  insets. A literal numeric `Margin`/`Padding` is rejected in every form (`8`, `8,6`, `16 12`, and
+  `<Setter Property="Padding" Value="...">`); only a plain `0` stays inline, because it cancels an
+  inset inherited from a shared style.
+- When nothing existing fits, add a token to `DesignTokens.axaml` and name it after the ramp step it
+  uses (`SkyGapTopMd`) or the surface it shapes (`SkyRowPadding`); never keep the number inline and
+  never add a per-file exception to the gate.
 - Dense legacy-parity dialogs use `Classes="compact"` instead of per-window font blocks.
 - Colors use theme brushes, not hex values.
 - Run `tools/scripts/ci/check-design-tokens.ps1` before committing UI changes.

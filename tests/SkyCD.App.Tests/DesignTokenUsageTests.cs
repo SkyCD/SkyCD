@@ -9,12 +9,22 @@ namespace SkyCD.App.Tests;
 
 /// <summary>
 /// Issue #898: windows and shared controls reference the design-token dictionary instead of
-/// declaring literal font sizes and spacing values.
+/// declaring literal font sizes and spacing values. Issue #999 extends the same rule to box
+/// insets, so <c>Xaml_DoesNotDeclareLiteralInsets</c> mirrors the Margin and Padding check that
+/// <c>tools/scripts/ci/check-design-tokens.ps1</c> applies.
 /// </summary>
 public sealed class DesignTokenUsageTests
 {
     private static readonly Regex NumericTypographyOrSpacing = new(
         "(FontSize|Spacing|RowSpacing|ColumnSpacing)=\"[0-9.]+\"",
+        RegexOptions.Compiled);
+
+    private static readonly Regex InsetAttribute = new(
+        "(?:Margin|Padding)=\"(?<inset>[^\"]*)\"",
+        RegexOptions.Compiled);
+
+    private static readonly Regex InsetsSetterValue = new(
+        "Property=\"(?:Margin|Padding)\" Value=\"(?<inset>[^\"]*)\"",
         RegexOptions.Compiled);
 
     private static readonly Regex TokenReference = new(
@@ -47,6 +57,24 @@ public sealed class DesignTokenUsageTests
         {
             var matches = NumericTypographyOrSpacing.Matches(File.ReadAllText(file));
             violations.AddRange(matches.Select(match => $"{Relative(file)}: {match.Value}"));
+        }
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Xaml_DoesNotDeclareLiteralInsets()
+    {
+        var violations = new List<string>();
+        var files = AllXaml().Where(path => !path.EndsWith("DesignTokens.axaml", StringComparison.OrdinalIgnoreCase));
+        foreach (var file in files)
+        {
+            var text = File.ReadAllText(file);
+            violations.AddRange(
+                InsetAttribute.Matches(text).Concat(InsetsSetterValue.Matches(text))
+                    .Select(match => match.Groups["inset"].Value)
+                    .Where(IsLiteralInset)
+                    .Select(inset => $"{Relative(file)}: literal inset '{inset}'"));
         }
 
         Assert.Empty(violations);
@@ -87,6 +115,14 @@ public sealed class DesignTokenUsageTests
         Directory.EnumerateFiles(Path.Combine([FindRepoRoot(), .. parts]), "*.axaml", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+
+    /// <summary>
+    /// A plain zero stays legal because it cancels an inset inherited from a shared style; every other
+    /// numeric thickness must come from the token dictionary.
+    /// </summary>
+    private static bool IsLiteralInset(string value) =>
+        value.All(c => char.IsAsciiDigit(c) || c is '.' or ',' or '-' or ' ')
+            && value.Any(c => char.IsAsciiDigit(c) && c != '0');
 
     private static string Relative(string fullPath) =>
         Path.GetRelativePath(FindRepoRoot(), fullPath).Replace('\\', '/');

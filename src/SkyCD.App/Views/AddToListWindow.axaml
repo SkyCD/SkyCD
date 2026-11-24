@@ -26,7 +26,7 @@
         <converters:InternetProtocolIconConverter x:Key="InternetProtocolIcon" />
         <ControlTheme x:Key="AddToListTabItemTheme" TargetType="TabItem">
             <Setter Property="FontSize" Value="{DynamicResource SkyFontCaption}" />
-            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Padding" Value="{DynamicResource SkyControlPadding}" />
             <Setter Property="Template">
                 <ControlTemplate>
                     <ContentPresenter Name="PART_ContentPresenter"
@@ -43,12 +43,12 @@
             <Setter Property="BorderThickness" Value="0" />
             <Style Selector="^:pointerover, ^:focus-visible">
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Padding" Value="7,2" />
+                <Setter Property="Padding" Value="{DynamicResource SkyControlPaddingBordered}" />
             </Style>
             <Style Selector="^:selected">
                 <Setter Property="Background" Value="#207A7A7A" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Padding" Value="7,2" />
+                <Setter Property="Padding" Value="{DynamicResource SkyControlPaddingBordered}" />
             </Style>
         </ControlTheme>
     </Window.Resources>
@@ -290,7 +290,7 @@
                                 <!-- Leave room for the dialog actions beside the tab headers. -->
                                 <ItemsPresenter Name="PART_ItemsPresenter"
                                                 Grid.Row="1"
-                                                Margin="0,0,154,0"
+                                                Margin="{DynamicResource SkyTabStripActionsReserve}"
                                                 VerticalAlignment="Center"
                                                 ItemsPanel="{TemplateBinding ItemsPanel}" />
                             </Grid>
@@ -314,7 +314,7 @@
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Bottom"
-                            Margin="0,0,0,2"
+                            Margin="{DynamicResource SkyGapBottomXxs}"
                             Spacing="{DynamicResource SkySpaceSm}">
                     <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
                             Width="72"

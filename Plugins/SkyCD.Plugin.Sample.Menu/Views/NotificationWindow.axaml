@@ -6,7 +6,7 @@
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         Title="SkyCD">
-    <StackPanel Margin="16" VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceLg}">
+    <StackPanel Margin="{DynamicResource SkyInsetLg}" VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceLg}">
         <TextBlock x:Name="MessageText"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center"

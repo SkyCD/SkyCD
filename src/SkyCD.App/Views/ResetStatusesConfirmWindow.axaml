@@ -11,7 +11,7 @@
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static i18n:UiKeys.ResetStatusesTitle}}">
 
-    <Grid RowDefinitions="*,Auto" Margin="16">
+    <Grid RowDefinitions="*,Auto" Margin="{DynamicResource SkyInsetLg}">
         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ResetStatusesConfirmation}}"
                    TextWrapping="Wrap"
                    VerticalAlignment="Center" />
@@ -20,7 +20,7 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="{DynamicResource SkySpaceSm}"
-                    Margin="0,14,0,0">
+                    Margin="{DynamicResource SkyGapTopLg}">
             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Yes}}"
                     MinWidth="90"
                     Click="OnYesClicked" />
