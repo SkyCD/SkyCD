@@ -15,11 +15,12 @@ public sealed class AboutStoryLayoutTests
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
 
     [Fact]
-    public void StoryTab_ExistsWithTranslatedStoryParagraphs()
+    public void OverviewTab_IsFirstAndCarriesTranslatedStoryParagraphs()
     {
-        var story = StoryTab();
+        var story = OverviewTab();
 
-        Assert.Contains("UiKeys.AboutStory", (string?)story.Attribute("Header"), StringComparison.Ordinal);
+        Assert.Contains("UiKeys.AboutOverview", (string?)story.Attribute("Header"), StringComparison.Ordinal);
+        Assert.Contains("UiKeys.AboutOverview", (string?)AllTabs().First().Attribute("Header"), StringComparison.Ordinal);
         AssertTranslatedText(story, "UiKeys.AboutStoryWhat");
         AssertTranslatedText(story, "UiKeys.AboutStoryOrigin");
         AssertTranslatedText(story, "UiKeys.AboutStoryRewrite");
@@ -27,9 +28,9 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
-    public void StoryTab_ShowsTheRunningVersionInsteadOfAHardCodedOne()
+    public void OverviewTab_ShowsTheRunningVersionInsteadOfAHardCodedOne()
     {
-        var story = StoryTab();
+        var story = OverviewTab();
         var versionLine = story.Descendants(Avalonia + "TextBlock")
             .Single(text => text.Descendants(Avalonia + "Run").Any());
 
@@ -41,9 +42,9 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
-    public void StoryTab_ReferenceLinksOpenThroughTheSharedHandler()
+    public void OverviewTab_ReferenceLinksOpenThroughTheSharedHandler()
     {
-        var story = StoryTab();
+        var story = OverviewTab();
         var links = story.Descendants(Avalonia + "TextBlock")
             .Where(text => (string?)text.Attribute("PointerPressed") == "OnOpenRepositoryUrl")
             .ToArray();
@@ -63,11 +64,15 @@ public sealed class AboutStoryLayoutTests
             ((string?)text.Attribute("Text"))?.Contains(key, StringComparison.Ordinal) == true);
     }
 
-    private static XElement StoryTab()
+    private static XElement OverviewTab()
     {
-        var document = XDocument.Parse(ReadAboutWindow());
-        return document.Descendants(Avalonia + "TabItem")
-            .Single(tab => ((string?)tab.Attribute("Header"))?.Contains("UiKeys.AboutStory", StringComparison.Ordinal) == true);
+        return AllTabs()
+            .Single(tab => ((string?)tab.Attribute("Header"))?.Contains("UiKeys.AboutOverview", StringComparison.Ordinal) == true);
+    }
+
+    private static XElement[] AllTabs()
+    {
+        return XDocument.Parse(ReadAboutWindow()).Descendants(Avalonia + "TabItem").ToArray();
     }
 
     private static string ReadAboutWindow()
