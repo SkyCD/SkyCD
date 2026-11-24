@@ -658,7 +658,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         Assert.False(request.Dialog.InfoProperties.ContainsKey("RealDirectoryName"));
         Assert.False(request.Dialog.InfoProperties.ContainsKey("Comment"));
         Assert.Equal("Imported comments", request.Dialog.InfoProperties["Comments"]);
-        Assert.Equal("/movies/interstellar.mkv", request.Dialog.InfoProperties["FullName"]);
+        Assert.Equal("/movies/interstellar.mkv", request.Dialog.InfoProperties[MediaMetadataValueFormatter.ResolveLabel("FullName")]);
         request.Dialog.ApplyCustomPropertyDefaults([new CustomPropertyDocument { Name = "name", DefaultValue = "fallback" }]);
         Assert.Equal("Original name", Assert.Single(request.Dialog.CustomProperties).DefaultValue);
         request.Dialog.Name = "Renamed.mkv";

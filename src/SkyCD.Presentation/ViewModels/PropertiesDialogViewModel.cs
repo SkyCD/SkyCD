@@ -358,7 +358,13 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
     }
 
     private static string FormatSize(long bytes) =>
-        $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({bytes.ToString("N0", CultureInfo.CurrentCulture)} bytes)";
+        $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({FormatExactByteCount((ulong)bytes, CultureInfo.CurrentCulture)})";
+
+    private static string FormatExactByteCount(ulong bytes, CultureInfo culture)
+    {
+        var unit = LocalizationService.Current.Get(PreviewKeys.BytesUnit, culture);
+        return $"{bytes.ToString("N0", culture)} {unit}";
+    }
 
     public bool HasInfoTab => InfoProperties.Count > 0;
 
@@ -464,7 +470,7 @@ public partial class PropertiesDialogViewModel : ObservableObject, IDisposable
             rawValue.All(char.IsAsciiDigit) &&
             ulong.TryParse(rawValue, NumberStyles.None, CultureInfo.InvariantCulture, out var bytes))
         {
-            return $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({bytes.ToString("N0", culture)} bytes)";
+            return $"{SizeFormatting.FormatBytes(bytes, "0.##")} ({FormatExactByteCount(bytes, culture)})";
         }
 
         if (string.Equals(key, "Attributes", StringComparison.OrdinalIgnoreCase) &&
