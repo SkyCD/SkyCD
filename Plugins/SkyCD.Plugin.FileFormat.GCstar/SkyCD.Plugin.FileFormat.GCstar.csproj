@@ -8,5 +8,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>GCstar Collection</AssemblyTitle>
+        <Description>Read-only import of GCstar collection exports.</Description>
     </PropertyGroup>
 </Project>

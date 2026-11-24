@@ -13,5 +13,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Katalog Collections</AssemblyTitle>
+        <Description>Read-only import of Katalog Memory-mode CSV/IDX folders and File-mode SQLite collections.</Description>
     </PropertyGroup>
 </Project>

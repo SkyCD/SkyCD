@@ -8,6 +8,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Web Browser</AssemblyTitle>
+        <Description>Opens a built-in web browser window from the Tools menu.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

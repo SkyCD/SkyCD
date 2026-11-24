@@ -12,6 +12,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>XML Catalog Export</AssemblyTitle>
+        <Description>Exports the catalog hierarchy or the current list as XML documents.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

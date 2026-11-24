@@ -21,6 +21,7 @@ using SkyCD.Core.BackgroundServices;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.Plugin.Abstractions;
 using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
 using SkyCD.Plugin.Abstractions.Capabilities.Storage;
@@ -65,6 +66,8 @@ public partial class App : Avalonia.Application
                 appServiceProvider = CreateAppServiceProvider();
                 var optionsRepository = (AppOptionsDocumentRepository)appServiceProvider.Resolve<RepositoryManager>().For<AppOptionsDocument>();
                 var options = optionsRepository.GetOrCreateAppOptions();
+                ApplyPluginRepositorySources(appServiceProvider.Resolve<PluginCatalog>(),
+                    options.PluginRepositorySources);
                 lastOpenedCatalogPath = options.LastOpenedCatalogPath;
                 LocalizationService.Current.SetLanguage(options.Language);
                 InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
@@ -155,6 +158,13 @@ public partial class App : Avalonia.Application
 
         Volatile.Write(ref shutdownDrainState, 2);
         desktopLifetime?.Shutdown();
+    }
+
+    private static void ApplyPluginRepositorySources(PluginCatalog catalog, IReadOnlyList<string>? sources)
+    {
+        catalog.SetRepositorySources((sources ?? [])
+            .Select(static url => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri : null)
+            .OfType<Uri>());
     }
 
     private void InitializePlugins(RepositoryManager repositoryManager)

@@ -576,4 +576,103 @@ public sealed class PluginCatalogResolutionTests
         await catalog.GetCatalogAsync();
         Assert.True(feed.RequestCount > requests);
     }
+
+    [Fact]
+    public async Task UserRepositoriesAreResolvedBesideTheCatalogSources()
+    {
+        var feed = new FakePluginFeed();
+        feed.Serve(PluginCatalogFixture.CatalogUrl, PluginCatalogFixture.Catalog(PluginCatalogFixture.SourceAUri));
+        feed.Serve(PluginCatalogFixture.SourceAUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedA,
+            PluginCatalogFixture.Package("SkyCD.Plugin.A", PluginCatalogFixture.Release("1.0.0"))));
+        feed.Serve(PluginCatalogFixture.SourceBUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedB,
+            PluginCatalogFixture.Package("SkyCD.Plugin.B", PluginCatalogFixture.Release("1.0.0"))));
+        var repositories = new PluginRepositorySourceStore();
+        repositories.SetSources([new Uri(PluginCatalogFixture.SourceBUri)]);
+        using var catalog = PluginCatalogFixture.Create(feed, repositorySources: repositories);
+
+        var result = await catalog.GetCatalogAsync();
+
+        Assert.Equal([PluginCatalogFixture.SourceAUri, PluginCatalogFixture.SourceBUri],
+            result.Snapshot.Sources.Select(source => source.ManifestUri.AbsoluteUri));
+        Assert.All(result.Snapshot.Sources, source => Assert.Equal(PluginSourceStatus.Loaded, source.Status));
+        Assert.Equal(["SkyCD.Plugin.A", "SkyCD.Plugin.B"],
+            result.Snapshot.Packages.Select(package => package.PackageId).Order(StringComparer.Ordinal));
+        Assert.DoesNotContain(result.Diagnostics, line => line.Contains(PluginCatalogFixture.SourceBUri));
+    }
+
+    [Fact]
+    public async Task RepositoryAlreadyListedByTheCatalogIsReadOnce()
+    {
+        var feed = new FakePluginFeed();
+        feed.Serve(PluginCatalogFixture.CatalogUrl, PluginCatalogFixture.Catalog(PluginCatalogFixture.SourceAUri));
+        feed.Serve(PluginCatalogFixture.SourceAUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedA,
+            PluginCatalogFixture.Package("SkyCD.Plugin.A", PluginCatalogFixture.Release("1.0.0"))));
+        var repositories = new PluginRepositorySourceStore();
+        repositories.SetSources([new Uri(PluginCatalogFixture.SourceAUri)]);
+        using var catalog = PluginCatalogFixture.Create(feed, repositorySources: repositories);
+
+        var result = await catalog.GetCatalogAsync();
+
+        Assert.Single(result.Snapshot.Sources);
+        Assert.Single(result.Snapshot.Packages);
+        Assert.Equal(1, feed.Requests.Count(request =>
+            string.Equals(request, PluginCatalogFixture.SourceAUri, StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task UnreachableUserRepositoryIsOfflineWithoutDiscardingCatalogPackages()
+    {
+        var feed = new FakePluginFeed();
+        feed.Serve(PluginCatalogFixture.CatalogUrl, PluginCatalogFixture.Catalog(PluginCatalogFixture.SourceAUri));
+        feed.Serve(PluginCatalogFixture.SourceAUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedA,
+            PluginCatalogFixture.Package("SkyCD.Plugin.A", PluginCatalogFixture.Release("1.0.0"))));
+        var repositories = new PluginRepositorySourceStore();
+        repositories.SetSources([new Uri(PluginCatalogFixture.SourceBUri)]);
+        using var catalog = PluginCatalogFixture.Create(feed, repositorySources: repositories);
+
+        var result = await catalog.GetCatalogAsync();
+
+        Assert.Equal(PluginSourceStatus.Loaded, result.Snapshot.Sources[0].Status);
+        Assert.Equal(PluginSourceStatus.Offline, result.Snapshot.Sources[1].Status);
+        Assert.Equal("SkyCD.Plugin.A", Assert.Single(result.Snapshot.Packages).PackageId);
+    }
+
+    [Fact]
+    public async Task RemovingARepositoryDropsItsPackagesOnTheNextRead()
+    {
+        var feed = new FakePluginFeed();
+        feed.Serve(PluginCatalogFixture.CatalogUrl, PluginCatalogFixture.Catalog(PluginCatalogFixture.SourceAUri));
+        feed.Serve(PluginCatalogFixture.SourceAUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedA,
+            PluginCatalogFixture.Package("SkyCD.Plugin.A", PluginCatalogFixture.Release("1.0.0"))));
+        feed.Serve(PluginCatalogFixture.SourceBUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedB,
+            PluginCatalogFixture.Package("SkyCD.Plugin.B", PluginCatalogFixture.Release("1.0.0"))));
+        var repositories = new PluginRepositorySourceStore();
+        repositories.SetSources([new Uri(PluginCatalogFixture.SourceBUri)]);
+        using var catalog = PluginCatalogFixture.Create(feed, repositorySources: repositories);
+        Assert.Equal(2, (await catalog.GetCatalogAsync()).Snapshot.Sources.Count);
+
+        await catalog.UpdateRepositorySourcesAsync([]);
+        var result = await catalog.GetCatalogAsync();
+
+        var source = Assert.Single(result.Snapshot.Sources);
+        Assert.Equal(PluginCatalogFixture.SourceAUri, source.ManifestUri.AbsoluteUri);
+        Assert.Equal("SkyCD.Plugin.A", Assert.Single(result.Snapshot.Packages).PackageId);
+    }
+
+    [Fact]
+    public void RepositoryStoreKeepsOnlyDistinctHttpsUrls()
+    {
+        var store = new PluginRepositorySourceStore();
+
+        Assert.True(store.SetSources([
+            new Uri("https://a.test/plugins.json"),
+            new Uri("https://A.test/plugins.json"),
+            new Uri("http://b.test/plugins.json"),
+            new Uri("https://user:secret@c.test/plugins.json")
+        ]));
+
+        Assert.Equal(["https://a.test/plugins.json"],
+            store.Sources.Select(source => source.AbsoluteUri));
+        Assert.False(store.SetSources([new Uri("https://a.test/plugins.json")]));
+    }
 }

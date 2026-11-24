@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>Microsoft 365 Accounts</AssemblyTitle>
+        <Description>Connects to Microsoft 365 through Microsoft Graph to sync subscription records into the accounts catalog.</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj"/>

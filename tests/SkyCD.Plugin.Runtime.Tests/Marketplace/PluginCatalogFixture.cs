@@ -44,11 +44,12 @@ internal static class PluginCatalogFixture
     }
 
     public static PluginCatalog Create(FakePluginFeed feed,
-        Func<PluginCatalogOptions, PluginCatalogOptions>? configure = null, IPluginCatalogCache? cache = null)
+        Func<PluginCatalogOptions, PluginCatalogOptions>? configure = null, IPluginCatalogCache? cache = null,
+        PluginRepositorySourceStore? repositorySources = null)
     {
         var options = Options(configure);
         var fetcher = new HttpsPluginSourceFetcher(feed, options.RequestTimeout);
-        return new PluginCatalog(options, cache ?? new InMemoryPluginCatalogCache(), fetcher, Clock);
+        return new PluginCatalog(options, cache ?? new InMemoryPluginCatalogCache(), fetcher, Clock, repositorySources);
     }
 
     public static string Catalog(params string[] entries)

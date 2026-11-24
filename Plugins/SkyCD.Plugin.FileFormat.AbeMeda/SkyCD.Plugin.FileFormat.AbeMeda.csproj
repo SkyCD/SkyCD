@@ -12,5 +12,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>abeMeda Catalog</AssemblyTitle>
+        <Description>Read-only import of abeMeda and NeoFinder-family XML catalog exports.</Description>
     </PropertyGroup>
 </Project>

@@ -31,6 +31,16 @@ Handling rules:
 - A malformed catalog document is reported as a catalog failure, not as an empty catalog.
 - Delisting a source removes it from browse results. It does not uninstall the plugin from a user's machine.
 
+### User repositories
+The Plugins → Settings page stores extra publisher manifests in `PluginRepositorySourceStore`. They are
+appended after the catalog sources on every resolution:
+
+- The built-in catalog is always read first and its row is not editable.
+- A URL the catalog already lists keeps its catalog entry, so its packages appear only once.
+- Each repository resolves independently: an unreachable URL is reported offline and a rejected or malformed
+  manifest does not affect the other sources.
+- Adding or removing a repository resets the last known good results, so the next read reflects the new list.
+
 ## Publisher manifest (schema version 1)
 
 ```json
@@ -140,6 +150,7 @@ state; an ordinary refresh never does.
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `CatalogEndpoints` | awesome-skycd `plugins.json` | Catalog documents, tried in order. |
+| `PluginRepositorySourceStore` | none | User repository manifests from Plugins → Settings, merged after the catalog sources. |
 | `HostVersion` / `RuntimeIdentifier` | host assembly version / current process RID | Compatibility inputs. |
 | `IncludePrerelease` | `false` | Allow automatic prerelease selection. |
 | `CacheLifetime` | 6 hours | When the published snapshot is refreshed again. |

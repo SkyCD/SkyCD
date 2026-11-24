@@ -11,6 +11,8 @@
       - a plugin project under Plugins/ does not match
         SkyCD.Plugin.<Kind>.<Subject>[.<Variant>] with a known <Kind>;
       - a production plugin uses Menu, Modal or Cli as <Kind> or first subject token;
+      - a plugin project under Plugins/ lacks a non-empty <AssemblyTitle> or
+        <Description>, or its title repeats the assembly name;
       - a test project directly under tests/ is not named <subject>.Tests
         (fixture projects are allow-listed; a subject may also name a
         source-linked shared folder under Plugins/Shared/).
@@ -57,6 +59,45 @@ function Test-SharedSourceSubject([string]$subject) {
 
     return [bool](Get-ChildItem -LiteralPath $sharedPath -Recurse -Filter "*.cs" -File)
 }
+
+function Get-PluginMetadataViolations([string]$projectName, [string]$projectText) {
+    $result = New-Object System.Collections.Generic.List[string]
+
+    $titleMatch = [regex]::Match($projectText, '<AssemblyTitle>\s*(?<Value>[^<]*?)\s*</AssemblyTitle>')
+    $title = if ($titleMatch.Success) { $titleMatch.Groups["Value"].Value } else { '' }
+    if ([string]::IsNullOrWhiteSpace($title)) {
+        $result.Add("Plugin '$projectName' must declare a non-empty <AssemblyTitle>.")
+    }
+    elseif ($title -eq $projectName -or $title -like 'SkyCD.Plugin.*') {
+        $result.Add("Plugin '$projectName' must declare a human-readable <AssemblyTitle>, not the assembly name.")
+    }
+
+    $descriptionMatch = [regex]::Match($projectText, '<Description>\s*(?<Value>[^<]*?)\s*</Description>')
+    $description = if ($descriptionMatch.Success) { $descriptionMatch.Groups["Value"].Value } else { '' }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $result.Add("Plugin '$projectName' must declare a non-empty <Description>.")
+    }
+
+    return $result
+}
+
+function Invoke-PluginMetadataSelfTest {
+    $cases = @(
+        @{ Name = 'complete'; Text = '<PropertyGroup><AssemblyTitle>TOML</AssemblyTitle><Description>Reads TOML catalogs.</Description></PropertyGroup>'; Expected = 0 },
+        @{ Name = 'missing'; Text = '<PropertyGroup><Company>SkyCD</Company></PropertyGroup>'; Expected = 2 },
+        @{ Name = 'assembly-name-title'; Text = '<PropertyGroup><AssemblyTitle>SkyCD.Plugin.FileFormat.Toml</AssemblyTitle><Description>Reads TOML catalogs.</Description></PropertyGroup>'; Expected = 1 },
+        @{ Name = 'blank-description'; Text = '<PropertyGroup><AssemblyTitle>TOML</AssemblyTitle><Description>  </Description></PropertyGroup>'; Expected = 1 }
+    )
+
+    foreach ($case in $cases) {
+        $actual = @(Get-PluginMetadataViolations -projectName 'SkyCD.Plugin.FileFormat.Toml' -projectText $case.Text).Count
+        if ($actual -ne $case.Expected) {
+            Add-Violation "Plugin metadata self-test '$($case.Name)' expected $($case.Expected) violation(s) but found $actual."
+        }
+    }
+}
+
+Invoke-PluginMetadataSelfTest
 
 $propsPath = Join-Path $RepositoryRoot "Directory.Build.props"
 if (-not (Test-Path -LiteralPath $propsPath)) {
@@ -113,6 +154,10 @@ foreach ($projectFile in $projectFiles) {
         }
 
         $pluginNames.Add($projectName)
+        foreach ($message in (Get-PluginMetadataViolations -projectName $projectName -projectText $projectText)) {
+            Add-Violation $message
+        }
+
         $match = [regex]::Match($projectName, $pluginNamePattern)
         if (-not $match.Success) {
             Add-Violation "Plugin '$projectName' does not match SkyCD.Plugin.<Kind>.<Subject>[.<Variant>]."

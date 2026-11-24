@@ -161,7 +161,8 @@ public class OptionsDialogViewModelTests
 
         vm.SettingsSearchText = "plug";
 
-        Assert.Equal(["Plugins"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal(["Installed"],
+            vm.FilteredSettingCategories.Select(category => category.Title));
         Assert.True(vm.ShowPluginPathSection);
         Assert.True(vm.ShowPluginListSection);
         Assert.True(vm.ShowPluginActionsSection);

@@ -4,6 +4,8 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <AssemblyTitle>Runtime Test Plugin</AssemblyTitle>
+        <Description>Fixture assembly used by the runtime plugin discovery tests.</Description>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="10.1.0"/>

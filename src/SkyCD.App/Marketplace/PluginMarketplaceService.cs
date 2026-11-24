@@ -26,6 +26,10 @@ public sealed class PluginMarketplaceService(
         return result.Snapshot;
     }
 
+    /// <summary>Applies the saved repository list and invalidates the published snapshot when it changed.</summary>
+    public Task ApplyRepositorySourcesAsync(IReadOnlyList<Uri> sources, CancellationToken cancellationToken = default) =>
+        catalog.UpdateRepositorySourcesAsync(sources, cancellationToken);
+
     public Task<PluginInstallResult> StageInstallAsync(MarketplaceRelease release, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(release);

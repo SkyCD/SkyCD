@@ -11,5 +11,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>CDPlayer.ini</AssemblyTitle>
+        <Description>Read-only import of CDPlayer.ini audio CD databases.</Description>
     </PropertyGroup>
 </Project>

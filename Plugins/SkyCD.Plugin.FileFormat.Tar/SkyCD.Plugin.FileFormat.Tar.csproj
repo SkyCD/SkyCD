@@ -8,6 +8,8 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>TAR Archive Index</AssemblyTitle>
+        <Description>Lists TAR archive entries as a catalog hierarchy.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

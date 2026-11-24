@@ -10,6 +10,9 @@ public partial class StatusBar : UserControl
     public static readonly StyledProperty<string?> StatusTextProperty =
         AvaloniaProperty.Register<StatusBar, string?>(nameof(StatusText));
 
+    public static readonly StyledProperty<string?> SecondaryStatusTextProperty =
+        AvaloniaProperty.Register<StatusBar, string?>(nameof(SecondaryStatusText));
+
     public static readonly StyledProperty<string?> ProgressTextProperty =
         AvaloniaProperty.Register<StatusBar, string?>(nameof(ProgressText));
 
@@ -46,6 +49,12 @@ public partial class StatusBar : UserControl
     {
         get => GetValue(StatusTextProperty);
         set => SetValue(StatusTextProperty, value);
+    }
+
+    public string? SecondaryStatusText
+    {
+        get => GetValue(SecondaryStatusTextProperty);
+        set => SetValue(SecondaryStatusTextProperty, value);
     }
 
     public string? ProgressText

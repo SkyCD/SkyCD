@@ -17,5 +17,7 @@
         <Nullable>enable</Nullable>
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
+        <AssemblyTitle>WinCatalog</AssemblyTitle>
+        <Description>Read-only import of native WinCatalog databases and CSV or XML reports.</Description>
     </PropertyGroup>
 </Project>
