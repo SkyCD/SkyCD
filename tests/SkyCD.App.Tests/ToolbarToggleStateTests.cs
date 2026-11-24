@@ -21,6 +21,7 @@ public class ToolbarToggleStateTests
         var preview = Assert.Single(commands, command => command.Id == ToolbarCommandIds.PreviewPane);
         var details = Assert.Single(commands, command => command.Id == ToolbarCommandIds.ViewDetails);
         var tiles = Assert.Single(commands, command => command.Id == ToolbarCommandIds.ViewTiles);
+        var find = Assert.Single(commands, command => command.Id == ToolbarCommandIds.Find);
         var newCatalog = Assert.Single(commands, command => command.Id == ToolbarCommandIds.NewCatalog);
 
         Assert.True(statusBar.IsToggle);
@@ -31,8 +32,32 @@ public class ToolbarToggleStateTests
         Assert.True(details.IsChecked);
         Assert.True(tiles.IsToggle);
         Assert.False(tiles.IsChecked);
+        Assert.True(find.IsToggle);
+        Assert.False(find.IsChecked);
         Assert.False(newCatalog.IsToggle);
         Assert.False(newCatalog.IsChecked);
+    }
+
+    [Fact]
+    public void FindToggle_FollowsQuickFilterOpenStateAndNotifiesTheToolbar()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        var raised = 0;
+        vm.ToolbarStateChanged += (_, _) => raised++;
+
+        var find = vm.ToolbarCommands().Single(command => command.Id == ToolbarCommandIds.Find);
+        Assert.False(find.IsChecked);
+
+        vm.FindCatalogCommand.Execute(null);
+
+        Assert.True(vm.IsQuickFilterOpen);
+        Assert.True(vm.ToolbarCommands().Single(command => command.Id == ToolbarCommandIds.Find).IsChecked);
+        Assert.Equal(1, raised);
+
+        vm.CloseQuickFilterCommand.Execute(null);
+
+        Assert.False(vm.ToolbarCommands().Single(command => command.Id == ToolbarCommandIds.Find).IsChecked);
+        Assert.Equal(2, raised);
     }
 
     [Fact]

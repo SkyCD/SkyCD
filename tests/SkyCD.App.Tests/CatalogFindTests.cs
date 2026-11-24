@@ -42,6 +42,21 @@ public sealed class CatalogFindTests
     }
 
     [Fact]
+    public void ToolbarFindToggle_OpensAndClosesTheQuickFindBar()
+    {
+        using var catalog = MainWindowViewModel.CreateForInMemoryCatalog(Documents);
+
+        catalog.ToggleQuickFilterCommand.Execute(null);
+        Assert.True(catalog.IsQuickFilterOpen);
+
+        catalog.QuickFindQuery = "sunset";
+        catalog.ToggleQuickFilterCommand.Execute(null);
+        Assert.False(catalog.IsQuickFilterOpen);
+        Assert.Equal(string.Empty, catalog.QuickFindQuery);
+        Assert.False(catalog.SearchWholeCatalog);
+    }
+
+    [Fact]
     public async Task QuickFind_FiltersCurrentChildrenAndRestoresListWhenClearedOrClosed()
     {
         using var catalog = MainWindowViewModel.CreateForInMemoryCatalog(Documents);
