@@ -81,8 +81,8 @@ public sealed class PluginOptionsTests : IDisposable
         Assert.Equal("Plugins", category.Title);
         Assert.Equal(1, vm.SettingCategories.Count(c => c.Title == "Plugins"));
         Assert.All(vm.SettingCategories.Take(10), c => Assert.Null(c.PluginPage));
-        Assert.Equal("locations", vm.SettingCategories[6].Id);
-        Assert.Equal("toolbar", vm.SettingCategories[7].Id);
+        Assert.Equal("toolbar", vm.SettingCategories[6].Id);
+        Assert.Equal("locations", vm.SettingCategories[7].Id);
         Assert.Equal("mcp", vm.SettingCategories[8].Id);
         Assert.Equal("acp", vm.SettingCategories[9].Id);
         vm.SelectedSettingCategory = category;
@@ -113,17 +113,18 @@ public sealed class PluginOptionsTests : IDisposable
     {
         using var vm = CreateViewModel();
         var withoutAi = vm.SettingCategories.ToList();
-        Assert.Equal([0, 1, 3, 4, 6, 7, 8, 9, 2, 5, 12],
+        Assert.Equal([0, 1, 3, 4, 6, 7, 9, 8, 2, 5, 12],
             withoutAi.Take(11).Select(category => category.BuiltInIndex));
         Assert.Equal(["plugins", "language", "statuses", "custom-properties", "scan", "details-columns",
-            "locations", "toolbar", "mcp", "acp", "mcp-tools"], withoutAi.Take(11).Select(category => category.Id));
+            "toolbar", "locations", "mcp", "acp", "mcp-tools"], withoutAi.Take(11).Select(category => category.Id));
         Assert.All(withoutAi.Skip(11), category => Assert.Equal(-1, category.BuiltInIndex));
 
         vm.SetAiDescriptionAvailable(true);
         var categories = vm.SettingCategories.ToList();
-        Assert.Equal([0, 1, 3, 4, 6, 7, 8, 9, 10, 11, 2, 5, 12],
+        Assert.Equal([0, 1, 3, 4, 6, 7, 9, 8, 10, 11, 2, 5, 12],
             categories.Take(13).Select(category => category.BuiltInIndex));
-        Assert.Equal("toolbar", categories[7].Id);
+        Assert.Equal("toolbar", categories[6].Id);
+        Assert.Equal("locations", categories[7].Id);
         Assert.Equal("ai-description", categories[8].Id);
         Assert.Equal("ai-provider", categories[9].Id);
         Assert.Equal((2, "mcp"), (categories[10].BuiltInIndex, categories[10].Id));
@@ -272,6 +273,41 @@ public sealed class PluginOptionsTests : IDisposable
             window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("ai-description", vm.SelectedSettingCategory?.Id);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void UiGroup_KeyboardNavigation_SkipsHeaderAndMovesBetweenChildren()
+    {
+        using var vm = CreateViewModel();
+        var details = vm.SidebarEntries.Single(entry => entry.Category?.Id == "details-columns");
+        var toolbar = vm.SidebarEntries.Single(entry => entry.Category?.Id == "toolbar");
+        var detailsIndex = vm.SidebarEntries.IndexOf(details);
+        Assert.True(vm.SidebarEntries[detailsIndex - 1].IsGroupHeader);
+        Assert.Equal(detailsIndex + 1, vm.SidebarEntries.IndexOf(toolbar));
+
+        var window = new OptionsWindow { DataContext = vm };
+        window.Show();
+        try
+        {
+            var list = window.FindControl<ListBox>("SettingsCategoriesList")!;
+            list.ScrollIntoView(detailsIndex);
+            Dispatcher.UIThread.RunJobs();
+            list.SelectedIndex = detailsIndex;
+            Dispatcher.UIThread.RunJobs();
+            var container = Assert.IsType<ListBoxItem>(list.ContainerFromIndex(detailsIndex));
+            container.Focus();
+
+            window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("toolbar", vm.SelectedSettingCategory?.Id);
+            Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
+
+            window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("details-columns", vm.SelectedSettingCategory?.Id);
+            Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
         }
         finally { window.Close(); }
     }

@@ -101,7 +101,7 @@ public class AiProviderSettingsViewModelTests
         vm.SetAiDescriptionAvailable(false);
 
         Assert.DoesNotContain(vm.SettingCategories, category => category.Id == "ai-provider");
-        Assert.Equal(7, vm.SelectedTabIndex);
+        Assert.Equal(6, vm.SelectedTabIndex);
         Assert.True(vm.IsToolbarCategorySelected);
         Assert.False(vm.ShowAiProviderSection);
     }
@@ -128,6 +128,7 @@ public class AiProviderSettingsViewModelTests
         vm.SetAiDescriptionAvailable(true);
 
         var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
+        Assert.Equal("AI", header.Title);
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)
@@ -161,7 +162,7 @@ public class AiProviderSettingsViewModelTests
 
         vm.SettingsSearchText = "provider";
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
         Assert.Equal("AI", header.Title);
         var child = Assert.Single(vm.SidebarEntries, entry => !entry.IsGroupHeader);
         Assert.Equal("Provider", child.Title);
@@ -169,7 +170,7 @@ public class AiProviderSettingsViewModelTests
 
         vm.SettingsSearchText = "AI";
 
-        Assert.DoesNotContain(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        Assert.DoesNotContain(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
         Assert.DoesNotContain(vm.FilteredSettingCategories, category => category.Id.StartsWith("ai-", StringComparison.Ordinal));
     }
 
@@ -183,6 +184,7 @@ public class AiProviderSettingsViewModelTests
         vm.SetAiDescriptionAvailable(false);
 
         var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
+        Assert.Equal("AI", header.Title);
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)

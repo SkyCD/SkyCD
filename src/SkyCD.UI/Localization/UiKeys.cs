@@ -29,6 +29,8 @@ public static class UiKeys
     public const string Yes = "core.ui.Yes";
     public const string No = "core.ui.No";
     public const string AddToList = "core.ui.AddToList";
+    public const string DropToAdd = "core.ui.DropToAdd";
+    public const string DroppedRoots = "core.ui.DroppedRoots";
     public const string FromMedia = "core.ui.FromMedia";
     public const string FromFolder = "core.ui.FromFolder";
     public const string InternetProtocol = "core.ui.InternetProtocol";
@@ -72,6 +74,17 @@ public static class UiKeys
     public const string OpenToolbar = "core.ui.OpenToolbar";
     public const string SaveToolbar = "core.ui.SaveToolbar";
     public const string AboutSkyCd = "core.ui.AboutSkyCd";
+    public const string AboutStory = "core.ui.AboutStory";
+    public const string AboutStoryWhat = "core.ui.AboutStoryWhat";
+    public const string AboutStoryOrigin = "core.ui.AboutStoryOrigin";
+    public const string AboutStoryRewrite = "core.ui.AboutStoryRewrite";
+    public const string AboutStoryVersion = "core.ui.AboutStoryVersion";
+    public const string AboutStoryReferences = "core.ui.AboutStoryReferences";
+    public const string AboutStoryRepository = "core.ui.AboutStoryRepository";
+    public const string AboutStorySourceForge = "core.ui.AboutStorySourceForge";
+    public const string AboutStorySite = "core.ui.AboutStorySite";
+    public const string AboutStoryOriginalSite = "core.ui.AboutStoryOriginalSite";
+    public const string AboutStoryLicense = "core.ui.AboutStoryLicense";
     public const string SystemInfo = "core.ui.SystemInfo";
     public const string Cpu = "core.ui.Cpu";
     public const string Memory = "core.ui.Memory";
@@ -106,6 +119,7 @@ public static class UiKeys
     public const string NoMatchingAcpAgents = "core.ui.NoMatchingAcpAgents";
     public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
     public const string AiGroup = "core.ui.AiGroup";
+    public const string UiGroup = "core.ui.UiGroup";
     public const string AiImplementation = "core.ui.AiImplementation";
     public const string AiProvider = "core.ui.AiProvider";
     public const string AiProviderCategory = "core.ui.AiProviderCategory";

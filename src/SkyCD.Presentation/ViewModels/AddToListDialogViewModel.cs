@@ -206,6 +206,92 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         RecomputeValidation();
     }
 
+    public ObservableCollection<DroppedSource> DroppedRoots { get; } = [];
+
+    public bool HasMultipleDroppedRoots => DroppedRoots.Count > 1;
+
+    [ObservableProperty] private DroppedSource? selectedDroppedRoot;
+
+    /// <summary>Prefills the dialog from OS drag-and-drop sources; several roots stay pickable.</summary>
+    public void ApplyDroppedSources(IReadOnlyList<DroppedSource> sources)
+    {
+        DroppedRoots.Clear();
+        foreach (var source in sources)
+        {
+            DroppedRoots.Add(source);
+        }
+
+        OnPropertyChanged(nameof(HasMultipleDroppedRoots));
+
+        SelectedDroppedRoot = null;
+        if (DroppedRoots.Count > 0)
+        {
+            SelectedDroppedRoot = DroppedRoots[0];
+        }
+    }
+
+    partial void OnSelectedDroppedRootChanged(DroppedSource? value)
+    {
+        if (value is not null)
+        {
+            ApplyDroppedSource(value);
+        }
+    }
+
+    private void ApplyDroppedSource(DroppedSource source)
+    {
+        switch (source.Mode)
+        {
+            case AddToListSourceMode.Media when FindDrive(source.Value) is { } drive:
+                SourceMode = AddToListSourceMode.Media;
+                SelectedDrive = drive;
+                MediaName = string.IsNullOrWhiteSpace(source.MediaName)
+                    ? (string.IsNullOrWhiteSpace(drive.VolumeLabel) ? drive.DisplayName : drive.VolumeLabel)
+                    : source.MediaName!;
+                break;
+            case AddToListSourceMode.Internet:
+                SourceMode = AddToListSourceMode.Internet;
+                if (FillInternetFromUrl(source.Value) is not null &&
+                    ToWebDavAddress(source.Value) is { } webDavAddress)
+                {
+                    // SkyCD reaches HTTP servers through WebDAV, the only HTTP transport it supports.
+                    FillInternetFromUrl(webDavAddress);
+                }
+
+                break;
+            default:
+                SourceMode = AddToListSourceMode.Folder;
+                SourceValue = source.Value;
+                MediaName = source.MediaName ?? string.Empty;
+                break;
+        }
+    }
+
+    private static string? ToWebDavAddress(string address)
+    {
+        if (address.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return "webdavs://" + address[8..];
+        }
+
+        return address.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            ? "webdav://" + address[7..]
+            : null;
+    }
+
+    private MediaDriveInfo? FindDrive(string path)
+    {
+        static string Trim(string value) => value.Trim().TrimEnd('/', '\\');
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        var candidate = Trim(path);
+        return AvailableDrives.FirstOrDefault(drive =>
+            string.Equals(candidate, Trim(drive.RootDirectory), comparison) ||
+            string.Equals(candidate, Trim(drive.Name), comparison));
+    }
+
     public void Dispose()
     {
         if (isDisposed)

@@ -265,6 +265,7 @@
                                                  SelectedItem="{Binding SelectedPlugin}"
                                                  IsVisible="{Binding !ShowInstalledPluginsEmptyState}"
                                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  SelectionChanged="OnInstalledPluginsSelectionChanged">
                                             <ListBox.Styles>
                                                 <Style Selector="ListBoxItem">
@@ -363,6 +364,7 @@
                                                      SelectedItem="{Binding SelectedMarketplacePlugin}"
                                                      IsVisible="{Binding ShowMarketplacePaneList}"
                                                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                      SelectionChanged="OnMarketplacePluginsSelectionChanged">
                                                 <ListBox.Styles>
                                                     <Style Selector="ListBoxItem">
