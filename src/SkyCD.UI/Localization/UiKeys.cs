@@ -119,6 +119,7 @@ public static class UiKeys
     public const string NoMatchingAcpAgents = "core.ui.NoMatchingAcpAgents";
     public const string EnableAiDescriptionPlugin = "core.ui.EnableAiDescriptionPlugin";
     public const string AiGroup = "core.ui.AiGroup";
+    public const string UiGroup = "core.ui.UiGroup";
     public const string AiImplementation = "core.ui.AiImplementation";
     public const string AiProvider = "core.ui.AiProvider";
     public const string AiProviderCategory = "core.ui.AiProviderCategory";

@@ -173,12 +173,13 @@ public sealed class OptionsDialogViewModelMcpToolsTests
     }
 
     [Fact]
-    public void Sidebar_WithoutAiPlugins_ShowsMcpPagesUnderAiHeaderAfterToolbar()
+    public void Sidebar_WithoutAiPlugins_ShowsMcpPagesUnderAiHeaderAfterTopLevelPages()
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
-        var headerIndex = vm.SidebarEntries.IndexOf(Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader));
-        Assert.Equal("toolbar", vm.SidebarEntries[headerIndex - 1].Category?.Id);
+        var headerIndex = vm.SidebarEntries.IndexOf(
+            Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup));
+        Assert.Equal("locations", vm.SidebarEntries[headerIndex - 1].Category?.Id);
         var children = vm.SidebarEntries.Skip(headerIndex + 1).ToList();
         Assert.Equal(["mcp", "acp", "mcp-tools"], children.Select(entry => entry.Category?.Id));
         Assert.All(children, child => Assert.Equal(1, child.Depth));
@@ -188,7 +189,7 @@ public sealed class OptionsDialogViewModelMcpToolsTests
     public void SelectingAiHeader_WithoutAiPlugins_SelectsMcpAndShowsFullPath()
     {
         var vm = new OptionsDialogViewModel(["English"]);
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
 
         vm.SelectedSidebarEntry = header;
 
@@ -204,7 +205,7 @@ public sealed class OptionsDialogViewModelMcpToolsTests
 
         vm.SettingsSearchText = "MCP";
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
         Assert.Equal(AiGroup, header.Title);
         Assert.Equal(["mcp", "mcp-tools"], vm.FilteredSettingCategories.Select(category => category.Id));
         Assert.Equal("mcp", vm.SelectedSettingCategory?.Id);
@@ -218,7 +219,7 @@ public sealed class OptionsDialogViewModelMcpToolsTests
 
         vm.SettingsSearchText = "ACP";
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
         Assert.Equal(AiGroup, header.Title);
         Assert.Equal(["acp"], vm.FilteredSettingCategories.Select(category => category.Id));
         Assert.Equal("acp", vm.SelectedSettingCategory?.Id);

@@ -171,6 +171,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     {
         get
         {
+            // Presentation settings share one UI group. Its members stay contiguous so the sidebar
+            // renders the whole group at the position of its first entry.
+            var uiGroup = LocalizationService.Current.Get(UiKeys.UiGroup);
             List<OptionsSettingCategory> categories =
             [
                 new("plugins", LocalizationService.Current.Get(TextKeys.Plugins), 0),
@@ -178,9 +181,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
                 new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4),
                 new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
-                new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7),
-                new("locations", LocalizationService.Current.Get(UiKeys.Locations), LocationsCategoryIndex),
-                new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex)
+                new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7,
+                    Group: uiGroup),
+                new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex,
+                    Group: uiGroup),
+                new("locations", LocalizationService.Current.Get(UiKeys.Locations), LocationsCategoryIndex)
             ];
 
             // Every AI surface shares one appended group. MCP and ACP agents keep their historical
