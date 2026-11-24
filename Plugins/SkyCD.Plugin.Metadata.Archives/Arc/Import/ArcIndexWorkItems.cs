@@ -1,13 +1,14 @@
+using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Threading;
-using System;
+using System.Threading.Tasks;
+using SharpCompress.Common;
+using SharpCompress.Readers;
+using SharpCompress.Readers.Arc;
 using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
-using SkyCD.Plugin.Metadata.Archives.Arc.Exceptions;
-using SkyCD.Plugin.Metadata.Archives.Arc.Models;
-using SkyCD.Plugin.Metadata.Archives.Arc.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Storage;
@@ -15,14 +16,20 @@ using SkyCD.Plugin.Storage;
 namespace SkyCD.Plugin.Metadata.Archives.Arc.Import;
 
 /// <summary>
-/// Extracts stored ARC entries into a unique temporary directory with bounded resource usage and exposes each
-/// extracted file as a host index work item. Disposing the returned set deletes the directory.
+/// Extracts ARC entries with the SharpCompress reader into a unique temporary directory with bounded resource
+/// usage and exposes each extracted file as a host index work item. Disposing the returned set deletes the
+/// directory. Stored, packed (RLE90), squeezed and crunched entries are decoded; methods the reader cannot
+/// decode are reported as <c>ARC_UNSUPPORTED</c> without writing their raw bytes.
 /// </summary>
 internal static class ArcIndexWorkItems
 {
+    private const byte EndOfArchiveMarker = 0x1A;
     private const string BufferedSourceName = ".skycd-arc-source";
+    private const string UnsupportedCode = "ARC_UNSUPPORTED";
+    private const string DamagedCode = "ARC_DAMAGED";
+    private const int CopyBufferBytes = 81_920;
 
-    public static async Task<IndexWorkItemSet> CreateAsync(
+    public static async Task<ArchiveIndexResult> CreateAsync(
         IndexWorkItemRequest request,
         ArchiveIndexLimits limits,
         CancellationToken cancellationToken)
@@ -31,43 +38,43 @@ internal static class ArcIndexWorkItems
         limits.Validate();
 
         var workspace = new ArchiveExtractionWorkspace("arc");
-
         FileStream? bufferedSource = null;
         try
         {
             await using var source = await request.OpenSource(cancellationToken).ConfigureAwait(false);
-            var archiveStream = source;
+            Stream archive = source;
             if (!source.CanSeek)
             {
                 bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
                     workspace.GetPath(BufferedSourceName), cancellationToken).ConfigureAwait(false);
-                archiveStream = bufferedSource;
+                archive = bufferedSource;
             }
 
-            var listing = ArcLister.List(archiveStream, cancellationToken);
-            var items = await ExtractEntriesAsync(archiveStream, listing, workspace.Root, limits, request.Progress,
-                cancellationToken).ConfigureAwait(false);
-
-            return new IndexWorkItemSet(items, () =>
+            if (archive.Length == 0)
             {
                 workspace.Dispose();
-                return ValueTask.CompletedTask;
-            });
+                return ArchiveIndexResult.Empty;
+            }
+
+            if (!await StartsWithEndOfArchiveMarkerAsync(archive, cancellationToken).ConfigureAwait(false))
+            {
+                workspace.Dispose();
+                return ArchiveIndexResult.Failure(DamagedCode, "The file does not start with the ARC marker.");
+            }
+
+            archive.Position = 0;
+            return await ExtractAsync(archive, workspace, limits, request.Progress, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             workspace.Dispose();
             throw;
         }
-        catch (ArcEntryCountExceededException)
-        {
-            workspace.Dispose();
-            return IndexWorkItemSet.Empty;
-        }
         catch (Exception exception) when (IsArchiveFailure(exception))
         {
             workspace.Dispose();
-            return IndexWorkItemSet.Empty;
+            return ArchiveIndexResult.Failure(DamagedCode, exception.Message);
         }
         catch (Exception)
         {
@@ -80,139 +87,256 @@ internal static class ArcIndexWorkItems
         }
     }
 
-    private static async Task<List<IndexWorkItem>> ExtractEntriesAsync(
-        Stream archiveStream,
-        ArcListing listing,
-        string tempRoot,
+    private static async Task<ArchiveIndexResult> ExtractAsync(
+        Stream archive,
+        ArchiveExtractionWorkspace workspace,
         ArchiveIndexLimits limits,
         IProgress<int>? progress,
         CancellationToken cancellationToken)
     {
         var items = new List<IndexWorkItem>();
-        var budget = new ExtractionBudget();
+        var skipped = new List<ArchiveSkipEntry>();
         var seenNames = new HashSet<string>(StringComparer.Ordinal);
+        var totalBytes = 0L;
         var index = 0;
+        var damaged = false;
 
-        foreach (var entry in listing.Entries)
+        await using var reader = await ArcReader
+            .OpenAsyncReader(archive, ReaderOptions.ForExternalStream, cancellationToken).ConfigureAwait(false);
+
+        while (true)
         {
+            bool moved;
+            try
+            {
+                moved = await reader.MoveToNextEntryAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // The reader takes the 29-byte end-of-archive marker (and any trailing padding) for a header
+                // and fails on its name field; in that position it only means the entry list ended.
+                break;
+            }
+            catch (Exception exception) when (IsArchiveFailure(exception))
+            {
+                damaged = true;
+                break;
+            }
+
+            if (!moved)
+            {
+                break;
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             index++;
 
-            if (!CanExtract(entry))
+            var entry = reader.Entry;
+            var name = entry.Key;
+            if (IsDirectoryName(name))
             {
                 continue;
             }
 
-            if (!PackageEntryPath.TryNormalize(entry.Name, out var normalized, out var safe)
-                || !safe
+            if (!IsDecodable(entry.CompressionType))
+            {
+                skipped.Add(new ArchiveSkipEntry(name ?? string.Empty, UnsupportedCode,
+                    $"Compression method {entry.CompressionType} is not supported."));
+                continue;
+            }
+
+            if (!PackageEntryPath.TryNormalize(name, out var normalized, out var safe) || !safe
                 || !seenNames.Add(normalized)
-                || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath))
+                || !PackageEntryPath.TryResolveUnderRoot(workspace.Root, normalized, out var fullPath)
+                || File.Exists(fullPath))
             {
                 continue;
             }
 
-            var length = Math.Max(entry.UncompressedSize, 0);
             if (index > limits.MaxEntries)
             {
-                throw new ArcEntryCountExceededException();
+                workspace.Dispose();
+                return ArchiveIndexResult.Empty;
             }
 
-            if (!budget.TryReserve(length, limits))
+            var remainingBytes = limits.MaxTotalBytes - totalBytes;
+            if (remainingBytes <= 0)
             {
+                skipped.Add(new ArchiveSkipEntry(normalized, UnsupportedCode,
+                    "The entry exceeds the configured size budget."));
                 continue;
             }
 
-            var item = await ExtractEntryAsync(archiveStream, entry, normalized, length, fullPath, limits, budget,
-                cancellationToken).ConfigureAwait(false);
-            if (item is not null)
+            var dataStart = archive.Position;
+            long written;
+            try
             {
-                items.Add(item);
+                written = await ExtractEntryAsync(reader, fullPath, Math.Min(limits.MaxEntryBytes, remainingBytes),
+                    cancellationToken).ConfigureAwait(false);
             }
+            catch (ArchiveEntryLimitExceededException)
+            {
+                DeleteQuietly(fullPath);
+                if (!TrySkipEntry(archive, dataStart, entry.CompressedSize))
+                {
+                    damaged = true;
+                    break;
+                }
+
+                skipped.Add(new ArchiveSkipEntry(normalized, UnsupportedCode,
+                    "The entry exceeds the configured size budget."));
+                continue;
+            }
+            catch (NotSupportedException exception)
+            {
+                // Opening failed before the entry was marked as written, so the reader skips its data on the
+                // next move; moving the stream here would skip twice.
+                DeleteQuietly(fullPath);
+                skipped.Add(new ArchiveSkipEntry(normalized, UnsupportedCode, exception.Message));
+                continue;
+            }
+            catch (Exception exception) when (IsArchiveFailure(exception))
+            {
+                damaged = true;
+                break;
+            }
+
+            if (entry.CompressionType == CompressionType.None && written != entry.CompressedSize)
+            {
+                damaged = true;
+                break;
+            }
+
+            totalBytes += written;
+            items.Add(new IndexWorkItem(normalized, written, token => OpenExtractedAsync(fullPath, token)));
+        }
+
+        if (damaged)
+        {
+            workspace.Dispose();
+            return ArchiveIndexResult.Failure(DamagedCode, "The archive is damaged or truncated.");
         }
 
         progress?.Report(100);
-        return items;
+        return new ArchiveIndexResult(
+            new IndexWorkItemSet(items, () =>
+            {
+                workspace.Dispose();
+                return ValueTask.CompletedTask;
+            }),
+            skipped);
     }
 
-    /// <summary>Only stored, non-directory entries with a decodable payload become work items.</summary>
-    private static bool CanExtract(ArcEntry entry) =>
-        !entry.IsDirectory
-        && entry.Method != ArcMethod.Reserved
-        && entry.UncompressedSize >= 0;
-
-    private static async Task<IndexWorkItem?> ExtractEntryAsync(
-        Stream archiveStream,
-        ArcEntry entry,
-        string normalized,
-        long length,
+    private static async Task<long> ExtractEntryAsync(
+        IAsyncReader reader,
         string fullPath,
-        ArchiveIndexLimits limits,
-        ExtractionBudget budget,
+        long maxBytes,
         CancellationToken cancellationToken)
     {
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await using var input = await reader.OpenEntryStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var output = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+            CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        return await CopyBoundedAsync(input, output, maxBytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<long> CopyBoundedAsync(
+        Stream input,
+        Stream output,
+        long maxBytes,
+        CancellationToken cancellationToken)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferBytes);
         try
         {
-            var directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(directory))
+            var written = 0L;
+            int read;
+            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                       .ConfigureAwait(false)) > 0)
             {
-                Directory.CreateDirectory(directory);
+                written += read;
+                if (written > maxBytes)
+                {
+                    throw new ArchiveEntryLimitExceededException();
+                }
+
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             }
 
-            await using (var output = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                             NonSeekableSourceBuffer.CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan))
-            {
-                await ArcEntryExtractor.CopyStoredAsync(archiveStream, entry, output, limits.MaxEntryBytes,
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return new IndexWorkItem(normalized, length, token => OpenExtractedAsync(fullPath, token),
-                entry.ModifiedUtc);
+            return written;
         }
-        catch (ArchiveEntryLimitExceededException)
+        finally
         {
-            budget.Release(length);
-            return null;
-        }
-        catch (Exception exception) when (IsArchiveFailure(exception))
-        {
-            budget.Release(length);
-            return null;
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
+
+    /// <summary>
+    /// Moves the archive stream past the data of an entry whose copy was abandoned, so the next header is read
+    /// from the right position.
+    /// </summary>
+    private static bool TrySkipEntry(Stream archive, long dataStart, long compressedSize)
+    {
+        var dataEnd = dataStart + compressedSize;
+        if (compressedSize < 0 || dataEnd > archive.Length)
+        {
+            return false;
+        }
+
+        archive.Position = dataEnd;
+        return true;
+    }
+
+    private static async ValueTask<bool> StartsWithEndOfArchiveMarkerAsync(
+        Stream archive,
+        CancellationToken cancellationToken)
+    {
+        var marker = new byte[1];
+        archive.Position = 0;
+        return await archive.ReadAsync(marker.AsMemory(), cancellationToken).ConfigureAwait(false) == 1
+            && marker[0] == EndOfArchiveMarker;
+    }
+
+    private static bool IsDecodable(CompressionType compressionType) =>
+        compressionType is CompressionType.None or CompressionType.Packed or CompressionType.Squeezed
+            or CompressionType.Crunched;
+
+    private static bool IsDirectoryName(string? name) =>
+        !string.IsNullOrEmpty(name) && (name.EndsWith('/') || name.EndsWith('\\'));
 
     private static Task<Stream> OpenExtractedAsync(string path, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
-            NonSeekableSourceBuffer.CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
         return Task.FromResult(stream);
     }
 
-    private static bool IsArchiveFailure(Exception exception) =>
-        exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException
-            or InvalidOperationException;
-
-    private sealed class ExtractionBudget
+    private static void DeleteQuietly(string path)
     {
-        private long totalBytes;
-
-        public bool TryReserve(long bytes, ArchiveIndexLimits limits)
+        try
         {
-            if (bytes < 0 || bytes > limits.MaxEntryBytes || totalBytes + bytes > limits.MaxTotalBytes)
+            if (File.Exists(path))
             {
-                return false;
+                File.Delete(path);
             }
-
-            totalBytes += bytes;
-            return true;
         }
-
-        public void Release(long bytes)
+        catch (IOException)
         {
-            if (bytes > 0)
-            {
-                totalBytes -= bytes;
-            }
+            // The workspace cleanup removes anything left behind.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The workspace cleanup removes anything left behind.
         }
     }
+
+    private static bool IsArchiveFailure(Exception exception) =>
+        exception is SharpCompressException or IOException or NotSupportedException or ArgumentException
+            or InvalidOperationException or UnauthorizedAccessException;
 }
