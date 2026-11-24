@@ -131,6 +131,53 @@ public class AboutDialogViewModelTests
         });
     }
 
+    [Fact]
+    public void SelectedTabKey_DefaultsToProjectLicense()
+    {
+        var vm = new AboutDialogViewModel();
+
+        Assert.Equal(AboutDialogViewModel.ProjectLicenseTabKey, vm.SelectedTabKey);
+        Assert.Equal(2, vm.SelectedTabIndex);
+    }
+
+    [Theory]
+    [InlineData(AboutDialogViewModel.SystemInfoTabKey, 0)]
+    [InlineData(AboutDialogViewModel.LoadedAssembliesTabKey, 1)]
+    [InlineData(AboutDialogViewModel.ProjectLicenseTabKey, 2)]
+    [InlineData(AboutDialogViewModel.AboutStoryTabKey, 3)]
+    public void RestoreSelectedTab_RestoresStoredKey(string tabKey, int expectedIndex)
+    {
+        var vm = new AboutDialogViewModel();
+
+        vm.RestoreSelectedTab(tabKey);
+
+        Assert.Equal(expectedIndex, vm.SelectedTabIndex);
+        Assert.Equal(tabKey, vm.SelectedTabKey);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("unknown-tab")]
+    public void RestoreSelectedTab_FallsBackToDefault_WhenNothingUsableIsStored(string? tabKey)
+    {
+        var vm = new AboutDialogViewModel();
+
+        vm.RestoreSelectedTab(tabKey);
+
+        Assert.Equal(AboutDialogViewModel.ProjectLicenseTabKey, vm.SelectedTabKey);
+    }
+
+    [Fact]
+    public void SelectedTabKey_TracksTabChanges()
+    {
+        var vm = new AboutDialogViewModel();
+
+        vm.SelectedTabIndex = 1;
+
+        Assert.Equal(AboutDialogViewModel.LoadedAssembliesTabKey, vm.SelectedTabKey);
+    }
+
     [Theory]
     [InlineData(1023, "1023 B")]
     [InlineData(1024, "1.0 KB")]

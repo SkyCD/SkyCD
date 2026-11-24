@@ -30,6 +30,9 @@ public sealed class AppOptionsDocument
 
     public string? OptionsCategoryId { get; set; }
 
+    /// <summary>Stable key of the About window tab selected last; <c>null</c> means the default tab.</summary>
+    public string? AboutTabKey { get; set; }
+
     public int AppStartCount { get; set; }
 
     public string LastOpenedCatalogPath { get; set; } = string.Empty;

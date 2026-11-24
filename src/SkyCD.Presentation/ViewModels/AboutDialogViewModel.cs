@@ -15,6 +15,20 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class AboutDialogViewModel : ObservableObject
 {
+    public const string SystemInfoTabKey = "system-info";
+    public const string LoadedAssembliesTabKey = "loaded-assemblies";
+    public const string ProjectLicenseTabKey = "project-license";
+    public const string AboutStoryTabKey = "about-story";
+    public const string DefaultTabKey = ProjectLicenseTabKey;
+
+    private static readonly string[] TabKeys =
+    [
+        SystemInfoTabKey,
+        LoadedAssembliesTabKey,
+        ProjectLicenseTabKey,
+        AboutStoryTabKey
+    ];
+
     private const string FallbackProductName = "SkyCD";
     private const string FallbackVersion = "0.0.0";
     private const string FallbackWebsite = "";
@@ -98,6 +112,18 @@ public partial class AboutDialogViewModel : ObservableObject
     public ObservableCollection<LoadedAssemblyEntry> LoadedAssemblies { get; }
 
     [ObservableProperty] private bool dialogAccepted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedTabKey))]
+    private int selectedTabIndex = Array.IndexOf(TabKeys, DefaultTabKey);
+
+    public string SelectedTabKey => TabKeys[Math.Clamp(SelectedTabIndex, 0, TabKeys.Length - 1)];
+
+    public void RestoreSelectedTab(string? tabKey)
+    {
+        var index = Array.IndexOf(TabKeys, tabKey);
+        SelectedTabIndex = index >= 0 ? index : Array.IndexOf(TabKeys, DefaultTabKey);
+    }
 
     [ObservableProperty] private string cpuUsage = "0.0 %";
 
