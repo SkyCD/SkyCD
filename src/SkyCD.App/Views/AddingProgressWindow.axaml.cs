@@ -148,6 +148,23 @@ public partial class AddingProgressWindow : Window
         }, DispatcherPriority.Background);
     }
 
+    private void OnDismissClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not AddingProgressDialogViewModel vm)
+        {
+            return;
+        }
+
+        if (vm.IsCloseMode)
+        {
+            Close();
+        }
+        else if (vm.CanCancel)
+        {
+            vm.Cancel();
+        }
+    }
+
     private async void OnCopyLogClicked(object? sender, RoutedEventArgs e)
     {
         if (DataContext is AddingProgressDialogViewModel vm)

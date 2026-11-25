@@ -92,6 +92,7 @@ public partial class MainWindow : Window
     private DropDestination dropDestination = DropDestination.LibraryRoot;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private readonly Dictionary<string, IImage> toolbarIcons = new(StringComparer.Ordinal);
+    private readonly List<AddingProgressDialogViewModel> openAddingDialogs = [];
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
@@ -145,6 +146,14 @@ public partial class MainWindow : Window
 
     private void OnPluginFailure(PluginFailure failure)
     {
+        // While an add is running, the failure belongs in its progress log instead of a modal on top
+        // of the Adding dialog; the routed log line keeps the fingerprint for later triage.
+        if (openAddingDialogs.LastOrDefault() is { } adding)
+        {
+            adding.ReportPluginFailure(failure);
+            return;
+        }
+
         Dispatcher.UIThread.Post(async () =>
         {
             await pluginErrorDialogGate.WaitAsync();
@@ -160,6 +169,29 @@ public partial class MainWindow : Window
                 pluginErrorDialogGate.Release();
             }
         });
+    }
+
+    private void TrackAddingDialog(AddingProgressDialogViewModel progressVm) => openAddingDialogs.Add(progressVm);
+
+    private void UntrackAddingDialog(AddingProgressDialogViewModel progressVm) => openAddingDialogs.Remove(progressVm);
+
+    /// <summary>
+    /// Closes the Adding dialog when the run is clean; with errors logged it stays open and the footer
+    /// button becomes Close so the log can be read before dismissing it.
+    /// </summary>
+    private void FinishAddingDialog(AddingProgressDialogViewModel progressVm, AddingProgressWindow progressDialog)
+    {
+        progressVm.FlushPendingReports();
+        progressVm.FinishCancellation();
+        UntrackAddingDialog(progressVm);
+
+        if (progressVm.HasErrors)
+        {
+            progressVm.IsCloseMode = true;
+            return;
+        }
+
+        progressDialog.Close();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -1113,6 +1145,7 @@ public partial class MainWindow : Window
                 DataContext = progressVm
             };
             progressDialog.Show(this);
+            TrackAddingDialog(progressVm);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
             var scanCompleted = false;
@@ -1166,8 +1199,7 @@ public partial class MainWindow : Window
             }
             finally
             {
-                progressVm.FinishCancellation();
-                progressDialog.Close();
+                FinishAddingDialog(progressVm, progressDialog);
             }
 
             if (scanCompleted)
@@ -1229,6 +1261,7 @@ public partial class MainWindow : Window
                 DataContext = progressVm
             };
             progressDialog.Show(this);
+            TrackAddingDialog(progressVm);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
             var scanCompleted = false;
@@ -1281,8 +1314,7 @@ public partial class MainWindow : Window
             }
             finally
             {
-                progressVm.FinishCancellation();
-                progressDialog.Close();
+                FinishAddingDialog(progressVm, progressDialog);
             }
 
             if (scanCompleted)
@@ -1326,6 +1358,7 @@ public partial class MainWindow : Window
                 DataContext = progressVm
             };
             progressDialog.Show(this);
+            TrackAddingDialog(progressVm);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
             var scanCompleted = false;
@@ -1378,8 +1411,7 @@ public partial class MainWindow : Window
             }
             finally
             {
-                progressVm.FinishCancellation();
-                progressDialog.Close();
+                FinishAddingDialog(progressVm, progressDialog);
             }
 
             if (scanCompleted)
@@ -1837,6 +1869,7 @@ public partial class MainWindow : Window
         };
 
         progressDialog.Show(this);
+        TrackAddingDialog(progressVm);
         try
         {
             var steps = BuildAddProgressSteps(addDialog);
@@ -1851,7 +1884,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            progressDialog.Close();
+            FinishAddingDialog(progressVm, progressDialog);
         }
     }
 
