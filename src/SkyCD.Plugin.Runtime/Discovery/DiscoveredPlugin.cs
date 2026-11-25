@@ -4,6 +4,7 @@ using System.Linq;
 using DryIoc;
 using SkyCD.SDK.Capabilities;
 using SkyCD.Plugin.Runtime.Documents;
+using SkyCD.Plugin.Runtime.Factories;
 
 namespace SkyCD.Plugin.Runtime.Discovery;
 
@@ -35,6 +36,18 @@ public sealed class DiscoveredPlugin
     /// PNG frame extracted from the plugin's ICO, or <see langword="null"/> when the plugin ships none.
     /// </summary>
     public byte[]? Icon { get; init; }
+
+    /// <summary>
+    /// Every square PNG frame from the plugin's ICO; transient display data, never persisted.
+    /// </summary>
+    public IReadOnlyList<PluginIconFrame> IconFrames { get; init; } = [];
+
+    /// <summary>
+    /// Returns the frame closest to the requested render size, falling back to the persisted
+    /// largest frame when the icon set is unavailable.
+    /// </summary>
+    public byte[]? GetIconNearest(int targetSize) =>
+        PluginIconFrame.SelectNearest(IconFrames, targetSize) ?? Icon;
 
     public required string FileName { get; init; }
 

@@ -171,11 +171,19 @@ public sealed class OptionsPluginsPageLayoutTests
 
         var slots = page.Descendants().OfType<XElement>()
             .Where(element => element.Name.LocalName == "Panel" &&
-                              (string?)element.Attribute("Width") == "24" &&
-                              (string?)element.Attribute("Height") == "24")
+                              (string?)element.Attribute("Width") == (string?)element.Attribute("Height") &&
+                              (string?)element.Attribute("Width") is "24" or "32" or "48")
             .ToList();
         Assert.Equal(4, slots.Count);
-        Assert.Equal(2, slots.Count(ContainsPluginBitmap));
+
+        var bitmapSlots = slots.Where(ContainsPluginBitmap).ToList();
+        Assert.Equal(2, bitmapSlots.Count);
+        Assert.Contains(bitmapSlots, slot => (string?)slot.Attribute("Width") == "32");
+        Assert.Contains(bitmapSlots, slot => (string?)slot.Attribute("Width") == "48");
+
+        var glyphSlots = slots.Except(bitmapSlots).ToList();
+        Assert.Equal(2, glyphSlots.Count);
+        Assert.All(glyphSlots, slot => Assert.Equal("24", (string?)slot.Attribute("Width")));
 
         foreach (var slot in slots)
         {
@@ -187,10 +195,23 @@ public sealed class OptionsPluginsPageLayoutTests
                 var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
                     element => element.Name.LocalName == "Image");
                 Assert.Contains("PluginBitmapConverter", (string?)bitmap.Attribute("Source"));
-                Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+                Assert.Equal("HighQuality",
+                    (string?)bitmap.Attribute("RenderOptions.BitmapInterpolationMode"));
                 Assert.Contains("PackIconLucideKind.Puzzle", (string?)glyph.Attribute("Kind"));
-                Assert.Contains("HasBitmapIcon", (string?)glyph.Attribute("IsVisible"));
                 Assert.Contains("!", (string?)glyph.Attribute("IsVisible"));
+
+                if ((string?)slot.Attribute("Width") == "32")
+                {
+                    Assert.Contains("ListIcon", (string?)bitmap.Attribute("Source"));
+                    Assert.Contains("HasListBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+                    Assert.Contains("!HasListBitmapIcon", (string?)glyph.Attribute("IsVisible"));
+                }
+                else
+                {
+                    Assert.Contains("SelectedPlugin.Icon", (string?)bitmap.Attribute("Source"));
+                    Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+                    Assert.Contains("!SelectedPlugin.HasBitmapIcon", (string?)glyph.Attribute("IsVisible"));
+                }
             }
             else
             {
