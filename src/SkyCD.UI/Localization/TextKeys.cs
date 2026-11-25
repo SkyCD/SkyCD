@@ -133,6 +133,7 @@ public static class TextKeys
     public const string FailedToOpenCatalog = "core.text.FailedToOpenCatalog";
     public const string SaveCatalog = "core.text.SaveCatalog";
     public const string FailedToSaveCatalog = "core.text.FailedToSaveCatalog";
+    public const string FailedToSaveCatalogAccessDenied = "core.text.FailedToSaveCatalogAccessDenied";
     public const string FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings = "core.text.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings";
     public const string SaveCatalogAs = "core.text.SaveCatalogAs";
     public const string ReadingDirectoryFromRemoteServer = "core.text.ReadingDirectoryFromRemoteServer";
