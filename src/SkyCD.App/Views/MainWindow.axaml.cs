@@ -172,7 +172,6 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
-            subscribedViewModel.CollectionsRequested -= OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
@@ -199,7 +198,6 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
-            subscribedViewModel.CollectionsRequested += OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
@@ -696,11 +694,6 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not { SelectedQuickFindResult: not null } vm) return;
         vm.OpenQuickFindResultCommand.Execute(null);
         MainBrowserItemsView.FocusActiveControl();
-    }
-
-    private async void OnCollectionsRequested(object? sender, CollectionsDialogRequestedEventArgs e)
-    {
-        await new CollectionsWindow { DataContext = e.Dialog }.ShowDialog<bool?>(this);
     }
 
     private async void OnAdvancedFindRequested(object? sender, AdvancedFindDialogRequestedEventArgs e)
@@ -1677,11 +1670,11 @@ public partial class MainWindow : Window
         e.Dialog.ToolbarLayoutApplied += OnOptionsToolbarLayoutApplied;
         RefreshPlugins(e.Dialog);
         e.Dialog.RestoreSettingCategory(options.OptionsCategoryId, options.OptionsTabIndex);
-        if (!string.IsNullOrWhiteSpace(e.PreselectSettingCategory))
+        if (!string.IsNullOrWhiteSpace(e.PreselectCategoryId))
         {
             e.Dialog.SettingsSearchText = string.Empty;
             e.Dialog.SelectedSettingCategory = e.Dialog.SettingCategories.FirstOrDefault(category =>
-                category.BuiltInIndex >= 0 && category.Title == e.PreselectSettingCategory);
+                string.Equals(category.Id, e.PreselectCategoryId, StringComparison.Ordinal));
         }
 
         var dialog = new OptionsWindow
@@ -2396,6 +2389,7 @@ public partial class MainWindow : Window
             }
             progress?.Report(++processed * 90 / total);
         }
+        catalogRepository.InvalidateSnapshot();
 
         foreach (var entry in entries)
         {

@@ -269,20 +269,52 @@ public class OptionsWindowLayoutTests
     }
 
     [Fact]
+    public void CollectionsSection_UsesSharedListLayoutWithTwoListsAndToolbarActions()
+    {
+        var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml"));
+        var section = Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowCollectionsSection}");
+
+        Assert.Equal("Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+        Assert.DoesNotContain("#", section.ToString(), StringComparison.Ordinal);
+
+        var lists = section.Descendants(Avalonia + "ListBox").ToArray();
+        Assert.Equal(2, lists.Length);
+        Assert.Contains(lists, list => ((string?)list.Attribute("ItemsSource"))?.Contains("CollectionsPage.Collections", StringComparison.Ordinal) == true);
+        Assert.Contains(lists, list => ((string?)list.Attribute("ItemsSource"))?.Contains("CollectionsPage.Members", StringComparison.Ordinal) == true);
+        Assert.Contains(lists, list => (string?)list.Attribute("DoubleTapped") == "OnCollectionMemberDoubleTapped");
+
+        var commands = section.Descendants(Avalonia + "Button")
+            .Select(button => button.Attribute("Command")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.Equal(
+        [
+            "{Binding CollectionsPage.CreateCollectionCommand}",
+            "{Binding CollectionsPage.RenameCollectionCommand}",
+            "{Binding CollectionsPage.DeleteCollectionCommand}",
+            "{Binding CollectionsPage.RemoveMissingEntriesCommand}",
+            "{Binding CollectionsPage.NavigateToSelectedCommand}",
+            "{Binding CollectionsPage.RefreshResultsCommand}"
+        ], commands);
+        Assert.Equal(2, section.Descendants(Avalonia + "TextBox").Count());
+        Assert.Contains(section.Descendants(Avalonia + "TextBlock"),
+            block => (string?)block.Attribute("Text") == "{i18n:Translate {x:Static i18n:UiKeys.NoCollections}}");
+    }
+
+    [Fact]
     public void RootGrid_KeepsSaveCancelFooterOutOfTheContentRow()
     {
         var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml"));
         var rootGrid = Assert.Single(document.Root!.Elements(Avalonia + "Grid"));
 
-        Assert.Equal("Auto,*,Auto", (string?)rootGrid.Attribute("RowDefinitions"));
+        Assert.Equal("*,Auto", (string?)rootGrid.Attribute("RowDefinitions"));
 
         var footer = Assert.Single(rootGrid.Elements(Avalonia + "Border"),
-            border => (string?)border.Attribute("Grid.Row") == "2");
+            border => (string?)border.Attribute("Grid.Row") == "1");
         Assert.Contains("ConfirmCommand", footer.ToString(), StringComparison.Ordinal);
         Assert.Contains("OnCancelClicked", footer.ToString(), StringComparison.Ordinal);
 
-        var contentGrid = Assert.Single(rootGrid.Elements(Avalonia + "Grid"),
-            grid => (string?)grid.Attribute("Grid.Row") == "1");
+        var contentGrid = Assert.Single(rootGrid.Elements(Avalonia + "Grid"));
         Assert.Contains(contentGrid.Descendants(Avalonia + "ScrollViewer"),
             viewer => (string?)viewer.Attribute(Xaml2006 + "Name") == "ScanSettingsScrollViewer");
     }

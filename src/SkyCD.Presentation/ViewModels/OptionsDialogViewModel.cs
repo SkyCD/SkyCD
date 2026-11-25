@@ -182,13 +182,23 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     Group: pluginsGroup),
                 new("language", LocalizationService.Current.Get(TextKeys.Language), 1),
                 new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
-                new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4),
+                new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4)
+            ];
+
+            if (CollectionsPage is not null)
+            {
+                categories.Add(new(CollectionsCategoryId, LocalizationService.Current.Get(UiKeys.Collections),
+                    CollectionsCategoryIndex));
+            }
+
+            categories.AddRange(
+            [
                 new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7,
                     Group: uiGroup),
                 new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex,
                     Group: uiGroup)
-            ];
+            ]);
 
             // Every AI surface shares one appended group. MCP and ACP agents keep their historical
             // built-in indexes but are appended here so the group stays below the always-present pages.
@@ -293,7 +303,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
         ShowDetailsColumnsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
-        ShowPluginSettingsSection || ShowPluginsSettingsSection;
+        ShowPluginSettingsSection || ShowPluginsSettingsSection ||
+        ShowCollectionsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -804,6 +815,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowMcpSection));
         OnPropertyChanged(nameof(ShowStatusesSection));
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
+        OnPropertyChanged(nameof(IsCollectionsCategorySelected));
+        OnPropertyChanged(nameof(ShowCollectionsSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));
