@@ -2,6 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
         Width="560"
@@ -16,6 +18,41 @@
     <Design.DataContext>
         <vm:AboutDialogViewModel />
     </Design.DataContext>
+
+    <Window.Resources>
+        <DataTemplate x:Key="DiagnosticCardTemplate" x:DataType="vm:AboutDiagnosticGroup">
+            <Border CornerRadius="{DynamicResource SkyCornerRadius}"
+                    Padding="{DynamicResource SkyInsetXs}"
+                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                    BorderThickness="1">
+                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                    <TextBlock Classes="caption" FontWeight="SemiBold" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Facts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AboutDiagnosticFact">
+                                <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Classes="caption"
+                                               Text="{Binding Label}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="body"
+                                               Text="{Binding Value}"
+                                               HorizontalAlignment="Right"
+                                               TextAlignment="Right"
+                                               TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
 
     <Window.Styles>
         <Style Selector="TextBlock.RepositoryLink">
@@ -82,116 +119,187 @@
                                                PointerPressed="OnOpenRepositoryUrl" />
                                 </StackPanel>
                             </StackPanel>
+
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <TextBlock Classes="h2"
+                                           Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryAuthors}}" />
+
+                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                    <TextBlock Classes="body"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryAuthorName}}" />
+                                    <TextBlock Classes="caption RepositoryLink"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryAuthorContact}}"
+                                               Tag="mailto:skycd@mekdrop.name"
+                                               Cursor="Hand"
+                                               TextDecorations="Underline"
+                                               PointerPressed="OnOpenRepositoryUrl" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <TextBlock Classes="h2"
+                                           Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanks}}" />
+
+                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksFreewareBase}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSourceForge}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksGbit}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSlivickas}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksAndYou}}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.SystemInfo}}">
-                    <StackPanel Spacing="{DynamicResource SkySpaceMd}">
-                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Cpu}}" FontWeight="SemiBold" />
-                            <Grid ColumnDefinitions="220,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10"
-                                             VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding CpuUsage}" VerticalAlignment="Center" />
-                            </Grid>
-                        </StackPanel>
+                    <Grid RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,*,Auto"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="{DynamicResource SkySpaceSm}"
+                              RowSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Cpu}}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <ProgressBar Grid.Row="0" Grid.Column="1"
+                                         Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10"
+                                         VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="0" Grid.Column="2"
+                                       Text="{Binding CpuUsage}"
+                                       VerticalAlignment="Center" />
 
-                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Memory}}" FontWeight="SemiBold" />
-                            <Grid ColumnDefinitions="220,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10"
-                                             VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
-                                    <TextBlock Text="{Binding WorkingSet}" />
-                                    <TextBlock Classes="caption" Text="{Binding ManagedHeap}" />
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <Border Grid.Column="0" CornerRadius="{DynamicResource SkyCornerRadius}"
-                                    Padding="{DynamicResource SkyInsetSm}"
-                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
-                                    BorderThickness="1">
-                                <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                                    <TextBlock Classes="caption" Text="{i18n:Translate {x:Static i18n:UiKeys.Threads}}" />
-                                    <TextBlock Classes="h2" Text="{Binding ThreadInfo}" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="1" CornerRadius="{DynamicResource SkyCornerRadius}"
-                                    Padding="{DynamicResource SkyInsetSm}"
-                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
-                                    BorderThickness="1">
-                                <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                                    <TextBlock Classes="caption" Text="{i18n:Translate {x:Static i18n:UiKeys.Uptime}}" />
-                                    <TextBlock Classes="h2" Text="{Binding UptimeFriendly}" />
-                                    <TextBlock Classes="caption" Text="{Binding StartTime}" />
-                                </StackPanel>
-                            </Border>
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Memory}}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <ProgressBar Grid.Row="1" Grid.Column="1"
+                                         Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10"
+                                         VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="1" Grid.Column="2"
+                                       Text="{Binding WorkingSet}"
+                                       VerticalAlignment="Center" />
                         </Grid>
-                    </StackPanel>
+
+                        <Grid Grid.Row="1"
+                              RowDefinitions="*,*"
+                              ColumnDefinitions="*,*"
+                              RowSpacing="{DynamicResource SkySpaceSm}"
+                              ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <ContentControl Grid.Row="0" Grid.Column="0"
+                                            Content="{Binding BuildGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                            <ContentControl Grid.Row="0" Grid.Column="1"
+                                            Content="{Binding RuntimeGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                            <ContentControl Grid.Row="1" Grid.Column="0"
+                                            Content="{Binding ProcessGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                            <ContentControl Grid.Row="1" Grid.Column="1"
+                                            Content="{Binding ApplicationGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                        </Grid>
+                    </Grid>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}">
-                    <Grid>
-                        <ListBox ItemsSource="{Binding LoadedAssemblies}"
-                                 SelectionMode="Multiple"
-                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 ScrollViewer.AllowAutoHide="False">
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <VirtualizingStackPanel Orientation="Vertical" />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
-                            <ListBox.Styles>
-                                <Style Selector="ListBoxItem">
-                                    <Setter Property="Padding" Value="{DynamicResource SkyInsetSm}" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
-                                    <Setter Property="BorderThickness" Value="0,0,0,1" />
-                                </Style>
-                            </ListBox.Styles>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
-                                    <StackPanel VerticalAlignment="Top" Spacing="{DynamicResource SkySpaceXs}">
-                                        <Grid VerticalAlignment="Center" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0"
-                                                       Classes="h2"
-                                                       Text="{Binding Name}"
-                                                       VerticalAlignment="Center"
+                    <Grid RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
+                        <TextBox Text="{Binding AssemblyFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}">
+                            <TextBox.InnerLeftContent>
+                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Search}"
+                                                           Width="14"
+                                                           Height="14"
+                                                           Margin="{DynamicResource SkyGapLeftSm}"
+                                                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                        <Grid Grid.Row="1">
+                            <ListBox ItemsSource="{Binding FilteredAssemblies}"
+                                     IsVisible="{Binding !ShowAssembliesEmptyState}"
+                                     SelectionMode="Multiple"
+                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.AllowAutoHide="False">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel Orientation="Vertical" />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="{DynamicResource SkyInsetSm}" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
+                                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                    </Style>
+                                </ListBox.Styles>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
+                                        <StackPanel VerticalAlignment="Top" Spacing="{DynamicResource SkySpaceXs}">
+                                            <Grid VerticalAlignment="Center" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Classes="h2"
+                                                           Text="{Binding Name}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap"
+                                                           MaxLines="1" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="body"
+                                                           Text="{Binding Version}"
+                                                           VerticalAlignment="Center"
+                                                           MinWidth="72"
+                                                           TextAlignment="Right" />
+                                            </Grid>
+                                            <TextBlock Classes="caption"
+                                                       Text="{Binding Copyright}"
+                                                       IsVisible="{Binding HasCopyright}"
                                                        TextTrimming="CharacterEllipsis"
-                                                       TextWrapping="NoWrap"
-                                                       MaxLines="1" />
-                                            <TextBlock Grid.Column="1"
-                                                       Classes="body"
-                                                       Text="{Binding Version}"
-                                                       VerticalAlignment="Center"
-                                                       MinWidth="72"
-                                                       TextAlignment="Right" />
-                                        </Grid>
-                                        <TextBlock Classes="caption"
-                                                   Text="{Binding Copyright}"
-                                                   IsVisible="{Binding HasCopyright}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="NoWrap" />
-                                        <TextBlock Classes="caption RepositoryLink"
-                                                   Text="{Binding RepositoryUrl}"
-                                                   Cursor="Hand"
-                                                   TextDecorations="Underline"
-                                                   IsVisible="{Binding HasRepositoryUrl}"
-                                                   PointerPressed="OnOpenRepositoryUrl"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="NoWrap" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                                       TextWrapping="NoWrap" />
+                                            <TextBlock Classes="caption RepositoryLink"
+                                                       Text="{Binding RepositoryUrl}"
+                                                       Cursor="Hand"
+                                                       TextDecorations="Underline"
+                                                       IsVisible="{Binding HasRepositoryUrl}"
+                                                       PointerPressed="OnOpenRepositoryUrl"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="NoWrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AssemblyFilterNoMatches}}"
+                                       Classes="caption"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                       Padding="{DynamicResource SkyInsetSm}"
+                                       TextWrapping="Wrap"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding ShowAssembliesEmptyState}" />
+                        </Grid>
                     </Grid>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}">

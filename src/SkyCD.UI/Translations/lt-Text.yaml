@@ -16,6 +16,8 @@ text.UnknownSelectedObject: "Nežinomas pasirinktas objektas."
 text.ExitRequested: "Paprašyta išeiti."
 text.Added: "Pridėta: {0}."
 text.Deleted: "Pašalinta: {0}."
+text.Deleting: "Šalinama..."
+text.DeleteFailed: "Nepavyko pašalinti: {0}"
 text.OptionsDialogIsNotImplementedYet: "Nuostatų langas dar neįgyvendintas."
 text.OptionsSavedLanguage: "Nuostatos įrašytos (kalba: {0})."
 text.OpeningSourceForgeProjectWebsite: "Atveriama projekto svetainė SourceForge..."
@@ -115,6 +117,7 @@ text.FailedToOpenCatalogPluginReadError: "Nepavyko atverti katalogo: papildinio 
 text.FailedToOpenCatalog: "Nepavyko atverti katalogo: {0}"
 text.SaveCatalog: "Įrašyti katalogą"
 text.FailedToSaveCatalog: "Nepavyko įrašyti katalogo: {0}"
+text.FailedToSaveCatalogAccessDenied: "„SkyCD“ negali įrašyti į {0}. Jei įjungta kontroliuojama prieiga prie aplankų sistemoje „Windows“, leiskite „SkyCD“ arba įrašykite į kitą aplanką."
 text.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings: "Nepavyko įrašyti katalogo: nėra įrašymui tinkamo failo formato. Patikrinkite papildinių nuostatas."
 text.SaveCatalogAs: "Įrašyti katalogą kaip"
 text.ReadingDirectoryFromRemoteServer: "Skaitomas aplankas iš nuotolinio serverio..."
@@ -189,10 +192,38 @@ text.FindEmptyQuery: "Įveskite tekstą paieškai visame kataloge."
 text.FindSearching: "Ieškoma..."
 text.FindNoMatches: "Atitinkančių katalogo įrašų nėra."
 text.FindMatchCount: "Rasta įrašų: {0}."
+text.AdvancedFind: "Išplėstinė paieška..."
+text.AdvancedFindHint: "Pridėkite filtrų ir rinkitės „Ieškoti“, arba ieškokite be filtrų, kad būtų rodomas visas sąrašas."
+text.AdvancedFindInvalid: "Filtras {0}: {1}"
+text.AdvancedFindCancelled: "Paieška atšaukta."
+text.AdvancedFindPageStatus: "Rodoma {0}–{1} iš {2} atitikmenų."
+text.AdvancedFindFailed: "Paieška nepavyko: {0}"
+text.AdvancedFindTruncated: "Rodomi tik pirmi {0} atitikmenys."
+text.AdvancedFindDuplicateFilter: Pasikartojimų filtras
+text.AdvancedFindHashAlgorithm: Maišos algoritmas
+text.AdvancedFindDuplicateNone: Bet kuris failas
+text.AdvancedFindDuplicateDuplicates: Pasikartojantys failai
+text.AdvancedFindDuplicateUniques: Unikalūs failai
+text.AdvancedFindAlgorithmSha256: SHA-256
+text.AdvancedFindAlgorithmCrc32: CRC32
+text.AdvancedFilterKeyRequired: "Savųjų savybių ir metaduomenų filtrams reikia rakto."
+text.AdvancedFilterPluginField: "Papildinio laukas"
+text.AdvancedFilterValueRequired: "Šiam operatoriui reikia palyginimo reikšmės."
+text.AdvancedFilterOneOfRequired: "„OneOf“ reikalauja bent vienos reikšmės, atskirtos kabliataškiu."
 
 text.ScanCanceled: Nuskaitymas atšauktas.
 
 text.ScanFailedItems: "Nuskaitymo metu nepavyko apdoroti {0} elementų. Katalogas nepakeistas."
+
+text.Tags: "Žymos"
+text.TagAddedToItems: "Žyma {0} pridėta elementams: {1}."
+text.TagRemovedFromItems: "Žyma {0} pašalinta iš elementų: {1}."
+text.TagCreated: "Sukurta žyma {0}."
+text.TagRenamed: "Žyma pervadinta į {0}."
+text.TagMerged: "Žyma {0} sujungta su {1}."
+text.TagDeleted: "Žyma {0} ištrinta."
+text.TagFilterMatchCount: "Įrašų su žyma {1}: {0}."
+text.TagNameRequired: "Įveskite žymos pavadinimą."
 
 text.Collections: "Rinkiniai"
 text.CollectionCreated: "Sukurtas rinkinys {0}."

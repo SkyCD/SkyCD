@@ -30,7 +30,7 @@ public sealed class TabControlContentInsetTests
             tabs.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
 
-            var body = Assert.IsType<StackPanel>(Assert.IsType<TabItem>(tabs.Items[1]).Content);
+            var body = Assert.IsAssignableFrom<Control>(Assert.IsType<TabItem>(tabs.Items[1]).Content);
             AssertInsetFromContentHost(tabs, body);
         }
         finally

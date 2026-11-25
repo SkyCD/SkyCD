@@ -65,7 +65,7 @@ public sealed class CatalogSizeMaintenanceIntegrationTests : IDisposable
         viewModel.SelectedBrowserItem = arrival;
         viewModel.SelectedBrowserItems = new List<CatalogDocument> { arrival };
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Null(context.Catalog.Get("arrival"));
 
@@ -85,7 +85,7 @@ public sealed class CatalogSizeMaintenanceIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Tree;
         viewModel.SelectedTreeNode = SelectTreeNode(viewModel, "scifi");
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
 
         Assert.Null(context.Catalog.Get("scifi"));
         Assert.Null(context.Catalog.Get("interstellar"));
@@ -104,7 +104,7 @@ public sealed class CatalogSizeMaintenanceIntegrationTests : IDisposable
 
         viewModel.ActivePane = ActivePane.Tree;
         viewModel.SelectedTreeNode = SelectTreeNode(viewModel, "scifi");
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
         await WaitUntilAsync(
             () => context.Catalog.Get("movies")?.Size == 0,
             "the background recount should empty Movies before undo");

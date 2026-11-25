@@ -128,158 +128,154 @@
               Grid.Column="1"
               RowDefinitions="Auto,*,Auto">
             <!--
-                Issue #942: the name/Location block and the source fields each own a sizing row spaced by
-                the token ramp instead of sharing a fixed 6 px row, so no section can draw over its neighbour.
+                Issue #942: the name/Location block owns the top sizing row so no section can draw
+                over its neighbour. Issue #1150: the source fields own the star row below it, so
+                they use the full remaining height and scroll only inside their own border.
             -->
-            <Grid x:Name="FormFieldsGrid"
-                  RowDefinitions="Auto,Auto"
-                  RowSpacing="{DynamicResource SkySpaceXs}">
-                <StackPanel x:Name="NameLocationBlock" Spacing="{DynamicResource SkySpaceXs}">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
-                    <TextBox Classes="source-field" Text="{Binding MediaName}" />
-                    <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="{DynamicResource SkySpaceXs}">
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Location}}" />
+            <StackPanel x:Name="NameLocationBlock" Spacing="{DynamicResource SkySpaceXs}">
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
+                <TextBox Classes="source-field" Text="{Binding MediaName}" />
+                <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="{DynamicResource SkySpaceXs}">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Location}}" />
+                    <ComboBox Classes="source-field"
+                              ItemsSource="{Binding LocationChoices}"
+                              SelectedItem="{Binding SelectedLocation}"
+                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Location}}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LocationItemViewModel">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+
+            <!--
+                The source-specific fields use the remaining height and scroll when a tab needs more
+                room than the fixed window height allows (#823 keeps the window size fixed, #942 the
+                content is never clipped, #1150 the star row is no longer capped).
+            -->
+            <ScrollViewer x:Name="SourceFieldsScrollViewer"
+                          Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <Grid x:Name="SourceDetailsPanel" VerticalAlignment="Top" RowDefinitions="Auto,Auto">
+                    <StackPanel Grid.Row="0"
+                                IsVisible="{Binding HasMultipleDroppedRoots}"
+                                Spacing="{DynamicResource SkySpaceXs}"
+                                VerticalAlignment="Top">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DroppedRoots}}" />
                         <ComboBox Classes="source-field"
-                                  ItemsSource="{Binding LocationChoices}"
-                                  SelectedItem="{Binding SelectedLocation}"
-                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Location}}"
+                                  ItemsSource="{Binding DroppedRoots}"
+                                  SelectedItem="{Binding SelectedDroppedRoot}"
+                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.DroppedRoots}}"
                                   HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:LocationItemViewModel">
-                                    <TextBlock Text="{Binding Name}" />
+                                <DataTemplate x:DataType="vm:DroppedSource">
+                                    <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
-                </StackPanel>
 
-                <!--
-                    The source-specific fields scroll when a tab needs more room than the fixed window
-                    height allows (#823 keeps the window size fixed, #942 the content is never clipped).
-                -->
-                <ScrollViewer x:Name="SourceFieldsScrollViewer"
-                              Grid.Row="1"
-                              MaxHeight="{DynamicResource SkyFormFieldsMaxHeight}"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <Grid x:Name="SourceDetailsPanel" VerticalAlignment="Top" RowDefinitions="Auto,Auto">
-                        <StackPanel Grid.Row="0"
-                                    IsVisible="{Binding HasMultipleDroppedRoots}"
-                                    Spacing="{DynamicResource SkySpaceXs}"
-                                    VerticalAlignment="Top">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DroppedRoots}}" />
-                            <ComboBox Classes="source-field"
-                                      ItemsSource="{Binding DroppedRoots}"
-                                      SelectedItem="{Binding SelectedDroppedRoot}"
-                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.DroppedRoots}}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:DroppedSource">
-                                        <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceMedia}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
-                            <ComboBox Classes="source-field"
-                                      ItemsSource="{Binding AvailableDrives}"
-                                      SelectedItem="{Binding SelectedDrive}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding DisplayName}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
-                                      IsChecked="{Binding IncludeMediaInfo}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
-                                      IsChecked="{Binding IncludeSubfolders}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
-                                      IsChecked="{Binding IncludeFiles}" />
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                                       Foreground="#666666"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceFolder}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBox Classes="source-field" Text="{Binding SourceValue}" />
-                                <Button Grid.Column="1"
-                                        Classes="source-field"
-                                        Content="..."
-                                        Width="28"
-                                        Click="OnBrowseFolderClicked" />
-                            </Grid>
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
-                                      IsChecked="{Binding IncludeSubfolders}" />
-                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
-                                      IsChecked="{Binding IncludeFiles}" />
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                                       Foreground="#666666"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceInternet}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ComboBox x:Name="InternetProtocolComboBox"
-                                          Classes="source-field"
-                                          ItemsSource="{Binding InternetProtocols}"
-                                          SelectedItem="{Binding InternetProtocol}"
-                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                                <iconPacks:PackIconControl Width="16" Height="16"
-                                                                           Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
-                                                                           VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                                <Button Grid.Column="1"
-                                        x:Name="PasteInternetUrlButton"
-                                        IsEnabled="False"
-                                        Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
-                                        Click="OnPasteInternetUrlClicked" />
-                            </Grid>
-                            <Grid ColumnDefinitions="*,72" RowDefinitions="Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}" RowSpacing="{DynamicResource SkySpaceXs}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
-                                <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
-                                <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
-                                <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
-                                         Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
-                            </Grid>
-                            <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
-                                       Text="{i18n:Translate {x:Static i18n:UiKeys.InternetPath}}" />
-                            <TextBlock IsVisible="{Binding IsSmbInternetProtocol}"
-                                       Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
-                            <TextBox Classes="source-field" Text="{Binding InternetPath}" />
-                            <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
-                            <StackPanel Spacing="{DynamicResource SkySpaceXs}" IsVisible="{Binding !InternetCredentials.IsSftp}">
-                                <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
-                                        Command="{Binding CheckInternetConnectionCommand}" />
-                                <TextBlock Text="{Binding InternetCheckStatus}" TextWrapping="Wrap"
-                                           IsVisible="{Binding InternetCheckStatus, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <TextBlock Grid.Row="1"
-                                   IsVisible="{Binding IsSourceTitleOnly}"
-                                   VerticalAlignment="Top"
-                                   Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
+                    <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceMedia}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectDrive}}" />
+                        <ComboBox Classes="source-field"
+                                  ItemsSource="{Binding AvailableDrives}"
+                                  SelectedItem="{Binding SelectedDrive}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
+                                  IsChecked="{Binding IncludeMediaInfo}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
+                                  IsChecked="{Binding IncludeSubfolders}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                                  IsChecked="{Binding IncludeFiles}" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                                   Foreground="#666666"
                                    TextWrapping="Wrap" />
-                    </Grid>
-                </ScrollViewer>
+                    </StackPanel>
 
-            </Grid>
+                    <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceFolder}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                            <Button Grid.Column="1"
+                                    Classes="source-field"
+                                    Content="..."
+                                    Width="28"
+                                    Click="OnBrowseFolderClicked" />
+                        </Grid>
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
+                                  IsChecked="{Binding IncludeSubfolders}" />
+                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                                  IsChecked="{Binding IncludeFiles}" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                                   Foreground="#666666"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceInternet}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <ComboBox x:Name="InternetProtocolComboBox"
+                                      Classes="source-field"
+                                      ItemsSource="{Binding InternetProtocols}"
+                                      SelectedItem="{Binding InternetProtocol}"
+                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                            <iconPacks:PackIconControl Width="16" Height="16"
+                                                                       Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
+                                                                       VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="1"
+                                    x:Name="PasteInternetUrlButton"
+                                    IsEnabled="False"
+                                    Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
+                                    Click="OnPasteInternetUrlClicked" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,72" RowDefinitions="Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}" RowSpacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                            <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                            <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
+                                     Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                        </Grid>
+                        <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.InternetPath}}" />
+                        <TextBlock IsVisible="{Binding IsSmbInternetProtocol}"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
+                        <TextBox Classes="source-field" Text="{Binding InternetPath}" />
+                        <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}" IsVisible="{Binding !InternetCredentials.IsSftp}">
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
+                                    Command="{Binding CheckInternetConnectionCommand}" />
+                            <TextBlock Text="{Binding InternetCheckStatus}" TextWrapping="Wrap"
+                                       IsVisible="{Binding InternetCheckStatus, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1"
+                               IsVisible="{Binding IsSourceTitleOnly}"
+                               VerticalAlignment="Top"
+                               Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnlyMediaHint}}"
+                               TextWrapping="Wrap" />
+                </Grid>
+            </ScrollViewer>
 
             <!--
                 The destination radios render directly in the content column. The radios and the

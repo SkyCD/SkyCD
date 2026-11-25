@@ -21,7 +21,8 @@ public sealed partial class OptionsPluginItem : ObservableObject
         string? capabilityType = null,
         long? sizeBytes = null,
         PluginUpdateSource? updateSource = null,
-        byte[]? icon = null)
+        byte[]? icon = null,
+        byte[]? listIcon = null)
     {
         Name = name;
         Type = type;
@@ -37,6 +38,7 @@ public sealed partial class OptionsPluginItem : ObservableObject
         SizeBytes = sizeBytes;
         UpdateSource = updateSource;
         Icon = icon is { Length: > 0 } ? icon : null;
+        ListIcon = listIcon is { Length: > 0 } ? listIcon : Icon;
     }
 
     public string Id { get; }
@@ -69,8 +71,17 @@ public sealed partial class OptionsPluginItem : ObservableObject
     /// <summary>PNG frame extracted from the plugin's ICO, or <see langword="null"/> when it ships none.</summary>
     public byte[]? Icon { get; }
 
+    /// <summary>
+    /// PNG frame sized for the installed list rows; the details header uses <see cref="Icon"/>.
+    /// Falls back to <see cref="Icon"/> when no row-sized frame is available.
+    /// </summary>
+    public byte[]? ListIcon { get; }
+
     /// <summary>True when the plugin ships an icon; otherwise the page renders the neutral glyph.</summary>
     public bool HasBitmapIcon => Icon is { Length: > 0 };
+
+    /// <summary>True when the list row can show a bitmap; otherwise the row renders the neutral glyph.</summary>
+    public bool HasListBitmapIcon => ListIcon is { Length: > 0 };
 
     public string ExtendedInfo { get; }
 

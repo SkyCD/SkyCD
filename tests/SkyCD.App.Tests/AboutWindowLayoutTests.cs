@@ -10,13 +10,16 @@ namespace SkyCD.App.Tests;
 /// <summary>
 /// Issue #937: the About window owns a single window inset and one spacing rhythm, so the
 /// System info tab no longer shows a double inset, a wider gap above the cards, or misaligned values.
+/// Issue #1147: the System info tab is a diagnostics dashboard with full-width bar rows and a
+/// stretching card grid instead of fixed-width bars over empty space.
 /// </summary>
 public sealed class AboutWindowLayoutTests
 {
     private const string WindowPaddingToken = "SkyWindowPadding";
-    private const string SharedValueColumn = "ColumnDefinitions=\"220,*\"";
-    private const string SmallStackSpacing = "Spacing=\"{DynamicResource SkySpaceXs}\"";
     private const string FooterRowSpacing = "RowSpacing=\"{DynamicResource SkySpaceMd}\"";
+
+    private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
+    private static readonly XNamespace Xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     private static readonly Regex NonZeroMargin = new(
         "\\bMargin=\"[^\"]*[1-9]",
@@ -46,31 +49,65 @@ public sealed class AboutWindowLayoutTests
     }
 
     [Fact]
-    public void SystemInfo_RowsShareOneFixedValueColumnWithoutFixedBarWidths()
+    public void SystemInfo_BarsStretchAcrossTheRowInsteadOfFixedWidths()
     {
-        var about = ReadAboutWindow();
+        var systemInfo = SystemInfoTab();
+        var bars = systemInfo.Descendants(Avalonia + "ProgressBar").ToArray();
 
-        Assert.Equal(2, Occurrences(about, SharedValueColumn));
-        Assert.Equal(0, Occurrences(about, "Width=\"220\""));
+        Assert.Equal(2, bars.Length);
+        Assert.All(bars, bar =>
+        {
+            Assert.Null(bar.Attribute("Width"));
+            Assert.Equal("Auto,*,Auto", (string?)bar.Parent!.Attribute("ColumnDefinitions"));
+        });
+        Assert.DoesNotContain("220", systemInfo.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Cards_UseTheSameInnerSpacingRhythm()
+    public void SystemInfo_UsesAStretchingGridWithTheSectionGapToken()
     {
-        Assert.True(Occurrences(ReadAboutWindow(), SmallStackSpacing) >= 2);
+        var root = Assert.Single(SystemInfoTab().Elements());
+
+        Assert.Equal("Grid", root.Name.LocalName);
+        Assert.Equal("Auto,*", (string?)root.Attribute("RowDefinitions"));
+        Assert.Equal("{DynamicResource SkySpaceSm}", (string?)root.Attribute("RowSpacing"));
     }
 
     [Fact]
-    public void SystemInfo_SectionsUseTheSectionGapToken()
+    public void SystemInfo_CardGridHasFourStretchingDiagnosticCards()
+    {
+        var cardGrid = SystemInfoTab().Descendants(Avalonia + "Grid")
+            .Single(grid => (string?)grid.Attribute("RowDefinitions") == "*,*");
+        var cards = cardGrid.Elements(Avalonia + "ContentControl").ToArray();
+
+        Assert.Equal("*,*", (string?)cardGrid.Attribute("ColumnDefinitions"));
+        Assert.Equal(4, cards.Length);
+        Assert.All(cards, card =>
+        {
+            Assert.Equal("{StaticResource DiagnosticCardTemplate}", (string?)card.Attribute("ContentTemplate"));
+            Assert.Equal("Stretch", (string?)card.Attribute("HorizontalContentAlignment"));
+            Assert.Equal("Stretch", (string?)card.Attribute("VerticalContentAlignment"));
+        });
+        Assert.Equal(4, cards.Select(card => (string?)card.Attribute("Content")).Distinct().Count());
+    }
+
+    [Fact]
+    public void DiagnosticCards_UseTheSameInsetAndSpacingTokens()
     {
         var document = XDocument.Parse(ReadAboutWindow());
-        XNamespace avalonia = "https://github.com/avaloniaui";
-        var systemInfo = document.Descendants(avalonia + "TabItem")
-            .Single(tab => ((string?)tab.Attribute("Header"))?.Contains("UiKeys.SystemInfo", StringComparison.Ordinal) == true)
-            .Elements().First();
+        var template = document.Descendants(Avalonia + "DataTemplate")
+            .Single(element => (string?)element.Attribute(Xaml + "Key") == "DiagnosticCardTemplate");
+        var border = Assert.Single(template.Elements(Avalonia + "Border"));
+        var stack = Assert.Single(border.Elements(Avalonia + "StackPanel"));
 
-        Assert.Equal("StackPanel", systemInfo.Name.LocalName);
-        Assert.Equal("{DynamicResource SkySpaceMd}", (string?)systemInfo.Attribute("Spacing"));
+        Assert.Equal("{DynamicResource SkyInsetXs}", (string?)border.Attribute("Padding"));
+        Assert.Equal("{DynamicResource SkySpaceXxs}", (string?)stack.Attribute("Spacing"));
+    }
+
+    private static XElement SystemInfoTab()
+    {
+        return XDocument.Parse(ReadAboutWindow()).Descendants(Avalonia + "TabItem")
+            .Single(tab => ((string?)tab.Attribute("Header"))?.Contains("UiKeys.SystemInfo", StringComparison.Ordinal) == true);
     }
 
     private static int Occurrences(string text, string token) =>

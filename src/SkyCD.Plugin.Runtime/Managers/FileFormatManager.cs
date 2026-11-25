@@ -288,7 +288,15 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
     {
         var destination = Path.GetFullPath(path);
         var directory = Path.GetDirectoryName(destination)!;
-        Directory.CreateDirectory(directory);
+        try
+        {
+            Directory.CreateDirectory(directory);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new CatalogSaveIOException(directory, exception);
+        }
+
         var temporary = Path.Combine(directory, $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
         try
         {
@@ -310,9 +318,92 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
             File.Move(temporary, destination, overwrite: true);
             return result;
         }
+        catch (UnauthorizedAccessException) when (IsReplaceOnly(destination))
+        {
+            // The folder denies creating siblings but the catalog file itself is writable, so the
+            // advertised writability still holds: serialize fully to memory first, so a format error
+            // can never touch the destination, then replace its bytes in place.
+            return await WriteInPlaceAsync(formatId, destination, payload, progress, cancellationToken,
+                catalogScopeItems);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new CatalogSaveIOException(directory, exception);
+        }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            TryDeleteTempFile(temporary);
+        }
+    }
+
+    private async Task<FileFormatWriteResult> WriteInPlaceAsync(
+        string formatId,
+        string destination,
+        object payload,
+        IProgress<int>? progress,
+        CancellationToken cancellationToken,
+        IReadOnlyList<FileFormatDataLossItem>? catalogScopeItems)
+    {
+        using var buffer = new MemoryStream();
+        var result = await WriteAsync(new FileFormatWriteRequest
+        {
+            FormatId = formatId,
+            FileName = Path.GetFileName(destination),
+            Target = buffer,
+            Payload = payload,
+            Progress = progress,
+            CatalogScopeItems = catalogScopeItems ?? []
+        }, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            await File.WriteAllBytesAsync(destination, buffer.ToArray(), cancellationToken);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new CatalogSaveIOException(Path.GetDirectoryName(destination)!, exception);
+        }
+
+        return result;
+    }
+
+    private static bool IsReplaceOnly(string destination)
+    {
+        if (!File.Exists(destination))
+        {
+            return false;
+        }
+
+        try
+        {
+            using (File.Open(destination, FileMode.Open, FileAccess.Write, FileShare.None))
+            {
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static void TryDeleteTempFile(string temporary)
+    {
+        // A leftover temp file must never mask or replace the save result.
+        try
+        {
+            if (File.Exists(temporary))
+            {
+                File.Delete(temporary);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 

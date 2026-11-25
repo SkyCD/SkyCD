@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Input;
 using SkyCD.App.Converters;
@@ -467,7 +468,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void BrowserCommands_TargetSelectionConsistentlyAcrossAllViewModes()
+    public async Task BrowserCommands_TargetSelectionConsistentlyAcrossAllViewModes()
     {
         var modes = new[] { "Details", "List", "SmallIcons", "LargeIcons", "Tiles" };
         foreach (var mode in modes)
@@ -483,7 +484,7 @@ public class MainWindowViewModelTests
             Assert.Same(item, vm.ClipboardItem);
 
             // Delete command targets selection
-            vm.DeleteItemCommand.Execute(null);
+            await vm.DeleteItemCommand.ExecuteAsync(null);
             Assert.DoesNotContain(vm.BrowserItems, doc => doc.Name == item.Name);
         }
     }
@@ -557,11 +558,11 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteThenSave_UpdatesSaveCommandState()
+    public async Task DeleteThenSave_UpdatesSaveCommandState()
     {
         var vm = CreateViewModel();
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsSaveEnabled);
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
@@ -598,7 +599,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_EnabledOnlyWhenItemIsSelected()
+    public async Task DeleteCommand_EnabledOnlyWhenItemIsSelected()
     {
         var vm = CreateViewModel();
         vm.SelectedBrowserItem = null;
@@ -611,26 +612,26 @@ public class MainWindowViewModelTests
         Assert.True(vm.DeleteItemCommand.CanExecute(null));
 
         var deletedName = vm.BrowserItems[0].Name;
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal($"Deleted {deletedName}.", vm.StatusText);
     }
 
     [Fact]
-    public void DeleteCommand_RemovesItemFromVisibleList()
+    public async Task DeleteCommand_RemovesItemFromVisibleList()
     {
         var vm = CreateViewModel();
         var originalCount = vm.BrowserItems.Count;
         var deletedName = vm.SelectedBrowserItem?.Name;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
         Assert.DoesNotContain(vm.BrowserItems, item => item.Name == deletedName);
     }
 
     [Fact]
-    public void DeleteCommand_MultiSelection_RemovesAllSelectedItemsAndFormatsStatus()
+    public async Task DeleteCommand_MultiSelection_RemovesAllSelectedItemsAndFormatsStatus()
     {
         var vm = CreateViewModel();
         var item1 = vm.BrowserItems[0];
@@ -639,7 +640,7 @@ public class MainWindowViewModelTests
         vm.ActivePane = ActivePane.Browser;
 
         var originalCount = vm.BrowserItems.Count;
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal(originalCount - 2, vm.BrowserItems.Count);
         Assert.DoesNotContain(vm.BrowserItems, item => item.Name == item1.Name);
@@ -649,7 +650,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_RemovesTreeNodeAndSelectsNextSibling()
+    public async Task DeleteCommand_TreeSelection_RemovesTreeNodeAndSelectsNextSibling()
     {
         var vm = CreateViewModel();
         var libraryNode = vm.TreeNodes.Single();
@@ -660,7 +661,7 @@ public class MainWindowViewModelTests
         Assert.True(vm.DeleteItemCommand.CanExecute(null));
         Assert.True(vm.IsDeleteEnabled);
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("Deleted Movies.", vm.StatusText);
         Assert.Equal("music", vm.SelectedTreeNode?.Key);
@@ -670,21 +671,21 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_LastSibling_SelectsPreviousSibling()
+    public async Task DeleteCommand_TreeSelection_LastSibling_SelectsPreviousSibling()
     {
         var vm = CreateViewModel();
         var projectsNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "projects");
         vm.SelectedTreeNode = projectsNode;
         vm.ActivePane = ActivePane.Tree;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("music", vm.SelectedTreeNode?.Key);
         Assert.DoesNotContain(vm.TreeNodes.Single().Children, child => child.Key == "projects");
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_OnlyChild_SelectsParentNode()
+    public async Task DeleteCommand_TreeSelection_OnlyChild_SelectsParentNode()
     {
         var vm = MainWindowViewModel.CreateForInMemoryCatalog(
         [
@@ -698,14 +699,14 @@ public class MainWindowViewModelTests
         vm.SelectedTreeNode = reportsNode;
         vm.ActivePane = ActivePane.Tree;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("documents", vm.SelectedTreeNode?.Key);
         Assert.Empty(vm.TreeNodes.Single().Children.Single(node => node.Key == "documents").Children);
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_NestedNode_RemovesNodeAndItsDescendantsFromTree()
+    public async Task DeleteCommand_TreeSelection_NestedNode_RemovesNodeAndItsDescendantsFromTree()
     {
         var vm = CreateViewModel();
         var musicNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "music");
@@ -713,7 +714,7 @@ public class MainWindowViewModelTests
         vm.SelectedTreeNode = classicalNode;
         vm.ActivePane = ActivePane.Tree;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         var refreshedMusicNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "music");
         Assert.DoesNotContain(refreshedMusicNode.Children, child => child.Key == "classical-collection");
@@ -721,7 +722,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreeSelection_DetachesNodeInPlaceLeavingSiblingsUntouched()
+    public async Task DeleteCommand_TreeSelection_DetachesNodeInPlaceLeavingSiblingsUntouched()
     {
         var vm = CreateViewModel();
         var libraryNode = vm.TreeNodes.Single();
@@ -731,7 +732,7 @@ public class MainWindowViewModelTests
         vm.SelectedTreeNode = moviesNode;
         vm.ActivePane = ActivePane.Tree;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         // Surviving nodes keep their identity, so their realized TreeViewItems are not torn down
         // along with the deleted subtree and keyboard focus has somewhere to land.
@@ -742,7 +743,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_BrowserSelection_KeepsSelectionAtDeletedPosition()
+    public async Task DeleteCommand_BrowserSelection_KeepsSelectionAtDeletedPosition()
     {
         var vm = MainWindowViewModel.CreateForInMemoryCatalog(
         [
@@ -756,14 +757,14 @@ public class MainWindowViewModelTests
         var beta = vm.BrowserItems.Single(item => item.Id == "beta");
         vm.SelectedBrowserItems = new List<CatalogDocument> { beta };
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("Gamma", vm.SelectedBrowserItem?.Name);
         Assert.Equal("Gamma", (vm.SelectedBrowserItems.Cast<CatalogDocument>().Single()).Name);
     }
 
     [Fact]
-    public void DeleteCommand_BrowserSelection_LastItem_KeepsSelectionAtEndOfList()
+    public async Task DeleteCommand_BrowserSelection_LastItem_KeepsSelectionAtEndOfList()
     {
         var vm = MainWindowViewModel.CreateForInMemoryCatalog(
         [
@@ -776,7 +777,7 @@ public class MainWindowViewModelTests
         var beta = vm.BrowserItems.Single(item => item.Id == "beta");
         vm.SelectedBrowserItems = new List<CatalogDocument> { beta };
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("Alpha", vm.SelectedBrowserItem?.Name);
     }
@@ -794,7 +795,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_TreeFocus_IgnoresStaleBrowserSelection()
+    public async Task DeleteCommand_TreeFocus_IgnoresStaleBrowserSelection()
     {
         var vm = CreateViewModel();
         var libraryNode = vm.TreeNodes.Single();
@@ -805,7 +806,7 @@ public class MainWindowViewModelTests
         vm.SelectedBrowserItem = browserItemBefore;
         vm.ActivePane = ActivePane.Tree;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("Deleted Music.", vm.StatusText);
         Assert.Equal("projects", vm.SelectedTreeNode?.Key);
@@ -828,7 +829,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_SingleItemAfterMultiSelection_DeletesOnlyTargetItem()
+    public async Task DeleteCommand_SingleItemAfterMultiSelection_DeletesOnlyTargetItem()
     {
         var vm = CreateViewModel();
         var item1 = vm.BrowserItems[0];
@@ -844,7 +845,7 @@ public class MainWindowViewModelTests
         vm.ActivePane = ActivePane.Browser;
 
         var originalCount = vm.BrowserItems.Count;
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal(originalCount - 1, vm.BrowserItems.Count);
         Assert.DoesNotContain(vm.BrowserItems, item => item.Name == item1.Name);
@@ -854,7 +855,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_StaleSelectionFromOtherFolder_OnlyDeletesItemsInCurrentFolder()
+    public async Task DeleteCommand_StaleSelectionFromOtherFolder_OnlyDeletesItemsInCurrentFolder()
     {
         var vm = CreateViewModel();
         var libraryItem = vm.BrowserItems.First(item => item.Id == "movies");
@@ -869,7 +870,7 @@ public class MainWindowViewModelTests
         vm.ActivePane = ActivePane.Browser;
 
         var musicCountBefore = vm.BrowserItems.Count;
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         // Only musicItem should be deleted because libraryItem is not in current folder
         Assert.Equal(musicCountBefore - 1, vm.BrowserItems.Count);
@@ -882,7 +883,7 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_InBrowserList_PreservesSelectedTreeNodeAndExpandedState()
+    public async Task DeleteCommand_InBrowserList_PreservesSelectedTreeNodeAndExpandedState()
     {
         var vm = CreateViewModel();
         var musicNode = vm.TreeNodes[0].Children.Single(node => node.Key == "music");
@@ -894,7 +895,7 @@ public class MainWindowViewModelTests
         var targetItem = vm.BrowserItems.First();
         vm.SelectedBrowserItems = new List<CatalogDocument> { targetItem };
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         // SelectedTreeNode must remain music
         Assert.NotNull(vm.SelectedTreeNode);
@@ -987,13 +988,13 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_InMemoryCatalog_RecalculatesAncestorSizes()
+    public async Task DeleteCommand_InMemoryCatalog_RecalculatesAncestorSizes()
     {
         var vm = CreateViewModel();
         vm.SelectedTreeNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "movies");
         vm.SelectedBrowserItem = vm.BrowserItems.Single(item => item.Id == "interstellar");
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         vm.SelectedTreeNode = vm.TreeNodes.Single();
         var movies = Assert.Single(vm.BrowserItems, item => item.Id == "movies");
@@ -1440,21 +1441,21 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void DeleteCommand_BrowserPane_RaisesFocusBrowserRequested()
+    public async Task DeleteCommand_BrowserPane_RaisesFocusBrowserRequested()
     {
         var vm = CreateViewModel();
         vm.ActivePane = ActivePane.Browser;
         var focusRaised = false;
         vm.FocusBrowserRequested += (_, _) => focusRaised = true;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.True(focusRaised);
         Assert.Equal(ActivePane.Browser, vm.ActivePane);
     }
 
     [Fact]
-    public void DeleteCommand_TreePane_RaisesFocusTreeRequested()
+    public async Task DeleteCommand_TreePane_RaisesFocusTreeRequested()
     {
         var vm = CreateViewModel();
         var moviesNode = vm.TreeNodes.Single().Children.Single(node => node.Key == "movies");
@@ -1464,7 +1465,7 @@ public class MainWindowViewModelTests
         var focusRaised = false;
         vm.FocusTreeRequested += (_, _) => focusRaised = true;
 
-        vm.DeleteItemCommand.Execute(null);
+        await vm.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.True(focusRaised);
         Assert.Equal(ActivePane.Tree, vm.ActivePane);

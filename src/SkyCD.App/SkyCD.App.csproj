@@ -14,6 +14,7 @@
     </PropertyGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="SkyCD.App.Tests" />
+        <InternalsVisibleTo Include="SkyCD.UI.Tests" />
     </ItemGroup>
     <ItemGroup>
         <AvaloniaResource Include="Assets\**" />

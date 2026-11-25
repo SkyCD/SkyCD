@@ -8,21 +8,24 @@ using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.GenDesc.Configuration;
 using SkyCD.Plugin.Ai.GenDesc.Exceptions;
-using SkyCD.Plugin.Ai.GenDesc.Import;
 using SkyCD.Plugin.Ai.GenDesc.Models;
 using SkyCD.Plugin.Ai.GenDesc.Parsing;
-using SkyCD.Plugin.Ai.GenDesc.Sources;
+using SkyCD.Plugin.OnlineMetadata.Models;
+using SkyCD.Plugin.OnlineMetadata.Sources;
 
 namespace SkyCD.Plugin.Ai.GenDesc;
 
 /// <summary>
-/// Reintroduces GenDesc.NET: it builds a media description from web sources rather than a model. On an explicit
-/// generation pass it looks the entry up across the enabled sources (Wikipedia, IMDb, AniDB, Anime News Network,
-/// TV.com), merges the facts, and renders a user-editable, site- and language-selected template into BBCode or
-/// plain text. It presents itself as a selectable implementation so the existing Properties generate/preview/save
-/// surface drives it, and the host's snapshot-freshness check protects the write.
+/// Reintroduces GenDesc.NET: it builds a media description from online metadata rather than a model. On an
+/// explicit generation pass it asks the host for the facts of the enabled online metadata sources (Wikipedia,
+/// IMDb, AniDB, Anime News Network, TV.com), merges them, and renders a user-editable, site- and
+/// language-selected template into BBCode or plain text. The site parsing itself belongs to the separate
+/// metadata plugins, so installing only some sources still works. It presents itself as a selectable
+/// implementation so the existing Properties generate/preview/save surface drives it, and the host's
+/// snapshot-freshness check protects the write.
 /// </summary>
-public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner, IAiDescriptionImplementationCapability
+public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner,
+    IAiDescriptionImplementationCapability, IOnlineMetadataConsumer
 {
     /// <summary>The plugin version stamped into every description's provenance.</summary>
     public const string PluginVersion = "1.0.0";
@@ -37,27 +40,25 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
     private static readonly DescriptionContextOptions ContextOptions =
         new(Filename: true, Metadata: true, Text: true, Images: false, Audio: false, MaxTextCharacters: 4000, MaxArtifactBytes: 0);
 
-    private static readonly string[] KnownHosts =
-        ["wikipedia.org", "imdb.com", "anidb.net", "anidb.info", "animenewsnetwork.com", "tv.com", "cbs.com"];
-
     private static readonly Regex UrlPattern = new("https?://[^\\s<>\"']+", RegexOptions.Compiled);
 
     private readonly GenDescSettingsStore store;
-    private readonly WebSourceOrchestrator orchestrator;
     private readonly Func<DateTimeOffset> clock;
+    private IOnlineMetadataService? metadata;
 
     public string ImplementationId => ImplementationIdValue;
 
     public string ImplementationName => ProviderName;
 
-    public GenDescPlugin() : this(GenDescSettingsStore.DefaultConfigurationPath(), new HttpWebFetcher(), null)
+    public GenDescPlugin() : this(GenDescSettingsStore.DefaultConfigurationPath(), null, null)
     {
     }
 
-    public GenDescPlugin(string configurationPath, IWebFetcher? fetcher, Func<DateTimeOffset>? clock = null)
+    public GenDescPlugin(string configurationPath, IOnlineMetadataService? metadata,
+        Func<DateTimeOffset>? clock = null)
     {
         store = new GenDescSettingsStore(configurationPath);
-        orchestrator = new WebSourceOrchestrator(WebSourceCatalog.CreateAll(), fetcher ?? new HttpWebFetcher());
+        this.metadata = metadata;
         this.clock = clock ?? (static () => DateTimeOffset.UtcNow);
     }
 
@@ -69,6 +70,13 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
             "AiDescriptionContextFingerprint", "AiDescriptionSourceFingerprint"
         }.Select(key => new MediaMetadataField(key, MediaMetadataType.Text)).ToArray());
 
+    /// <summary>Receives the host aggregate of the enabled online metadata source plugins.</summary>
+    public void InitializeOnlineMetadata(IOnlineMetadataService service)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        metadata = service;
+    }
+
     public async Task<GeneratedDescription> GenerateAsync(DescriptionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -76,15 +84,23 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
         if (!settings.Enabled)
             throw new GenDescGenerationException("generation is disabled; enable GenDesc in configuration before generating");
 
-        var entry = ReadEntry(context);
-        var request = new ImportRequest(entry.Title, entry.Url, settings.Language);
+        var service = metadata ?? throw NoSourcesInstalled();
+        if (service.SourceIds.Count == 0)
+            throw NoSourcesInstalled();
+
+        var entry = ReadEntry(context, service.KnownHosts);
+        var request = new OnlineMetadataRequest(entry.Title, entry.Url, settings.Language);
         if (!request.HasLookup)
             throw new GenDescGenerationException("the entry carries no filename or source URL to look up");
 
         var timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
-        var run = await orchestrator.RunAsync(request, settings.Sources, timeout, cancellationToken).ConfigureAwait(false);
+        var run = await service.FetchAsync(settings.Sources, request, timeout, cancellationToken).ConfigureAwait(false);
 
-        var facts = run.Facts;
+        var facts = new DescriptionFacts();
+        foreach (var (key, value) in run.Facts) facts.Set(key, value);
+        foreach (var result in run.Results)
+            if (result.Succeeded) facts.AddSourceUrl(result.SourceUrl);
+
         facts.Force("Name", entry.Title);
         facts.Force("Filename", entry.Filename);
         if (!facts.Has("Title") && !string.IsNullOrWhiteSpace(entry.Title)) facts.Set("Title", entry.Title);
@@ -121,7 +137,10 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
             var settings = store.Load();
             if (!settings.Enabled)
                 return new DescriptionGenerationPlan(false, ProviderName, PluginVersion, null, ProcessingDestination,
-                    ContextOptions, "generation is disabled; create the GenDesc configuration and set \"enabled\": true to import from web sources");
+                    ContextOptions, "generation is disabled; create the GenDesc configuration and set \"enabled\": true to import from online metadata sources");
+            if (metadata is null || metadata.SourceIds.Count == 0)
+                return new DescriptionGenerationPlan(false, ProviderName, PluginVersion, null, ProcessingDestination,
+                    ContextOptions, "no online metadata source plugins are installed; install the Wikipedia and video-database source plugins to generate descriptions");
             return new DescriptionGenerationPlan(true, ProviderName, PluginVersion, null, ProcessingDestination, ContextOptions);
         }
         catch (GenDescConfigurationException exception)
@@ -129,6 +148,9 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
             return new DescriptionGenerationPlan(false, ProviderName, PluginVersion, null, ProcessingDestination, ContextOptions, exception.Message);
         }
     }
+
+    private static GenDescGenerationException NoSourcesInstalled() => new(
+        "no online metadata source plugins are installed; install the Wikipedia and video-database source plugins to generate descriptions");
 
     private TemplateStore LoadTemplates(GenDescSettings settings)
     {
@@ -144,11 +166,11 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
         return TemplateStore.Load(directory);
     }
 
-    private static string ResolveSite(string configuredSite, ImportRun run)
+    private static string ResolveSite(string configuredSite, OnlineMetadataRun run)
     {
         if (!string.IsNullOrWhiteSpace(configuredSite) &&
             !string.Equals(configuredSite, TemplateInfo.DefaultSite, StringComparison.OrdinalIgnoreCase)) return configuredSite;
-        var primary = run.Results.FirstOrDefault(result => result.Succeeded && result.Facts.Keys.Count > 0);
+        var primary = run.Results.FirstOrDefault(result => result.Succeeded && result.Facts.Count > 0);
         return primary?.SourceId ?? TemplateInfo.DefaultSite;
     }
 
@@ -166,7 +188,7 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
         return cut.TrimEnd() + "…";
     }
 
-    private static EntryContext ReadEntry(DescriptionContext context)
+    private static EntryContext ReadEntry(DescriptionContext context, IReadOnlyList<string> knownHosts)
     {
         string filename = string.Empty;
         string? url = null;
@@ -178,17 +200,18 @@ public sealed class GenDescPlugin : IGeneratedDescriptionCapability, IDescriptio
                 filename = text;
                 continue;
             }
-            url ??= FindKnownUrl(text);
+            url ??= FindKnownUrl(text, knownHosts);
         }
         var title = filename.Length == 0 ? string.Empty : Path.GetFileNameWithoutExtension(filename).Trim();
         return new EntryContext(title, filename, url);
     }
 
-    private static string? FindKnownUrl(string text)
+    private static string? FindKnownUrl(string text, IReadOnlyList<string> knownHosts)
     {
+        if (knownHosts.Count == 0) return null;
         foreach (Match match in UrlPattern.Matches(text))
         {
-            if (KnownHosts.Any(host => UrlHelpers.MatchesHost(match.Value, host))) return match.Value;
+            if (knownHosts.Any(host => UrlHelpers.MatchesHost(match.Value, host))) return match.Value;
         }
         return null;
     }

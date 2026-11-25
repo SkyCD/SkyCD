@@ -92,6 +92,7 @@ public partial class MainWindow : Window
     private DropDestination dropDestination = DropDestination.LibraryRoot;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private readonly Dictionary<string, IImage> toolbarIcons = new(StringComparer.Ordinal);
+    private readonly List<AddingProgressDialogViewModel> openAddingDialogs = [];
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
 
     public MainWindow(
@@ -145,6 +146,14 @@ public partial class MainWindow : Window
 
     private void OnPluginFailure(PluginFailure failure)
     {
+        // While an add is running, the failure belongs in its progress log instead of a modal on top
+        // of the Adding dialog; the routed log line keeps the fingerprint for later triage.
+        if (openAddingDialogs.LastOrDefault() is { } adding)
+        {
+            adding.ReportPluginFailure(failure);
+            return;
+        }
+
         Dispatcher.UIThread.Post(async () =>
         {
             await pluginErrorDialogGate.WaitAsync();
@@ -160,6 +169,29 @@ public partial class MainWindow : Window
                 pluginErrorDialogGate.Release();
             }
         });
+    }
+
+    private void TrackAddingDialog(AddingProgressDialogViewModel progressVm) => openAddingDialogs.Add(progressVm);
+
+    private void UntrackAddingDialog(AddingProgressDialogViewModel progressVm) => openAddingDialogs.Remove(progressVm);
+
+    /// <summary>
+    /// Closes the Adding dialog when the run is clean; with errors logged it stays open and the footer
+    /// button becomes Close so the log can be read before dismissing it.
+    /// </summary>
+    private void FinishAddingDialog(AddingProgressDialogViewModel progressVm, AddingProgressWindow progressDialog)
+    {
+        progressVm.FlushPendingReports();
+        progressVm.FinishCancellation();
+        UntrackAddingDialog(progressVm);
+
+        if (progressVm.HasErrors)
+        {
+            progressVm.IsCloseMode = true;
+            return;
+        }
+
+        progressDialog.Close();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -1113,6 +1145,7 @@ public partial class MainWindow : Window
                 DataContext = progressVm
             };
             progressDialog.Show(this);
+            TrackAddingDialog(progressVm);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
             var scanCompleted = false;
@@ -1166,8 +1199,7 @@ public partial class MainWindow : Window
             }
             finally
             {
-                progressVm.FinishCancellation();
-                progressDialog.Close();
+                FinishAddingDialog(progressVm, progressDialog);
             }
 
             if (scanCompleted)
@@ -1229,6 +1261,7 @@ public partial class MainWindow : Window
                 DataContext = progressVm
             };
             progressDialog.Show(this);
+            TrackAddingDialog(progressVm);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
             var scanCompleted = false;
@@ -1281,8 +1314,7 @@ public partial class MainWindow : Window
             }
             finally
             {
-                progressVm.FinishCancellation();
-                progressDialog.Close();
+                FinishAddingDialog(progressVm, progressDialog);
             }
 
             if (scanCompleted)
@@ -1326,6 +1358,7 @@ public partial class MainWindow : Window
                 DataContext = progressVm
             };
             progressDialog.Show(this);
+            TrackAddingDialog(progressVm);
 
             IReadOnlyList<ScanIssue> scanIssues = [];
             var scanCompleted = false;
@@ -1378,8 +1411,7 @@ public partial class MainWindow : Window
             }
             finally
             {
-                progressVm.FinishCancellation();
-                progressDialog.Close();
+                FinishAddingDialog(progressVm, progressDialog);
             }
 
             if (scanCompleted)
@@ -1601,6 +1633,17 @@ public partial class MainWindow : Window
             else vm.CompleteSaveCatalog(targetPath);
             return true;
         }
+        catch (CatalogSaveIOException ex)
+        {
+            // Name the folder and the way forward instead of the internal temp file the save never created.
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalogAccessDenied, ex.DirectoryPath);
+            if (!saveAs)
+            {
+                return await SaveCatalogAsync(vm, saveAs: true);
+            }
+
+            return false;
+        }
         catch (Exception ex)
         {
             vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
@@ -1806,7 +1849,9 @@ public partial class MainWindow : Window
     private async void OnAboutRequested(object? sender, EventArgs e)
     {
         var options = LoadAppOptions();
-        var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(typeof(App).Assembly);
+        var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(
+            typeof(App).Assembly,
+            applicationSnapshot: CreateAboutApplicationSnapshot());
         dialogVm.RestoreSelectedTab(options.AboutTabKey);
         var dialog = new AboutWindow
         {
@@ -1817,6 +1862,24 @@ public partial class MainWindow : Window
 
         options.AboutTabKey = dialogVm.SelectedTabKey;
         SaveAppOptions(options);
+    }
+
+    private AboutApplicationSnapshot CreateAboutApplicationSnapshot()
+    {
+        var enabledPluginIds = pluginManager.GetPluginDescriptors()
+            .Where(static descriptor => descriptor.IsEnabled && !string.IsNullOrWhiteSpace(descriptor.Id))
+            .Select(static descriptor => descriptor.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var enabledPluginCount = pluginManager.AvailablePlugins
+            .Count(plugin => enabledPluginIds.Contains(plugin.Id));
+        var catalogPath = openCatalogState.Path;
+
+        return new AboutApplicationSnapshot(
+            HostVersion: hostVersionProvider.Current.ToString(),
+            LoadedPluginCount: pluginManager.Plugins.Count,
+            EnabledPluginCount: enabledPluginCount,
+            CatalogName: string.IsNullOrWhiteSpace(catalogPath) ? null : Path.GetFileName(catalogPath),
+            CatalogEntryCount: openCatalogState.Repository?.GetAll().Count);
     }
 
     private async Task ShowAddProgressAsync(AddToListDialogViewModel addDialog)
@@ -1837,6 +1900,7 @@ public partial class MainWindow : Window
         };
 
         progressDialog.Show(this);
+        TrackAddingDialog(progressVm);
         try
         {
             var steps = BuildAddProgressSteps(addDialog);
@@ -1851,7 +1915,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            progressDialog.Close();
+            FinishAddingDialog(progressVm, progressDialog);
         }
     }
 
@@ -2246,6 +2310,10 @@ public partial class MainWindow : Window
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
+        // Discovery builds fresh capability instances, so the host APIs are re-injected before the
+        // contributed Options pages use them — otherwise a page like Locations fails with a plugin
+        // error every time the list refreshes.
+        pluginRuntimeSynchronizer.ReinjectHostApis();
         // The runtime now reflects this folder: it is the path Cancel has to restore.
         dialogVm.MarkPluginPathScanned(dialogVm.PluginPath);
         var descriptors = pluginManager.GetPluginDescriptors();
@@ -2270,6 +2338,12 @@ public partial class MainWindow : Window
     /// Combines the persisted descriptor (enabled state, stale plugins) with the freshly discovered
     /// assembly metadata so the Additional Info tab can show links, version, size and update source.
     /// </summary>
+    /// <summary>Render size of the plugin bitmaps in the installed list rows.</summary>
+    private const int PluginListIconSize = 32;
+
+    /// <summary>Render size of the plugin bitmap in the details header.</summary>
+    private const int PluginDetailsIconSize = 48;
+
     private static OptionsPluginItem CreateOptionsPluginItem(
         PluginDocument descriptor,
         IReadOnlyDictionary<string, DiscoveredPlugin> discoveredById,
@@ -2279,6 +2353,7 @@ public partial class MainWindow : Window
 
         var authorName = discovered?.Author?.Name ?? descriptor.Author?.Name;
         var version = discovered is null ? descriptor.Version : discovered.Version.ToString();
+        var persistedIcon = PluginIconKey.TryDecodePersisted(descriptor.IconPng);
         return new OptionsPluginItem(
             discovered?.Name ?? descriptor.Name,
             string.IsNullOrWhiteSpace(authorName) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : authorName,
@@ -2293,7 +2368,8 @@ public partial class MainWindow : Window
             capabilityType: ResolveCapabilityType(discovered),
             sizeBytes: PluginFolderSize.TryComputeBytes(discovered?.AssemblyLocation),
             updateSource: ResolveUpdateSource(descriptor.Id, discovered, installStates),
-            icon: discovered?.Icon ?? PluginIconKey.TryDecodePersisted(descriptor.IconPng));
+            icon: discovered?.GetIconNearest(PluginDetailsIconSize) ?? persistedIcon,
+            listIcon: discovered?.GetIconNearest(PluginListIconSize) ?? persistedIcon);
     }
 
     private static string? ResolveCapabilityType(DiscoveredPlugin? plugin)

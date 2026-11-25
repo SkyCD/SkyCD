@@ -6,14 +6,15 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>GenDesc Templates</AssemblyTitle>
-        <Description>Builds media descriptions from web sources such as Wikipedia, IMDb and AniDB and renders them through user-editable templates.</Description>
+        <Description>Renders user-editable description templates over metadata supplied by the Wikipedia and video-database metadata source plugins.</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <!-- HTML parsing for the web source importers; the same MIT parser the DiskExplorer plugin uses. -->
-        <PackageReference Include="AngleSharp" Version="1.10.4" />
+        <!-- Shared fact bag and URL matching used by the plugin and the separate source plugins. -->
+        <Compile Include="..\Shared\OnlineMetadata\Models\DescriptionFacts.cs" Link="Shared\OnlineMetadata\Models\DescriptionFacts.cs" />
+        <Compile Include="..\Shared\OnlineMetadata\Sources\UrlHelpers.cs" Link="Shared\OnlineMetadata\Sources\UrlHelpers.cs" />
     </ItemGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="SkyCD.Plugin.Ai.GenDesc.Tests" />

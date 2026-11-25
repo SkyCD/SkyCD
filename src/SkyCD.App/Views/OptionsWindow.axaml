@@ -275,18 +275,19 @@
                                                             Padding="{DynamicResource SkyInsetSm}">
                                                         <Grid ColumnDefinitions="Auto,*,Auto"
                                                               ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                                            <Panel Width="24" Height="24" VerticalAlignment="Center">
-                                                                <Image Source="{Binding Icon, Converter={StaticResource PluginBitmapConverter}}"
+                                                            <Panel Width="32" Height="32" VerticalAlignment="Center">
+                                                                <Image Source="{Binding ListIcon, Converter={StaticResource PluginBitmapConverter}}"
                                                                        Stretch="Uniform"
-                                                                       IsVisible="{Binding HasBitmapIcon}" />
+                                                                       RenderOptions.BitmapInterpolationMode="HighQuality"
+                                                                       IsVisible="{Binding HasListBitmapIcon}" />
                                                                 <iconPacks:PackIconControl
                                                                     Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
-                                                                    Width="20"
-                                                                    Height="20"
+                                                                    Width="28"
+                                                                    Height="28"
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
                                                                     Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                                                                    IsVisible="{Binding !HasBitmapIcon}" />
+                                                                    IsVisible="{Binding !HasListBitmapIcon}" />
                                                             </Panel>
                                                             <StackPanel Grid.Column="1"
                                                                         VerticalAlignment="Center"
@@ -429,16 +430,17 @@
                                                Classes="h2"
                                                TextWrapping="Wrap" />
                                     <Panel Grid.Column="1"
-                                           Width="24"
-                                           Height="24"
+                                           Width="48"
+                                           Height="48"
                                            VerticalAlignment="Top">
                                         <Image Source="{Binding SelectedPlugin.Icon, Converter={StaticResource PluginBitmapConverter}}"
                                                Stretch="Uniform"
+                                               RenderOptions.BitmapInterpolationMode="HighQuality"
                                                IsVisible="{Binding SelectedPlugin.HasBitmapIcon}" />
                                         <iconPacks:PackIconControl
                                             Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
-                                            Width="20"
-                                            Height="20"
+                                            Width="40"
+                                            Height="40"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Foreground="{DynamicResource ThemeForegroundLowBrush}"
@@ -926,15 +928,16 @@
                                        Text="{Binding PluginPathHint}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
-                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="2"
+                              RowDefinitions="Auto,Auto,*"
+                              RowSpacing="{DynamicResource SkySpaceSm}">
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositories}}"
                                                FontSize="{DynamicResource SkyFontBody}" />
                                     <Border Grid.Column="1" Height="1" Background="#2E2E2E"
                                             VerticalAlignment="Center" />
                                 </Grid>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                     <TextBlock Classes="caption"
                                                Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                                Text="{i18n:Translate {x:Static i18n:UiKeys.PluginRepositoryHint}}"
@@ -958,7 +961,7 @@
                                                 Command="{Binding RemovePluginRepositoryCommand}" />
                                     </StackPanel>
                                 </Grid>
-                                <Border BorderBrush="#2E2E2E" BorderThickness="1">
+                                <Border Grid.Row="2" BorderBrush="#2E2E2E" BorderThickness="1">
                                     <Grid RowDefinitions="Auto,*">
                                         <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
                                             <Grid ColumnDefinitions="*,180" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -1011,8 +1014,7 @@
                                         </ListBox>
                                     </Grid>
                                 </Border>
-                            </StackPanel>
-                        </ScrollViewer>
+                        </Grid>
                     </Grid>
 
                     <Grid Grid.Row="2"

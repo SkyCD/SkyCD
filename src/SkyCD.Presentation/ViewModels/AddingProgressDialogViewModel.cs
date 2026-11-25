@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
+using SkyCD.SDK;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -34,7 +35,19 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    [NotifyPropertyChangedFor(nameof(CanDismiss))]
     private bool canCancel;
+
+    /// <summary>
+    /// Set when the operation ends with errors: the dialog stays open and the footer button
+    /// becomes Close instead of Cancel.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDismiss))]
+    private bool isCloseMode;
+
+    /// <summary>The footer button dismisses the dialog while it can cancel, or closes it afterwards.</summary>
+    public bool CanDismiss => CanCancel || IsCloseMode;
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
     public void Cancel()
@@ -575,6 +588,42 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     public void ReportSkipped(string itemPath, string reason, string? stage = null) =>
         ReportLog(OperationLogLevel.ItemSkipped, $"Skipped: {reason}", stage, itemPath, reason);
+
+    /// <summary>
+    /// Routes a plugin failure into the operation log while an add is running, so no global error
+    /// dialog interrupts the operation. The full fingerprint is kept in the log for later triage.
+    /// </summary>
+    public void ReportPluginFailure(PluginFailure failure)
+    {
+        ArgumentNullException.ThrowIfNull(failure);
+
+        var identity = failure.PluginIdentity;
+        var shortIdentity = identity.Length > 8 ? identity[..8] + "…" : identity;
+        ReportLog(
+            OperationLogLevel.Error,
+            $"Plugin error during '{failure.Operation}' (plugin {shortIdentity})",
+            details: $"fingerprint {failure.Fingerprint}");
+    }
+
+    /// <summary>
+    /// Publishes every queued report immediately; must run on the UI thread. Completion paths call
+    /// this before reading <see cref="HasErrors"/> so a trailing error cannot slip past unseen.
+    /// </summary>
+    public void FlushPendingReports()
+    {
+        while (true)
+        {
+            FlushPending();
+
+            lock (gate)
+            {
+                if (pendingEntries.Count == 0 && pendingReport is null)
+                {
+                    return;
+                }
+            }
+        }
+    }
 
     public void ReportFailed(string itemPath, string reason, string? stage = null, Exception? exception = null) =>
         ReportLog(

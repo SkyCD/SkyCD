@@ -103,6 +103,34 @@ public sealed class AddingProgressWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public void CloseMode_ShowsCloseInsteadOfCancelAndStaysEnabled()
+    {
+        var viewModel = new AddingProgressDialogViewModel { CanCancel = true };
+        var window = new AddingProgressWindow { DataContext = viewModel };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            var button = FindDismissButton(window);
+            Assert.Equal(LocalizationService.Current.Get(UiKeys.Cancel), button.Content);
+            Assert.True(button.IsEnabled);
+
+            viewModel.FinishCancellation();
+            viewModel.IsCloseMode = true;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(LocalizationService.Current.Get(UiKeys.Close), button.Content);
+            Assert.True(button.IsEnabled);
+        }
+        finally
+        {
+            viewModel.FinishCancellation();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void FixedSize_KeepsLogAndFooterInsideTheWindow()
     {
         var viewModel = new AddingProgressDialogViewModel { CanCancel = true };
@@ -314,6 +342,14 @@ public sealed class AddingProgressWindowLayoutTests
         var label = LocalizationService.Current.Get(UiKeys.Cancel);
         return window.GetVisualDescendants().OfType<Button>()
             .Single(button => Equals(button.Content, label));
+    }
+
+    private static Button FindDismissButton(Window window)
+    {
+        var cancel = LocalizationService.Current.Get(UiKeys.Cancel);
+        var close = LocalizationService.Current.Get(UiKeys.Close);
+        return window.GetVisualDescendants().OfType<Button>()
+            .Single(button => Equals(button.Content, cancel) || Equals(button.Content, close));
     }
 
     private static TextBlock FindText(Window window, string key)

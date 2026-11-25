@@ -203,6 +203,7 @@ public partial class App : Avalonia.Application
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
+        var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
 
         foreach (var plugin in pluginManager.Plugins)
         {
@@ -234,6 +235,12 @@ public partial class App : Avalonia.Application
             {
                 try { consumer.InitializeDialogApi(dialogApi); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<IOnlineMetadataConsumer>())
+            {
+                try { consumer.InitializeOnlineMetadata(onlineMetadata); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "media", exception); }
             }
         }
     }

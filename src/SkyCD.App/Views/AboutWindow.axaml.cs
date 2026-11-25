@@ -16,6 +16,7 @@ public partial class AboutWindow : Window
     };
 
     private AboutDialogViewModel? subscribedViewModel;
+    private bool isWindowOpen;
 
     public AboutWindow()
     {
@@ -25,6 +26,8 @@ public partial class AboutWindow : Window
         Opened += OnOpened;
         Closed += OnClosed;
     }
+
+    internal bool IsSystemInfoSampling => statsTimer.IsEnabled;
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
@@ -42,16 +45,19 @@ public partial class AboutWindow : Window
         {
             subscribedViewModel = null;
         }
+
+        UpdateStatsTimer();
     }
 
     private void OnOpened(object? sender, EventArgs e)
     {
-        subscribedViewModel?.RefreshSystemInfo();
-        statsTimer.Start();
+        isWindowOpen = true;
+        UpdateStatsTimer();
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        isWindowOpen = false;
         statsTimer.Stop();
         if (subscribedViewModel is not null)
         {
@@ -64,13 +70,44 @@ public partial class AboutWindow : Window
         subscribedViewModel?.RefreshSystemInfo();
     }
 
+    private void UpdateStatsTimer()
+    {
+        if (!isWindowOpen || subscribedViewModel is not { } vm)
+        {
+            statsTimer.Stop();
+            return;
+        }
+
+        if (vm.SelectedTabKey == AboutDialogViewModel.SystemInfoTabKey)
+        {
+            vm.RefreshSystemInfo();
+            if (!statsTimer.IsEnabled)
+            {
+                statsTimer.Start();
+            }
+        }
+        else
+        {
+            statsTimer.Stop();
+        }
+    }
+
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is AboutDialogViewModel vm &&
-            e.PropertyName == nameof(AboutDialogViewModel.DialogAccepted) &&
-            vm.DialogAccepted)
+        if (sender is not AboutDialogViewModel vm)
+        {
+            return;
+        }
+
+        if (e.PropertyName == nameof(AboutDialogViewModel.DialogAccepted) && vm.DialogAccepted)
         {
             Close(true);
+            return;
+        }
+
+        if (e.PropertyName == nameof(AboutDialogViewModel.SelectedTabIndex))
+        {
+            UpdateStatsTimer();
         }
     }
 

@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Avalonia.Controls;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.SDK;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -151,6 +155,49 @@ public sealed class OptionsDialogViewModelOptionsPagesTests
     }
 
     [Fact]
+    public void EnsureContent_FailureShowsInlineErrorWithoutGlobalReport()
+    {
+        using var _ = ObserveFailures(out var reported);
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetPlugins([EnabledPlugin()]);
+        var capability = new FlakyCapability("locations", "Locations")
+        {
+            ContentSource = () => throw new InvalidOperationException("page failed")
+        };
+        viewModel.SetPluginOptionsPages([ProvideFlaky(capability)]);
+        viewModel.SelectedSettingCategory = viewModel.SettingCategories.Single(category => category.Id == FlakyPageId(capability));
+        var page = viewModel.SelectedContributedPage!;
+
+        page.EnsureContent();
+
+        Assert.True(page.HasError);
+        Assert.False(page.HasContent);
+        Assert.Contains("Locations", page.Error, StringComparison.Ordinal);
+        Assert.Empty(reported);
+    }
+
+    [Fact]
+    public void Title_FailureFallsBackAndReportsWithCapabilityAttribution()
+    {
+        using var _ = ObserveFailures(out var reported);
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetPlugins([EnabledPlugin()]);
+        var capability = new FlakyCapability("locations", "Locations");
+        viewModel.SetPluginOptionsPages([ProvideFlaky(capability)]);
+        viewModel.SelectedSettingCategory = viewModel.SettingCategories.Single(category => category.Id == FlakyPageId(capability));
+        var page = viewModel.SelectedContributedPage!;
+
+        capability.FailTitle = true;
+
+        Assert.Equal("Locations", page.Title);
+
+        var failure = Assert.Single(reported);
+        Assert.Equal("options", failure.Operation);
+        Assert.Equal(IdentityOf(capability.GetType()), failure.PluginIdentity);
+        Assert.NotEqual(IdentityOf(typeof(OptionsContributedPage)), failure.PluginIdentity);
+    }
+
+    [Fact]
     public void RemovingProvider_DisposesTheRetiredPage()
     {
         var viewModel = new OptionsDialogViewModel(["English"]);
@@ -175,6 +222,43 @@ public sealed class OptionsDialogViewModelOptionsPagesTests
         new(PluginId, "Locations", capability);
 
     private static string PageId(TestCapability capability) => $"options:{PluginId}/{capability.PageIdValue}";
+
+    private static OptionsPageProvider ProvideFlaky(FlakyCapability capability) =>
+        new(PluginId, "Locations", capability);
+
+    private static string FlakyPageId(FlakyCapability capability) => $"options:{PluginId}/{capability.PageIdValue}";
+
+    private static IDisposable ObserveFailures(out List<PluginFailure> reported)
+    {
+        var failures = new List<PluginFailure>();
+        reported = failures;
+        void Capture(PluginFailure failure) => failures.Add(failure);
+        PluginFailure.Reported += Capture;
+        return new FailureUnsubscriber(() => PluginFailure.Reported -= Capture);
+    }
+
+    private sealed class FailureUnsubscriber(Action unsubscribe) : IDisposable
+    {
+        public void Dispose() => unsubscribe();
+    }
+
+    private static string IdentityOf(Type type) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(type.Assembly.GetName().Name ?? "unknown")));
+
+    private sealed class FlakyCapability(string pageIdValue, string title) : IOptionsPageCapability
+    {
+        public string PageIdValue { get; } = pageIdValue;
+
+        public bool FailTitle { get; set; }
+
+        public Func<object?>? ContentSource { get; set; }
+
+        public OptionsPageDescriptor OptionsPage =>
+            FailTitle ? throw new InvalidOperationException("title failed") : new(PageIdValue, title, Order: 0);
+
+        public object CreateOptionsPage() =>
+            ContentSource?.Invoke() ?? throw new InvalidOperationException("no content source");
+    }
 
     private sealed class TestCapability(string pageIdValue, string title, Func<object?>? create = null)
         : IOptionsPageCapability

@@ -11,7 +11,7 @@ namespace SkyCD.Plugin.Ai.GenDesc.Models;
 /// </summary>
 public sealed record GenDescSettings
 {
-    /// <summary>Canonical source ids, in the default priority order the orchestrator walks.</summary>
+    /// <summary>Canonical source ids, in the default priority order the host runs them.</summary>
     public static readonly IReadOnlyList<string> KnownSources = ["wikipedia", "imdb", "anidb", "ann", "tvcom"];
 
     /// <summary>Explicit opt-in flag; network lookups only run once a user enables generation.</summary>

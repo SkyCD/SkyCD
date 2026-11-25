@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
@@ -17,7 +18,7 @@ namespace SkyCD.UI.Tests;
 public class TreeViewDeleteFocusTests
 {
     [AvaloniaFact]
-    public void DeleteTreeNode_KeepsNeighbourContainerAliveSoFocusStaysInTheTree()
+    public async Task DeleteTreeNode_KeepsNeighbourContainerAliveSoFocusStaysInTheTree()
     {
         using var viewModel = MainWindowViewModel.CreateForInMemoryCatalog(CreateCatalog());
 
@@ -61,7 +62,9 @@ public class TreeViewDeleteFocusTests
         Assert.Same(moviesContainer, window.FocusManager?.GetFocusedElement());
 
         viewModel.SelectedTreeNode = moviesNode;
-        viewModel.DeleteItemCommand.Execute("tree");
+        // Delete runs off the UI thread, so await the command instead of assuming one dispatcher pass
+        // completes it; otherwise the reselection races the delete and the assertion is flaky.
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal("music", viewModel.SelectedTreeNode?.Key);

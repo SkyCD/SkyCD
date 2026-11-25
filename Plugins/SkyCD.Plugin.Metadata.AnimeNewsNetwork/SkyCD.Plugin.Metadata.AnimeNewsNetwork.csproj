@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Anime News Network Metadata</AssemblyTitle>
+        <Description>Looks anime entries up on the Anime News Network encyclopedia and returns type, episodes, runtime, studio, staff and synopsis facts to description generators.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Shared online metadata parsing; the same MIT parser the GenDesc and DiskExplorer plugins use. -->
+        <PackageReference Include="AngleSharp" Version="1.10.4"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\Shared\OnlineMetadata\Models\DescriptionFacts.cs" Link="Shared\OnlineMetadata\Models\DescriptionFacts.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Parsing\PageMeta.cs" Link="Shared\OnlineMetadata\Parsing\PageMeta.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Parsing\Infobox.cs" Link="Shared\OnlineMetadata\Parsing\Infobox.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\UrlHelpers.cs" Link="Shared\OnlineMetadata\Sources\UrlHelpers.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\IWebFetcher.cs" Link="Shared\OnlineMetadata\Sources\IWebFetcher.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\HttpWebFetcher.cs" Link="Shared\OnlineMetadata\Sources\HttpWebFetcher.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.AnimeNewsNetwork.Tests"/>
+    </ItemGroup>
+</Project>
