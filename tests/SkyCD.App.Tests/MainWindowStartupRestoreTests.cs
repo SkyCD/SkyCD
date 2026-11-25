@@ -1,36 +1,15 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Xml.Linq;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 /// <summary>
 /// Issue #1109: the shell must be painted before the plugin runtime and the last catalog are restored,
-/// and the browser area must show a busy state for as long as the restore runs.
+/// and nothing may rebuild the outgoing view while the restore runs, so the window keeps drawing.
 /// </summary>
-public sealed class MainWindowStartupBusyStateTests
+public sealed class MainWindowStartupRestoreTests
 {
-    [Fact]
-    public void BrowserArea_ShowsBusyOverlayWhileTheCatalogLoads()
-    {
-        var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml"));
-        XNamespace avalonia = "https://github.com/avaloniaui";
-
-        var browser = document.Descendants().Single(element => element.Name.LocalName == "BrowserItemsView");
-        var browserArea = browser.Ancestors(avalonia + "Grid").First();
-        var overlay = browserArea.Elements(avalonia + "Border").SingleOrDefault(element =>
-            (string?)element.Attribute("IsVisible") == "{Binding IsCatalogLoading}");
-
-        Assert.NotNull(overlay);
-        Assert.Equal("{DynamicResource ThemeBackgroundBrush}", (string?)overlay!.Attribute("Background"));
-        Assert.Contains(overlay.Descendants(avalonia + "ProgressBar"),
-            progress => (string?)progress.Attribute("Value") == "{Binding ProgressValue}");
-        Assert.Contains(overlay.Descendants(avalonia + "TextBlock"),
-            text => (string?)text.Attribute("Text") == "{Binding StatusText}");
-    }
-
     [Fact]
     public void StartupRestore_PaintsTheShellBeforeLoadingPluginsAndTheLastCatalog()
     {
@@ -50,6 +29,22 @@ public sealed class MainWindowStartupBusyStateTests
         Assert.True(loadCatalog > loadPlugins,
             "The last catalog must be restored after the file-format providers are loaded.");
         Assert.Contains("vm.EndCatalogLoad();", opened, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FeatureDataChanges_DoNotRebuildTheViewWhileTheCatalogLoads()
+    {
+        var handler = ExtractMethod(
+            ReadRepoFile("src", "SkyCD.Presentation", "ViewModels", "MainWindowViewModel.cs"),
+            "private void OnCatalogFeatureDataChanged(");
+
+        var loadingGuard = handler.IndexOf("if (IsCatalogLoading)", StringComparison.Ordinal);
+        var refreshTree = handler.IndexOf("RefreshTreeNodes();", StringComparison.Ordinal);
+
+        Assert.True(loadingGuard >= 0,
+            "Feature data changes raised during a catalog load must not rebuild the outgoing view.");
+        Assert.True(refreshTree > loadingGuard,
+            "The loading guard must run before the view refresh.");
     }
 
     private static string ExtractMethod(string source, string signature)

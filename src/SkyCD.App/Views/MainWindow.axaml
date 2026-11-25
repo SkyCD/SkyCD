@@ -219,26 +219,6 @@
                                TextWrapping="Wrap"
                                TextAlignment="Center"
                                Opacity="0.8" />
-                    <Border IsVisible="{Binding IsCatalogLoading}"
-                            Background="{DynamicResource ThemeBackgroundBrush}"
-                            Padding="{DynamicResource SkyInsetLg}">
-                        <StackPanel HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Spacing="{DynamicResource SkySpaceSm}"
-                                    MaxWidth="360">
-                            <TextBlock Classes="h2"
-                                       Text="{Binding StatusText}"
-                                       TextWrapping="Wrap"
-                                       TextAlignment="Center" />
-                            <ProgressBar Minimum="0" Maximum="100"
-                                         Value="{Binding ProgressValue}"
-                                         Height="6" />
-                            <TextBlock Classes="caption"
-                                       Text="{Binding ProgressText}"
-                                       HorizontalAlignment="Center"
-                                       Opacity="0.8" />
-                        </StackPanel>
-                    </Border>
                 </Grid>
             </DockPanel>
 
