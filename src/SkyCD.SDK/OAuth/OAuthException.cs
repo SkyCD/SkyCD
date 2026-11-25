@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.Abstractions.OAuth;
+namespace SkyCD.SDK.OAuth;
 
 /// <summary>A sanitized OAuth failure; provider response bodies and credentials are never included.</summary>
 public sealed class OAuthException : Exception

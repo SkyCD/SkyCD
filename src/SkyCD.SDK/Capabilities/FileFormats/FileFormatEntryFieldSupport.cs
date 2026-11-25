@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// Per-entry fields a format can represent. Names are always represented and have no flag.

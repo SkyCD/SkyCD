@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Formatting.Rtf;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Rtf.Exceptions;
 using SkyCD.Plugin.Metadata.Rtf.Models;
 using SkyCD.Plugin.Metadata.Rtf.Parsing;

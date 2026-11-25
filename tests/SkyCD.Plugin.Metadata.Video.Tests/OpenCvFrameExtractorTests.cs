@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenCvSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Video.Models;
 using SkyCD.Plugin.Metadata.Video.Parsing;
 using Xunit;

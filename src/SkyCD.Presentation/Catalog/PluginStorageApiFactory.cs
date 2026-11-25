@@ -1,4 +1,4 @@
-using SkyCD.Plugin.Abstractions.Capabilities.Storage;
+using SkyCD.SDK.Capabilities.Storage;
 
 namespace SkyCD.Presentation.Catalog;
 

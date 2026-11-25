@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.UI.Localization;
 

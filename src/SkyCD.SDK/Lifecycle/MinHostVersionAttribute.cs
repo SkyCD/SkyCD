@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.Abstractions.Lifecycle;
+namespace SkyCD.SDK.Lifecycle;
 
 /// <summary>
 /// Defines the minimum supported host version at assembly level.

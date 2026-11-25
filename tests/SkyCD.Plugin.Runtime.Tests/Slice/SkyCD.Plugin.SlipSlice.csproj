@@ -16,13 +16,13 @@
         <ProjectReference Include="..\..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
     </ItemGroup>
     <ItemGroup>
-        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIdAttribute">
+        <AssemblyAttribute Include="SkyCD.SDK.Lifecycle.PluginIdAttribute">
             <_Parameter1>skycd.plugin.slip-slice</_Parameter1>
         </AssemblyAttribute>
-        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MinHostVersionAttribute">
+        <AssemblyAttribute Include="SkyCD.SDK.Lifecycle.MinHostVersionAttribute">
             <_Parameter1>3.0.0</_Parameter1>
         </AssemblyAttribute>
-        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MaxHostVersionAttribute">
+        <AssemblyAttribute Include="SkyCD.SDK.Lifecycle.MaxHostVersionAttribute">
             <_Parameter1>4.0.0</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>

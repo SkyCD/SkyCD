@@ -8,11 +8,11 @@ using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
-using SkyCD.Plugin.Abstractions.Capabilities.Actions;
-using SkyCD.Plugin.Abstractions.Capabilities.Ownership;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Actions;
+using SkyCD.SDK.Capabilities.Ownership;
+using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+namespace SkyCD.SDK.Capabilities.Configuration;
 
 /// <summary>
 /// Request payload for opening a plugin configuration surface.

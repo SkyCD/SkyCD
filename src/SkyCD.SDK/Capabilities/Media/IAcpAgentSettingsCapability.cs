@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
+namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>Exposes local ACP provider selection to the host's Options dialog.</summary>
 public interface IAcpAgentSettingsCapability : IPluginCapability

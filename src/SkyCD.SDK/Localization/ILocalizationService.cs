@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace SkyCD.Plugin.Abstractions.Localization;
+namespace SkyCD.SDK.Localization;
 
 /// <summary>Shared culture, formatting, and dynamically registered translation sources.</summary>
 public interface ILocalizationService : INotifyPropertyChanged

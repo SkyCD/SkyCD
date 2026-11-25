@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Plugin.Runtime.Configuration;

@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+namespace SkyCD.SDK.Capabilities.Configuration;
 
 /// <summary>
 /// Describes a configuration surface contributed by a plugin.

@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Ui;
+namespace SkyCD.SDK.Capabilities.Ui;
 
 /// <summary>
 /// A request to show a plugin-built control inside a host-owned dialog window. <see cref="CreateContent"/>

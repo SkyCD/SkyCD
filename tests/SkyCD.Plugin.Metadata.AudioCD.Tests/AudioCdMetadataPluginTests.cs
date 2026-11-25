@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.AudioCD;
 using SkyCD.Plugin.Metadata.AudioCD.Sources;
 using SkyCD.Plugin.Runtime.Factories;
@@ -168,7 +168,7 @@ public sealed class AudioCdMetadataPluginTests
         Assert.Equal("Audio CD Metadata Collection", plugin.Name);
         Assert.Contains(plugin.Capabilities, capability => capability is IAudioCdMetadataCapability);
         Assert.Contains(plugin.Capabilities,
-            capability => capability is SkyCD.Plugin.Abstractions.Capabilities.Configuration.IPluginConfigurationCapability);
+            capability => capability is SkyCD.SDK.Capabilities.Configuration.IPluginConfigurationCapability);
         Assert.Equal("cda", plugin.PrimaryExtension);
     }
 

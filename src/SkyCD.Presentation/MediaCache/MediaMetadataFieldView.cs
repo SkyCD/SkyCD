@@ -1,4 +1,4 @@
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Presentation.MediaCache;
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.UI.Localization;
 

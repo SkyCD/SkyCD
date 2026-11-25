@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
+namespace SkyCD.SDK.Capabilities.Menu;
 
 /// <summary>Optional host capability bound to the catalog open when the command starts.</summary>
 public interface ICatalogCaptureHostApi : IHostCommandApi

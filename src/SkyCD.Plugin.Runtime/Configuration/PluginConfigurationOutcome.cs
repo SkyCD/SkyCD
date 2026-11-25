@@ -14,7 +14,7 @@ public sealed class PluginConfigurationOutcome
     public required PluginConfigurationStatus Status { get; init; }
 
     /// <summary>Gets the newly created draft, owned by the caller until disposal.</summary>
-    public SkyCD.Plugin.Abstractions.Capabilities.Configuration.PluginConfigurationPage? Page { get; init; }
+    public SkyCD.SDK.Capabilities.Configuration.PluginConfigurationPage? Page { get; init; }
 
     /// <summary>
     /// Gets the validated settings snapshot. Creation and acceptance do not persist this snapshot.

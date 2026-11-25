@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Playlist.M3u;
 using SkyCD.Plugin.FileFormat.Playlist.Pls;
 using SkyCD.Plugin.FileFormat.Playlist.Xspf;

@@ -15,7 +15,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Ai.Description;
 using SkyCD.TestSupport;

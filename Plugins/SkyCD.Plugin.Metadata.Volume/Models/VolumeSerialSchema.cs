@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Metadata.Volume.Models;
 

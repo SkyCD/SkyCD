@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using SkiaSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 using SkyCD.Plugin.Metadata.Fonts.Export;
 using SkyCD.Plugin.Metadata.Fonts.Models;

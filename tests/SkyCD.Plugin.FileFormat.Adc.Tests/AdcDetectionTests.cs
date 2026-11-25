@@ -83,7 +83,7 @@ public sealed class AdcDetectionTests
     [Fact]
     public async Task WriteAsync_IsRejected()
     {
-        var result = await plugin.WriteAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatWriteRequest
+        var result = await plugin.WriteAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatWriteRequest
         {
             FormatId = "advanced-disk-catalog",
             Target = new MemoryStream(),

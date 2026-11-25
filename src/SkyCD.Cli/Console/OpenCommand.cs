@@ -8,8 +8,8 @@ using SkyCD.Cli.Enum;
 using SkyCD.Cli.Execution;
 using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.Cli;
 using SkyCD.Plugin.Runtime.Managers;
 
 namespace SkyCD.Cli.Console;

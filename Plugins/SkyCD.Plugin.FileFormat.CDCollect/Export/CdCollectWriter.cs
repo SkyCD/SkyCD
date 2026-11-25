@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Microsoft.Data.Sqlite;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.CDCollect.Exceptions;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;
 using SkyCD.Plugin.Storage;

@@ -5,8 +5,8 @@ Project structure and role folders are described in [plugin-project-layout.md](p
 ## The `SkyCD.SDK` package
 
 `SkyCD.SDK` is the single, versioned, dependency-free library a third-party author references to build a
-SkyCD plugin. It is produced by `src/SkyCD.SDK` (assembly and NuGet package id `SkyCD.SDK`; the namespaces
-remain `SkyCD.Plugin.Abstractions.*`, so source is portable across the rename). See
+SkyCD plugin. It is produced by `src/SkyCD.SDK` (assembly and NuGet package id `SkyCD.SDK`, and the same
+root for every contract namespace: `SkyCD.SDK.*`). See
 [sdk-versioning-policy.md](sdk-versioning-policy.md) for the versioning rules.
 
 The package contains only the plugin-authoring surface:

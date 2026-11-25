@@ -8,7 +8,7 @@ using System.Text.Json;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Staging;
 
 namespace SkyCD.Presentation.Scanning;

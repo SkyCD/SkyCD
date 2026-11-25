@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>Base type for location API failures, so plugins can handle them as one family.</summary>
 public abstract class LocationApiException : Exception

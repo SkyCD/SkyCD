@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Storage;
+namespace SkyCD.SDK.Capabilities.Storage;
 
 /// <summary>
 /// One stored document as a neutral id plus a field map, so a plugin persists its own records without

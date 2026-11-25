@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Export;
 using SkyCD.Plugin.FileFormat.CDCatalogExpert.Models;

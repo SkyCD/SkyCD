@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
+namespace SkyCD.SDK.Capabilities.Menu;
 
 /// <summary>
 /// Context passed to menu command execution.

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using JetDatabaseWriter;
 using JetDatabaseWriter.Enums;
 using JetDatabaseWriter.Models;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 
 namespace SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests;
 

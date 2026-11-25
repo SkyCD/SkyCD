@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.SDK.Localization;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 

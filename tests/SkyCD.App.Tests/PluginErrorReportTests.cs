@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 using Xunit;
 
 namespace SkyCD.App.Tests;

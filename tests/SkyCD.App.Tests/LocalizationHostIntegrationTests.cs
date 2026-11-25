@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using DryIoc;
 using SkyCD.Core.DependencyInjection;
-using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.SDK.Localization;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using Xunit;

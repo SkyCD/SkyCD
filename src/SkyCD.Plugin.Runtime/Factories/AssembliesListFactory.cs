@@ -84,7 +84,7 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
     {
         var fileName = Path.GetFileName(fullPath);
         if (string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fileName, "SkyCD.Plugin.Abstractions.dll", StringComparison.OrdinalIgnoreCase))
+            string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

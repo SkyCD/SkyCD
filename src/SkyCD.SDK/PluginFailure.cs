@@ -4,7 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SkyCD.Plugin.Abstractions;
+namespace SkyCD.SDK;
 
 /// <summary>Allowlisted failure metadata. Never contains exception messages or user data.</summary>
 public sealed record PluginFailure(string PluginIdentity, string PluginVersion, string Operation, string Fingerprint)

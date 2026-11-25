@@ -1,4 +1,4 @@
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Accounts;
 using System;
 using System.IO;
 using Xunit;

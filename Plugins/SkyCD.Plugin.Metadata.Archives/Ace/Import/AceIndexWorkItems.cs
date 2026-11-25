@@ -10,7 +10,7 @@ using SharpCompress.Readers;
 using SharpCompress.Readers.Ace;
 using AceCompressionType = SharpCompress.Common.CompressionType;
 using SkyCD.PackagePaths;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Ace.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;

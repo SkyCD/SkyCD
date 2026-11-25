@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
@@ -409,7 +409,7 @@ public sealed class TestStubConfigurationCapability : IPluginConfigurationCapabi
 
     public PluginConfigurationDescriptor Configuration => ThrowOnConfigurationRead
         ? throw new MissingMethodException(
-            "Method not found: 'Void SkyCD.Plugin.Abstractions.Capabilities.Configuration.PluginConfigurationDescriptor..ctor(System.String, System.String)'.")
+            "Method not found: 'Void SkyCD.SDK.Capabilities.Configuration.PluginConfigurationDescriptor..ctor(System.String, System.String)'.")
         : new PluginConfigurationDescriptor("tests.sample.config", "Test Stub Configuration");
 
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,

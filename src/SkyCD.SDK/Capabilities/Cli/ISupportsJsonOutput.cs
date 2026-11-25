@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Cli;
+namespace SkyCD.SDK.Capabilities.Cli;
 
 /// <summary>
 /// Opt-in contract for plugin CLI commands that can emit machine-readable JSON.

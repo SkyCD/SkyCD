@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
+namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>
 /// Offline disclosure of what an explicit generation pass would use. Reading it never contacts the agent,

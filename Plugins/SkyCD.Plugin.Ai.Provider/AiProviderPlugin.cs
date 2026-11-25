@@ -5,7 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Configuration;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 using SkyCD.Plugin.Ai.Provider.Models;

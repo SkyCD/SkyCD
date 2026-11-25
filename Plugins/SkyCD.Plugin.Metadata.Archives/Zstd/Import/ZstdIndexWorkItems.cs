@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Metadata.Archives.Zstd.Parsing;

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Executable.Export;
 using SkyCD.Plugin.Metadata.Executable.Models;
 using SkyCD.Plugin.Metadata.Executable.Parsing;

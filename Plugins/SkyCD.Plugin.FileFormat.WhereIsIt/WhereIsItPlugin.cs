@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.WhereIsIt.Exceptions;
 using SkyCD.Plugin.FileFormat.WhereIsIt.Import;
 using SkyCD.Plugin.FileFormat.WhereIsIt.Parsing;

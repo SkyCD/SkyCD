@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Ownership;
+namespace SkyCD.SDK.Capabilities.Ownership;
 
 /// <summary>Synchronizes ownership information from a plugin's store or library.</summary>
 public interface IOwnershipProvider : IPluginCapability

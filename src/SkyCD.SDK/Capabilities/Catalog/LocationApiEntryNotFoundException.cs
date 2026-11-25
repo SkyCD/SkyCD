@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>The referenced catalog entry does not exist.</summary>
 public sealed class LocationApiEntryNotFoundException(string entryId)

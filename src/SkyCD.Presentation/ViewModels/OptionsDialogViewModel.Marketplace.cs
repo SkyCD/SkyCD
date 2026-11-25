@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Marketplace.Models;
 using SkyCD.Presentation.Marketplace;

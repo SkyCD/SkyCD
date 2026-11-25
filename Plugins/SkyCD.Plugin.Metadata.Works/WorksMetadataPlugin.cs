@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Works.Exceptions;
 using SkyCD.Plugin.Metadata.Works.Models;
 using SkyCD.Plugin.Metadata.Works.Parsing;

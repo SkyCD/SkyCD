@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Volume;
 
 namespace SkyCD.Plugin.Host.Volume;
 

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Ace.Import;
 using SkyCD.Plugin.Metadata.Archives.Arc.Import;
 using SkyCD.Plugin.Metadata.Archives.Arj.Import;

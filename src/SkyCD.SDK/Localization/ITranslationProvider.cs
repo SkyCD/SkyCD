@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Localization;
+namespace SkyCD.SDK.Localization;
 
 /// <summary>Supplies flat YAML catalogs keyed by BCP-47 culture name.</summary>
 public interface ITranslationProvider

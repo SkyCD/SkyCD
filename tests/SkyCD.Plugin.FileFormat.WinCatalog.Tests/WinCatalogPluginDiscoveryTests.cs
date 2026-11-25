@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Csv;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv;
 using SkyCD.Plugin.FileFormat.WinCatalog.Native;

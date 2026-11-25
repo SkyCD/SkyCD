@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Ui;
+namespace SkyCD.SDK.Capabilities.Ui;
 
 /// <summary>
 /// Optional capability hook the host calls to give a plugin a dialog API before its services are published,

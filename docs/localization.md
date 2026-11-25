@@ -2,7 +2,7 @@
 
 SkyCD uses a shared `ILocalizationService` for presentation code and an Avalonia
 `TranslateExtension` for XAML. The implementation lives in `SkyCD.UI.Localization`;
-plugin translation contracts live in `SkyCD.Plugin.Abstractions.Localization`.
+plugin translation contracts live in `SkyCD.SDK.Localization`.
 
 Core translations are shipped as filesystem YAML packs with embedded fallback resources. YamlDotNet parses these resources,
 and SmartFormat handles parameter substitution and plural forms. Lepo's WPF

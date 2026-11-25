@@ -1,6 +1,6 @@
 using System;
 using SkiaSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Preview.Export;
 
 namespace SkyCD.Plugin.Metadata.AudioCD.Export;

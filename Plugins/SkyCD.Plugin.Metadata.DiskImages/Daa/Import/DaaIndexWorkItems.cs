@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils.Iso9660;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Models;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Parsing;
 using SkyCD.Plugin.Metadata.DiskImages.Models;

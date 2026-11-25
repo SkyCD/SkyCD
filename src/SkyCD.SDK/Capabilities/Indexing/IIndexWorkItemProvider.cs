@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+namespace SkyCD.SDK.Capabilities.Indexing;
 
 /// <summary>
 /// Lets a plugin hook into the host indexing sequence by contributing extra sources, such as the files

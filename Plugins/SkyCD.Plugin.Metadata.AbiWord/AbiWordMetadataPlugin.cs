@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.AbiWord.Exceptions;
 using SkyCD.Plugin.Metadata.AbiWord.Models;
 using SkyCD.Plugin.Metadata.AbiWord.Parsing;

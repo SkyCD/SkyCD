@@ -10,7 +10,7 @@ using RecursiveAI.OneArchive;
 using RecursiveAI.OneArchive.Cab;
 using RecursiveAI.OneCompress;
 using SkyCD.PackagePaths;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Storage;

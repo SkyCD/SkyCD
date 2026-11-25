@@ -216,7 +216,7 @@ public sealed partial class DescriptionViewModel : ObservableObject
     };
 
     private static string DescribeContext(
-        SkyCD.Plugin.Abstractions.Capabilities.Media.DescriptionContextOptions options)
+        SkyCD.SDK.Capabilities.Media.DescriptionContextOptions options)
     {
         var parts = new System.Collections.Generic.List<string>();
         if (options.Filename) parts.Add(LocalizationService.Current.Get(UiKeys.ContextFilename));

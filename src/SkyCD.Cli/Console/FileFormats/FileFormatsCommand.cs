@@ -1,5 +1,5 @@
 using CommandDotNet;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.SDK.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console.FileFormats;
 

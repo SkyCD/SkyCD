@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.SDK.OAuth;
 
 namespace SkyCD.Core.OAuth;
 

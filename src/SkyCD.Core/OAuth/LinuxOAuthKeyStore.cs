@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DBus.Services.Secrets;
-using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.SDK.OAuth;
 
 namespace SkyCD.Core.OAuth;
 

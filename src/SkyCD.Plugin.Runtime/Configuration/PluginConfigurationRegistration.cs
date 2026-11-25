@@ -1,4 +1,4 @@
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK.Capabilities.Configuration;
 
 namespace SkyCD.Plugin.Runtime.Configuration;
 

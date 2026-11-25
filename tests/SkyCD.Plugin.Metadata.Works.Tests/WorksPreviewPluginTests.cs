@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Works.Exceptions;
 using SkyCD.Plugin.Metadata.Works.Export;
 using SkyCD.Plugin.Metadata.Works.Models;

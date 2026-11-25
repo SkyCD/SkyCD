@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using Xunit;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 using SkyCD.Plugin.Ai.Provider.Models;
 

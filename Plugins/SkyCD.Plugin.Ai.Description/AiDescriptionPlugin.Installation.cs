@@ -12,7 +12,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 using SkyCD.Plugin.Ai.Description.Models;
 using SkyCD.Plugin.Ai.Description.Sources;

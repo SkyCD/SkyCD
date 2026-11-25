@@ -1,6 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.SDK.OAuth;
 
 namespace SkyCD.Core.OAuth;
 

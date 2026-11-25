@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 
 namespace SkyCD.Plugin.Ai.Provider.Models;

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System;
 using SkyCD.PackagePaths;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Lha.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Models;

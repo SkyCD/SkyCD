@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Exceptions;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 
