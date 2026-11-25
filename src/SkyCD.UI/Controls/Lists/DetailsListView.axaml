@@ -49,7 +49,7 @@
             <Border x:Name="HeaderScrollBarSpacer"
                     Grid.Column="1"
                     Width="0"
-                    Background="{DynamicResource ThemeControlBackgroundBrush}"
+                    Background="{DynamicResource ThemeBackgroundBrush}"
                     BorderThickness="0,0,0,1"
                     BorderBrush="{DynamicResource ThemeBorderLowBrush}" />
         </Grid>

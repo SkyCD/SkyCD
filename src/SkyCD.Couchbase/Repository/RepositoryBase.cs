@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Helpers;
 using SkyCD.Couchbase.Mapping;
@@ -10,7 +12,20 @@ using SkyCD.Couchbase.Models;
 
 namespace SkyCD.Couchbase.Repository;
 
-public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
+/// <summary>
+/// Non-generic repository base so infrastructure can hand every repository the host logger before it
+/// initializes, without knowing the document type.
+/// </summary>
+public abstract class RepositoryBase
+{
+    /// <summary>
+    /// Diagnostics that must not abort repository construction. The host assigns its logger through
+    /// <see cref="Collections.RepositoryCollection"/>; a repository built by hand keeps the no-op logger.
+    /// </summary>
+    public ILogger Logger { get; internal set; } = NullLogger.Instance;
+}
+
+public abstract class RepositoryBase<TDocument> : RepositoryBase, IRepository<TDocument>
     where TDocument : class, new()
 {
     public Type DocumentType { get; private set; } = null!;
@@ -37,8 +52,11 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-        using var document = Collection.GetDocument(id);
-        return document.FromDocument<TDocument>();
+        return DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var document = Collection.GetDocument(id);
+            return document.FromDocument<TDocument>();
+        });
     }
 
     public TDocument GetOrCreate(string id)
@@ -77,18 +95,24 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(value);
 
-        using var document = value.ToMutableDocument(id);
-        Collection.Save(document);
+        DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var document = value.ToMutableDocument(id);
+            Collection.Save(document);
+        });
     }
 
     public virtual IReadOnlyList<TDocument> GetAll()
     {
-        using var query = QueryBuilder
-            .Select(SelectResult.All())
-            .From(DataSource.Collection(Collection));
+        return DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var query = QueryBuilder
+                .Select(SelectResult.All())
+                .From(DataSource.Collection(Collection));
 
-        using var results = query.Execute();
-        return ReadResults(results);
+            using var results = query.Execute();
+            return ReadResults(results);
+        });
     }
 
     /// <summary>

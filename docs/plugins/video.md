@@ -72,6 +72,11 @@ Two decoders are tried in order through `IVideoFrameExtractor`:
    frame. It remains the poster source on platforms without the Windows native runtime and for codecs
    OpenCV's bundled build cannot decode.
 
+`VideoPosterPlugin` marks its descriptor as an `IndexTimePreview`, so the add/index pass stores the poster
+next to the metadata it captures — the browser and the Adding window's latest-thumbnail panel show it as
+soon as the add completes, without a separate preview request. The pass still honours the source budget,
+decoder timeout and cancellation, and a source no decoder can read stays metadata-only.
+
 `CompositeVideoFrameExtractor` holds both and is the default extractor; a successful OpenCV frame never starts
 the fallback. Discovery of the fallback is unchanged and nothing is ever downloaded:
 

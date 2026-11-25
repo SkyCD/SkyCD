@@ -40,6 +40,10 @@ host service contracts implemented by the host, not by copied helper source.
 - `IModalPluginCapability`
   - Declares modal descriptors with size hints, permission requirements, and typed input/output contracts
   - Uses `ModalPayload` (`TypeId` + value) for input/output envelopes
+- `IOptionsPageCapability` (`Capabilities.Options`)
+  - Contributes a first-class management page to Tools > Options (`OptionsPageDescriptor`), rendered next
+    to Collections instead of a plugin-owned floating window
+  - `CreateOptionsPage()` returns an embeddable control; the host owns navigation and disposal
 - `ICliPluginCapability`
   - Declares CLI command contributions (`CliCommandContribution`)
   - Supports new command registration and extension-point contributions for built-in host commands
@@ -104,6 +108,26 @@ configuration Windows and the descriptor's Width/Height arguments. Other capabil
 See `Plugins/SkyCD.Plugin.Sample.Config/SampleConfigurationPlugin.cs` and
 `SampleConfigurationPage.axaml` for the editor, lazy control and acceptance callbacks. The four production
 examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
+
+## Plugin-contributed Options pages (SDK 3.0, #1105)
+
+`IOptionsPageCapability` lets a feature plugin add a first-class management page to Tools > Options
+instead of opening its own window. It is for operational surfaces such as managing catalog locations;
+settings drafts stay on `IPluginConfigurationCapability`.
+
+- `OptionsPageDescriptor(PageId, Title, Order)` identifies the page. Keep `PageId` stable: the host
+  persists the selection as plugin ID plus page ID, not the translated title. `Title` is read whenever
+  the navigation is rebuilt, so a language change inside Options retranslates the entry. `Order` sorts
+  contributed pages, which are placed next to Collections.
+- `CreateOptionsPage()` returns an embeddable Avalonia `Control`, never a `Window`, and is called once
+  per Options session on the UI thread. The host keeps the page across navigation/search and disposes
+  the content when Options closes.
+- A page that cannot be created or embedded is reported inline. The page is hidden while its plugin is
+  disabled.
+- Pages read host state through SDK contracts (for example `ILocationApi.IsCatalogOpen`) and render their
+  own empty/unavailable states; the host stays feature-agnostic.
+
+See `Plugins/SkyCD.Plugin.Feature.Locations/LocationsPlugin.cs` for the reference implementation.
 
 ## Catalog data-loss preflight (SDK 3.0)
 

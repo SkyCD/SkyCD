@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
+using SkyCD.Couchbase;
 using SkyCD.SDK.Capabilities.Storage;
 
 namespace SkyCD.Presentation.Catalog;
@@ -52,26 +53,29 @@ public sealed class PluginStorageApi(OpenCatalogState state, string pluginId) : 
             using var query = QueryBuilder
                 .Select(SelectResult.All())
                 .From(DataSource.Collection(collection));
-            using var results = query.Execute();
-            var records = new List<PluginDocumentRecord>();
-            foreach (var row in results)
+            return DatabaseGate.Run(collection.Database, () =>
             {
-                var dictionary = row.GetDictionary(collection.Name);
-                if (dictionary is null)
+                using var results = query.Execute();
+                var records = new List<PluginDocumentRecord>();
+                foreach (var row in results)
                 {
-                    continue;
+                    var dictionary = row.GetDictionary(collection.Name);
+                    if (dictionary is null)
+                    {
+                        continue;
+                    }
+
+                    var fields = ToFields(dictionary.ToDictionary());
+                    if (!fields.TryGetValue(IdField, out var id) || string.IsNullOrWhiteSpace(id?.ToString()))
+                    {
+                        continue;
+                    }
+
+                    records.Add(new PluginDocumentRecord(id!.ToString()!, fields));
                 }
 
-                var fields = ToFields(dictionary.ToDictionary());
-                if (!fields.TryGetValue(IdField, out var id) || string.IsNullOrWhiteSpace(id?.ToString()))
-                {
-                    continue;
-                }
-
-                records.Add(new PluginDocumentRecord(id!.ToString()!, fields));
-            }
-
-            return records;
+                return records;
+            });
         }
 
         public void Upsert(string id, IReadOnlyDictionary<string, object?> fields)

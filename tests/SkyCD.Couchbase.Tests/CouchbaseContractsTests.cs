@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Couchbase.Lite;
 using DryIoc;
+using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Collections;
@@ -322,6 +323,55 @@ public class CouchbaseContractsTests
         Assert.NotNull(repositoryManager);
     }
 
+    [Fact]
+    public void TreeRepository_ReportsTheParentIndexWhenItIsCreated()
+    {
+        using var database = CreateDatabase("tree-index-created");
+        var databases = new DatabaseCollection();
+        databases.Add("default", database);
+        var loggerFactory = new CapturingLoggerFactory();
+        var repositories = new RepositoryCollection(databases, loggerFactory);
+
+        var repository = Assert.IsType<TestTreeRepository>(repositories.GetOrAdd(typeof(AnnotatedDocument)));
+
+        Assert.True(repository.IsParentIndexAvailable);
+        Assert.DoesNotContain(loggerFactory.Entries, entry => entry.Level >= LogLevel.Warning);
+    }
+
+    [Fact]
+    public void TreeRepository_OpensUnindexedWhenIndexCreationFails()
+    {
+        // Issue #1097: SQLite error 14 leaves the parent index unbuilt; the catalog still has to open.
+        using var database = CreateDatabase("tree-index-failure");
+        var databases = new DatabaseCollection();
+        databases.Add("default", database);
+        var loggerFactory = new CapturingLoggerFactory();
+        var repositories = new RepositoryCollection(databases, loggerFactory);
+
+        var repository = Assert.IsType<FailingIndexTreeRepository>(repositories.GetOrAdd(typeof(FailingIndexDocument)));
+
+        Assert.False(repository.IsParentIndexAvailable);
+        Assert.Equal(2, repository.CreateParentIndexCalls);
+
+        var retries = loggerFactory.Entries.Where(entry => entry.Level == LogLevel.Warning).ToArray();
+        Assert.Equal(2, retries.Length);
+        Assert.All(retries, entry => Assert.Contains("idx_tree_parent_failingindex", entry.Message, StringComparison.Ordinal));
+
+        var diagnostic = Assert.Single(loggerFactory.Entries, entry => entry.Level == LogLevel.Error);
+        Assert.Contains("idx_tree_parent_failingindex", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("unavailable", diagnostic.Message, StringComparison.Ordinal);
+        Assert.NotNull(diagnostic.Exception);
+
+        // The unindexed repository still reads and writes; folder queries fall back to a scan.
+        repository.Save("root", new FailingIndexDocument { Id = "root", Name = "Root" });
+        repository.Save("child", new FailingIndexDocument { Id = "child", ParentId = "root", Name = "Child" });
+
+        var children = repository.GetChildrenOf("root");
+
+        Assert.Single(children);
+        Assert.Equal("child", children[0].Id);
+    }
+
     private static Database CreateDatabase(string prefix)
     {
         var name = $"{prefix}-{Guid.NewGuid():N}";
@@ -370,6 +420,81 @@ public class CouchbaseContractsTests
             return base.GetAll();
         }
     }
+
+    [CouchbaseDocument("failingindex", typeof(FailingIndexTreeRepository))]
+    private sealed class FailingIndexDocument
+    {
+        [Id] public string Id { get; set; } = string.Empty;
+
+        [ParentId] public string? ParentId { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class FailingIndexTreeRepository : TreeRepository<FailingIndexDocument>
+    {
+        public int CreateParentIndexCalls { get; private set; }
+
+        protected override void CreateParentIndex(string indexName)
+        {
+            CreateParentIndexCalls++;
+            throw new InvalidOperationException("unable to open database file (14/14)");
+        }
+    }
+
+    private sealed class CapturingLoggerFactory : ILoggerFactory
+    {
+        private readonly List<LogEntry> entries = [];
+
+        public IReadOnlyList<LogEntry> Entries
+        {
+            get
+            {
+                lock (entries)
+                {
+                    return entries.ToArray();
+                }
+            }
+        }
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
+
+        public void AddProvider(ILoggerProvider provider)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        internal void Add(LogLevel level, string message, Exception? exception)
+        {
+            lock (entries)
+            {
+                entries.Add(new LogEntry(level, message, exception));
+            }
+        }
+
+        private sealed class CapturingLogger(CapturingLoggerFactory owner) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                owner.Add(logLevel, formatter(state, exception), exception);
+            }
+        }
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
 
     private sealed class MappedPayload
     {
