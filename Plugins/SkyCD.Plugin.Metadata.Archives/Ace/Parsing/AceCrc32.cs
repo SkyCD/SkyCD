@@ -3,23 +3,25 @@ using System;
 namespace SkyCD.Plugin.Metadata.Archives.Ace.Parsing;
 
 /// <summary>
-/// The ACE CRC-32: the standard reflected CRC-32 register without the final inversion, which makes it the
-/// bitwise inverse of the usual CRC-32 value.
+/// The ACE CRC-32: the standard reflected CRC-32 register without the final inversion. The value is built
+/// incrementally so an entry can be checksummed while it is copied to disk.
 /// </summary>
-internal static class AceCrc32
+internal sealed class AceCrc32
 {
     private static readonly uint[] Table = BuildTable();
 
-    /// <summary>Computes the ACE CRC-32 of <paramref name="data"/>.</summary>
-    public static uint Compute(ReadOnlySpan<byte> data)
+    private uint crc = 0xFFFFFFFFu;
+
+    /// <summary>Gets the checksum of everything appended so far.</summary>
+    public uint Value => crc;
+
+    /// <summary>Adds the next bytes of the entry to the checksum.</summary>
+    public void Append(ReadOnlySpan<byte> data)
     {
-        var crc = 0xFFFFFFFFu;
         foreach (var value in data)
         {
             crc = Table[(crc ^ value) & 0xFF] ^ (crc >> 8);
         }
-
-        return crc;
     }
 
     private static uint[] BuildTable()
