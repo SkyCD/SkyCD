@@ -92,6 +92,8 @@ public partial class AboutDialogViewModel : ObservableObject
         LoadedAssemblies = new ObservableCollection<LoadedAssemblyEntry>(
             BuildLoadedAssemblyEntries(loadedAssemblies ?? AppDomain.CurrentDomain.GetAssemblies()));
 
+        FilteredAssemblies = new ObservableCollection<LoadedAssemblyEntry>(LoadedAssemblies);
+
         currentProcess = process ?? Process.GetCurrentProcess();
         this.timeProvider = timeProvider ?? TimeProvider.System;
         lastTotalProcessorTime = currentProcess.TotalProcessorTime;
@@ -110,6 +112,12 @@ public partial class AboutDialogViewModel : ObservableObject
     public string LicenseText { get; }
 
     public ObservableCollection<LoadedAssemblyEntry> LoadedAssemblies { get; }
+
+    public ObservableCollection<LoadedAssemblyEntry> FilteredAssemblies { get; }
+
+    [ObservableProperty] private string assemblyFilterText = string.Empty;
+
+    public bool ShowAssembliesEmptyState => FilteredAssemblies.Count == 0;
 
     [ObservableProperty] private bool dialogAccepted;
 
@@ -228,6 +236,52 @@ public partial class AboutDialogViewModel : ObservableObject
         }
 
         return null;
+    }
+
+    partial void OnAssemblyFilterTextChanged(string value) => RefreshFilteredAssemblies();
+
+    private void RefreshFilteredAssemblies()
+    {
+        var matching = LoadedAssemblies
+            .Where(entry => MatchesAssemblyFilter(entry, AssemblyFilterText))
+            .ToArray();
+
+        // Update the visible list in place so rows that still match keep their selection.
+        var wanted = new HashSet<LoadedAssemblyEntry>(matching);
+        for (var index = FilteredAssemblies.Count - 1; index >= 0; index--)
+        {
+            if (!wanted.Contains(FilteredAssemblies[index]))
+            {
+                FilteredAssemblies.RemoveAt(index);
+            }
+        }
+
+        var insertAt = 0;
+        foreach (var entry in matching)
+        {
+            if (insertAt >= FilteredAssemblies.Count || !FilteredAssemblies[insertAt].Equals(entry))
+            {
+                FilteredAssemblies.Insert(insertAt, entry);
+            }
+
+            insertAt++;
+        }
+
+        OnPropertyChanged(nameof(ShowAssembliesEmptyState));
+    }
+
+    private static bool MatchesAssemblyFilter(LoadedAssemblyEntry entry, string filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            return true;
+        }
+
+        var text = filter.Trim();
+        return entry.Name.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || entry.Version.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || entry.Copyright.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || entry.RepositoryUrl.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<LoadedAssemblyEntry> BuildLoadedAssemblyEntries(IEnumerable<Assembly> assemblies)
