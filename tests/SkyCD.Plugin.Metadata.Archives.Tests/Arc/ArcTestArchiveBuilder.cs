@@ -1,20 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
 namespace SkyCD.Plugin.Metadata.Archives.Arc.Tests;
 
 /// <summary>
-/// Builds ARC archives byte by byte so tests do not depend on external tools. Header layouts mirror the reader:
-/// short entries carry 16-bit CRC, size, time, date and header length; extended entries terminate the name with
-/// 0xFE, append size and date/time extensions, use 32-bit fields, and end with the absolute header offset.
+/// Builds ARC archives in the 29-byte header layout the SharpCompress reader expects: 0x1A marker, method,
+/// a 13-byte NUL-terminated name, packed size, date, CRC-16 and original size, followed by the entry data.
+/// The archive is terminated with the 0x1A end-of-archive marker. Names are limited to twelve bytes because
+/// the extended name layout is not supported.
 /// </summary>
 internal sealed class ArcTestArchiveBuilder
 {
-    private const byte EndOfArchive = 0x1A;
-    private const byte ExtendedNameMarker = 0xFE;
-    private const int ExtensionBytes = 4;
-    private const int FixedLongBytes = 4 + 4 + 2 + 2 + 4; // CRC-32, size, time, date, header end offset
+    private const byte Marker = 0x1A;
+    private const byte StoredMethod = 1;
+    private const byte PackedMethod = 3;
+    private const byte Dle = 0x90;
+    private const int NameFieldBytes = 13;
+    private const uint DosDate = 1_700_000_000;
 
     private readonly MemoryStream stream = new();
 
@@ -22,60 +26,47 @@ internal sealed class ArcTestArchiveBuilder
     {
     }
 
-    /// <summary>Gets the number of bytes written so far.</summary>
+    /// <summary>Gets the number of bytes written so far, including the end marker.</summary>
     public long Length => stream.Length;
 
     public static ArcTestArchiveBuilder Create() => new();
 
-    /// <summary>Writes a stored entry using the short (16-bit) header layout.</summary>
-    public ArcTestArchiveBuilder AddStored(string name, string content, DateTime? modified = null) =>
-        AddShort(name, method: 0, Encoding.UTF8.GetBytes(content), modified ?? DefaultDate);
-
-    /// <summary>Writes an entry whose method byte the reader must classify without decoding the data.</summary>
-    public ArcTestArchiveBuilder AddWithMethod(byte method, string name, string content) =>
-        AddShort(name, method, Encoding.UTF8.GetBytes(content), DefaultDate);
-
-    /// <summary>Writes an explicit directory entry: a name ending in a slash and no data.</summary>
-    public ArcTestArchiveBuilder AddDirectory(string name) =>
-        AddShort(name.TrimEnd('/') + "/", method: 0, [], DefaultDate);
-
-    /// <summary>
-    /// Writes a stored entry using the extended (32-bit) layout: the name ends with 0xFE, a 4-byte extension
-    /// follows, then CRC-32, size, time, date, and the absolute header end offset.
-    /// </summary>
-    public ArcTestArchiveBuilder AddStoredExtended(string name, string content, DateTime? modified = null)
+    /// <summary>Writes a stored (method 1) entry whose data follows the header verbatim.</summary>
+    public ArcTestArchiveBuilder AddStored(string name, string content)
     {
         var data = Encoding.UTF8.GetBytes(content);
-        var nameBytes = Encoding.Latin1.GetByteCount(name);
-        var value = modified ?? DefaultDate;
-
-        stream.WriteByte(0);
-        stream.Write(Encoding.Latin1.GetBytes(name));
-        stream.WriteByte(ExtendedNameMarker);
-        stream.Write([1, 0, 0, 0]); // one extension: this header's index within the archive
-
-        var headerStart = stream.Length - (1 + nameBytes + 1 + ExtensionBytes);
-        // The extended name terminator replaces the NUL, so it counts toward the header length too.
-        var headerEnd = headerStart + 1 + nameBytes + 1 + ExtensionBytes + FixedLongBytes;
-        WriteUInt32((uint)Crc32(data));
-        WriteUInt32((uint)data.Length);
-        WriteUInt16(DosTime(value));
-        WriteUInt16(DosDate(value));
-        WriteUInt32((uint)headerEnd);
-        stream.Write(data);
-        return this;
+        return AddEntry(StoredMethod, name, data, data, data);
     }
 
-    /// <summary>Writes the "=TX=" text-mode settings header that old archives place before text files.</summary>
-    public ArcTestArchiveBuilder AddTextModeModel()
+    /// <summary>Writes a packed (method 3) entry whose data is RLE90-compressed.</summary>
+    public ArcTestArchiveBuilder AddPacked(string name, string content)
     {
-        WriteShortcutHeader(method: 0, "=TX=");
-        WriteUInt16(0);
-        WriteUInt16(0);
-        WriteUInt16(DosDate(DefaultDate));
-        WriteUInt16(DosTime(DefaultDate));
-        WriteUInt16(1 + Encoding.Latin1.GetByteCount("=TX=") + 1 + 8 + 2);
-        return this;
+        var data = Encoding.UTF8.GetBytes(content);
+        return AddEntry(PackedMethod, name, EncodeRle90(data), data, EncodeRle90(data));
+    }
+
+    /// <summary>Writes an entry with a method the reader maps to a compression it cannot decode.</summary>
+    public ArcTestArchiveBuilder AddWithMethod(byte method, string name, string content)
+    {
+        var data = Encoding.UTF8.GetBytes(content);
+        return AddEntry(method, name, data, data, data);
+    }
+
+    /// <summary>Writes an explicit directory entry: a name ending in a slash and no data.</summary>
+    public ArcTestArchiveBuilder AddDirectory(string name)
+    {
+        var headerName = name.EndsWith('/') ? name : name + "/";
+        return AddEntry(StoredMethod, headerName, [], [], []);
+    }
+
+    /// <summary>
+    /// Writes a stored entry that advertises its full size but omits the tail of its data, so extraction
+    /// reaches the end of the stream early.
+    /// </summary>
+    public ArcTestArchiveBuilder AddTruncatedStored(string name, string content)
+    {
+        var data = Encoding.UTF8.GetBytes(content);
+        return AddEntry(StoredMethod, name, data, data, data[..(data.Length / 2)]);
     }
 
     /// <summary>Produces the archive, optionally omitting the end-of-archive marker.</summary>
@@ -83,7 +74,7 @@ internal sealed class ArcTestArchiveBuilder
     {
         if (withEndMarker)
         {
-            stream.WriteByte(EndOfArchive);
+            stream.WriteByte(Marker);
         }
 
         stream.Position = 0;
@@ -93,34 +84,75 @@ internal sealed class ArcTestArchiveBuilder
     /// <summary>Copies everything written so far without an end marker, for truncation tests.</summary>
     public byte[] WithoutEndMarker() => stream.ToArray();
 
-    private ArcTestArchiveBuilder AddShort(string name, byte method, byte[] data, DateTime modified)
+    private ArcTestArchiveBuilder AddEntry(byte method, string name, byte[] storedData, byte[] original,
+        byte[] writtenData)
     {
-        WriteShortcutHeader(method, name);
-        WriteUInt16(Crc16(data));
-        WriteUInt16((ushort)data.Length);
-        WriteUInt16(DosDate(modified));
-        WriteUInt16(DosTime(modified));
-        WriteUInt16(1 + Encoding.Latin1.GetByteCount(name) + 1 + 8 + 2);
-        stream.Write(data);
+        var nameBytes = Encoding.UTF8.GetBytes(name);
+        if (nameBytes.Length >= NameFieldBytes)
+        {
+            throw new ArgumentException($"ARC names are limited to {NameFieldBytes - 1} bytes.", nameof(name));
+        }
+
+        stream.WriteByte(Marker);
+        stream.WriteByte(method);
+        stream.Write(nameBytes);
+        stream.Write(new byte[NameFieldBytes - nameBytes.Length]);
+
+        WriteUInt32((uint)storedData.Length);
+        WriteUInt32(DosDate);
+        WriteUInt16(Crc16(original));
+        WriteUInt32((uint)original.Length);
+        stream.Write(writtenData);
         return this;
     }
 
-    private void WriteShortcutHeader(byte method, string name)
+    /// <summary>
+    /// Encodes data in the RLE90 scheme of the packed (method 3) decoder. The first byte of a run is written
+    /// literally; a run of two adds one more literal byte and a longer run adds 0x90 followed by the run
+    /// length. A literal 0x90 is always written as 0x90 0x00.
+    /// </summary>
+    private static byte[] EncodeRle90(byte[] data)
     {
-        stream.WriteByte(method);
-        stream.Write(Encoding.Latin1.GetBytes(name));
-        stream.WriteByte(0);
+        var output = new List<byte>(data.Length);
+        var lastChar = -1;
+        var count = 0;
+        foreach (var value in data)
+        {
+            if (value == lastChar && count < 255)
+            {
+                count++;
+            }
+            else
+            {
+                EmitRun(output, lastChar, count);
+                output.Add(value);
+                lastChar = value;
+                count = 1;
+            }
+
+            if (value == Dle)
+            {
+                output.Add(0);
+                lastChar = -1;
+            }
+        }
+
+        EmitRun(output, lastChar, count);
+        return [.. output];
     }
 
-    private static DateTime DefaultDate => new(2024, 1, 2, 3, 4, 6, DateTimeKind.Utc);
-
-    private static ushort DosDate(DateTime value) =>
-        (ushort)(((value.Year - 1980) << 9) | (value.Month << 5) | value.Day);
-
-    private static ushort DosTime(DateTime value) =>
-        (ushort)((value.Hour << 11) | (value.Minute << 5) | (value.Second / 2));
-
-    private void WriteBytes(byte[] value) => stream.Write(value);
+    private static void EmitRun(List<byte> output, int lastChar, int count)
+    {
+        if (count == 2)
+        {
+            output.Add((byte)lastChar);
+        }
+        else if (count > 2)
+        {
+            output.Add(Dle);
+            output.Add((byte)count);
+        }
+    }
 
     private void WriteUInt16(int value)
     {
@@ -149,20 +181,5 @@ internal sealed class ArcTestArchiveBuilder
         }
 
         return crc;
-    }
-
-    private static uint Crc32(byte[] data)
-    {
-        uint crc = 0xFFFFFFFFu;
-        foreach (var value in data)
-        {
-            crc ^= value;
-            for (var bit = 0; bit < 8; bit++)
-            {
-                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
-            }
-        }
-
-        return ~crc;
     }
 }

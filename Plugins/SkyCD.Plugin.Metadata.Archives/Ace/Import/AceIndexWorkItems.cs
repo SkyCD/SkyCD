@@ -1,11 +1,16 @@
+using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Threading;
-using System;
+using System.Threading.Tasks;
+using SharpCompress.Common;
+using SharpCompress.Common.Ace.Headers;
+using SharpCompress.Readers;
+using SharpCompress.Readers.Ace;
+using AceCompressionType = SharpCompress.Common.CompressionType;
 using SkyCD.PackagePaths;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
-using SkyCD.Plugin.Metadata.Archives.Ace.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Ace.Parsing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
@@ -14,17 +19,21 @@ using SkyCD.Plugin.Storage;
 namespace SkyCD.Plugin.Metadata.Archives.Ace.Import;
 
 /// <summary>
-/// Extracts stored ACE entries into a unique temporary directory with bounded resource usage and exposes
-/// each extracted file as a host index work item. Disposing the returned set deletes the directory.
-/// Compressed, encrypted, split and damaged entries are listed during scanning but skipped here, because
-/// this plugin ships no ACE decompressor.
+/// Extracts stored ACE entries with the SharpCompress reader into a unique temporary directory with bounded
+/// resource usage and exposes each extracted file as a host index work item. Disposing the returned set
+/// deletes the directory. Compressed, encrypted, split and damaged entries are reported through typed
+/// diagnostics and contribute no work item; stored entries are verified against the ACE CRC-32.
 /// </summary>
 internal static class AceIndexWorkItems
 {
+    private const string BufferedSourceName = ".skycd-ace-source";
+    private const string EncryptedCode = "ACE_ENCRYPTED";
+    private const string UnsupportedCode = "ACE_UNSUPPORTED";
+    private const string DamagedCode = "ACE_DAMAGED";
+    private const string UnsafeCode = "ACE_UNSAFE";
     private const int CopyBufferBytes = 81_920;
 
-    /// <summary>Extracts every eligible entry and reports the entries skipped with a typed failure.</summary>
-    public static async Task<AceIndexResult> CreateAsync(
+    public static async Task<ArchiveIndexResult> CreateAsync(
         IndexWorkItemRequest request,
         ArchiveIndexLimits limits,
         CancellationToken cancellationToken)
@@ -33,176 +42,243 @@ internal static class AceIndexWorkItems
         limits.Validate();
 
         var workspace = new ArchiveExtractionWorkspace("ace");
-
+        FileStream? bufferedSource = null;
         try
         {
-            byte[] archiveBytes;
-            await using (var source = await request.OpenSource(cancellationToken).ConfigureAwait(false))
+            await using var source = await request.OpenSource(cancellationToken).ConfigureAwait(false);
+            Stream archive = source;
+            if (!source.CanSeek)
             {
-                archiveBytes = await ReadAllBytesAsync(source, workspace.Root, cancellationToken)
-                    .ConfigureAwait(false);
+                bufferedSource = await NonSeekableSourceBuffer.BufferAsync(source,
+                    workspace.GetPath(BufferedSourceName), cancellationToken).ConfigureAwait(false);
+                archive = bufferedSource;
             }
 
-            var headers = new AceHeaderReader().Read(new MemoryStream(archiveBytes, writable: false),
-                cancellationToken);
-            var extraction = ExtractEntries(headers, archiveBytes, workspace.Root, limits, request.Progress,
-                cancellationToken);
-
-            var set = new IndexWorkItemSet(extraction.Items, () =>
+            if (!IsAceArchive(archive))
             {
                 workspace.Dispose();
-                return ValueTask.CompletedTask;
-            });
-            return new AceIndexResult(set, extraction.Skipped);
+                return ArchiveIndexResult.Failure(DamagedCode, "The file does not contain the ACE signature.");
+            }
+
+            archive.Position = 0;
+            return await ExtractAsync(archive, workspace, limits, request.Progress, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             workspace.Dispose();
             throw;
         }
-        catch (AceEncryptedArchiveException exception)
+        catch (CryptographicException exception)
         {
             workspace.Dispose();
-            return AceIndexResult.ForFailure("ACE_ENCRYPTED", exception.Message);
+            return ArchiveIndexResult.Failure(EncryptedCode, exception.Message);
         }
-        catch (AceUnsupportedBlockException exception)
+        catch (MultiVolumeExtractionException exception)
         {
             workspace.Dispose();
-            return AceIndexResult.ForFailure("ACE_UNSUPPORTED", exception.Message);
+            return ArchiveIndexResult.Failure(UnsupportedCode, exception.Message);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (IsArchiveFailure(exception))
         {
             workspace.Dispose();
-            if (!AceArchiveFailures.IsArchiveFailure(exception))
-            {
-                throw;
-            }
-
-            return AceIndexResult.Damaged(exception.Message);
+            return ArchiveIndexResult.Failure(DamagedCode, exception.Message);
+        }
+        catch (Exception)
+        {
+            workspace.Dispose();
+            throw;
+        }
+        finally
+        {
+            bufferedSource?.Dispose();
         }
     }
 
-    private static Extraction ExtractEntries(
-        List<AceHeader> headers,
-        byte[] archiveBytes,
-        string tempRoot,
+    private static async Task<ArchiveIndexResult> ExtractAsync(
+        Stream archive,
+        ArchiveExtractionWorkspace workspace,
         ArchiveIndexLimits limits,
         IProgress<int>? progress,
         CancellationToken cancellationToken)
     {
         var items = new List<IndexWorkItem>();
-        var skipped = new List<AceSkippedEntry>();
+        var skipped = new List<ArchiveSkipEntry>();
         var budget = new ExtractionBudget();
         var index = 0;
 
-        foreach (var header in headers)
+        await using var reader = await AceReader
+            .OpenAsyncReader(archive, ReaderOptions.ForExternalStream, cancellationToken).ConfigureAwait(false);
+
+        while (await reader.MoveToNextEntryAsync(cancellationToken).ConfigureAwait(false))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (header.BlockType != AceBlockType.File)
-            {
-                continue;
-            }
 
+            var entry = reader.Entry;
             index++;
-            if (header.IsDirectory)
+            if (entry.IsDirectory)
             {
                 continue;
             }
 
-            if (header.IsEncrypted)
+            var name = entry.Key ?? string.Empty;
+            if (entry.IsEncrypted)
             {
-                skipped.Add(new AceSkippedEntry(header.Name, "ACE_ENCRYPTED",
-                    "Encrypted entries cannot be extracted."));
+                skipped.Add(new ArchiveSkipEntry(name, EncryptedCode, "Encrypted entries cannot be extracted."));
                 continue;
             }
 
-            if (header.Method != 0 || header.IsMultiVolume)
+            if (entry.CompressionType != AceCompressionType.None)
             {
-                // ACE_UNSUPPORTED rather than a damaged archive: the header is intact, the plugin simply
-                // ships no decompressor and cannot join split volumes.
-                skipped.Add(new AceSkippedEntry(header.Name, "ACE_UNSUPPORTED",
-                    header.IsMultiVolume
-                        ? "Multi-volume archive parts cannot be extracted without their companion volumes."
-                        : $"Compression method {header.Method} is not supported."));
+                skipped.Add(new ArchiveSkipEntry(name, UnsupportedCode,
+                    $"Compression method {entry.CompressionType} is not supported."));
                 continue;
             }
 
             if (index > limits.MaxEntries)
             {
-                skipped.Add(new AceSkippedEntry(header.Name, "ACE_UNSUPPORTED",
+                skipped.Add(new ArchiveSkipEntry(name, UnsupportedCode,
                     "The archive exceeds the configured entry limit."));
                 continue;
             }
 
-            if (!PackageEntryPath.TryNormalize(header.Name, out var normalized, out var safe)
-                || !safe
-                || !PackageEntryPath.TryResolveUnderRoot(tempRoot, normalized, out var fullPath, suppressErrors: true))
+            if (!PackageEntryPath.TryNormalize(name, out var normalized, out var safe) || !safe
+                || !PackageEntryPath.TryResolveUnderRoot(workspace.Root, normalized, out var fullPath,
+                    suppressErrors: true))
             {
-                skipped.Add(new AceSkippedEntry(header.Name, "ACE_UNSAFE",
+                skipped.Add(new ArchiveSkipEntry(name, UnsafeCode,
                     "The entry path escapes the extraction directory."));
                 continue;
             }
 
-            if (header.PackSize < 0 || header.DataOffset < 0
-                || header.DataOffset > archiveBytes.Length - header.PackSize)
+            var length = entry.Size;
+            if (length < 0 || !budget.TryReserve(length, limits))
             {
-                skipped.Add(new AceSkippedEntry(normalized, "ACE_DAMAGED",
-                    "The stored entry data is outside the archive."));
-                continue;
-            }
-
-            var length = header.PackSize;
-            if (!budget.TryReserve(length, limits))
-            {
-                skipped.Add(new AceSkippedEntry(header.Name, "ACE_UNSUPPORTED",
+                skipped.Add(new ArchiveSkipEntry(name, UnsupportedCode,
                     "The entry exceeds the configured size budget."));
                 continue;
             }
 
-            var item = TryExtract(header, archiveBytes, normalized, fullPath, skipped);
-            if (item is null)
+            try
             {
-                budget.Release(length);
-                continue;
-            }
+                var (written, crc) = await ExtractEntryAsync(reader, fullPath, limits.MaxEntryBytes,
+                    cancellationToken).ConfigureAwait(false);
+                if (written != length)
+                {
+                    DeleteQuietly(fullPath);
+                    budget.Release(length);
+                    skipped.Add(new ArchiveSkipEntry(normalized, DamagedCode,
+                        "The archive ends inside the entry."));
+                    continue;
+                }
 
-            items.Add(item);
+                if (crc != (uint)entry.Crc)
+                {
+                    DeleteQuietly(fullPath);
+                    budget.Release(length);
+                    skipped.Add(new ArchiveSkipEntry(normalized, DamagedCode,
+                        "The stored entry data does not match its CRC-32."));
+                    continue;
+                }
+
+                items.Add(new IndexWorkItem(normalized, written, token => OpenExtractedAsync(fullPath, token),
+                    ToTimestamp(entry.LastModifiedTime)));
+            }
+            catch (ArchiveEntryLimitExceededException)
+            {
+                DeleteQuietly(fullPath);
+                budget.Release(length);
+                skipped.Add(new ArchiveSkipEntry(normalized, UnsupportedCode,
+                    "The entry exceeds the configured size budget."));
+            }
+            catch (Exception exception) when (IsArchiveFailure(exception))
+            {
+                // The reader cannot resume after a failed entry read, so the rest of the archive is dropped.
+                workspace.Dispose();
+                return ArchiveIndexResult.Failure(DamagedCode, exception.Message);
+            }
         }
 
         progress?.Report(100);
-        return new Extraction(items, skipped);
+        return new ArchiveIndexResult(
+            new IndexWorkItemSet(items, () =>
+            {
+                workspace.Dispose();
+                return ValueTask.CompletedTask;
+            }),
+            skipped);
     }
 
-    private static IndexWorkItem? TryExtract(AceHeader header, byte[] archiveBytes, string normalized,
-        string fullPath, List<AceSkippedEntry> skipped)
+    private static async Task<(long Written, uint Crc)> ExtractEntryAsync(
+        IAsyncReader reader,
+        string fullPath,
+        long maxBytes,
+        CancellationToken cancellationToken)
     {
-        var payload = archiveBytes.AsSpan((int)header.DataOffset, (int)header.PackSize);
-        if (AceCrc32.Compute(payload) != header.FileCrc)
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(directory))
         {
-            skipped.Add(new AceSkippedEntry(normalized, "ACE_DAMAGED",
-                "The stored entry data does not match its CRC-32."));
-            return null;
+            Directory.CreateDirectory(directory);
         }
 
+        await using var input = await reader.OpenEntryStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var output = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+            CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferBytes);
+        var crc = new AceCrc32();
         try
         {
-            var directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(directory))
+            var written = 0L;
+            int read;
+            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                       .ConfigureAwait(false)) > 0)
             {
-                Directory.CreateDirectory(directory);
+                written += read;
+                if (written > maxBytes)
+                {
+                    throw new ArchiveEntryLimitExceededException();
+                }
+
+                crc.Append(buffer.AsSpan(0, read));
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             }
 
-            File.WriteAllBytes(fullPath, payload);
+            return (written, crc.Value);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        finally
         {
-            skipped.Add(new AceSkippedEntry(normalized, "ACE_DAMAGED", exception.Message));
-            return null;
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    /// <summary>
+    /// Validates the <c>**ACE**</c> signature the reader itself accepts without complaint, so a file with an
+    /// <c>.ace</c> name that is not an ACE archive is still reported as damaged.
+    /// </summary>
+    private static bool IsAceArchive(Stream archive)
+    {
+        if (archive.Length < 14)
+        {
+            return false;
         }
 
-        return new IndexWorkItem(normalized, payload.Length, token => OpenExtractedAsync(fullPath, token),
-            header.ModifiedUtc);
+        var position = archive.Position;
+        try
+        {
+            archive.Position = 0;
+            return AceHeader.IsArchive(archive);
+        }
+        finally
+        {
+            archive.Position = position;
+        }
     }
+
+    private static DateTimeOffset? ToTimestamp(DateTime? value) =>
+        value is DateTime date
+            ? new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc))
+            : null;
 
     private static Task<Stream> OpenExtractedAsync(string path, CancellationToken cancellationToken)
     {
@@ -212,43 +288,28 @@ internal static class AceIndexWorkItems
         return Task.FromResult(stream);
     }
 
-    /// <summary>
-    /// Buffers the source in memory so the header list and entry payloads can be walked twice. Sources are
-    /// never written to disk outside the plugin's temporary directory.
-    /// </summary>
-    private static async Task<byte[]> ReadAllBytesAsync(Stream source, string tempRoot,
-        CancellationToken cancellationToken)
+    private static void DeleteQuietly(string path)
     {
-        if (source.CanSeek && source.Length <= int.MaxValue)
+        try
         {
-            var length = (int)source.Length;
-            var buffer = new byte[length];
-            var read = 0;
-            while (read < length)
+            if (File.Exists(path))
             {
-                var chunk = await source.ReadAsync(buffer.AsMemory(read), cancellationToken)
-                    .ConfigureAwait(false);
-                if (chunk == 0)
-                {
-                    break;
-                }
-
-                read += chunk;
+                File.Delete(path);
             }
-
-            return read == length ? buffer : buffer[..read];
         }
-
-        var bufferPath = Path.Combine(tempRoot, ".skycd-ace-source");
-        await using (var buffer = await NonSeekableSourceBuffer.BufferAsync(source, bufferPath, cancellationToken)
-                         .ConfigureAwait(false))
+        catch (IOException)
         {
+            // The workspace cleanup removes anything left behind.
         }
-
-        return await File.ReadAllBytesAsync(bufferPath, cancellationToken).ConfigureAwait(false);
+        catch (UnauthorizedAccessException)
+        {
+            // The workspace cleanup removes anything left behind.
+        }
     }
 
-    private sealed record Extraction(List<IndexWorkItem> Items, List<AceSkippedEntry> Skipped);
+    private static bool IsArchiveFailure(Exception exception) =>
+        exception is SharpCompressException or IOException or NotSupportedException or ArgumentException
+            or InvalidOperationException or UnauthorizedAccessException or FormatException or OverflowException;
 
     private sealed class ExtractionBudget
     {
@@ -273,18 +334,4 @@ internal static class AceIndexWorkItems
             }
         }
     }
-}
-
-/// <summary>An entry that was listed but not contributed for extraction, with its typed failure code.</summary>
-internal sealed record AceSkippedEntry(string Name, string Code, string Reason);
-
-/// <summary>The work items one ACE pass contributes plus the entries it skipped.</summary>
-internal sealed record AceIndexResult(IndexWorkItemSet WorkItems, IReadOnlyList<AceSkippedEntry> Skipped)
-{
-    /// <summary>Gets a set that contributes nothing and reports one typed archive-level failure.</summary>
-    public static AceIndexResult Damaged(string reason) => ForFailure("ACE_DAMAGED", reason);
-
-    /// <summary>Gets a set that contributes nothing and reports one typed archive-level failure code.</summary>
-    public static AceIndexResult ForFailure(string code, string reason) =>
-        new(IndexWorkItemSet.Empty, [new AceSkippedEntry(string.Empty, code, reason)]);
 }

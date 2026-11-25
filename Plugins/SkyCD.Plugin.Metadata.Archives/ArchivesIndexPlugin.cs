@@ -119,7 +119,8 @@ public sealed class ArchivesIndexPlugin : IIndexWorkItemProvider
 
         if (HasExtension(request.FileName, ".arc"))
         {
-            return await ArcIndexWorkItems.CreateAsync(request, limits, cancellationToken).ConfigureAwait(false);
+            return ApplyDiagnostics(await ArcIndexWorkItems.CreateAsync(request, limits, cancellationToken)
+                .ConfigureAwait(false));
         }
 
         if (HasExtension(request.FileName, ".zoo"))
@@ -129,16 +130,17 @@ public sealed class ArchivesIndexPlugin : IIndexWorkItemProvider
 
         if (HasExtension(request.FileName, ".ace"))
         {
-            var result = await AceIndexWorkItems.CreateAsync(request, limits, cancellationToken).ConfigureAwait(false);
-            LastDiagnostics = result.Skipped
-                .Select(entry => string.IsNullOrEmpty(entry.Name)
-                    ? $"{entry.Code}: {entry.Reason}"
-                    : $"{entry.Code}: {entry.Name}: {entry.Reason}")
-                .ToList();
-            return result.WorkItems;
+            return ApplyDiagnostics(await AceIndexWorkItems.CreateAsync(request, limits, cancellationToken)
+                .ConfigureAwait(false));
         }
 
         return IndexWorkItemSet.Empty;
+    }
+
+    private IndexWorkItemSet ApplyDiagnostics(ArchiveIndexResult result)
+    {
+        LastDiagnostics = result.Skipped.Select(entry => entry.Describe()).ToList();
+        return result.WorkItems;
     }
 
     private static bool HasExtension(string fileName, string extension) =>
