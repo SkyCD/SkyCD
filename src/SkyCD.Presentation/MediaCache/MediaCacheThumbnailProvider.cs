@@ -31,6 +31,9 @@ public sealed class MediaCacheThumbnailProvider : IPreviewThumbnailProvider
     public Task<IImage?> GetThumbnailAsync(object item, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(item);
+        // A cancelled request must not answer, even when the entry has no stored preview and the fast path
+        // below would otherwise just return null without ever observing the token.
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (item is not CatalogDocument entry || string.IsNullOrWhiteSpace(entry.Id))
         {

@@ -45,6 +45,9 @@ public partial class AddingProgressWindow : Window
         if (observedLogEntries is not null)
         {
             observedLogEntries.CollectionChanged += OnLogEntriesChanged;
+            // The window opens after the run has started, so the log can already hold entries by the time
+            // the context attaches; jump to the newest line once the view has been laid out.
+            RequestScrollToEnd();
         }
     }
 
@@ -59,7 +62,9 @@ public partial class AddingProgressWindow : Window
         base.OnClosed(e);
     }
 
-    private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e) => RequestScrollToEnd();
+
+    private void RequestScrollToEnd()
     {
         // A whole flush arrives as many Add events; scroll once after the batch is realized.
         if (scrollPending)
