@@ -6,7 +6,6 @@ public static class LocationsKeys
     private const string Prefix = "plugins.skycd.locations.ui.";
 
     public const string Locations = Prefix + "Locations";
-    public const string ManageLocations = Prefix + "ManageLocations";
     public const string ManageHint = Prefix + "ManageHint";
     public const string LocationColumn = Prefix + "LocationColumn";
     public const string NewLocation = Prefix + "NewLocation";

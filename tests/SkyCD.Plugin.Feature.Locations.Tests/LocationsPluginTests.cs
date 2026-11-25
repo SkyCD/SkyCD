@@ -7,6 +7,8 @@ using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Options;
 using SkyCD.Plugin.Feature.Locations.Models;
 using SkyCD.Plugin.Feature.Locations.Views;
 using SkyCD.Plugin.Host.Catalog;
@@ -20,7 +22,7 @@ namespace SkyCD.Plugin.Feature.Locations.Tests;
 public sealed class LocationsPluginTests
 {
     [Fact]
-    public void EnabledPluginContributesLocationColumnSearchFieldAndMenu()
+    public void EnabledPluginContributesLocationColumnSearchFieldAndOptionsPage()
     {
         using var stack = new Stack();
         var garage = stack.Api.CreateLocation("Garage");
@@ -40,10 +42,31 @@ public sealed class LocationsPluginTests
         Assert.False(field.Matches(Entry("unmapped")));
         Assert.Equal("Garage", field.SelectValue?.Invoke(Entry("file")));
 
-        var menu = Assert.Single(plugin.GetMenuContributions());
-        Assert.Equal("skycd.locations.manage", menu.CommandId);
-        Assert.Equal("Tools", menu.Location);
+        Assert.IsNotAssignableFrom<IMenuPluginCapability>(plugin);
+        var optionsPage = Assert.IsAssignableFrom<IOptionsPageCapability>(plugin);
+        Assert.Equal("locations", optionsPage.OptionsPage.PageId);
         Assert.NotEmpty(plugin.GetTranslations());
+    }
+
+    [Fact]
+    public void OptionsPageUsesTheTranslatedTitleAndEmbedsTheManagerView()
+    {
+        const string translationNamespace = "plugins.skycd.locations";
+        using var stack = new Stack();
+        var plugin = stack.CreatePlugin();
+        LocalizationService.Current.Register(translationNamespace, plugin);
+        try
+        {
+            Assert.Equal("Locations", plugin.OptionsPage.Title);
+
+            var view = Assert.IsType<LocationsView>(plugin.CreateOptionsPage());
+            var viewModel = Assert.IsType<LocationsManagerViewModel>(view.DataContext);
+            Assert.True(viewModel.IsCatalogOpen);
+        }
+        finally
+        {
+            LocalizationService.Current.Unregister(translationNamespace);
+        }
     }
 
     [Fact]
@@ -166,6 +189,20 @@ public sealed class LocationsPluginTests
         {
             LocalizationService.Current.Unregister(translationNamespace);
         }
+    }
+
+    [Fact]
+    public void ManagerReportsCatalogUnavailableWithoutAnOpenCatalog()
+    {
+        var state = new OpenCatalogState();
+        using var api = new LocationApiAdapter(state);
+        var viewModel = new LocationsManagerViewModel(api);
+
+        Assert.False(viewModel.IsCatalogOpen);
+        Assert.True(viewModel.ShowCatalogUnavailable);
+        Assert.Empty(viewModel.Locations);
+        Assert.False(viewModel.RenameLocationCommand.CanExecute(null));
+        Assert.False(viewModel.DeleteLocationCommand.CanExecute(null));
     }
 
     [Fact]

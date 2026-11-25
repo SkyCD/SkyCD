@@ -30,6 +30,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Options;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.SDK.Capabilities.Catalog;
@@ -2259,6 +2260,9 @@ public partial class MainWindow : Window
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
+        dialogVm.SetPluginOptionsPages(pluginManager.AvailablePlugins.SelectMany(plugin =>
+            plugin.Capabilities.OfType<IOptionsPageCapability>()
+                .Select(capability => new OptionsPageProvider(plugin.Id, plugin.Name, capability))));
         dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
     }
 
