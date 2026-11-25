@@ -274,15 +274,14 @@ public class OptionsWindowLayoutTests
         var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml"));
         var rootGrid = Assert.Single(document.Root!.Elements(Avalonia + "Grid"));
 
-        Assert.Equal("Auto,*,Auto", (string?)rootGrid.Attribute("RowDefinitions"));
+        Assert.Equal("*,Auto", (string?)rootGrid.Attribute("RowDefinitions"));
 
         var footer = Assert.Single(rootGrid.Elements(Avalonia + "Border"),
-            border => (string?)border.Attribute("Grid.Row") == "2");
+            border => (string?)border.Attribute("Grid.Row") == "1");
         Assert.Contains("ConfirmCommand", footer.ToString(), StringComparison.Ordinal);
         Assert.Contains("OnCancelClicked", footer.ToString(), StringComparison.Ordinal);
 
-        var contentGrid = Assert.Single(rootGrid.Elements(Avalonia + "Grid"),
-            grid => (string?)grid.Attribute("Grid.Row") == "1");
+        var contentGrid = Assert.Single(rootGrid.Elements(Avalonia + "Grid"));
         Assert.Contains(contentGrid.Descendants(Avalonia + "ScrollViewer"),
             viewer => (string?)viewer.Attribute(Xaml2006 + "Name") == "ScanSettingsScrollViewer");
     }

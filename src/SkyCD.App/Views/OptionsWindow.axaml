@@ -139,16 +139,8 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto">
-        <Border BorderBrush="#2A2A2A"
-                BorderThickness="0,0,0,1"
-                Padding="{DynamicResource SkyInsetMd}">
-            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Settings}}"
-                       FontSize="{DynamicResource SkyFontSubtitle}"
-                       FontWeight="SemiBold" />
-        </Border>
-
-        <Grid Grid.Row="1"
+    <Grid RowDefinitions="*,Auto">
+        <Grid
               IsEnabled="{Binding !ConfirmCommand.IsRunning}"
               Margin="{DynamicResource SkyInsetMd}"
               ColumnDefinitions="250,*"
@@ -1874,7 +1866,7 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="2" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" Padding="{DynamicResource SkyInsetMd}">
+        <Border Grid.Row="1" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" Padding="{DynamicResource SkyInsetMd}">
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="{DynamicResource SkySpaceSm}">
