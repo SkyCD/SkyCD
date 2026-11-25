@@ -797,7 +797,7 @@ public partial class BrowserItemsView : UserControl
                 MinHeight = 24,
                 Cursor = headerCursor
             };
-            cellBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
+            cellBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeBackgroundBrush"));
             cellBorder.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
 
             var headerText = new TextBlock
@@ -955,13 +955,13 @@ public partial class BrowserItemsView : UserControl
             Name = DetailsHeaderDragGhostName,
             IsVisible = false,
             IsHitTestVisible = false,
-            Opacity = 0.9,
             BorderThickness = new Thickness(1),
             Padding = new Thickness(6, 3),
             CornerRadius = new CornerRadius(2),
+            BoxShadow = DetailsHeaderDragGhostShadow,
             Child = ghostText
         };
-        dragGhost.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
+        dragGhost.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeBackgroundBrush"));
         dragGhost.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeAccentBrush"));
         dragOverlay.Children.Add(dragGhost);
 
@@ -1069,7 +1069,7 @@ public partial class BrowserItemsView : UserControl
                 BorderThickness = new Thickness(0, 0, 0, 1),
                 MinHeight = 24
             };
-            fillerBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeControlBackgroundBrush"));
+            fillerBorder.Bind(Border.BackgroundProperty, new DynamicResourceExtension("ThemeBackgroundBrush"));
             fillerBorder.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("ThemeBorderLowBrush"));
             Grid.SetColumn(fillerBorder, detailsColumns.Count);
             grid.Children.Add(fillerBorder);
@@ -1444,6 +1444,12 @@ public partial class BrowserItemsView : UserControl
 
     /// <summary>Name of the floating header preview shown while a header reorder drag is active.</summary>
     private const string DetailsHeaderDragGhostName = "DetailsHeaderDragGhost";
+
+    /// <summary>
+    /// Shadow under the floating header preview, so the opaque ghost reads as lifted off the header
+    /// row instead of painted onto it (issue #1112).
+    /// </summary>
+    private static readonly BoxShadows DetailsHeaderDragGhostShadow = BoxShadows.Parse("0 2 6 0 #40000000");
 
     private void RaiseDetailsColumnResized(BrowserDetailsColumn column, bool widthChanged)
     {
