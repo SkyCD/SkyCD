@@ -49,15 +49,15 @@ jobs:
       - name: Verify formatting
         run: dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal
 
-  build-test:
-    name: Build & Test (${{ matrix.os }})
+  build:
+    name: Build (${{ matrix.os }})
     needs: style
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -78,54 +78,79 @@ jobs:
       - name: Build solution
         run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
 
-      - name: Test solution
+  test:
+    name: Test (${{ matrix.os }}, shard ${{ matrix.shard }})
+    needs: style
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+
+      - name: Build test logger
+        run: dotnet build tools/SkyCD.TestLogger/SkyCD.TestLogger.csproj --configuration Release
+
+      - name: Test shard
         shell: bash
-        timeout-minutes: 20
+        timeout-minutes: 15
         run: |
-          # A crashed test host aborts its whole assembly run, so one crashing assembly can fail the jobs of
-          # unrelated changes. Rerun only for that signature; assertion and build failures fail immediately.
-          # --blame-hang names a test that never completes instead of letting the run sit until the job timeout.
-          test_command=(dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal
-            --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0"
-            --logger "console;verbosity=quiet"
-            --logger "ansi"
-            --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}"
-            --results-directory "artifacts/test-results/${{ matrix.os }}"
-            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none)
+          # Round-robin the sorted test projects across shards, so a failure or hang only takes down
+          # the shard job for its own project and the job name identifies the OS/shard combination.
+          mapfile -t projects < <(find tests -mindepth 2 -maxdepth 2 -name '*.Tests.csproj' | sort | awk -v shard="${{ matrix.shard }}" -v shards=8 '((NR - 1) % shards) == shard')
 
-          mkdir -p artifacts/test-logs
+          results="artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard }}"
+          mkdir -p artifacts/test-logs "$results"
 
-          for attempt in 1 2 3; do
-            log="artifacts/test-logs/dotnet-test-attempt-${attempt}.log"
-            status=0
-            # Redirecting to a file instead of piping into tee means an orphaned test host that inherited
-            # the pipe write end cannot keep this step alive after dotnet test has finished.
-            "${test_command[@]}" > "$log" 2>&1 || status=$?
+          status=0
+          for project in "${projects[@]}"; do
+            name=$(basename "$project" .csproj)
+            log="artifacts/test-logs/${name}.log"
+            echo "::group::${name}"
+            project_status=0
+            dotnet test "$project" --configuration Release \
+              --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0" \
+              --logger "console;verbosity=quiet" \
+              --logger "ansi" \
+              --logger "trx;LogFilePrefix=${name}" \
+              --results-directory "$results/${name}" \
+              --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
+              > "$log" 2>&1 || project_status=$?
 
-            if [ "$status" -eq 0 ]; then
-              echo "Test run passed on attempt ${attempt}."
-              exit 0
+            if [ "$project_status" -ne 0 ]; then
+              echo "::error::${name} failed with exit code ${project_status}."
+              cat "$log"
+              status=$project_status
+            else
+              echo "Passed ${name}."
             fi
-
-            # Output is no longer streamed live, so publish the failed attempt's log in the job output.
-            cat "$log"
-
-            if ! grep -q "Test host process crashed" "$log"; then
-              exit "$status"
-            fi
-
-            echo "::warning::Test host process crashed on attempt ${attempt}; rerunning the solution tests."
+            echo "::endgroup::"
           done
 
-          exit 1
+          exit "$status"
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-${{ matrix.os }}
+          name: test-results-${{ matrix.os }}-shard-${{ matrix.shard }}
           path: |
-            artifacts/test-results/${{ matrix.os }}/
+            artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard }}/
             artifacts/test-logs/
 
   license-compliance:
