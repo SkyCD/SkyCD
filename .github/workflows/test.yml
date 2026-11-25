@@ -21,6 +21,7 @@ jobs:
   style:
     name: Style (.NET format)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -56,6 +57,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -78,26 +80,35 @@ jobs:
 
       - name: Test solution
         shell: bash
+        timeout-minutes: 20
         run: |
           # A crashed test host aborts its whole assembly run, so one crashing assembly can fail the jobs of
           # unrelated changes. Rerun only for that signature; assertion and build failures fail immediately.
+          # --blame-hang names a test that never completes instead of letting the run sit until the job timeout.
           test_command=(dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal
             --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0"
             --logger "console;verbosity=quiet"
             --logger "ansi"
             --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}"
-            --results-directory "artifacts/test-results/${{ matrix.os }}")
+            --results-directory "artifacts/test-results/${{ matrix.os }}"
+            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none)
 
           mkdir -p artifacts/test-logs
 
           for attempt in 1 2 3; do
             log="artifacts/test-logs/dotnet-test-attempt-${attempt}.log"
             status=0
-            "${test_command[@]}" 2>&1 | tee "$log" || status=$?
+            # Redirecting to a file instead of piping into tee means an orphaned test host that inherited
+            # the pipe write end cannot keep this step alive after dotnet test has finished.
+            "${test_command[@]}" > "$log" 2>&1 || status=$?
 
             if [ "$status" -eq 0 ]; then
+              echo "Test run passed on attempt ${attempt}."
               exit 0
             fi
+
+            # Output is no longer streamed live, so publish the failed attempt's log in the job output.
+            cat "$log"
 
             if ! grep -q "Test host process crashed" "$log"; then
               exit "$status"
@@ -113,12 +124,15 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
-          path: artifacts/test-results/${{ matrix.os }}/
+          path: |
+            artifacts/test-results/${{ matrix.os }}/
+            artifacts/test-logs/
 
   license-compliance:
     name: License Compliance
     needs: style
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -151,6 +165,7 @@ jobs:
     if: github.event_name == 'push'
     needs: style
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7

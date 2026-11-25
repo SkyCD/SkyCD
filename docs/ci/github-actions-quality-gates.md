@@ -21,8 +21,19 @@ For `main`, configure branch protection to require:
 - `v3 License Compliance`
 
 ## Test Results and Artifacts
-- CI publishes per-OS test artifacts under `artifacts/test-results/<os>/`.
+- CI publishes per-OS test artifacts under `artifacts/test-results/<os>/` and the per-attempt
+  `dotnet test` logs under `artifacts/test-logs/` (uploaded with the same per-OS artifact).
 - License compliance reports are published as `license-artifacts`.
+
+## Timeouts and Hang Diagnostics
+Every job declares `timeout-minutes`, and the `Test solution` step is capped at 20 minutes, so a stuck
+test host can no longer hold a run open until GitHub's 6-hour limit.
+- The test step redirects output to a log file instead of piping into `tee`: an orphaned test host
+  that inherited the pipe's write end cannot keep the step alive after `dotnet test` finishes.
+- `dotnet test` runs with `--blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none`, so a test
+  that never completes fails the run after five minutes and writes a sequence file naming it.
+- The sequence file is uploaded with the per-OS test artifact; the failed attempt's log is also printed
+  in the job output.
 
 ## Runtime and Flaky-Risk Notes
 - Matrix execution increases runtime during SDK/dependency update waves.
