@@ -55,11 +55,50 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
+    public void OverviewTab_CarriesAuthorsAndThanksAfterReferences()
+    {
+        // Issue #1134: the legacy About.vb credits return after the project references.
+        var story = OverviewTab();
+        foreach (var key in new[]
+                 {
+                     "UiKeys.AboutStoryAuthors", "UiKeys.AboutStoryAuthorName",
+                     "UiKeys.AboutStoryThanks", "UiKeys.AboutStoryThanksFreewareBase",
+                     "UiKeys.AboutStoryThanksSourceForge", "UiKeys.AboutStoryThanksPersons",
+                     "UiKeys.AboutStoryThanksGbit", "UiKeys.AboutStoryThanksSlivickas",
+                     "UiKeys.AboutStoryThanksYou"
+                 })
+        {
+            AssertTranslatedText(story, key);
+        }
+
+        var texts = story.Descendants(Avalonia + "TextBlock")
+            .Select(text => (string?)text.Attribute("Text"))
+            .Where(text => text is not null)
+            .Select(text => text!)
+            .ToArray();
+        int IndexOf(string key) => Array.FindIndex(texts, text => text.Contains(key, StringComparison.Ordinal));
+
+        var rewrite = IndexOf("UiKeys.AboutStoryRewrite");
+        var references = IndexOf("UiKeys.AboutStoryReferences");
+        var authors = IndexOf("UiKeys.AboutStoryAuthors");
+        var thanks = IndexOf("UiKeys.AboutStoryThanks}");
+
+        Assert.True(rewrite < references, "the story must precede the references");
+        Assert.True(references < authors, "the references must precede the authors");
+        Assert.True(authors < thanks, "the authors must precede the thanks");
+
+        Assert.Contains(story.Descendants(Avalonia + "TextBlock"), text =>
+            (string?)text.Attribute("Tag") == "mailto:skycd@mekdrop.name" &&
+            (string?)text.Attribute("PointerPressed") == "OnOpenRepositoryUrl");
+    }
+
+    [Fact]
     public void OverviewTab_ReferenceLinksOpenThroughTheSharedHandler()
     {
         var story = OverviewTab();
         var links = story.Descendants(Avalonia + "TextBlock")
             .Where(text => (string?)text.Attribute("PointerPressed") == "OnOpenRepositoryUrl")
+            .Where(text => ((string?)text.Attribute("Text"))?.StartsWith("http", StringComparison.Ordinal) == true)
             .ToArray();
 
         Assert.Equal(3, links.Length);
