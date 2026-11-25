@@ -89,6 +89,8 @@ public static class UiKeys
     public const string Threads = "core.ui.Threads";
     public const string Uptime = "core.ui.Uptime";
     public const string LoadedAssemblies = "core.ui.LoadedAssemblies";
+    public const string FilterAssemblies = "core.ui.FilterAssemblies";
+    public const string AssemblyFilterNoMatches = "core.ui.AssemblyFilterNoMatches";
     public const string ProjectLicense = "core.ui.ProjectLicense";
     public const string Options = "core.ui.Options";
     public const string Settings = "core.ui.Settings";

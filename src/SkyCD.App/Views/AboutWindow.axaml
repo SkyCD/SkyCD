@@ -2,6 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
         Width="560"
@@ -133,65 +135,86 @@
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}">
-                    <Grid>
-                        <ListBox ItemsSource="{Binding LoadedAssemblies}"
-                                 SelectionMode="Multiple"
-                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 ScrollViewer.AllowAutoHide="False">
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <VirtualizingStackPanel Orientation="Vertical" />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
-                            <ListBox.Styles>
-                                <Style Selector="ListBoxItem">
-                                    <Setter Property="Padding" Value="{DynamicResource SkyInsetSm}" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
-                                    <Setter Property="BorderThickness" Value="0,0,0,1" />
-                                </Style>
-                            </ListBox.Styles>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
-                                    <StackPanel VerticalAlignment="Top" Spacing="{DynamicResource SkySpaceXs}">
-                                        <Grid VerticalAlignment="Center" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0"
-                                                       Classes="h2"
-                                                       Text="{Binding Name}"
-                                                       VerticalAlignment="Center"
+                    <Grid RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
+                        <TextBox Text="{Binding AssemblyFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}">
+                            <TextBox.InnerLeftContent>
+                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Search}"
+                                                           Width="14"
+                                                           Height="14"
+                                                           Margin="{DynamicResource SkyGapLeftSm}"
+                                                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                        <Grid Grid.Row="1">
+                            <ListBox ItemsSource="{Binding FilteredAssemblies}"
+                                     IsVisible="{Binding !ShowAssembliesEmptyState}"
+                                     SelectionMode="Multiple"
+                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.AllowAutoHide="False">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel Orientation="Vertical" />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="{DynamicResource SkyInsetSm}" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
+                                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                    </Style>
+                                </ListBox.Styles>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:LoadedAssemblyEntry">
+                                        <StackPanel VerticalAlignment="Top" Spacing="{DynamicResource SkySpaceXs}">
+                                            <Grid VerticalAlignment="Center" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Classes="h2"
+                                                           Text="{Binding Name}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap"
+                                                           MaxLines="1" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="body"
+                                                           Text="{Binding Version}"
+                                                           VerticalAlignment="Center"
+                                                           MinWidth="72"
+                                                           TextAlignment="Right" />
+                                            </Grid>
+                                            <TextBlock Classes="caption"
+                                                       Text="{Binding Copyright}"
+                                                       IsVisible="{Binding HasCopyright}"
                                                        TextTrimming="CharacterEllipsis"
-                                                       TextWrapping="NoWrap"
-                                                       MaxLines="1" />
-                                            <TextBlock Grid.Column="1"
-                                                       Classes="body"
-                                                       Text="{Binding Version}"
-                                                       VerticalAlignment="Center"
-                                                       MinWidth="72"
-                                                       TextAlignment="Right" />
-                                        </Grid>
-                                        <TextBlock Classes="caption"
-                                                   Text="{Binding Copyright}"
-                                                   IsVisible="{Binding HasCopyright}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="NoWrap" />
-                                        <TextBlock Classes="caption RepositoryLink"
-                                                   Text="{Binding RepositoryUrl}"
-                                                   Cursor="Hand"
-                                                   TextDecorations="Underline"
-                                                   IsVisible="{Binding HasRepositoryUrl}"
-                                                   PointerPressed="OnOpenRepositoryUrl"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="NoWrap" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                                       TextWrapping="NoWrap" />
+                                            <TextBlock Classes="caption RepositoryLink"
+                                                       Text="{Binding RepositoryUrl}"
+                                                       Cursor="Hand"
+                                                       TextDecorations="Underline"
+                                                       IsVisible="{Binding HasRepositoryUrl}"
+                                                       PointerPressed="OnOpenRepositoryUrl"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="NoWrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AssemblyFilterNoMatches}}"
+                                       Classes="caption"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                       Padding="{DynamicResource SkyInsetSm}"
+                                       TextWrapping="Wrap"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding ShowAssembliesEmptyState}" />
+                        </Grid>
                     </Grid>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.ProjectLicense}}">

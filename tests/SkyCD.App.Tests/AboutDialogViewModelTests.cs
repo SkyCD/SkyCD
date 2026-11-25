@@ -132,6 +132,78 @@ public class AboutDialogViewModelTests
     }
 
     [Fact]
+    public void FilteredAssemblies_InitiallyShowsTheFullList()
+    {
+        using var workspace = new TestWorkspace();
+        var vm = new AboutDialogViewModel(
+            "SkyCD",
+            "3.0.0",
+            "https://github.com/SkyCD/SkyCD",
+            loadedAssemblies: [typeof(string).Assembly, typeof(AboutDialogViewModel).Assembly],
+            baseDirectory: workspace.Root);
+
+        Assert.Equal(vm.LoadedAssemblies.Count, vm.FilteredAssemblies.Count);
+        Assert.False(vm.ShowAssembliesEmptyState);
+    }
+
+    [Theory]
+    [InlineData("presentation")]
+    [InlineData("PRESENTATION")]
+    public void AssemblyFilterText_FiltersByNameCaseInsensitive(string filter)
+    {
+        using var workspace = new TestWorkspace();
+        var vm = new AboutDialogViewModel(
+            "SkyCD",
+            "3.0.0",
+            "https://github.com/SkyCD/SkyCD",
+            loadedAssemblies: [typeof(string).Assembly, typeof(AboutDialogViewModel).Assembly],
+            baseDirectory: workspace.Root);
+
+        vm.AssemblyFilterText = filter;
+
+        var filtered = Assert.Single(vm.FilteredAssemblies);
+        Assert.Equal(typeof(AboutDialogViewModel).Assembly.GetName().Name, filtered.Name);
+        Assert.False(vm.ShowAssembliesEmptyState);
+        Assert.Equal(2, vm.LoadedAssemblies.Count);
+    }
+
+    [Fact]
+    public void AssemblyFilterText_NoMatch_ShowsEmptyState()
+    {
+        using var workspace = new TestWorkspace();
+        var vm = new AboutDialogViewModel(
+            "SkyCD",
+            "3.0.0",
+            "https://github.com/SkyCD/SkyCD",
+            loadedAssemblies: [typeof(string).Assembly, typeof(AboutDialogViewModel).Assembly],
+            baseDirectory: workspace.Root);
+
+        vm.AssemblyFilterText = "zzz-no-such-assembly";
+
+        Assert.Empty(vm.FilteredAssemblies);
+        Assert.True(vm.ShowAssembliesEmptyState);
+    }
+
+    [Fact]
+    public void AssemblyFilterText_Cleared_RestoresTheFullList()
+    {
+        using var workspace = new TestWorkspace();
+        var vm = new AboutDialogViewModel(
+            "SkyCD",
+            "3.0.0",
+            "https://github.com/SkyCD/SkyCD",
+            loadedAssemblies: [typeof(string).Assembly, typeof(AboutDialogViewModel).Assembly],
+            baseDirectory: workspace.Root);
+
+        vm.AssemblyFilterText = "presentation";
+        vm.AssemblyFilterText = string.Empty;
+
+        Assert.Equal(vm.LoadedAssemblies.Count, vm.FilteredAssemblies.Count);
+        Assert.Equal(2, vm.FilteredAssemblies.Count);
+        Assert.False(vm.ShowAssembliesEmptyState);
+    }
+
+    [Fact]
     public void SelectedTabKey_DefaultsToTheOverviewTab()
     {
         var vm = new AboutDialogViewModel();
