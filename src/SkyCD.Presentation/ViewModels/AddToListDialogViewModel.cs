@@ -48,7 +48,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<MediaDriveInfo> AvailableDrives { get; } = [];
 
-    /// <summary>Location picker choices; the first entry is the empty "(none)" choice.</summary>
+    /// <summary>Location picker choices; the first entry is the empty "(Unassigned)" choice.</summary>
     public ObservableCollection<LocationItemViewModel> LocationChoices { get; } =
     [
         new(string.Empty, string.Empty)
@@ -58,7 +58,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     private LocationItemViewModel? selectedLocation;
 
     /// <summary>
-    /// The picked location id, or null when "(none)" is selected. The picker binds through
+    /// The picked location id, or null when "(Unassigned)" is selected. The picker binds through
     /// <see cref="SelectedLocation"/>, which keeps this value in sync in both directions.
     /// </summary>
     public string? SelectedLocationId
@@ -94,8 +94,22 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public bool CanUseMedia => AvailableDrives.Count > 0;
 
-    /// <summary>The location picker applies to media roots created from a drive or a title-only entry.</summary>
-    public bool IsLocationPickerVisible => SourceMode is AddToListSourceMode.Media or AddToListSourceMode.TitleOnly;
+    /// <summary>True when at least one storage location is defined beyond the empty choice.</summary>
+    public bool HasDefinedLocations => LocationChoices.Count > 1;
+
+    /// <summary>
+    /// The location picker applies to media roots created from a drive or a title-only entry, and only
+    /// when a storage location actually exists to pick; otherwise the picker stays hidden entirely.
+    /// </summary>
+    public bool IsLocationPickerVisible =>
+        SourceMode is AddToListSourceMode.Media or AddToListSourceMode.TitleOnly && HasDefinedLocations;
+
+    /// <summary>
+    /// Folder and Internet entries keep the scanned source path, so no separate location is offered;
+    /// the dialog explains that where the picker is absent.
+    /// </summary>
+    public bool IsScannedPathNoteVisible =>
+        SourceMode is AddToListSourceMode.Folder or AddToListSourceMode.Internet;
 
     public bool IsTargetSelectedFolder => TargetPlacement == AddToListTargetPlacement.SelectedFolder;
 
@@ -403,6 +417,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsSourceInternet));
         OnPropertyChanged(nameof(IsSourceTitleOnly));
         OnPropertyChanged(nameof(IsLocationPickerVisible));
+        OnPropertyChanged(nameof(IsScannedPathNoteVisible));
     }
 
     partial void OnSelectedDriveChanged(MediaDriveInfo? value)

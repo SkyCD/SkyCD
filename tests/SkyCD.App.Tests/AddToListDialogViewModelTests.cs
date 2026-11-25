@@ -82,6 +82,63 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void NoLocations_LocationPickerIsHiddenEverywhere()
+    {
+        var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([drive]), AddToListSourceMode.Media);
+
+        Assert.False(vm.HasDefinedLocations);
+        Assert.False(vm.IsLocationPickerVisible);
+        Assert.False(vm.IsScannedPathNoteVisible);
+
+        vm.SelectSourceCommand.Execute("TitleOnly");
+
+        Assert.False(vm.IsLocationPickerVisible);
+    }
+
+    [Fact]
+    public void WithLocations_PickerShowsOnlyOnMediaAndTitleOnly()
+    {
+        var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        var locations = new[] { new LocationItemViewModel("shelf", "Shelf") };
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([drive]), AddToListSourceMode.Media, locations);
+
+        Assert.True(vm.HasDefinedLocations);
+        Assert.True(vm.IsLocationPickerVisible);
+        Assert.False(vm.IsScannedPathNoteVisible);
+
+        vm.SelectSourceCommand.Execute("TitleOnly");
+        Assert.True(vm.IsLocationPickerVisible);
+        Assert.False(vm.IsScannedPathNoteVisible);
+
+        vm.SelectSourceCommand.Execute("Folder");
+        Assert.False(vm.IsLocationPickerVisible);
+        Assert.True(vm.IsScannedPathNoteVisible);
+
+        vm.SelectSourceCommand.Execute("Internet");
+        Assert.False(vm.IsLocationPickerVisible);
+        Assert.True(vm.IsScannedPathNoteVisible);
+    }
+
+    [Fact]
+    public void SelectingLocation_StoresItsId()
+    {
+        var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        var locations = new[] { new LocationItemViewModel("shelf", "Shelf") };
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([drive]), AddToListSourceMode.Media, locations);
+
+        Assert.Null(vm.SelectedLocationId);
+
+        vm.SelectedLocation = vm.LocationChoices[1];
+
+        Assert.Equal("shelf", vm.SelectedLocationId);
+
+        vm.SelectedLocation = vm.LocationChoices[0];
+
+        Assert.Null(vm.SelectedLocationId);
+    }
+
+    [Fact]
     public void RemovingLastDrive_WhileMediaSelected_SwitchesToFolder()
     {
         var driveD = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
