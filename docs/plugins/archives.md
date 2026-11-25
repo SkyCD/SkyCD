@@ -35,8 +35,8 @@ extension-based and case-insensitive; the first match wins in this order:
 | 9 | LHA | `.lha`, `.lzh` | `Hst.Compression` decoder. |
 | 10 | CAB | `.cab` | `RecursiveAI.OneArchive` reader for stored, MSZIP and LZX folders. |
 | 11 | ARJ | `.arj` | `SharpCompress` reader. |
-| 12 | ARC | `.arc` | Custom SEA ARC parser for stored and squashed entries. |
-| 13 | ACE | `.ace` | Custom header parser; stored entries only. |
+| 12 | ARC | `.arc` | `SharpCompress` reader for stored, packed, squeezed and crunched entries. |
+| 13 | ACE | `.ace` | `SharpCompress` reader; stored entries only, verified against the entry CRC-32. |
 | 14 | ZOO | `.zoo` | Custom reader with stored and LZD decoding. |
 
 Files that match no format return an empty work-item set. The router passes one shared
@@ -54,7 +54,7 @@ is being copied.
 
 ## Shared path and name handling
 
-- `ArchiveEntryPath` normalizes entry names to forward slashes and flags absolute, drive-qualified and
+- `PackageEntryPath` normalizes entry names to forward slashes and flags absolute, drive-qualified and
   traversal paths as unsafe before extraction. Every resolved target is re-checked to stay under the
   temporary root, so archive contents never escape it. TAR additionally rejects control characters,
   and RAR drops `.` segments while still rejecting `..` traversal.
@@ -113,16 +113,23 @@ not available during a scan.
 ### ARJ and ARC
 
 ARJ uses `SharpCompress` for stored and compressed methods; methods whose original size exceeds the
-ARJ algorithm's 128 KB window are listed but reported as unsupported at extraction. ARC supports the
-short and extended SEA ARC headers with stored, squashed and unpacked methods; crunched and packed
-methods are listed as `ARC_UNSUPPORTED`.
+ARJ algorithm's 128 KB window are listed but reported as unsupported at extraction.
+
+ARC uses the `SharpCompress` `ArcReader` and decodes stored (methods 1 and 2), packed RLE90 (3),
+squeezed (4) and crunched (5–8) entries. Methods the reader cannot decode — squashed (9), crushed
+(10), distilled (11) and extended `0xFE` headers — are listed as `ARC_UNSUPPORTED`, and their raw
+bytes are never written. ARC item sizes come from the extracted bytes, and ARC items report no
+modification time.
 
 ### ACE
 
-ACE supports ACE 2.0 block headers with CRC-16 validation and CRC-32-verified stored entries only.
-Compressed, encrypted, split and unknown blocks are reported on the listing as `ACE_UNSUPPORTED`,
-`ACE_ENCRYPTED` or `ACE_DAMAGED` and contribute no work item; `ArchivesIndexPlugin.LastDiagnostics`
-exposes the typed reasons for the last call.
+ACE uses the `SharpCompress` `AceReader` with ACE 2.0 block headers and extracts stored entries only.
+Each extracted entry is checked against its declared size and the ACE CRC-32, so a truncated or
+corrupted entry is reported as damaged instead of being contributed. Encrypted entries are reported
+as `ACE_ENCRYPTED`, and compressed entries, multi-volume sets and undecodable blocks as
+`ACE_UNSUPPORTED`; skipped entries contribute no work item. A damaged archive contributes no work
+items and is reported as `ACE_DAMAGED`. `ArchivesIndexPlugin.LastDiagnostics` exposes the typed
+reasons for the last call.
 
 ### ZOO
 
@@ -132,15 +139,15 @@ member size.
 
 ## Dependencies and licensing
 
-- `SharpCompress` 0.50.8 (MIT) decodes 7-Zip, RAR, ARJ, bzip2, XZ and Zstandard.
+- `SharpCompress` 0.50.8 (MIT) decodes 7-Zip, RAR, ARJ, ARC, ACE, bzip2, XZ and Zstandard.
 - `Hst.Compression` 1.0.104 (MIT) and its transitive `Hst.Core` 1.0.104 (MIT) decode LHA.
 - `RecursiveAI.OneArchive` 1.2.0 (MIT OR Apache-2.0) and its dependency-free transitive
   `RecursiveAI.OneCompress` 1.2.0 (MIT OR Apache-2.0) decode CAB stored, MSZIP and LZX folders.
-- TAR, gzip, ZIP and ARC stored/squashed handling use the .NET 10 runtime and plugin code.
-- ACE, ZOO and the 7-Zip/ARJ/RAR header checks are implemented in the plugin.
+- TAR, gzip and ZIP use the .NET 10 runtime and plugin code.
+- ZOO and the 7-Zip/ARJ/RAR header checks are implemented in the plugin.
 
 All packages expose a permissive `PackageLicenseExpression` (`MIT` or `MIT OR Apache-2.0`), target
-`net10.0`, and pass the Trivy license gate in `docs/legal/dependency-policy.md`. `unace` and its .NET ports are GPL-licensed and therefore
-rejected, which is why ACE ships a header parser without a decompressor, and no compliant maintained
-ZOO package exists, which is why the ZOO reader is a small custom implementation written from the
-public-domain format description.
+`net10.0`, and pass the Trivy license gate in `docs/legal/dependency-policy.md`. `unace` and its
+.NET ports are GPL-licensed and therefore rejected, so ACE relies on `SharpCompress` and extracts
+stored entries only; no compliant maintained ZOO package exists, so the ZOO reader is a small
+custom implementation written from the public-domain format description.

@@ -566,4 +566,41 @@ public class AddToListDialogViewModelTests
         vm.ConfirmCommand.Execute(null);
         Assert.True(vm.DialogAccepted);
     }
+
+    [Fact]
+    public void SetTargetParent_CapturesDestinationAtOpenTime()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]));
+
+        vm.SetTargetParent("folder-1", "Concerts");
+
+        // The captured id is what the caller applies after confirmation; it does not read tree
+        // selection again, so the parent cannot drift while the dialog is open (#1060).
+        Assert.Equal("folder-1", vm.TargetParentId);
+        Assert.True(vm.HasTargetParentDescription);
+        Assert.Contains("Concerts", vm.TargetParentDescription, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetTargetParent_WithoutName_HidesDestinationDescription()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]));
+
+        vm.SetTargetParent(null, null);
+
+        Assert.Equal(DropDestination.LibraryRootId, vm.TargetParentId);
+        Assert.False(vm.HasTargetParentDescription);
+    }
+
+    [Fact]
+    public void TargetParentDescription_HidesWhenAddingAsNewMedia()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]));
+        vm.SetTargetParent("folder-1", "Concerts");
+        Assert.True(vm.HasTargetParentDescription);
+
+        vm.TargetPlacement = AddToListTargetPlacement.NewMedia;
+
+        Assert.False(vm.HasTargetParentDescription);
+    }
 }
