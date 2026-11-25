@@ -12,6 +12,22 @@ public class OptionsWindowLayoutTests
     private static readonly XNamespace Xaml2006 = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
+    public void SidebarAndBreadcrumb_WrapLongCategoryNames()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+
+        var sidebarItem = Assert.Single(document.Descendants(Avalonia + "TextBlock"),
+            element => element.Attribute("Classes.sidebarGroup") is not null);
+        Assert.Equal("Wrap", (string?)sidebarItem.Attribute("TextWrapping"));
+
+        var breadcrumb = Assert.Single(document.Descendants(Avalonia + "TextBlock"),
+            element => element.Descendants(Avalonia + "Run")
+                .Any(run => (string?)run.Attribute("Text") == "{Binding CurrentCategoryPath}"));
+        Assert.Equal("Wrap", (string?)breadcrumb.Attribute("TextWrapping"));
+    }
+
+    [Fact]
     public void CustomPropertiesSection_UsesFullHeightStatusesGridLayout()
     {
         var section = GetCustomPropertiesSection();

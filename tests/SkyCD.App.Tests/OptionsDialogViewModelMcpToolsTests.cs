@@ -194,7 +194,7 @@ public sealed class OptionsDialogViewModelMcpToolsTests
         vm.SelectedSidebarEntry = header;
 
         Assert.Equal("mcp", vm.SelectedSettingCategory?.Id);
-        Assert.Equal("AI  >  MCP", vm.CurrentCategoryPath);
+        Assert.Equal($"{AiGroup}  >  {LocalizationService.Current.Get(TextKeys.MCP)}", vm.CurrentCategoryPath);
         Assert.True(vm.ShowMcpSection);
     }
 

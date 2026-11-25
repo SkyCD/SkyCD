@@ -88,7 +88,7 @@ text.AddressIsRequiredForInternetSource: "Interneto šaltiniui būtinas adresas.
 text.CopyURL: "Kopijuoti URL"
 text.Plugins: "Papildiniai"
 text.Language: "Kalba"
-text.MCP: "MCP"
+text.MCP: "MCP serveris"
 text.Statuses: "Būsenos"
 text.ConfigureIsNotImplementedYet: "„{0}“ konfigūravimas dar neįgyvendintas."
 text.PluginConfigurationSaved: "„{0}“ nuostatos išsaugotos."
