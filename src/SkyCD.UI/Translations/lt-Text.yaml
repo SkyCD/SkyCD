@@ -113,6 +113,7 @@ text.FailedToOpenCatalogPluginReadError: "Nepavyko atverti katalogo: papildinio 
 text.FailedToOpenCatalog: "Nepavyko atverti katalogo: {0}"
 text.SaveCatalog: "Įrašyti katalogą"
 text.FailedToSaveCatalog: "Nepavyko įrašyti katalogo: {0}"
+text.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings: "Nepavyko įrašyti katalogo: nėra įrašymui tinkamo failo formato. Patikrinkite papildinių nuostatas."
 text.SaveCatalogAs: "Įrašyti katalogą kaip"
 text.ReadingDirectoryFromRemoteServer: "Skaitomas aplankas iš nuotolinio serverio..."
 text.RemoteSchemeNotSupported: "Nuotolinis protokolas „{0}“ nepalaikomas."
@@ -190,6 +191,15 @@ text.FindMatchCount: "Rasta įrašų: {0}."
 text.ScanCanceled: Nuskaitymas atšauktas.
 
 text.ScanFailedItems: "Nuskaitymo metu nepavyko apdoroti {0} elementų. Katalogas nepakeistas."
+
+text.Collections: "Rinkiniai"
+text.CollectionCreated: "Sukurtas rinkinys {0}."
+text.CollectionRenamed: "Rinkinys pervadintas į {0}."
+text.CollectionDeleted: "Rinkinys {0} ištrintas."
+text.CollectionNameRequired: "Įveskite rinkinio pavadinimą."
+text.CollectionCleaned: "Pašalinta pasenusių nuorodų: {0}."
+text.CollectionAddedTo: "Į „{0}“ pridėta elementų: {1}."
+text.CollectionRemovedFrom: "Iš „{0}“ pašalinta elementų: {1}."
 
 text.AiDescriptionBatchNoTargets: "Pasirinkite bent vieną katalogo failą aprašymams generuoti."
 text.AiDescriptionProvider: "Teikėjas: {0} {1}; apdorojimo vieta: {2}. Vieta nurodyta konfigūracijoje ir nėra patvirtinta privatumo ar sąnaudų garantija."

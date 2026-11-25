@@ -4,6 +4,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -306,13 +307,80 @@ public class AddingProgressDialogViewModelTests
     }
 
     [Fact]
-    public void SourceKind_HighlightsMatchingIcon()
+    public void SourceKind_ReportsTheActiveSourceForTheInlineBadge()
     {
         var vm = new AddingProgressDialogViewModel { SourceKind = AddingProgressSourceKind.Internet };
 
-        Assert.Equal(1, vm.InternetSourceIconOpacity);
-        Assert.Equal(0.35, vm.MediaSourceIconOpacity);
-        Assert.Equal(0.35, vm.FolderSourceIconOpacity);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.FromInternet), vm.SourceLabel);
+        Assert.True(vm.IsInternetSource);
+        Assert.False(vm.IsMediaSource);
+        Assert.False(vm.IsFolderSource);
+    }
+
+    [Fact]
+    public void GenericSourceKind_ShowsNoSourceBadge()
+    {
+        var vm = new AddingProgressDialogViewModel();
+
+        Assert.Equal(string.Empty, vm.SourceLabel);
+        Assert.False(vm.IsMediaSource);
+        Assert.False(vm.IsFolderSource);
+        Assert.False(vm.IsInternetSource);
+    }
+
+    [Fact]
+    public void MergedReports_KeepEarlierFieldsTheLaterReportOmits()
+    {
+        var item = OperationProgressReport.CreateItem(
+            "/source/track01.flac",
+            stagePercentage: 10,
+            overallPercentage: 5);
+        var stage = OperationProgressReport.CreateStage(
+            "Importing",
+            stagePercentage: 50,
+            overallPercentage: 20);
+
+        var merged = AddingProgressDialogViewModel.MergePendingReport(item, stage);
+
+        Assert.NotNull(merged);
+        Assert.Equal("Importing", merged.StageName);
+        Assert.Equal("/source/track01.flac", merged.CurrentItem);
+        Assert.Equal(20.0, merged.OverallProgressPercentage);
+        Assert.Equal(50.0, merged.StageProgressPercentage);
+    }
+
+    [Fact]
+    public void HighVolumeReports_KeepCountersAndBoundedLogConsistent()
+    {
+        var vm = new AddingProgressDialogViewModel { MaxLogEntries = 500 };
+
+        for (var i = 0; i < 5000; i++)
+        {
+            vm.ReportLog(OperationLogLevel.ItemProcessed, $"Processed file {i}", itemPath: $"/file_{i}.txt");
+        }
+
+        // Coalescing must not lose the statistics even when only the newest entries stay visible.
+        Assert.Equal(5000, vm.TotalLoggedCount);
+        Assert.Equal(5000, vm.ProcessedCount);
+        Assert.Equal(500, vm.LogEntries.Count);
+        Assert.Contains("Processed file 4999", vm.LogEntries[^1].DisplayText);
+    }
+
+    [Fact]
+    public void ScanIssues_SurviveHighVolumeLogging()
+    {
+        var vm = new AddingProgressDialogViewModel { MaxLogEntries = 100 };
+
+        for (var i = 0; i < 1000; i++)
+        {
+            vm.ReportLog(OperationLogLevel.ItemProcessed, $"Processed file {i}");
+            if (i % 100 == 0)
+            {
+                vm.ReportError("Unreadable metadata", itemPath: $"/bad_{i}.bin");
+            }
+        }
+
+        Assert.Equal(10, vm.GetScanIssues().Count);
     }
 
     private sealed class ManualTimeProvider : TimeProvider

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Couchbase.Lite;
 using DryIoc;
 using SkyCD.Couchbase;
@@ -229,6 +230,86 @@ public class CouchbaseContractsTests
     }
 
     [Fact]
+    public void TreeRepository_GetChildrenOf_UsesAParentScopedQuery()
+    {
+        using var database = CreateDatabase("tree-children");
+        var databases = new DatabaseCollection();
+        databases.Add("default", database);
+        var repositories = new RepositoryCollection(databases);
+        var repository = Assert.IsType<CountingTreeRepository>(repositories.GetOrAdd(typeof(CountingDocument)));
+
+        repository.Save("root", new CountingDocument { Id = "root", Name = "Root" });
+        repository.Save("folder", new CountingDocument { Id = "folder", ParentId = "root", Name = "Folder" });
+        repository.Save("other", new CountingDocument { Id = "other", ParentId = "root", Name = "Other" });
+        for (var index = 0; index < 500; index++)
+        {
+            repository.Save($"noise-{index}",
+                new CountingDocument { Id = $"noise-{index}", ParentId = "noise", Name = $"Noise {index}" });
+        }
+
+        for (var index = 0; index < 3; index++)
+        {
+            repository.Save($"child-{index}",
+                new CountingDocument { Id = $"child-{index}", ParentId = "folder", Name = $"Child {index}" });
+        }
+
+        repository.GetAllCalls = 0;
+
+        var roots = repository.GetRoots();
+        var children = repository.GetChildrenOf("folder");
+        var descendants = repository.GetDescendantsOf("root");
+
+        Assert.Equal(["root"], roots.Select(static document => document.Id));
+        Assert.Equal(3, children.Count);
+        Assert.All(children, static child => Assert.Equal("folder", child.ParentId));
+        Assert.Equal(5, descendants.Count);
+        // Only GetDescendantsOf needs the whole tree, and it reuses the cached snapshot.
+        Assert.Equal(1, repository.GetAllCalls);
+    }
+
+    [Fact]
+    public void TreeRepository_GetAll_CachesTheSnapshotUntilItIsInvalidated()
+    {
+        using var database = CreateDatabase("tree-cache");
+        var databases = new DatabaseCollection();
+        databases.Add("default", database);
+        var repositories = new RepositoryCollection(databases);
+        var repository = Assert.IsType<TestTreeRepository>(repositories.GetOrAdd(typeof(AnnotatedDocument)));
+
+        repository.Save("a", new AnnotatedDocument { Id = "a", Name = "A" });
+        var first = repository.GetAll();
+        var second = repository.GetAll();
+
+        Assert.Same(first, second);
+        Assert.Single(first);
+
+        repository.Save("b", new AnnotatedDocument { Id = "b", Name = "B" });
+        var afterSave = repository.GetAll();
+
+        Assert.NotSame(first, afterSave);
+        Assert.Equal(2, afterSave.Count);
+
+        // Imports and bulk deletes write through the collection; they invalidate explicitly afterwards.
+        using (var imported = new AnnotatedDocument { Id = "c", Name = "C" }.ToMutableDocument("c"))
+        {
+            repository.Collection.Save(imported);
+        }
+        repository.InvalidateSnapshot();
+
+        Assert.Equal(3, repository.GetAll().Count);
+
+        using (var deleted = Assert.IsAssignableFrom<Document>(repository.Collection.GetDocument("c")))
+        {
+            repository.Collection.Delete(deleted);
+        }
+        repository.InvalidateSnapshot();
+
+        var afterDelete = repository.GetAll();
+        Assert.Equal(2, afterDelete.Count);
+        Assert.DoesNotContain(afterDelete, static document => document.Id == "c");
+    }
+
+    [Fact]
     public void CouchbaseServiceRegistrator_RegistersManagers()
     {
         using var provider = new Container();
@@ -267,6 +348,27 @@ public class CouchbaseContractsTests
 
     private sealed class TestTreeRepository : TreeRepository<AnnotatedDocument>
     {
+    }
+
+    [CouchbaseDocument("counting", typeof(CountingTreeRepository))]
+    private sealed class CountingDocument
+    {
+        [Id] public string Id { get; set; } = string.Empty;
+
+        [ParentId] public string? ParentId { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class CountingTreeRepository : TreeRepository<CountingDocument>
+    {
+        public int GetAllCalls { get; set; }
+
+        public override IReadOnlyList<CountingDocument> GetAll()
+        {
+            GetAllCalls++;
+            return base.GetAll();
+        }
     }
 
     private sealed class MappedPayload

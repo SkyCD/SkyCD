@@ -11,6 +11,15 @@
           "Hst.Core": "1.0.104"
         }
       },
+      "RecursiveAI.OneArchive": {
+        "type": "Direct",
+        "requested": "[1.2.0, )",
+        "resolved": "1.2.0",
+        "contentHash": "XqhfMf58jY5Yd9VO7V6zDmnTxmdvr0iZbBI1UizriuK4SxWqSBNEYN3+9A/2Zehj1kQkVeJ+XHy8R6Fns/1DBQ==",
+        "dependencies": {
+          "RecursiveAI.OneCompress": "1.2.0"
+        }
+      },
       "SharpCompress": {
         "type": "Direct",
         "requested": "[0.50.8, )",
@@ -21,6 +30,11 @@
         "type": "Transitive",
         "resolved": "1.0.104",
         "contentHash": "r1QAOi2QaoP7Gfus2QW3W7+Zub4kguBMLiHY9EOgEG0HqK/Zb43aDHRUcz5WDRuB2vhHRANOvQW2wAF1tcQLdQ=="
+      },
+      "RecursiveAI.OneCompress": {
+        "type": "Transitive",
+        "resolved": "1.2.0",
+        "contentHash": "FjF0m6mI8qSvyytDkynJxWSZ6kNU6lE+sHqs6qa6N05gUCSzOkK1gCCvpRtpO9FGG8IJlo2JdH/9gRPBoQG9sg=="
       },
       "skycd.sdk": {
         "type": "Project"

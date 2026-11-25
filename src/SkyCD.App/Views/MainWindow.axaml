@@ -222,18 +222,19 @@
                 </Grid>
             </DockPanel>
 
-            <Border x:Name="DropOverlay"
+            <Border x:Name="DropHint"
                     Grid.ColumnSpan="3"
-                    Margin="{DynamicResource SkyInsetSm}"
-                    Padding="{DynamicResource SkyInsetLg}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="{DynamicResource SkyInsetMd}"
+                    Padding="{DynamicResource SkyInsetMd}"
                     IsVisible="False"
                     IsHitTestVisible="False"
-                    Background="{DynamicResource ThemeBackgroundBrush}"
+                    Background="{DynamicResource ThemeControlMidBrush}"
                     BorderBrush="{DynamicResource ThemeAccentBrush}"
                     BorderThickness="2"
                     CornerRadius="{DynamicResource SkyCornerRadiusLarge}">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DropToAdd}}"
-                           FontSize="{DynamicResource SkyFontTitle}"
+                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DropToAddToLibrary}}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            TextWrapping="Wrap"

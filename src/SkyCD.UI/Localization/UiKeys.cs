@@ -29,7 +29,8 @@ public static class UiKeys
     public const string Yes = "core.ui.Yes";
     public const string No = "core.ui.No";
     public const string AddToList = "core.ui.AddToList";
-    public const string DropToAdd = "core.ui.DropToAdd";
+    public const string DropToAddToLibrary = "core.ui.DropToAddToLibrary";
+    public const string DropTargetFormat = "core.ui.DropTargetFormat";
     public const string DroppedRoots = "core.ui.DroppedRoots";
     public const string FromMedia = "core.ui.FromMedia";
     public const string FromFolder = "core.ui.FromFolder";
@@ -331,6 +332,8 @@ public static class UiKeys
     public const string MissingEntries = "core.ui.MissingEntries";
     public const string GoToEntry = "core.ui.GoToEntry";
     public const string CollectionMembers = "core.ui.CollectionMembers";
+    public const string CollectionEntries = "core.ui.CollectionEntries";
+    public const string NoCollections = "core.ui.NoCollections";
     public const string AdvancedFind = "core.ui.AdvancedFind";
     public const string AddFilter = "core.ui.AddFilter";
     public const string RemoveFilter = "core.ui.RemoveFilter";
