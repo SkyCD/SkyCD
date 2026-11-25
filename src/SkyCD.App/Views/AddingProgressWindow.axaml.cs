@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -11,6 +12,8 @@ namespace SkyCD.App.Views;
 public partial class AddingProgressWindow : Window
 {
     private INotifyCollectionChanged? observedLogEntries;
+    private AddingProgressDialogViewModel? subscribedProgressVm;
+    private readonly TaskbarProgressThrottle taskbarThrottle = new();
     private bool scrollPending;
 
     public AddingProgressWindow()
@@ -46,6 +49,18 @@ public partial class AddingProgressWindow : Window
         {
             observedLogEntries.CollectionChanged += OnLogEntriesChanged;
         }
+
+        if (subscribedProgressVm is not null)
+        {
+            subscribedProgressVm.PropertyChanged -= OnProgressViewModelPropertyChanged;
+        }
+
+        subscribedProgressVm = DataContext as AddingProgressDialogViewModel;
+        if (subscribedProgressVm is not null)
+        {
+            subscribedProgressVm.PropertyChanged += OnProgressViewModelPropertyChanged;
+            ReportTaskbarProgress();
+        }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -56,7 +71,65 @@ public partial class AddingProgressWindow : Window
             observedLogEntries = null;
         }
 
+        if (subscribedProgressVm is not null)
+        {
+            subscribedProgressVm.PropertyChanged -= OnProgressViewModelPropertyChanged;
+            subscribedProgressVm = null;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            WindowsTaskbarProgress.Clear(TaskbarWindowHandle);
+        }
+
         base.OnClosed(e);
+    }
+
+    private void OnProgressViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(AddingProgressDialogViewModel.OverallProgressValue)
+            or nameof(AddingProgressDialogViewModel.IsOverallIndeterminate))
+        {
+            ReportTaskbarProgress();
+        }
+    }
+
+    private void ReportTaskbarProgress()
+    {
+        if (!OperatingSystem.IsWindows() || subscribedProgressVm is null)
+        {
+            return;
+        }
+
+        var state = subscribedProgressVm.IsOverallIndeterminate
+            ? TaskbarProgressState.Indeterminate
+            : TaskbarProgressState.Normal;
+        var completed = (ulong)Math.Clamp(subscribedProgressVm.OverallProgressValue, 0, 100);
+
+        if (!taskbarThrottle.ShouldReport(state, completed))
+        {
+            return;
+        }
+
+        if (state == TaskbarProgressState.Indeterminate)
+        {
+            WindowsTaskbarProgress.SetIndeterminate(TaskbarWindowHandle);
+        }
+        else
+        {
+            WindowsTaskbarProgress.SetProgress(TaskbarWindowHandle, completed);
+        }
+    }
+
+    private IntPtr TaskbarWindowHandle
+    {
+        get
+        {
+            // The progress dialog never shows in the taskbar itself, so the indicator belongs
+            // to the owning main window; fall back to this window when shown without an owner.
+            var owner = Owner as TopLevel ?? this;
+            return owner.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        }
     }
 
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
