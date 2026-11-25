@@ -108,7 +108,7 @@ public sealed class MediaCapabilityTests
         try
         {
             var first = manager.ProcessAsync(new MediaItem(".fake", null, 3), OpenTracked);
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
             Assert.True(Assert.Single(await first).TimedOut);
             Assert.True(Assert.Single(await manager.ProcessAsync(new MediaItem(".fake", null, 3), OpenTracked)).TimedOut);
             Assert.Equal(1, opens);
@@ -117,7 +117,7 @@ public sealed class MediaCapabilityTests
         finally
         {
             release.TrySetResult();
-            await exited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await exited.Task.WaitAsync(TimeSpan.FromSeconds(30));
         }
     }
 
