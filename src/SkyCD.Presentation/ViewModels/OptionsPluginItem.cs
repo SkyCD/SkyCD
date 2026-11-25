@@ -66,7 +66,7 @@ public sealed partial class OptionsPluginItem : ObservableObject
     /// <summary>Primary format extension without a leading dot, when the plugin declares one.</summary>
     public string? PrimaryExtension { get; }
 
-    /// <summary>PNG icon embedded in the plugin assembly, or <see langword="null"/> when it ships none.</summary>
+    /// <summary>PNG frame extracted from the plugin's ICO, or <see langword="null"/> when it ships none.</summary>
     public byte[]? Icon { get; }
 
     /// <summary>True when the plugin ships an icon; otherwise the page renders the neutral glyph.</summary>

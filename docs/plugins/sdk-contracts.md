@@ -141,20 +141,20 @@ Options → Plugins shows one 24 px icon slot in the installed list and in the p
 Every plugin library ships its own icon inside the assembly, so the icon travels with the DLL to the
 build output, the install folder and the NuGet package.
 
-Add `Assets/icon.png` to the plugin project and embed it under the fixed logical name:
+Add `Assets/icon.ico` to the plugin project and embed it under the fixed logical name:
 
 ```xml
 <ItemGroup>
-  <EmbeddedResource Include="Assets/icon.png" LogicalName="SkyCD.Plugin.Icon.png" />
+  <EmbeddedResource Include="Assets/icon.ico" LogicalName="SkyCD.Plugin.Icon.ico" />
 </ItemGroup>
 ```
 
-First-party projects get that item from `Plugins/Directory.Build.props` automatically. They also ship
-`Assets/icon.ico`, embedded as `SkyCD.Plugin.Icon.ico`, with 16, 20, 24, 30, 32, 36, 40, 48, 60,
-64, 72, 80, 96 and 256 px images. The PNG is used for the cross-platform Options view. The CI icon
-check verifies both files and the ICO sizes.
+First-party projects get that item from `Plugins/Directory.Build.props` automatically. Their ICO files
+contain 16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96 and 256 px images. The CI icon check
+verifies the ICO and its sizes.
 
-- The file must be a square PNG of at least 24 px (64 px recommended) and at most 256 KiB.
+- The ICO must be at most 256 KiB and contain at least one PNG-encoded frame; the host displays its
+  largest square PNG frame. Separate PNG files are unnecessary.
 - Use full-color artwork with transparency and enough edge contrast to read on both light and dark themes.
   The host displays the image's original colors.
 - Discovery reads the resource from the plugin assembly; there is no attribute, no adjacent file and

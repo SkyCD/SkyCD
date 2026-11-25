@@ -7,7 +7,7 @@ using Avalonia.Media.Imaging;
 namespace SkyCD.App.Converters;
 
 /// <summary>
-/// Decodes the full-color PNG icon embedded in a plugin assembly.
+/// Decodes the full-color frame extracted from a plugin assembly's ICO.
 /// </summary>
 public sealed class PluginBitmapConverter : IValueConverter
 {

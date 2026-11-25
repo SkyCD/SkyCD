@@ -32,7 +32,7 @@ public sealed class DiscoveredPlugin
     public string? PrimaryExtension { get; init; }
 
     /// <summary>
-    /// PNG icon embedded in the plugin assembly, or <see langword="null"/> when the plugin ships none.
+    /// PNG frame extracted from the plugin's ICO, or <see langword="null"/> when the plugin ships none.
     /// </summary>
     public byte[]? Icon { get; init; }
 

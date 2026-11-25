@@ -1,18 +1,19 @@
 using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Reflection;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
 /// <summary>
-/// Reads the PNG icon a plugin ships inside its own assembly. Every plugin library embeds its icon at build
+/// Reads the ICO icon a plugin ships inside its own assembly. Every plugin library embeds its icon at build
 /// time under <see cref="EmbeddedIconResourceName"/>; the host never derives an icon from the assembly name
 /// or from the capabilities the plugin happens to implement.
 /// </summary>
 internal static class PluginIconResolver
 {
-    /// <summary>Logical name of the PNG icon resource embedded in every plugin assembly.</summary>
-    internal const string EmbeddedIconResourceName = "SkyCD.Plugin.Icon.png";
+    /// <summary>Logical name of the ICO icon resource embedded in every plugin assembly.</summary>
+    internal const string EmbeddedIconResourceName = "SkyCD.Plugin.Icon.ico";
 
     /// <summary>Upper bound for icon payloads read from untrusted plugin assemblies.</summary>
     internal const int MaxIconBytes = 256 * 1024;
@@ -20,8 +21,7 @@ internal static class PluginIconResolver
     private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     /// <summary>
-    /// Returns the embedded PNG icon of <paramref name="assembly"/>, or <see langword="null"/> when the
-    /// assembly ships no icon or the resource is not a bounded PNG payload.
+    /// Returns the largest PNG frame from the embedded ICO, or <see langword="null"/> for invalid icons.
     /// </summary>
     public static byte[]? Resolve(Assembly assembly)
     {
@@ -44,10 +44,43 @@ internal static class PluginIconResolver
             buffer.Write(chunk, 0, read);
         }
 
-        var icon = buffer.ToArray();
-        return IsPng(icon) ? icon : null;
-    }
+        var icon = buffer.ToArray().AsSpan();
+        if (icon.Length < 6 || BinaryPrimitives.ReadUInt16LittleEndian(icon) != 0 ||
+            BinaryPrimitives.ReadUInt16LittleEndian(icon[2..]) != 1)
+        {
+            return null;
+        }
 
-    private static bool IsPng(byte[] payload) =>
-        payload.Length > PngSignature.Length && payload.AsSpan(0, PngSignature.Length).SequenceEqual(PngSignature);
+        var count = BinaryPrimitives.ReadUInt16LittleEndian(icon[4..]);
+        var directoryEnd = 6 + (16 * count);
+        if (count == 0 || directoryEnd > icon.Length)
+        {
+            return null;
+        }
+
+        var bestSize = 0;
+        byte[]? best = null;
+        for (var i = 0; i < count; i++)
+        {
+            var entry = icon.Slice(6 + (16 * i), 16);
+            var width = entry[0] == 0 ? 256 : entry[0];
+            var height = entry[1] == 0 ? 256 : entry[1];
+            var length = BinaryPrimitives.ReadUInt32LittleEndian(entry[8..]);
+            var offset = BinaryPrimitives.ReadUInt32LittleEndian(entry[12..]);
+            if (width != height || width <= bestSize || offset < directoryEnd ||
+                offset > icon.Length || length > icon.Length - offset || length <= PngSignature.Length)
+            {
+                continue;
+            }
+
+            var frame = icon.Slice((int)offset, (int)length);
+            if (frame[..PngSignature.Length].SequenceEqual(PngSignature))
+            {
+                bestSize = width;
+                best = frame.ToArray();
+            }
+        }
+
+        return best;
+    }
 }

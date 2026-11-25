@@ -4,13 +4,10 @@
 
 .DESCRIPTION
     Fails when:
-      - a plugin project under Plugins/ has no Assets/icon.png;
       - Assets/icon.ico is missing, malformed, or lacks a required size;
-      - Assets/icon.png is not a PNG (signature mismatch);
-      - the icon exceeds the host's PluginIconResolver.MaxIconBytes limit;
-      - the icon is not square or smaller than 24 pixels.
+      - the icon exceeds the host's PluginIconResolver.MaxIconBytes limit or lacks a PNG frame.
 
-    Plugins/Directory.Build.props embeds the file as the SkyCD.Plugin.Icon.png manifest resource, which
+    Plugins/Directory.Build.props embeds the file as the SkyCD.Plugin.Icon.ico manifest resource, which
     PluginIconResolver reads at discovery time.
 #>
 param(
@@ -21,8 +18,6 @@ $ErrorActionPreference = "Stop"
 
 $pngSignature = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
 $maxIconBytes = 256 * 1024
-$minIconPixels = 24
-$iconRelativePath = "Assets/icon.png"
 $icoSizes = @(16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256)
 
 $violations = New-Object System.Collections.Generic.List[string]
@@ -49,13 +44,6 @@ function Test-PngSignature([byte[]]$bytes) {
     return $true
 }
 
-function Get-BigEndianInt32([byte[]]$bytes, [int]$offset) {
-    return ([int]$bytes[$offset] -shl 24) -bor
-        ([int]$bytes[$offset + 1] -shl 16) -bor
-        ([int]$bytes[$offset + 2] -shl 8) -bor
-        [int]$bytes[$offset + 3]
-}
-
 $projectFiles = Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot "Plugins") -Directory |
     Where-Object { $_.Name -ne "Shared" } |
     ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Filter "*.csproj" -File }
@@ -64,7 +52,6 @@ $checked = 0
 foreach ($projectFile in $projectFiles) {
     $checked++
     $projectDirectory = $projectFile.Directory.FullName
-    $iconPath = Join-Path $projectDirectory $iconRelativePath
     $relativeProject = Get-RelativePath $projectFile.FullName
 
     $icoPath = Join-Path $projectDirectory 'Assets/icon.ico'
@@ -73,6 +60,9 @@ foreach ($projectFile in $projectFiles) {
     }
     else {
         $ico = [System.IO.File]::ReadAllBytes($icoPath)
+        if ($ico.Length -gt $maxIconBytes) {
+            Add-Violation "Plugin icon '$icoPath' exceeds the $maxIconBytes byte host limit."
+        }
         if ($ico.Length -lt 6 -or $ico[0] -ne 0 -or $ico[1] -ne 0 -or $ico[2] -ne 1 -or $ico[3] -ne 0) {
             Add-Violation "Plugin icon '$icoPath' has an invalid ICO header."
         }
@@ -83,6 +73,7 @@ foreach ($projectFile in $projectFiles) {
             }
             else {
                 $found = @()
+                $hasPngFrame = $false
                 for ($i = 0; $i -lt $count; $i++) {
                     $offset = 6 + 16 * $i
                     $width = if ($ico[$offset] -eq 0) { 256 } else { [int]$ico[$offset] }
@@ -93,44 +84,22 @@ foreach ($projectFile in $projectFiles) {
                         ([long]$dataOffset + $length) -gt $ico.Length) {
                         Add-Violation "Plugin icon '$icoPath' has an invalid image entry."
                     }
-                    elseif ($width -eq $height) { $found += $width }
+                    elseif ($width -eq $height) {
+                        $found += $width
+                        if ($length -gt $pngSignature.Length -and
+                            (Test-PngSignature $ico[$dataOffset..($dataOffset + $pngSignature.Length - 1)])) {
+                            $hasPngFrame = $true
+                        }
+                    }
                 }
                 foreach ($size in $icoSizes) {
                     if ($size -notin $found) { Add-Violation "Plugin icon '$icoPath' is missing ${size}x${size}." }
                 }
+                if (-not $hasPngFrame) { Add-Violation "Plugin icon '$icoPath' has no PNG-encoded frame." }
             }
         }
     }
 
-    if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf)) {
-        Add-Violation "Plugin project '$relativeProject' has no $iconRelativePath."
-        continue
-    }
-
-    $bytes = [System.IO.File]::ReadAllBytes($iconPath)
-    if (-not (Test-PngSignature $bytes)) {
-        Add-Violation "Plugin icon '$iconPath' does not start with a PNG signature."
-        continue
-    }
-
-    if ($bytes.Length -gt $maxIconBytes) {
-        Add-Violation "Plugin icon '$iconPath' exceeds the $maxIconBytes byte host limit."
-        continue
-    }
-
-    if ($bytes.Length -lt 24) {
-        Add-Violation "Plugin icon '$iconPath' is too small to describe its dimensions."
-        continue
-    }
-
-    $width = Get-BigEndianInt32 $bytes 16
-    $height = Get-BigEndianInt32 $bytes 20
-    if ($width -ne $height) {
-        Add-Violation "Plugin icon '$iconPath' must be square but is $($width)x$($height)."
-    }
-    elseif ($width -lt $minIconPixels) {
-        Add-Violation "Plugin icon '$iconPath' must be at least ${minIconPixels}x${minIconPixels} but is $($width)x$($height)."
-    }
 }
 
 if ($violations.Count -gt 0) {

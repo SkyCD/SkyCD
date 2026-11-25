@@ -9,6 +9,7 @@ public sealed class PluginIconResourceTests
     [Fact]
     public void PluginAssembly_ContainsTheMultiresolutionIcon()
     {
+        Assert.Null(typeof(JsonCatalogPlugin).Assembly.GetManifestResourceStream("SkyCD.Plugin.Icon.png"));
         using var stream = typeof(JsonCatalogPlugin).Assembly.GetManifestResourceStream("SkyCD.Plugin.Icon.ico");
         Assert.NotNull(stream);
         using var reader = new BinaryReader(stream);

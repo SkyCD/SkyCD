@@ -3,13 +3,8 @@
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
     <!--
-      Every plugin library ships its own icon. The PNG is embedded under the name read by
-      PluginIconResolver; the ICO contains the same artwork at the supported desktop sizes.
+      Every plugin library embeds one multiresolution ICO under the name read by PluginIconResolver.
     -->
-    <ItemGroup Condition="Exists('Assets/icon.png')">
-        <None Remove="Assets/icon.png" />
-        <EmbeddedResource Include="Assets/icon.png" LogicalName="SkyCD.Plugin.Icon.png" />
-    </ItemGroup>
     <ItemGroup Condition="Exists('Assets/icon.ico')">
         <None Remove="Assets/icon.ico" />
         <EmbeddedResource Include="Assets/icon.ico" LogicalName="SkyCD.Plugin.Icon.ico" />

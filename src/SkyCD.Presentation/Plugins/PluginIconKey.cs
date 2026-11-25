@@ -3,7 +3,7 @@ using System;
 namespace SkyCD.Presentation.Plugins;
 
 /// <summary>
-/// Icon keys rendered by the Options plug-ins page. Installed plugins show the PNG icon embedded in their own
+/// Icon keys rendered by the Options plug-ins page. Installed plugins show a frame from their embedded ICO
 /// assembly, while marketplace entries are remote data and may only declare a Lucide glyph or an extension key.
 /// </summary>
 public static class PluginIconKey

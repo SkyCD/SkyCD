@@ -8,8 +8,8 @@
 3. Load each assembly once, reusing an already loaded assembly when available.
 4. Resolve identity and version constraints from assembly metadata, including `PluginIdAttribute`,
    `MinHostVersionAttribute`, and `MaxHostVersionAttribute`.
-5. Read the plugin icon from the `SkyCD.Plugin.Icon.png` resource embedded in the plugin assembly
-   (`Assets/icon.png` in the plugin project); an assembly without that resource gets the neutral glyph.
+5. Read a PNG-encoded frame from the `SkyCD.Plugin.Icon.ico` resource embedded in the plugin assembly
+   (`Assets/icon.ico` in the plugin project); an assembly without that resource gets the neutral glyph.
 6. Instantiate concrete `IPluginCapability` implementations with public parameterless constructors.
 7. Check host compatibility against minimum and optional maximum host versions.
 8. Persist discovered descriptors and expose capabilities from enabled, available plugins.
