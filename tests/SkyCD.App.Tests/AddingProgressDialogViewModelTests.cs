@@ -4,6 +4,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.SDK;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -156,6 +157,50 @@ public class AddingProgressDialogViewModelTests
         Assert.Contains("Skipped: Access Denied", logText);
         Assert.Contains("Missing metadata", logText);
         Assert.Contains("Corrupted file", logText);
+    }
+
+    [Fact]
+    public void ReportPluginFailure_LogsErrorWithFingerprintAndCountsIt()
+    {
+        var vm = new AddingProgressDialogViewModel();
+        var failure = PluginFailure.Create(typeof(AddingProgressDialogViewModelTests), "media",
+            new InvalidOperationException("decode failed"));
+
+        vm.ReportPluginFailure(failure);
+
+        Assert.Equal(1, vm.ErrorCount);
+        Assert.True(vm.HasErrors);
+        Assert.Contains(failure.Fingerprint, vm.GetFullLogText(), StringComparison.Ordinal);
+        Assert.Contains("media", vm.GetFullLogText(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CloseMode_IsOffByDefault_AndEnablesDismissal()
+    {
+        var vm = new AddingProgressDialogViewModel();
+
+        Assert.False(vm.IsCloseMode);
+        Assert.False(vm.CanDismiss);
+
+        vm.CanCancel = true;
+        Assert.True(vm.CanDismiss);
+
+        vm.FinishCancellation();
+        Assert.False(vm.CanDismiss);
+
+        vm.IsCloseMode = true;
+        Assert.True(vm.CanDismiss);
+    }
+
+    [Fact]
+    public void FlushPendingReports_PublishesQueuedEntriesSynchronously()
+    {
+        var vm = new AddingProgressDialogViewModel();
+        vm.ReportInfo("Starting scan");
+
+        vm.FlushPendingReports();
+
+        Assert.Contains(vm.LogEntries, entry => entry.Message == "Starting scan");
     }
 
     [Fact]

@@ -228,11 +228,20 @@
                            FontFamily="Cascadia Code,Consolas,Courier New,monospace" />
             </StackPanel>
             <Button Grid.Column="2"
-                    Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
-                    Command="{Binding CancelCommand}"
-                    IsEnabled="{Binding CanCancel}"
+                    Classes.close="{Binding IsCloseMode}"
+                    IsEnabled="{Binding CanDismiss}"
+                    Click="OnDismissClicked"
                     VerticalAlignment="Center"
-                    Width="72" />
+                    Width="72">
+                <Button.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}" />
+                    </Style>
+                    <Style Selector="Button.close">
+                        <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.Close}}" />
+                    </Style>
+                </Button.Styles>
+            </Button>
         </Grid>
     </Grid>
 </Window>
