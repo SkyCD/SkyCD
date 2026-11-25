@@ -193,7 +193,8 @@
                     Padding="{DynamicResource SkyInsetMd}">
                 <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
                       RowSpacing="{DynamicResource SkySpaceSm}">
-                    <TextBlock FontSize="{DynamicResource SkyFontSubtitle}" FontWeight="SemiBold">
+                    <TextBlock FontSize="{DynamicResource SkyFontSubtitle}" FontWeight="SemiBold"
+                               TextWrapping="Wrap">
                         <Run Text="{i18n:Translate {x:Static i18n:UiKeys.Tools}}" />
                         <Run Text="  >  " />
                         <Run Text="{Binding CurrentCategoryPath}" />
@@ -846,7 +847,7 @@
                                 IsVisible="{Binding ShowMcpSection}"
                                 Spacing="{DynamicResource SkySpaceSm}">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.McpServer}}" FontSize="{DynamicResource SkyFontBody}" />
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.McpServerSettings}}" FontSize="{DynamicResource SkyFontBody}" />
                             <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
                         </Grid>
                         <Grid ColumnDefinitions="140,*" ColumnSpacing="{DynamicResource SkySpaceSm}">

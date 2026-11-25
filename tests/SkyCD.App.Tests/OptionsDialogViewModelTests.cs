@@ -197,10 +197,39 @@ public class OptionsDialogViewModelTests
         vm.SettingsSearchText = "mcp";
 
         // The MCP tool exposure page shares the server keywords, so both MCP pages match.
-        Assert.Equal(["MCP", "MCP Tools"], vm.FilteredSettingCategories.Select(category => category.Title));
-        Assert.Equal("MCP", vm.SelectedSettingCategory?.Title);
+        Assert.Equal(["MCP Server", "MCP Tools"], vm.FilteredSettingCategories.Select(category => category.Title));
+        Assert.Equal("MCP Server", vm.SelectedSettingCategory?.Title);
         Assert.Equal(7, vm.SelectedTabIndex);
         Assert.True(vm.ShowMcpSection);
+    }
+
+    [Fact]
+    public void SearchText_FindsUiPagesByGroupAbbreviation()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "UI";
+
+        Assert.Equal(["details-columns", "toolbar"],
+            vm.FilteredSettingCategories.Select(category => category.Id));
+        Assert.Contains(vm.SidebarEntries, entry =>
+            entry.IsGroupHeader && entry.Title == LocalizationService.Current.Get(UiKeys.UiGroup));
+        Assert.True(vm.ShowDetailsColumnsSection);
+    }
+
+    [Fact]
+    public void SearchText_FindsAiPagesByGroupAbbreviation()
+    {
+        var vm = new OptionsDialogViewModel(["English", "Lithuanian"]);
+
+        vm.SettingsSearchText = "AI";
+
+        var filteredIds = vm.FilteredSettingCategories.Select(category => category.Id).ToList();
+        Assert.Contains("mcp", filteredIds);
+        Assert.Contains("acp", filteredIds);
+        Assert.Contains("mcp-tools", filteredIds);
+        Assert.Contains(vm.SidebarEntries, entry =>
+            entry.IsGroupHeader && entry.Title == LocalizationService.Current.Get(UiKeys.AiGroup));
     }
 
     [Fact]

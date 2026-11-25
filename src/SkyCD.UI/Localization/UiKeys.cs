@@ -79,13 +79,10 @@ public static class UiKeys
     public const string AboutStoryWhat = "core.ui.AboutStoryWhat";
     public const string AboutStoryOrigin = "core.ui.AboutStoryOrigin";
     public const string AboutStoryRewrite = "core.ui.AboutStoryRewrite";
-    public const string AboutStoryVersion = "core.ui.AboutStoryVersion";
     public const string AboutStoryReferences = "core.ui.AboutStoryReferences";
     public const string AboutStoryRepository = "core.ui.AboutStoryRepository";
     public const string AboutStorySourceForge = "core.ui.AboutStorySourceForge";
     public const string AboutStorySite = "core.ui.AboutStorySite";
-    public const string AboutStoryOriginalSite = "core.ui.AboutStoryOriginalSite";
-    public const string AboutStoryLicense = "core.ui.AboutStoryLicense";
     public const string SystemInfo = "core.ui.SystemInfo";
     public const string Cpu = "core.ui.Cpu";
     public const string Memory = "core.ui.Memory";
@@ -202,6 +199,7 @@ public static class UiKeys
     public const string ApplicationSettings = "core.ui.ApplicationSettings";
     public const string Language = "core.ui.Language";
     public const string McpServer = "core.ui.McpServer";
+    public const string McpServerSettings = "core.ui.McpServerSettings";
     public const string McpTools = "core.ui.McpTools";
     public const string SearchMcpTools = "core.ui.SearchMcpTools";
     public const string SelectAll = "core.ui.SelectAll";

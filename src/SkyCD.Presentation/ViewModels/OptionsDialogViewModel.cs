@@ -640,6 +640,13 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
             return true;
         }
 
+        // Group labels carry the expanded abbreviations ("User Interface (UI)",
+        // "Artificial Intelligence (AI)"), so a search for the abbreviation keeps the group's pages.
+        if (category.Group is { } group && IsExpandedAbbreviationGroup(group) && MatchesSearch(group))
+        {
+            return true;
+        }
+
         if (category.Id == "plugins")
         {
             return MatchesSearch(
@@ -669,6 +676,10 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
         return false;
     }
+
+    private static bool IsExpandedAbbreviationGroup(string group) =>
+        string.Equals(group, LocalizationService.Current.Get(UiKeys.UiGroup), StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(group, LocalizationService.Current.Get(UiKeys.AiGroup), StringComparison.OrdinalIgnoreCase);
 
     partial void OnSelectedSettingCategoryChanged(OptionsSettingCategory? value)
     {
