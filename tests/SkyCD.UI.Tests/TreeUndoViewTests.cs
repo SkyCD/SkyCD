@@ -54,7 +54,7 @@ public sealed class TreeUndoViewTests : IDisposable
 
         Assert.NotNull(TreeViewFocus.FindContainer(treeView, deletedNode));
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
         Dispatcher.UIThread.RunJobs();
 
         Assert.Null(FindNode(viewModel, "scifi"));
@@ -97,7 +97,7 @@ public sealed class TreeUndoViewTests : IDisposable
         viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "scifi");
         Dispatcher.UIThread.RunJobs();
 
-        viewModel.DeleteItemCommand.Execute("list");
+        await viewModel.DeleteItemCommand.ExecuteAsync("list");
         Dispatcher.UIThread.RunJobs();
 
         // A folder deleted in the browser pane is a tree node too. Leaving its container realized means the
@@ -145,7 +145,7 @@ public sealed class TreeUndoViewTests : IDisposable
         viewModel.SelectedTreeNode = victim;
         Dispatcher.UIThread.RunJobs();
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal("Deleted VICTIM-250.", viewModel.StatusText);

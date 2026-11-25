@@ -20,6 +20,8 @@ public static class TextKeys
     public const string ExitRequested = "core.text.ExitRequested";
     public const string Added = "core.text.Added";
     public const string Deleted = "core.text.Deleted";
+    public const string Deleting = "core.text.Deleting";
+    public const string DeleteFailed = "core.text.DeleteFailed";
     public const string OptionsDialogIsNotImplementedYet = "core.text.OptionsDialogIsNotImplementedYet";
     public const string OptionsSavedLanguage = "core.text.OptionsSavedLanguage";
     public const string OpeningSourceForgeProjectWebsite = "core.text.OpeningSourceForgeProjectWebsite";
