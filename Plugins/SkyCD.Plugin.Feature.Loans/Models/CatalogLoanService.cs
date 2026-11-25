@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using SkyCD.Couchbase;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
@@ -49,7 +50,7 @@ public sealed class CatalogLoanService(
             return;
         }
 
-        loans.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(loans.Collection.Database, () =>
         {
             var records = loans.GetAll();
             var firstSave = string.IsNullOrEmpty(CatalogPath);
@@ -107,7 +108,7 @@ public sealed class CatalogLoanService(
     internal BorrowerDocument CreateContact(string name)
     {
         BorrowerDocument? result = null;
-        borrowers.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
         {
             var trimmed = name.Trim();
             if (trimmed.Length == 0 || GetBorrowers().Any(contact =>
@@ -124,7 +125,7 @@ public sealed class CatalogLoanService(
 
     internal void SaveContact(BorrowerDocument contact)
     {
-        borrowers.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
         {
             var name = contact.Name.Trim();
             if (string.IsNullOrWhiteSpace(contact.Id) || name.Length == 0 || borrowers.Get(contact.Id) is null ||
@@ -142,7 +143,7 @@ public sealed class CatalogLoanService(
 
     internal void DeleteContact(string id)
     {
-        borrowers.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
         {
             if (string.IsNullOrWhiteSpace(id) || borrowers.Get(id) is null || IsContactInUse(id))
             {
@@ -162,7 +163,7 @@ public sealed class CatalogLoanService(
         var added = 0;
         var updated = 0;
         var existing = GetBorrowers().ToList();
-        borrowers.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
         {
             foreach (var contact in contacted)
             {
@@ -216,13 +217,13 @@ public sealed class CatalogLoanService(
     internal BorrowerDocument AddBorrower(string name)
     {
         BorrowerDocument? result = null;
-        borrowers.Collection.Database.InBatch(() => result = FindOrCreateBorrower(name));
+        DatabaseGate.InBatch(borrowers.Collection.Database, () => result = FindOrCreateBorrower(name));
         return result!;
     }
 
     internal void RenameBorrower(string id, string name)
     {
-        borrowers.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
         {
             var contact = borrowers.Get(id) ?? throw new LoanEditException();
             var trimmed = name.Trim();
@@ -239,7 +240,7 @@ public sealed class CatalogLoanService(
 
     internal void Lend(string entryId, string borrowerId, DateOnly date, DateOnly? due, string? note)
     {
-        loans.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(loans.Collection.Database, () =>
         {
             if (catalog.Get(entryId) is null || borrowers.Get(borrowerId) is null ||
                 due < date || GetHistory(entryId).Any(loan => loan.IsActive))
@@ -262,7 +263,7 @@ public sealed class CatalogLoanService(
 
     internal void Return(string entryId, string loanId, DateOnly date)
     {
-        loans.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(loans.Collection.Database, () =>
         {
             var loan = loans.Get(loanId);
             if (loan is null || loan.EntryId != entryId || !IsInCatalog(loan) || !loan.IsActive ||

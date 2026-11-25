@@ -140,6 +140,10 @@
                                   Content="{i18n:Translate {x:Static i18n:UiKeys.WholeCatalog}}" />
                     </Grid>
                 </StackPanel>
+                <Border DockPanel.Dock="Top"
+                        Height="1"
+                        Background="{DynamicResource ThemeBorderLowBrush}"
+                        IsVisible="{Binding IsQuickFilterOpen}" />
                 <Panel DockPanel.Dock="Bottom" IsVisible="{Binding !IsQuickFilterOpen}">
                     <pv:MediaPreviewPane x:Name="MainPreviewPane"
                                          Height="150"

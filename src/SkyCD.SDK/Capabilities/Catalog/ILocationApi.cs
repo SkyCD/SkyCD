@@ -12,6 +12,9 @@ public interface ILocationApi
     /// <summary>Raised after a location definition, assignment, or the open catalog changes.</summary>
     event EventHandler? Changed;
 
+    /// <summary>Gets whether a catalog is open; mutations throw <c>LocationApiCatalogUnavailableException</c> without one.</summary>
+    bool IsCatalogOpen { get; }
+
     /// <summary>Gets every location with its effective usage count, ordered by name; empty when no catalog is open.</summary>
     IReadOnlyList<CatalogLocationInfo> GetLocations();
 

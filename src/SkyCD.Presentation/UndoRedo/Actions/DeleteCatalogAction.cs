@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using SkyCD.Core.UndoRedo;
+using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Catalog;
@@ -77,7 +78,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                 return Task.CompletedTask;
             }
 
-            _repository.Collection.Database.InBatch(() =>
+            DatabaseGate.InBatch(_repository.Collection.Database, () =>
             {
                 foreach (var document in _restoreOrder)
                 {
@@ -99,7 +100,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                 return Task.CompletedTask;
             }
 
-            _repository.Collection.Database.InBatch(() =>
+            DatabaseGate.InBatch(_repository.Collection.Database, () =>
             {
                 foreach (var document in _removalOrder)
                 {
