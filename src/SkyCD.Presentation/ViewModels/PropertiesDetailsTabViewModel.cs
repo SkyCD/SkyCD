@@ -1,5 +1,5 @@
 using System;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 
 namespace SkyCD.Presentation.ViewModels;
 

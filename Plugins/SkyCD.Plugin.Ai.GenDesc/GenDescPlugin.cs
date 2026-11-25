@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.GenDesc.Configuration;
 using SkyCD.Plugin.Ai.GenDesc.Exceptions;
 using SkyCD.Plugin.Ai.GenDesc.Import;

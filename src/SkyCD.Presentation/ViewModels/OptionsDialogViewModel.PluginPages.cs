@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.UI.Localization;
 
@@ -114,6 +114,9 @@ public partial class OptionsDialogViewModel
         foreach (var plugin in Plugins) plugin.PropertyChanged -= OnPluginEnabledChanged;
         foreach (var page in pluginPages.Values) page.Dispose();
         pluginPages.Clear();
+        foreach (var page in contributedPages.Values) page.Dispose();
+        contributedPages.Clear();
+        DisposePluginPathScan();
         CollectionsPage?.StopWatchingCatalogChanges();
         DisposeMarketplace();
     }

@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
-using SkyCD.Plugin.Abstractions.Capabilities.Ui;
+using SkyCD.SDK.Capabilities.Ui;
 
 namespace SkyCD.App.PluginHost;
 

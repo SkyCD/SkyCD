@@ -1,6 +1,6 @@
 using System.IO;
 using System.Linq;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.AbeMeda.Native;
 using SkyCD.Plugin.Runtime.Managers;
 using Xunit;

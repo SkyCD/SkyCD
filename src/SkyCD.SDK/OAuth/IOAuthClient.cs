@@ -1,6 +1,6 @@
-using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.SDK.Capabilities;
 
-namespace SkyCD.Plugin.Abstractions.OAuth;
+namespace SkyCD.SDK.OAuth;
 
 /// <summary>Optional capability hook called by the host before publishing discovered plugin services.</summary>
 public interface IOAuthClient : IPluginCapability

@@ -111,7 +111,7 @@ public sealed class WinCatalogCsvParserTests
         await using var stream = File.OpenRead(fixturePath);
 
         var plugin = new WinCatalogCsvPlugin();
-        var result = await plugin.ReadAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+        var result = await plugin.ReadAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatReadRequest
         {
             FormatId = "wincatalog-csv",
             Source = stream,

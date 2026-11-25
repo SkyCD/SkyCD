@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
+namespace SkyCD.SDK.Capabilities.Menu;
 
 /// <summary>
 /// Capability contract for plugins that contribute host menu commands.

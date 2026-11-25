@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Actions;
+namespace SkyCD.SDK.Capabilities.Actions;
 
 /// <summary>Host-supplied item context, independent of persistence and UI models.</summary>
 public sealed class Item

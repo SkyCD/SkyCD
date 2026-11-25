@@ -8,7 +8,7 @@ using SharpCompress.Common;
 using SharpCompress.Readers;
 using SharpCompress.Readers.Arc;
 using SkyCD.PackagePaths;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.Archives.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Storage;

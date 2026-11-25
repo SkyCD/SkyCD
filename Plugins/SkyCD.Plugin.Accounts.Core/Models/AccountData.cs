@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Accounts;
 
 namespace SkyCD.Plugin.Accounts.Core.Models;
 

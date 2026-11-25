@@ -4,7 +4,7 @@ using System.Linq;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
 using SkyCD.Couchbase;
-using SkyCD.Plugin.Abstractions.Capabilities.Storage;
+using SkyCD.SDK.Capabilities.Storage;
 
 namespace SkyCD.Presentation.Catalog;
 

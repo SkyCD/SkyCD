@@ -15,7 +15,7 @@ using SkyCD.Presentation.UndoRedo;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.MediaCache;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.TestSupport;
 using System.Security.Cryptography;
 using System.Threading;

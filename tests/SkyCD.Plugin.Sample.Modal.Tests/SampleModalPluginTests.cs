@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Modal;
+using SkyCD.SDK.Capabilities.Modal;
 using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Sample.Modal;
 using Xunit;

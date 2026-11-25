@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
-using SkyCD.Plugin.Abstractions.Capabilities.Import;
+using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Import;
 using SkyCD.Plugin.Host.Catalog;
 using Xunit;
 

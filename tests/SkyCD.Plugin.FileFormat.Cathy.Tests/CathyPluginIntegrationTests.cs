@@ -29,7 +29,7 @@ public class CathyPluginIntegrationTests
         var bytes = CathyTestHelper.CreateSampleCaf(version: 8, volumeName: "CD_2026", comment: "Test Cathy");
         using var ms = new MemoryStream(bytes);
 
-        var request = new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+        var request = new SkyCD.SDK.Capabilities.FileFormats.FileFormatReadRequest
         {
             FormatId = "cathy-caf",
             Source = ms,

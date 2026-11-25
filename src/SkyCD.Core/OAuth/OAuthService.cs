@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using AsyncKeyedLock;
 using Duende.IdentityModel;
 using Duende.IdentityModel.Client;
-using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.SDK.OAuth;
 
 namespace SkyCD.Core.OAuth;
 

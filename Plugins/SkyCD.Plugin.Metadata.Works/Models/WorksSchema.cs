@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Metadata.Works.Models;
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Accounts;
 
 namespace SkyCD.Plugin.Accounts.Core.Models;
 

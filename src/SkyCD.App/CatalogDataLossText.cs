@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App;

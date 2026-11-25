@@ -6,10 +6,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities;
+using SkyCD.SDK.Capabilities.Configuration;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Host.Media;
 

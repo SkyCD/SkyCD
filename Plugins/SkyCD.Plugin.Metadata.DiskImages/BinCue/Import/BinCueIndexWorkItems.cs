@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.DiskImages.BinCue.Exceptions;
 using SkyCD.Plugin.Metadata.DiskImages.BinCue.Models;
 using SkyCD.Plugin.Metadata.DiskImages.BinCue.Parsing;

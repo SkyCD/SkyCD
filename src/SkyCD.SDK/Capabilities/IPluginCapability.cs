@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities;
+namespace SkyCD.SDK.Capabilities;
 
 /// <summary>
 /// Marker interface for plugin capabilities discoverable by the host.

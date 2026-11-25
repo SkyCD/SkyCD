@@ -9,7 +9,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
@@ -218,6 +218,45 @@ public sealed class VideoPluginIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task IndexingPass_StoresMetadataAndPosterForAVideo()
+    {
+        var video = VideoFixtures.Mp4();
+
+        using var database = OpenDatabase();
+        var catalog = CreateCatalogRepository(database);
+        var entry = SeedCatalog(catalog, video.Length);
+        using var store = MediaCacheStore.Create(database);
+        var thumbnails = new ThumbnailCollector();
+
+        // The add/index pass runs StandardMetadata only; the poster opts in as an index-time preview.
+        var outcome = await CreateScheduler(store).ProcessAsync(
+            MediaExtractionRequest.ForCatalogEntry(
+                entry,
+                _ => Task.FromResult<Stream>(new MemoryStream(video)),
+                catalog.GetAll(),
+                providerSelection: MediaProviderSelection.StandardMetadata),
+            thumbnailProgress: thumbnails);
+
+        Assert.True(outcome.Published);
+
+        var records = store.GetRecordsForEntry(entry.Id);
+        Assert.Equal(2, records.Count);
+
+        var metadata = records.Single(record => record.SchemaId == VideoSchema.MetadataSchemaId);
+        Assert.Equal(MediaCacheRecordState.Captured, metadata.State);
+        Assert.Contains(metadata.Metadata, value => value.Key == VideoSchema.Container);
+
+        var poster = records.Single(record => record.SchemaId == VideoSchema.PreviewSchemaId);
+        Assert.Equal(MediaCacheRecordState.Captured, poster.State);
+        Assert.Equal("image/jpeg", Assert.Single(poster.Artifacts).ContentType);
+
+        var thumbnail = Assert.Single(thumbnails.Items);
+        Assert.Equal(VideoFixtures.JpegFrame, thumbnail.Data);
+        Assert.Equal("image/jpeg", thumbnail.ContentType);
+        Assert.Equal(entry.Name, thumbnail.Name);
+    }
+
+    [Fact]
     public async Task CancelledExtraction_PublishesNothing()
     {
         var video = VideoFixtures.Mp4();
@@ -359,6 +398,14 @@ public sealed class VideoPluginIntegrationTests : IDisposable
         }
 
         throw new InvalidOperationException("Could not locate the video plugin project directory.");
+    }
+
+    /// <summary>Collects thumbnails synchronously so assertions see them as soon as extraction completes.</summary>
+    private sealed class ThumbnailCollector : IProgress<MediaThumbnail>
+    {
+        public List<MediaThumbnail> Items { get; } = [];
+
+        public void Report(MediaThumbnail value) => Items.Add(value);
     }
 
     /// <summary>Stands in for an external decoder, optionally slowly, so host timeouts can be exercised.</summary>

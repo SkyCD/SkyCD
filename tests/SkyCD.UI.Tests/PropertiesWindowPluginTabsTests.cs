@@ -5,7 +5,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SkyCD.App.Views;
 using SkyCD.Documents.Collections;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 

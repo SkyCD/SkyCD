@@ -27,4 +27,14 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.Fonts\SkyCD.Plugin.Metadata.Fonts.csproj"/>
         <ProjectReference Include="..\SkyCD.TestSupport\SkyCD.TestSupport.csproj"/>
     </ItemGroup>
+    <!-- The views read their Twemoji artwork from the app's output (IconifyBundle Disk mode), which is not
+         copied for a referencing project; mirror it so a window the tests instantiate paints its icons. -->
+    <Target Name="CopyTwemojiArtwork" AfterTargets="Build">
+        <ItemGroup>
+            <_TwemojiArtwork Include="..\..\src\SkyCD.App\bin\$(Configuration)\$(TargetFramework)\iconifybundle\**\*.svg"/>
+        </ItemGroup>
+        <Copy SourceFiles="@(_TwemojiArtwork)"
+              DestinationFiles="@(_TwemojiArtwork->'$(OutDir)iconifybundle\%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true"/>
+    </Target>
 </Project>

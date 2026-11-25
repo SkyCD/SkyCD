@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 using SkyCD.Plugin.Ai.Description.Sources;
 using SkyCD.Plugin.Ai.Description.Models;

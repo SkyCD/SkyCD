@@ -2,7 +2,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.AudioCD.Exceptions;
 using SkyCD.Plugin.Metadata.AudioCD.Sources;
 using SkyCD.Plugin.Metadata.AudioCD.Export;

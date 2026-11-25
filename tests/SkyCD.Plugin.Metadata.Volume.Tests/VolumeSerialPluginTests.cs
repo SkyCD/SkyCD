@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Volume;
 using Xunit;
 using SkyCD.Plugin.Metadata.Volume.Models;
 using SkyCD.Plugin.Metadata.Volume.Sources;

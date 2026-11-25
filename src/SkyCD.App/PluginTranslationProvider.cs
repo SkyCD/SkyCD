@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.SDK.Localization;
 
 namespace SkyCD.App;
 

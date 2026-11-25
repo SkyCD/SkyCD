@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 
 namespace SkyCD.Plugin.Ai.Description.Models;

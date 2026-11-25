@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.Plugin.Accounts.JetBrains.Models;
 
 namespace SkyCD.Plugin.Accounts.JetBrains;

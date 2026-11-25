@@ -1,6 +1,6 @@
 using System.Linq;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
 

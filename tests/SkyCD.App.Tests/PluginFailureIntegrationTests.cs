@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.Plugin.Host.Menu;
 using Xunit;
 

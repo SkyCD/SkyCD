@@ -27,8 +27,8 @@ using SkyCD.UI.Controls.Preview;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
@@ -37,11 +37,11 @@ using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Core.UndoRedo;
 using SkyCD.Presentation.Tags;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Presentation.Locations;
 using SkyCD.Presentation.Collections;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -457,6 +457,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         if (isDisposed)
         {
+            return;
+        }
+
+        if (IsCatalogLoading)
+        {
+            // The open handler replaces this catalog and view model when the load completes, so rebuilding
+            // the outgoing tree here would only block the dispatcher while the window loads (#1109).
             return;
         }
 

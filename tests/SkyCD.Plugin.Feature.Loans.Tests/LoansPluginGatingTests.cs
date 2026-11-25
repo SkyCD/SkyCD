@@ -7,7 +7,7 @@ using Couchbase.Lite;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Plugin.Feature.Loans.Models;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Presentation.Catalog;

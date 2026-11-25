@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Video.Models;
 using SkyCD.Plugin.Metadata.Video.Parsing;
 
@@ -44,7 +44,7 @@ public sealed class VideoPosterPlugin : IMediaPreviewCapability
     }
 
     public MediaDescriptor Descriptor =>
-        new(VideoSchema.Extensions, VideoSchema.ContentTypes, VideoSchema.Preview);
+        new(VideoSchema.Extensions, VideoSchema.ContentTypes, VideoSchema.Preview, IndexTimePreview: true);
 
     public async Task<MediaPreviewResult> GeneratePreviewAsync(
         MediaItem item,

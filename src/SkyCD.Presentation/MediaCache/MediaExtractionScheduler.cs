@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 
 namespace SkyCD.Presentation.MediaCache;
@@ -245,7 +245,9 @@ public sealed class MediaExtractionScheduler
     }
 
     private static string ResolveSourceName(MediaExtractionRequest request) =>
-        string.IsNullOrWhiteSpace(request.SourcePath) ? string.Empty : Path.GetFileName(request.SourcePath);
+        string.IsNullOrWhiteSpace(request.SourcePath)
+            ? string.Empty
+            : Path.GetFileName(request.SourcePath.Replace('\\', '/'));
 
     private static MediaThumbnailArtifact? SelectThumbnailArtifact(MediaCachePayload payload)
     {

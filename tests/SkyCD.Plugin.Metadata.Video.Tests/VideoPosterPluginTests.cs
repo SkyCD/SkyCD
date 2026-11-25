@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Video.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Video.Models;
@@ -23,6 +23,8 @@ public class VideoPosterPluginTests
         Assert.Equal("skycd.video.preview", descriptor.Schema.Id);
         Assert.Equal(1, descriptor.Schema.Version);
         Assert.Empty(descriptor.Schema.Fields);
+        Assert.False(descriptor.IsOptIn);
+        Assert.True(descriptor.IndexTimePreview, "The add/index pass must collect the poster like other previews.");
     }
 
     [Fact]

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.ExportFormatting;
 using SkyCD.Plugin.FileFormat.Csv.Exceptions;

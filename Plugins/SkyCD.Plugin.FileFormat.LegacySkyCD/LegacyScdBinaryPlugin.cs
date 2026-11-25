@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Export;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Models;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Parsing;

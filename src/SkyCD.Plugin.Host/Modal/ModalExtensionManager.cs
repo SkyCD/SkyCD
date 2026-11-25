@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Modal;
+using SkyCD.SDK.Capabilities.Modal;
 using SkyCD.Plugin.Host.Exceptions;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 
 namespace SkyCD.Plugin.Host.Modal;
 

@@ -5,7 +5,7 @@ using System.IO;
 using DryIoc;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Plugin.Runtime.Discovery;

@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Menu;
 
 namespace SkyCD.Plugin.Feature.MotionDetector;
 

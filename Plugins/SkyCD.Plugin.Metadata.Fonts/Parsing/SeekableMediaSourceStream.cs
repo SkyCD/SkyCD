@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Fonts.Exceptions;
 
 namespace SkyCD.Plugin.Metadata.Fonts.Parsing;

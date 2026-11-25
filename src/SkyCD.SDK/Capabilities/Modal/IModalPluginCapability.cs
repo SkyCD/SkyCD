@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
+namespace SkyCD.SDK.Capabilities.Modal;
 
 /// <summary>
 /// Capability contract for plugins that provide modal dialog contributions.

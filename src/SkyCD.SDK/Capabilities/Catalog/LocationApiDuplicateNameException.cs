@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>Another location already uses the requested name, ignoring case.</summary>
 public sealed class LocationApiDuplicateNameException(string name)

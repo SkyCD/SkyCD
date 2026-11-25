@@ -4,7 +4,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 
 namespace SkyCD.App;
 

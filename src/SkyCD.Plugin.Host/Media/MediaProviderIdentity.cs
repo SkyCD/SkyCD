@@ -1,7 +1,7 @@
 namespace SkyCD.Plugin.Host.Media;
 
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
 /// <summary>
 /// Identity of a provider that matches a source: plugin, capability type and output schema version.

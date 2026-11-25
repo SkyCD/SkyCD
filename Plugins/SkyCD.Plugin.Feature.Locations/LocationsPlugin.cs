@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
-using SkyCD.Plugin.Abstractions.Capabilities.Ui;
-using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.SDK.Capabilities;
+using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Options;
+using SkyCD.SDK.Localization;
 using SkyCD.Plugin.Feature.Locations.Models;
 using SkyCD.Plugin.Feature.Locations.Views;
 using SkyCD.UI.Localization;
@@ -16,16 +15,16 @@ namespace SkyCD.Plugin.Feature.Locations;
 
 /// <summary>
 /// First-party feature plugin that owns the storage-location UI. Location documents stay in the catalog and
-/// the host keeps storage and inheritance resolution internal behind <see cref="ILocationApi"/>.
+/// the host keeps storage and inheritance resolution internal behind <see cref="ILocationApi"/>. Management
+/// lives in the host's Options dialog as a contributed page rather than a floating window.
 /// </summary>
 public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, ICatalogFeaturePluginCapability,
-    IMenuPluginCapability, IHostDialogConsumer, ILocalizationPluginCapability
+    IOptionsPageCapability, ILocalizationPluginCapability
 {
-    private const string ManageCommandId = "skycd.locations.manage";
+    private const string OptionsPageId = "locations";
     private const string ColumnKey = "location";
 
     private ILocationApi? locationApi;
-    private IHostDialogApi? dialogApi;
 
     /// <inheritdoc />
     public event EventHandler? DataChanged;
@@ -44,9 +43,15 @@ public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, I
     }
 
     /// <inheritdoc />
-    public void InitializeDialogApi(IHostDialogApi hostDialogApi)
+    public OptionsPageDescriptor OptionsPage =>
+        new(OptionsPageId, LocalizationService.Current.Get(LocationsKeys.Locations));
+
+    /// <inheritdoc />
+    public object CreateOptionsPage()
     {
-        dialogApi = hostDialogApi;
+        var api = locationApi
+            ?? throw new InvalidOperationException("The locations page requires the host location API.");
+        return new LocationsView { DataContext = new LocationsManagerViewModel(api, RaiseDataChanged) };
     }
 
     /// <inheritdoc />
@@ -84,29 +89,6 @@ public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, I
         CancellationToken cancellationToken = default) => Task.FromResult(false);
 
     /// <inheritdoc />
-    public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
-    [
-        new(ManageCommandId, LocalizationService.Current.Get(LocationsKeys.ManageLocations), "Tools", 50)
-    ];
-
-    /// <inheritdoc />
-    public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
-        CancellationToken cancellationToken = default)
-    {
-        if (commandId != ManageCommandId || locationApi is not { } api || dialogApi is null)
-        {
-            return;
-        }
-
-        var viewModel = new LocationsManagerViewModel(api, RaiseDataChanged);
-        await dialogApi.ShowAsync(new HostWindowRequest(
-            LocalizationService.Current.Get(LocationsKeys.ManageLocations),
-            720,
-            520,
-            () => new LocationsView { DataContext = viewModel })).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
     public IReadOnlyDictionary<string, string> GetTranslations() => Translations;
 
     private void OnLocationsChanged(object? sender, EventArgs args) => DataChanged?.Invoke(this, EventArgs.Empty);
@@ -116,7 +98,6 @@ public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, I
     private static readonly Dictionary<string, string> English = new()
     {
         ["ui.Locations"] = "Locations",
-        ["ui.ManageLocations"] = "Manage locations…",
         ["ui.ManageHint"] = "Locations are stored in the catalog. An entry without its own location inherits the location of its parent.",
         ["ui.LocationColumn"] = "Location",
         ["ui.NewLocation"] = "New location name",
@@ -141,7 +122,6 @@ public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, I
     private static readonly Dictionary<string, string> Lithuanian = new()
     {
         ["ui.Locations"] = "Vietos",
-        ["ui.ManageLocations"] = "Tvarkyti vietas…",
         ["ui.ManageHint"] = "Vietos saugomos kataloge. Elementas be savo vietos paveldi tėvinio elemento vietą.",
         ["ui.LocationColumn"] = "Vieta",
         ["ui.NewLocation"] = "Naujos vietos pavadinimas",

@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+namespace SkyCD.SDK.Capabilities.Indexing;
 
 /// <summary>
 /// One extra source a plugin adds to the host indexing sequence. The open factory must return a new

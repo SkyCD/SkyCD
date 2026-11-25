@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
+namespace SkyCD.SDK.Capabilities.Menu;
 
 /// <summary>
 /// Public host API exposed to plugin menu commands.

@@ -1,6 +1,6 @@
-using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.SDK.Capabilities;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
+namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>Stable identifiers for the AI description implementations the host can switch between.</summary>
 public static class AiDescriptionImplementationIds

@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Menu;
+namespace SkyCD.SDK.Capabilities.Menu;
 
 /// <summary>
 /// Describes a host menu contribution exposed by a plugin.

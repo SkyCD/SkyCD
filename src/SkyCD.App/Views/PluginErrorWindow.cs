@@ -5,7 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 
 namespace SkyCD.App.Views;
 

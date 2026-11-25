@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>
 /// Optional capability hook the host calls, mirroring <c>IOAuthClient.InitializeOAuth</c>, to hand a

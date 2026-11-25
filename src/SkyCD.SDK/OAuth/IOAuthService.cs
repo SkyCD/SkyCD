@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.OAuth;
+namespace SkyCD.SDK.OAuth;
 
 /// <summary>Plugin-scoped OAuth login and sessions. Never log returned bearer tokens.</summary>
 public interface IOAuthService

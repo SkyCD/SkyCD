@@ -29,7 +29,7 @@ public sealed class KatalogCsvIdxIntegrationTests
         var fixtureDir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "KatalogCollection");
         var plugin = new KatalogCsvIdxPlugin();
 
-        var result = await plugin.ReadAsync(new Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+        var result = await plugin.ReadAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatReadRequest
         {
             FormatId = "katalog-csv-idx",
             SourcePath = fixtureDir
@@ -91,7 +91,7 @@ public sealed class KatalogCsvIdxIntegrationTests
         File.Copy(attackIdx, Path.Combine(tempDir, "attack.idx"));
 
         var plugin = new KatalogCsvIdxPlugin();
-        var result = await plugin.ReadAsync(new Abstractions.Capabilities.FileFormats.FileFormatReadRequest
+        var result = await plugin.ReadAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatReadRequest
         {
             FormatId = "katalog-csv-idx",
             SourcePath = tempDir

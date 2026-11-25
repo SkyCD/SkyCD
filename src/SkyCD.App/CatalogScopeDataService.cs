@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Documents;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.FileFormats;
 
 namespace SkyCD.App;
 

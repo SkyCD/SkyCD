@@ -1,6 +1,6 @@
 using System;
 
-namespace SkyCD.Plugin.Abstractions.Lifecycle;
+namespace SkyCD.SDK.Lifecycle;
 
 /// <summary>
 /// Defines an optional plugin identifier override at assembly level.

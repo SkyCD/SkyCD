@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
 using SkyCD.Formatting.Rtf;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Rtf.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Rtf.Export;

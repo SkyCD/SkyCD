@@ -1,3 +1,3 @@
-using SkyCD.Plugin.Abstractions.Lifecycle;
+using SkyCD.SDK.Lifecycle;
 
 [assembly: PluginId("SkyCD.Plugin.EBook")]

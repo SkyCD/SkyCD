@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Scanning;
 using Xunit;
 

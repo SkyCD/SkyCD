@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
+using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Helpers;
 using SkyCD.Couchbase.Models;
@@ -18,12 +19,19 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
     where TDocument : class, new()
 {
     private const string ParentIndexPrefix = "idx_tree_parent_";
+    private const int ParentIndexCreationAttempts = 2;
 
     private readonly object snapshotLock = new();
     private IReadOnlyList<TDocument>? snapshot;
     private ListenerToken? changeListener;
 
     public DocumentPropertyBinding ParentIdProperty { get; internal set; } = new("ParentId", null);
+
+    /// <summary>
+    /// True when the parent index backing <see cref="GetChildrenOf"/> exists. A catalog whose index could
+    /// not be built still opens, but folder queries fall back to scanning the whole collection.
+    /// </summary>
+    public bool IsParentIndexAvailable { get; private set; }
 
     public override void Initialize(Type documentType, string collectionName, Collection collection)
     {
@@ -183,11 +191,52 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
     {
         if (ParentIdProperty.Property is null)
         {
+            IsParentIndexAvailable = false;
             return;
         }
 
+        var indexName = ParentIndexPrefix + CollectionName.ToLowerInvariant();
+        Exception? lastFailure = null;
+        for (var attempt = 1; attempt <= ParentIndexCreationAttempts; attempt++)
+        {
+            try
+            {
+                CreateParentIndex(indexName);
+                IsParentIndexAvailable = true;
+                return;
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                lastFailure = exception;
+                Logger.LogWarning(
+                    exception,
+                    "Creating index {IndexName} on collection {CollectionName} failed on attempt {Attempt} of {Attempts}.",
+                    indexName,
+                    CollectionName,
+                    attempt,
+                    ParentIndexCreationAttempts);
+            }
+        }
+
+        // The catalog opens unindexed instead of failing construction; folder queries then scan the
+        // whole collection until the index can be created on a later open (#1097).
+        IsParentIndexAvailable = false;
+        Logger.LogError(
+            lastFailure,
+            "Index {IndexName} on collection {CollectionName} could not be created after {Attempts} attempts and is unavailable; folder and tree queries will scan the whole collection.",
+            indexName,
+            CollectionName,
+            ParentIndexCreationAttempts);
+    }
+
+    /// <summary>
+    /// Builds the parent index. Overridable so a test can force creation to fail the way a filtered or
+    /// cleaned <c>%TEMP%</c> directory makes SQLite fail (issue #1097).
+    /// </summary>
+    protected virtual void CreateParentIndex(string indexName)
+    {
         Collection.CreateIndex(
-            ParentIndexPrefix + CollectionName.ToLowerInvariant(),
+            indexName,
             IndexBuilder.ValueIndex(ValueIndexItem.Property(ParentIdProperty.Name)));
     }
 

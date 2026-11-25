@@ -9,8 +9,8 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.TestSupport;
@@ -176,7 +176,7 @@ public class PropertiesDialogViewModelTests
     }
 
     private sealed class TestTranslationProvider(IReadOnlyDictionary<string, string> translations)
-        : SkyCD.Plugin.Abstractions.Localization.ITranslationProvider
+        : SkyCD.SDK.Localization.ITranslationProvider
     {
         public IReadOnlyDictionary<string, string> GetTranslations() => translations;
     }

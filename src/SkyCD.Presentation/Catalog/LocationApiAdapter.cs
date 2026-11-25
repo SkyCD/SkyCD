@@ -4,7 +4,7 @@ using System.Linq;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Presentation.Locations;
 
 namespace SkyCD.Presentation.Catalog;
@@ -35,6 +35,9 @@ public sealed class LocationApiAdapter : ILocationApi, IDisposable
 
     /// <inheritdoc />
     public event EventHandler? Changed;
+
+    /// <inheritdoc />
+    public bool IsCatalogOpen => Service() is not null;
 
     /// <inheritdoc />
     public IReadOnlyList<CatalogLocationInfo> GetLocations()

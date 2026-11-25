@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using SkyCD.PackagePaths;
-using SkyCD.Plugin.Abstractions.Lifecycle;
+using SkyCD.SDK.Lifecycle;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Installation.Exceptions;
 

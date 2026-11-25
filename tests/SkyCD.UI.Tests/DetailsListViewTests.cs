@@ -657,6 +657,47 @@ public class DetailsListViewTests
     }
 
     [AvaloniaFact]
+    public void HeaderDrag_GhostIsOpaqueSurfaceCopyOfTheHeaderCell()
+    {
+        var (window, _, headerGrid) = ShowDetailsColumns(
+            CreateCatalogColumn(DetailsColumnsCatalog.NameId, required: true, width: 150),
+            CreateCatalogColumn(DetailsColumnsCatalog.SizeId, required: false, width: 120));
+
+        try
+        {
+            var ghost = FindHeaderVisual(headerGrid, "DetailsHeaderDragGhost");
+            var nameCell = Assert.IsType<Grid>(headerGrid.Children[0]);
+            var sizeCell = Assert.IsType<Grid>(headerGrid.Children[1]);
+
+            var start = sizeCell.TranslatePoint(new Point(30, 10), window)!.Value;
+            var namePoint = nameCell.TranslatePoint(new Point(10, 10), window)!.Value;
+            window.MouseDown(start, MouseButton.Left);
+            window.MouseMove(namePoint, RawInputModifiers.LeftMouseButton);
+            Assert.True(ghost.IsVisible);
+
+            // Issue #1112: the ghost must hide the headers underneath it, so it is a solid theme
+            // surface at full opacity, sized like the header cell it copies, with a lift shadow.
+            Assert.Equal(1d, ghost.Opacity, 3);
+            Assert.NotEqual(default, ghost.BoxShadow);
+            Assert.Equal(sizeCell.Bounds.Width, ghost.Width, 1);
+
+            var ghostSurface = Assert.IsAssignableFrom<ISolidColorBrush>(ghost.Background);
+            Assert.Equal(byte.MaxValue, ghostSurface.Color.A);
+
+            var headerSurface = Assert.IsAssignableFrom<ISolidColorBrush>(
+                Assert.IsType<Border>(sizeCell.Children[0]).Background);
+            Assert.Equal(byte.MaxValue, headerSurface.Color.A);
+            Assert.Equal(headerSurface.Color, ghostSurface.Color);
+
+            window.MouseUp(namePoint, MouseButton.Left);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void HeaderDrag_CaptureLost_ClearsDragVisuals()
     {
         var (window, _, headerGrid) = ShowDetailsColumns(

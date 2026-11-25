@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CommandDotNet;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Cli;
+using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.Plugin.Accounts.Core.Import;
 
 namespace SkyCD.Plugin.Accounts.Core;
