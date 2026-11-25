@@ -28,17 +28,30 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
-    public void OverviewTab_ShowsTheRunningVersionInsteadOfAHardCodedOne()
+    public void OverviewTab_DropsTheRetiredVersionAndLicenseRows()
     {
+        // Issue #1098: the version is already shown under the dialog title, and the original SkyFTP
+        // site and license rows do not belong in the Overview story.
         var story = OverviewTab();
-        var versionLine = story.Descendants(Avalonia + "TextBlock")
-            .Single(text => text.Descendants(Avalonia + "Run").Any());
+        var markup = story.ToString();
 
-        Assert.Contains(versionLine.Descendants(Avalonia + "Run"), run =>
-            ((string?)run.Attribute("Text"))?.Contains("UiKeys.AboutStoryVersion", StringComparison.Ordinal) == true);
-        Assert.Contains(versionLine.Descendants(Avalonia + "Run"), run =>
-            string.Equals((string?)run.Attribute("Text"), "{Binding Version}", StringComparison.Ordinal));
-        Assert.DoesNotContain("Version 30", story.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(story.Descendants(Avalonia + "Run"), _ => true);
+        Assert.DoesNotContain("skyftp.skynet.lt", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("BSD-2-Clause", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryVersion", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryOriginalSite", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryLicense", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RetiredAboutStoryKeys_LeaveNoOrphanKeysOrCatalogEntries()
+    {
+        foreach (var key in new[] { "AboutStoryVersion", "AboutStoryOriginalSite", "AboutStoryLicense" })
+        {
+            Assert.DoesNotContain(key, ReadRepoFile("src", "SkyCD.UI", "Localization", "UiKeys.cs"), StringComparison.Ordinal);
+            Assert.DoesNotContain("ui." + key, ReadRepoFile("src", "SkyCD.UI", "Translations", "en-UI.yaml"), StringComparison.Ordinal);
+            Assert.DoesNotContain("ui." + key, ReadRepoFile("src", "SkyCD.UI", "Translations", "lt-UI.yaml"), StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -49,13 +62,10 @@ public sealed class AboutStoryLayoutTests
             .Where(text => (string?)text.Attribute("PointerPressed") == "OnOpenRepositoryUrl")
             .ToArray();
 
-        Assert.Equal(5, links.Length);
+        Assert.Equal(3, links.Length);
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "https://github.com/SkyCD/SkyCD");
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "https://sourceforge.net/projects/skycd/");
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "http://skycd.sf.net");
-        Assert.Contains(links, link => (string?)link.Attribute("Text") == "http://www.skyftp.skynet.lt");
-        Assert.Contains(links, link =>
-            (string?)link.Attribute("Tag") == "https://github.com/SkyCD/SkyCD/blob/main/LICENSE");
     }
 
     private static void AssertTranslatedText(XElement story, string key)
@@ -77,7 +87,12 @@ public sealed class AboutStoryLayoutTests
 
     private static string ReadAboutWindow()
     {
-        var path = Path.Combine(FindRepoRoot(), "src", "SkyCD.App", "Views", "AboutWindow.axaml");
+        return ReadRepoFile("src", "SkyCD.App", "Views", "AboutWindow.axaml");
+    }
+
+    private static string ReadRepoFile(params string[] parts)
+    {
+        var path = Path.Combine([FindRepoRoot(), .. parts]);
         return File.ReadAllText(path);
     }
 
