@@ -19,6 +19,41 @@
         <vm:AboutDialogViewModel />
     </Design.DataContext>
 
+    <Window.Resources>
+        <DataTemplate x:Key="DiagnosticCardTemplate" x:DataType="vm:AboutDiagnosticGroup">
+            <Border CornerRadius="{DynamicResource SkyCornerRadius}"
+                    Padding="{DynamicResource SkyInsetXs}"
+                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                    BorderThickness="1">
+                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                    <TextBlock Classes="caption" FontWeight="SemiBold" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Facts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AboutDiagnosticFact">
+                                <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Classes="caption"
+                                               Text="{Binding Label}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="body"
+                                               Text="{Binding Value}"
+                                               HorizontalAlignment="Right"
+                                               TextAlignment="Right"
+                                               TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
     <Window.Styles>
         <Style Selector="TextBlock.RepositoryLink">
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -127,51 +162,62 @@
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.SystemInfo}}">
-                    <StackPanel Spacing="{DynamicResource SkySpaceMd}">
-                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Cpu}}" FontWeight="SemiBold" />
-                            <Grid ColumnDefinitions="220,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10"
-                                             VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding CpuUsage}" VerticalAlignment="Center" />
-                            </Grid>
-                        </StackPanel>
+                    <Grid RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,*,Auto"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="{DynamicResource SkySpaceSm}"
+                              RowSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Cpu}}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <ProgressBar Grid.Row="0" Grid.Column="1"
+                                         Minimum="0" Maximum="100" Value="{Binding CpuPercent}" Height="10"
+                                         VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="0" Grid.Column="2"
+                                       Text="{Binding CpuUsage}"
+                                       VerticalAlignment="Center" />
 
-                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Memory}}" FontWeight="SemiBold" />
-                            <Grid ColumnDefinitions="220,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10"
-                                             VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
-                                    <TextBlock Text="{Binding WorkingSet}" />
-                                    <TextBlock Classes="caption" Text="{Binding ManagedHeap}" />
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <Border Grid.Column="0" CornerRadius="{DynamicResource SkyCornerRadius}"
-                                    Padding="{DynamicResource SkyInsetSm}"
-                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
-                                    BorderThickness="1">
-                                <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                                    <TextBlock Classes="caption" Text="{i18n:Translate {x:Static i18n:UiKeys.Threads}}" />
-                                    <TextBlock Classes="h2" Text="{Binding ThreadInfo}" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="1" CornerRadius="{DynamicResource SkyCornerRadius}"
-                                    Padding="{DynamicResource SkyInsetSm}"
-                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
-                                    BorderThickness="1">
-                                <StackPanel Spacing="{DynamicResource SkySpaceXs}">
-                                    <TextBlock Classes="caption" Text="{i18n:Translate {x:Static i18n:UiKeys.Uptime}}" />
-                                    <TextBlock Classes="h2" Text="{Binding UptimeFriendly}" />
-                                    <TextBlock Classes="caption" Text="{Binding StartTime}" />
-                                </StackPanel>
-                            </Border>
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.Memory}}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <ProgressBar Grid.Row="1" Grid.Column="1"
+                                         Minimum="0" Maximum="100" Value="{Binding MemoryPercent}" Height="10"
+                                         VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="1" Grid.Column="2"
+                                       Text="{Binding WorkingSet}"
+                                       VerticalAlignment="Center" />
                         </Grid>
-                    </StackPanel>
+
+                        <Grid Grid.Row="1"
+                              RowDefinitions="*,*"
+                              ColumnDefinitions="*,*"
+                              RowSpacing="{DynamicResource SkySpaceSm}"
+                              ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <ContentControl Grid.Row="0" Grid.Column="0"
+                                            Content="{Binding BuildGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                            <ContentControl Grid.Row="0" Grid.Column="1"
+                                            Content="{Binding RuntimeGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                            <ContentControl Grid.Row="1" Grid.Column="0"
+                                            Content="{Binding ProcessGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                            <ContentControl Grid.Row="1" Grid.Column="1"
+                                            Content="{Binding ApplicationGroup}"
+                                            ContentTemplate="{StaticResource DiagnosticCardTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch" />
+                        </Grid>
+                    </Grid>
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}">
                     <Grid RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">

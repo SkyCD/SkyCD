@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Formatting;
@@ -34,6 +35,13 @@ public partial class AboutDialogViewModel : ObservableObject
     private const string FallbackWebsite = "";
     private readonly Process currentProcess;
     private readonly TimeProvider timeProvider;
+    private readonly AboutApplicationSnapshot applicationSnapshot;
+    private readonly string unavailableText;
+    private string privateMemoryText = "0 B";
+    private string handleCountText = "0";
+    private string gcCollectionsText = "0 / 0 / 0";
+    private string threadCountText = "0";
+    private bool processSampled;
     private TimeSpan lastTotalProcessorTime;
     private DateTimeOffset lastSampleTimeUtc;
 
@@ -54,7 +62,8 @@ public partial class AboutDialogViewModel : ObservableObject
         IEnumerable<Assembly>? loadedAssemblies = null,
         string? baseDirectory = null,
         Process? process = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        AboutApplicationSnapshot? applicationSnapshot = null)
     {
         ArgumentNullException.ThrowIfNull(mainAssembly);
 
@@ -65,7 +74,8 @@ public partial class AboutDialogViewModel : ObservableObject
             loadedAssemblies,
             baseDirectory,
             process,
-            timeProvider);
+            timeProvider,
+            applicationSnapshot);
     }
 
     public AboutDialogViewModel(
@@ -75,11 +85,14 @@ public partial class AboutDialogViewModel : ObservableObject
         IEnumerable<Assembly>? loadedAssemblies = null,
         string? baseDirectory = null,
         Process? process = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        AboutApplicationSnapshot? applicationSnapshot = null)
     {
         ProductName = productName;
         Version = version;
         Website = website;
+        this.applicationSnapshot = applicationSnapshot ?? new AboutApplicationSnapshot();
+        unavailableText = LocalizationService.Current.Get(UiKeys.SystemInfoUnavailable);
 
         var normalizedBaseDirectory = string.IsNullOrWhiteSpace(baseDirectory)
             ? AppContext.BaseDirectory
@@ -98,6 +111,7 @@ public partial class AboutDialogViewModel : ObservableObject
         this.timeProvider = timeProvider ?? TimeProvider.System;
         lastTotalProcessorTime = currentProcess.TotalProcessorTime;
         lastSampleTimeUtc = this.timeProvider.GetUtcNow();
+        RefreshStaticGroups();
         RefreshSystemInfo();
     }
 
@@ -143,11 +157,17 @@ public partial class AboutDialogViewModel : ObservableObject
 
     [ObservableProperty] private double memoryPercent;
 
-    [ObservableProperty] private string threadInfo = LocalizationService.Current.Format(TextKeys.Threads, 0);
-
     [ObservableProperty] private string uptimeFriendly = "0s";
 
     [ObservableProperty] private string startTime = string.Empty;
+
+    public AboutDiagnosticGroup BuildGroup { get; private set; } = AboutDiagnosticGroup.Empty;
+
+    public AboutDiagnosticGroup RuntimeGroup { get; private set; } = AboutDiagnosticGroup.Empty;
+
+    public AboutDiagnosticGroup ApplicationGroup { get; private set; } = AboutDiagnosticGroup.Empty;
+
+    [ObservableProperty] private AboutDiagnosticGroup processGroup = AboutDiagnosticGroup.Empty;
 
     [RelayCommand]
     private void Confirm()
@@ -179,22 +199,117 @@ public partial class AboutDialogViewModel : ObservableObject
             CpuUsage = $"{CpuPercent:0.0} %";
             WorkingSet = SizeFormatting.FormatAboutDialogBytes(currentProcess.WorkingSet64);
             ManagedHeap = SizeFormatting.FormatAboutDialogBytes(GC.GetTotalMemory(false));
+            privateMemoryText = SizeFormatting.FormatAboutDialogBytes(currentProcess.PrivateMemorySize64);
+            handleCountText = currentProcess.HandleCount.ToString(CultureInfo.CurrentCulture);
+            gcCollectionsText = string.Create(CultureInfo.CurrentCulture,
+                $"{GC.CollectionCount(0)} / {GC.CollectionCount(1)} / {GC.CollectionCount(2)}");
+            threadCountText = currentProcess.Threads.Count.ToString(CultureInfo.CurrentCulture);
 
             var totalAvailableMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             MemoryPercent = totalAvailableMemory > 0
                 ? Math.Clamp((double)currentProcess.WorkingSet64 / totalAvailableMemory * 100d, 0d, 100d)
                 : 0d;
 
-            ThreadInfo = LocalizationService.Current.Format(TextKeys.Threads, currentProcess.Threads.Count);
-
             var uptime = DateTime.Now - currentProcess.StartTime;
             UptimeFriendly = TimeFormatting.FormatAboutDialogDuration(uptime);
-            StartTime = currentProcess.StartTime.ToString("f", CultureInfo.CurrentCulture);
+            StartTime = currentProcess.StartTime.ToString("t", CultureInfo.CurrentCulture);
+            processSampled = true;
         }
         catch
         {
-            // Ignore transient process probing issues in About diagnostics.
+            // Ignore transient process probing issues and report the values as unavailable.
+            processSampled = false;
+            CpuPercent = 0d;
+            CpuUsage = unavailableText;
+            MemoryPercent = 0d;
+            WorkingSet = unavailableText;
+            ManagedHeap = unavailableText;
         }
+
+        RefreshProcessGroup();
+    }
+
+    private void RefreshStaticGroups()
+    {
+        var localization = LocalizationService.Current;
+        BuildGroup = new AboutDiagnosticGroup(
+            localization.Get(UiKeys.SystemInfoBuild),
+            [
+                new AboutDiagnosticFact(localization.Get(UiKeys.SystemInfoVersion), Version),
+                new AboutDiagnosticFact(
+                    localization.Get(UiKeys.SystemInfoHostVersion),
+                    applicationSnapshot.HostVersion ?? unavailableText)
+            ]);
+        RuntimeGroup = new AboutDiagnosticGroup(
+            localization.Get(UiKeys.SystemInfoRuntime),
+            [
+                new AboutDiagnosticFact(localization.Get(UiKeys.SystemInfoDotnet), RuntimeInformation.FrameworkDescription),
+                new AboutDiagnosticFact(localization.Get(UiKeys.SystemInfoOs), RuntimeInformation.OSDescription),
+                new AboutDiagnosticFact(
+                    localization.Get(UiKeys.SystemInfoArchitecture),
+                    RuntimeInformation.ProcessArchitecture.ToString()),
+                new AboutDiagnosticFact(
+                    localization.Get(UiKeys.SystemInfoProcessors),
+                    Environment.ProcessorCount.ToString(CultureInfo.CurrentCulture))
+            ]);
+        ApplicationGroup = new AboutDiagnosticGroup(
+            localization.Get(UiKeys.SystemInfoApplication),
+            BuildApplicationFacts());
+    }
+
+    private IReadOnlyList<AboutDiagnosticFact> BuildApplicationFacts()
+    {
+        var localization = LocalizationService.Current;
+        var facts = new List<AboutDiagnosticFact>
+        {
+            new(localization.Get(UiKeys.LoadedAssemblies),
+                LoadedAssemblies.Count.ToString(CultureInfo.CurrentCulture))
+        };
+
+        if (applicationSnapshot.LoadedPluginCount is { } loadedPlugins
+            && applicationSnapshot.EnabledPluginCount is { } enabledPlugins)
+        {
+            facts.Add(new AboutDiagnosticFact(
+                localization.Get(UiKeys.SystemInfoPlugins),
+                $"{loadedPlugins.ToString(CultureInfo.CurrentCulture)} / {enabledPlugins.ToString(CultureInfo.CurrentCulture)}"));
+        }
+
+        if (applicationSnapshot.CatalogEntryCount is { } catalogEntries)
+        {
+            var catalogName = string.IsNullOrWhiteSpace(applicationSnapshot.CatalogName)
+                ? localization.Get(UiKeys.SystemInfoCatalogUntitled)
+                : applicationSnapshot.CatalogName;
+            facts.Add(new AboutDiagnosticFact(localization.Get(UiKeys.SystemInfoCatalog), catalogName));
+            facts.Add(new AboutDiagnosticFact(
+                localization.Get(UiKeys.SystemInfoCatalogEntries),
+                catalogEntries.ToString("N0", CultureInfo.CurrentCulture)));
+        }
+
+        return facts;
+    }
+
+    private void RefreshProcessGroup()
+    {
+        var localization = LocalizationService.Current;
+        string Sampled(string value) => processSampled ? value : unavailableText;
+
+        ProcessGroup = new AboutDiagnosticGroup(
+            localization.Get(UiKeys.SystemInfoProcess),
+            [
+                new AboutDiagnosticFact(
+                    localization.Get(UiKeys.SystemInfoWorkingSet),
+                    processSampled ? $"{WorkingSet} / {privateMemoryText}" : unavailableText),
+                new AboutDiagnosticFact(localization.Get(UiKeys.SystemInfoManagedHeap), Sampled(ManagedHeap)),
+                new AboutDiagnosticFact(
+                    localization.Get(UiKeys.SystemInfoHandles),
+                    processSampled ? $"{handleCountText} / {threadCountText}" : unavailableText),
+                new AboutDiagnosticFact(localization.Get(UiKeys.SystemInfoGcCollections), Sampled(gcCollectionsText)),
+                new AboutDiagnosticFact(
+                    localization.Get(UiKeys.Uptime),
+                    processSampled && !string.IsNullOrWhiteSpace(StartTime)
+                        ? $"{UptimeFriendly} · {StartTime}"
+                        : Sampled(UptimeFriendly))
+            ]);
     }
 
     public static string LoadLicenseText(string baseDirectory)
