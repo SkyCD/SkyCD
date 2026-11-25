@@ -3,12 +3,15 @@
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
     <!--
-      Every plugin library ships its own icon. Assets/icon.png is embedded under a fixed logical name so the
-      host can read it from the assembly wherever the plugin is deployed (build output, install folder or
-      NuGet package). The name must match PluginIconResolver.EmbeddedIconResourceName.
+      Every plugin library ships its own icon. The PNG is embedded under the name read by
+      PluginIconResolver; the ICO contains the same artwork at the supported desktop sizes.
     -->
     <ItemGroup Condition="Exists('Assets/icon.png')">
         <None Remove="Assets/icon.png" />
         <EmbeddedResource Include="Assets/icon.png" LogicalName="SkyCD.Plugin.Icon.png" />
+    </ItemGroup>
+    <ItemGroup Condition="Exists('Assets/icon.ico')">
+        <None Remove="Assets/icon.ico" />
+        <EmbeddedResource Include="Assets/icon.ico" LogicalName="SkyCD.Plugin.Icon.ico" />
     </ItemGroup>
 </Project>

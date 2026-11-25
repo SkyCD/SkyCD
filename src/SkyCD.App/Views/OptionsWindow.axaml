@@ -78,7 +78,7 @@
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:PluginIconConverter x:Key="PluginIconConverter" />
         <converters:PluginGlyphConverter x:Key="PluginGlyphConverter" />
-        <converters:PluginIconMaskConverter x:Key="PluginIconMaskConverter" />
+        <converters:PluginBitmapConverter x:Key="PluginBitmapConverter" />
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
@@ -275,9 +275,9 @@
                                                         <Grid ColumnDefinitions="Auto,*,Auto"
                                                               ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                             <Panel Width="24" Height="24" VerticalAlignment="Center">
-                                                                <Border Background="{DynamicResource ThemeForegroundLowBrush}"
-                                                                        OpacityMask="{Binding Icon, Converter={StaticResource PluginIconMaskConverter}}"
-                                                                        IsVisible="{Binding HasBitmapIcon}" />
+                                                                <Image Source="{Binding Icon, Converter={StaticResource PluginBitmapConverter}}"
+                                                                       Stretch="Uniform"
+                                                                       IsVisible="{Binding HasBitmapIcon}" />
                                                                 <iconPacks:PackIconControl
                                                                     Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
                                                                     Width="20"
@@ -431,9 +431,9 @@
                                            Width="24"
                                            Height="24"
                                            VerticalAlignment="Top">
-                                        <Border Background="{DynamicResource ThemeForegroundLowBrush}"
-                                                OpacityMask="{Binding SelectedPlugin.Icon, Converter={StaticResource PluginIconMaskConverter}}"
-                                                IsVisible="{Binding SelectedPlugin.HasBitmapIcon}" />
+                                        <Image Source="{Binding SelectedPlugin.Icon, Converter={StaticResource PluginBitmapConverter}}"
+                                               Stretch="Uniform"
+                                               IsVisible="{Binding SelectedPlugin.HasBitmapIcon}" />
                                         <iconPacks:PackIconControl
                                             Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
                                             Width="20"

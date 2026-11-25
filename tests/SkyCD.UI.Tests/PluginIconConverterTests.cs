@@ -62,8 +62,8 @@ public sealed class PluginIconConverterTests
                 Assert.True(icon.IsVisible);
             });
 
-            Assert.DoesNotContain(window.GetVisualDescendants()
-                .OfType<Image>(), image => image.DataContext is OptionsPluginItem);
+            Assert.All(window.GetVisualDescendants().OfType<Image>()
+                .Where(image => image.DataContext is OptionsPluginItem), image => Assert.False(image.IsVisible));
         }
         finally
         {
@@ -89,9 +89,9 @@ public sealed class PluginIconConverterTests
             Assert.Equal(PackIconLucideKind.Puzzle, glyph.Kind);
             Assert.False(glyph.IsVisible);
 
-            var mask = Assert.Single(window.GetVisualDescendants().OfType<Border>(),
-                border => border.DataContext is OptionsPluginItem && border.OpacityMask is not null);
-            Assert.True(mask.IsVisible);
+            var image = Assert.Single(window.GetVisualDescendants().OfType<Image>(),
+                candidate => candidate.DataContext is OptionsPluginItem && candidate.Source is not null);
+            Assert.True(image.IsVisible);
         }
         finally
         {

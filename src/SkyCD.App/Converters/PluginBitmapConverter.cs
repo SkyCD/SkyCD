@@ -2,16 +2,14 @@ using System;
 using System.Globalization;
 using System.IO;
 using Avalonia.Data.Converters;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 
 namespace SkyCD.App.Converters;
 
 /// <summary>
-/// Turns the PNG icon embedded in a plugin assembly into an opacity mask, so the Options page paints the
-/// plugin's own artwork with the same theme foreground it uses for icon-pack glyphs.
+/// Decodes the full-color PNG icon embedded in a plugin assembly.
 /// </summary>
-public sealed class PluginIconMaskConverter : IValueConverter
+public sealed class PluginBitmapConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -23,7 +21,7 @@ public sealed class PluginIconMaskConverter : IValueConverter
         try
         {
             using var stream = new MemoryStream(icon);
-            return new ImageBrush(new Bitmap(stream)) { Stretch = Stretch.Uniform };
+            return new Bitmap(stream);
         }
         catch
         {

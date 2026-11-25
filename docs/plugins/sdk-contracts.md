@@ -149,13 +149,14 @@ Add `Assets/icon.png` to the plugin project and embed it under the fixed logical
 </ItemGroup>
 ```
 
-First-party projects get that item from `Plugins/Directory.Build.props` automatically. Every plugin
-project must ship `Assets/icon.png`; `tools/scripts/ci/check-plugin-icons.ps1` fails CI when one is
-missing.
+First-party projects get that item from `Plugins/Directory.Build.props` automatically. They also ship
+`Assets/icon.ico`, embedded as `SkyCD.Plugin.Icon.ico`, with 16, 20, 24, 30, 32, 36, 40, 48, 60,
+64, 72, 80, 96 and 256 px images. The PNG is used for the cross-platform Options view. The CI icon
+check verifies both files and the ICO sizes.
 
 - The file must be a square PNG of at least 24 px (64 px recommended) and at most 256 KiB.
-- Draw the artwork with transparency. The host paints the alpha channel with the theme foreground, so
-  one icon follows both light and dark themes.
+- Use full-color artwork with transparency and enough edge contrast to read on both light and dark themes.
+  The host displays the image's original colors.
 - Discovery reads the resource from the plugin assembly; there is no attribute, no adjacent file and
   no assembly-name or capability fallback. A plugin without the resource shows the neutral puzzle
   glyph.

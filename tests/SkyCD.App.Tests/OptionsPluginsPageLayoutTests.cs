@@ -175,19 +175,19 @@ public sealed class OptionsPluginsPageLayoutTests
                               (string?)element.Attribute("Height") == "24")
             .ToList();
         Assert.Equal(4, slots.Count);
-        Assert.Equal(2, slots.Count(ContainsMaskedIcon));
+        Assert.Equal(2, slots.Count(ContainsPluginBitmap));
 
         foreach (var slot in slots)
         {
             var glyph = Assert.Single(slot.Descendants().OfType<XElement>(),
                 element => element.Name.LocalName == "PackIconControl");
 
-            if (ContainsMaskedIcon(slot))
+            if (ContainsPluginBitmap(slot))
             {
-                var mask = Assert.Single(slot.Descendants().OfType<XElement>(),
-                    element => element.Name.LocalName == "Border");
-                Assert.Contains("PluginIconMaskConverter", (string?)mask.Attribute("OpacityMask"));
-                Assert.Contains("HasBitmapIcon", (string?)mask.Attribute("IsVisible"));
+                var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
+                    element => element.Name.LocalName == "Image");
+                Assert.Contains("PluginBitmapConverter", (string?)bitmap.Attribute("Source"));
+                Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
                 Assert.Contains("PackIconLucideKind.Puzzle", (string?)glyph.Attribute("Kind"));
                 Assert.Contains("HasBitmapIcon", (string?)glyph.Attribute("IsVisible"));
                 Assert.Contains("!", (string?)glyph.Attribute("IsVisible"));
@@ -205,8 +205,9 @@ public sealed class OptionsPluginsPageLayoutTests
         }
     }
 
-    private static bool ContainsMaskedIcon(XElement slot) =>
-        slot.Descendants().OfType<XElement>().Any(element => element.Name.LocalName == "Border");
+    private static bool ContainsPluginBitmap(XElement slot) =>
+        slot.Descendants().OfType<XElement>().Any(element =>
+            ((string?)element.Attribute("Source"))?.Contains("PluginBitmapConverter") == true);
 
     [Fact]
     public void PluginsPage_KeepsLiteralTypographyAndSpacingOutOfTheSplice()

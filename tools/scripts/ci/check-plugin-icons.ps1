@@ -5,6 +5,7 @@
 .DESCRIPTION
     Fails when:
       - a plugin project under Plugins/ has no Assets/icon.png;
+      - Assets/icon.ico is missing, malformed, or lacks a required size;
       - Assets/icon.png is not a PNG (signature mismatch);
       - the icon exceeds the host's PluginIconResolver.MaxIconBytes limit;
       - the icon is not square or smaller than 24 pixels.
@@ -22,6 +23,7 @@ $pngSignature = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
 $maxIconBytes = 256 * 1024
 $minIconPixels = 24
 $iconRelativePath = "Assets/icon.png"
+$icoSizes = @(16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256)
 
 $violations = New-Object System.Collections.Generic.List[string]
 
@@ -64,6 +66,41 @@ foreach ($projectFile in $projectFiles) {
     $projectDirectory = $projectFile.Directory.FullName
     $iconPath = Join-Path $projectDirectory $iconRelativePath
     $relativeProject = Get-RelativePath $projectFile.FullName
+
+    $icoPath = Join-Path $projectDirectory 'Assets/icon.ico'
+    if (-not (Test-Path -LiteralPath $icoPath -PathType Leaf)) {
+        Add-Violation "Plugin project '$relativeProject' has no Assets/icon.ico."
+    }
+    else {
+        $ico = [System.IO.File]::ReadAllBytes($icoPath)
+        if ($ico.Length -lt 6 -or $ico[0] -ne 0 -or $ico[1] -ne 0 -or $ico[2] -ne 1 -or $ico[3] -ne 0) {
+            Add-Violation "Plugin icon '$icoPath' has an invalid ICO header."
+        }
+        else {
+            $count = [BitConverter]::ToUInt16($ico, 4)
+            if ($ico.Length -lt (6 + 16 * $count)) {
+                Add-Violation "Plugin icon '$icoPath' has a truncated ICO directory."
+            }
+            else {
+                $found = @()
+                for ($i = 0; $i -lt $count; $i++) {
+                    $offset = 6 + 16 * $i
+                    $width = if ($ico[$offset] -eq 0) { 256 } else { [int]$ico[$offset] }
+                    $height = if ($ico[$offset + 1] -eq 0) { 256 } else { [int]$ico[$offset + 1] }
+                    $length = [BitConverter]::ToUInt32($ico, $offset + 8)
+                    $dataOffset = [BitConverter]::ToUInt32($ico, $offset + 12)
+                    if ($length -eq 0 -or $dataOffset -lt (6 + 16 * $count) -or
+                        ([long]$dataOffset + $length) -gt $ico.Length) {
+                        Add-Violation "Plugin icon '$icoPath' has an invalid image entry."
+                    }
+                    elseif ($width -eq $height) { $found += $width }
+                }
+                foreach ($size in $icoSizes) {
+                    if ($size -notin $found) { Add-Violation "Plugin icon '$icoPath' is missing ${size}x${size}." }
+                }
+            }
+        }
+    }
 
     if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf)) {
         Add-Violation "Plugin project '$relativeProject' has no $iconRelativePath."
