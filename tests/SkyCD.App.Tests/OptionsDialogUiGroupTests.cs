@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
@@ -9,6 +10,24 @@ public class OptionsDialogUiGroupTests
 {
     private static readonly string UiGroup = LocalizationService.Current.Get(UiKeys.UiGroup);
     private static readonly string DetailsColumns = LocalizationService.Current.Get(UiKeys.DetailsColumns);
+
+    [Theory]
+    [InlineData("en", "User Interface (UI)", "Artificial Intelligence (AI)", "MCP Server", "MCP Tools",
+        "MCP server settings")]
+    [InlineData("lt", "Vartotojo sąsaja (UI)", "Dirbtinis intelektas (AI)", "MCP serveris", "MCP įrankiai",
+        "MCP serverio nustatymai")]
+    public void OptionsLabels_AreExpandedInEveryShippedLanguage(string cultureCode, string uiGroup,
+        string aiGroup, string mcpPage, string mcpTools, string mcpSettingsHeading)
+    {
+        var service = new LocalizationService();
+        var culture = CultureInfo.GetCultureInfo(cultureCode);
+
+        Assert.Equal(uiGroup, service.Get(UiKeys.UiGroup, culture));
+        Assert.Equal(aiGroup, service.Get(UiKeys.AiGroup, culture));
+        Assert.Equal(mcpPage, service.Get(TextKeys.MCP, culture));
+        Assert.Equal(mcpTools, service.Get(UiKeys.McpTools, culture));
+        Assert.Equal(mcpSettingsHeading, service.Get(UiKeys.McpServerSettings, culture));
+    }
 
     [Fact]
     public void UiPages_RenderUnderSingleGroupHeader()

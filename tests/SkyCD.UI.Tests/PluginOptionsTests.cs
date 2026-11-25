@@ -26,6 +26,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Sample.Config;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 using SkyCD.Plugin.Metadata.AudioCD.Configuration;
 using SkyCD.Plugin.Metadata.AudioCD.Models;
@@ -249,7 +250,7 @@ public sealed class PluginOptionsTests : IDisposable
         var descriptionIndex = vm.SidebarEntries.IndexOf(description);
         var header = vm.SidebarEntries[descriptionIndex - 1];
         Assert.True(header.IsGroupHeader);
-        Assert.Equal("AI", header.Title);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.AiGroup), header.Title);
         Assert.Equal(descriptionIndex + 1, vm.SidebarEntries.IndexOf(provider));
 
         var window = new OptionsWindow { DataContext = vm };

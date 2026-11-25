@@ -88,7 +88,7 @@ text.AddressIsRequiredForInternetSource: "Address is required for internet sourc
 text.CopyURL: "Copy URL"
 text.Plugins: "Plugins"
 text.Language: "Language"
-text.MCP: "MCP"
+text.MCP: "MCP Server"
 text.Statuses: "Statuses"
 text.ConfigureIsNotImplementedYet: "Configure '{0}' is not implemented yet."
 text.PluginConfigurationSaved: "Settings for '{0}' were saved."

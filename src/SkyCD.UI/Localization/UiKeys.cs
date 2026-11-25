@@ -202,6 +202,7 @@ public static class UiKeys
     public const string ApplicationSettings = "core.ui.ApplicationSettings";
     public const string Language = "core.ui.Language";
     public const string McpServer = "core.ui.McpServer";
+    public const string McpServerSettings = "core.ui.McpServerSettings";
     public const string McpTools = "core.ui.McpTools";
     public const string SearchMcpTools = "core.ui.SearchMcpTools";
     public const string SelectAll = "core.ui.SelectAll";

@@ -5,12 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public class AiProviderSettingsViewModelTests
 {
+    private static readonly string AiGroup = LocalizationService.Current.Get(UiKeys.AiGroup);
+
     private static readonly AiProviderChoice LmStudio = new("lmstudio", "LM Studio", "http", "127.0.0.1", 1234,
         "model-a", true, ["model-a", "model-b"]);
 
@@ -122,18 +125,19 @@ public class AiProviderSettingsViewModelTests
     }
 
     [Fact]
-    public void AiCategories_RenderUnderSingleGroupHeaderWithShortLabels()
+    public void AiCategories_RenderUnderSingleGroupHeaderWithReadableLabels()
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetAiDescriptionAvailable(true);
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
-        Assert.Equal("AI", header.Title);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
+        Assert.Equal(AiGroup, header.Title);
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)
             .ToList();
-        Assert.Equal(["Description", "Provider", "MCP", "ACP agents", "MCP Tools"], children.Select(child => child.Title));
+        Assert.Equal(["Description", "Provider", "MCP Server", "ACP agents", "MCP Tools"],
+            children.Select(child => child.Title));
         Assert.Equal(["ai-description", "ai-provider", "mcp", "acp", "mcp-tools"],
             children.Select(child => child.Category?.Id));
         Assert.All(children, child => Assert.Equal(1, child.Depth));
@@ -144,34 +148,40 @@ public class AiProviderSettingsViewModelTests
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetAiDescriptionAvailable(true);
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
 
         vm.SelectedSidebarEntry = header;
 
         Assert.Equal("ai-description", vm.SelectedSettingCategory?.Id);
         Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
-        Assert.Equal("AI  >  Description", vm.CurrentCategoryPath);
+        Assert.Equal($"{AiGroup}  >  Description", vm.CurrentCategoryPath);
         Assert.True(vm.ShowAiDescriptionSection);
     }
 
     [Fact]
-    public void Search_FiltersAiChildrenAndHidesGroup()
+    public void Search_FiltersAiChildrenAndKeepsGroupForAbbreviation()
     {
         var vm = new OptionsDialogViewModel(["English"]);
         vm.SetAiDescriptionAvailable(true);
 
         vm.SettingsSearchText = "provider";
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
-        Assert.Equal("AI", header.Title);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
+        Assert.Equal(AiGroup, header.Title);
         var child = Assert.Single(vm.SidebarEntries, entry => !entry.IsGroupHeader);
         Assert.Equal("Provider", child.Title);
         Assert.Equal("ai-provider", child.Category?.Id);
 
         vm.SettingsSearchText = "AI";
 
-        Assert.DoesNotContain(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
-        Assert.DoesNotContain(vm.FilteredSettingCategories, category => category.Id.StartsWith("ai-", StringComparison.Ordinal));
+        header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
+        Assert.Equal(AiGroup, header.Title);
+        var filteredIds = vm.FilteredSettingCategories.Select(category => category.Id).ToList();
+        Assert.Contains("ai-description", filteredIds);
+        Assert.Contains("ai-provider", filteredIds);
+        Assert.Contains("mcp", filteredIds);
+        Assert.Contains("acp", filteredIds);
+        Assert.Contains("mcp-tools", filteredIds);
     }
 
     [Fact]
@@ -183,8 +193,8 @@ public class AiProviderSettingsViewModelTests
 
         vm.SetAiDescriptionAvailable(false);
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == "AI");
-        Assert.Equal("AI", header.Title);
+        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
+        Assert.Equal(AiGroup, header.Title);
         var headerIndex = vm.SidebarEntries.IndexOf(header);
         var children = vm.SidebarEntries.Skip(headerIndex + 1)
             .TakeWhile(entry => !entry.IsGroupHeader)
