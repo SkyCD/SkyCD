@@ -1838,7 +1838,9 @@ public partial class MainWindow : Window
     private async void OnAboutRequested(object? sender, EventArgs e)
     {
         var options = LoadAppOptions();
-        var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(typeof(App).Assembly);
+        var dialogVm = AboutDialogViewModel.CreateFromMainAssembly(
+            typeof(App).Assembly,
+            applicationSnapshot: CreateAboutApplicationSnapshot());
         dialogVm.RestoreSelectedTab(options.AboutTabKey);
         var dialog = new AboutWindow
         {
@@ -1849,6 +1851,24 @@ public partial class MainWindow : Window
 
         options.AboutTabKey = dialogVm.SelectedTabKey;
         SaveAppOptions(options);
+    }
+
+    private AboutApplicationSnapshot CreateAboutApplicationSnapshot()
+    {
+        var enabledPluginIds = pluginManager.GetPluginDescriptors()
+            .Where(static descriptor => descriptor.IsEnabled && !string.IsNullOrWhiteSpace(descriptor.Id))
+            .Select(static descriptor => descriptor.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var enabledPluginCount = pluginManager.AvailablePlugins
+            .Count(plugin => enabledPluginIds.Contains(plugin.Id));
+        var catalogPath = openCatalogState.Path;
+
+        return new AboutApplicationSnapshot(
+            HostVersion: hostVersionProvider.Current.ToString(),
+            LoadedPluginCount: pluginManager.Plugins.Count,
+            EnabledPluginCount: enabledPluginCount,
+            CatalogName: string.IsNullOrWhiteSpace(catalogPath) ? null : Path.GetFileName(catalogPath),
+            CatalogEntryCount: openCatalogState.Repository?.GetAll().Count);
     }
 
     private async Task ShowAddProgressAsync(AddToListDialogViewModel addDialog)
