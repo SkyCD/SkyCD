@@ -80,6 +80,15 @@ public static class UiKeys
     public const string AboutStoryOrigin = "core.ui.AboutStoryOrigin";
     public const string AboutStoryRewrite = "core.ui.AboutStoryRewrite";
     public const string AboutStoryReferences = "core.ui.AboutStoryReferences";
+    public const string AboutStoryAuthors = "core.ui.AboutStoryAuthors";
+    public const string AboutStoryAuthorName = "core.ui.AboutStoryAuthorName";
+    public const string AboutStoryAuthorContact = "core.ui.AboutStoryAuthorContact";
+    public const string AboutStoryThanks = "core.ui.AboutStoryThanks";
+    public const string AboutStoryThanksFreewareBase = "core.ui.AboutStoryThanksFreewareBase";
+    public const string AboutStoryThanksSourceForge = "core.ui.AboutStoryThanksSourceForge";
+    public const string AboutStoryThanksGbit = "core.ui.AboutStoryThanksGbit";
+    public const string AboutStoryThanksSlivickas = "core.ui.AboutStoryThanksSlivickas";
+    public const string AboutStoryThanksAndYou = "core.ui.AboutStoryThanksAndYou";
     public const string AboutStoryRepository = "core.ui.AboutStoryRepository";
     public const string AboutStorySourceForge = "core.ui.AboutStorySourceForge";
     public const string AboutStorySite = "core.ui.AboutStorySite";
