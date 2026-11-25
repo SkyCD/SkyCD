@@ -12,7 +12,8 @@ Define a repeatable dependency license compliance process for SkyCD v3.
 - Tool: `aquasecurity/trivy-action` with `scanners: license`, `severity: CRITICAL,HIGH`, `exit-code: '1'`.
 - Lock files: `packages.lock.json` in every project (enabled by `RestorePackagesWithLockFile` in
   `Directory.Build.props`).
-- Release artifact: the CycloneDX SBOM produced by the `sbom` job and used to maintain
+- Release artifact: the CycloneDX SBOM produced by the `sbom` job (weekly `schedule` and
+  `workflow_dispatch`) and used to maintain
   `src/SkyCD.App/THIRD-PARTY-NOTICES.txt`.
 
 There is no allow list, exception list, or license-mapping file. The gate is the license
@@ -61,8 +62,8 @@ When a dependency changes, run `dotnet restore SkyCD.slnx` and commit the update
 
 ## Release Notices
 
-The CycloneDX SBOM is not the license gate. It is produced by the `sbom` job on pushes to `main`
-and remains the input for maintaining `src/SkyCD.App/THIRD-PARTY-NOTICES.txt`. Whenever a package
+The CycloneDX SBOM is not the license gate. It is produced by the `sbom` job on a weekly schedule
+and on demand (`workflow_dispatch`) and remains the input for maintaining `src/SkyCD.App/THIRD-PARTY-NOTICES.txt`. Whenever a package
 that requires attribution or a license text is added, update the notices in the same change.
 
 ## Changing the Gate

@@ -1,22 +1,20 @@
 name: ci
-
 on:
   push:
     branches:
       - main
   pull_request:
-
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
   packages: read
-
 env:
   NuGetPackageSourceCredentials_skycd: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
-
 jobs:
   style:
     name: Style (.NET format)
@@ -25,15 +23,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
       - name: Check assembly naming
         shell: pwsh
         run: ./tools/scripts/ci/check-naming.ps1
-
       - name: Check plugin icons
         shell: pwsh
         run: ./tools/scripts/ci/check-plugin-icons.ps1
-
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
@@ -42,13 +37,10 @@ jobs:
           cache-dependency-path: |
             **/*.csproj
             **/packages.lock.json
-
       - name: Restore solution
         run: dotnet restore SkyCD.slnx
-
       - name: Verify formatting
         run: dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal
-
   build-test:
     name: Build & Test (${{ matrix.os }})
     needs: style
@@ -59,11 +51,9 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
@@ -72,13 +62,10 @@ jobs:
           cache-dependency-path: |
             **/*.csproj
             **/packages.lock.json
-
       - name: Restore solution
         run: dotnet restore SkyCD.slnx
-
       - name: Build solution
         run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
-
       - name: Test solution
         shell: bash
         timeout-minutes: 20
@@ -92,14 +79,12 @@ jobs:
             --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}" \
             --results-directory "artifacts/test-results/${{ matrix.os }}" \
             --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
           path: artifacts/test-results/${{ matrix.os }}/
-
   license-compliance:
     name: License Compliance
     needs: style
@@ -108,7 +93,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
@@ -117,12 +101,10 @@ jobs:
           cache-dependency-path: |
             **/*.csproj
             **/packages.lock.json
-
       # Trivy reads package licenses from the nuspec files in the NuGet global
       # packages folder, so restore must run before the scan.
       - name: Restore solution
         run: dotnet restore SkyCD.slnx --locked-mode
-
       - name: Scan dependency licenses
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -131,32 +113,27 @@ jobs:
           scanners: license
           severity: CRITICAL,HIGH
           exit-code: '1'
-
   sbom:
     name: CycloneDX SBOM
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: style
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
       - name: Install CycloneDX tool
         shell: pwsh
         run: |
           dotnet tool update --global CycloneDX --version 6.1.1
           "$env:HOME/.dotnet/tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
       - name: Generate CycloneDX SBOM (JSON)
         run: |
           dotnet-CycloneDX SkyCD.slnx --output artifacts/licenses --filename bom.json --output-format Json --exclude-test-projects
-
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
         with:
