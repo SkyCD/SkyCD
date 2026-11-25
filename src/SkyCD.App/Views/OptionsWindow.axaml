@@ -77,6 +77,8 @@
     <Window.Resources>
         <converters:IconGlyphConverter x:Key="IconConverter" />
         <converters:PluginIconConverter x:Key="PluginIconConverter" />
+        <converters:PluginGlyphConverter x:Key="PluginGlyphConverter" />
+        <converters:PluginBitmapConverter x:Key="PluginBitmapConverter" />
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
@@ -273,8 +275,9 @@
                                                         <Grid ColumnDefinitions="Auto,*,Auto"
                                                               ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                             <Panel Width="24" Height="24" VerticalAlignment="Center">
-                                                                <Image Source="{Binding IconKey, Converter={StaticResource PluginIconConverter}}"
-                                                                       IsVisible="{Binding HasIcon}" />
+                                                                <Image Source="{Binding Icon, Converter={StaticResource PluginBitmapConverter}}"
+                                                                       Stretch="Uniform"
+                                                                       IsVisible="{Binding HasBitmapIcon}" />
                                                                 <iconPacks:PackIconControl
                                                                     Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
                                                                     Width="20"
@@ -282,7 +285,7 @@
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
                                                                     Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                                                                    IsVisible="{Binding !HasIcon}" />
+                                                                    IsVisible="{Binding !HasBitmapIcon}" />
                                                             </Panel>
                                                             <StackPanel Grid.Column="1"
                                                                         VerticalAlignment="Center"
@@ -372,13 +375,16 @@
                                                             <Grid ColumnDefinitions="Auto,*,Auto"
                                                                   ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                                 <Panel Width="24" Height="24" VerticalAlignment="Center">
+                                                                    <Image Source="{Binding IconKey, Converter={StaticResource PluginIconConverter}}"
+                                                                           IsVisible="{Binding HasBitmapIcon}" />
                                                                     <iconPacks:PackIconControl
-                                                                        Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
+                                                                        Kind="{Binding IconKey, Converter={StaticResource PluginGlyphConverter}}"
                                                                         Width="20"
                                                                         Height="20"
                                                                         HorizontalAlignment="Center"
                                                                         VerticalAlignment="Center"
-                                                                        Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                                                                        Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                                                        IsVisible="{Binding HasGlyphIcon}" />
                                                                 </Panel>
                                                                 <StackPanel Grid.Column="1"
                                                                             VerticalAlignment="Center"
@@ -415,10 +421,29 @@
                               RowDefinitions="Auto,Auto,*"
                               RowSpacing="{DynamicResource SkySpaceSm}">
                             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                <TextBlock x:Name="SelectedPluginTitle"
-                                           Text="{Binding SelectedPlugin.Name}"
-                                           Classes="h2"
-                                           TextWrapping="Wrap" />
+                                <Grid ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock x:Name="SelectedPluginTitle"
+                                               Text="{Binding SelectedPlugin.Name}"
+                                               Classes="h2"
+                                               TextWrapping="Wrap" />
+                                    <Panel Grid.Column="1"
+                                           Width="24"
+                                           Height="24"
+                                           VerticalAlignment="Top">
+                                        <Image Source="{Binding SelectedPlugin.Icon, Converter={StaticResource PluginBitmapConverter}}"
+                                               Stretch="Uniform"
+                                               IsVisible="{Binding SelectedPlugin.HasBitmapIcon}" />
+                                        <iconPacks:PackIconControl
+                                            Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
+                                            Width="20"
+                                            Height="20"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                            IsVisible="{Binding !SelectedPlugin.HasBitmapIcon}" />
+                                    </Panel>
+                                </Grid>
                                 <Button Content="{Binding SelectedPlugin.Type}"
                                         Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                         Background="Transparent"
@@ -597,10 +622,28 @@
                               RowDefinitions="Auto,Auto,*"
                               RowSpacing="{DynamicResource SkySpaceSm}">
                             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                <TextBlock x:Name="SelectedMarketplacePluginTitle"
-                                           Text="{Binding SelectedMarketplacePlugin.Title}"
-                                           Classes="h2"
-                                           TextWrapping="Wrap" />
+                                <Grid ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <TextBlock x:Name="SelectedMarketplacePluginTitle"
+                                               Text="{Binding SelectedMarketplacePlugin.Title}"
+                                               Classes="h2"
+                                               TextWrapping="Wrap" />
+                                    <Panel Grid.Column="1"
+                                           Width="24"
+                                           Height="24"
+                                           VerticalAlignment="Top">
+                                        <Image Source="{Binding SelectedMarketplacePlugin.IconKey, Converter={StaticResource PluginIconConverter}}"
+                                               IsVisible="{Binding SelectedMarketplacePlugin.HasBitmapIcon}" />
+                                        <iconPacks:PackIconControl
+                                            Kind="{Binding SelectedMarketplacePlugin.IconKey, Converter={StaticResource PluginGlyphConverter}}"
+                                            Width="20"
+                                            Height="20"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                            IsVisible="{Binding SelectedMarketplacePlugin.HasGlyphIcon}" />
+                                    </Panel>
+                                </Grid>
                                 <TextBlock Text="{Binding SelectedMarketplacePlugin.Publisher}"
                                            Classes="caption" />
                                 <TextBlock Text="{Binding SelectedMarketplacePlugin.SourceLabel}"

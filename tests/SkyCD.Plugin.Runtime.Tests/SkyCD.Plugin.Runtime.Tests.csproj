@@ -33,6 +33,10 @@
         </AssemblyAttribute>
     </ItemGroup>
     <ItemGroup>
+        <!-- Exercises the icon resource the host reads from every plugin assembly. -->
+        <EmbeddedResource Include="../../Plugins/SkyCD.Plugin.FileFormat.Json/Assets/icon.ico" LogicalName="SkyCD.Plugin.Icon.ico"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- Slice plugin assemblies packaged by staged-install fixtures and copied next to the tests. -->
         <Compile Remove="Slice/**/*.cs"/>
         <None Include="Slice/**/*.cs"/>

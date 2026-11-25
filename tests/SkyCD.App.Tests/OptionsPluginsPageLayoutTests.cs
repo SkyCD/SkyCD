@@ -165,6 +165,51 @@ public sealed class OptionsPluginsPageLayoutTests
     }
 
     [Fact]
+    public void PluginsPage_ReservesTheSameIconSlotOnEveryRowAndDetailHeader()
+    {
+        var page = GetPluginsPage();
+
+        var slots = page.Descendants().OfType<XElement>()
+            .Where(element => element.Name.LocalName == "Panel" &&
+                              (string?)element.Attribute("Width") == "24" &&
+                              (string?)element.Attribute("Height") == "24")
+            .ToList();
+        Assert.Equal(4, slots.Count);
+        Assert.Equal(2, slots.Count(ContainsPluginBitmap));
+
+        foreach (var slot in slots)
+        {
+            var glyph = Assert.Single(slot.Descendants().OfType<XElement>(),
+                element => element.Name.LocalName == "PackIconControl");
+
+            if (ContainsPluginBitmap(slot))
+            {
+                var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
+                    element => element.Name.LocalName == "Image");
+                Assert.Contains("PluginBitmapConverter", (string?)bitmap.Attribute("Source"));
+                Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+                Assert.Contains("PackIconLucideKind.Puzzle", (string?)glyph.Attribute("Kind"));
+                Assert.Contains("HasBitmapIcon", (string?)glyph.Attribute("IsVisible"));
+                Assert.Contains("!", (string?)glyph.Attribute("IsVisible"));
+            }
+            else
+            {
+                var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
+                    element => element.Name.LocalName == "Image");
+                Assert.Contains("IconKey", (string?)bitmap.Attribute("Source"));
+                Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+                Assert.Contains("PluginGlyphConverter", (string?)glyph.Attribute("Kind"));
+                Assert.Contains("IconKey", (string?)glyph.Attribute("Kind"));
+                Assert.Contains("HasGlyphIcon", (string?)glyph.Attribute("IsVisible"));
+            }
+        }
+    }
+
+    private static bool ContainsPluginBitmap(XElement slot) =>
+        slot.Descendants().OfType<XElement>().Any(element =>
+            ((string?)element.Attribute("Source"))?.Contains("PluginBitmapConverter") == true);
+
+    [Fact]
     public void PluginsPage_KeepsLiteralTypographyAndSpacingOutOfTheSplice()
     {
         var markup = GetPluginsPage().ToString();
