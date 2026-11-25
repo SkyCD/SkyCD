@@ -59,8 +59,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         }
     }
 
-    public OptionsDialogViewModel(IEnumerable<string> availableLanguages)
+    public OptionsDialogViewModel(IEnumerable<string> availableLanguages, TimeProvider? timeProvider = null)
     {
+        this.timeProvider = timeProvider ?? TimeProvider.System;
         foreach (var language in availableLanguages.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             Languages.Add(LanguageItem.Create(language));

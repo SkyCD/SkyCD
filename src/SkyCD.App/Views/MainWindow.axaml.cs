@@ -1627,7 +1627,7 @@ public partial class MainWindow : Window
         var options = LoadAppOptions();
         var pluginPath = options.PluginPath;
 
-        e.Dialog.PluginPath = pluginPath;
+        e.Dialog.InitializePluginPath(pluginPath);
         e.Dialog.SetPluginRepositories(options.PluginRepositorySources);
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
@@ -1664,6 +1664,7 @@ public partial class MainWindow : Window
         e.Dialog.SetPluginUninstaller(pluginUninstaller);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        e.Dialog.PluginPathScanRequested += OnPluginPathScanRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested += OnResetAiScanExclusionsRequested;
@@ -1754,9 +1755,16 @@ public partial class MainWindow : Window
             // Trigger UI refresh to apply new language
             InvalidateVisual();
         }
+        else
+        {
+            // A rescan performed while the dialog was open changed live plugin state; put the stored
+            // folder back so Cancel leaves the running app on the persisted path.
+            e.Dialog.RevertPluginPathPreview();
+        }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+        e.Dialog.PluginPathScanRequested -= OnPluginPathScanRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested -= OnResetAiScanExclusionsRequested;
@@ -2145,6 +2153,24 @@ public partial class MainWindow : Window
         RefreshPlugins(dialogVm);
     }
 
+    /// <summary>Handles the folder field's typing pause, Enter and lost focus.</summary>
+    private void OnPluginPathScanRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        // The debounce expires on a pool thread, while the list it rebuilds is bound to the UI thread.
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            RefreshPlugins(dialogVm);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => RefreshPlugins(dialogVm));
+    }
+
     private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
@@ -2213,6 +2239,8 @@ public partial class MainWindow : Window
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
+        // The runtime now reflects this folder: it is the path Cancel has to restore.
+        dialogVm.MarkPluginPathScanned(dialogVm.PluginPath);
         var descriptors = pluginManager.GetPluginDescriptors();
         var discoveredById = pluginManager.AvailablePlugins
             .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
