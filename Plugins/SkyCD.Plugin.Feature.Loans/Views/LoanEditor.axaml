@@ -5,8 +5,8 @@
              xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Loans.Views"
              x:Class="SkyCD.Plugin.Feature.Loans.Views.LoanEditor"
              x:DataType="vm:LoanDialogViewModel">
-    <ScrollViewer>
-        <StackPanel Margin="{DynamicResource SkyInsetSm}" Spacing="{DynamicResource SkySpaceXs}">
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource SkySpaceXs}" Margin="{DynamicResource SkyInsetSm}">
+        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
             <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.Borrower}}" />
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding Borrowers}" SelectedItem="{Binding SelectedBorrower}"
@@ -41,15 +41,15 @@
             </StackPanel>
             <TextBlock Text="{Binding Error}" Foreground="Firebrick" TextWrapping="Wrap" />
             <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}" />
-            <ListBox ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLoan}" MaxHeight="160"
-                     AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="loans:LoanHistoryRow">
-                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanChangesSave}}" TextWrapping="Wrap" />
         </StackPanel>
-    </ScrollViewer>
+        <ListBox Grid.Row="1" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLoan}" MinHeight="160"
+                 AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="loans:LoanHistoryRow">
+                    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Grid.Row="2" Text="{i18n:Translate {x:Static loans:LoansKeys.LoanChangesSave}}" TextWrapping="Wrap" />
+    </Grid>
 </UserControl>
